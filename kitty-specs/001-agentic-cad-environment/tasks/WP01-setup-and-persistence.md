@@ -8,8 +8,10 @@ subtasks:
   - "T005"
 title: "Setup, Persistence & Foundation"
 phase: "Phase 1 - Foundation"
-lane: "planned"
+lane: "doing"
 dependencies: []
+agent: "Antigravity"
+shell_pid: "8493"
 history:
   - timestamp: "{{TIMESTAMP}}"
     lane: "planned"
@@ -114,3 +116,7 @@ history:
 ## Risks & Mitigations
 
 - **Concurrency**: SQLite is fine for single-threaded agent, but if parallel evals happen later, might need locking or WAL mode. Enable WAL mode by default (`PRAGMA journal_mode=WAL;`).
+
+## Activity Log
+
+- 2026-01-31T20:16:03Z – Antigravity – shell_pid=8493 – lane=doing – Started implementation via workflow command
