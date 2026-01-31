@@ -14,7 +14,7 @@ The environment provides the agent with a suite of tools to:
 
 1. **Learn**: Access library documentation via RAG.
 2. **Iterate**: Edit code and request visual previews (renders).
-3. **Validate**: Submit designs for rigorous geometric and physical testing.
+3. **Validate**: Submit designs for rigorous geometric and physical testing against specific **Problem Scenarios** (e.g., "Move block A to location B").
 
 Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite into a dataset for future model fine-tuning.
 
@@ -23,8 +23,9 @@ Crucially, the environment acts as a **Data Engine**, logging every interaction,
 ### 2.1. Primary Goals
 
 1. **Enable Code-Based Design**: Create a robust loop where an LLM can iteratively write and fix `build123d` scripts to solve geometric prompts.
-2. **Data Capture**: Persist 100% of agent interactions (successful and failed) to build a "Thought-Process" dataset.
-3. **Extensible Architecture**: Establish a "Workbench" system to easily add domain-specific constraints (Injection Molding, Sheet Metal) in future updates.
+2. **Solve Dynamic Problems**: Support scenarios where the agent's design must perform work (move objects, apply forces) in a physics simulation, not just satisfy static geometry.
+3. **Data Capture**: Persist 100% of agent interactions (successful and failed) to build a "Thought-Process" dataset.
+4. **Extensible Architecture**: Establish a "Workbench" system to easily add domain-specific constraints (Injection Molding, Sheet Metal) in future updates. Note: Workbenches include specific cost calculations in addition to geometric constraints.
 
 ### 2.2. Success Criteria
 
@@ -38,7 +39,8 @@ Crucially, the environment acts as a **Data Engine**, logging every interaction,
 * **As an Agent**, I want to search the `build123d` documentation (RAG) so that I use the correct syntax for complex operations (e.g., Lofts, Sweeps).
 * **As an Agent**, I want to see a visual render of my current code (Preview) so that I can correct geometric errors before submission.
 * **As an Agent**, I want to receive specific error messages (Python tracebacks or geometric violations) so that I can self-correct my script.
-* **As an Agent**, I want to submit my final design so that it can be evaluated against the physical/functional requirements.
+* **As an Agent**, I want to know the "Problem Scenario" (e.g., obstacles, target locations) so I can design a mechanism that fits the environment.
+* **As an Agent**, I want to submit my final design so that it can be evaluated against the physical/functional requirements (Success/Fail, Energy Used).
 
 ## 4. Functional Requirements
 
@@ -46,11 +48,15 @@ Crucially, the environment acts as a **Data Engine**, logging every interaction,
 
 The system shall implement a `gymnasium`-like (or compatible) interface, but adapted for tool-use:
 
-1. **Observation**: Current file content, console output (stdout/stderr), last render (image), and task description.
+1. **Observation**: Current file content, console output (stdout/stderr), last render (image), and **Task Description** (Natural Language + Geometric Constraints).
 2. **Action**: Tool calls (Edit, RAG, Preview, Submit).
 3. **Reward/Feedback**:
     * **Preview**: No external reward; intrinsic visual feedback only.
-    * **Submit**: Sparse reward based on passing/failing the Workbench constraints.
+    * **Submit**: Detailed metrics including:
+        * **Success**: Boolean (Task Completed?).
+        * **Efficiency**: Energy consumed (Joules).
+        * **Safety**: Environment damage (Collision impulse magnitude).
+        * **Constraints**: Pass/Fail on static checks.
 
 ### 4.2. Tool Suite
 
@@ -66,23 +72,31 @@ The Environment shall expose the following tools to the Agent:
 
 ### 4.3. Workbench Architecture
 
-The system shall support pluggable "Workbenches" that define specific constraints.
+The system shall support pluggable "Workbenches" that define specific constraints and cost models.
 
-* **Interface**: `validate(geometry: Compound) -> List[Violation]`
+* **Interface**:
+  * `validate(geometry: Compound) -> List[Violation]`
+  * `calculate_cost(geometry: Compound) -> float`
 * **MVP Workbench (3D Printing)**:
   * **Constraint 1**: `ManifoldCheck` (Is the mesh watertight?).
-  * **Constraint 2**: `SingleBodyCheck` (Does the design consist of exactly one solids? No floating islands).
+  * **Constraint 2**: `SingleBodyCheck` (Does the design consist of exactly one solid? No floating islands).
+  * **Cost Model**: Volume-based material cost (e.g., $0.05 per cm³).
 
 ### 4.4. Simulation Bridge (MuJoCo)
 
 * The `submit_design` tool shall trigger a **Geometry Compiler**.
 * **Input**: `build123d` Compound objects.
+* **Context**: The current **Problem Scenario** (defined as a partially filled MJCF XML template with pre-existing environment obstacles and goals).
 * **Process**:
     1. Generate High-Res Mesh (Visual).
     2. Generate Convex Hull Decomposition (Collision).
     3. Generate `standard.xml` (MJCF) file structure.
-* **Output**: A valid MuJoCo simulation scene.
-* *Note: Detailed physics simulation feedback is a "Future Feature", but the compiler infrastructure must be present in this MVP.*
+    4. **Inject** the agent's design into the Problem Scenario XML.
+    5. Run Simulation for $T$ seconds.
+* **Output**:
+  * `success`: Did the target object reach the goal zone?
+  * `energy`: $\int \tau \cdot \omega dt$ (Total actuator work).
+  * `damage`: Sum of impact forces on "Environment/Forbidden" geoms.
 
 ### 4.5. Persistence (The Black Box)
 
