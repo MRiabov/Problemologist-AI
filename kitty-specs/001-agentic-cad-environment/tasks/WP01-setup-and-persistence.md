@@ -8,10 +8,12 @@ subtasks:
   - "T005"
 title: "Setup, Persistence & Foundation"
 phase: "Phase 1 - Foundation"
-lane: "doing"
+lane: "planned"
 dependencies: []
 agent: "Antigravity"
 shell_pid: "8493"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 history:
   - timestamp: "{{TIMESTAMP}}"
     lane: "planned"
@@ -120,3 +122,4 @@ history:
 ## Activity Log
 
 - 2026-01-31T20:16:03Z – Antigravity – shell_pid=8493 – lane=doing – Started implementation via workflow command
+- 2026-01-31T21:18:41Z – Antigravity – shell_pid=8493 – lane=planned – Moved to planned
