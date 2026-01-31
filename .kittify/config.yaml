@@ -1,0 +1,10 @@
+vcs:
+  type: git
+agents:
+  available:
+  - claude
+  - gemini
+  selection:
+    strategy: preferred
+    preferred_implementer: gemini
+    preferred_reviewer: gemini
