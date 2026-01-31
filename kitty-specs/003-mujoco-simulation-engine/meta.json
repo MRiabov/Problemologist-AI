@@ -1,0 +1,10 @@
+{
+    "feature_number": "003",
+    "slug": "003-mujoco-simulation-engine",
+    "friendly_name": "MuJoCo Simulation Engine",
+    "mission": "software-dev",
+    "source_description": "A MuJoCo simulation engine validation backend for the Agentic CAD Environment. It validates agent designs by converting them into MuJoCo physics environments, simulating their behavior against agent-defined control logic, and enforcing constraints like 'forbid zones' and 'goal zones'.",
+    "created_at": "2026-01-31T20:29:12Z",
+    "target_branch": "main",
+    "vcs": "git"
+}

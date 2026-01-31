@@ -1,0 +1,10 @@
+{
+    "feature_number": "002",
+    "slug": "vlm-cad-agent",
+    "friendly_name": "VLM CAD Agent",
+    "mission": "software-dev",
+    "source_description": "Define the VLM agent acting on the Agentic CAD Environment (Spec 001). Architecture: Raw Python loop (OpenAI/Gemini), Phased Execution (Plan -> Act), Memory/Journaling for self-learning, Vision-on-demand strategy.",
+    "created_at": "2026-01-31T20:13:00Z",
+    "target_branch": "main",
+    "vcs": "git"
+}
