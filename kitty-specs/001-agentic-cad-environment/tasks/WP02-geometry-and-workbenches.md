@@ -1,20 +1,20 @@
 ---
-work_package_id: "WP02"
+work_package_id: WP02
+title: Geometry & Workbenches
+lane: planned
+dependencies: []
 subtasks:
-  - "T006"
-  - "T007"
-  - "T008"
-  - "T009"
-  - "T010"
-title: "Geometry & Workbenches"
-phase: "Phase 2 - Domain Logic"
-lane: "planned"
-dependencies: ["WP01"]
+- T006
+- T007
+- T008
+- T009
+- T010
+phase: Phase 2 - Domain Logic
 history:
-  - timestamp: "{{TIMESTAMP}}"
-    lane: "planned"
-    agent: "system"
-    action: "Prompt generated via /spec-kitty.tasks"
+- timestamp: '{{TIMESTAMP}}'
+  lane: planned
+  agent: system
+  action: Prompt generated via /spec-kitty.tasks
 ---
 
 # Work Package Prompt: WP02 – Geometry & Workbenches

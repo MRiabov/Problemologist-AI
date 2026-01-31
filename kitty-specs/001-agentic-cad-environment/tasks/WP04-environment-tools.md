@@ -1,20 +1,20 @@
 ---
-work_package_id: "WP04"
+work_package_id: WP04
+title: Environment Tools & RAG
+lane: planned
+dependencies: []
 subtasks:
-  - "T015"
-  - "T016"
-  - "T017"
-  - "T018"
-  - "T019"
-title: "Environment Tools & RAG"
-phase: "Phase 4 - Agent Interface"
-lane: "planned"
-dependencies: ["WP01"]
+- T015
+- T016
+- T017
+- T018
+- T019
+phase: Phase 4 - Agent Interface
 history:
-  - timestamp: "{{TIMESTAMP}}"
-    lane: "planned"
-    agent: "system"
-    action: "Prompt generated via /spec-kitty.tasks"
+- timestamp: '{{TIMESTAMP}}'
+  lane: planned
+  agent: system
+  action: Prompt generated via /spec-kitty.tasks
 ---
 
 # Work Package Prompt: WP04 – Environment Tools & RAG

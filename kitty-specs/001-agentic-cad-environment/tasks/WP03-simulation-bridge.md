@@ -1,19 +1,19 @@
 ---
-work_package_id: "WP03"
+work_package_id: WP03
+title: Simulation Bridge (MuJoCo)
+lane: planned
+dependencies: []
 subtasks:
-  - "T011"
-  - "T012"
-  - "T013"
-  - "T014"
-title: "Simulation Bridge (MuJoCo)"
-phase: "Phase 3 - Physics"
-lane: "planned"
-dependencies: ["WP02"]
+- T011
+- T012
+- T013
+- T014
+phase: Phase 3 - Physics
 history:
-  - timestamp: "{{TIMESTAMP}}"
-    lane: "planned"
-    agent: "system"
-    action: "Prompt generated via /spec-kitty.tasks"
+- timestamp: '{{TIMESTAMP}}'
+  lane: planned
+  agent: system
+  action: Prompt generated via /spec-kitty.tasks
 ---
 
 # Work Package Prompt: WP03 – Simulation Bridge (MuJoCo)
