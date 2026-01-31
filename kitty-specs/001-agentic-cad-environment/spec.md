@@ -1,0 +1,128 @@
+# Feature Specification: Agentic CAD Environment
+
+**Feature**: 001-agentic-cad-environment
+**Status**: Draft
+**Mission**: software-dev
+
+## 1. Overview
+
+The **Agentic CAD Environment** is a specialized software development environment designed to enable a Large Language Model (LLM) to function as an autonomous mechanical engineer.
+
+Unlike traditional Reinforcement Learning (RL) environments that rely on discrete, low-level actions (e.g., "move cursor", "place box"), this environment implements a **Code-as-Policy** paradigm. The agent interacts with the world by writing, editing, and executing high-level Python scripts using the `build123d` parametric CAD library.
+
+The environment provides the agent with a suite of tools to:
+
+1. **Learn**: Access library documentation via RAG.
+2. **Iterate**: Edit code and request visual previews (renders).
+3. **Validate**: Submit designs for rigorous geometric and physical testing.
+
+Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite into a dataset for future model fine-tuning.
+
+## 2. Goals & Success Criteria
+
+### 2.1. Primary Goals
+
+1. **Enable Code-Based Design**: Create a robust loop where an LLM can iteratively write and fix `build123d` scripts to solve geometric prompts.
+2. **Data Capture**: Persist 100% of agent interactions (successful and failed) to build a "Thought-Process" dataset.
+3. **Extensible Architecture**: Establish a "Workbench" system to easily add domain-specific constraints (Injection Molding, Sheet Metal) in future updates.
+
+### 2.2. Success Criteria
+
+* **Pipeline Latency**: "Render/Preview" tool returns a visual snapshot within 2 seconds for typical parts.
+* **Data Integrity**: All agent actions, including code diffs and execution logs, are successfully stored in SQLite.
+* **MVP Workbench**: A "3D Printing" workbench is implemented that successfully detects and rejects multi-body (non-contiguous) parts.
+* **Safety**: Agent code execution is sandboxed (or at least isolated) to prevent system damage.
+
+## 3. User Stories (The "Agent" as User)
+
+* **As an Agent**, I want to search the `build123d` documentation (RAG) so that I use the correct syntax for complex operations (e.g., Lofts, Sweeps).
+* **As an Agent**, I want to see a visual render of my current code (Preview) so that I can correct geometric errors before submission.
+* **As an Agent**, I want to receive specific error messages (Python tracebacks or geometric violations) so that I can self-correct my script.
+* **As an Agent**, I want to submit my final design so that it can be evaluated against the physical/functional requirements.
+
+## 4. Functional Requirements
+
+### 4.1. The Environment Loop
+
+The system shall implement a `gymnasium`-like (or compatible) interface, but adapted for tool-use:
+
+1. **Observation**: Current file content, console output (stdout/stderr), last render (image), and task description.
+2. **Action**: Tool calls (Edit, RAG, Preview, Submit).
+3. **Reward/Feedback**:
+    * **Preview**: No external reward; intrinsic visual feedback only.
+    * **Submit**: Sparse reward based on passing/failing the Workbench constraints.
+
+### 4.2. Tool Suite
+
+The Environment shall expose the following tools to the Agent:
+
+| Tool Name | Input | Output | Description |
+| :--- | :--- | :--- | :--- |
+| `search_docs` | `query` (str) | `snippets` (str) | RAG retrieval from `build123d` and `problemologist` docs. |
+| `write_script` | `content` (str) | `status` (str) | Overwrites the current working script (Context: `design.py`). |
+| `edit_script` | `find` (str), `replace` (str) | `status` (str) | Performs string replacement on the script. |
+| `preview_design` | None | `image_path` (str) | Runs the script, exports an STL/SVG, renders it, and returns the view. No penalties. |
+| `submit_design` | None | `report` (json) | Runs the script, performs full Workbench validation (Physics/Geometric checks), and returns final grades/penalties. |
+
+### 4.3. Workbench Architecture
+
+The system shall support pluggable "Workbenches" that define specific constraints.
+
+* **Interface**: `validate(geometry: Compound) -> List[Violation]`
+* **MVP Workbench (3D Printing)**:
+  * **Constraint 1**: `ManifoldCheck` (Is the mesh watertight?).
+  * **Constraint 2**: `SingleBodyCheck` (Does the design consist of exactly one solids? No floating islands).
+
+### 4.4. Simulation Bridge (MuJoCo)
+
+* The `submit_design` tool shall trigger a **Geometry Compiler**.
+* **Input**: `build123d` Compound objects.
+* **Process**:
+    1. Generate High-Res Mesh (Visual).
+    2. Generate Convex Hull Decomposition (Collision).
+    3. Generate `standard.xml` (MJCF) file structure.
+* **Output**: A valid MuJoCo simulation scene.
+* *Note: Detailed physics simulation feedback is a "Future Feature", but the compiler infrastructure must be present in this MVP.*
+
+### 4.5. Persistence (The Black Box)
+
+* **Database**: SQLite (`history.db`).
+* **Schema**:
+  * `Episodes`: (id, prompt, start_time, result).
+  * `Steps`: (id, episode_id, tool_name, tool_input, tool_output, duration).
+  * `Artifacts`: (id, step_id, code_snapshot, render_path).
+
+## 5. Technical Design
+
+### 5.1. Tech Stack
+
+* **Language**: Python 3.10+
+* **CAD Kernel**: `build123d` (wrapping OpenCASCADE).
+* **Physics**: `mujoco` (Python bindings).
+* **Rendering**: `vtk` or `pyglet` (via `build123d`'s export capability).
+* **Database**: `sqlite3`.
+* **LLM Interface**: Open-ended; the environment exposes an API compatible with standard Tool-Use loops (e.g., PydanticAI, LangChain, or raw OpenAI API).
+
+### 5.2. Directory Structure
+
+```
+src/
+├── environment/
+│   ├── core.py           # Main Env class
+│   ├── tools.py          # Tool definitions
+│   └── persistence.py    # SQLite logger
+├── workbenches/
+│   ├── base.py           # Abstract Base Class
+│   └── print_3d.py       # MVP Workbench
+├── compiler/
+│   ├── geometry.py       # Mesh generation/cleaning
+│   └── mujoco_bridge.py  # MJCF XML generation
+└── rag/
+    └── vector_store.py   # ChromaDB/FAISS (or simple grep for MVP)
+```
+
+## 6. Assumptions & Constraints
+
+* **Single Threaded**: The environment assumes a single synchronous agent per instance.
+* **Local Execution**: Code is executed locally; security relies on the container/environment being ephemeral.
+* **RAG Scope**: Initial RAG will be limited to a static dump of `build123d` documentation.
