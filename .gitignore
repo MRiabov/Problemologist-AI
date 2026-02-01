@@ -34,3 +34,6 @@ wheels/
 
 .agent_storage/
 workspace/
+
+# Excluded via sparse-checkout
+kitty-specs/
