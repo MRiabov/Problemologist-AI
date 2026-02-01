@@ -57,10 +57,10 @@ Implementation breakdown for the COTS Assembly System. The work is divided into 
 **Priority**: P1
 **Test**: Unit tests for each new category.
 
-- [ ] T011: Implement logic to index Bearings
-- [ ] T012: Implement logic to index Fasteners (Screws, Nuts)
-- [ ] T013: Implement logic to index Beams (T-Slot profiles)
-- [ ] T014: Ensure recipes are correct for each type
+- [x] T011: Implement logic to index Bearings
+- [x] T012: Implement logic to index Fasteners (Screws, Nuts)
+- [x] T013: Implement logic to index Beams (T-Slot profiles)
+- [x] T014: Ensure recipes are correct for each type
 
 **Implementation Notes**:
 - Fasteners have many variants (ISO, DIN). Ensure the index ID captures this (e.g., `bd_warehouse:fastener:iso4762:M6-10`).
