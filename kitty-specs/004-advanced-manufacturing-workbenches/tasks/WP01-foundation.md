@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Shared Utilities"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
+agent: "Gemini"
+shell_pid: "213662"
 ---
 
 ### Objective
@@ -56,3 +58,7 @@ We are building CNC and Injection Molding support. This requires `trimesh` for a
 *   `manufacturing_config.yaml` exists with valid data.
 *   `analysis_utils.py` exists with conversion and config loading.
 *   Tests pass.
+
+## Activity Log
+
+- 2026-02-01T11:09:18Z – Gemini – shell_pid=213662 – lane=doing – Started implementation via workflow command
