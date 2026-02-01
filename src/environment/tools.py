@@ -2,10 +2,16 @@ import os
 import subprocess
 import sys
 from src.rag import search as rag_search
+from src.cots.core import PartIndex
+from src.cots.providers.bd_warehouse import BDWarehouseProvider
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = os.path.abspath("workspace")
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
+
+# Initialize COTS Part Index (Singleton)
+_PART_INDEX = PartIndex()
+_PART_INDEX.register_provider("bd_warehouse", BDWarehouseProvider())
 
 
 def set_workspace_dir(path: str):
@@ -176,3 +182,38 @@ def search_docs(query: str) -> str:
     Searches documentation (RAG).
     """
     return rag_search.search(query)
+
+
+def search_parts(query: str) -> str:
+    """
+    Search for COTS parts by name or ID. Returns a list of matches.
+    """
+    try:
+        results = _PART_INDEX.search(query)
+        if not results:
+            return f"No parts found for query: {query}"
+
+        output = "Found parts:\n"
+        for res in results:
+            output += f"- {res.id}: {res.name} (Provider: {res.provider})\n"
+        return output
+    except Exception as e:
+        return f"Error searching parts: {str(e)}"
+
+
+def preview_part(part_id: str) -> str:
+    """
+    Get visual preview and details for a part ID.
+    Returns description, image path, and a Python recipe to instantiate it.
+    """
+    try:
+        preview = _PART_INDEX.preview(part_id)
+        output = f"Part: {preview.id}\n"
+        output += f"Description: {preview.description}\n"
+        output += f"Image: {preview.image_path}\n"
+        output += f"Recipe:\n```python\n{preview.recipe}\n```\n"
+        if preview.metadata:
+            output += f"Metadata: {preview.metadata}\n"
+        return output
+    except Exception as e:
+        return f"Error previewing part {part_id}: {str(e)}"
