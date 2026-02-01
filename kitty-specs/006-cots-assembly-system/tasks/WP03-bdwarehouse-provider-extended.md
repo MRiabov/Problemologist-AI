@@ -1,13 +1,17 @@
 ---
-work_package_id: "WP03"
-title: "BDWarehouse Provider (Extended)"
-lane: "planned"
-dependencies: ["WP02"]
+work_package_id: WP03
+title: BDWarehouse Provider (Extended)
+lane: "doing"
+dependencies: [WP02]
+base_branch: main
+base_commit: df689e8ddfd17dfc29db655cdb253e87d6369d22
+created_at: '2026-02-01T13:49:08.028118+00:00'
 subtasks:
-  - T011
-  - T012
-  - T013
-  - T014
+- T011
+- T012
+- T013
+- T014
+shell_pid: "345401"
 ---
 
 # WP03: BDWarehouse Provider (Extended)
