@@ -61,7 +61,7 @@ def test_agent_exposure(tmp_path):
     # 3. Call manufacturability check via agent interface
     # tool 5 is check_manufacturability
     obs, reward, terminated, truncated, info = env.step({
-        "tool": 5, 
+        "tool": 7, 
         "arguments": "cnc|||10"
     })
     
