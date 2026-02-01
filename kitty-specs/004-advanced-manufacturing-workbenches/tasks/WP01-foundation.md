@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Shared Utilities"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
 agent: "Antigravity"
@@ -70,3 +70,4 @@ We are building CNC and Injection Molding support. This requires `trimesh` for a
 - 2026-02-01T12:36:58Z – Antigravity – shell_pid=125379 – lane=doing – Started implementation via workflow command
 - 2026-02-01T13:36:31Z – Antigravity – shell_pid=125379 – lane=for_review – Ready for review: Implemented foundation utils, manufacturing config, and added dependencies. Tests verify config loading and trimesh conversion. Cleaned up garbage files.
 - 2026-02-01T13:39:11Z – Antigravity – shell_pid=336474 – lane=doing – Started review via workflow command
+- 2026-02-01T14:43:50Z – Antigravity – shell_pid=336474 – lane=for_review – Addressed feedback: Cleaned up garbage files and experimental scripts from the root directory. Rebased on main.
