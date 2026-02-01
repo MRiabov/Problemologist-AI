@@ -32,3 +32,7 @@ kitty-specs/**/tasks/*.md
 *.db
 *.db-wal
 *.db-shm.cache/
+
+.env
+
+
