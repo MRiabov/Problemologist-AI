@@ -20,7 +20,27 @@ def read_journal(topic: str = "") -> str:
     if not content:
         return "Journal is empty."
 
-    # TODO: Implement fuzzy search or filtering based on topic
+    if topic:
+        # Split by entry delimiter (assuming standard format from write_journal)
+        # Note: write_journal prepends "\n\n## [", so we split by "\n## ["
+        entries = content.split("\n## [")
+        filtered_entries = []
+
+        for entry in entries:
+            if not entry.strip():
+                continue
+
+            # Reconstruct the full entry with the delimiter
+            full_entry = f"\n## [{entry}"
+
+            if topic.lower() in full_entry.lower():
+                filtered_entries.append(full_entry)
+
+        if not filtered_entries:
+            return f"No entries found matching topic: {topic}"
+
+        return "".join(filtered_entries)
+
     return content
 
 
