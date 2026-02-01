@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: End-to-End Validation & Reporting
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T017
@@ -61,3 +61,4 @@ We need to prove that a "Real" agent (e.g., a simple hardcoded pusher) can actua
 ## Activity Log
 
 - 2026-02-01T11:53:17Z – gemini – shell_pid=249171 – lane=doing – Started implementation via workflow command
+- 2026-02-01T12:02:19Z – gemini – shell_pid=249171 – lane=for_review – Implemented E2E validation with a pusher bot reference case. Simulation engine now supports agent scripts and goal zones. Replay artifacts (state traces) are returned in the API response. All tests passed.
