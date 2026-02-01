@@ -46,7 +46,7 @@ Depends on WP01
 **Priority**: High
 Depends on WP02
 
-- [ ] T009: Implement `SimulationLoop` class in `simulation.py`.
+- [x] T009: Implement `SimulationLoop` class in `simulation.py`.
 - [ ] T010: Implement `AgentInterface` to call user-provided control functions.
 - [ ] T011: Implement `MetricCollector` to track energy, time, and collisions.
 - [ ] T012: Implement "Termination Conditions" (Goal reached, Forbidden zone, Timeout).
