@@ -23,3 +23,5 @@ wheels/
 .amazonq/
 .github/copilot/
 .kittify/.dashboard
+# Excluded via sparse-checkout
+kitty-specs/
