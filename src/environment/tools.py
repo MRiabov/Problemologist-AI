@@ -8,6 +8,12 @@ WORKSPACE_DIR = os.path.abspath("workspace")
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
 
 
+def set_workspace_dir(path: str):
+    global WORKSPACE_DIR
+    WORKSPACE_DIR = os.path.abspath(path)
+    os.makedirs(WORKSPACE_DIR, exist_ok=True)
+
+
 def write_script(content: str, filename: str = "design.py") -> str:
     """
     Writes content to a file in the workspace.
