@@ -17,10 +17,10 @@
 
 ### WP02: Dashboard Shell & Text Components
 
-- [ ] T005: Create `src/dashboard/main.py` with basic layout (Sidebar/Main)
-- [ ] T006: Implement `src/dashboard/components/chat.py` (CoT & Logs)
-- [ ] T007: Implement `src/dashboard/components/code.py` (Syntax highlighting)
-- [ ] T008: Implement `src/dashboard/components/sidebar.py` (Episode selection)
+- [x] T005: Create `src/dashboard/main.py` with basic layout (Sidebar/Main)
+- [x] T006: Implement `src/dashboard/components/chat.py` (CoT & Logs)
+- [x] T007: Implement `src/dashboard/components/code.py` (Syntax highlighting)
+- [x] T008: Implement `src/dashboard/components/sidebar.py` (Episode selection)
 
 *Dependency Setup*: Depends on WP01
 *Parallelism*: Can be done partly in parallel with WP03, but WP03 integrates here.
