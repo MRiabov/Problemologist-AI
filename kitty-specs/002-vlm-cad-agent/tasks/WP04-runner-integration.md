@@ -8,6 +8,7 @@ subtasks:
 - T015
 - T016
 agent: "gemini"
+assignee: "gemini-cli"
 shell_pid: "271099"
 reviewed_by: "MRiabov"
 review_status: "approved"

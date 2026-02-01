@@ -10,6 +10,7 @@ subtasks:
   - "T004"
   - "T005"
 agent: "Antigravity"
+assignee: "gemini-cli"
 reviewed_by: "MRiabov"
 review_status: "approved"
 shell_pid: "90978"

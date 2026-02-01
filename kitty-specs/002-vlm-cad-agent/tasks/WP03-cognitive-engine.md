@@ -14,6 +14,7 @@ subtasks:
 - T0013
 shell_pid: "161127"
 agent: "gemini"
+assignee: "gemini-cli"
 reviewed_by: "MRiabov"
 review_status: "approved"
 ---
