@@ -2,7 +2,7 @@
 work_package_id: WP04
 title: Process Isolation & API Service
 lane: planned
-dependencies: ["WP03"]
+dependencies: []
 subtasks:
 - T013
 - T014

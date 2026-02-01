@@ -2,7 +2,7 @@
 work_package_id: WP05
 title: End-to-End Validation & Reporting
 lane: planned
-dependencies: ["WP04"]
+dependencies: []
 subtasks:
 - T017
 - T018
