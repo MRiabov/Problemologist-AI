@@ -35,11 +35,11 @@
 **Dependencies**: WP02
 **File**: [tasks/WP03-graph-architecture.md](tasks/WP03-graph-architecture.md)
 
-- [ ] **T009**: Implement Graph Builder & Conditionals
-- [ ] **T010**: Implement Planner Node (Reasoning)
-- [ ] **T011**: Implement Actor Node (Tool Calling)
-- [ ] **T012**: Implement Critic Node (Validation & Reflection)
-- [ ] **T013**: Implement Console Streaming (LangGraph Events)
+- [x] T009 Implement Graph Builder & Conditionals
+- [x] T010 Implement Planner Node (Reasoning)
+- [x] T011 Implement Actor Node (Tool Calling)
+- [x] T012 Implement Critic Node (Validation & Reflection)
+- [x] T013 Implement Console Streaming (LangGraph Events)
 
 ### WP04: Runner & Integration
 
