@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Simulation Runtime Core
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T009
@@ -85,3 +85,4 @@ The core loop:
 ## Activity Log
 
 - 2026-02-01T08:51:52Z – Antigravity – shell_pid=119698 – lane=doing – Started implementation via workflow command
+- 2026-02-01T09:00:17Z – Antigravity – shell_pid=119698 – lane=for_review – Implemented SimulationLoop, AgentProtocol, Metrics and Termination logic. Verified with unit tests.
