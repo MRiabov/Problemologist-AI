@@ -12,6 +12,7 @@ subtasks:
 - T013
 - T014
 shell_pid: "473862"
+assignee: "Antigravity"
 agent: "Antigravity"
 reviewed_by: "MRiabov"
 review_status: "approved"

@@ -10,6 +10,7 @@ title: "Setup, Persistence & Foundation"
 phase: "Phase 1 - Foundation"
 lane: "done"
 dependencies: []
+assignee: "Antigravity"
 agent: "Antigravity"
 shell_pid: "72514"
 review_status: "has_feedback"
@@ -17,7 +18,8 @@ reviewed_by: "MRiabov"
 history:
   - timestamp: "{{TIMESTAMP}}"
     lane: "planned"
-    agent: "system"
+    assignee: "Antigravity"
+agent: "system"
     action: "Prompt generated via /spec-kitty.tasks"
 ---
 

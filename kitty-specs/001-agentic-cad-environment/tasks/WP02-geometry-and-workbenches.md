@@ -10,6 +10,7 @@ subtasks:
 - T009
 - T010
 phase: Phase 2 - Domain Logic
+assignee: "Antigravity"
 agent: "Antigravity"
 shell_pid: "96023"
 reviewed_by: "MRiabov"
@@ -17,7 +18,8 @@ review_status: "approved"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
-  agent: system
+  assignee: "Antigravity"
+agent: system
   action: Prompt generated via /spec-kitty.tasks
 ---
 

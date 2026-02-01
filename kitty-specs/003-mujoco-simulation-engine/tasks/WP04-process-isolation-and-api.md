@@ -10,6 +10,7 @@ subtasks:
 - T016
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
+assignee: "Antigravity"
 agent: "gemini-reviewer"
 shell_pid: "227533"
 ---

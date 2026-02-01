@@ -10,6 +10,7 @@ subtasks:
 - T023
 - T024
 phase: Phase 5 - Integration
+assignee: "Antigravity"
 agent: "Gemini"
 shell_pid: "152717"
 reviewed_by: "MRiabov"
@@ -17,7 +18,8 @@ review_status: "approved"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
-  agent: system
+  assignee: "Antigravity"
+agent: system
   action: Prompt generated via /spec-kitty.tasks
 ---
 

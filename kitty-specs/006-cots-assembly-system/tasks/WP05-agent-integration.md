@@ -1,6 +1,8 @@
 ---
 work_package_id: WP05
 title: Agent Integration
+agent: "Antigravity"
+assignee: "Antigravity"
 lane: "for_review"
 dependencies: [WP04]
 base_branch: main

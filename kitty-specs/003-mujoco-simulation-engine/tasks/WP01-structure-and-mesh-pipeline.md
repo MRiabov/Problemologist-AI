@@ -8,6 +8,7 @@ subtasks:
   - T002
   - T003
   - T004
+assignee: "Antigravity"
 agent: "Antigravity"
 shell_pid: "79273"
 reviewed_by: "MRiabov"
