@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Tool Integration & Caching
-lane: "doing"
+lane: "for_review"
 dependencies: [WP03, WP04]
 base_branch: 004-advanced-manufacturing-workbenches-WP03
 base_commit: 2c0348a4fca3c719c7dbaa9ae22473b672c7b6b2
@@ -55,3 +55,7 @@ The agent shouldn't instantiate workbenches directly. It calls `check_manufactur
 *   `check_manufacturability` is available in `tools.py`.
 *   Caching works (second call is instant).
 *   Output format matches schema.
+
+## Activity Log
+
+- 2026-02-01T11:42:32Z – unknown – shell_pid=234286 – lane=for_review – Integrated tool with caching and unified API. Completed end-to-end integration.
