@@ -32,6 +32,16 @@ async def search_docs_async(query: str) -> str:
     return await asyncio.to_thread(env_tools.search_docs, query)
 
 
+async def search_parts_async(query: str) -> str:
+    """Async wrapper for searching COTS parts."""
+    return await asyncio.to_thread(env_tools.search_parts, query)
+
+
+async def preview_part_async(part_id: str) -> str:
+    """Async wrapper for previewing a COTS part."""
+    return await asyncio.to_thread(env_tools.preview_part, part_id)
+
+
 async def submit_design_async(control_path: str) -> str:
     """Async wrapper for submitting a design."""
     global _ACTIVE_ENV

@@ -47,10 +47,10 @@ class CADEnv(gym.Env):
         self.sim_bridge = mujoco_bridge.MujocoBridge()
 
         # Action Space
-        # tool: 0=write, 1=edit, 2=preview, 3=search, 4=submit
+        # tool: 0=write, 1=edit, 2=preview, 3=search, 4=submit, 5=search_parts, 6=preview_part
         self.action_space = spaces.Dict(
             {
-                "tool": spaces.Discrete(5),
+                "tool": spaces.Discrete(7),
                 "arguments": spaces.Text(min_length=0, max_length=100000),
             }
         )
@@ -113,6 +113,8 @@ class CADEnv(gym.Env):
             2: "preview_design",
             3: "search_docs",
             4: "submit_design",
+            5: "search_parts",
+            6: "preview_part",
         }
         tool_name = tool_map.get(tool_idx, "unknown")
 
@@ -140,6 +142,10 @@ class CADEnv(gym.Env):
                     )
             elif tool_name == "search_docs":
                 tool_output = tools.search_docs(arguments)
+            elif tool_name == "search_parts":
+                tool_output = tools.search_parts(arguments)
+            elif tool_name == "preview_part":
+                tool_output = tools.preview_part(arguments)
             elif tool_name == "submit_design":
                 reward, tool_output, terminated = self._submit_design()
             else:
