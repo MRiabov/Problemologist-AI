@@ -70,10 +70,10 @@ description: "Work package task list template for feature implementation"
 ### Included Subtasks
 
 - [ ] T006 Implement `src/compiler/geometry.py` - Mesh export from `build123d` objects
-- [ ] T007 Implement `src/compiler/geometry.py` - Convex decomposition (or basic hull approximation) for physics
-- [ ] T008 Implement `src/workbenches/base.py` (Abstract Base Class)
-- [ ] T009 [P] Implement `src/workbenches/print_3d.py` - Geometric Checks (Manifold, SingleBody)
-- [ ] T010 [P] Implement `src/workbenches/print_3d.py` - Cost Model
+- [x] T007 Implement `src/compiler/geometry.py` - Convex decomposition (or basic hull approximation) for physics
+- [x] T008 Implement `src/workbenches/base.py` (Abstract Base Class)
+- [x] T009 [P] Implement `src/workbenches/print_3d.py` - Geometric Checks (Manifold, SingleBody)
+- [x] T010 [P] Implement `src/workbenches/print_3d.py` - Cost Model
 
 ### Implementation Notes
 
