@@ -1,108 +1,74 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan - Benchmark Scenario Generator
 
+**Feature**: 005-benchmark-scenario-generator
+**Goal**: Build an automated pipeline to generate, validate, and export physics benchmark scenarios.
+**Architecture**: Standalone utility package driven by `deepagents` (LangGraph).
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
+## 1. Technical Context
 
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
+This feature implements a "Scenario Architect" agent—a specialized automation that uses an LLM to author Python code. Unlike the main VLM CAD Agent (which *solves* problems), this agent *creates* problems.
 
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+### Technology Stack
 
-## Summary
+* **Orchestration**: `deepagents` (LangGraph) for the "Plan → Code → Validate" loop.
+* **LLM Interface**: Reuse `src/agent/utils/llm.py` (Gemini/OpenAI).
+* **Geometry**: `build123d` for parametric CAD generation.
+* **Physics**: `mujoco` for XML generation and stability checks.
+* **File System**: Output to `datasets/benchmarks/`.
 
-[Extract from feature spec: primary requirement + technical approach from research]
+### Key Components
 
-## Technical Context
+1. **Generator Agent**: A LangGraph state machine with nodes for `Prompting`, `Coding`, and `Reviewing`.
+2. **Validator**: A headless script that loads generated XMLs into MuJoCo to check for instant explosions (instability).
+3. **Randomizer**: Logic injected into generated scripts to vary parameters (±40% bounds) via a seed.
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+## 2. Constitution Check
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+* **No-Go**: No runtime dependency on the generator for the end-user agent. This is a build-time tool.
+* **Conventions**: Python scripts must follow project linting rules. Generated assets (STL/XML) must be deterministic for a given seed.
 
-## Constitution Check
+## 3. High-Level Design
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+### 3.1 Data Model (`data-model.md`)
 
-[Gates determined based on constitution file]
+* **ScenarioManifest**: Metadata for a benchmark (name, tier, parameters, seed).
+* **GenerationRequest**: Input prompt + config (e.g., "10 levers, tier 2").
+* **ValidationReport**: Result of the stability check (pass/fail, max velocity).
 
-## Project Structure
-
-### Documentation (this feature)
+### 3.2 Directory Structure
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
-```
-
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
-
-```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+  generators/
+    benchmark/
+      __init__.py
+      agent.py       # LangGraph definition
+      prompts.py     # System prompts for scenario authoring
+      validator.py   # Headless MuJoCo check
+      manager.py     # CLI entry point
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+## 4. Phase 1: Core Generator Logic
 
-## Complexity Tracking
+**Goal**: Can generate a *single* valid scenario from a text prompt.
 
-*Fill ONLY if Constitution Check has violations that must be justified*
+1. **Scaffold Generator Package**: Create `src/generators/benchmark/` structure.
+2. **Implement Validator**: Write `validator.py` to load an MJCF string and step the sim.
+3. **Implement Generator Agent**:
+    * **Planner Node**: Breaks down "Tier 1 Peg-in-Hole" into geometric requirements.
+    * **Coder Node**: writes a `build123d` script with a `build(seed)` function.
+    * **Critique Node**: Uses the `Validator` output to feedback errors to the Coder.
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+## 5. Phase 2: Batch Processing & Randomization
+
+**Goal**: Can generate *40+* diverse scenarios and manage the dataset.
+
+1. **Implement Randomization Wrapper**: A harness that runs the generated `build(seed)` function multiple times with different seeds to verify stability across the parameter range.
+2. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
+3. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
+
+## 6. Success Criteria Verification
+
+* **Efficiency**: Run `manager generate --count 10` and measure runtime (Target: < 5 mins).
+* **Yield**: Count valid vs. invalid outputs in the `staging` folder.
+* **Quality**: Manual review of the generated "Tier 2" lever mechanisms.
