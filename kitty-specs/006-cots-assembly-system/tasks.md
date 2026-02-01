@@ -78,11 +78,11 @@ Implementation breakdown for the COTS Assembly System. The work is divided into 
 **Priority**: P1
 **Test**: Verify `preview_part` returns a valid image path and description.
 
-- [ ] T015: Create `src/assets/cots_descriptions.json` with initial data
-- [ ] T016: Implement helper to load/match descriptions from JSON
-- [ ] T017: Implement rendering logic (generate `build123d` object -> export STL/image)
-- [ ] T018: Integrate rendering into `PartIndex.preview`
-- [ ] T019: Handle caching of rendered images (optional but good)
+- [x] T015: Create `src/assets/cots_descriptions.json` with initial data
+- [x] T016: Implement helper to load/match descriptions from JSON
+- [x] T017: Implement rendering logic (generate `build123d` object -> export STL/image)
+- [x] T018: Integrate rendering into `PartIndex.preview`
+- [x] T019: Handle caching of rendered images (optional but good)
 
 **Implementation Notes**:
 - Reuse existing rendering logic from Spec 001 if available (check `src/compiler` or similar).
