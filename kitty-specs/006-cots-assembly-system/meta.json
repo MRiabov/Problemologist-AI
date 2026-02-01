@@ -1,0 +1,10 @@
+{
+  "feature_number": "006",
+  "slug": "006-cots-assembly-system",
+  "friendly_name": "COTS Assembly System",
+  "mission": "software-dev",
+  "source_description": "see project idea 011 in @project-ideas.md. there is also a library called bd_warehouse. it's a collection of snippets for various stuff for build123d. namely, NEMA motors, beams, bearings, fasteners, gears. We won't need pipes and flanges yet, and gears probably too (because who will simulate them? Well, it's a separate piece of work if gears are added anyway). Springs may be necessary too, though the lib does not support it. So... Add an index that the model can query. A small search engine for parts. Probably just by substrings and keywords. Model sizes are specified. Possibly, the model should be able to preview those parts via a tool call (e.g. to figure out orientation)",
+  "created_at": "2026-02-01T12:00:00Z",
+  "target_branch": "main",
+  "vcs": "git"
+}
