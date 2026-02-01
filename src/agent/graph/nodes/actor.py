@@ -5,44 +5,40 @@ from src.agent.utils.config import Config
 from src.agent.tools.env import write_script, edit_script, preview_design, submit_design, search_docs
 from src.agent.tools.memory import read_journal, write_journal
 
-TOOLS = [
-    write_script, 
-    edit_script, 
-    preview_design, 
-    submit_design, 
-    search_docs, 
-    read_journal, 
-    write_journal
-]
+ACTOR_PROMPT = """You are the CAD Engineer (Actor).
+Your goal is to execute the technical plan provided by the Planner.
+You have access to a workspace where you can write and edit Python scripts using build123d.
 
-ACTOR_SYSTEM_PROMPT = """You are the Actor for the VLM CAD Agent. Your goal is to execute the current plan by calling the available tools.
+Follow the plan step-by-step.
+- Use 'write_script' to create new files.
+- Use 'edit_script' to modify existing ones.
+- Use 'search_docs' if you are unsure about syntax.
+- Use 'preview_design' to check your geometry visually.
+- Use 'submit_design' ONLY when you are confident the design is complete and meets requirements.
 
-Current Plan:
-{plan}
-
-Use the available tools to implement the geometry, material properties, and simulation setup. 
-If you need more information, use `search_docs` or `read_journal`.
-When you have implemented a part of the design, use `preview_design` to check it.
-When you are ready to finalize, use `submit_design`.
-
-Always provide a brief thought process before calling a tool."""
-
+You can also read/write to the journal for memory.
+"""
 
 def actor_node(state: AgentState):
     """
-    The Actor node that decides which tool to call based on the plan and history.
+    Executes the next step in the plan using tools.
     """
-    model = get_model(Config.LLM_MODEL, Config.TEMPERATURE)
-    model_with_tools = model.bind_tools(TOOLS)
+    model = get_model(Config.LLM_MODEL)
     
-    # Prepare the system message with the current plan
-    system_msg = SystemMessage(content=ACTOR_SYSTEM_PROMPT.format(plan=state["plan"]))
+    # Bind tools to the model
+    tools = [write_script, edit_script, preview_design, submit_design, search_docs, read_journal, write_journal]
+    model_with_tools = model.bind_tools(tools)
     
-    # Invoke the model with the full message history
-    # LangGraph's add_messages will handle merging this into the state
-    response = model_with_tools.invoke([system_msg] + state["messages"])
+    messages = [SystemMessage(content=ACTOR_PROMPT)] + state["messages"]
+    
+    # We might want to inject the plan as context if it's not the most recent message
+    if state.get("plan"):
+         messages.append(SystemMessage(content=f"Current Plan:\n{state['plan']}"))
+
+    response = model_with_tools.invoke(messages)
     
     return {
         "messages": [response],
+        # Increment step count to avoid infinite loops
         "step_count": state.get("step_count", 0) + 1
     }

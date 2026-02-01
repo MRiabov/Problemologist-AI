@@ -5,58 +5,47 @@ from langchain_core.messages import AIMessage, ToolMessage
 
 console = Console()
 
-
-def visualize_node_entry(node_name: str):
-    """Prints a header when entering a graph node."""
-    console.print(f"\n[bold magenta]>>> Entering Node:[/bold magenta] [bold cyan]{node_name}[/bold cyan]")
-
-
-def visualize_node_output(node_name: str, output: dict):
-    """Prints the output of a graph node in a formatted panel."""
-    if "messages" in output:
-        last_msg = output["messages"][-1]
-        
-        if isinstance(last_msg, AIMessage):
-            content = last_msg.content
-            if last_msg.tool_calls:
-                tools = ", ".join([tc["name"] for tc in last_msg.tool_calls])
-                content += f"\n\n[bold yellow]Tool Calls:[/bold yellow] {tools}"
-            
-            console.print(Panel(
-                Markdown(content) if content else "Empty AIMessage",
-                title=f"Output from {node_name}",
-                border_style="blue"
-            ))
-        elif isinstance(last_msg, ToolMessage):
-            console.print(Panel(
-                last_msg.content,
-                title=f"Tool Output ({last_msg.name})",
-                border_style="green"
-            ))
+def visualize_stream(graph, inputs, config=None):
+    """
+    Streams the graph execution and renders updates to the console using Rich.
+    """
+    console.print(Panel("[bold green]Starting VLM CAD Agent...[/bold green]", title="System"))
     
-    if "plan" in output and node_name == "planner":
-        console.print(Panel(
-            Markdown(output["plan"]),
-            title="Updated Plan",
-            border_style="yellow"
-        ))
-
-
-async def stream_graph_async(graph, inputs, config=None):
-    """
-    Streams graph updates asynchronously and visualizes them in the console.
-    """
-    async for event in graph.astream(inputs, config=config, stream_mode="updates"):
-        for node_name, output in event.items():
-            visualize_node_entry(node_name)
-            visualize_node_output(node_name, output)
-
-
-def stream_graph(graph, inputs, config=None):
-    """
-    Streams graph updates synchronously and visualizes them in the console.
-    """
+    current_node = None
+    
+    # We use stream_mode="updates" to see the state changes from each node
     for event in graph.stream(inputs, config=config, stream_mode="updates"):
-        for node_name, output in event.items():
-            visualize_node_entry(node_name)
-            visualize_node_output(node_name, output)
+        for node_name, updates in event.items():
+            
+            # Print Node Entry
+            color = "blue"
+            if node_name == "planner": color = "magenta"
+            elif node_name == "actor": color = "cyan"
+            elif node_name == "critic": color = "yellow"
+            elif node_name == "tools": color = "green"
+            
+            console.print(Panel(f"Exiting Node: [bold]{node_name}[/bold]", border_style=color))
+            
+            # Display relevant updates
+            if "messages" in updates:
+                messages = updates["messages"]
+                if not isinstance(messages, list):
+                    messages = [messages]
+                    
+                for msg in messages:
+                    if isinstance(msg, AIMessage):
+                        content = msg.content
+                        if content:
+                            console.print(Panel(Markdown(content), title=f"🤖 {node_name.capitalize()}", border_style=color))
+                        
+                        if msg.tool_calls:
+                            for tc in msg.tool_calls:
+                                console.print(f"[bold {color}]🛠️  Tool Call: {tc['name']}[/bold {color}]")
+                                
+                    elif isinstance(msg, ToolMessage):
+                        console.print(Panel(msg.content[:500] + ("..." if len(msg.content) > 500 else ""), title=f"🔧 Tool Output ({msg.name})", border_style="dim white"))
+            
+            if "plan" in updates:
+                 console.print(Panel(Markdown(updates["plan"]), title="📋 Updated Plan", border_style="magenta"))
+
+    console.print(Panel("[bold green]Execution Complete[/bold green]", title="System"))

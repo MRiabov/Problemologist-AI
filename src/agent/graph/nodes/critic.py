@@ -1,52 +1,37 @@
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from src.agent.graph.state import AgentState
 from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
-from src.agent.tools.memory import write_journal
 
-CRITIC_SYSTEM_PROMPT = """You are the Critic for the VLM CAD Agent. Your goal is to evaluate the results of a design preview or submission.
+CRITIC_PROMPT = """You are the Design Reviewer (Critic).
+Your job is to evaluate the results of the recent design action (Preview or Submission).
 
-Current Plan:
-{plan}
+1. If this is a PREVIEW:
+   - Check if the visual feedback (if described) looks correct.
+   - If there are errors, suggest fixes.
+   - If it looks good, encourage the Actor to proceed or submit.
 
-Analyze the latest tool output (preview or submission results) and decide if the design is successful.
+2. If this is a SUBMISSION:
+   - Check the validation score/report.
+   - If successful, celebrate and finalize the task.
+   - If failed, analyze the failure reason and explicitly update the plan to fix it.
 
-1. If SUCCESSFUL: 
-   - Use `write_journal` to record the final design and achievements.
-   - Summarize the final result.
-2. If FAILURE/NEEDS IMPROVEMENT:
-   - Identify specifically what went wrong.
-   - Provide an updated plan to fix the issues.
-   - The updated plan should be a numbered list.
-
-Always provide your critical analysis before deciding on success or failure."""
-
+Output your feedback clearly.
+"""
 
 def critic_node(state: AgentState):
     """
-    The Critic node that validates results and decides on the next steps.
+    Analyzes the output of the tools (preview/submit) and decides next steps.
     """
-    model = get_model(Config.LLM_MODEL, Config.TEMPERATURE)
-    # Critic might need to write to the journal
-    model_with_tools = model.bind_tools([write_journal])
+    model = get_model(Config.LLM_MODEL)
     
-    # Find the latest tool output related to preview or submission
-    latest_output = "No tool output found."
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, ToolMessage):
-            latest_output = msg.content
-            break
-            
-    system_msg = SystemMessage(content=CRITIC_SYSTEM_PROMPT.format(
-        plan=state["plan"],
-        tool_output=latest_output
-    ))
+    # We look at the last message, which should be a ToolMessage from the execution
+    # or the sequence of messages leading up to it.
     
-    response = model_with_tools.invoke([system_msg] + state["messages"])
+    messages = [SystemMessage(content=CRITIC_PROMPT)] + state["messages"]
     
-    # Logic to detect if we should update the plan
-    # For now, we'll just append the response to messages. 
-    # In a more advanced version, we could parse the response to update state["plan"]
+    # We ask the LLM to review the situation
+    response = model.invoke(messages)
     
     return {
         "messages": [response]
