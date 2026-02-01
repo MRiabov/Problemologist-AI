@@ -2,7 +2,7 @@
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
 lane: "done"
-dependencies: []
+dependencies: "[]"
 subtasks:
   - "T001"
   - "T002"

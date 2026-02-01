@@ -2,7 +2,7 @@
 work_package_id: WP04
 title: Runner & Integration
 lane: planned
-dependencies: ["WP03"]
+dependencies: "[]"
 subtasks:
 - T014
 - T015
