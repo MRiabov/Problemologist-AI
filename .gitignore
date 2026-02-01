@@ -31,3 +31,6 @@ kitty-specs/**/tasks/*.md
 *.db
 *.db-wal
 *.db-shm
+
+# Excluded via sparse-checkout
+kitty-specs/
