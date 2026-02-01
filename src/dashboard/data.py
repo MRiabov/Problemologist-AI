@@ -147,18 +147,12 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                             "content": "from build123d import *\nwith BuildPart() as p:\n    Box(10, 10, 10)"  # noqa: E501
                         }
                     },
-                    "tool_output": "Successfully wrote design.py"
+                    "tool_output": "Successfully wrote design.py",
+                    "artifacts": ["design.stl"]
                 }
             ]
         }
     return {"id": episode_id, "steps": []}
-
-def get_latest_episode() -> dict[str, Any] | None:
-    """Returns the latest episode."""
-    episodes = get_all_episodes()
-    if not episodes:
-        return None
-    return get_episode_by_id(episodes[0]["id"])
 
 def get_step_artifacts(episode_id: str, step_index: int) -> list[str]:
     """Returns artifacts for a given step."""
@@ -169,3 +163,13 @@ def get_step_artifacts(episode_id: str, step_index: int) -> list[str]:
     if step_index < len(steps):
         return steps[step_index].get("artifacts", [])
     return []
+
+def get_latest_episode() -> dict[str, Any] | None:
+    """Returns the latest episode."""
+    episodes = get_all_episodes()
+    if not episodes:
+        return None
+    # Latest is first in DB (descending), but last in mock list
+    # Let's be safe and check timestamp
+    sorted_episodes = sorted(episodes, key=lambda x: x["timestamp"], reverse=True)
+    return get_episode_by_id(sorted_episodes[0]["id"])

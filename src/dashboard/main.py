@@ -1,8 +1,12 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 from src.dashboard.components.chat import render_chat
 from src.dashboard.components.code import render_code
 from src.dashboard.components.sidebar import render_sidebar
+from src.dashboard.components.viewer_3d import render_3d_artifact
+from src.dashboard.data import get_latest_episode, get_step_artifacts
+from src.dashboard.utils import resolve_artifact_path
 
 
 def init_session_state():
@@ -22,6 +26,16 @@ def main():
     )
     
     init_session_state()
+    
+    # Auto-refresh if in Live Mode
+    if st.session_state.live_mode:
+        st_autorefresh(interval=2000, key="live_refresh")
+        # In live mode, force selection of latest
+        latest = get_latest_episode()
+        if latest:
+            st.session_state.selected_episode_id = latest["id"]
+            num_steps = len(latest.get("steps", []))
+            st.session_state.selected_step_index = max(0, num_steps - 1)
     
     # Render Sidebar
     episode = render_sidebar()
@@ -47,8 +61,27 @@ def main():
                 
         with col2:
             st.subheader("3D Preview & Simulation")
-            st.info("3D Visualization Component Placeholder (WP03)")
-            # This is where the MuJoCo/Three.js view will go
+            
+            # Fetch artifacts for current step
+            artifacts = get_step_artifacts(
+                st.session_state.selected_episode_id, 
+                st.session_state.selected_step_index
+            )
+            
+            # Filter for 3D files
+            three_d_files = [a for a in artifacts if a.endswith(('.stl', '.obj'))]
+            
+            if three_d_files:
+                # If multiple, allow selection
+                if len(three_d_files) > 1:
+                    selected_file = st.selectbox("Select Mesh", three_d_files)
+                else:
+                    selected_file = three_d_files[0]
+                
+                path = resolve_artifact_path(selected_file)
+                render_3d_artifact(path)
+            else:
+                st.info("No 3D artifacts generated in this step.")
             
     else:
         st.warning("Please select an episode from the sidebar or enable Live Mode.")

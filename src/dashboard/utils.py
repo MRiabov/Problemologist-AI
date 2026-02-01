@@ -3,15 +3,21 @@ from pathlib import Path
 
 def get_project_root() -> Path:
     """Returns the absolute path to the project root."""
-    # Assuming this file is at src/dashboard/utils.py
-    # Path(__file__) is .../src/dashboard/utils.py
-    # .parent is .../src/dashboard/
-    # .parent.parent is .../src/
-    # .parent.parent.parent is .../root/
     return Path(__file__).parent.parent.parent.absolute()
 
-def resolve_artifact_path(relative_path: str) -> Path:
-    """Joins project root with the relative path stored in DB and verifies existence."""
+def resolve_artifact_path(path_or_name: str) -> Path:
+    """
+    Resolves the path to an artifact.
+    First checks if it's a relative path from project root, 
+    then checks in the default workspace/artifacts folder.
+    """
     root = get_project_root()
-    full_path = root / relative_path
-    return full_path
+    
+    # Try as direct relative path (from DB)
+    direct_path = root / path_or_name
+    if direct_path.exists():
+        return direct_path
+        
+    # Try in default artifacts folder
+    fallback_path = root / "workspace" / "artifacts" / path_or_name
+    return fallback_path

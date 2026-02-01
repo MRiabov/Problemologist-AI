@@ -25,6 +25,7 @@ dependencies = [
     "sqlalchemy>=2.0.46",
     "stpyvista>=0.1.4",
     "streamlit>=1.53.1",
+    "streamlit-autorefresh>=1.0.1",
     "trimesh[easy]>=4.11.1",
     "uvicorn>=0.40.0",
 ]
