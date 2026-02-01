@@ -24,7 +24,8 @@ This document tracks future features, infrastructure components, and research di
   * **Tier 1 (Spatial)**: Peg-in-Hole, Gravity Trap (Catching).
   * **Tier 2 (Kinematic)**: Class 1 Lever (Force balancing), Crank-Slider (Motion conversion).
   * **Tier 3 (Integrated)**: Motor Mounting Bracket, Under-actuated Gripper.
-  * **Artifacts**: Pre-built MJCF templates with defined "Start", "Goal", and "Forbid" zones.
+  <!-- dev note: I'm not sure about tier 3... it's kind of.. off. I think I'll leave it. Spatial and kinematic go first at least + we don't have the simulator that can actually compute FEM for something like motor mounting bracket (yet. But still.) -->
+  * **Artifacts**: Pre-built MJCF templates with defined "Start", "Build" (may be merged with Start") "Goal", and "Forbid" zones.
   <!-- dev note: YES! the last time, I had to do it by hand. However ...-->
 
 ## 2. Infrastructure & Tooling
@@ -82,9 +83,6 @@ This document tracks future features, infrastructure components, and research di
   * **Remote Execution**: Offloading heavy MuJoCo/FEM simulations to cloud workers.
   * **Parallelism**: Running 100 simulations in parallel for RL training. -->
 
-      *   **Remote Execution**: Offloading heavy MuJoCo/FEM simulations to cloud workers.
-      *   **Parallelism**: Running 100 simulations in parallel for RL training.
-  
 ### 011-cots-assembly-system
 
 * **Status**: Missing
@@ -94,3 +92,5 @@ This document tracks future features, infrastructure components, and research di
   * **Digital Twin Catalog**: Parametric definitions of standard parts (NEMA motors, 608 bearings) with rigorous metadata (mass, torque, dimensions).
   * **Port-Based Mating**: Every COTS part exposes named "Ports" (Coordinate Systems) for attachment (e.g., `motor.mount_face`, `motor.shaft`).
   * **Virtual Fasteners**: Helper tools to "drill" matching holes in custom parts (`bracket -= motor.hole_pattern`) and generate `<weld>` constraints in MuJoCo to simulate screws. -->
+  <!-- DEV NOTE: yes - also a library called bd_warehouse exists with all of those snippets. https://bd-warehouse.readthedocs.io/en/latest/ -->
+  
