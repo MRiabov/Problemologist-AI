@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Simulation Bridge (MuJoCo)
-lane: "doing"
+lane: "done"
 dependencies: []
 subtasks:
 - T011
@@ -11,6 +11,8 @@ subtasks:
 phase: Phase 3 - Physics
 agent: "Antigravity"
 shell_pid: "90978"
+reviewed_by: "MRiabov"
+review_status: "approved"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -97,3 +99,4 @@ history:
 - 2026-02-01T08:26:19Z – Antigravity – shell_pid=103573 – lane=doing – Started implementation via workflow command
 - 2026-02-01T08:29:45Z – Antigravity – shell_pid=103573 – lane=for_review – Implemented Mujoco bridge with template loading, injection, and metrics. Tests passed.
 - 2026-02-01T08:31:26Z – Antigravity – shell_pid=90978 – lane=doing – Started implementation via workflow command
+- 2026-02-01T09:42:37Z – Antigravity – shell_pid=90978 – lane=done – Approving stale WP03: Implementation is complete and identical to verified version in WP05.
