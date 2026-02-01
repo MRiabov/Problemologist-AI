@@ -1,12 +1,16 @@
 ---
-work_package_id: "WP05"
-title: "Agent Integration"
-lane: "planned"
-dependencies: ["WP04"]
+work_package_id: WP05
+title: Agent Integration
+lane: "doing"
+dependencies: [WP04]
+base_branch: main
+base_commit: dba744bf6522a47a4f6f52a17f93666893fae774
+created_at: '2026-02-01T17:34:48.018398+00:00'
 subtasks:
-  - T020
-  - T021
-  - T022
+- T020
+- T021
+- T022
+shell_pid: "490041"
 ---
 
 # WP05: Agent Integration
