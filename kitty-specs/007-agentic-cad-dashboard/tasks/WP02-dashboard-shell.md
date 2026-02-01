@@ -1,9 +1,11 @@
 ---
 work_package_id: WP02
 title: Dashboard Shell & Text Components
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks: [T005, T006, T007, T008]
+agent: "gemini-cli"
+shell_pid: "350435"
 ---
 
 # WP02: Dashboard Shell & Text Components
@@ -79,3 +81,7 @@ subtasks: [T005, T006, T007, T008]
 - Verify you can switch between episodes.
 - Verify sliding the step slider updates the displayed chat history.
 - Verify code snippets appear when relevant steps are selected.
+
+## Activity Log
+
+- 2026-02-01T13:53:25Z – gemini-cli – shell_pid=350435 – lane=doing – Started implementation via workflow command
