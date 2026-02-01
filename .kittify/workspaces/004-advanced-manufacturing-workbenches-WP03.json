@@ -1,0 +1,14 @@
+{
+  "wp_id": "WP03",
+  "feature_slug": "004-advanced-manufacturing-workbenches",
+  "worktree_path": ".worktrees/004-advanced-manufacturing-workbenches-WP03",
+  "branch_name": "004-advanced-manufacturing-workbenches-WP03",
+  "base_branch": "004-advanced-manufacturing-workbenches-WP02",
+  "base_commit": "58830b6ba99207131bb366fcf00bae5a3246b61a",
+  "dependencies": [
+    "WP02"
+  ],
+  "created_at": "2026-02-01T11:26:45.584179+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}
