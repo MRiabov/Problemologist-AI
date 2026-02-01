@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Generator Agent Core
-lane: "for_review"
+lane: "doing"
 dependencies: [WP01]
 base_branch: 005-benchmark-scenario-generator-WP01
 base_commit: bd71bfd96bc9caf50b2527d6304c62ca85b98bde
@@ -10,7 +10,8 @@ subtasks:
 - T004
 - T005
 - T006
-shell_pid: "321215"
+shell_pid: "345676"
+agent: "Gemini"
 ---
 
 ## Objective
@@ -63,3 +64,4 @@ The agent needs to know how to write `build123d` code. We will use a multi-step 
 ## Activity Log
 
 - 2026-02-01T13:23:21Z – unknown – shell_pid=321215 – lane=for_review – Implemented generator agent with planner, coder, and validator nodes using LangGraph.
+- 2026-02-01T13:49:20Z – Gemini – shell_pid=345676 – lane=doing – Started review via workflow command
