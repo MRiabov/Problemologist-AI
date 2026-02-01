@@ -17,7 +17,7 @@ review_status: "has_feedback"
 reviewed_by: "MRiabov"
 history:
   - timestamp: "{{TIMESTAMP}}"
-    lane: "planned"
+    lane: "done"
     assignee: "Antigravity"
 agent: "system"
     action: "Prompt generated via /spec-kitty.tasks"
@@ -140,3 +140,4 @@ agent: "system"
 - 2026-02-01T07:16:08Z – Antigravity – shell_pid=63746 – lane=for_review – Complete implementation with SQLAlchemy and Alembic. All tests passing.
 - 2026-02-01T07:28:41Z – Antigravity – shell_pid=72514 – lane=doing – Started review via workflow command
 - 2026-02-01T07:33:10Z – Antigravity – shell_pid=72514 – lane=done – Review passed: Implementation follows spec and plan. Persistence layer verified with tests. Alembic initialized correctly.
+- 2026-02-01T18:41:16Z – Antigravity – lane=done – Marking as done for acceptance check
