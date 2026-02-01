@@ -1,13 +1,15 @@
 ---
 work_package_id: WP02
 title: Scene Compiler (MJCF Generator)
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T005
 - T006
 - T007
 - T008
+agent: "Antigravity"
+shell_pid: "60800"
 ---
 
 # WP02: Scene Compiler (MJCF Generator)
@@ -90,3 +92,7 @@ We must respect the "Zone Convention":
 - [ ] Zones appear as non-colliding visual ghosts.
 - [ ] Obstacles appear as colliders.
 - [ ] Agent joints generate functional `<joint>` and `<motor>` tags.
+
+## Activity Log
+
+- 2026-02-01T07:36:12Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
