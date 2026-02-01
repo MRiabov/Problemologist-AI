@@ -12,6 +12,7 @@ dependencies = [
     "gymnasium>=1.2.3",
     "mujoco>=3.4.0",
     "numpy>=2.4.2",
+    "pillow>=12.1.0",
     "sqlalchemy>=2.0.46",
     "trimesh[easy]>=4.11.1",
     "uvicorn>=0.40.0",

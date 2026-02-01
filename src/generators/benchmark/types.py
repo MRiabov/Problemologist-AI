@@ -3,6 +3,7 @@ from typing import TypedDict, List, Optional, Dict, Any
 class ScenarioAssets(TypedDict):
     mjcf: str
     meshes: List[str]
+    images: List[str]
 
 class ScenarioRandomization(TypedDict):
     seed_range: List[int]
