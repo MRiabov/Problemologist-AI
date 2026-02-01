@@ -63,3 +63,25 @@ def test_filter_case_insensitive():
 
     result = read_journal.invoke({"topic": "APPLE"})
     assert "Apple pie recipe" in result
+
+def test_fuzzy_search_typo():
+    write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})
+
+    # "reciipe" is a typo for "recipe"
+    result = read_journal.invoke({"topic": "reciipe"})
+    assert "Apple pie recipe" in result
+
+def test_fuzzy_search_multi_word_typo():
+    write_journal.invoke({"entry": "System architecture design", "tags": ["tech"]})
+
+    # "sytem desig" - typos in both words
+    result = read_journal.invoke({"topic": "sytem desig"})
+    assert "System architecture design" in result
+
+def test_fuzzy_search_partial_no_match():
+    write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})
+
+    # "banana" is completely different
+    result = read_journal.invoke({"topic": "banana"})
+    assert "Apple pie recipe" not in result
+    assert "No journal entries found" in result
