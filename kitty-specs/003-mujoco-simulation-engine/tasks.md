@@ -29,7 +29,7 @@ Depends on WP01
 
 - [x] T005: Implement `SceneCompiler` class to generate MJCF XML structure.
 - [x] T006: Implement "Zone Logic" - map `zone_*` named objects to MuJoCo sites/sensors.
-- [ ] T007: Implement "Actuator Injection" - parse agent joints and add `<motor>` tags.
+- [x] T007: Implement "Actuator Injection" - parse agent joints and add `<motor>` tags.
 - [ ] T008: Verify generated XML is valid by loading it with `mujoco.MjModel.from_xml_string`.
 
 **Implementation Logic**:
