@@ -46,10 +46,10 @@ class CADEnv(gym.Env):
         self.sim_bridge = mujoco_bridge.MujocoBridge()
 
         # Action Space
-        # tool: 0=write, 1=edit, 2=preview, 3=search, 4=submit, 5=search_parts, 6=preview_part
+        # tool: 0=write, 1=edit, 2=preview, 3=search, 4=submit, 5=search_parts, 6=preview_part, 7=manufacturability
         self.action_space = spaces.Dict(
             {
-                "tool": spaces.Discrete(7),
+                "tool": spaces.Discrete(8),
                 "arguments": spaces.Text(min_length=0, max_length=100000),
             }
         )
@@ -113,6 +113,7 @@ class CADEnv(gym.Env):
             4: "submit_design",
             5: "search_parts",
             6: "preview_part",
+            7: "check_manufacturability",
         }
         tool_name = tool_map.get(tool_idx, "unknown")
 
@@ -142,6 +143,17 @@ class CADEnv(gym.Env):
                 tool_output = tools.search_parts(arguments)
             elif tool_name == "preview_part":
                 tool_output = tools.preview_part(arguments)
+            elif tool_name == "check_manufacturability":
+                if "|||" in arguments:
+                    process, quantity_str = arguments.split("|||", 1)
+                    try:
+                        quantity = int(quantity_str)
+                    except ValueError:
+                        quantity = 1
+                else:
+                    process = arguments if arguments else "cnc"
+                    quantity = 1
+                tool_output = str(tools.check_manufacturability("design.py", process, quantity))
             elif tool_name == "submit_design":
                 reward, tool_output, terminated = self._submit_design()
             else:

@@ -16,6 +16,7 @@ from src.agent.tools.env_adapter import (
     submit_design_async,
     update_skill_async,
     write_script_async,
+    check_manufacturability_async,
 )
 
 
@@ -187,3 +188,19 @@ async def preview_part(part_id: str) -> str:
         part_id: The namespaced ID of the part (e.g., 'bd_warehouse:motor:Nema17').
     """
     return await preview_part_async(part_id)
+
+
+@tool
+async def check_manufacturability(
+    design_file: str = "design.py", process: str = "cnc", quantity: int = 1
+) -> dict:
+    """
+    Checks if the design in the specified file can be manufactured using the target process.
+    Supported processes: 'cnc', 'injection_molding'.
+
+    Args:
+        design_file: The name of the script file to analyze.
+        process: The manufacturing process to check against ('cnc' or 'injection_molding').
+        quantity: Target production quantity (affects cost).
+    """
+    return await check_manufacturability_async(design_file, process, quantity)

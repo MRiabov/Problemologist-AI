@@ -15,6 +15,7 @@ from src.agent.tools.env import (
     submit_design,
     update_skill,
     write_script,
+    check_manufacturability,
 )
 from src.agent.tools.memory import read_journal, write_journal
 from src.agent.utils.config import Config
@@ -40,6 +41,7 @@ def build_graph():
         submit_design,
         search_docs,
         update_skill,
+        check_manufacturability,
         read_journal,
         write_journal,
     ]
@@ -94,7 +96,9 @@ def build_graph():
     builder.add_conditional_edges("tools", route_tools)
 
     # Critic -> conditional (loop back or end)
-    def route_critic(state: AgentState) -> Literal["planner", "actor", "skill_populator", "__end__"]:
+    def route_critic(
+        state: AgentState,
+    ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
         # Logic to decide if we are done or need to loop.
         # For this prototype, we'll loop back to Planner to allow for re-planning or continuation.
         # Ideally, the Critic's output (AIMessage) would contain a structured decision or specific text.
