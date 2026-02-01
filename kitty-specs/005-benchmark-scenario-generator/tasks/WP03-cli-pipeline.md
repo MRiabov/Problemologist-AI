@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: CLI & Randomization Pipeline
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: main
 base_commit: d4e4dd4e6ffe2e4bd203a3d3883dd4b7abf5957e
@@ -58,3 +58,7 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 - [ ] `python -m src.generators.benchmark.manager generate --prompt "Box" --count 5` works.
 - [ ] 5 distinct XML/STL sets are created in the output directory.
 - [ ] Manifest files contain correct metadata.
+
+## Activity Log
+
+- 2026-02-01T16:17:21Z – unknown – shell_pid=383008 – lane=for_review – Benchmark scenario generation pipeline implemented. Includes CLI, agent orchestration, batch randomization, and artifact export. Verified with tests.
