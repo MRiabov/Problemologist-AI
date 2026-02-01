@@ -7,7 +7,9 @@ class SimulationRequest(BaseModel):
     Input schema for the simulation service.
     """
     mjcf_xml: str = Field(..., description="The MJCF XML content for the simulation.")
+    agent_script: str = Field(default="", description="Optional Python control logic.")
     duration: float = Field(default=5.0, description="Simulation duration in logic seconds.")
+    goal_pos: Optional[tuple[float, float, float]] = Field(None, description="Optional success zone (x, y, z).")
     config: Dict[str, Any] = Field(default_factory=dict, description="Additional configuration parameters.")
 
 
