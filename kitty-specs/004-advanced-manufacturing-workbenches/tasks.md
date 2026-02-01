@@ -51,7 +51,7 @@
 **Tests**: `tests/test_tool_integration.py`
 **Estimated Prompt Size**: ~300 lines
 
-- [ ] **T018**: Update `src/environment/tools.py` to import new workbenches.
-- [ ] **T019**: Implement `check_manufacturability` function with `lru_cache` on mesh hash.
-- [ ] **T020**: Ensure tool output matches the JSON schema contract.
-- [ ] **T021**: Verify end-to-end flow with a new integration test case.
+- [x] **T018**: Update `src/environment/tools.py` to import new workbenches.
+- [x] **T019**: Implement `check_manufacturability` function with `lru_cache` on mesh hash.
+- [x] **T020**: Ensure tool output matches the JSON schema contract.
+- [x] **T021**: Verify end-to-end flow with a new integration test case.
