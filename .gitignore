@@ -30,7 +30,11 @@ wheels/
 *.db-wal
 *.db-shm
 
-.worktrees/*/kitty-specs/tasks/*.md
+# Excluded via sparse-checkout
+kitty-specs/
+
+# COTS Rendering Cache
+.cache/
 
 .agent_storage/
 workspace/
