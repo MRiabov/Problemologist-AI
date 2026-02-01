@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Geometry & Workbenches
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T006
@@ -10,6 +10,8 @@ subtasks:
 - T009
 - T010
 phase: Phase 2 - Domain Logic
+agent: "Antigravity"
+shell_pid: "60800"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -102,3 +104,7 @@ history:
 ## Risks & Mitigations
 
 - **OCP Complexity**: OpenCASCADE API is deep. Use `build123d` wrappers where possible. If `part.is_closed` isn't exposed directly, check `part.encapsulating_solid` or similar properties.
+
+## Activity Log
+
+- 2026-02-01T07:36:18Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
