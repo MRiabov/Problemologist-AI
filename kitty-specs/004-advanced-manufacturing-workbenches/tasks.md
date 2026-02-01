@@ -29,10 +29,10 @@
 **Tests**: `tests/test_workbench_cnc.py`
 **Estimated Prompt Size**: ~350 lines
 
-- [x] **T010**: Create `src/workbenches/cnc.py` inheriting from base Workbench.
-- [x] **T011**: Implement `CNCWorkbench.validate_geometry` using utils (Undercut, Tool Access).
-- [x] **T012**: Implement `CNCWorkbench.calculate_cost` (Material + Run + Setup) using config.
-- [x] **T013**: Write tests for CNC validation (pass/fail cases) and cost calculation.
+- [x] T010: Create `src/workbenches/cnc.py` inheriting from base Workbench.
+- [x] T011: Implement `CNCWorkbench.validate_geometry` using utils (Undercut, Tool Access).
+- [x] T012: Implement `CNCWorkbench.calculate_cost` (Material + Run + Setup) using config.
+- [x] T013: Write tests for CNC validation (pass/fail cases) and cost calculation.
 
 ## Work Package 4: Injection Molding Workbench Implementation
 **Goal**: Implement the Injection Molding Workbench class with specific validation and cost modeling.
