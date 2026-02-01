@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP02"
-title: "Geometric Analysis Algorithms"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T006", "T007", "T008", "T009"]
+work_package_id: WP02
+title: Geometric Analysis Algorithms
+lane: "doing"
+dependencies: [WP01]
+base_branch: 004-advanced-manufacturing-workbenches-WP01
+base_commit: fb2a701efb41c088043d89a828fbd4257cb38eb8
+created_at: '2026-02-01T11:14:19.528161+00:00'
+subtasks: [T006, T007, T008, T009]
+shell_pid: "217205"
 ---
 
 ### Objective
