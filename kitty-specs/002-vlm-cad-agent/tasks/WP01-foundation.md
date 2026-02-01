@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
-lane: "done"
+lane: "doing"
 dependencies: []
 subtasks:
   - "T001"
@@ -10,110 +10,109 @@ subtasks:
   - "T004"
   - "T005"
 agent: "Antigravity"
-shell_pid: "90978"
-reviewed_by: "MRiabov"
-review_status: "approved"
+reviewed_by: ""
+review_status: ""
+shell_pid: "105353"
 ---
 
 ## Objective
 
-Establish the foundational infrastructure for the VLM CAD Agent. This includes setting up the Python project structure, installing core dependencies (LiteLLM, Pydantic, etc.), implementing the Unified LLM Client, and defining the initial Prompt Templates and Tool Schemas.
+Establish the foundational infrastructure for the VLM CAD Agent using the **DeepAgents** framework (based on `langgraph`). This includes setting up the Python project structure for a graph-based agent, installing LangChain ecosystem dependencies, and defining the core `AgentState` and Tool interfaces.
 
 ## Context
 
-This is the "Step 0" for the agent. We need a robust base where the agent can easily call LLMs (OpenAI, Gemini, Anthropic) via a unified interface and validate structured data. We are building the `src/agent` directory structure as defined in the plan.
+We are migrating from a custom ReAct loop to a robust Graph Architecture. WP01 focuses on the "skeleton" of this graph: the environment setup, the state definition (TypedDict), and the integration of the Environment's tools into the LangChain ecosystem.
 
 ## Subtasks
 
 ### T001: Scaffold Project Structure
 
-**Purpose**: Create the directory hierarchy for the agent source code.
+**Purpose**: Create the directory hierarchy for the Graph-based agent.
 **Steps**:
 
 1. Create the following directory structure inside `src/agent/`:
 
    ```text
    src/agent/
-   ├── core/
-   ├── clients/
-   ├── prompts/
-   └── __init__.py (and in subdirs)
+   ├── graph/
+   │   ├── nodes/
+   │   ├── __init__.py
+   │   ├── state.py       # AgentState definition
+   │   └── graph.py       # Main GraphBuilder
+   ├── tools/
+   │   ├── __init__.py
+   │   └── env.py         # Wrappers for Spec 001 tools
+   ├── utils/
+   │   ├── __init__.py
+   │   └── config.py      # LLM Configuration
+   └── __init__.py
    ```
 
-2. Ensure `__init__.py` files are present to make them packages.
+2. Ensure `__init__.py` files are present.
 
-### T002: Install & Configure Dependencies
+### T002: Install Dependencies
 
-**Purpose**: Install required libraries.
+**Purpose**: Install LangChain and DeepAgents ecosystem libraries.
 **Steps**:
 
-1. Add the following to `pyproject.toml` (or `requirements.txt` if used):
-   - `litellm`: For unified LLM access.
-   - `pydantic`: For data validation.
-   - `jinja2`: For prompting.
-   - `rich`: For beautiful terminal output.
-   - `tenacity`: For retry logic (standard good practice).
+1. Add the following to `pyproject.toml` (or `requirements.txt`):
+   - `langgraph`: Orchestration.
+   - `deepagents`: (Presumed) Framework utilities.
+   - `langchain-core`: Base abstractions.
+   - `langchain-openai`: ChatModels for OpenAI.
+   - `langchain-google-genai`: ChatModels for Gemini.
+   - `langchain-anthropic`: ChatModels for Claude.
+   - `pydantic`: Data validation (v2).
+   - `rich`: Terminal UI.
 2. Install dependencies.
 
-### T003: Implement LLM Client
+### T003: Configure LangChain ChatModels
 
-**Purpose**: Create a wrapper around `litellm` to handle model calls, retries, and configuration.
+**Purpose**: Setup the ChatModel factory to easily switch between GPT-4o, Gemini 1.5 Pro, and Claude 3.5 Sonnet.
 **Steps**:
 
-1. Create `src/agent/clients/base.py` defining an abstract `LLMClient` class with `generate(messages, tools)` method.
-2. Create `src/agent/clients/llm.py` implementing `LiteLLMClient`.
-   - Use `tenacity` for retrying on RateLimitError or APIError.
-   - Support loading API keys from environment variables.
-   - Implement `generate` method that calls `litellm.completion`.
-   - Ensure it supports passing a list of `tools` (JSON schemas).
+1. Create `src/agent/utils/llm.py`.
+2. Implement a factory function `get_model(model_name: str, temperature: float) -> BaseChatModel`.
+3. Support environment variables for API keys (`OPENAI_API_KEY`, `GOOGLE_API_KEY`, etc.).
 
-### T004: Create Base Prompt Templates
+### T004: Define AgentState TypedDict
 
-**Purpose**: Set up Jinja2 environment and base templates.
+**Purpose**: Define the shared state that flows through the Graph.
 **Steps**:
 
-1. Create `src/agent/prompts/system_persona.j2` containing the system prompt (Refer to Spec 3.2 System Persona references or creates a placeholder based on "You are an expert mechanical engineer...").
-2. Create `src/agent/prompts/planning.j2` for the Phase 0 planning step.
-3. Create `src/agent/core/prompts.py` (or similar) to load these templates using `jinja2.Environment`.
+1. Create `src/agent/graph/state.py`.
+2. Define `AgentState(TypedDict)` containing:
+   - `messages`: Annotated[list[AnyMessage], add_messages] (Standard LangGraph history).
+   - `plan`: str (The current implementation plan).
+   - `step_count`: int (For safety limits).
+   - `scratchpad`: dict (For intermediate node data).
 
-### T005: Define Tool Interface Models
+### T005: Wrap Environmental Tools
 
-**Purpose**: Define Pydantic models for the environment tools to ensure type safety.
+**Purpose**: Convert Spec 001 JSON-schema tools into LangChain `BaseTool` or `@tool` functions.
 **Steps**:
 
-1. Create `src/agent/clients/tools.py`.
-2. Define Pydantic models for:
-   - `WriteScript(content: str, path: str)`
-   - `EditScript(find: str, replace: str, path: str)`
-   - `PreviewDesign()`
-   - `SubmitDesign(control_path: str)`
-   - `SearchDocs(query: str)`
-   - `ReadJournal(topic: str)`
-   - `WriteJournal(entry: str, tags: list[str])`
-   - `UpdatePlan(status: str, notes: str)`
-3. Add a helper function to convert these models to OpenAI-compatible JSON schema format (using `.model_json_schema()`).
+1. Create `src/agent/tools/env.py`.
+2. Implement wrapper functions using the `@tool` decorator for:
+   - `write_script(content: str, path: str)`
+   - `edit_script(find: str, replace: str, path: str)`
+   - `preview_design()`
+   - `submit_design(control_path: str)`
+   - `search_docs(query: str)`
+3. Ensure each tool has a precise docstring (for LLM tool calling).
 
 ## Files to Create
 
-- `src/agent/__init__.py`
-- `src/agent/clients/__init__.py`
-- `src/agent/clients/base.py`
-- `src/agent/clients/llm.py`
-- `src/agent/clients/tools.py`
-- `src/agent/core/__init__.py`
-- `src/agent/prompts/system_persona.j2`
-- `src/agent/prompts/planning.j2`
+- `src/agent/graph/state.py`
+- `src/agent/utils/llm.py`
+- `src/agent/tools/env.py`
 
 ## Acceptance Criteria
 
-- [ ] Dependencies installed and importable.
-- [ ] `LiteLLMClient` can successfully make a simple call to a model (mocked or real if key exists).
-- [ ] Tool schemas are correctly generated as JSON.
-- [ ] Jinja2 templates can be rendered with sample context.
+- [ ] `AgentState` matches the architectural needs.
+- [ ] `get_model("gpt-4o")` returns a working ChatOpenAI instance.
+- [ ] Environment tools are bindable to the model (`model.bind_tools([...])`).
 
 ## Activity Log
 
-- 2026-02-01T07:36:05Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
-- 2026-02-01T07:43:04Z – Antigravity – shell_pid=60800 – lane=for_review – Implemented core infrastructure, tool models, and prompt management. Verified with unit tests.
-- 2026-02-01T08:11:03Z – Antigravity – shell_pid=90978 – lane=doing – Started review via workflow command
-- 2026-02-01T08:14:38Z – Antigravity – shell_pid=90978 – lane=done – Review passed: Foundation infrastructure (LiteLLM client, Pydantic tool models, Jinja2 prompts) is correctly implemented and verified with unit tests.
+- 2026-02-01T08:29:17Z – Antigravity – shell_pid=105353 – lane=doing – Started implementation via workflow command
