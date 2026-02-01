@@ -1,9 +1,9 @@
 # Implementation Plan: [FEATURE]
+
 *Path: [templates/plan-template.md](templates/plan-template.md)*
 
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
+**Branch**: `002-vlm-cad-agent` | **Date**: 2026-02-01 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/002-vlm-cad-agent/spec.md`
 
 **Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
 
@@ -11,92 +11,68 @@ The planner will not begin until all planning questions have been answered—cap
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement the **VLM CAD Agent**, a cognitive engine that autonomously solves geometric problems by interacting with the `001-agentic-cad-environment`. The agent uses a "Think, Plan, Act" loop to generate `build123d` code, validating its output via visual feedback from the environment.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Python 3.10+
+**Primary Dependencies**:
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+- `litellm`: Unified interface for LLM/VLM providers (OpenAI, Gemini, Anthropic)
+- `pydantic`: Structured data validation for tool calls and planning
+- `jinja2`: Template engine for prompt construction
+- `rich`: Terminal UI for real-time thought process visualization
+- `gymnasium`: Interface to the loosely-coupled environment
+**Storage**:
+- `journal.md`: Markdown-based long-term memory (read/append)
+- `agent_trace.jsonl`: Structured execution logs
+**Testing**: `pytest` with `pytest-mock` for deterministic replay of agent reasoning.
+**Target Platform**: Linux (Development), Docker (Deployment).
+**Performance Goals**:
+- **Reasoning Overhead**: < 2s per step (excluding LLM latency).
+- **Context Management**: Efficiently handle 128k+ context windows by summarizing past steps.
+**Constraints**:
+- **Loose Coupling**: Agent treats the Environment as a black box (Gymnasium interface).
+- **Synchronous**: Simplified specific "Think -> Act -> Observe" loop.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+[Constitution file missing. Proceeding with standard best practices for Agentic development.]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/002-vlm-cad-agent/
+├── plan.md              # This file
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output
+├── contracts/           # Phase 1 output (Prompt Schemas)
+└── tasks.md             # Phase 2 output
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── agent/
+│   ├── core/
+│   │   ├── engine.py       # Main ReAct loop & State Machine
+│   │   ├── context.py      # Window management & summarization
+│   │   └── memory.py       # Journaling (Long-term memory)
+│   ├── clients/
+│   │   ├── llm.py          # LiteLLM wrapper with retry logic
+│   │   └── tools.py        # Schema generators for Env tools
+│   ├── prompts/
+│   │   ├── system.j2       # Persona definitions
+│   │   └── tasks.j2        # Dynamic task prompts
+│   └── runner.py           # CLI entry point to spin up Agent + Env
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Clean separation of `src/agent` from `src/environment` (Spec 001). The agent packages its own logic and consumes the environment via standard interfaces.
 
 ## Complexity Tracking
 
@@ -104,5 +80,5 @@ directories captured above]
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| Custom ReAct Loop | Need explicit control over "Think", "Plan", "Act" phases and specialized logging | Standard `LangChain` agents are often opaque and harder to debug for specific VLM workflows |
+| File-based Memory | Simple, human-readable long-term memory | Vector DB is overkill for the initial scope and adds infrastructure complexity |
