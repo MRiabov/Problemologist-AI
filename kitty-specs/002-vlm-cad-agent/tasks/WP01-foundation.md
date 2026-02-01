@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks:
   - "T001"
@@ -9,6 +9,8 @@ subtasks:
   - "T003"
   - "T004"
   - "T005"
+agent: "Antigravity"
+shell_pid: "60800"
 ---
 
 ## Objective
@@ -106,3 +108,7 @@ This is the "Step 0" for the agent. We need a robust base where the agent can ea
 - [ ] `LiteLLMClient` can successfully make a simple call to a model (mocked or real if key exists).
 - [ ] Tool schemas are correctly generated as JSON.
 - [ ] Jinja2 templates can be rendered with sample context.
+
+## Activity Log
+
+- 2026-02-01T07:36:05Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
