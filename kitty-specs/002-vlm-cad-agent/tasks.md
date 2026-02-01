@@ -48,6 +48,6 @@
 **Dependencies**: WP03
 **File**: [tasks/WP04-runner-integration.md](tasks/WP04-runner-integration.md)
 
-- [ ] **T014**: Implement Environment Adapter for LangChain
-- [ ] **T015**: Implement Async Runner CLI
-- [ ] **T016**: Verify End-to-End Graph Execution
+- [x] T014: Implement Environment Adapter for LangChain
+- [x] T015: Implement Async Runner CLI
+- [x] T016: Verify End-to-End Graph Execution
