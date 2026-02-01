@@ -1,9 +1,11 @@
 ---
 work_package_id: WP03
 title: 3D Visualization & Integration
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks: [T009, T010, T011, T012]
+agent: "gemini-cli-agent"
+shell_pid: "366550"
 ---
 
 # WP03: 3D Visualization & Integration
@@ -67,3 +69,7 @@ subtasks: [T009, T010, T011, T012]
 - **3D Test**: Run dashboard, select an episode with an STL artifact. Verify the 3D model appears and is rotatable.
 - **Live Test**: Run a dummy script that writes to `history.db` in the background. Verify dashboard updates without manual refresh.
 - **Navigation**: Switching steps updates the 3D model to the version corresponding to that step.
+
+## Activity Log
+
+- 2026-02-01T14:09:13Z – gemini-cli-agent – shell_pid=366550 – lane=doing – Started review via workflow command
