@@ -18,10 +18,10 @@
 **Tests**: `tests/test_analysis_algorithms.py`
 **Estimated Prompt Size**: ~400 lines
 
-- [ ] **T006**: Implement `check_draft_angle(mesh, pull_vector, min_angle)` in `analysis_utils.py`.
-- [ ] **T007**: Implement `check_undercuts(mesh, pull_vector)` using raycasting in `analysis_utils.py`.
-- [ ] **T008**: Implement `check_wall_thickness(mesh, min, max)` (sampling approach) in `analysis_utils.py`.
-- [ ] **T009**: Write comprehensive tests for each analysis algorithm with simple geometry (Cube, Cylinder).
+- [x] **T006**: Implement `check_draft_angle(mesh, pull_vector, min_angle)` in `analysis_utils.py`.
+- [x] **T007**: Implement `check_undercuts(mesh, pull_vector)` using raycasting in `analysis_utils.py`.
+- [x] **T008**: Implement `check_wall_thickness(mesh, min, max)` (sampling approach) in `analysis_utils.py`.
+- [x] **T009**: Write comprehensive tests for each analysis algorithm with simple geometry (Cube, Cylinder).
 
 ## Work Package 3: CNC Workbench Implementation
 **Goal**: Implement the CNC Workbench class with specific validation and cost modeling.
