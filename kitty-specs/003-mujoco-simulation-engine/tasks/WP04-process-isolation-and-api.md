@@ -1,13 +1,15 @@
 ---
 work_package_id: WP04
 title: Process Isolation & API Service
-lane: planned
+lane: "planned"
 dependencies: []
 subtasks:
 - T013
 - T014
 - T015
 - T016
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP04: Process Isolation & API Service
@@ -73,3 +75,7 @@ Agent code is "untrusted". If it does `while True: pass`, the server would hang.
 - [ ] Runs sim in separate PID.
 - [ ] Returns 200 OK with metrics on success.
 - [ ] Returns 400/500 with readable error on Script Crash or Timeout.
+
+## Activity Log
+
+- 2026-02-01T08:42:56Z – unknown – lane=planned – Moved to planned
