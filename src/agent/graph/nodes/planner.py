@@ -1,63 +1,43 @@
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.agent.graph.state import AgentState
 from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
-from src.agent.tools.memory import read_journal
 
+PLANNING_PROMPT = """You are the Lead Mechanical Engineer (Planner).
+Your goal is to decompose the user's design request into a structured step-by-step technical plan.
+You must use build123d for CAD and consider physics constraints (MuJoCo).
 
-PLANNING_PROMPT = """You are the Planner for the VLM CAD Agent. Your goal is to break down a mechanical engineering design problem into a sequence of actionable steps.
+Reference the 'journal.md' if it exists to understand previous attempts and failures.
 
-Context from previous sessions:
-{journal}
-
-Current User Request:
-{user_input}
-
-Generate a high-level implementation plan. Focus on:
-1. Geometry creation (CSG or B-Rep).
-2. Material and physical property assignment.
-3. Simulation setup (MuJoCo).
-4. Validation and iteration.
-
-Return ONLY the plan as a numbered list of steps."""
-
+Output only the plan in a clear, numbered list format.
+"""
 
 def planner_node(state: AgentState):
     """
-    The Planner node that generates or updates the high-level implementation plan.
+    Decides the high-level strategy and updates the plan.
     """
-    # Only generate a plan if it's currently empty
+    # If a plan already exists, we might want to revise it or just keep it.
+    # For this simple version, if we have a plan, we don't re-plan unless explicitly triggered (not covered here).
     if state.get("plan"):
-        return state
+       return {"messages": [AIMessage(content="Plan already exists. Proceeding to execution.")]}
 
-    # Retrieve context from the journal
-    journal_context = read_journal.invoke({})
-
-    # Get the original user input (first human message)
-    user_input = ""
+    model = get_model(Config.LLM_MODEL)
+    
+    # Get the original request from the first message
+    original_request = ""
     for msg in state["messages"]:
-        if isinstance(msg, HumanMessage):
-            user_input = msg.content
+        if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
+            original_request = msg.content
             break
-
-    if not user_input:
-        # Fallback if no human message found (should not happen in normal flow)
-        user_input = "No user input provided."
-
-    # Format the prompt
-    prompt = PLANNING_PROMPT.format(
-        journal=journal_context,
-        user_input=user_input
-    )
-
-    # Call the LLM
-    model = get_model(Config.LLM_MODEL, Config.TEMPERATURE)
-    response = model.invoke([HumanMessage(content=prompt)])
-
-    plan = response.content
-
-    # Update state
+            
+    messages = [
+        SystemMessage(content=PLANNING_PROMPT),
+        HumanMessage(content=f"Original Request: {original_request}\n\nPlease generate a technical plan.")
+    ]
+    
+    response = model.invoke(messages)
+    
     return {
-        "plan": plan,
-        "messages": [AIMessage(content=f"Generated plan:\n{plan}")]
+        "plan": response.content,
+        "messages": [response]
     }
