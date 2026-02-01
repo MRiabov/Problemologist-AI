@@ -2,7 +2,7 @@
 work_package_id: "WP01"
 title: "Foundation & Shared Utilities"
 lane: "done"
-dependencies: []
+dependencies: "[]"
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
 agent: "gemini-cli-agent"
 shell_pid: "336474"
@@ -72,3 +72,4 @@ We are building CNC and Injection Molding support. This requires `trimesh` for a
 - 2026-02-01T13:39:11Z – Antigravity – shell_pid=336474 – lane=doing – Started review via workflow command
 - 2026-02-01T14:43:50Z – Antigravity – shell_pid=336474 – lane=for_review – Addressed feedback: Cleaned up garbage files and experimental scripts from the root directory. Rebased on main.
 - 2026-02-01T16:19:23Z – gemini-cli-agent – shell_pid=336474 – lane=done – Manually approved as reviewer to unblock WP03
+- 2026-02-01T16:20:48Z – gemini-cli-agent – shell_pid=336474 – lane=done – Moved to done
