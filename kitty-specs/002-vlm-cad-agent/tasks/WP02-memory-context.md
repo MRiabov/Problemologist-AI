@@ -1,12 +1,16 @@
 ---
 work_package_id: WP02
 title: Memory & Context Management
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: 002-vlm-cad-agent-WP01
+base_commit: cae840b45479c0be4e1476e2e387f4e4de1ff23f
+created_at: '2026-02-01T07:45:00.513999+00:00'
 subtasks:
 - T006
 - T007
 - T008
+shell_pid: "83240"
 ---
 
 ## Objective
