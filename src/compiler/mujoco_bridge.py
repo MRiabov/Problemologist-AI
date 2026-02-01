@@ -1,4 +1,5 @@
 import os
+from typing import Optional, List
 import mujoco
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ class SimResult:
     energy: float
     success: bool
     damage: float
+    replay_data: Optional[list[dict]] = None
 
 
 class MujocoBridge:
@@ -87,12 +89,22 @@ class MujocoBridge:
 
         return ET.tostring(root, encoding="unicode")
 
-    def run_simulation(self, xml_string: str, duration: float = 5.0) -> SimResult:
+    def run_simulation(
+        self,
+        xml_string: str,
+        duration: float = 5.0,
+        agent_script: str = "",
+        goal_pos: Optional[tuple[float, float, float]] = None,
+        goal_size: float = 0.5,
+    ) -> SimResult:
         """Run the simulation headless and return metrics.
 
         Args:
             xml_string: The MJCF XML content.
             duration: Simulation logic time in seconds.
+            agent_script: Python code for control logic.
+            goal_pos: (x, y, z) of the success zone.
+            goal_size: radius of success zone.
 
         Returns:
             SimResult object with metrics.
@@ -101,40 +113,91 @@ class MujocoBridge:
             model = mujoco.MjModel.from_xml_string(xml_string)
         except Exception as e:
             print(f"MuJoCo Load Error: {e}")
-            # Return failure result instead of crashing
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
         data = mujoco.MjData(model)
 
+        # Prepare control logic if provided
+        control_func = None
+        if agent_script:
+            try:
+                namespace = {}
+                exec(agent_script, namespace)
+                if "control_logic" in namespace:
+                    control_func = namespace["control_logic"]
+            except Exception as e:
+                print(f"Control Script Error: {e}")
+                return SimResult(duration, energy=0.0, success=False, damage=100.0)
+
         energy_acc = 0.0
         damage_acc = 0.0
         success = False
+        replay_data = []
 
         try:
+            # Determine logging interval (e.g., every 0.1s)
+            log_interval = 0.1
+            last_log_time = -log_interval
+
             while data.time < duration:
+                if control_func:
+                    control_func(model, data)
+
                 mujoco.mj_step(model, data)
 
-                # Energy Metric: Accumulate |power| = |force . velocity|
-                if model.nu > 0:
-                    power = np.dot(data.qfrc_actuator, data.qvel)
-                    energy_acc += abs(power) * model.opt.timestep
+                # State Logging for Replay
+                if data.time >= last_log_time + log_interval:
+                    states = {}
+                    for i in range(model.nbody):
+                        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
+                        states[name or f"body_{i}"] = {
+                            "pos": data.xpos[i].tolist(),
+                            "quat": data.xquat[i].tolist()
+                        }
+                    replay_data.append({"time": data.time, "bodies": states})
+                    last_log_time = data.time
 
-                # Damage Metric: Monitor contacts (placeholder logic)
-                # If we define specific logic later, we can iterate data.contact
-                pass
+                # Energy Metric: Accumulate |power| = |force . velocity|
+                power = 0.0
+                if model.nu > 0:
+                    power += np.dot(data.qfrc_actuator, data.qvel)
+                
+                # Also include applied forces (from agent script)
+                power += np.dot(data.qfrc_applied, data.qvel)
+                
+                energy_acc += abs(power) * model.opt.timestep
+
+                # Goal Detection
+                if goal_pos is not None:
+                    body_id = mujoco.mj_name2id(
+                        model, mujoco.mjtObj.mjOBJ_BODY, "injected_object"
+                    )
+                    if body_id != -1:
+                        pos = data.xpos[body_id]
+                        dist = np.linalg.norm(pos - np.array(goal_pos))
+                        if dist < goal_size:
+                            success = True
+                            # Optional: break early on success?
+                            # break
 
         except Exception as e:
             print(f"Simulation Runtime Error: {e}")
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
-        # Check Success (Object Validity)
-        body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "injected_object")
-        if body_id != -1:
-            pos = data.xpos[body_id]
-            # Success if position is valid (not NaN)
-            if not np.any(np.isnan(pos)):
-                success = True
+        # Final Success check if no goal zone but position is valid
+        if goal_pos is None:
+            body_id = mujoco.mj_name2id(
+                model, mujoco.mjtObj.mjOBJ_BODY, "injected_object"
+            )
+            if body_id != -1:
+                pos = data.xpos[body_id]
+                if not np.any(np.isnan(pos)):
+                    success = True
 
         return SimResult(
-            duration=duration, energy=energy_acc, success=success, damage=damage_acc
+            duration=duration,
+            energy=energy_acc,
+            success=success,
+            damage=damage_acc,
+            replay_data=replay_data,
         )

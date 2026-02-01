@@ -17,28 +17,30 @@ MJCF = """
 </mujoco>
 """
 
-
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-
 def test_simulate_endpoint():
-    payload = {"mjcf_xml": MJCF, "duration": 5.0}
+    payload = {
+        "model_xml": MJCF,
+        "agent_script": "def control(obs): return []",
+        "max_steps": 10
+    }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["outcome"] == "success"
-    assert "energy" in data["result"]
-
+    assert data["status"] == "TIMEOUT"  # Or SUCCESS if it won, but here it just times out on steps
+    assert "metrics" in data
 
 def test_simulate_crash():
-    payload = {"mjcf_xml": MJCF, "duration": 5.0}
-    # We ignore the agent_script for now as it's not supported by this endpoint's schema
+    payload = {
+        "model_xml": MJCF,
+        "agent_script": "import os\ndef control(obs): os._exit(1)",
+        "max_steps": 10
+    }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200
     data = response.json()
-    # Since we can't easily crash the isolated process without agent script support in this endpoint,
-    # it currently returns success because the simulation itself (empty world) runs fine.
-    assert data["outcome"] == "success"
+    assert data["status"] == "CRASH"

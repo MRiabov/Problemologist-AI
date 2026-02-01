@@ -6,14 +6,25 @@ from dataclasses import asdict
 from src.compiler.mujoco_bridge import MujocoBridge, SimResult
 
 
-def _run_sim_wrapper(xml_string: str, duration: float, queue: multiprocessing.Queue):
+def _run_sim_wrapper(
+    xml_string: str,
+    duration: float,
+    queue: multiprocessing.Queue,
+    agent_script: str = "",
+    goal_pos: Optional[tuple[float, float, float]] = None,
+):
     """
     Internal wrapper to run the simulation and put the result in a queue.
     This runs in a separate process.
     """
     try:
         bridge = MujocoBridge()
-        result = bridge.run_simulation(xml_string, duration=duration)
+        result = bridge.run_simulation(
+            xml_string, 
+            duration=duration, 
+            agent_script=agent_script,
+            goal_pos=goal_pos
+        )
         queue.put({"success": True, "result": asdict(result)})
     except Exception as e:
         queue.put({
@@ -24,7 +35,13 @@ def _run_sim_wrapper(xml_string: str, duration: float, queue: multiprocessing.Qu
         })
 
 
-def run_isolated(xml_string: str, duration: float = 5.0, timeout: float = 30.0) -> Dict[str, Any]:
+def run_isolated(
+    xml_string: str, 
+    duration: float = 5.0, 
+    timeout: float = 30.0,
+    agent_script: str = "",
+    goal_pos: Optional[tuple[float, float, float]] = None,
+) -> Dict[str, Any]:
     """
     Runs the simulation in an isolated process with a timeout.
     
@@ -32,6 +49,8 @@ def run_isolated(xml_string: str, duration: float = 5.0, timeout: float = 30.0) 
         xml_string: The MJCF XML content.
         duration: The simulation duration in seconds.
         timeout: Maximum wall-clock time allowed for the simulation process.
+        agent_script: Python control logic.
+        goal_pos: Optional success zone coordinates.
         
     Returns:
         A dictionary containing the simulation results or error information.
@@ -39,7 +58,7 @@ def run_isolated(xml_string: str, duration: float = 5.0, timeout: float = 30.0) 
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(
         target=_run_sim_wrapper, 
-        args=(xml_string, duration, queue)
+        args=(xml_string, duration, queue, agent_script, goal_pos)
     )
     
     process.start()
