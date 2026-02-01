@@ -9,7 +9,7 @@
 **Priority**: Critical (Foundation)
 **Prerequisites**: None
 
-- [ ] T001: Initialize `src/simulation_engine` package and install dependencies (mujoco, build123d, trimesh).
+- [x] T001: Initialize `src/simulation_engine` package and install dependencies (mujoco, build123d, trimesh).
 - [ ] T002: Implement `MeshProcessor` to convert `build123d` objects to temporary STL/GLB files.
 - [ ] T003: Implement Convex Decomposition logic (using `trimesh.convex.convex_hull` or `vhacd`).
 - [ ] T004: Write unit tests for mesh conversion and hull generation.
