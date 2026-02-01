@@ -9,6 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.generators.benchmark.agent import generator_agent
 from src.generators.benchmark.validator import validate_mjcf
+from src.generators.benchmark.renderer import render_scenario
 from src.generators.benchmark.types import ScenarioManifest, ValidationReport
 
 app = typer.Typer(help="Benchmark Scenario Generator CLI")
@@ -55,6 +56,7 @@ def generate(
     scenario_dir = os.path.join(output_dir, f"{tier}_{scenario_id}")
     os.makedirs(scenario_dir, exist_ok=True)
     os.makedirs(os.path.join(scenario_dir, "assets"), exist_ok=True)
+    os.makedirs(os.path.join(scenario_dir, "images"), exist_ok=True)
 
     # Save the template script
     script_path = os.path.join(scenario_dir, "template.py")
@@ -86,12 +88,31 @@ def generate(
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
                     
-                    # Save MJCF
-                    xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
-                    with open(xml_path, "w") as f:
-                        f.write(mjcf_xml)
+                                        # Save MJCF
                     
-                    # Mock STL saving (since build123d normally exports them, 
+                                        xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
+                    
+                                        with open(xml_path, "w") as f:
+                    
+                                            f.write(mjcf_xml)
+                    
+                                        
+                    
+                                        # Render images
+                    
+                                        image_prefix = os.path.join(scenario_dir, "images", f"preview_{seed}")
+                    
+                                        image_paths = render_scenario(mjcf_xml, image_prefix)
+                    
+                                        # Convert absolute paths back to relative for manifest
+                    
+                                        rel_image_paths = [os.path.relpath(p, scenario_dir) for p in image_paths]
+                    
+                                        
+                    
+                                        # Mock STL saving
+                    
+                     (since build123d normally exports them, 
                     # but our MJCF might already contain mesh references)
                     # For now we follow the requirement: Save assets/mesh_{seed}.stl
                     stl_path = os.path.join(scenario_dir, "assets", f"mesh_{seed}.stl")
@@ -106,7 +127,8 @@ def generate(
                         "script_path": "template.py",
                         "assets": {
                             "mjcf": f"scene_{seed}.xml",
-                            "meshes": [f"assets/mesh_{seed}.stl"]
+                            "meshes": [f"assets/mesh_{seed}.stl"],
+                            "images": rel_image_paths
                         },
                         "randomization": {
                             "seed_range": [0, 1000000],
