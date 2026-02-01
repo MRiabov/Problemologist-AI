@@ -1,10 +1,24 @@
 {
+  "accept_commit": null,
+  "acceptance_history": [
+    {
+      "accepted_at": "2026-02-01T18:41:19Z",
+      "accepted_by": "gemini",
+      "accepted_from_commit": "c8b3a356849c16ab1905fe849911111fac9ec8e5",
+      "branch": "main",
+      "mode": "local"
+    }
+  ],
+  "acceptance_mode": "local",
+  "accepted_at": "2026-02-01T18:41:19Z",
+  "accepted_by": "gemini",
+  "accepted_from_commit": "c8b3a356849c16ab1905fe849911111fac9ec8e5",
+  "created_at": "2026-01-31T19:29:44Z",
   "feature_number": "001",
-  "slug": "001-agentic-cad-environment",
   "friendly_name": "Agentic CAD Environment",
   "mission": "software-dev",
+  "slug": "001-agentic-cad-environment",
   "source_description": "Initial environment specification for an agentic code LLM that generates build123d scripts, utilizing a workbench system, SQLite logging, and eventual MuJoCo integration.",
-  "created_at": "2026-01-31T19:29:44Z",
   "target_branch": "main",
   "vcs": "git"
 }
