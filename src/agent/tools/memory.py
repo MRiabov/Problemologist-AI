@@ -15,7 +15,7 @@ def read_journal(topic: str = "") -> str:
     Read the agent's journal (journal.md) to retrieve context or past memories.
 
     Args:
-        topic: Optional topic or keyword to look for. Currently retrieves the entire journal.
+        topic: Optional topic or keyword to filter entries by.
     """
     content = workspace.read("journal.md")
     if not content:
