@@ -28,6 +28,8 @@ dependencies = [
     "streamlit-autorefresh>=1.0.1",
     "trimesh[easy]>=4.11.1",
     "uvicorn>=0.40.0",
+    "python-dotenv>=1.0.1",
+    "aiosqlite>=0.20.0",
 ]
 
 [dependency-groups]
