@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Tool Integration & Caching
-lane: "doing"
+lane: "for_review"
 dependencies: "[]"
 base_branch: 004-advanced-manufacturing-workbenches-WP03
 base_commit: 2c0348a4fca3c719c7dbaa9ae22473b672c7b6b2
@@ -84,3 +84,4 @@ The agent shouldn't instantiate workbenches directly. It calls `check_manufactur
 - 2026-02-01T18:52:52Z – gemini-cli – shell_pid=519473 – lane=doing – Started review via workflow command
 - 2026-02-01T19:05:55Z – gemini-cli – shell_pid=519473 – lane=planned – Moved to planned
 - 2026-02-01T19:13:01Z – gemini-cli – shell_pid=530342 – lane=doing – Started implementation via workflow command
+- 2026-02-01T19:33:14Z – gemini-cli – shell_pid=530342 – lane=for_review – Resolved merge conflicts from concurrent WP development. Fully exposed unified check_manufacturability tool to agent at index 7. Optimized caching and added 'cnc' alias per feedback. All tests passing.
