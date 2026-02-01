@@ -40,10 +40,10 @@ Implementation breakdown for the COTS Assembly System. The work is divided into 
 **Priority**: P0
 **Test**: Unit tests verifying NEMA motors are found and correctly instantiated.
 
-- [ ] T007: Implement `BDWarehouseProvider` class skeleton
-- [ ] T008: Implement logic to crawl/index NEMA Motors from `bd_warehouse`
-- [ ] T009: Implement `get_part` logic to generate instantiation recipes for Motors
-- [ ] T010: Write unit tests for Motor indexing
+- [x] T007: Implement `BDWarehouseProvider` class skeleton
+- [x] T008: Implement logic to crawl/index NEMA Motors from `bd_warehouse`
+- [x] T009: Implement `get_part` logic to generate instantiation recipes for Motors
+- [x] T010: Write unit tests for Motor indexing
 
 **Implementation Notes**:
 - Inspect `bd_warehouse` source or documentation to find how to list available parts (e.g., `Nema.sizes()`).
