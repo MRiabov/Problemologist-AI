@@ -5,6 +5,8 @@ from src.agent.tools.env_adapter import (
     preview_design_async,
     submit_design_async,
     search_docs_async,
+    search_parts_async,
+    preview_part_async,
 )
 
 
@@ -71,3 +73,27 @@ async def search_docs(query: str) -> str:
         query: The search query or question to look up.
     """
     return await search_docs_async(query)
+
+
+@tool
+async def search_parts(query: str) -> str:
+    """
+    Search for COTS parts by name or ID. Returns a list of matches.
+    Use this to find standard components like motors, bearings, or fasteners.
+
+    Args:
+        query: The search query or part name to look up.
+    """
+    return await search_parts_async(query)
+
+
+@tool
+async def preview_part(part_id: str) -> str:
+    """
+    Get visual preview and details for a specific COTS part ID.
+    Returns a description and a Python recipe to instantiate it.
+
+    Args:
+        part_id: The namespaced ID of the part (e.g., 'bd_warehouse:motor:Nema17').
+    """
+    return await preview_part_async(part_id)
