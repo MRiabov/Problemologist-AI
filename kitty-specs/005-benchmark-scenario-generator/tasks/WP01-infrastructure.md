@@ -8,6 +8,7 @@ subtasks:
 - T002
 - T003
 agent: "Gemini"
+assignee: "Gemini"
 shell_pid: "353112"
 reviewed_by: "MRiabov"
 review_status: "approved"
@@ -27,6 +28,7 @@ We are building a standalone utility in `src/generators/benchmark/`. The validat
 
 **Purpose**: Create the module layout.
 **Steps**:
+
 1. Create directory `src/generators/benchmark/`.
 2. Add `__init__.py` to make it a package.
 3. Ensure `pyproject.toml` or environment has `mujoco` and `build123d` installed (already should be, but verify).
@@ -35,6 +37,7 @@ We are building a standalone utility in `src/generators/benchmark/`. The validat
 
 **Purpose**: TypedDicts for type safety.
 **Steps**:
+
 1. Create `src/generators/benchmark/types.py` (or similar).
 2. Define `ScenarioManifest` (JSON metadata structure).
 3. Define `ValidationReport` (Stability check results).
@@ -44,6 +47,7 @@ We are building a standalone utility in `src/generators/benchmark/`. The validat
 
 **Purpose**: The core validation logic.
 **Steps**:
+
 1. Create `src/generators/benchmark/validator.py`.
 2. Implement `validate_mjcf(xml_string: str) -> ValidationReport`:
    - Load the XML string into `mujoco.MjModel.from_xml_string`.

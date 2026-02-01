@@ -10,8 +10,9 @@ subtasks:
 - T004
 - T005
 - T006
-shell_pid: "345676"
 agent: "Gemini"
+assignee: "Gemini"
+shell_pid: "345676"
 reviewed_by: "MRiabov"
 review_status: "approved"
 ---
@@ -30,6 +31,7 @@ The agent needs to know how to write `build123d` code. We will use a multi-step 
 
 **Purpose**: Instructions for the LLM.
 **Steps**:
+
 1. Create `src/generators/benchmark/prompts.py`.
 2. `PLANNER_PROMPT`: "Break down the physics puzzle into parts..."
 3. `CODER_PROMPT`: "You are an expert in build123d. Write a script that defines `build(seed)`..."
@@ -40,6 +42,7 @@ The agent needs to know how to write `build123d` code. We will use a multi-step 
 
 **Purpose**: The LangGraph orchestration.
 **Steps**:
+
 1. Create `src/generators/benchmark/agent.py`.
 2. Define `GeneratorState` (TypedDict with `messages`, `code`, `errors`, `attempts`).
 3. Implement Nodes:
@@ -54,6 +57,7 @@ The agent needs to know how to write `build123d` code. We will use a multi-step 
 
 **Purpose**: Connect to the project's LLM utility.
 **Steps**:
+
 1. Import `get_model` from `src.agent.utils.llm`.
 2. Ensure the nodes in `agent.py` use this client to invoke the prompts.
 

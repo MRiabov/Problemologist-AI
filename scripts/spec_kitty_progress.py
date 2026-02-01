@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import re
+import json
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
@@ -81,6 +82,17 @@ def get_wp_status(
         return None
 
 
+def is_spec_accepted(spec_dir: Path) -> bool:
+    meta_file = spec_dir / "meta.json"
+    if not meta_file.exists():
+        return False
+    try:
+        data = json.loads(meta_file.read_text())
+        return "accepted_at" in data and data["accepted_at"] is not None
+    except Exception:
+        return False
+
+
 def main():
     base_path = Path("kitty-specs")
     if not base_path.exists():
@@ -100,6 +112,9 @@ def main():
 
         tasks_dir = spec_dir / "tasks"
         if not tasks_dir.exists():
+            continue
+
+        if is_spec_accepted(spec_dir):
             continue
 
         for wp_file in sorted(tasks_dir.glob("WP*.md")):
