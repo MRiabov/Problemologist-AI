@@ -40,10 +40,10 @@
 **Tests**: `tests/test_workbench_im.py`
 **Estimated Prompt Size**: ~350 lines
 
-- [ ] **T014**: Create `src/workbenches/injection_molding.py` inheriting from base Workbench.
-- [ ] **T015**: Implement `InjectionMoldingWorkbench.validate_geometry` using utils (Draft, Undercut, Thickness).
-- [ ] **T016**: Implement `InjectionMoldingWorkbench.calculate_cost` (Tooling + Unit) using config.
-- [ ] **T017**: Write tests for IM validation (pass/fail cases) and cost calculation.
+- [x] **T014**: Create `src/workbenches/injection_molding.py` inheriting from base Workbench.
+- [x] **T015**: Implement `InjectionMoldingWorkbench.validate_geometry` using utils (Draft, Undercut, Thickness).
+- [x] **T016**: Implement `InjectionMoldingWorkbench.calculate_cost` (Tooling + Unit) using config.
+- [x] **T017**: Write tests for IM validation (pass/fail cases) and cost calculation.
 
 ## Work Package 5: Tool Integration & Caching
 **Goal**: Expose the manufacturability check as a high-level agent tool with caching for performance.
