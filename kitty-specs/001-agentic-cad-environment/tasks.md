@@ -167,11 +167,11 @@ description: "Work package task list template for feature implementation"
 
 ### Included Subtasks
 
-- [ ] T020 Implement `src/environment/core.py` - Class structure (Gymnasium inheritance)
-- [ ] T021 Implement `submit_design` logic in `core.py` (Compile -> Sim -> Reward)
-- [ ] T022 Integrate Persistence Layer (Logging steps and artifacts)
-- [ ] T023 Implement Observation construction (State assembly)
-- [ ] T024 Add Gym registration and entry point
+- [x] T020 Implement `src/environment/core.py` - Class structure (Gymnasium inheritance)
+- [x] T021 Implement `submit_design` logic in `core.py` (Compile -> Sim -> Reward)
+- [x] T022 Integrate Persistence Layer (Logging steps and artifacts)
+- [x] T023 Implement Observation construction (State assembly)
+- [x] T024 Add Gym registration and entry point
 
 ### Implementation Notes
 
