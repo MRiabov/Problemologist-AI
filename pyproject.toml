@@ -4,9 +4,30 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.18.3",
+    "build123d>=0.10.0",
+    "gymnasium>=1.2.3",
+    "mujoco>=3.4.0",
+    "numpy>=2.4.2",
+    "sqlalchemy>=2.0.46",
+]
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
     "spec-kitty-cli>=0.13.20",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
