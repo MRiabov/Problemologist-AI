@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Core Environment Loop
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks:
 - T020
@@ -11,7 +11,7 @@ subtasks:
 - T024
 phase: Phase 5 - Integration
 agent: "Gemini"
-shell_pid: "129414"
+shell_pid: "152717"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -114,3 +114,4 @@ history:
 
 - 2026-02-01T09:06:17Z – Gemini – shell_pid=129414 – lane=doing – Started implementation via workflow command
 - 2026-02-01T09:15:43Z – Gemini – shell_pid=129414 – lane=for_review – Implemented CADEnv with Gymnasium API, integrated persistence, tools, workbenches, and simulation. Verified with tests.
+- 2026-02-01T09:34:16Z – Gemini – shell_pid=152717 – lane=doing – Started review via workflow command
