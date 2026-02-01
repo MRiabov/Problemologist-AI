@@ -1,13 +1,15 @@
 ---
 work_package_id: WP01
 title: Project Structure & Mesh Pipeline
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
   - T001
   - T002
   - T003
   - T004
+agent: "Antigravity"
+shell_pid: "60800"
 ---
 
 # WP01: Project Structure & Mesh Pipeline
@@ -81,3 +83,7 @@ This work package sets up the project structure and this critical geometry utili
 - [ ] Dependencies are locked and installed.
 - [ ] `builder.py` can take a `build123d` object and produce a Convex Trimesh.
 - [ ] Tests pass.
+
+## Activity Log
+
+- 2026-02-01T07:36:10Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
