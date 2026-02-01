@@ -22,6 +22,7 @@ wheels/
 .roo/
 .amazonq/
 .github/copilot/
+.github/prompts/
 .kittify/.dashboard
 
 # Database files

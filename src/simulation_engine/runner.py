@@ -1,0 +1,71 @@
+import multiprocessing
+import traceback
+from typing import Dict, Any, Optional
+from dataclasses import asdict
+
+from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+
+
+def _run_sim_wrapper(xml_string: str, duration: float, queue: multiprocessing.Queue):
+    """
+    Internal wrapper to run the simulation and put the result in a queue.
+    This runs in a separate process.
+    """
+    try:
+        bridge = MujocoBridge()
+        result = bridge.run_simulation(xml_string, duration=duration)
+        queue.put({"success": True, "result": asdict(result)})
+    except Exception as e:
+        queue.put({
+            "success": False, 
+            "error_type": "RuntimeError", 
+            "message": str(e), 
+            "traceback": traceback.format_exc()
+        })
+
+
+def run_isolated(xml_string: str, duration: float = 5.0, timeout: float = 30.0) -> Dict[str, Any]:
+    """
+    Runs the simulation in an isolated process with a timeout.
+    
+    Args:
+        xml_string: The MJCF XML content.
+        duration: The simulation duration in seconds.
+        timeout: Maximum wall-clock time allowed for the simulation process.
+        
+    Returns:
+        A dictionary containing the simulation results or error information.
+    """
+    queue = multiprocessing.Queue()
+    process = multiprocessing.Process(
+        target=_run_sim_wrapper, 
+        args=(xml_string, duration, queue)
+    )
+    
+    process.start()
+    process.join(timeout=timeout)
+    
+    if process.is_alive():
+        process.terminate()
+        process.join()
+        return {
+            "success": False,
+            "error_type": "TimeoutError",
+            "message": f"Simulation timed out after {timeout} seconds."
+        }
+    
+    if process.exitcode != 0:
+        return {
+            "success": False,
+            "error_type": "CrashError",
+            "message": f"Simulation process crashed with exit code {process.exitcode}."
+        }
+    
+    if queue.empty():
+        return {
+            "success": False,
+            "error_type": "UnknownError",
+            "message": "Simulation process finished but returned no results."
+        }
+    
+    return queue.get()
