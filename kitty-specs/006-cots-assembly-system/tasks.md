@@ -16,12 +16,12 @@ Implementation breakdown for the COTS Assembly System. The work is divided into 
 **Priority**: P0 (Blocker)
 **Test**: Unit tests for `PartIndex` registration and search logic.
 
-- [ ] T001: Add `bd_warehouse` dependency to `pyproject.toml`
-- [ ] T002: Create `src/cots` package structure
-- [ ] T003: Define `Part`, `PartSummary`, `PartPreview` data classes
-- [ ] T004: Define abstract `PartProvider` base class
-- [ ] T005: Implement `PartIndex` (registration, search, preview orchestration)
-- [ ] T006: Write unit tests for `PartIndex` and data classes
+- [x] T001: Add `bd_warehouse` dependency to `pyproject.toml`
+- [x] T002: Create `src/cots` package structure
+- [x] T003: Define `Part`, `PartSummary`, `PartPreview` data classes
+- [x] T004: Define abstract `PartProvider` base class
+- [x] T005: Implement `PartIndex` (registration, search, preview orchestration)
+- [x] T006: Write unit tests for `PartIndex` and data classes
 
 **Implementation Notes**:
 - Use Python's `dataclasses` for entities.
