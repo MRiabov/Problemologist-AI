@@ -66,6 +66,19 @@ wheels = [
 ]
 
 [[package]]
+name = "bd-warehouse"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "build123d" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/03/7c/6365c77d5583d47339ca56da5423088064aa5f974a5d44952b65a9b139d6/bd_warehouse-0.1.1.tar.gz", hash = "sha256:df9fddeb5ef5e6b09e94aaacd78659e5c9d30a157830e4afe3bf6111092209cd", size = 7397254, upload-time = "2025-11-13T15:28:22.931Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/be/f33651b407516148f1209327b38425461c287ccd6246a4fc1e3fc49e5fb9/bd_warehouse-0.1.1-py3-none-any.whl", hash = "sha256:f750c1aedbd0b7266fdaba6f469c641ca70757f99240f2c4cb281ab8cc9c3581", size = 109109, upload-time = "2025-11-13T15:28:21.457Z" },
+]
+
+[[package]]
 name = "build123d"
 version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1040,6 +1053,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "bd-warehouse" },
     { name = "build123d" },
     { name = "gymnasium" },
     { name = "mujoco" },
@@ -1057,6 +1071,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.3" },
+    { name = "bd-warehouse" },
     { name = "build123d", specifier = ">=0.10.0" },
     { name = "gymnasium", specifier = ">=1.2.3" },
     { name = "mujoco", specifier = ">=3.4.0" },

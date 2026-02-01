@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.18.3",
+    "bd_warehouse",
     "build123d>=0.10.0",
     "gymnasium>=1.2.3",
     "mujoco>=3.4.0",
