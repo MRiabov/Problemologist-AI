@@ -30,15 +30,3 @@ kitty-specs/**/tasks/*.md
 *.db
 *.db-wal
 *.db-shm
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-# Excluded via sparse-checkout
-kitty-specs/
->>>>>>> 002-vlm-cad-agent-WP03
-=======
-
-# Excluded via sparse-checkout
-kitty-specs/
->>>>>>> 002-vlm-cad-agent-WP04
