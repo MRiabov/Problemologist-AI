@@ -1,12 +1,14 @@
 ---
 work_package_id: WP04
 title: Runner & Integration
-lane: planned
+lane: "doing"
 dependencies: "[]"
 subtasks:
 - T014
 - T015
 - T016
+agent: "gemini-cli"
+shell_pid: "254905"
 ---
 
 ## Objective
@@ -68,3 +70,7 @@ The agent is now a compiled `StateGraph`. To run it, we need an asynchronous run
 - [ ] `python src/agent/runner.py` executes the graph asynchronously.
 - [ ] Console output shows the graph events streaming.
 - [ ] Graph successfully calls environment tools via adapters.
+
+## Activity Log
+
+- 2026-02-01T11:57:08Z – gemini-cli – shell_pid=254905 – lane=doing – Started implementation via workflow command
