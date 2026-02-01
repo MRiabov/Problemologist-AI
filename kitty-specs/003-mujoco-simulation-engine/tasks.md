@@ -82,6 +82,6 @@ Depends on WP03
 **Priority**: Low
 Depends on WP04
 
-- [ ] T017: Create a reference "Pusher Bot" `build123d` model + control script.
-- [ ] T018: Write E2E test: Submit Pusher Bot -> Waiting for Success Report.
-- [ ] T019: Implement optionally returning replay artifacts (video/MJCF).
+- [x] T017: Create a reference "Pusher Bot" `build123d` model + control script.
+- [x] T018: Write E2E test: Submit Pusher Bot -> Waiting for Success Report.
+- [x] T019: Implement optionally returning replay artifacts (video/MJCF).
