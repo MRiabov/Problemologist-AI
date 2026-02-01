@@ -4,9 +4,17 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "build123d>=0.10.0",
+    "fastapi>=0.128.0",
+    "mujoco>=3.1.0",
+    "numpy>=2.4.2",
+    "trimesh[easy]>=4.11.1",
+    "uvicorn>=0.40.0",
+]
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.2",
     "spec-kitty-cli>=0.13.20",
 ]
