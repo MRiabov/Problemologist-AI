@@ -65,10 +65,10 @@ Depends on WP02
 **Priority**: Medium
 Depends on WP03
 
-- [ ] T013: Implement `ProcessRunner` in `runner.py` to run `SimulationLoop` in a separate process.
-- [ ] T014: Implement timeout and exception safety in `ProcessRunner`.
-- [ ] T015: Create `main.py` with FastAPI app and `POST /simulate` endpoint.
-- [ ] T016: Define API request/response models (Pydantic).
+- [x] T013: Implement `ProcessRunner` in `runner.py` to run `SimulationLoop` in a separate process.
+- [x] T014: Implement timeout and exception safety in `ProcessRunner`.
+- [x] T015: Create `main.py` with FastAPI app and `POST /simulate` endpoint.
+- [x] T016: Define API request/response models (Pydantic).
 
 **Implementation Logic**:
 
