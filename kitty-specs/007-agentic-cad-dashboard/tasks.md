@@ -10,7 +10,7 @@
 - [x] T001: Install dependencies (streamlit, stpyvista, pyvista, sqlalchemy)
 - [x] T002: Create directory structure (src/dashboard/...)
 - [x] T003: Implement `src/dashboard/utils.py` (Path resolution)
-- [ ] T004: Implement `src/dashboard/data.py` (SQLAlchemy models & queries)
+- [x] T004: Implement `src/dashboard/data.py` (SQLAlchemy models & queries)
 
 *Dependency Setup*: None
 *Parallelism*: Prerequisite for WP02/WP03.
