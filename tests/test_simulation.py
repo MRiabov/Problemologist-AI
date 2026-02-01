@@ -117,3 +117,17 @@ def control(obs):
 
     assert sim.metrics.steps == 5
     assert sim.metrics.time == 5 * sim.model.opt.timestep
+
+
+def test_energy_calculation(model_path):
+    sim = SimulationLoop(model_path)
+    # Apply some control to generate energy
+    sim.run(
+        """
+def control(obs):
+    return [10.0, 10.0]
+""",
+        max_steps=10,
+    )
+
+    assert sim.metrics.energy > 0

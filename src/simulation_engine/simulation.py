@@ -68,17 +68,11 @@ class SimulationLoop:
         # Collisions: simply count contacts
         self.metrics.collisions += self.data.ncon
 
-        # Energy calculation (simple version)
-        # Iterate over actuators
-        current_energy = 0.0
-        if self.data.ctrl is not None:
-            # This is a rough proxy. Real extraction requires more mapping.
-            # sum(|ctrl| * |joint_vel|) * dt ?
-            # Let's assume torque * velocity.
-            # We need to access the joint velocity corresponding to actuator.
-            # This is complex without mapping.
-            # Placeholder:
-            pass
+        # Energy calculation
+        # Power = actuator_force * actuator_velocity
+        # Energy = sum(|power|) * dt
+        power = self.data.actuator_force * self.data.actuator_velocity
+        self.metrics.energy += np.sum(np.abs(power)) * dt
 
     def run(self, agent_script: str, max_steps: int = 1000) -> Dict[str, Any]:
         """
