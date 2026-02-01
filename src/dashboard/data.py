@@ -1,5 +1,6 @@
 import uuid
-from typing import List, Optional
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker, joinedload
 
@@ -37,7 +38,11 @@ class DashboardDataLayer:
     def get_episode_by_id(self, episode_id: uuid.UUID | str) -> Optional[Episode]:
         """Returns a single episode with steps and artifacts eagerly loaded."""
         if isinstance(episode_id, str):
-            episode_id = uuid.UUID(episode_id)
+            try:
+                episode_id = uuid.UUID(episode_id)
+            except ValueError:
+                # Handle mock IDs
+                return None
             
         with self.SessionLocal() as session:
             stmt = (
@@ -53,19 +58,114 @@ class DashboardDataLayer:
     def get_step_artifacts(self, step_id: uuid.UUID | str) -> List[Artifact]:
         """Returns all artifacts associated with a specific step."""
         if isinstance(step_id, str):
-            step_id = uuid.UUID(step_id)
+            episode_id = uuid.UUID(step_id)
             
         with self.SessionLocal() as session:
             stmt = select(Artifact).where(Artifact.step_id == step_id)
             return list(session.scalars(stmt).all())
 
-if __name__ == "__main__":
-    # Basic validation logic
+# Singleton instance
+_dal = DashboardDataLayer()
+
+def get_all_episodes() -> list[dict[str, Any]]:
+    """Returns a list of available episodes from database, falling back to mock if empty."""
     try:
-        dal = DashboardDataLayer()
-        episodes = dal.get_all_episodes()
-        print(f"Connection successful. Found {len(episodes)} episodes.")
-        for ep in episodes[:5]:
-            print(f"Episode: {ep.id} | Problem: {ep.problem_id} | Status: {ep.status}")
-    except Exception as e:
-        print(f"Data layer validation failed (this is expected if history.db does not exist yet): {e}")
+        episodes = _dal.get_all_episodes()
+        if episodes:
+            return [
+                {
+                    "id": str(ep.id),
+                    "timestamp": ep.start_time,
+                    "name": f"Problem: {ep.problem_id[:8]}..." if ep.problem_id else "Untitled Episode"
+                }
+                for ep in episodes
+            ]
+    except Exception:
+        pass
+
+    return [
+        {
+            "id": "ep_001",
+            "timestamp": datetime(2026, 2, 1, 10, 0, 0),
+            "name": "Designing a Cube"
+        },
+        {
+            "id": "ep_002",
+            "timestamp": datetime(2026, 2, 1, 11, 30, 0),
+            "name": "Complex Linkage Attempt"
+        }
+    ]
+
+def get_episode_by_id(episode_id: str) -> dict[str, Any]:
+    """Returns full episode details including steps from database or mock."""
+    try:
+        ep = _dal.get_episode_by_id(episode_id)
+        if ep:
+            return {
+                "id": str(ep.id),
+                "name": f"Problem: {ep.problem_id}",
+                "steps": [
+                    {
+                        "index": i,
+                        "type": step.type,
+                        "content": step.content,
+                        "tool_calls": step.tool_calls,
+                        "tool_output": step.tool_output,
+                        "artifacts": [a.name for a in step.artifacts]
+                    }
+                    for i, step in enumerate(ep.steps)
+                ]
+            }
+    except Exception:
+        pass
+
+    if episode_id == "ep_001":
+        return {
+            "id": "ep_001",
+            "name": "Designing a Cube",
+            "steps": [
+                {
+                    "index": 0,
+                    "type": "user",
+                    "content": "Create a 10mm cube.",
+                    "tool_calls": None
+                },
+                {
+                    "index": 1,
+                    "type": "thought",
+                    "content": "I need to design a 10mm cube using build123d.",
+                    "tool_calls": None
+                },
+                {
+                    "index": 2,
+                    "type": "tool",
+                    "content": "Writing the script...",
+                    "tool_calls": {
+                        "name": "write_file",
+                        "inputs": {
+                            "path": "design.py", 
+                            "content": "from build123d import *\nwith BuildPart() as p:\n    Box(10, 10, 10)"  # noqa: E501
+                        }
+                    },
+                    "tool_output": "Successfully wrote design.py"
+                }
+            ]
+        }
+    return {"id": episode_id, "steps": []}
+
+def get_latest_episode() -> dict[str, Any] | None:
+    """Returns the latest episode."""
+    episodes = get_all_episodes()
+    if not episodes:
+        return None
+    return get_episode_by_id(episodes[0]["id"])
+
+def get_step_artifacts(episode_id: str, step_index: int) -> list[str]:
+    """Returns artifacts for a given step."""
+    episode = get_episode_by_id(episode_id)
+    if not episode:
+        return []
+    steps = episode.get("steps", [])
+    if step_index < len(steps):
+        return steps[step_index].get("artifacts", [])
+    return []
