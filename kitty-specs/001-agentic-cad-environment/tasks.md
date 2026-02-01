@@ -69,7 +69,7 @@ description: "Work package task list template for feature implementation"
 
 ### Included Subtasks
 
-- [ ] T006 Implement `src/compiler/geometry.py` - Mesh export from `build123d` objects
+- [x] T006 Implement `src/compiler/geometry.py` - Mesh export from `build123d` objects
 - [x] T007 Implement `src/compiler/geometry.py` - Convex decomposition (or basic hull approximation) for physics
 - [x] T008 Implement `src/workbenches/base.py` (Abstract Base Class)
 - [x] T009 [P] Implement `src/workbenches/print_3d.py` - Geometric Checks (Manifold, SingleBody)
@@ -93,6 +93,8 @@ description: "Work package task list template for feature implementation"
 - Complex geometry might fail decomposition; add error handling.
 
 ---
+
+## Work Package WP03: Simulation Integration (Priority: P1)
 
 **Goal**: Implement the client interface to the Spec 003 Simulation Engine.
 **Independent Test**: Can send a CAD design and control script to the Simulation Engine API and receive a valid JSON report.
