@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Dashboard Shell & Text Components
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: [T005, T006, T007, T008]
 agent: "gemini-cli"
@@ -85,3 +85,4 @@ shell_pid: "350435"
 ## Activity Log
 
 - 2026-02-01T13:53:25Z – gemini-cli – shell_pid=350435 – lane=doing – Started implementation via workflow command
+- 2026-02-01T13:59:20Z – gemini-cli – shell_pid=350435 – lane=for_review – Implemented Streamlit dashboard shell with Sidebar (episode/step nav), Chat Viewer (reasoning), and Code Viewer. Integrated with mock data module.
