@@ -11,11 +11,11 @@
 **Priority**: Critical (Blocker)
 **File**: [tasks/WP01-foundation.md](tasks/WP01-foundation.md)
 
-- [ ] **T001**: Scaffold Project Structure
-- [ ] **T002**: Install & Configure Dependencies
-- [ ] **T003**: Implement LLM Client (LiteLLM)
-- [ ] **T004**: Create Base Prompt Templates
-- [ ] **T005**: Define Tool Interface Models
+- [x] **T001**: Scaffold Project Structure
+- [x] **T002**: Install & Configure Dependencies
+- [x] **T003**: Implement LLM Client (LiteLLM)
+- [x] **T004**: Create Base Prompt Templates
+- [x] **T005**: Define Tool Interface Models
 
 ### WP02: Memory & Context Management
 
