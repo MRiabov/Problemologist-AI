@@ -1,33 +1,37 @@
-# Quickstart: Benchmark Scenario Generator (Physics Puzzles)
+# Quickstart: Benchmark Scenario Generator
 
-The Benchmark Scenario Generator automates the creation of stable MuJoCo physics environments from high-level technical requirements.
+The Benchmark Scenario Generator is an automated pipeline designed to bridge the gap between high-level physics "puzzle" concepts and stable, validated MuJoCo environments.
 
-## System Architecture
+## How it Works
 
-The generation process follows a deterministic self-correcting loop:
+The system operates as a self-correcting loop, ensuring that every generated scenario is physically viable before it reaches the final output.
 
-1.  **Planner**: Decomposes the functional request into a geometric and kinematic plan.
-2.  **Coder**: Generates a build123d Python script. This script must implement a `build(seed: int) -> str` function that returns an MJCF XML string.
-3.  **Validator**: Executes a headless MuJoCo simulation for 1,000 steps (1.0s at dt=0.001) to verify kinematic stability.
-4.  **Critic**: Analyzes simulation telemetry (NaNs, excessive velocities) to provide corrective feedback if the initial design is unstable.
+1.  **Planning**: A specialized agent decomposes your functional request (e.g., "a sliding drawer") into a concrete geometric and kinematic plan.
+2.  **Implementation**: The coder agent generates a `build123d` Python script. This script must implement a `build(seed: int) -> str` function that returns the model's MJCF XML.
+3.  **Validation**: A headless MuJoCo instance runs the model for 1,000 steps. If the physics "explode" or the solver crashes, the validation fails.
+4.  **Refinement**: If errors are detected, a critic agent analyzes the simulation telemetry (like high velocities or interpenetration) and provides corrective instructions to the coder for a second attempt.
 
-## Prerequisites
+## Getting Started
 
-The system requires a Python 3.12+ environment with the following dependencies:
-- `mujoco >= 3.4.0`
-- `build123d >= 0.10.0`
-- `trimesh[easy] >= 4.11.1`
+### Prerequisites
 
-## Operational Usage
+Ensure your environment includes:
+*   **MuJoCo** (>= 3.4.0) for physics simulation.
+*   **build123d** (>= 0.10.0) for procedural CAD generation.
+*   **trimesh** (>= 4.11.1) for geometry processing.
 
-### CLI Execution
-To generate a new scenario from the terminal:
+### Basic Execution
+
+To generate a new scenario via the command line, simply provide a descriptive string:
 
 ```bash
 uv run python -m src.generators.benchmark.manager --scenario "A sliding drawer with a handle"
 ```
 
 ### Programmatic Integration
+
+For integration into other services or agents, use the `BenchmarkManager`:
+
 ```python
 from src.generators.benchmark.manager import BenchmarkManager
 
@@ -35,45 +39,36 @@ manager = BenchmarkManager()
 result = manager.generate("A box containing three small spheres")
 
 if result.stable:
-    # xml_path contains the path to the validated MJCF file
-    print(f"Validation Successful: {result.xml_path}")
+    print(f"Scenario validated and saved to: {result.xml_path}")
 else:
-    # error contains the MuJoCo solver error or Big Bang violation
-    print(f"Validation Failed: {result.error}")
+    print(f"Generation failed: {result.error}")
 ```
 
-## Validation Constraints
+## The "Big Bang" Stability Test
 
-Scenarios are subjected to the "Big Bang" stability test in `src/generators/benchmark/validator.py`:
+Safety is enforced via `src/generators/benchmark/validator.py`. A scenario is only considered "stable" if it passes these three gates:
 
-- **Kinematic Stability**: Linear velocity must not exceed 100m/s in a zero-external-force environment.
-- **Solver Integrity**: The simulation must not produce NaN (Not-a-Number) values in the state vector.
-- **Interpenetration**: Initial contact forces must be within normal bounds to prevent collision explosions.
+*   **Kinematic Stability**: Linear velocity must remain below 100m/s. This prevents "explosions" caused by overlapping geometries.
+*   **Solver Integrity**: The state vector must remain free of NaN (Not-a-Number) values.
+*   **Zero-Force Settling**: The simulation is run without external actuators to ensure the environment reaches a natural equilibrium under gravity.
 
-## Technical Debugging (HITL)
+## Human-in-the-Loop & Debugging
 
-If the generator fails to converge on a stable design:
+When a design fails to converge, you can intervene manually:
 
-1.  **Inspect Intermediate Artifacts**: Check the `workspace/` directory for the `latest_attempt.py` script.
-2.  **Manual Verification**: Run the standalone validator against an MJCF file:
+1.  **Inspect the Code**: The `workspace/` directory contains the `latest_attempt.py` script. You can run this directly to see the raw build123d output.
+2.  **Manual Validation**: Test any MJCF file against the stability gates:
     ```bash
     uv run python -m src.generators.benchmark.validator --xml workspace/output.xml
     ```
-3.  **Refine Constraints**: Adjust the `ScenarioManifest` in the input JSON to provide more explicit joint limits or clearances.
+3.  **Refine Constraints**: If the agent is struggling, try providing more explicit joint limits or clearance requirements in the input prompt.
 
-## Directory Structure
-
-- `output/scenarios/`: Final validated MJCF XML files.
-- `output/manifests/`: JSON metadata (labels, goals, constraints).
-- `workspace/`: Temporary Python scripts, logs, and simulation telemetry.
-
-## Example Workflow (End-to-End)
+## Example: From Request to Result
 
 1.  **Input**: "Create a sliding drawer with a handle on the front."
-2.  **Planner**: Identifies two bodies (`housing` and `drawer`) and a `SliderJoint` on the X-axis.
-3.  **Coder**: Defines a hollow box (housing) and a smaller box (drawer) with a cylinder handle.
-4.  **Validator (Attempt 1)**: Fails. The drawer spawned exactly touching the housing, causing a collision explosion (velocity > 100m/s).
-5.  **Critic**: Instructs the Coder to add a 1mm clearance (gap) between the drawer and housing.
-6.  **Coder**: Updates the script with 1mm offset.
-7.  **Validator (Attempt 2)**: Passes. Simulation settles naturally under gravity.
-8.  **Output**: Final MJCF XML and ScenarioManifest are persisted to `output/`.
+2.  **Decomposition**: The Planner identifies a static `housing`, a mobile `drawer`, and a `SliderJoint`.
+3.  **Initial Attempt**: The Coder generates geometry where the drawer and housing share a boundary.
+4.  **Failure**: The Validator detects a collision explosion (velocity > 100m/s) because the parts were intersecting at spawn.
+5.  **Correction**: The Critic identifies the intersection and suggests a 1.0mm clearance gap.
+6.  **Success**: The Coder applies the gap; the second simulation settles perfectly.
+7.  **Output**: The MJCF XML and its JSON metadata (ScenarioManifest) are persisted to the `output/` directory.
