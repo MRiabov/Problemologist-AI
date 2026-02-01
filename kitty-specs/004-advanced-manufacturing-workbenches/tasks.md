@@ -6,11 +6,11 @@
 **Tests**: `tests/test_analysis_utils.py`
 **Estimated Prompt Size**: ~300 lines
 
-- [ ] **T001**: Add dependencies (`trimesh[easy]`, `pyyaml`) to `pyproject.toml`.
-- [ ] **T002**: Create default `src/workbenches/manufacturing_config.yaml`.
-- [ ] **T003**: Create `src/workbenches/analysis_utils.py` with `part_to_trimesh` conversion.
-- [ ] **T004**: Implement configuration loading utility in `analysis_utils.py`.
-- [ ] **T005**: Write unit tests for mesh conversion and config loading.
+- [x] **T001**: Add dependencies (`trimesh[easy]`, `pyyaml`) to `pyproject.toml`.
+- [x] **T002**: Create default `src/workbenches/manufacturing_config.yaml`.
+- [x] **T003**: Create `src/workbenches/analysis_utils.py` with `part_to_trimesh` conversion.
+- [x] **T004**: Implement configuration loading utility in `analysis_utils.py`.
+- [x] **T005**: Write unit tests for mesh conversion and config loading.
 
 ## Work Package 2: Geometric Analysis Algorithms
 **Goal**: Implement core DFM analysis algorithms (Draft, Undercut, Wall Thickness) using `trimesh`.
