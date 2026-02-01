@@ -12,9 +12,9 @@
 **Dependencies**: None
 **File**: [tasks/WP01-infrastructure.md](tasks/WP01-infrastructure.md)
 
-- [ ] **T001**: Scaffold Package Structure (`src/generators/benchmark/`)
-- [ ] **T002**: Define Data Models (`ValidationReport`, `ScenarioManifest`)
-- [ ] **T003**: Implement Headless Validator (`validator.py`)
+- [x] T001 Scaffold Package Structure (`src/generators/benchmark/`)
+- [x] T002 Define Data Models (`ValidationReport`, `ScenarioManifest`)
+- [x] T003 Implement Headless Validator (`validator.py`)
 
 ### WP02: Generator Agent Core
 
@@ -23,9 +23,9 @@
 **Dependencies**: WP01
 **File**: [tasks/WP02-generator-agent.md](tasks/WP02-generator-agent.md)
 
-- [ ] **T004**: Define System Prompts (`prompts.py`)
-- [ ] **T005**: Implement Agent Graph (`agent.py`)
-- [ ] **T006**: Integrate LLM Client
+- [ ] T004 Define System Prompts (`prompts.py`)
+- [ ] T005 Implement Agent Graph (`agent.py`)
+- [ ] T006 Integrate LLM Client
 
 ### WP03: CLI & Randomization Pipeline
 
@@ -34,6 +34,6 @@
 **Dependencies**: WP02
 **File**: [tasks/WP03-cli-pipeline.md](tasks/WP03-cli-pipeline.md)
 
-- [ ] **T007**: Implement CLI Entry Point (`manager.py`)
-- [ ] **T008**: Implement Batch Processing & Randomization Loop
-- [ ] **T009**: Implement Artifact Export logic
+- [ ] T007 Implement CLI Entry Point (`manager.py`)
+- [ ] T008 Implement Batch Processing & Randomization Loop
+- [ ] T009 Implement Artifact Export logic
