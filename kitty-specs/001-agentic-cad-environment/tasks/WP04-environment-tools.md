@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Environment Tools & RAG
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T015
@@ -108,3 +108,4 @@ history:
 ## Activity Log
 
 - 2026-02-01T08:36:06Z – Antigravity – shell_pid=90978 – lane=doing – Started implementation via workflow command
+- 2026-02-01T08:39:11Z – Antigravity – shell_pid=90978 – lane=for_review – Implemented environment tools, RAG search with stubs, and added unit tests. All tests passed.
