@@ -1,11 +1,13 @@
 ---
 work_package_id: WP03
 title: 3D Visualization & Integration
-lane: "doing"
+lane: "planned"
 dependencies: []
 subtasks: [T009, T010, T011, T012]
 agent: "gemini-cli-agent"
 shell_pid: "366550"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP03: 3D Visualization & Integration
@@ -73,3 +75,4 @@ shell_pid: "366550"
 ## Activity Log
 
 - 2026-02-01T14:09:13Z – gemini-cli-agent – shell_pid=366550 – lane=doing – Started review via workflow command
+- 2026-02-01T14:25:26Z – gemini-cli-agent – shell_pid=366550 – lane=planned – Moved to planned
