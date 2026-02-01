@@ -102,10 +102,10 @@ description: "Work package task list template for feature implementation"
 
 ### Included Subtasks
 
-- [ ] T011 [P] Implement `src/compiler/sim_client.py` - HTTP Client/Wrapper to call Spec 003 API
-- [ ] T012 Define the simulation request payload (Design STL + Control Script + Scenario)
-- [ ] T013 Implement response parsing and metric mapping (Engine result -> Gym reward)
-- [ ] T014 [P] Create a mock/stub simulation service for local testing without Spec 003 running
+- [x] T011 [P] Implement `src/compiler/sim_client.py` - HTTP Client/Wrapper to call Spec 003 API
+- [x] T012 Define the simulation request payload (Design STL + Control Script + Scenario)
+- [x] T013 Implement response parsing and metric mapping (Engine result -> Gym reward)
+- [x] T014 [P] Create a mock/stub simulation service for local testing without Spec 003 running
 
 ### Implementation Notes
 
