@@ -1,0 +1,27 @@
+defaults:
+  currency: "USD"
+
+cnc:
+  materials:
+    aluminum_6061:
+      density_g_cm3: 2.7
+      cost_per_kg: 5.50
+      machine_hourly_rate: 80.00
+  constraints:
+    min_tool_radius_mm: 3.0
+    default_axis: "Z"
+
+injection_molding:
+  materials:
+    abs:
+      density_g_cm3: 1.04
+      cost_per_kg: 2.50
+  constraints:
+    min_draft_angle_deg: 2.0
+    min_wall_thickness_mm: 1.0
+    max_wall_thickness_mm: 4.0
+  costs:
+    base_mold_cost: 5000.00
+    mold_cost_per_surface_area_cm2: 0.50
+    injection_rate_cm3_s: 10.0
+    machine_hourly_rate: 60.00
