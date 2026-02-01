@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Process Isolation & API Service
-lane: "doing"
+lane: "done"
 dependencies: []
 subtasks:
 - T013
@@ -85,3 +85,4 @@ Agent code is "untrusted". If it does `while True: pass`, the server would hang.
 - 2026-02-01T11:02:08Z – gemini – shell_pid=182241 – lane=for_review – Implemented process isolation with timeouts and crash detection. Added FastAPI service with Pydantic models. Verified with unit and API tests.
 - 2026-02-01T11:04:11Z – gemini – shell_pid=182241 – lane=for_review – Implemented process isolation for MuJoCo simulation using multiprocessing. Created FastAPI service with /simulate endpoint. Verified with unit tests.
 - 2026-02-01T11:27:24Z – gemini-reviewer – shell_pid=227533 – lane=doing – Started review via workflow command
+- 2026-02-01T11:28:37Z – gemini-reviewer – shell_pid=227533 – lane=done – Review passed: Process isolation and FastAPI simulation service implemented correctly. Tests verified successful execution, timeouts, and crash handling.
