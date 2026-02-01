@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Infrastructure & Validator
-lane: "done"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T001
@@ -65,3 +65,4 @@ We are building a standalone utility in `src/generators/benchmark/`. The validat
 - 2026-02-01T13:18:46Z – gemini-cli – shell_pid=264295 – lane=for_review – Implemented infrastructure, data models, and headless validator
 - 2026-02-01T13:33:04Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
 - 2026-02-01T13:40:33Z – Antigravity – shell_pid=313636 – lane=done – Review passed: Infrastructure, Data Models, and Validator implemented and verified. Fixed energy calculation.
+- 2026-02-01T13:53:15Z – Antigravity – shell_pid=313636 – lane=for_review – Implemented core infrastructure and MuJoCo validator for benchmark generator.
