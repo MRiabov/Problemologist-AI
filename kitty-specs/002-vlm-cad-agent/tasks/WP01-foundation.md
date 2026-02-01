@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
   - "T001"
@@ -116,3 +116,4 @@ We are migrating from a custom ReAct loop to a robust Graph Architecture. WP01 f
 ## Activity Log
 
 - 2026-02-01T08:29:17Z – Antigravity – shell_pid=105353 – lane=doing – Started implementation via workflow command
+- 2026-02-01T08:33:16Z – Antigravity – shell_pid=105353 – lane=for_review – Ready for review: Foundation established with LangGraph state, tools and model factory
