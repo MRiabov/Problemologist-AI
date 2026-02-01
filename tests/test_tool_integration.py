@@ -42,3 +42,31 @@ def test_manufacturability_caching(tmp_path, capsys):
     report = tools.check_manufacturability("small.py", "cnc_milling")
     assert report["status"] == "fail" # because of box bottom undercut
 
+
+from src.environment.core import CADEnv
+
+def test_agent_exposure(tmp_path):
+    # Setup environment with a temporary workspace
+    db_path = tmp_path / "test_history.db"
+    workspace_dir = tmp_path / "workspace"
+    env = CADEnv(db_url=f"sqlite:///{db_path}", workspace_dir=str(workspace_dir))
+    
+    # 1. Reset env
+    env.reset()
+    
+    # 2. Write a script
+    design_content = "from build123d import Box\np = Box(10, 10, 10)"
+    env.step({"tool": 0, "arguments": design_content}) # tool 0 is write_script
+    
+    # 3. Call manufacturability check via agent interface
+    # tool 5 is check_manufacturability
+    obs, reward, terminated, truncated, info = env.step({
+        "tool": 5, 
+        "arguments": "cnc|||10"
+    })
+    
+    # 4. Assert tool output is present in observations
+    assert "last_output" in obs
+    assert "'status': 'fail'" in obs["last_output"] # Box has undercuts from Z
+    assert "'process': 'cnc'" in obs["last_output"]
+    assert "'quantity': 10" in obs["last_output"]

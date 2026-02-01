@@ -99,3 +99,12 @@ async def submit_design_async(control_path: str) -> str:
     return (
         "Warning: No active environment found. Submission simulated. Result: Success."
     )
+
+
+async def check_manufacturability_async(
+    design_file: str, process: str, quantity: int
+) -> dict:
+    """Async wrapper for check_manufacturability."""
+    return await asyncio.to_thread(
+        env_tools.check_manufacturability, design_file, process, quantity
+    )
