@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: CLI & Randomization Pipeline
-lane: "for_review"
+lane: "doing"
 dependencies: [WP02]
 base_branch: main
 base_commit: d4e4dd4e6ffe2e4bd203a3d3883dd4b7abf5957e
@@ -10,7 +10,8 @@ subtasks:
 - T007
 - T008
 - T009
-shell_pid: "383008"
+shell_pid: "313636"
+agent: "Antigravity"
 ---
 
 ## Objective
@@ -62,3 +63,4 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 ## Activity Log
 
 - 2026-02-01T16:17:21Z – unknown – shell_pid=383008 – lane=for_review – Benchmark scenario generation pipeline implemented. Includes CLI, agent orchestration, batch randomization, and artifact export. Verified with tests.
+- 2026-02-01T16:36:57Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
