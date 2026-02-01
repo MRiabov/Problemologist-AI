@@ -23,9 +23,9 @@
 **Dependencies**: WP01
 **File**: [tasks/WP02-generator-agent.md](tasks/WP02-generator-agent.md)
 
-- [ ] T004 Define System Prompts (`prompts.py`)
-- [ ] T005 Implement Agent Graph (`agent.py`)
-- [ ] T006 Integrate LLM Client
+- [x] T004 Define System Prompts (`prompts.py`)
+- [x] T005 Implement Agent Graph (`agent.py`)
+- [x] T006 Integrate LLM Client
 
 ### WP03: CLI & Randomization Pipeline
 
