@@ -8,6 +8,7 @@ def test_bdwarehouse_provider_initialization():
     assert any("Nema17" in s.id for s in provider.summaries)
     assert any("bearing" in s.id for s in provider.summaries)
     assert any("fastener" in s.id for s in provider.summaries)
+    assert any("beam" in s.id for s in provider.summaries)
 
 
 def test_bdwarehouse_search():
@@ -27,6 +28,12 @@ def test_bdwarehouse_search():
     assert len(results) > 0
 
     results = provider.search("nut")
+    assert len(results) > 0
+
+    # Search beams
+    results = provider.search("v_slot")
+    assert len(results) > 0
+    results = provider.search("c_beam")
     assert len(results) > 0
 
 
@@ -72,5 +79,11 @@ def test_bdwarehouse_instantiation():
     # Test Fastener
     screw_id = [s.id for s in provider.summaries if "screw" in s.id][0]
     part = provider.get_part(screw_id)
+    obj = part.factory()
+    assert obj is not None
+
+    # Test Beam
+    beam_id = [s.id for s in provider.summaries if "beam" in s.id][0]
+    part = provider.get_part(beam_id)
     obj = part.factory()
     assert obj is not None

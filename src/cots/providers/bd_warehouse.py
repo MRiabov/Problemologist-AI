@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from src.cots.providers.base import PartProvider
 from src.cots.core import Part, PartSummary, PartPreview
-from bd_warehouse.open_builds import StepperMotor
+from bd_warehouse.open_builds import StepperMotor, VSlotLinearRail, CBeamLinearRail
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
 from bd_warehouse.fastener import SocketHeadCapScrew, HexNut
 from src.cots.utils import get_description
@@ -15,6 +15,7 @@ class BDWarehouseProvider(PartProvider):
         self._index_motors()
         self._index_bearings()
         self._index_fasteners()
+        self._index_beams()
 
     def _index_motors(self):
         # Hardcoded from bd_warehouse.open_builds.StepperMotor implementation
@@ -127,6 +128,61 @@ class BDWarehouseProvider(PartProvider):
         except Exception as e:
             print(f"Warning: Failed to index nuts: {e}")
 
+    def _index_beams(self):
+        # Index V-Slot and C-Beam profiles
+        try:
+            # V-Slot Linear Rail
+            v_slot_sizes = ["2020", "2040", "2060", "2080"]
+            default_length = 250
+
+            for size in v_slot_sizes:
+                part_id = f"bd_warehouse:beam:v_slot:{size}-{default_length}"
+                self.summaries.append(
+                    PartSummary(
+                        id=part_id,
+                        name=f"V-Slot {size}x{default_length}",
+                        provider="bd_warehouse",
+                    )
+                )
+
+                rail_size = f"{size[:2]}x{size[2:]}"
+                self.parts[part_id] = Part(
+                    id=part_id,
+                    factory=lambda rs=rail_size, l=default_length: VSlotLinearRail(
+                        rail_size=rs, length=l
+                    ),
+                    params={
+                        "size": size,
+                        "rail_size": rail_size,
+                        "length": default_length,
+                        "type": "beam",
+                        "subtype": "v_slot",
+                    },
+                )
+
+            # C-Beam Linear Rail
+            part_id = f"bd_warehouse:beam:c_beam:4080-{default_length}"
+            self.summaries.append(
+                PartSummary(
+                    id=part_id,
+                    name=f"C-Beam 4080x{default_length}",
+                    provider="bd_warehouse",
+                )
+            )
+
+            self.parts[part_id] = Part(
+                id=part_id,
+                factory=lambda l=default_length: CBeamLinearRail(length=l),
+                params={
+                    "size": "4080",
+                    "length": default_length,
+                    "type": "beam",
+                    "subtype": "c_beam",
+                },
+            )
+        except Exception as e:
+            print(f"Warning: Failed to index beams: {e}")
+
     def search(self, query: str) -> list[PartSummary]:
         return [
             s
@@ -158,6 +214,13 @@ class BDWarehouseProvider(PartProvider):
                 recipe = f'from bd_warehouse.fastener import HexNut\npart = HexNut(size="{params["size"]}", fastener_type="{params["fastener_type"]}")'
             else:
                 recipe = "# Unknown fastener subtype"
+        elif params.get("type") == "beam":
+            if params.get("subtype") == "v_slot":
+                recipe = f'from bd_warehouse.open_builds import VSlotLinearRail\npart = VSlotLinearRail(rail_size="{params["rail_size"]}", length={params["length"]})'
+            elif params.get("subtype") == "c_beam":
+                recipe = f'from bd_warehouse.open_builds import CBeamLinearRail\npart = CBeamLinearRail(length={params["length"]})'
+            else:
+                recipe = "# Unknown beam subtype"
         else:
             recipe = "# Recipe not implemented"
 
