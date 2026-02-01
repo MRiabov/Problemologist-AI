@@ -1,0 +1,56 @@
+import pytest
+import asyncio
+from unittest.mock import MagicMock, patch
+from langchain_core.messages import AIMessage
+from src.generators.benchmark.agent import generator_agent
+
+@pytest.mark.asyncio
+async def test_generator_agent_mock():
+    mock_llm = MagicMock()
+    
+    def mock_invoke(messages, **kwargs):
+        system_content = messages[0].content
+        if "detailed plan" in system_content:
+            return AIMessage(content="Plan: Create a box.")
+        elif "build(seed: int = 0)" in system_content:
+            return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody><geom type=\"box\" size=\"0.1 0.1 0.1\"/></worldbody></mujoco>'\n```")
+        return AIMessage(content="Default")
+
+    mock_llm.invoke.side_effect = mock_invoke
+    
+    with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
+        with patch("src.generators.benchmark.agent.validate_mjcf", return_value={"is_valid": True, "error_message": None}):
+            result = await generator_agent.ainvoke({"request": "Create a red box", "attempts": 0})
+            assert result["validation_passed"] is True
+            assert "mujoco" in result["mjcf"]
+
+@pytest.mark.asyncio
+async def test_generator_agent_retry():
+    mock_llm = MagicMock()
+    
+    call_count = {"coder": 0}
+
+    def mock_invoke(messages, **kwargs):
+        system_content = messages[0].content
+        if "detailed plan" in system_content:
+            return AIMessage(content="Plan: Create a box.")
+        elif "build(seed: int = 0)" in system_content or "expert build123d coder" in system_content:
+            call_count["coder"] += 1
+            if call_count["coder"] == 1:
+                return AIMessage(content="```python\ndef build(seed=0):\n    return 'INVALID XML'\n```")
+            else:
+                return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```")
+        return AIMessage(content="Default")
+
+    mock_llm.invoke.side_effect = mock_invoke
+    
+    with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
+        def mock_validate(xml):
+            if xml == "INVALID XML":
+                return {"is_valid": False, "error_message": "Invalid XML"}
+            return {"is_valid": True, "error_message": None}
+
+        with patch("src.generators.benchmark.agent.validate_mjcf", side_effect=mock_validate):
+            result = await generator_agent.ainvoke({"request": "Create something", "attempts": 0})
+            assert result["validation_passed"] is True
+            assert result["attempts"] == 2
