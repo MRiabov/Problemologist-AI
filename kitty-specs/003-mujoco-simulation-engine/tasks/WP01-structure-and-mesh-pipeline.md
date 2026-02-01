@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Project Structure & Mesh Pipeline
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
   - T001
@@ -87,3 +87,4 @@ This work package sets up the project structure and this critical geometry utili
 ## Activity Log
 
 - 2026-02-01T07:36:10Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
+- 2026-02-01T07:38:35Z – Antigravity – shell_pid=60800 – lane=for_review – Ready for review
