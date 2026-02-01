@@ -10,8 +10,9 @@ subtasks:
 - T007
 - T008
 - T009
-shell_pid: "313636"
 agent: "Antigravity"
+assignee: "Antigravity"
+shell_pid: "313636"
 reviewed_by: "MRiabov"
 review_status: "approved"
 ---
@@ -30,6 +31,7 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 
 **Purpose**: The main command.
 **Steps**:
+
 1. Create `src/generators/benchmark/manager.py`.
 2. Use `argparse` or `typer` to define `generate`.
    - Arguments: `--prompt`, `--count`, `--output-dir`, `--tier`.
@@ -39,6 +41,7 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 
 **Purpose**: Run the template multiple times.
 **Steps**:
+
 1. Once the Agent returns a valid script, enter the "Mass Production" phase.
 2. Loop `count` times:
    - Generate a random seed.
@@ -50,6 +53,7 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 
 **Purpose**: Save files to disk.
 **Steps**:
+
 1. For each valid variation:
    - Save `assets/mesh_{seed}.stl`.
    - Save `scene_{seed}.xml`.

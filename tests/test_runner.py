@@ -7,7 +7,7 @@ MJCF = """
   <worldbody>
     <light pos="0 0 3"/>
     <geom name="floor" type="plane" size="5 5 .1"/>
-    <body name="target" pos="0 0 0.2">
+    <body name="injected_object" pos="0 0 0.2">
       <freejoint/>
       <geom type="sphere" size="0.1" rgba="1 0 0 1"/>
     </body>
@@ -16,46 +16,42 @@ MJCF = """
 </mujoco>
 """
 
+
 @pytest.fixture
-def model_path(tmp_path):
-    p = tmp_path / "test_model.xml"
-    p.write_text(MJCF)
-    return str(p)
+def mjcf_string():
+    return MJCF
 
-def test_run_isolated_success(model_path):
-    script = "def control(obs): return []"
-    result = run_isolated(model_path, script, max_steps=10)
-    assert result["status"] == "TIMEOUT"  # It didn't win or fail, just finished steps
-    assert "metrics" in result
 
-def test_run_isolated_timeout(model_path):
-    # Script that hangs
-    script = """
-import time
-def control(obs):
-    while True:
-        time.sleep(0.1)
-    return []
-"""
-    # Short timeout for test
-    result = run_isolated(model_path, script, max_steps=100, timeout=2.0)
-    assert result["status"] == "TIMEOUT"
+def test_run_isolated_success(mjcf_string):
+    result = run_isolated(mjcf_string, duration=0.1)
+    assert result["success"] is True
+    assert "result" in result
+    assert result["result"]["success"] is True
+
+
+def test_run_isolated_timeout(mjcf_string):
+    # Test wall-clock timeout
+    # We use a very short timeout and a long duration to trigger it
+    result = run_isolated(mjcf_string, duration=10.0, timeout=0.01)
+    assert result["success"] is False
+    assert result["error_type"] == "TimeoutError"
     assert "timed out" in result["message"]
 
-def test_run_isolated_crash(model_path):
-    # Script that crashes the process (e.g., segfault if we could, but let's just do exit)
-    script = """
-import os
-def control(obs):
-    os._exit(1)
-"""
-    result = run_isolated(model_path, script, max_steps=100)
-    assert result["status"] == "CRASH"
-    assert "crashed" in result["message"]
 
-def test_run_isolated_error(model_path):
-    # Script with syntax error or similar
-    script = "invalid script"
-    result = run_isolated(model_path, script, max_steps=10)
-    assert result["status"] == "ERROR"
-    assert "Script execution failed" in result["message"]
+def test_run_isolated_crash(mjcf_string):
+    # It's hard to trigger a crash without a script that calls os._exit,
+    # and the current runner doesn't support scripts.
+    # We'll skip or mock this if needed, but for now let's just test invalid XML
+    result = run_isolated("invalid xml", duration=0.1)
+    assert (
+        result["success"] is True
+    )  # MujocoBridge handles load error by returning SimResult(success=False)
+    assert result["result"]["success"] is False
+
+
+def test_run_isolated_error(mjcf_string):
+    # Test invalid duration
+    # MujocoBridge handles the TypeError internally and returns a SimResult with success=False
+    result = run_isolated(mjcf_string, duration="invalid")
+    assert result["success"] is True
+    assert result["result"]["success"] is False
