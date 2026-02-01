@@ -25,6 +25,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-asyncio>=0.23.0",
     "ruff>=0.14.14",
     "spec-kitty-cli>=0.13.20",
 ]
