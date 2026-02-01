@@ -34,6 +34,6 @@
 **Dependencies**: WP02
 **File**: [tasks/WP03-cli-pipeline.md](tasks/WP03-cli-pipeline.md)
 
-- [ ] T007 Implement CLI Entry Point (`manager.py`)
-- [ ] T008 Implement Batch Processing & Randomization Loop
-- [ ] T009 Implement Artifact Export logic
+- [x] T007 Implement CLI Entry Point (`manager.py`)
+- [x] T008 Implement Batch Processing & Randomization Loop
+- [x] T009 Implement Artifact Export logic
