@@ -10,6 +10,7 @@ subtasks:
   - T004
   - T005
   - T006
+assignee: "Antigravity"
 agent: "Gemini"
 shell_pid: "277555"
 reviewed_by: "MRiabov"

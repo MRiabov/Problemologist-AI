@@ -10,6 +10,7 @@ subtasks:
 - T018
 - T019
 phase: Phase 4 - Agent Interface
+assignee: "Antigravity"
 agent: "Antigravity"
 shell_pid: "90978"
 review_status: "has_feedback"
@@ -17,7 +18,8 @@ reviewed_by: "MRiabov"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
-  agent: system
+  assignee: "Antigravity"
+agent: system
   action: Prompt generated via /spec-kitty.tasks
 ---
 

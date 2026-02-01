@@ -9,6 +9,7 @@ subtasks:
 - T013
 - T014
 phase: Phase 3 - Physics
+assignee: "Antigravity"
 agent: "Antigravity"
 shell_pid: "90978"
 reviewed_by: "MRiabov"
@@ -16,7 +17,8 @@ review_status: "approved"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
-  agent: system
+  assignee: "Antigravity"
+agent: system
   action: Prompt generated via /spec-kitty.tasks
 ---
 
