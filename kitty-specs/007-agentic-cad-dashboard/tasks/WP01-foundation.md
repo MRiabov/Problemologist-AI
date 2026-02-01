@@ -88,3 +88,4 @@ reviewed_by: "MRiabov"
 - 2026-02-01T13:24:26Z – Antigravity – shell_pid=322329 – lane=for_review – Foundation and data layer implemented with tests.
 - 2026-02-01T13:33:57Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
 - 2026-02-01T13:37:34Z – Antigravity – shell_pid=313636 – lane=planned – Moved to planned
+- 2026-02-01T13:41:43Z – Antigravity – shell_pid=313636 – lane=planned – Moved to planned
