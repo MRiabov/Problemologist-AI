@@ -59,3 +59,4 @@ The agent shouldn't instantiate workbenches directly. It calls `check_manufactur
 ## Activity Log
 
 - 2026-02-01T11:42:32Z – unknown – shell_pid=234286 – lane=for_review – Integrated tool with caching and unified API. Completed end-to-end integration.
+- 2026-02-01T14:45:18Z – unknown – shell_pid=234286 – lane=for_review – Cleaned up garbage files from the root directory.
