@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Core Environment Loop
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T020
@@ -10,6 +10,8 @@ subtasks:
 - T023
 - T024
 phase: Phase 5 - Integration
+agent: "Gemini"
+shell_pid: "129414"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -107,3 +109,7 @@ history:
 ## Risks & Mitigations
 
 - **Loop Stability**: If the tool crashes, the environment shouldn't crash. Wrap tool calls in try/except and return Error message as observation.
+
+## Activity Log
+
+- 2026-02-01T09:06:17Z – Gemini – shell_pid=129414 – lane=doing – Started implementation via workflow command
