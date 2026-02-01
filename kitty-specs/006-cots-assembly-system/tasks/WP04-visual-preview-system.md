@@ -1,14 +1,18 @@
 ---
-work_package_id: "WP04"
-title: "Visual Preview System"
-lane: "planned"
-dependencies: ["WP01", "WP02"]
+work_package_id: WP04
+title: Visual Preview System
+lane: "doing"
+dependencies: [WP01, WP02]
+base_branch: main
+base_commit: 8c03b173e1fcc15efbccc86eac07f8eabae5d48f
+created_at: '2026-02-01T16:27:20.913179+00:00'
 subtasks:
-  - T015
-  - T016
-  - T017
-  - T018
-  - T019
+- T015
+- T016
+- T017
+- T018
+- T019
+shell_pid: "313636"
 ---
 
 # WP04: Visual Preview System
