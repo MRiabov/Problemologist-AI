@@ -5,6 +5,7 @@ lane: "done"
 dependencies: []
 subtasks: [T005, T006, T007, T008]
 agent: "Gemini"
+assignee: "gemini-cli"
 shell_pid: "368166"
 reviewed_by: "MRiabov"
 review_status: "approved"

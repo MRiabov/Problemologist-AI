@@ -5,6 +5,7 @@ lane: "done"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004"]
 agent: "Antigravity"
+assignee: "gemini-cli"
 shell_pid: "313636"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
