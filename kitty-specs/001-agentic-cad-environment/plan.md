@@ -20,7 +20,7 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 - `mujoco`: Physics engine
 - `gymnasium`: Standard RL interface patterns
 - `numpy`: Numerical operations
-**Storage**: SQLite (`history.db`) for robust logging of episodes, steps, and artifacts.
+**Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
 **Testing**: `pytest` for unit tests of tools and compiler; visual regression tests for rendering.
 **Target Platform**: Linux (Development), Docker (Deployment).
 **Performance Goals**:

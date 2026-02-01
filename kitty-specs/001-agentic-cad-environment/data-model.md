@@ -1,8 +1,8 @@
 # Data Model: Agentic CAD Environment
 
-## Database Schema (SQLite)
+## Database Schema (SQLAlchemy ORM)
 
-The persistence layer uses a local SQLite database `history.db`.
+The persistence layer uses SQLAlchemy to manage a local SQLite database `history.db`. Alembic is used for migrations.
 
 ### 1. Episodes
 
