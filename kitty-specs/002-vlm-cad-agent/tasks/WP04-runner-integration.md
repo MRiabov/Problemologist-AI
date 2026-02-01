@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Runner & Integration
-lane: "doing"
+lane: "for_review"
 dependencies: "[]"
 subtasks:
 - T014
@@ -74,3 +74,4 @@ The agent is now a compiled `StateGraph`. To run it, we need an asynchronous run
 ## Activity Log
 
 - 2026-02-01T11:57:08Z – gemini-cli – shell_pid=254905 – lane=doing – Started implementation via workflow command
+- 2026-02-01T12:07:05Z – gemini-cli – shell_pid=254905 – lane=for_review – Implemented async runner and environment adapter. Verified with e2e tests.
