@@ -1,3 +1,4 @@
+import difflib
 import re
 from datetime import datetime
 from typing import List, Optional
@@ -27,9 +28,32 @@ def read_journal(topic: str = "") -> str:
         # We capture the full entry text including the header.
         entries = re.findall(r"(## \[.*?\][\s\S]*?)(?=(?:## \[|$))", content)
 
-        filtered_entries = [
-            entry for entry in entries if topic.lower() in entry.lower()
-        ]
+        def is_match(entry_text: str, search_topic: str) -> bool:
+            entry_lower = entry_text.lower()
+            topic_lower = search_topic.lower()
+
+            # 1. Exact substring match
+            if topic_lower in entry_lower:
+                return True
+
+            # 2. Fuzzy match
+            # Split into tokens to match words
+            entry_words = re.findall(r"\w+", entry_lower)
+            topic_words = re.findall(r"\w+", topic_lower)
+
+            if not topic_words:
+                return False
+
+            # Check if every word in topic has a close match in entry
+            for t_word in topic_words:
+                matches = difflib.get_close_matches(
+                    t_word, entry_words, n=1, cutoff=0.7
+                )
+                if not matches:
+                    return False
+            return True
+
+        filtered_entries = [entry for entry in entries if is_match(entry, topic)]
 
         if not filtered_entries:
             return f"No journal entries found matching topic: '{topic}'."
