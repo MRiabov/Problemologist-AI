@@ -335,6 +335,92 @@ def package_skill(skill_name: str) -> str:
         return f"Exception packaging skill: {e!s}"
 
 
+import hashlib
+import functools
+import build123d as bd
+from src.workbenches.cnc import CNCWorkbench
+from src.workbenches.injection_molding import InjectionMoldingWorkbench
+
+# Global workbenches to avoid re-initializing config
+_WORKBENCHES = {
+    "cnc_milling": CNCWorkbench(),
+    "injection_molding": InjectionMoldingWorkbench()
+}
+
+@functools.lru_cache(maxsize=128)
+def _analyze_cached(file_hash: str, process: str, quantity: int, script_path: str):
+    """Internal helper to cache analysis results based on file content hash."""
+    # Execute the script to get the part
+    locs = {}
+    with open(script_path, "r") as f:
+        code = f.read()
+    exec(code, globals(), locs)
+    
+    export_obj = None
+    for val in locs.values():
+        if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
+            export_obj = val
+            break
+        elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
+            export_obj = val.part
+            break
+            
+    if not export_obj:
+        raise ValueError("No 3D object found in script")
+
+    workbench = _WORKBENCHES.get(process)
+    if not workbench:
+        raise ValueError(f"Unknown manufacturing process: {process}")
+
+    violations = workbench.validate(export_obj)
+    total_cost = workbench.calculate_cost(export_obj, quantity)
+    
+    # Map to schema
+    status = "pass" if not violations else "fail"
+    
+    # Simple violation mapping for MVP
+    # In a real system, we'd return face indices too
+    mapped_violations = []
+    for v in violations:
+        mapped_violations.append({
+            "type": "generic_violation",
+            "description": v,
+            "severity": "critical"
+        })
+
+    report = {
+        "status": status,
+        "process": process,
+        "manufacturability_score": 1.0 if status == "pass" else max(0.0, 1.0 - len(violations) * 0.1),
+        "violations": mapped_violations,
+        "cost_analysis": {
+            "quantity": quantity,
+            "unit_cost": total_cost / quantity if quantity > 0 else 0.0,
+            "total_cost": total_cost
+        }
+    }
+    return report
+
+def check_manufacturability(design_file: str = "design.py", process: str = "cnc_milling", quantity: int = 1) -> dict:
+    """
+    Checks if the design in the specified file can be manufactured using the target process.
+    Supported processes: 'cnc_milling', 'injection_molding'.
+    """
+    design_file = os.path.basename(design_file)
+    script_path = os.path.join(WORKSPACE_DIR, design_file)
+
+    if not os.path.exists(script_path):
+        return {"error": f"File {design_file} does not exist."}
+
+    try:
+        # Compute hash of file content for caching
+        with open(script_path, "rb") as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()
+        
+        return _analyze_cached(file_hash, process, quantity, script_path)
+    except Exception as e:
+        return {"error": str(e)}
+
 def search_docs(query: str) -> str:
     """
     Searches documentation (RAG).
