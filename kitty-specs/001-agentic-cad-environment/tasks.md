@@ -134,11 +134,11 @@ description: "Work package task list template for feature implementation"
 
 ### Included Subtasks
 
-- [ ] T015 Implement `src/rag/search.py` - Simple documentation loader and searcher
-- [ ] T016 Implement `src/environment/tools.py` - Structure & `write_script` tool
-- [ ] T017 Implement `src/environment/tools.py` - `edit_script` tool (Regex/String replace)
-- [ ] T018 Implement `src/environment/tools.py` - `preview_design` tool (Graphics export)
-- [ ] T019 Implement `src/environment/tools.py` - `search_docs` wrapper
+- [x] T015 Implement `src/rag/search.py` - Simple documentation loader and searcher
+- [x] T016 Implement `src/environment/tools.py` - Structure & `write_script` tool
+- [x] T017 Implement `src/environment/tools.py` - `edit_script` tool (Regex/String replace)
+- [x] T018 Implement `src/environment/tools.py` - `preview_design` tool (Graphics export)
+- [x] T019 Implement `src/environment/tools.py` - `search_docs` wrapper
 
 ### Implementation Notes
 
