@@ -30,4 +30,5 @@ wheels/
 *.db-wal
 *.db-shm
 
-.worktrees/*/kitty-specs/tasks/*.md
+.worktrees/*/kitty-specs/tasks/*.md.agent_storage/
+workspace/
