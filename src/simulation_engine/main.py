@@ -1,35 +1,42 @@
-import tempfile
-import os
 from fastapi import FastAPI, HTTPException
-from .api import SimulationRequest, SimulationResponse
-from .runner import run_isolated
+from src.simulation_engine.api import SimulationRequest, SimulationResponse
+from src.simulation_engine.runner import run_isolated
 
-app = FastAPI(title="Problemologist Simulation Engine")
+app = FastAPI(title="Problemologist Simulation Service")
 
 
 @app.post("/simulate", response_model=SimulationResponse)
 async def simulate(request: SimulationRequest):
     """
-    Runs a MuJoCo simulation isolated in a separate process.
+    Triggers an isolated MuJoCo simulation.
     """
-    # Create a temporary file for the MJCF model
-    with tempfile.NamedTemporaryFile(suffix=".xml", mode="w", delete=False) as tmp:
-        tmp.write(request.model_xml)
-        tmp_path = tmp.name
-
     try:
-        result = run_isolated(
-            model_path=tmp_path,
-            agent_script=request.agent_script,
-            max_steps=request.max_steps,
-            timeout=request.timeout
+        # We run the isolated process. 
+        # Since run_isolated uses multiprocessing, it might block the event loop 
+        # if not called in a thread/executor, but for simple MVP it's often fine.
+        # In a high-load scenario, we'd use an async executor or a task queue like Celery/Huey.
+        result_data = run_isolated(
+            xml_string=request.mjcf_xml,
+            duration=request.duration,
+            timeout=request.config.get("timeout", 30.0)
         )
-        return SimulationResponse(**result)
+        
+        if result_data["success"]:
+            return SimulationResponse(
+                success=True,
+                outcome="success",
+                result=result_data["result"]
+            )
+        else:
+            return SimulationResponse(
+                success=False,
+                outcome=result_data.get("error_type", "error").lower(),
+                error=result_data.get("message"),
+                error_type=result_data.get("error_type")
+            )
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
 
 
 @app.get("/health")

@@ -1,95 +1,71 @@
 import multiprocessing
 import traceback
-import time
-import queue as queue_module
-from typing import Any, Dict
-from .simulation import SimulationLoop
+from typing import Dict, Any, Optional
+from dataclasses import asdict
+
+from src.compiler.mujoco_bridge import MujocoBridge, SimResult
 
 
-class SimulationError(Exception):
-    """Base class for simulation errors."""
-    pass
-
-
-class SimulationTimeoutError(SimulationError):
-    """Raised when a simulation exceeds its allocated time."""
-    pass
-
-
-class SimulationCrashError(SimulationError):
-    """Raised when the simulation subprocess crashes."""
-    pass
-
-
-def _run_sim_wrapper(model_path: str, agent_script: str, max_steps: int, queue: multiprocessing.Queue):
+def _run_sim_wrapper(xml_string: str, duration: float, queue: multiprocessing.Queue):
     """
-    Internal wrapper run in a separate process.
+    Internal wrapper to run the simulation and put the result in a queue.
+    This runs in a separate process.
     """
     try:
-        sim = SimulationLoop(model_path)
-        result = sim.run(agent_script, max_steps=max_steps)
-        queue.put(result)
-    except Exception:
+        bridge = MujocoBridge()
+        result = bridge.run_simulation(xml_string, duration=duration)
+        queue.put({"success": True, "result": asdict(result)})
+    except Exception as e:
         queue.put({
-            "status": "ERROR",
-            "message": f"Subprocess exception: {traceback.format_exc()}"
+            "success": False, 
+            "error_type": "RuntimeError", 
+            "message": str(e), 
+            "traceback": traceback.format_exc()
         })
 
 
-def run_isolated(model_path: str, agent_script: str, max_steps: int = 1000, timeout: float = 30.0) -> Dict[str, Any]:
+def run_isolated(xml_string: str, duration: float = 5.0, timeout: float = 30.0) -> Dict[str, Any]:
     """
-    Runs a simulation in a separate process with a timeout.
+    Runs the simulation in an isolated process with a timeout.
+    
+    Args:
+        xml_string: The MJCF XML content.
+        duration: The simulation duration in seconds.
+        timeout: Maximum wall-clock time allowed for the simulation process.
+        
+    Returns:
+        A dictionary containing the simulation results or error information.
     """
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(
-        target=_run_sim_wrapper,
-        args=(model_path, agent_script, max_steps, queue)
+        target=_run_sim_wrapper, 
+        args=(xml_string, duration, queue)
     )
-
+    
     process.start()
-    
-    start_time = time.time()
-    result = None
-    
-    while True:
-        try:
-            # Short wait to allow checking process liveness
-            result = queue.get(timeout=0.1)
-            break
-        except queue_module.Empty:
-            # Check if process is still running
-            if not process.is_alive():
-                # One last check of the queue just in case it finished and died between checks
-                try:
-                    result = queue.get(timeout=0.01)
-                except queue_module.Empty:
-                    pass
-                break
-            
-            # Check for overall timeout
-            if time.time() - start_time > timeout:
-                break
+    process.join(timeout=timeout)
     
     if process.is_alive():
         process.terminate()
         process.join()
-
-    if result is not None:
-        return result
-    
-    if time.time() - start_time > timeout:
         return {
-            "status": "TIMEOUT",
-            "message": f"Simulation timed out after {timeout} seconds"
+            "success": False,
+            "error_type": "TimeoutError",
+            "message": f"Simulation timed out after {timeout} seconds."
         }
     
     if process.exitcode != 0:
         return {
-            "status": "CRASH",
-            "message": f"Simulation process crashed with exit code {process.exitcode}"
+            "success": False,
+            "error_type": "CrashError",
+            "message": f"Simulation process crashed with exit code {process.exitcode}."
         }
     
-    return {
-        "status": "ERROR",
-        "message": "Simulation process exited unexpectedly without result"
-    }
+    if queue.empty():
+        return {
+            "success": False,
+            "error_type": "UnknownError",
+            "message": "Simulation process finished but returned no results."
+        }
+    
+    return queue.get()
