@@ -72,7 +72,11 @@ def preview_design(filename: str = "design.py") -> str:
     runner_script = f"""
 import os
 import sys
+# WARNING: This script uses exec() which is unsafe for untrusted code.
+# In a production environment, this should be run in a sandboxed container.
+
 import build123d as bd
+from build123d import ExportSVG, Drawing, Unit
 
 # Add workspace to path
 sys.path.append("{WORKSPACE_DIR}")
@@ -101,11 +105,27 @@ try:
             break
             
     if export_obj:
-        # Real implementation would use build123d rendering or vtk
-        # For this WP, let's create a dummy PNG to satisfy the "generates an image" criterion
-        with open("{output_path}", "wb") as f:
-            f.write(b"DUMMY PNG CONTENT")
-        print(f"RENDER_SUCCESS:{{os.path.basename('{output_path}')}}")
+        # Export as SVG using built-in exporters
+        svg_filename = "{os.path.splitext(os.path.basename(filename))[0]}.svg"
+        svg_path = os.path.join("{WORKSPACE_DIR}", svg_filename)
+        
+        try:
+            # Create a drawing (projection) for 3D shapes
+            drawing = Drawing(export_obj)
+            
+            exporter = ExportSVG(unit=Unit.MM)
+            exporter.add_layer("visible", line_color=(0,0,0), line_weight=0.2)
+            exporter.add_shape(drawing.visible_lines, layer="visible")
+            # exporter.add_layer("hidden", line_color=(100,100,100), line_type=bd.LineType.DASHED)
+            # exporter.add_shape(drawing.hidden_lines, layer="hidden")
+            
+            exporter.write(svg_path)
+            print(f"RENDER_SUCCESS:{{svg_filename}}")
+        except Exception as e:
+            # Fallback for 2D shapes that might not work with Drawing(project) directly?
+            # Drawing() should handle Shape, so it should be fine.
+            print(f"RENDER_EXCEPTION:{{str(e)}}")
+
     else:
         print("RENDER_ERROR: No 3D object found in script (Solid, Compound, or Shape)")
 except Exception as e:
@@ -122,7 +142,19 @@ except Exception as e:
         )
 
         if "RENDER_SUCCESS" in result.stdout:
-            return f"Preview generated: {os.path.basename(output_path)}"
+            # Extract filename from stdout if needed
+            try:
+                # Stdout format: ... RENDER_SUCCESS:filename.svg ...
+                output_line = [
+                    line
+                    for line in result.stdout.split("\n")
+                    if "RENDER_SUCCESS" in line
+                ][0]
+                generated_file = output_line.split("RENDER_SUCCESS:")[1].strip()
+                return f"Preview generated: {generated_file}"
+            except IndexError:
+                # Fallback if parsing fails but success code found (shouldn't happen)
+                return f"Preview generated: {os.path.basename(output_path)}"
         else:
             error = result.stdout + result.stderr
             return f"Error generating preview: {error}"

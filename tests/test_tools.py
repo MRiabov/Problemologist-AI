@@ -61,7 +61,12 @@ with BuildPart() as p:
     result = tools.preview_design("design.py")
     assert "Preview generated" in result
 
-    path = os.path.join(tools.WORKSPACE_DIR, "design.png")
+    # It might be png or svg depending on implementation details, check result
+    if "design.png" in result:
+        path = os.path.join(tools.WORKSPACE_DIR, "design.png")
+    else:
+        path = os.path.join(tools.WORKSPACE_DIR, "design.svg")
+
     assert os.path.exists(path)
 
 
