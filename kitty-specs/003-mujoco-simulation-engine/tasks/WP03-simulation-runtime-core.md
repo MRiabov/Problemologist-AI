@@ -2,7 +2,7 @@
 work_package_id: WP03
 title: Simulation Runtime Core
 lane: planned
-dependencies: []
+dependencies: ["WP02"]
 subtasks:
 - T009
 - T010

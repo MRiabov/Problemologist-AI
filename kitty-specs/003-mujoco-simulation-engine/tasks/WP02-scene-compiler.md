@@ -2,7 +2,7 @@
 work_package_id: WP02
 title: Scene Compiler (MJCF Generator)
 lane: planned
-dependencies: []
+dependencies: ["WP01"]
 subtasks:
 - T005
 - T006
