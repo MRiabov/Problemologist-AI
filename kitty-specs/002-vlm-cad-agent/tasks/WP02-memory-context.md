@@ -1,12 +1,16 @@
 ---
 work_package_id: WP02
 title: Memory & Context Management
-lane: "planned"
-dependencies: ["WP01"]
+lane: "doing"
+dependencies: [WP01]
+base_branch: main
+base_commit: 7ac1f5ace2102717fef2d1a0cb5fd8df9155c3e1
+created_at: '2026-02-01T08:39:17.165993+00:00'
 subtasks:
 - T006
 - T007
 - T008
+shell_pid: "112735"
 ---
 
 ## Objective
