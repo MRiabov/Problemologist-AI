@@ -1,14 +1,14 @@
 ---
 work_package_id: WP03
 title: CNC Workbench Implementation
-lane: "for_review"
+lane: "doing"
 dependencies: [WP02]
 base_branch: 004-advanced-manufacturing-workbenches-WP02
 base_commit: 58830b6ba99207131bb366fcf00bae5a3246b61a
 created_at: '2026-02-01T11:26:45.584179+00:00'
 subtasks: [T010, T011, T012, T013]
-shell_pid: "358040"
-agent: "gemini-cli"
+shell_pid: "366730"
+agent: "gemini-cli-agent"
 ---
 
 ### Objective
@@ -59,3 +59,4 @@ This class inherits from `src.workbenches.base.Workbench` (check existing code f
 - 2026-02-01T11:30:33Z – unknown – shell_pid=226747 – lane=for_review – CNC Workbench implemented with volume-dependent cost model and 3-axis undercut validation.
 - 2026-02-01T13:59:02Z – gemini-cli – shell_pid=358040 – lane=doing – Started implementation via workflow command
 - 2026-02-01T14:06:27Z – gemini-cli – shell_pid=358040 – lane=for_review – CNC Workbench implemented with DFM validation (undercuts) and volume-based cost modeling. Verified with unit tests.
+- 2026-02-01T14:09:29Z – gemini-cli-agent – shell_pid=366730 – lane=doing – Started review via workflow command
