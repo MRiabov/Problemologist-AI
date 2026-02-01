@@ -1,34 +1,33 @@
 # Quickstart: Benchmark Scenario Generator (Physics Puzzles)
 
-This feature allows you to generate stable, validated MuJoCo physics puzzles from natural language descriptions.
+The Benchmark Scenario Generator automates the creation of stable MuJoCo physics environments from high-level technical requirements.
 
-## 🚀 Core Concepts
+## System Architecture
 
-The generator uses a self-correcting loop:
-1.  **Planner**: Decomposes your request into a geometric plan.
-2.  **Coder**: Generates a `build123d` Python script that outputs MJCF XML.
-3.  **Validator**: Runs the generated XML in a headless MuJoCo simulation for 1 second to ensure it doesn't "explode" or crash.
-4.  **Critic**: (Optional) Fixes the code if validation fails.
+The generation process follows a deterministic self-correcting loop:
 
-## 🛠 Prerequisites
+1.  **Planner**: Decomposes the functional request into a geometric and kinematic plan.
+2.  **Coder**: Generates a build123d Python script. This script must implement a `build(seed: int) -> str` function that returns an MJCF XML string.
+3.  **Validator**: Executes a headless MuJoCo simulation for 1,000 steps (1.0s at dt=0.001) to verify kinematic stability.
+4.  **Critic**: Analyzes simulation telemetry (NaNs, excessive velocities) to provide corrective feedback if the initial design is unstable.
 
-Ensure you have the following installed (managed via `uv`):
-- `mujoco` (Physics Engine)
-- `build123d` (CAD Library)
-- `trimesh` (Geometry processing)
+## Prerequisites
 
-## 🏃 Running the Generator
+The system requires a Python 3.12+ environment with the following dependencies:
+- `mujoco >= 3.4.0`
+- `build123d >= 0.10.0`
+- `trimesh[easy] >= 4.11.1`
 
-You can trigger a generation using the Benchmark Manager.
+## Operational Usage
 
-### Option 1: CLI Execution
-Run the manager directly from the project root:
+### CLI Execution
+To generate a new scenario from the terminal:
 
 ```bash
 uv run python -m src.generators.benchmark.manager --scenario "A sliding drawer with a handle"
 ```
 
-### Option 2: Programmatic Usage
+### Programmatic Integration
 ```python
 from src.generators.benchmark.manager import BenchmarkManager
 
@@ -36,51 +35,45 @@ manager = BenchmarkManager()
 result = manager.generate("A box containing three small spheres")
 
 if result.stable:
-    print(f"Success! MJCF saved to {result.xml_path}")
+    # xml_path contains the path to the validated MJCF file
+    print(f"Validation Successful: {result.xml_path}")
 else:
-    print(f"Failed to generate stable scenario: {result.error}")
+    # error contains the MuJoCo solver error or Big Bang violation
+    print(f"Validation Failed: {result.error}")
 ```
 
-## 🔍 Validation & Stability
+## Validation Constraints
 
-Every scenario is automatically validated using the "Big Bang" test in `src/generators/benchmark/validator.py`:
-- **Gravity Check**: Does it settle or collapse immediately?
-- **Velocity Check**: Do any parts exceed 100m/s (indicates unstable physics)?
-- **NaN Check**: Does the solver crash?
+Scenarios are subjected to the "Big Bang" stability test in `src/generators/benchmark/validator.py`:
 
-## 🔄 Example Workflow (End-to-End)
+- **Kinematic Stability**: Linear velocity must not exceed 100m/s in a zero-external-force environment.
+- **Solver Integrity**: The simulation must not produce NaN (Not-a-Number) values in the state vector.
+- **Interpenetration**: Initial contact forces must be within normal bounds to prevent collision explosions.
 
-Here is how the generator handles a typical request:
+## Technical Debugging (HITL)
 
-1.  **User Request**: "Create a sliding drawer with a handle on the front."
-2.  **Planner Agent**: 
-    - "We need two main bodies: a fixed `housing` and a mobile `drawer`."
-    - "The `drawer` needs a `SliderJoint` along the X-axis."
-    - "The `handle` should be a separate child body or part of the drawer union."
-3.  **Coder Agent**: Writes a `build123d` script that defines the housing as a hollow box and the drawer as a slightly smaller box with a cylinder handle.
-4.  **Validator (Attempt 1)**: 
-    - *Result*: **FAILED**. 
-    - *Reason*: The drawer was spawned exactly touching the housing, causing a "collision explosion" (velocity > 100m/s).
-5.  **Critic Agent**: "Add a 1mm clearance (gap) between the drawer and the housing to prevent initial penetration."
-6.  **Coder Agent**: Updates the script with `offset` or smaller dimensions for the drawer.
-7.  **Validator (Attempt 2)**: 
-    - *Result*: **PASSED**. 
-    - *Reason*: Simulation runs for 1.0s; the drawer settles naturally under gravity.
-8.  **Output**: The stable MJCF XML is saved and the `ScenarioManifest` is generated.
+If the generator fails to converge on a stable design:
 
-## 🧑‍💻 Human-in-the-Loop (Debugging)
-
-If the agent is failing to create a stable scenario:
-
-1.  **Check the Workspace**: Look in the `workspace/` directory for the latest generated Python script.
-2.  **Manual Tweak**: You can manually edit the Python script to fix joint limits or overlapping geometry.
-3.  **Local Validation**: Run the validator against your modified XML:
+1.  **Inspect Intermediate Artifacts**: Check the `workspace/` directory for the `latest_attempt.py` script.
+2.  **Manual Verification**: Run the standalone validator against an MJCF file:
     ```bash
-    uv run python -m src.generators.benchmark.validator --xml workspace/latest.xml
+    uv run python -m src.generators.benchmark.validator --xml workspace/output.xml
     ```
+3.  **Refine Constraints**: Adjust the `ScenarioManifest` in the input JSON to provide more explicit joint limits or clearances.
 
-## 📁 Output Structure
+## Directory Structure
 
 - `output/scenarios/`: Final validated MJCF XML files.
-- `output/manifests/`: JSON metadata describing the puzzle (labels, goals, constraints).
-- `workspace/`: Intermediate Python scripts and logs from the generation loop.
+- `output/manifests/`: JSON metadata (labels, goals, constraints).
+- `workspace/`: Temporary Python scripts, logs, and simulation telemetry.
+
+## Example Workflow (End-to-End)
+
+1.  **Input**: "Create a sliding drawer with a handle on the front."
+2.  **Planner**: Identifies two bodies (`housing` and `drawer`) and a `SliderJoint` on the X-axis.
+3.  **Coder**: Defines a hollow box (housing) and a smaller box (drawer) with a cylinder handle.
+4.  **Validator (Attempt 1)**: Fails. The drawer spawned exactly touching the housing, causing a collision explosion (velocity > 100m/s).
+5.  **Critic**: Instructs the Coder to add a 1mm clearance (gap) between the drawer and housing.
+6.  **Coder**: Updates the script with 1mm offset.
+7.  **Validator (Attempt 2)**: Passes. Simulation settles naturally under gravity.
+8.  **Output**: Final MJCF XML and ScenarioManifest are persisted to `output/`.
