@@ -1729,6 +1729,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "ruff" },
     { name = "spec-kitty-cli" },
+    { name = "typer" },
 ]
 
 [package.metadata]
@@ -1757,6 +1758,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "spec-kitty-cli", specifier = ">=0.13.20" },
+    { name = "typer", specifier = ">=0.21.1" },
 ]
 
 [[package]]
