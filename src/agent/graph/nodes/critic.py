@@ -1,7 +1,8 @@
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
+
 from src.agent.graph.state import AgentState
-from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
+from src.agent.utils.llm import get_model
 
 CRITIC_PROMPT = """You are the Design Reviewer (Critic).
 Your job is to evaluate the results of the recent design action (Preview or Submission).
@@ -16,23 +17,33 @@ Your job is to evaluate the results of the recent design action (Preview or Subm
    - If successful, celebrate and finalize the task.
    - If failed, analyze the failure reason and explicitly update the plan to fix it.
 
-Output your feedback clearly.
+IMPORTANT:
+- If the task is successfully completed (valid submission), end your response with
+  "STATUS: SUCCESS".
+- If the task needs more work or failed, end your response with "STATUS: RETRY".
 """
+
 
 def critic_node(state: AgentState):
     """
     Analyzes the output of the tools (preview/submit) and decides next steps.
     """
     model = get_model(Config.LLM_MODEL)
-    
+
     # We look at the last message, which should be a ToolMessage from the execution
     # or the sequence of messages leading up to it.
-    
+
     messages = [SystemMessage(content=CRITIC_PROMPT)] + state["messages"]
-    
+
     # We ask the LLM to review the situation
     response = model.invoke(messages)
-    
+
+    # Parse status from response
+    status = "retry"
+    if "STATUS: SUCCESS" in response.content:
+        status = "success"
+
     return {
-        "messages": [response]
+        "messages": [response],
+        "scratchpad": {**state.get("scratchpad", {}), "critic_status": status},
     }
