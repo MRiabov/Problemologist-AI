@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Process Isolation & API Service
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks:
 - T013
@@ -10,6 +10,8 @@ subtasks:
 - T016
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
+agent: "gemini"
+shell_pid: "182241"
 ---
 
 # WP04: Process Isolation & API Service
@@ -79,3 +81,4 @@ Agent code is "untrusted". If it does `while True: pass`, the server would hang.
 ## Activity Log
 
 - 2026-02-01T08:42:56Z – unknown – lane=planned – Moved to planned
+- 2026-02-01T10:15:07Z – gemini – shell_pid=182241 – lane=doing – Started implementation via workflow command
