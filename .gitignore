@@ -34,3 +34,9 @@ wheels/
 
 .agent_storage/
 workspace/
+
+# Excluded via sparse-checkout
+kitty-specs/
+
+# COTS Rendering Cache
+.cache/
