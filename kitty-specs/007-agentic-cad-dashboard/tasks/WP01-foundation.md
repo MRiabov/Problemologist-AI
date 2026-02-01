@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Data Layer"
-lane: "planned"
+lane: "done"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004"]
 agent: "Antigravity"
@@ -89,3 +89,4 @@ reviewed_by: "MRiabov"
 - 2026-02-01T13:33:57Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
 - 2026-02-01T13:37:34Z – Antigravity – shell_pid=313636 – lane=planned – Moved to planned
 - 2026-02-01T13:41:43Z – Antigravity – shell_pid=313636 – lane=planned – Moved to planned
+- 2026-02-01T15:45:00Z – Antigravity – shell_pid=313636 – lane=done – Force moving to done as it was completed but status was lost/incorrect.
