@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Memory & Context Management
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: main
 base_commit: 7ac1f5ace2102717fef2d1a0cb5fd8df9155c3e1
@@ -70,3 +70,7 @@ In the DeepAgents framework, context window management is handled by LangGraph's
 - [ ] `Workspace` class correctly handles file I/O.
 - [ ] `SqliteSaver` creates a DB file and can save/load state config.
 - [ ] Journal tools correctly modify `journal.md`.
+
+## Activity Log
+
+- 2026-02-01T08:55:55Z – unknown – shell_pid=112735 – lane=for_review – Implemented Workspace, Checkpointer and Memory Tools. Verified with a test script.
