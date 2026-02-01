@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Simulation Bridge (MuJoCo)
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T011
@@ -9,6 +9,8 @@ subtasks:
 - T013
 - T014
 phase: Phase 3 - Physics
+agent: "Antigravity"
+shell_pid: "103573"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -89,3 +91,7 @@ history:
 
 - **Mesh Errors**: Bad meshes crash MuJoCo. Ensure WP02 output is clean. If crash, wrap in try/except and return penalty.
 - **Headless**: Keep `mujoco.gl_context` null or use `osmesa` if rendering is needed (but here we just need physics step). Note: `preview_design` does visuals, this does physics. Using `mujoco` for physics only doesn't require a window.
+
+## Activity Log
+
+- 2026-02-01T08:26:19Z – Antigravity – shell_pid=103573 – lane=doing – Started implementation via workflow command
