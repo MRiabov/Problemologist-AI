@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Environment Tools & RAG
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T015
@@ -10,6 +10,8 @@ subtasks:
 - T018
 - T019
 phase: Phase 4 - Agent Interface
+agent: "Antigravity"
+shell_pid: "90978"
 history:
 - timestamp: '{{TIMESTAMP}}'
   lane: planned
@@ -102,3 +104,7 @@ history:
 
 - **Exec Safety**: `exec()` is dangerous. Warn in comments. For now, trust the agent (local execution).
 - **Preview Deps**: Rendering can depend on display drivers. If headless fails, use `build123d` SVG export as a fallback (it's robust and stateless).
+
+## Activity Log
+
+- 2026-02-01T08:36:06Z – Antigravity – shell_pid=90978 – lane=doing – Started implementation via workflow command
