@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Agent Integration
-lane: "doing"
+lane: "for_review"
 dependencies: [WP04]
 base_branch: main
 base_commit: dba744bf6522a47a4f6f52a17f93666893fae774
@@ -51,3 +51,7 @@ shell_pid: "490041"
 - Tools are callable from `Environment`.
 - Integration test passes.
 - Feature is ready for use.
+
+## Activity Log
+
+- 2026-02-01T18:22:39Z – unknown – shell_pid=490041 – lane=for_review – Ready for review: Registered COTS search and preview tools in Environment and Agent layers, and verified with integration tests.
