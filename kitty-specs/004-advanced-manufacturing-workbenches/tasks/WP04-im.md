@@ -60,3 +60,4 @@ Inherits from `src.workbenches.base.Workbench`. Focuses on Draft angles and Mold
 ## Activity Log
 
 - 2026-02-01T11:33:27Z – unknown – shell_pid=231429 – lane=for_review – Injection Molding Workbench implemented with Draft, Undercut, and Thickness validation.
+- 2026-02-01T14:45:15Z – unknown – shell_pid=231429 – lane=for_review – Cleaned up garbage files from the root directory.
