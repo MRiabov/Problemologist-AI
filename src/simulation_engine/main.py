@@ -18,7 +18,9 @@ async def simulate(request: SimulationRequest):
         result_data = run_isolated(
             xml_string=request.mjcf_xml,
             duration=request.duration,
-            timeout=request.config.get("timeout", 30.0)
+            timeout=request.config.get("timeout", 30.0),
+            agent_script=request.agent_script,
+            goal_pos=request.goal_pos
         )
         
         if result_data["success"]:
