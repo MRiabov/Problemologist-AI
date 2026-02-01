@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: BDWarehouse Provider (Extended)
-lane: "for_review"
+lane: "doing"
 dependencies: [WP02]
 base_branch: main
 base_commit: df689e8ddfd17dfc29db655cdb253e87d6369d22
@@ -11,7 +11,8 @@ subtasks:
 - T012
 - T013
 - T014
-shell_pid: "345401"
+shell_pid: "313636"
+agent: "Antigravity"
 ---
 
 # WP03: BDWarehouse Provider (Extended)
@@ -71,3 +72,4 @@ shell_pid: "345401"
 ## Activity Log
 
 - 2026-02-01T16:14:54Z – unknown – shell_pid=345401 – lane=for_review – Implemented Bearings and Fasteners in BDWarehouseProvider. Beams skipped as they are not available in the library.
+- 2026-02-01T16:19:19Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
