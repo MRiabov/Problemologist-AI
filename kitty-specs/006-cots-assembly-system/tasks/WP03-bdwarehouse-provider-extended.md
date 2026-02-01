@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: BDWarehouse Provider (Extended)
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: main
 base_commit: df689e8ddfd17dfc29db655cdb253e87d6369d22
@@ -67,3 +67,7 @@ shell_pid: "345401"
 - Bearings and Fasteners are indexed.
 - Search returns them.
 - Recipes are syntactically correct.
+
+## Activity Log
+
+- 2026-02-01T16:14:54Z – unknown – shell_pid=345401 – lane=for_review – Implemented Bearings and Fasteners in BDWarehouseProvider. Beams skipped as they are not available in the library.
