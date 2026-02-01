@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Visual Preview System
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01, WP02]
 base_branch: main
 base_commit: 8c03b173e1fcc15efbccc86eac07f8eabae5d48f
@@ -70,3 +70,7 @@ shell_pid: "313636"
 - `cots_descriptions.json` exists.
 - `render_part` produces a file (or robustly handles failure).
 - `get_preview` returns valid `PartPreview` object with image path and text.
+
+## Activity Log
+
+- 2026-02-01T16:43:15Z – unknown – shell_pid=313636 – lane=for_review – Implemented visual preview system with pyvista rendering and hash-based caching. Added description database. Rebased onto main.
