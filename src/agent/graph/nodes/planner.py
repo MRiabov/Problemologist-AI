@@ -2,15 +2,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.agent.graph.state import AgentState
 from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
-
-PLANNING_PROMPT = """You are the Lead Mechanical Engineer (Planner).
-Your goal is to decompose the user's design request into a structured step-by-step technical plan.
-You must use build123d for CAD and consider physics constraints (MuJoCo).
-
-Reference the 'journal.md' if it exists to understand previous attempts and failures.
-
-Output only the plan in a clear, numbered list format.
-"""
+from src.agent.utils.prompts import get_prompt
 
 def planner_node(state: AgentState):
     """
@@ -31,7 +23,7 @@ def planner_node(state: AgentState):
             break
             
     messages = [
-        SystemMessage(content=PLANNING_PROMPT),
+        SystemMessage(content=get_prompt("cad_agent.planner.system")),
         HumanMessage(content=f"Original Request: {original_request}\n\nPlease generate a technical plan.")
     ]
     

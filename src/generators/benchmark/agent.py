@@ -4,7 +4,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 
 from src.agent.utils.llm import get_model
-from src.generators.benchmark.prompts import PLANNER_PROMPT, CODER_PROMPT, CRITIC_PROMPT
+from src.generators.benchmark.prompts import PLANNER_PROMPT, CODER_PROMPT, CRITIC_PROMPT, FIXER_PROMPT
 from src.generators.benchmark.validator import validate_mjcf
 
 
@@ -47,9 +47,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         # Retry mode: use Critic prompt logic
         full_prompt = CRITIC_PROMPT.format(error=errors, code=code)
         messages = [
-            SystemMessage(
-                content="You are an expert build123d coder. Fix the code based on the error. Return the full corrected script."
-            ),
+            SystemMessage(content=FIXER_PROMPT),
             HumanMessage(content=full_prompt),
         ]
     else:
