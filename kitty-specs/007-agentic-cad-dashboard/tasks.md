@@ -27,10 +27,10 @@
 
 ### WP03: 3D Visualization & Integration
 
-- [ ] T009: Implement `src/dashboard/components/viewer_3d.py` (STL loading with PyVista)
-- [ ] T010: Integrate 3D viewer into main layout
-- [ ] T011: Implement "Live Mode" polling logic
-- [ ] T012: Final Polish & Error Handling
+- [x] T009: Implement `src/dashboard/components/viewer_3d.py` (STL loading with PyVista)
+- [x] T010: Integrate 3D viewer into main layout
+- [x] T011: Implement "Live Mode" polling logic
+- [x] T012: Final Polish & Error Handling
 
 *Dependency Setup*: Depends on WP01, WP02 (for integration)
 *Parallelism*: Integration step requires WP02.
