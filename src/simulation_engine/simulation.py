@@ -45,6 +45,19 @@ class SimulationLoop:
         # If target is not a body, maybe a geom? Prompt said "xpos['target']" which usually refers to body xpos.
         # But if it fails, we assume no win condition based on these names.
 
+        # Cache forbidden geom IDs
+        self.forbidden_geom_ids = set()
+        for i in range(self.model.ngeom):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
+            if name and "forbid" in name.lower():
+                self.forbidden_geom_ids.add(i)
+
+        # Cache site names
+        self.site_names = {
+            i: mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_SITE, i)
+            for i in range(self.model.nsite)
+        }
+
     def step(self):
         """
         Performs one physics tick and updates metrics.
@@ -175,9 +188,7 @@ class SimulationLoop:
             if self.model.nsensor > 0
             else np.array([]),
             "site_xpos": {
-                mujoco.mj_id2name(
-                    self.model, mujoco.mjtObj.mjOBJ_SITE, i
-                ): self.data.site_xpos[i].copy()
+                self.site_names[i]: self.data.site_xpos[i].copy()
                 for i in range(self.model.nsite)
             },
         }
@@ -196,23 +207,15 @@ class SimulationLoop:
 
         # FAIL CONDITION: Collision with "Forbid"
         # We need to iterate contacts
+        if not self.forbidden_geom_ids:
+            return "RUNNING"
+
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            geom1_id = contact.geom1
-            geom2_id = contact.geom2
-
-            name1 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_id)
-            name2 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_id)
-
-            # Check if one is forbid and other is part of agent
-            # We assume "forbid" is in the name of forbidden zone
-            # And we need to know what is the agent.
-            # Assuming if one is forbid and other is NOT forbid and NOT ground, it's a fail?
-            # Or if "forbid" is touched by anything?
-
-            if name1 and "forbid" in name1.lower():
-                return "FAIL"
-            if name2 and "forbid" in name2.lower():
+            if (
+                contact.geom1 in self.forbidden_geom_ids
+                or contact.geom2 in self.forbidden_geom_ids
+            ):
                 return "FAIL"
 
         return "RUNNING"
