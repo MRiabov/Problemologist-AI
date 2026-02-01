@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Generator Agent Core
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: 005-benchmark-scenario-generator-WP01
 base_commit: bd71bfd96bc9caf50b2527d6304c62ca85b98bde
@@ -59,3 +59,7 @@ The agent needs to know how to write `build123d` code. We will use a multi-step 
 - [ ] Agent accepts a string prompt and returns a `GeneratorState`.
 - [ ] If the generated code is invalid, the agent retries at least once (loop works).
 - [ ] Successfully generates a script for a simple prompt ("Create a red box").
+
+## Activity Log
+
+- 2026-02-01T13:23:21Z – unknown – shell_pid=321215 – lane=for_review – Implemented generator agent with planner, coder, and validator nodes using LangGraph.
