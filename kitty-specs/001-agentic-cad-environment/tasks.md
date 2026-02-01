@@ -32,16 +32,18 @@ description: "Work package task list template for feature implementation"
 
 ### Included Subtasks
 
-- [ ] T001 Create project directory structure per implementation plan (`src/environment`, `src/workbenches`, `src/compiler`, `src/rag`)
-- [ ] T002 Initialize Python project with `uv` (or poetry) and add dependencies (`build123d`, `mujoco`, `gymnasium`, `numpy`)
-- [ ] T003 [P] Configure development tooling (linting, formatting, pre-commit)
-- [ ] T004 Implement database schema in `src/environment/persistence.py` (Episodes, Steps, Artifacts)
-- [ ] T005 Implement data access methods in `src/environment/persistence.py` (log_step, save_artifact, etc.)
+- [x] T001 Create project directory structure per implementation plan (`src/environment`, `src/workbenches`, `src/compiler`, `src/rag`)
+- [x] T002 Initialize Python project with `uv` (or poetry) and add dependencies (`build123d`, `mujoco`, `gymnasium`, `numpy`, `sqlalchemy`, `alembic`)
+- [x] T003 [P] Configure development tooling (linting, formatting, pre-commit)
+- [x] T004 Define SQLAlchemy models in `src/environment/persistence.py` (Episodes, Steps, Artifacts)
+- [x] T005 [P] Initialize Alembic for database migrations in `src/migrations/`
+- [x] T006 Implement data access methods in `src/environment/persistence.py` using SQLAlchemy sessions (log_step, save_artifact, etc.)
 
 ### Implementation Notes
 
-- Use `sqlite3` standard library.
-- Ensure schema is robust (foreign keys enabled).
+- Use SQLAlchemy ORM with an async (optional) or sync engine.
+- Use Alembic for any schema changes.
+- Ensure foreign keys are handled by the ORM.
 
 ### Parallel Opportunities
 
