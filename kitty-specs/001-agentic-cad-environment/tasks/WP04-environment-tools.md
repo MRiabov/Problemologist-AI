@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Environment Tools & RAG
-lane: "planned"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T015
@@ -113,3 +113,4 @@ history:
 - 2026-02-01T08:39:11Z – Antigravity – shell_pid=90978 – lane=for_review – Implemented environment tools, RAG search with stubs, and added unit tests. All tests passed.
 - 2026-02-01T08:40:50Z – Antigravity – shell_pid=113637 – lane=doing – Started review via workflow command
 - 2026-02-01T08:43:13Z – Antigravity – shell_pid=113637 – lane=planned – Moved to planned
+- 2026-02-01T08:53:24Z – Antigravity – shell_pid=113637 – lane=for_review – Addressed feedback: Implemented real SVG preview using build123d.Drawing, added exec safety warnings, and updated tests.
