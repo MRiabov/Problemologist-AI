@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Injection Molding Workbench Implementation
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: 004-advanced-manufacturing-workbenches-WP02
 base_commit: 58830b6ba99207131bb366fcf00bae5a3246b61a
@@ -56,3 +56,7 @@ Inherits from `src.workbenches.base.Workbench`. Focuses on Draft angles and Mold
 *   `InjectionMoldingWorkbench` implemented.
 *   Catches draft, undercut, and thickness issues.
 *   Cost model reflects economies of scale.
+
+## Activity Log
+
+- 2026-02-01T11:33:27Z – unknown – shell_pid=231429 – lane=for_review – Injection Molding Workbench implemented with Draft, Undercut, and Thickness validation.
