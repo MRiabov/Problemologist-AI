@@ -1,13 +1,15 @@
 ---
 work_package_id: WP03
 title: Simulation Runtime Core
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks:
 - T009
 - T010
 - T011
 - T012
+agent: "Antigravity"
+shell_pid: "119698"
 ---
 
 # WP03: Simulation Runtime Core
@@ -79,3 +81,7 @@ The core loop:
 - [ ] Agent script controls actuators.
 - [ ] Metrics are captured.
 - [ ] Goal/Forbid detection works reliability.
+
+## Activity Log
+
+- 2026-02-01T08:51:52Z – Antigravity – shell_pid=119698 – lane=doing – Started implementation via workflow command
