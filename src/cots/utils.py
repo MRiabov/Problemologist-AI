@@ -37,19 +37,30 @@ def load_descriptions() -> Dict[str, Any]:
 def get_description(part_id: str) -> Dict[str, Any]:
     """
     Get description and metadata for a part ID.
-    Supports exact match and partial match (after the semicolon or colon).
+    Supports exact match, partial match, and keyword-based fallback.
     """
     data = load_descriptions()
 
-    # Try exact match
+    # 1. Try exact match
     if part_id in data:
         return data[part_id]
 
-    # Try partial match (e.g. "bd_warehouse:motor:Nema17" -> "Nema17")
+    # 2. Try partial match (e.g. "bd_warehouse:motor:Nema17" -> "Nema17")
     # Take the last part after the last colon
     short_id = part_id.split(":")[-1]
-
     if short_id in data:
         return data[short_id]
 
+    # 3. Try keyword match for common types (motor, bearing, screw, nut)
+    for keyword in ["motor", "bearing", "screw", "nut"]:
+        if keyword in part_id.lower():
+            # Find the first entry in data that contains the keyword
+            for key, val in data.items():
+                if (
+                    keyword in key.lower()
+                    or keyword in val.get("metadata", {}).get("type", "").lower()
+                ):
+                    return val
+
+    # Default fallback
     return {"description": "No description available for this part.", "metadata": {}}
