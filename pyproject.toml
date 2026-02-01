@@ -8,10 +8,13 @@ dependencies = [
     "alembic>=1.18.3",
     "bd_warehouse",
     "build123d>=0.10.0",
+    "fastapi>=0.128.0",
     "gymnasium>=1.2.3",
     "mujoco>=3.4.0",
     "numpy>=2.4.2",
     "sqlalchemy>=2.0.46",
+    "trimesh[easy]>=4.11.1",
+    "uvicorn>=0.40.0",
 ]
 
 [dependency-groups]
