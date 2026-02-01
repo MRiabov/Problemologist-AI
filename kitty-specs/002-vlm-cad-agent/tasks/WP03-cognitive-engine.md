@@ -1,14 +1,18 @@
 ---
 work_package_id: WP03
 title: Graph Architecture Implementation
-lane: planned
-dependencies: ["WP01", "WP02"]
+lane: "doing"
+dependencies: [WP01, WP02]
+base_branch: main
+base_commit: 6effdea38856fce3b942735a215df1603531afcf
+created_at: '2026-02-01T09:05:41.094433+00:00'
 subtasks:
 - T009
 - T0010
 - T0011
 - T0012
 - T0013
+shell_pid: "128761"
 ---
 
 ## Objective
