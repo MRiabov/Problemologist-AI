@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Scene Compiler (MJCF Generator)
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks:
 - T005
@@ -9,7 +9,7 @@ subtasks:
 - T007
 - T008
 agent: "Antigravity"
-shell_pid: "60800"
+shell_pid: "90978"
 ---
 
 # WP02: Scene Compiler (MJCF Generator)
@@ -97,3 +97,4 @@ We must respect the "Zone Convention":
 
 - 2026-02-01T07:36:12Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
 - 2026-02-01T08:23:05Z – Antigravity – shell_pid=60800 – lane=for_review – SceneCompiler implemented and verified with MuJoCo XML loading tests.
+- 2026-02-01T08:33:16Z – Antigravity – shell_pid=90978 – lane=doing – Started review via workflow command
