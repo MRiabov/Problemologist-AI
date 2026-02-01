@@ -83,3 +83,4 @@ Agent code is "untrusted". If it does `while True: pass`, the server would hang.
 - 2026-02-01T08:42:56Z – unknown – lane=planned – Moved to planned
 - 2026-02-01T10:15:07Z – gemini – shell_pid=182241 – lane=doing – Started implementation via workflow command
 - 2026-02-01T11:02:08Z – gemini – shell_pid=182241 – lane=for_review – Implemented process isolation with timeouts and crash detection. Added FastAPI service with Pydantic models. Verified with unit and API tests.
+- 2026-02-01T11:04:11Z – gemini – shell_pid=182241 – lane=for_review – Implemented process isolation for MuJoCo simulation using multiprocessing. Created FastAPI service with /simulate endpoint. Verified with unit tests.
