@@ -29,3 +29,5 @@ wheels/
 *.db
 *.db-wal
 *.db-shm
+
+.worktrees/*/kitty-specs/tasks/*.md
