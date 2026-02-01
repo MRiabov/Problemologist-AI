@@ -96,8 +96,8 @@ Implementation breakdown for the COTS Assembly System. The work is divided into 
 **Priority**: P0
 **Test**: End-to-end test of the tools in the environment.
 
-- [ ] T020: Register `search_parts` tool in `src/environment/tools.py`
-- [ ] T021: Register `preview_part` tool in `src/environment/tools.py`
+- [x] T020: Register `search_parts` tool in `src/environment/tools.py`
+- [x] T021: Register `preview_part` tool in `src/environment/tools.py`
 - [ ] T022: Write integration test verifying Agent can call these tools
 
 **Implementation Notes**:
