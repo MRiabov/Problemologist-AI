@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import List, Optional
 from langchain_core.tools import tool
@@ -14,13 +15,27 @@ def read_journal(topic: str = "") -> str:
     Read the agent's journal (journal.md) to retrieve context or past memories.
 
     Args:
-        topic: Optional topic or keyword to look for. Currently retrieves the entire journal.
+        topic: Optional topic or keyword to filter entries by.
     """
     content = workspace.read("journal.md")
     if not content:
         return "Journal is empty."
 
-    # TODO: Implement fuzzy search or filtering based on topic
+    if topic:
+        # Split content into entries.
+        # Each entry starts with "## [" (header).
+        # We capture the full entry text including the header.
+        entries = re.findall(r"(## \[.*?\][\s\S]*?)(?=(?:## \[|$))", content)
+
+        filtered_entries = [
+            entry for entry in entries if topic.lower() in entry.lower()
+        ]
+
+        if not filtered_entries:
+            return f"No journal entries found matching topic: '{topic}'."
+
+        return "".join(filtered_entries).strip()
+
     return content
 
 
