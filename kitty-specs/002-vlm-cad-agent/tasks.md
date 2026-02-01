@@ -24,9 +24,9 @@
 **Dependencies**: WP01
 **File**: [tasks/WP02-memory-context.md](tasks/WP02-memory-context.md)
 
-- [ ] **T006**: Implement File-System Memory (Workspace)
-- [ ] **T007**: Configure LangGraph Checkpointer (SQLite)
-- [ ] **T008**: Implement Journaler Node Logic
+- [x] **T006**: Implement File-System Memory (Workspace)
+- [x] **T007**: Configure LangGraph Checkpointer (SQLite)
+- [x] **T008**: Implement Journaler Node Logic
 
 ### WP03: Graph Architecture Implementation
 
