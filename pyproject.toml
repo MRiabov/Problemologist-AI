@@ -15,6 +15,7 @@ dependencies = [
     "langchain-google-genai>=4.2.0",
     "langchain-openai>=1.1.7",
     "langgraph>=1.0.7",
+    "langgraph-checkpoint-sqlite>=1.0.0",
     "mujoco>=3.4.0",
     "numpy>=2.4.2",
     "pydantic>=2.12.5",
