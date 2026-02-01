@@ -16,7 +16,7 @@ The environment provides the agent with a suite of tools to:
 2. **Iterate**: Edit code and request visual previews (renders).
 3. **Validate**: Submit designs for rigorous geometric and physical testing against specific **Problem Scenarios** (e.g., "Move block A to location B").
 
-Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite into a dataset for future model fine-tuning.
+Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite database using an ORM (SQLAlchemy) into a dataset for future model fine-tuning.
 
 ## 2. Goals & Success Criteria
 
@@ -65,10 +65,10 @@ The Environment shall expose the following tools to the Agent:
 | Tool Name | Input | Output | Description |
 | :--- | :--- | :--- | :--- |
 | `search_docs` | `query` (str) | `snippets` (str) | RAG retrieval from `build123d` and `problemologist` docs. |
-| `write_script` | `content` (str) | `status` (str) | Overwrites the current working script (Context: `design.py`). |
-| `edit_script` | `find` (str), `replace` (str) | `status` (str) | Performs string replacement on the script. |
+| `write_script` | `content` (str), `path` (str) | `status` (str) | Writes content to a specific file (e.g., `design.py`, `controller.py`). |
+| `edit_script` | `find` (str), `replace` (str), `path` (str) | `status` (str) | Performs string replacement on the specified file. |
 | `preview_design` | None | `image_path` (str) | Runs the script, exports an STL/SVG, renders it, and returns the view. No penalties. |
-| `submit_design` | None | `report` (json) | Runs the script, performs full Workbench validation (Physics/Geometric checks), and returns final grades/penalties. |
+| `submit_design` | `control_path` (str) | `report` (json) | Runs the script, performs full Workbench validation, and returns final grades. Uses the script at `control_path` for motor logic. Calls Spec 003. |
 
 ### 4.3. Workbench Architecture
 
@@ -84,7 +84,7 @@ The system shall support pluggable "Workbenches" that define specific constraint
 
 ### 4.4. Simulation Bridge (MuJoCo)
 
-* The `submit_design` tool shall trigger a **Geometry Compiler**.
+* The `submit_design` tool shall trigger the **Simulation Engine** (Spec 003).
 * **Input**: `build123d` Compound objects.
 * **Context**: The current **Problem Scenario** (defined as a partially filled MJCF XML template with pre-existing environment obstacles and goals).
 * **Process**:
@@ -100,7 +100,7 @@ The system shall support pluggable "Workbenches" that define specific constraint
 
 ### 4.5. Persistence (The Black Box)
 
-* **Database**: SQLite (`history.db`).
+* **Database**: SQLite (`history.db`) managed via **SQLAlchemy**.
 * **Schema**:
   * `Episodes`: (id, prompt, start_time, result).
   * `Steps`: (id, episode_id, tool_name, tool_input, tool_output, duration).

@@ -73,10 +73,10 @@ The agent interacts with the environment via a strictly typed interface (JSON Sc
 #### 4.2.1. Environment Tools (Wrapped from Spec 001)
 
 * `search_docs(query: str)`
-* `write_script(content: str)`
-* `edit_script(find: str, replace: str)`
+* `write_script(content: str, path: str)`
+* `edit_script(find: str, replace: str, path: str)`
 * `preview_design()` -> Returns schema with `image_url` (or base64).
-* `submit_design()` -> Returns evaluation report.
+* `submit_design(control_path: str)` -> Returns evaluation report.
 
 #### 4.2.2. Meta-Cognitive Tools
 

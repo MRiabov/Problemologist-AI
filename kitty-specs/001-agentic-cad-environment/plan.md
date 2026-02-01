@@ -61,8 +61,7 @@ src/
 │   ├── base.py           # Workbench ABC
 │   └── print_3d.py       # MVP Workbench (Watertight + Cost)
 ├── compiler/
-│   ├── geometry.py       # Mesh generation/cleaning (Trimesh/Build123d export)
-│   └── mujoco_bridge.py  # MJCF XML generation & Simulation runner
+│   └── sim_client.py     # HTTP Client for Spec 003 Simulation Engine
 └── rag/
     └── search.py         # Simple Grep-based documentation search
 ```
