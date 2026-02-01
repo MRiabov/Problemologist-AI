@@ -1,0 +1,10 @@
+{
+  "feature_number": "007",
+  "slug": "agentic-cad-dashboard",
+  "friendly_name": "Agentic CAD Dashboard & 3D Debugger",
+  "mission": "software-dev",
+  "source_description": "A streamlit UI for viewing and debugging of agent inputs and outputs. Definitely add support for viewing of 3d models using three js or pyvista. Also, we have features with `trimesh`, so you can use it here too. Should see: 1. Reasoning 2. Agent outputs 3. models that agents generates 4. code that agent generates I think it should be very similar to how Cursor or Claude code or Gemini CLI works; but with 3d viewing support and a UI.",
+  "created_at": "2026-02-01T12:00:00Z",
+  "target_branch": "main",
+  "vcs": "git"
+}

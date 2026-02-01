@@ -1,108 +1,70 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Agentic CAD Dashboard & 3D Debugger
 
+*Path: kitty-specs/007-agentic-cad-dashboard/plan.md*
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `main` | **Date**: 2026-02-01 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/007-agentic-cad-dashboard/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+The **Agentic CAD Dashboard** is a Streamlit-based visual interface designed for real-time monitoring and historical review of the AI agent's 3D design process. It integrates interactive 3D rendering using `stpyvista` to allow developers to inspect generated models (STLs) alongside the agent's reasoning and code.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Python 3.12  
+**Primary Dependencies**: `streamlit`, `stpyvista`, `pyvista`, `sqlalchemy`, `trimesh`  
+**Storage**: SQLite (`history.db`) with WAL mode for concurrent read-only access.  
+**Testing**: `pytest` for data layer and utility functions.  
+**Target Platform**: Linux Desktop / Local Development  
+**Project Type**: Single project (Dashboard module within existing source tree)  
+**Performance Goals**:
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+- Render STL files < 2 seconds.
+- Real-time updates < 1 second after DB commit.
+**Constraints**:
+- Read-only database connection to avoid interference with the agent.
+- Access to local `artifacts/` directory for mesh retrieval.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+[SKIPPED: Constitution file not present in repository.]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/007-agentic-cad-dashboard/
+├── spec.md              # Feature specification
+├── plan.md              # This file
+├── research.md          # Technical research and discoveries
+├── data-model.md        # UI state and data fetching contracts
+├── quickstart.md        # Setup and execution guide
+├── contracts/           # API/Data schema definitions
+└── tasks.md             # Implementation tasks (generated later)
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+└── dashboard/           # Dashboard module
+    ├── main.py          # Entry point (Streamlit app)
+    ├── data.py          # Data layer (SQLAlchemy integration)
+    ├── components/      # UI components
+    │   ├── chat.py      # Reasoning and logs viewer
+    │   ├── code.py      # Syntax-highlighted code viewer
+    │   └── viewer_3d.py # interactive PyVista viewport
+    └── utils.py         # Path resolution and formatting
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: A dedicated `dashboard` directory inside `src/`. This follows the existing project organization while keeping the UI code isolated from the agent logic.
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
-
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| stpyvista | Specialized 3D visualization | `st.code` or static images are insufficient for debugging complex geometry. |
+| SQLite WAL | Concurrent access | Standard mode would cause database locks when the agent and dashboard access `history.db` simultaneously. |
