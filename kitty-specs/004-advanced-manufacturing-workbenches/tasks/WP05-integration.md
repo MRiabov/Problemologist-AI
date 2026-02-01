@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Tool Integration & Caching
-lane: "for_review"
+lane: "doing"
 dependencies: "[]"
 base_branch: 004-advanced-manufacturing-workbenches-WP03
 base_commit: 2c0348a4fca3c719c7dbaa9ae22473b672c7b6b2
@@ -9,7 +9,7 @@ created_at: '2026-02-01T11:33:53.023731+00:00'
 subtasks: [T018, T019, T020, T021]
 agent: "gemini-cli"
 assignee: "unknown"
-shell_pid: "515256"
+shell_pid: "519473"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -81,3 +81,4 @@ The agent shouldn't instantiate workbenches directly. It calls `check_manufactur
 - 2026-02-01T18:32:43Z – gemini-cli – shell_pid=509349 – lane=planned – Moved to planned
 - 2026-02-01T18:40:46Z – gemini-cli – shell_pid=515256 – lane=doing – Started implementation via workflow command
 - 2026-02-01T18:47:43Z – gemini-cli – shell_pid=515256 – lane=for_review – Rebased on main. Restored missing workbench and utility files, fixed base class API regressions, and integrated unified manufacturability tool with caching. Integration tests passed.
+- 2026-02-01T18:52:52Z – gemini-cli – shell_pid=519473 – lane=doing – Started review via workflow command
