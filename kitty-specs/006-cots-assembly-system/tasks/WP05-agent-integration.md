@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Agent Integration
-lane: "for_review"
+lane: "planned"
 dependencies: [WP04]
 base_branch: main
 base_commit: dba744bf6522a47a4f6f52a17f93666893fae774
@@ -11,6 +11,8 @@ subtasks:
 - T021
 - T022
 shell_pid: "490041"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP05: Agent Integration
@@ -55,3 +57,4 @@ shell_pid: "490041"
 ## Activity Log
 
 - 2026-02-01T18:22:39Z – unknown – shell_pid=490041 – lane=for_review – Ready for review: Registered COTS search and preview tools in Environment and Agent layers, and verified with integration tests.
+- 2026-02-01T18:32:38Z – unknown – shell_pid=490041 – lane=planned – Moved to planned
