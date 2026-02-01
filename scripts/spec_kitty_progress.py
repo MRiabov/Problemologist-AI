@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 from dataclasses import dataclass
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
 
@@ -16,6 +17,7 @@ class WorkPackage:
     spec_slug: str
     spec_number: str
     file_path: Path
+    last_updated: Optional[datetime] = None
 
 
 def parse_frontmatter(content: str) -> dict:
@@ -30,6 +32,28 @@ def parse_frontmatter(content: str) -> dict:
             key, val = line.split(":", 1)
             data[key.strip()] = val.strip().strip('"').strip("'")
     return data
+
+
+def get_last_activity_time(content: str) -> Optional[datetime]:
+    lines = content.splitlines()
+    for line in reversed(lines):
+        line = line.strip()
+        if not line.startswith("- "):
+            continue
+        # Format: - YYYY-MM-DDTHH:MM:SSZ ...
+        # Split by " – " (en-dash) or " - " (hyphen) just in case, but spec seems to use " – "
+        # Actually let's just grab the first word
+        parts = line.split(" ", 2)
+        if len(parts) < 2:
+            continue
+        ts_str = parts[1]
+        try:
+            if ts_str.endswith("Z"):
+                ts_str = ts_str[:-1] + "+00:00"
+            return datetime.fromisoformat(ts_str)
+        except ValueError:
+            continue
+    return None
 
 
 def get_wp_status(
@@ -50,6 +74,7 @@ def get_wp_status(
             spec_slug=spec_slug,
             spec_number=spec_number,
             file_path=wp_file,
+            last_updated=get_last_activity_time(content),
         )
     except Exception as e:
         print(f"Error parsing {wp_file}: {e}")
@@ -105,6 +130,15 @@ def main():
                 if wp.lane == "for_review"
                 else "⚪"
             )
+            is_stale = False
+            if wp.lane == "doing" and wp.last_updated:
+                # Assuming system time is close enough to UTC or we want relative time
+                # The timestamp is timezone-aware (UTC), so we need aware current time
+                now = datetime.now(timezone.utc)
+                if (now - wp.last_updated) > timedelta(minutes=15):
+                    is_stale = True
+                    status_char = "🐢"
+
             lane_str = wp.lane.upper()
             if wp.lane == "for_review":
                 lane_str = f"\033[93m{lane_str}\033[0m"
@@ -114,6 +148,8 @@ def main():
                 lane_str = f"\033[92m{lane_str}\033[0m"
             elif wp.lane == "doing":
                 lane_str = f"\033[94m{lane_str}\033[0m"
+                if is_stale:
+                    lane_str += " \033[31m(STALE > 15m)\033[0m"
 
             print(f"  {status_char} {wp.id}: {wp.title.ljust(40)} | Lane: {lane_str}")
 
