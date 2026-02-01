@@ -1,12 +1,16 @@
 ---
 work_package_id: WP03
 title: CLI & Randomization Pipeline
-lane: "planned"
+lane: "doing"
 dependencies: [WP02]
+base_branch: main
+base_commit: d4e4dd4e6ffe2e4bd203a3d3883dd4b7abf5957e
+created_at: '2026-02-01T14:34:12.671447+00:00'
 subtasks:
 - T007
 - T008
 - T009
+shell_pid: "383008"
 ---
 
 ## Objective
