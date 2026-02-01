@@ -1,12 +1,16 @@
 ---
 work_package_id: WP02
 title: Generator Agent Core
-lane: "planned"
+lane: "doing"
 dependencies: [WP01]
+base_branch: 005-benchmark-scenario-generator-WP01
+base_commit: bd71bfd96bc9caf50b2527d6304c62ca85b98bde
+created_at: '2026-02-01T13:20:20.227906+00:00'
 subtasks:
 - T004
 - T005
 - T006
+shell_pid: "321215"
 ---
 
 ## Objective
