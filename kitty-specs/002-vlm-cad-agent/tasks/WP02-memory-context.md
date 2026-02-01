@@ -1,73 +1,68 @@
 ---
 work_package_id: WP02
 title: Memory & Context Management
-lane: "doing"
-dependencies: []
-base_branch: 002-vlm-cad-agent-WP01
-base_commit: cae840b45479c0be4e1476e2e387f4e4de1ff23f
-created_at: '2026-02-01T07:45:00.513999+00:00'
+lane: "planned"
+dependencies: ["WP01"]
 subtasks:
 - T006
 - T007
 - T008
-shell_pid: "83240"
 ---
 
 ## Objective
 
-Implement the agent's state management, including the sliding context window for LLM conversation history and the long-term filesystem-based memory (Journal).
+Implement the agent's state persistence layer. This involves two levels of memory:
+
+1. **Short-Term (Session)**: Managed by LangGraph Checkpointers (e.g., SQLite), allowing the agent to resume, rewind, and debug execution steps.
+2. **Long-Term (Deep Memory)**: A file-system based "Workspace" where the agent reads/writes `journal.md`, `plan.md`, and other artifacts.
 
 ## Context
 
-The agent needs to maintain short-term consistency (conversation history) and long-term learning (Journal). We are implementing `src/agent/core/context.py` and `src/agent/core/memory.py`.
+In the DeepAgents framework, context window management is handled by LangGraph's state management (automatic message appending). Our focus here is on the *persistence* of that state and the *external* memory (Journal) that survives across sessions.
 
 ## Subtasks
 
-### T006: Implement Memory System (Journal)
+### T006: Implement File-System Workspace
 
-**Purpose**: Enable reading and writing to `journal.md`.
+**Purpose**: Provide a clean interface for the agent to interact with its "brain" on disk.
 **Steps**:
 
-1. Create `src/agent/core/memory.py`.
-2. Implement `Journal` class.
-   - `__init__(path: str)`
-   - `read(topic: str = None) -> str`: If topic provided, perform simple text match/filter. If not, return recent/all.
-   - `write(entry: str, tags: list[str])`: Append formatted entry with timestamp and tags to `journal.md`.
-   - Ensure the file is created if it doesn't exist.
+1. Create `src/agent/utils/workspace.py`.
+2. Implement `Workspace` class:
+   - `read(path: str) -> str`: Safe read of markdown files.
+   - `write(path: str, content: str)`: Atomic write.
+   - `append(path: str, content: str)`: Safe append (for logging/journaling).
+   - `list_files(pattern: str)`: Directory exploration.
 
-### T007: Implement Context Manager
+### T007: Configure LangGraph Checkpointer
 
-**Purpose**: Manage the LLM message history, handling token limits.
+**Purpose**: Enable "Time Travel" debugging and session resumption.
 **Steps**:
 
-1. Create `src/agent/core/context.py`.
-2. Implement `ContextManager` class.
-   - Maintain a list of `messages` (role, content).
-   - Implement `add_message(role, content, images=None)`.
-   - Implement `get_messages_for_model()`: Return standard list for `litellm`.
-   - **Sliding Window**: Implement basic pruning or summarization if message list gets too long (e.g., keep System + last N messages).
-   - **Image Handling**: Ensure images passed to `add_message` are formatted correctly for VLM (e.g., `{"type": "image_url", ...}`).
+1. Create `src/agent/utils/checkpoint.py`.
+2. Setup a `SqliteSaver` (from `langgraph.checkpoint.sqlite`).
+3. Ensure the database file is stored in a permanent location (e.g., `.agent_storage/checkpoints.sqlite`).
+4. Write a helper `get_checkpointer() -> Checkpointer`.
 
-### T008: Implement Meta-Cognitive Tool Logic
+### T008: Implement Journaler Node Logic
 
-**Purpose**: Connect the Pydantic tool models (from WP01) to the actual Memory logic.
+**Purpose**: The specific logic for reading/writing to the Journal.
 **Steps**:
 
-1. Implement helper functions in `src/agent/core/tools_impl.py` (or similar) that execute the meta-tools:
-   - `handle_read_journal(tool_call, memory_instance)`
-   - `handle_write_journal(tool_call, memory_instance)`
-   - `handle_update_plan(tool_call, state_instance)`
-2. Ensure these functions return strings that can be fed back to the LLM as tool outputs.
+1. Create `src/agent/tools/memory.py` (LangChain Tools).
+2. Implement `@tool` functions:
+   - `read_journal(topic: str)`: Fuzzy search or full read of `journal.md` via `Workspace`.
+   - `write_journal(entry: str, tags: list[str])`: Formats and appends to `journal.md` via `Workspace`.
+3. These tools will be bound to the **Planner** and **Journaler** nodes.
 
 ## Files to Create
 
-- `src/agent/core/memory.py`
-- `src/agent/core/context.py`
-- `src/agent/core/tools_impl.py` (Optional, can be part of engine later but good to separate)
+- `src/agent/utils/workspace.py`
+- `src/agent/utils/checkpoint.py`
+- `src/agent/tools/memory.py`
 
 ## Acceptance Criteria
 
-- [ ] `Journal` class correctly appends to file and reads from it.
-- [ ] `ContextManager` correctly formats messages for LiteLLM.
-- [ ] `ContextManager` prunes old messages when limit reached (unit test).
-- [ ] Meta-tools can be executed via the handler functions.
+- [ ] `Workspace` class correctly handles file I/O.
+- [ ] `SqliteSaver` creates a DB file and can save/load state config.
+- [ ] Journal tools correctly modify `journal.md`.

@@ -1,97 +1,98 @@
 ---
 work_package_id: WP03
-title: Cognitive Engine Implementation
+title: Graph Architecture Implementation
 lane: planned
-dependencies: []
+dependencies: ["WP01", "WP02"]
 subtasks:
 - T009
-- T010
-- T011
-- T012
-- T013
+- T0010
+- T0011
+- T0012
+- T0013
 ---
 
 ## Objective
 
-Implement the core `Engine` that drives the Agent's "Think, Plan, Act" loop. This includes the state machine for the three phases (Planning, Execution, Validation), the main execution loop, and comprehensive logging.
+Implement the core `DeepAgents` graph that uses the "Planner-Actor-Critic" cognitive architecture. We will define the nodes and edges of the `StateGraph` and compile it into a runnable app.
 
 ## Context
 
-This is the heart of the agent. `src/agent/core/engine.py` will orchestrate the LLM, the Memory, and the Tool execution. It must follow the robust ReAct loop defined in the Plan.
+Instead of a monolithic `engine.py`, we are building modular nodes. The state flows from **Planner** (what to do?) -> **Actor** (do it) -> **Critic** (did it work?). The persistence layer (WP02) ensures this process can be paused and resumed.
 
 ## Subtasks
 
-### T009: Implement Engine Skeleton & State
+### T009: Implement Graph Builder & Conditionals
 
-**Purpose**: Define the Engine class and its state representation.
+**Purpose**: Define the skeleton of the graph and the conditional routing logic.
 **Steps**:
 
-1. Create `src/agent/core/engine.py`.
-2. Define `AgentState` (Pydantic model or dataclass) tracking:
-   - Current Phase (0, 1, 2)
-   - Step count
-   - Current Plan
-   - Last Error (if any)
-3. Initialize `Engine` with `LLMClient`, `ContextManager`, `Memory`.
+1. Create `src/agent/graph/graph.py`.
+2. Define a `build_graph()` function.
+3. Initialize `StateGraph(AgentState)`.
+4. Define conditional edges:
+   - `should_continue(state)`: Returns "actor", "critic", or "end".
+   - Logic: If tool call involves `submit_design` or `preview_design` -> Go to Critic. Else -> Loop back to Actor (or End if max steps).
 
-### T010: Implement Phase 0 (Planning)
+### T010: Implement Planner Node
 
-**Purpose**: Only runs once at start. Reads doc/memory, generates plan.
+**Purpose**: The "Brain" that decides the high-level strategy.
 **Steps**:
 
-1. Implement `run_phase_0(problem_desc)` method in Engine.
-2. Logic:
-   - Construct Prompt: System + "Here is problem: {desc}. Search docs/memory and output plan."
-   - Call LLM (may trigger `read_journal` or `search_docs` tools).
-   - Final output should be the Plan.
-   - Save Plan to State.
+1. Create `src/agent/graph/nodes/planner.py`.
+2. Implement `planner_node(state: AgentState)`.
+3. Logic:
+   - Checks if `plan` is empty. If so, calls LLM with "Planning Prompt" (referencing `journal.md`).
+   - Updates `state["plan"]` with the generated plan.
+   - Updates `state["messages"]` with the planning thought process.
 
-### T011: Implement Phase 1 (Execution Loop)
+### T011: Implement Actor Node
 
-**Purpose**: The main ReAct loop.
+**Purpose**: The "Hand" that executes tools.
 **Steps**:
 
-1. Implement `run_phase_1()` method.
-2. Loop while `steps < MAX_STEPS`:
-   - **Think**: Construct prompt (System + Plan + Context). Call LLM.
-   - **Act**: Parse Tool Calls.
-     - If `submit_design`: Transition to Phase 2.
-     - If other tool: Execute it (via helper or External Env adapter).
-   - **Observe**: Capture tool output (text or image). Add to Context.
-   - Update `AgentState`.
+1. Create `src/agent/graph/nodes/actor.py`.
+2. Implement `actor_node(state: AgentState)`.
+3. Logic:
+   - This checks the current step of the plan.
+   - Calls the LLM bound with `env_tools` (from WP01).
+   - Allows the LLM to call `write_script`, `edit_script`, etc.
+   - Appends (AIMessage + ToolMessage) to history.
 
-### T012: Implement Phase 2 (Validation) & Submission
+### T012: Implement Critic Node
 
-**Purpose**: Handle `submit_design` and feedback loop.
+**Purpose**: The "Eye" that validates results.
 **Steps**:
 
-1. Implement `run_phase_2(submission_args)`.
-2. Logic:
-   - Call external `submit_design`.
-   - If Success: Write to Journal ("What went right"), End Session.
-   - If Fail: Read error report, add to Context as observation.
-   - **Self-Correction**: Revert to Phase 1 for Retry (increment retry counter).
-   - Verify failure limits (e.g., max 3 retries).
+1. Create `src/agent/graph/nodes/critic.py`.
+2. Implement `critic_node(state: AgentState)`.
+3. Logic:
+   - Triggered after `preview_design` or `submit_design`.
+   - Analyzes the Tool Output (Image or Simulation Report).
+   - Decisions:
+     - **Success**: Update Journal (call `write_journal`), finalize.
+     - **Failure**: Update Plan (call `update_plan`), route back to **Actor** or **Planner**.
 
-### T013: Implement Logging & Rich UI
+### T013: Implement Console Streaming
 
-**Purpose**: Visibility into the agent's mind.
+**Purpose**: Visualize the graph execution in real-time.
 **Steps**:
 
-1. Integrate `rich` library to print colored logs.
-   - Blue for "Thought", Green for "Tool Call", Yellow for "Observation".
-2. Implement JSONL logging to `agent_trace.jsonl`.
-   - Log entry: `{step, phase, thought, tool_inputs, tool_outputs, timestamp}`.
-   - Append to file after every step.
+1. Create `src/agent/utils/visualize.py`.
+2. Use `rich` to subscribe to the graph's event stream (`graph.stream(..., stream_mode="updates")`).
+3. Print colorful boxes when entering/exiting nodes.
+4. Render streamed tokens if possible, or at least final node outputs.
 
 ## Files to Create
 
-- `src/agent/core/engine.py`
+- `src/agent/graph/graph.py`
+- `src/agent/graph/nodes/planner.py`
+- `src/agent/graph/nodes/actor.py`
+- `src/agent/graph/nodes/critic.py`
+- `src/agent/utils/visualize.py`
 
 ## Acceptance Criteria
 
-- [ ] Engine can transition from Phase 0 to Phase 1.
-- [ ] Execution loop correctly handles tool calls and updates context.
-- [ ] `submit_design` triggers Phase 2 logic (success or retry).
-- [ ] Trace logs are written to JSONL.
-- [ ] Console output is formatted with Rich.
+- [ ] Graph compiles without error.
+- [ ] Conditional logic correctly routes between Actor and Critic.
+- [ ] Planner generates a plan on first run.
+- [ ] Console shows "Entering Planner", "Entering Actor" logs.

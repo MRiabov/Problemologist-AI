@@ -2,7 +2,7 @@
 work_package_id: WP04
 title: Runner & Integration
 lane: planned
-dependencies: []
+dependencies: ["WP03"]
 subtasks:
 - T014
 - T015
@@ -11,61 +11,60 @@ subtasks:
 
 ## Objective
 
-Create the CLI entry point (`runner.py`) and wire the Agent up to the actual `001-agentic-cad-environment` (or a mock for now if environment isn't fully separate package).
+Create the entry point for the agent (`runner.py`) that initializes the LangGraph application and executes it asynchronously. Validate the full loop with end-to-end tests.
 
 ## Context
 
-The agent needs to be runnable from the command line, accepting a problem description and executing the full loop. We also need to ensure the "External Tools" (`write_script`, etc.) actually invoke the Environment.
+The agent is now a compiled `StateGraph`. To run it, we need an asynchronous runner that handles the event stream and connects the `visualize` utils (from WP03) to the graph's output.
 
 ## Subtasks
 
-### T014: Implement Environment Adapter
+### T014: Implement Environment Adapter for LangChain
 
 **Purpose**: Bridge the Agent's tool calls to the Environment.
 **Steps**:
 
-1. If Spec 001 code is importable, import the tool functions.
-2. If Spec 001 is a separate process/server, implement the client wrapper.
-   - *Assumption*: Based on plan, it's "Loose Coupling".
-   - Implement `src/agent/environment_adapter.py`.
-   - Map `WriteScript` -> calls environment's file writer.
-   - Map `PreviewDesign` -> calls environment's renderer.
-   - Map `SearchDocs` -> calls environment's retrieval system.
-   - *For now, if Env 001 isn't ready, implement Mock versions that return plausible responses.*
+1. Create `src/agent/tools/env_adapter.py`.
+2. Ensure the tools defined in WP01 (`src/agent/tools/env.py`) correctly map to the underlying `001-agentic-cad-environment` logic.
+   - *Assumption*: If Spec 001 provides a python API, import it. If it's a server, use `httpx`.
+   - Wrap these calls in `async` functions to avoid blocking the graph.
 
-### T015: Implement CLI Runner
+### T015: Implement Async Runner CLI
 
 **Purpose**: The main executable script.
 **Steps**:
 
 1. Create `src/agent/runner.py`.
-2. Use `argparse` or `click` to accept:
-   - `--problem "Make a cube"`
-   - `--model "gpt-4o"`
-   - `--max-steps 20`
+2. Use `asyncclick` or standard `argparse` + `asyncio.run()`.
 3. Logic:
-   - Initialize `LLMClient` with config.
-   - Initialize `Memory` and `Context`.
-   - Initialize `Engine`.
-   - Call `engine.run(problem)`.
+   - Load Config (API Keys).
+   - Initialize `Checkpointer` (WP02).
+   - Build Graph (`app = build_graph().compile(checkpointer=...)`).
+   - Run loop:
 
-### T016: Verify End-to-End Flow & Smoke Test
+     ```python
+     async for event in app.astream(initial_state, config):
+         visualize_event(event)
+     ```
 
-**Purpose**: Ensure the whole system hangs together.
+### T016: Verify End-to-End Graph Execution
+
+**Purpose**: Smoke test the complete graph.
 **Steps**:
 
-1. Create `tests/e2e/test_agent_run.py`.
-2. Create a test that runs `runner.py` main function with a mocked LLM (that outputs a predictable sequence of tool calls).
-3. Verify the agent completes the loop and exits successfully.
+1. Create `tests/e2e/test_graph_run.py`.
+2. Use `langchain-core.tracers.context` or `langsmith` to capture run traces.
+3. Mock the LLM to return a predefined plan and tool call.
+4. Assert that the graph transitions: `start` -> `planner` -> `actor` -> `critic` -> `end` (or similar happy path).
 
 ## Files to Create
 
-- `src/agent/environment_adapter.py`
+- `src/agent/tools/env_adapter.py`
 - `src/agent/runner.py`
-- `tests/e2e/test_agent_run.py`
+- `tests/e2e/test_graph_run.py`
 
 ## Acceptance Criteria
 
-- [ ] `python src/agent/runner.py --problem "test"` runs without crashing.
-- [ ] Agent correctly invokes environment tools (mocked or real).
-- [ ] Full "Thought -> Act -> Observe" cycle works in the runner.
+- [ ] `python src/agent/runner.py` executes the graph asynchronously.
+- [ ] Console output shows the graph events streaming.
+- [ ] Graph successfully calls environment tools via adapters.
