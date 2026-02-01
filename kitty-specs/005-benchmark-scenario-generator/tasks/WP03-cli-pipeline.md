@@ -1,0 +1,56 @@
+---
+work_package_id: WP03
+title: CLI & Randomization Pipeline
+lane: "planned"
+dependencies: [WP02]
+subtasks:
+- T007
+- T008
+- T009
+---
+
+## Objective
+
+Build the user-facing "Production Line". This wraps the agent in a CLI and adds the "Mass Production" logic (randomization and export).
+
+## Context
+
+We need to generate *many* variations of each scenario. The agent writes the *template* script; this pipeline runs that script with different seeds to produce the final dataset.
+
+## Subtasks
+
+### T007: Implement CLI Entry Point
+
+**Purpose**: The main command.
+**Steps**:
+1. Create `src/generators/benchmark/manager.py`.
+2. Use `argparse` or `typer` to define `generate`.
+   - Arguments: `--prompt`, `--count`, `--output-dir`, `--tier`.
+3. Wire it to invoke the Agent from WP02.
+
+### T008: Implement Batch Processing & Randomization
+
+**Purpose**: Run the template multiple times.
+**Steps**:
+1. Once the Agent returns a valid script, enter the "Mass Production" phase.
+2. Loop `count` times:
+   - Generate a random seed.
+   - Execute the script's `build(seed)` function.
+   - Run `validator.validate_mjcf` on the output.
+   - If valid, queue for export. If invalid, discard (or log).
+
+### T009: Implement Artifact Export
+
+**Purpose**: Save files to disk.
+**Steps**:
+1. For each valid variation:
+   - Save `assets/mesh_{seed}.stl`.
+   - Save `scene_{seed}.xml`.
+   - Save `manifest_{seed}.json` (using `ScenarioManifest`).
+2. Ensure directory structure matches `datasets/benchmarks/`.
+
+## Acceptance Criteria
+
+- [ ] `python -m src.generators.benchmark.manager generate --prompt "Box" --count 5` works.
+- [ ] 5 distinct XML/STL sets are created in the output directory.
+- [ ] Manifest files contain correct metadata.
