@@ -12,10 +12,10 @@
 **File**: [tasks/WP01-foundation.md](tasks/WP01-foundation.md)
 
 - [x] **T001**: Scaffold Project Structure
-- [x] **T002**: Install & Configure Dependencies
-- [x] **T003**: Implement LLM Client (LiteLLM)
-- [x] **T004**: Create Base Prompt Templates
-- [x] **T005**: Define Tool Interface Models
+- [x] **T002**: Install Dependencies (`langchain`, `langgraph`, `deepagents`)
+- [x] **T003**: Configure LangChain ChatModels (OpenAI/Gemini)
+- [x] **T004**: Define AgentState TypedDict
+- [x] **T005**: Wrap Environmental Tools as LangChain Tools
 
 ### WP02: Memory & Context Management
 
@@ -24,22 +24,22 @@
 **Dependencies**: WP01
 **File**: [tasks/WP02-memory-context.md](tasks/WP02-memory-context.md)
 
-- [ ] **T006**: Implement Memory System (Journal)
-- [ ] **T007**: Implement Context Manager
-- [ ] **T008**: Implement Meta-Cognitive Tool Logic
+- [ ] **T006**: Implement File-System Memory (Workspace)
+- [ ] **T007**: Configure LangGraph Checkpointer (SQLite)
+- [ ] **T008**: Implement Journaler Node Logic
 
-### WP03: Cognitive Engine Implementation
+### WP03: Graph Architecture Implementation
 
-**Goal**: Build the "Think, Plan, Act" ReAct loop, including Phase 0 (Planning), Phase 1 (Execution), and Phase 2 (Validation).
+**Goal**: Build the LangGraph State Machine with Planner, Actor, and Critic nodes.
 **Priority**: High
 **Dependencies**: WP02
-**File**: [tasks/WP03-cognitive-engine.md](tasks/WP03-cognitive-engine.md)
+**File**: [tasks/WP03-graph-architecture.md](tasks/WP03-graph-architecture.md)
 
-- [ ] **T009**: Implement Engine Skeleton & State
-- [ ] **T010**: Implement Phase 0 (Planning)
-- [ ] **T011**: Implement Phase 1 (Execution Loop)
-- [ ] **T012**: Implement Phase 2 (Validation) & Submission
-- [ ] **T013**: Implement Logging & Rich UI
+- [ ] **T009**: Implement Graph Builder & Conditionals
+- [ ] **T010**: Implement Planner Node (Reasoning)
+- [ ] **T011**: Implement Actor Node (Tool Calling)
+- [ ] **T012**: Implement Critic Node (Validation & Reflection)
+- [ ] **T013**: Implement Console Streaming (LangGraph Events)
 
 ### WP04: Runner & Integration
 
@@ -48,6 +48,6 @@
 **Dependencies**: WP03
 **File**: [tasks/WP04-runner-integration.md](tasks/WP04-runner-integration.md)
 
-- [ ] **T014**: Implement Environment Adapter
-- [ ] **T015**: Implement CLI Runner
-- [ ] **T016**: Verify End-to-End Flow & Smoke Test
+- [ ] **T014**: Implement Environment Adapter for LangChain
+- [ ] **T015**: Implement Async Runner CLI
+- [ ] **T016**: Verify End-to-End Graph Execution

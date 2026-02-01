@@ -6,9 +6,9 @@
 
 ## 1. Overview
 
-The **VLM CAD Agent** is the autonomous cognitive engine designed to operate within the **Agentic CAD Environment** (Spec 001). It is a specialized Vision-Language Model (VLM) system that acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
+The **VLM CAD Agent** is the autonomous cognitive engine designed to operate within the **Agentic CAD Environment** (Spec 001). It is a specialized Vision-Language Model (VLM) system built using the **DeepAgents** framework (based on LangGraph). It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
 
-Unlike generic coding assistants, this agent implements a rigorous **"Think, Plan, Act"** cognitive architecture. It validates its own work using visual feedback (renders) and simulation results, maintaining a persistent "Journal" of lessons learned to improve over time.
+Unlike generic coding assistants, this agent leverages the "Deep Agent" architecture to perform long-horizon planning, sub-task delegation, and persistent file-system based memory management. It validates its own work using visual feedback (renders) and simulation results.
 
 ## 2. Goals & Success Criteria
 
@@ -43,32 +43,35 @@ Unlike generic coding assistants, this agent implements a rigorous **"Think, Pla
 
 ## 4. Functional Requirements
 
-### 4.1. Cognitive Architecture
+### 4.1. Cognitive Architecture (DeepAgents Graph)
 
-The agent shall implement a customized ReAct (Reason + Act) loop with distinct phases:
+The agent shall be implemented as a **LangGraph** state machine with the following nodes:
 
-1. **Phase 0: Orientation & Planning**
-    * **Input**: User Prompt + Environment Constraints.
-    * **Action**: Read `journal.md` (Memory), Browse Docs (RAG).
-    * **Output**: A concise **Implementation Plan** (written to `plan.md` or internal scratchpad) outlining the geometric approach.
+1. **Planner Node**:
+    * **Role**: Analyzes the request and `journal.md`.
+    * **Action**: Generates a structured plan in `plan.md`.
+    * **Transition**: -> `Actor`.
 
-2. **Phase 1: Execution Loop**
-    * **Input**: Current file state + Plan.
-    * **Cycle**:
-        * **Think**: Analyze current state vs. plan.
-        * **Act**: Write/Edit Code or Request Preview.
-        * **Observe**: Parse execution output or Image.
-    * **Constraint**: Maximum `N` steps (e.g., 20) to prevent infinite loops.
+2. **Actor Node** (The Builder):
+    * **Role**: Executes the current step of the plan.
+    * **Action**: Calls tools (`write_script`, `preview_design`).
+    * **Transition**: -> `Critic` (if submission or preview) OR -> `Actor` (if continuing).
 
-3. **Phase 2: Validation & Reflection**
-    * **Trigger**: Agent calls `submit_design`.
-    * **Outcome**:
-        * **Success**: Update `journal.md` with "What went right".
-        * **Failure**: Analyze Feedback, revert to Phase 1.
+3. **Critic Node** (The Validator):
+    * **Role**: Visual and Logic validation.
+    * **Trigger**: After `submit_design` or `preview_design`.
+    * **Action**: Checks simulator feedback or vision output.
+    * **Transition**:
+        * **Success**: -> `Journaler` -> `End`.
+        * **Failure**: -> `Replanner` (Updates plan) -> `Actor`.
+
+4. **Journaler Node**:
+    * **Role**: Long-term memory management.
+    * **Action**: Updates `journal.md` with successful patterns.
 
 ### 4.2. Tool Interface
 
-The agent interacts with the environment via a strictly typed interface (JSON Schema).
+The agent interacts with the environment via **LangChain Tools** (wrapping Spec 001 JSON schema).
 
 #### 4.2.1. Environment Tools (Wrapped from Spec 001)
 
@@ -86,48 +89,43 @@ The agent interacts with the environment via a strictly typed interface (JSON Sc
 
 ### 4.3. LLM Integration
 
-* **Provider Agnostic**: The system shall use a standardized adapter pattern to support:
-  * **OpenAI** (GPT-4o)
-  * **Google** (Gemini 1.5 Pro)
-  * **Anthropic** (Claude 3.5 Sonnet)
-* **Context Management**:
-  * **Sliding Window**: Summarize older conversation turns if context limit is approached.
-  * **Image Handling**: Images from `preview_design` are passed as native multimodal inputs (if supported) or transiently described (if text-only model). **Priority is Native Multimodal**.
+* **Framework**: `langchain-core` / `langchain-anthropic` / `langchain-google-genai`.
+* **Context Management**: Handles by `langgraph` checkpoints and `deepagents` file-system memory.
+* **Image Handling**: Native multimodal support via LangChain's message content types.
 
 ### 4.4. Observability & Logging
 
-* **Traceability**: Every agent step (Thought -> Tool -> Result) is logged to a structured JSONL file `agent_trace.jsonl`.
-* **Console Output**: Rich terminal output (using `rich` library) showing the agent's "Thought" in one color and "Action" in another.
+* **LangSmith**: Primary observability platform (if key provided).
+* **Console**: Rich output via `rich`, streaming graph events.
 
 ## 5. Technical Design
 
 ### 5.1. Tech Stack
 
 * **Language**: Python 3.10+
-* **Model Client**: `litellm` (or direct SDKs if preferred for specific VLM features).
-* **Schema Validation**: `Pydantic`.
-* **Prompt Management**: `Jinja2` templates for system prompts.
+* **Framework**: `deepagents` (presumed library name) / `langgraph` / `langchain`.
+* **Models**: `langchain-openai`, `langchain-google-genai`.
+* **Schema Validation**: `Pydantic` (V2).
 
 ### 5.2. Component Structure
 
 ```
 src/agent/
-├── core/
-│   ├── engine.py           # The main ReAct loop
-│   ├── context.py          # Context window manager
-│   └── memory.py           # Journaling system (File-based)
-├── clients/
-│   ├── base.py             # Abstract LLM Client
-│   ├── openai_client.py
-│   └── gemini_client.py
-├── prompts/
-│   ├── system_persona.j2   # "You are an expert CAD engineer..."
-│   └── planning.j2         # "First, outline your approach..."
-└── runner.py               # CLI entry point to run agent on a problem.
+├── graph/
+│   ├── graph.py            # Definition of Nodes and Edges
+│   ├── state.py            # TypedDict State definition
+│   └── nodes/
+│       ├── planner.py
+│       ├── actor.py
+│       └── critic.py
+├── tools/
+│   ├── env_tools.py        # LangChain tool wrappers
+│   └── memory_tools.py     # Journaling tools
+├── runner.py               # CLI entry point to run the Graph.
+└── utils/                  # DeepAgents utilities
 ```
 
 ## 6. Assumptions & Constraints
 
-* **Sync/Async**: The loop will be synchronous for simplicity (Step 1 wait for Step 2).
-* **Single Agent**: No multi-agent collaboration (e.g., separate Critic/Coder) in Version 1. One model does it all.
-* **Local File Memory**: Long-term memory is a flat Markdown file (`journal.md`), not a vector database, to keep dependencies low.
+* **State Persistence**: Uses LangGraph `MemorySaver` (in-memory or SQLite) for session state, and File System for cross-session "Deep Memory".
+* **Single Orchestrator**: One top-level graph coordinating the process.
