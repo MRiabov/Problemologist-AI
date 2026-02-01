@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
   - "T001"
@@ -112,3 +112,4 @@ This is the "Step 0" for the agent. We need a robust base where the agent can ea
 ## Activity Log
 
 - 2026-02-01T07:36:05Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
+- 2026-02-01T07:43:04Z – Antigravity – shell_pid=60800 – lane=for_review – Implemented core infrastructure, tool models, and prompt management. Verified with unit tests.
