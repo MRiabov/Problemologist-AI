@@ -25,7 +25,7 @@
 
 **Goal**: Convert the Processed Geometry into a full MuJoCo XML definition.
 **Priority**: High
-**Dependencies**: WP01
+Dependencies: WP01
 
 - [ ] T005: Implement `SceneCompiler` class to generate MJCF XML structure.
 - [ ] T006: Implement "Zone Logic" - map `zone_*` named objects to MuJoCo sites/sensors.
@@ -44,7 +44,7 @@
 
 **Goal**: Execute the physics loop with agent control and metric tracking.
 **Priority**: High
-**Dependencies**: WP02
+Dependencies: WP02
 
 - [ ] T009: Implement `SimulationLoop` class in `simulation.py`.
 - [ ] T010: Implement `AgentInterface` to call user-provided control functions.
@@ -63,7 +63,7 @@
 
 **Goal**: Wrap the simulation in a safe sandbox and expose it via HTTP.
 **Priority**: Medium
-**Dependencies**: WP03
+Dependencies: WP03
 
 - [ ] T013: Implement `ProcessRunner` in `runner.py` to run `SimulationLoop` in a separate process.
 - [ ] T014: Implement timeout and exception safety in `ProcessRunner`.
@@ -80,7 +80,7 @@
 
 **Goal**: Verify the entire system with realistic test cases.
 **Priority**: Low
-**Dependencies**: WP04
+Dependencies: WP04
 
 - [ ] T017: Create a reference "Pusher Bot" `build123d` model + control script.
 - [ ] T018: Write E2E test: Submit Pusher Bot -> Waiting for Success Report.
