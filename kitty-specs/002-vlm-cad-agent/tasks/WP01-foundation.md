@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Infrastructure"
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks:
   - "T001"
@@ -10,7 +10,7 @@ subtasks:
   - "T004"
   - "T005"
 agent: "Antigravity"
-shell_pid: "60800"
+shell_pid: "90978"
 ---
 
 ## Objective
@@ -113,3 +113,4 @@ This is the "Step 0" for the agent. We need a robust base where the agent can ea
 
 - 2026-02-01T07:36:05Z – Antigravity – shell_pid=60800 – lane=doing – Started implementation via workflow command
 - 2026-02-01T07:43:04Z – Antigravity – shell_pid=60800 – lane=for_review – Implemented core infrastructure, tool models, and prompt management. Verified with unit tests.
+- 2026-02-01T08:11:03Z – Antigravity – shell_pid=90978 – lane=doing – Started review via workflow command
