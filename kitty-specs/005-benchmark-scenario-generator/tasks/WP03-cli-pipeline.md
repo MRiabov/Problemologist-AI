@@ -70,4 +70,8 @@ We need to generate *many* variations of each scenario. The agent writes the *te
 
 - 2026-02-01T16:17:21Z – unknown – shell_pid=383008 – lane=for_review – Benchmark scenario generation pipeline implemented. Includes CLI, agent orchestration, batch randomization, and artifact export. Verified with tests.
 - 2026-02-01T16:36:57Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
+<<<<<<< HEAD
 - 2026-02-01T16:41:08Z – Antigravity – shell_pid=313636 – lane=done – Review passed: CLI and randomization pipeline implemented correctly. Verified with automated tests. Note: STL export is mocked with placeholder data, which is acceptable for this stage of the pipeline development.
+=======
+
+>>>>>>> 005-benchmark-scenario-generator-WP03
