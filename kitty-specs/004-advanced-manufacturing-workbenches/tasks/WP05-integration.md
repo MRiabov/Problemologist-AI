@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP05"
-title: "Tool Integration & Caching"
-lane: "planned"
-dependencies: ["WP03", "WP04"]
-subtasks: ["T018", "T019", "T020", "T021"]
+work_package_id: WP05
+title: Tool Integration & Caching
+lane: "doing"
+dependencies: [WP03, WP04]
+base_branch: 004-advanced-manufacturing-workbenches-WP03
+base_commit: 2c0348a4fca3c719c7dbaa9ae22473b672c7b6b2
+created_at: '2026-02-01T11:33:53.023731+00:00'
+subtasks: [T018, T019, T020, T021]
+shell_pid: "234286"
 ---
 
 ### Objective
