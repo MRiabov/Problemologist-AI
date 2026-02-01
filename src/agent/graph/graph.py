@@ -55,7 +55,7 @@ def build_graph():
         last_message = messages[-1]
 
         # If the LLM didn't make a tool call, we stop.
-        if not last_message.tool_calls:
+        if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
             return END
 
         # Otherwise, we execute the tools.
