@@ -1,0 +1,10 @@
+{
+  "feature_number": "004",
+  "slug": "advanced-manufacturing-workbenches",
+  "friendly_name": "Advanced Manufacturing Workbenches and DFM Analysis",
+  "mission": "software-dev",
+  "source_description": "Implement Injection Molding and CNC workbenches with strict DFM constraints (draft angles, undercuts, tool access) and complex pricing, plus a manufacturability analysis tool.",
+  "created_at": "2026-02-01T12:00:00Z",
+  "target_branch": "main",
+  "vcs": "git"
+}

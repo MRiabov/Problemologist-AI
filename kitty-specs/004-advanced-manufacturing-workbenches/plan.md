@@ -1,108 +1,67 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Advanced Manufacturing Workbenches
+*Path: templates/plan-template.md*
 
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `004-advanced-manufacturing-workbenches` | **Date**: 2026-02-01 | **Spec**: [kitty-specs/004-advanced-manufacturing-workbenches/spec.md](spec.md)
+**Input**: Feature specification from `kitty-specs/004-advanced-manufacturing-workbenches/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+This feature implements two advanced manufacturing workbenches: **CNC Milling** and **Injection Molding**. It introduces strict Design for Manufacturing (DFM) validation (draft angles, undercuts, tool access) using `trimesh` for geometric analysis. The system includes a volume-dependent cost model configurable via YAML, and a `check_manufacturability` tool for the agent, optimized with caching to ensure performance.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Python 3.12
+**Primary Dependencies**: 
+- `build123d` (Geometry generation/manipulation)
+- `trimesh` (Geometric analysis: raycasting, draft angles)
+- `numpy` (Vector math)
+- `PyYAML` (Configuration loading - standard lib or `pyyaml`)
+**Storage**: Stateless analysis; Configuration in `src/workbenches/manufacturing_config.yaml`
+**Testing**: `pytest`
+**Target Platform**: Linux (Development/Execution)
+**Project Type**: Single project (Library/Agent Environment)
+**Performance Goals**: DFM checks < 5s per part.
+**Constraints**: 
+- Must handle standard mesh formats (STL/OBJ) or internal `build123d` representations converted to mesh.
+- Cost parameters must be hot-swappable via config.
+**Scale/Scope**: ~3 new modules, integration into existing tool system.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-[Gates determined based on constitution file]
+*GATE: Skipped (Constitution file not found)*
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/004-advanced-manufacturing-workbenches/
+├── plan.md              # This file
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output
+├── quickstart.md        # Phase 1 output
+├── contracts/           # Phase 1 output
+└── tasks.md             # Phase 2 output
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── workbenches/
+│   ├── cnc.py                    # CNC Workbench implementation
+│   ├── injection_molding.py      # Injection Molding Workbench implementation
+│   ├── manufacturing_config.yaml # Cost & Constraints configuration
+│   └── analysis_utils.py         # Shared DFM logic (using trimesh)
+├── environment/
+│   └── tools.py                  # Updated to expose check_manufacturability
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Extending existing `src/workbenches/` package with new modules. Shared analysis logic (raycasting, etc.) separated into `analysis_utils.py` to keep workbench classes clean.
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
-
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| `trimesh` dependency | Advanced geometric queries (raycasting for undercuts) | `build123d`/OCP native kernels are complex/slow for discrete raycasting tasks; `trimesh` is industry standard for this. |
+| YAML Config | Hot-swappable pricing/constraints | Hardcoding prevents easy tuning of the economic model without code changes. |
