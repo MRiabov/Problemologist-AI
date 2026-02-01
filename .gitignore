@@ -31,4 +31,4 @@ kitty-specs/**/tasks/*.md
 # Database files
 *.db
 *.db-wal
-*.db-shm
+*.db-shm.cache/
