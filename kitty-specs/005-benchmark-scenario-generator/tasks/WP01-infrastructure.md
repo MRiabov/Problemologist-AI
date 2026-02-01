@@ -1,14 +1,14 @@
 ---
 work_package_id: WP01
 title: Infrastructure & Validator
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks:
 - T001
 - T002
 - T003
-agent: "Antigravity"
-shell_pid: "313636"
+agent: "Gemini"
+shell_pid: "353112"
 reviewed_by: "MRiabov"
 review_status: "approved"
 ---
@@ -66,3 +66,4 @@ We are building a standalone utility in `src/generators/benchmark/`. The validat
 - 2026-02-01T13:33:04Z – Antigravity – shell_pid=313636 – lane=doing – Started review via workflow command
 - 2026-02-01T13:40:33Z – Antigravity – shell_pid=313636 – lane=done – Review passed: Infrastructure, Data Models, and Validator implemented and verified. Fixed energy calculation.
 - 2026-02-01T13:53:15Z – Antigravity – shell_pid=313636 – lane=for_review – Implemented core infrastructure and MuJoCo validator for benchmark generator.
+- 2026-02-01T13:55:13Z – Gemini – shell_pid=353112 – lane=doing – Started review via workflow command
