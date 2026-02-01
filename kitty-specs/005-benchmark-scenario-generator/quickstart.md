@@ -48,6 +48,26 @@ Every scenario is automatically validated using the "Big Bang" test in `src/gene
 - **Velocity Check**: Do any parts exceed 100m/s (indicates unstable physics)?
 - **NaN Check**: Does the solver crash?
 
+## 🔄 Example Workflow (End-to-End)
+
+Here is how the generator handles a typical request:
+
+1.  **User Request**: "Create a sliding drawer with a handle on the front."
+2.  **Planner Agent**: 
+    - "We need two main bodies: a fixed `housing` and a mobile `drawer`."
+    - "The `drawer` needs a `SliderJoint` along the X-axis."
+    - "The `handle` should be a separate child body or part of the drawer union."
+3.  **Coder Agent**: Writes a `build123d` script that defines the housing as a hollow box and the drawer as a slightly smaller box with a cylinder handle.
+4.  **Validator (Attempt 1)**: 
+    - *Result*: **FAILED**. 
+    - *Reason*: The drawer was spawned exactly touching the housing, causing a "collision explosion" (velocity > 100m/s).
+5.  **Critic Agent**: "Add a 1mm clearance (gap) between the drawer and the housing to prevent initial penetration."
+6.  **Coder Agent**: Updates the script with `offset` or smaller dimensions for the drawer.
+7.  **Validator (Attempt 2)**: 
+    - *Result*: **PASSED**. 
+    - *Reason*: Simulation runs for 1.0s; the drawer settles naturally under gravity.
+8.  **Output**: The stable MJCF XML is saved and the `ScenarioManifest` is generated.
+
 ## 🧑‍💻 Human-in-the-Loop (Debugging)
 
 If the agent is failing to create a stable scenario:
