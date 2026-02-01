@@ -1,10 +1,24 @@
 {
-    "feature_number": "003",
-    "slug": "003-mujoco-simulation-engine",
-    "friendly_name": "MuJoCo Simulation Engine",
-    "mission": "software-dev",
-    "source_description": "A MuJoCo simulation engine validation backend for the Agentic CAD Environment. It validates agent designs by converting them into MuJoCo physics environments, simulating their behavior against agent-defined control logic, and enforcing constraints like 'forbid zones' and 'goal zones'.",
-    "created_at": "2026-01-31T20:29:12Z",
-    "target_branch": "main",
-    "vcs": "git"
+  "accept_commit": null,
+  "acceptance_history": [
+    {
+      "accepted_at": "2026-02-01T18:41:10Z",
+      "accepted_by": "gemini",
+      "accepted_from_commit": "e2627d168fb4c8616391f3e01e9f691547d7b09f",
+      "branch": "main",
+      "mode": "local"
+    }
+  ],
+  "acceptance_mode": "local",
+  "accepted_at": "2026-02-01T18:41:10Z",
+  "accepted_by": "gemini",
+  "accepted_from_commit": "e2627d168fb4c8616391f3e01e9f691547d7b09f",
+  "created_at": "2026-01-31T20:29:12Z",
+  "feature_number": "003",
+  "friendly_name": "MuJoCo Simulation Engine",
+  "mission": "software-dev",
+  "slug": "003-mujoco-simulation-engine",
+  "source_description": "A MuJoCo simulation engine validation backend for the Agentic CAD Environment. It validates agent designs by converting them into MuJoCo physics environments, simulating their behavior against agent-defined control logic, and enforcing constraints like 'forbid zones' and 'goal zones'.",
+  "target_branch": "main",
+  "vcs": "git"
 }
