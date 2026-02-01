@@ -55,8 +55,8 @@ class Print3DWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
         """
-        Calculates cost based on part volume.
+        Calculates cost based on part volume and quantity.
         """
-        return part.volume * self.material_cost
+        return (part.volume * self.material_cost) * quantity

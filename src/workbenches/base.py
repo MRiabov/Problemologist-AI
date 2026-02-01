@@ -23,13 +23,20 @@ class Workbench(ABC):
         """
         pass
 
+    def validate_geometry(self, part: Part) -> List[Union[Exception, str]]:
+        """
+        Alias for validate, as per spec requirements.
+        """
+        return self.validate(part)
+
     @abstractmethod
-    def calculate_cost(self, part: Part) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
 
         Args:
             part: The build123d Part to cost.
+            quantity: The number of parts to produce.
 
         Returns:
             The calculated cost as a float.
