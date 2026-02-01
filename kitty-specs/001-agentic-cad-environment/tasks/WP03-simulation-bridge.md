@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Simulation Bridge (MuJoCo)
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks:
 - T011
@@ -95,3 +95,4 @@ history:
 ## Activity Log
 
 - 2026-02-01T08:26:19Z – Antigravity – shell_pid=103573 – lane=doing – Started implementation via workflow command
+- 2026-02-01T08:29:45Z – Antigravity – shell_pid=103573 – lane=for_review – Implemented Mujoco bridge with template loading, injection, and metrics. Tests passed.
