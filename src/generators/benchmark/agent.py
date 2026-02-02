@@ -1,4 +1,3 @@
-import os
 import traceback
 from pathlib import Path
 from typing import Literal, TypedDict
@@ -217,8 +216,8 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
             }
 
         # Validate MJCF
-        temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
-        report = validate_mjcf(mjcf_xml, asset_dir=temp_assets_path)
+        temp_assets_path = Path("workspace_gen") / rel_temp_assets
+        report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
         print(f"DEBUG: validator_node report: {report}")
 
         if report["is_valid"]:

@@ -1,6 +1,6 @@
 import json
-import os
 import time
+from pathlib import Path
 from typing import Any
 
 import gymnasium as gym
@@ -29,8 +29,8 @@ class CADEnv(gym.Env):
         super().__init__()
         self.problem_id = problem_id
         self.task_description = task_description
-        self.workspace_dir = os.path.abspath(workspace_dir)
-        os.makedirs(self.workspace_dir, exist_ok=True)
+        self.workspace_dir = str(Path(workspace_dir).resolve())
+        Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
         tools.set_workspace_dir(self.workspace_dir)
 
         # Persistence
@@ -83,9 +83,8 @@ class CADEnv(gym.Env):
         self.step_count = 0
 
         # Reset workspace - clear the design script
-        design_path = os.path.join(self.workspace_dir, "design.py")
-        with open(design_path, "w", encoding="utf-8") as f:
-            f.write("")
+        design_path = Path(self.workspace_dir) / "design.py"
+        design_path.write_text("", encoding="utf-8")
 
         self.last_obs = {
             "code": "",
@@ -171,10 +170,9 @@ class CADEnv(gym.Env):
             )
 
         # Update observation
-        script_path = os.path.join(self.workspace_dir, "design.py")
-        if os.path.exists(script_path):
-            with open(script_path, encoding="utf-8") as f:
-                self.last_obs["code"] = f.read()
+        script_path = Path(self.workspace_dir) / "design.py"
+        if script_path.exists():
+            self.last_obs["code"] = script_path.read_text(encoding="utf-8")
 
         self.last_obs["last_output"] = tool_output
 
@@ -182,20 +180,20 @@ class CADEnv(gym.Env):
 
     def _submit_design(self) -> tuple[float, str, bool]:
         """Handles the full submission, validation, and simulation pipeline."""
-        script_path = os.path.join(self.workspace_dir, "design.py")
-        if not os.path.exists(script_path):
+        script_path = Path(self.workspace_dir) / "design.py"
+        if not script_path.exists():
             return -10.0, "Error: No design.py found.", False
 
         # 1. Process design.py in Sandbox
         runner_filename = "submit_runner.py"
-        runner_path = os.path.join(self.workspace_dir, runner_filename)
+        runner_path = Path(self.workspace_dir) / runner_filename
         stl_filename = "design.stl"
-        stl_path = os.path.join(self.workspace_dir, stl_filename)
+        stl_path = Path(self.workspace_dir) / stl_filename
 
         runner_script = f"""
-import os
 import sys
 import json
+from pathlib import Path
 import build123d as bd
 from src.workbenches.print_3d import Print3DWorkbench
 from src.compiler import geometry
@@ -225,7 +223,7 @@ try:
         "Location": bd.Location,
     }}
     
-    with open("/workspace/design.py", "r", encoding="utf-8") as f:
+    with Path("/workspace/design.py").open("r", encoding="utf-8") as f:
         code = f.read()
     exec(code, ctx, locs)
     
@@ -250,7 +248,7 @@ try:
         
         if not violations:
             # 4. Export Mesh
-            stl_path = "/workspace/{stl_filename}"
+            stl_path = f"/workspace/{{'stl_filename'}}"
             geometry.export_mesh(part, stl_path)
             result["success"] = True
             result["stl_path"] = "{stl_filename}"
@@ -263,8 +261,7 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
 
         try:
             # Write runner
-            with open(runner_path, "w", encoding="utf-8") as f:
-                f.write(runner_script)
+            runner_path.write_text(runner_script, encoding="utf-8")
 
             # Run in sandbox with source mounted for workbench/geometry access
             stdout, stderr, returncode = tools._SANDBOX.run_script(
@@ -274,8 +271,39 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             )
 
             # Clean up runner
-            if os.path.exists(runner_path):
-                os.remove(runner_path)
+            if runner_path.exists():
+                runner_path.unlink()
+
+            if "SUBMIT_RESULT:" not in stdout:
+                error_msg = f"Sandbox execution failed: {stderr}"
+                return -10.0, error_msg, False
+
+            # Parse result
+            result_line = [
+                line for line in stdout.split("\n") if "SUBMIT_RESULT:" in line
+            ][0]
+            res_data = json.loads(result_line.split("SUBMIT_RESULT:")[1])
+
+            if res_data["error"]:
+                return -10.0, f"Error processing design: {res_data['error']}", False
+
+            if res_data["violations"]:
+                return (
+                    -10.0,
+                    f"Validation Failed: {', '.join(res_data['violations'])}",
+                    False,
+                )
+
+            if not res_data["success"]:
+                return (
+                    -10.0,
+                    "Submission processing failed without specific error.",
+                    False,
+                )
+
+            # str(stl_path) is now in workspace_dir
+        except Exception as e:
+            return -10.0, f"Error during sandboxed submission: {e!s}", False
 
             if "SUBMIT_RESULT:" not in stdout:
                 error_msg = f"Sandbox execution failed: {stderr}"

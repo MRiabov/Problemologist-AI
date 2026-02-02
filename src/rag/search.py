@@ -1,5 +1,4 @@
-import glob
-import os
+from pathlib import Path
 
 # Hardcoded stubs for build123d when real docs are missing
 STUBS = [
@@ -36,20 +35,20 @@ def load_docs(directory: str) -> list[dict[str, str]]:
     Simple doc loader that reads .md and .py files.
     """
     docs = []
-    if not os.path.exists(directory):
+    dir_path = Path(directory)
+    if not dir_path.exists():
         return docs
 
     for ext in ["*.md", "*.py"]:
-        for filename in glob.glob(os.path.join(directory, "**", ext), recursive=True):
+        for filename in dir_path.rglob(ext):
             try:
-                with open(filename, encoding="utf-8") as f:
-                    docs.append(
-                        {
-                            "title": os.path.basename(filename),
-                            "content": f.read(),
-                            "path": filename,
-                        }
-                    )
+                docs.append(
+                    {
+                        "title": filename.name,
+                        "content": filename.read_text(encoding="utf-8"),
+                        "path": str(filename),
+                    }
+                )
             except Exception as e:
                 print(f"Error loading {filename}: {e}")
     return docs

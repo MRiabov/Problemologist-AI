@@ -1,5 +1,5 @@
-import os
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -9,9 +9,10 @@ from src.environment import tools
 @pytest.fixture(autouse=True)
 def setup_workspace():
     """Ensure a clean workspace for each test."""
-    if os.path.exists(tools.WORKSPACE_DIR):
-        shutil.rmtree(tools.WORKSPACE_DIR)
-    os.makedirs(tools.WORKSPACE_DIR)
+    workspace = Path(tools.WORKSPACE_DIR)
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir(parents=True, exist_ok=True)
     yield
     # Optional: cleanup after tests
     # shutil.rmtree(tools.WORKSPACE_DIR)
@@ -22,10 +23,9 @@ def test_write_script():
     result = tools.write_script(content, "hello.py")
     assert "Successfully wrote" in result
 
-    path = os.path.join(tools.WORKSPACE_DIR, "hello.py")
-    assert os.path.exists(path)
-    with open(path) as f:
-        assert f.read() == content
+    path = Path(tools.WORKSPACE_DIR) / "hello.py"
+    assert path.exists()
+    assert path.read_text() == content
 
 
 def test_edit_script_success():
@@ -33,11 +33,10 @@ def test_edit_script_success():
     result = tools.edit_script("edit.py", "line2", "line_two")
     assert "Successfully edited" in result
 
-    path = os.path.join(tools.WORKSPACE_DIR, "edit.py")
-    with open(path) as f:
-        content = f.read()
-        assert "line_two" in content
-        assert "line2" not in content
+    path = Path(tools.WORKSPACE_DIR) / "edit.py"
+    content = path.read_text()
+    assert "line_two" in content
+    assert "line2" not in content
 
 
 def test_edit_script_not_found():
@@ -64,12 +63,13 @@ with BuildPart() as p:
     assert "Preview generated" in result
 
     # It might be png or svg depending on implementation details, check result
+    workspace = Path(tools.WORKSPACE_DIR)
     if "design.png" in result:
-        path = os.path.join(tools.WORKSPACE_DIR, "design.png")
+        path = workspace / "design.png"
     else:
-        path = os.path.join(tools.WORKSPACE_DIR, "design.svg")
+        path = workspace / "design.svg"
 
-    assert os.path.exists(path)
+    assert path.exists()
 
 
 def test_search_docs():

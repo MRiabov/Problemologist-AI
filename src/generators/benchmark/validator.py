@@ -1,7 +1,7 @@
-import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import mujoco
 import numpy as np
@@ -30,16 +30,17 @@ def validate_mjcf(xml_string: str, asset_dir: str = None) -> ValidationReport:
 
         # Load the model
         if asset_dir:
+            asset_path = Path(asset_dir)
             with tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_dir_path = Path(tmp_dir)
                 # Copy assets to tmp_dir
-                if os.path.exists(asset_dir):
-                    for f in os.listdir(asset_dir):
-                        shutil.copy(os.path.join(asset_dir, f), tmp_dir)
+                if asset_path.exists():
+                    for f in asset_path.iterdir():
+                        shutil.copy(str(f), str(tmp_dir_path))
 
-                xml_path = os.path.join(tmp_dir, "scene.xml")
-                with open(xml_path, "w") as f:
-                    f.write(processed_xml)
-                model = mujoco.MjModel.from_xml_path(xml_path)
+                xml_path = tmp_dir_path / "scene.xml"
+                xml_path.write_text(processed_xml)
+                model = mujoco.MjModel.from_xml_path(str(xml_path))
         else:
             model = mujoco.MjModel.from_xml_string(processed_xml)
 

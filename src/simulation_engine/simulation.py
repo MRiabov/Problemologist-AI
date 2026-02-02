@@ -1,6 +1,6 @@
 import json
-import os
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import mujoco
@@ -29,7 +29,7 @@ class SimulationLoop:
         Initialize the simulation loop with a path to MJCF model.
         """
         try:
-            self.model_path = os.path.abspath(model_path)
+            self.model_path = str(Path(model_path).resolve())
             self.model = mujoco.MjModel.from_xml_path(self.model_path)
         except Exception as e:
             raise ValueError(f"Failed to load model from {model_path}: {e}")
@@ -83,11 +83,11 @@ class SimulationLoop:
         """
         from src.environment import tools
 
-        workspace = tools.WORKSPACE_DIR
+        workspace = Path(tools.WORKSPACE_DIR)
         sandbox = tools._SANDBOX
 
         runner_filename = "sim_engine_runner.py"
-        runner_path = os.path.join(workspace, runner_filename)
+        runner_path = workspace / runner_filename
 
         # In-container path for the model
         # We'll mount the host's model_path to /workspace/model.xml
@@ -114,8 +114,7 @@ result = sim._run_internal(agent_script, max_steps)
 print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
 """
         try:
-            with open(runner_path, "w", encoding="utf-8") as f:
-                f.write(runner_script)
+            runner_path.write_text(runner_script, encoding="utf-8")
 
             stdout, stderr, rc = sandbox.run_script(
                 runner_filename,
@@ -124,8 +123,8 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
                 timeout=60,
             )
 
-            if os.path.exists(runner_path):
-                os.remove(runner_path)
+            if runner_path.exists():
+                runner_path.unlink()
 
             if rc != 0:
                 return {

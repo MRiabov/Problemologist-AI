@@ -1,5 +1,5 @@
-import os
 import shutil
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -37,11 +37,11 @@ def build(seed, scale_factors=(1,1,1)):
 
 @pytest.fixture
 def clean_datasets():
-    output_dir = "test_datasets"
-    if os.path.exists(output_dir):
+    output_dir = Path("test_datasets")
+    if output_dir.exists():
         shutil.rmtree(output_dir)
     yield output_dir
-    if os.path.exists(output_dir):
+    if output_dir.exists():
         shutil.rmtree(output_dir)
 
 
@@ -72,7 +72,15 @@ def test_generate_pipeline(mock_invoke, mock_render, clean_datasets):
     # When app has only one command, Typer might behave differently depending on how it's initialized.
     # Here 'generate' is a command, so we should call it.
     result = runner.invoke(
-        app, ["--prompt", "Test Prompt", "--count", "2", "--output-dir", clean_datasets]
+        app,
+        [
+            "--prompt",
+            "Test Prompt",
+            "--count",
+            "2",
+            "--output-dir",
+            str(clean_datasets),
+        ],
     )
 
     print(result.output)
@@ -81,22 +89,22 @@ def test_generate_pipeline(mock_invoke, mock_render, clean_datasets):
 
     # Check if files were created
     # Find the generated directory (it has a random suffix)
-    dirs = os.listdir(clean_datasets)
+    dirs = list(clean_datasets.iterdir())
     assert len(dirs) == 1
-    scenario_dir = os.path.join(clean_datasets, dirs[0])
+    scenario_dir = dirs[0]
 
-    assert os.path.exists(os.path.join(scenario_dir, "template.py"))
+    assert (scenario_dir / "template.py").exists()
 
     # We requested 2 variations
-    files = os.listdir(scenario_dir)
-    mjcf_files = [f for f in files if f.startswith("scene_")]
-    manifest_files = [f for f in files if f.startswith("manifest_")]
+    files = list(scenario_dir.iterdir())
+    mjcf_files = [f for f in files if f.name.startswith("scene_")]
+    manifest_files = [f for f in files if f.name.startswith("manifest_")]
 
     assert len(mjcf_files) == 2
     assert len(manifest_files) == 2
 
     # Check assets
-    assets_dir = os.path.join(scenario_dir, "assets")
-    assert os.path.exists(assets_dir)
-    stl_files = os.listdir(assets_dir)
+    assets_dir = scenario_dir / "assets"
+    assert assets_dir.exists()
+    stl_files = list(assets_dir.iterdir())
     assert len(stl_files) == 2

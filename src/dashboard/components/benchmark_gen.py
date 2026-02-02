@@ -1,6 +1,6 @@
-import os
 import tempfile
 import traceback
+from pathlib import Path
 
 import streamlit as st
 
@@ -187,8 +187,8 @@ def render_coding_stage(state):
                 # 4. Render
                 status_placeholder.info("Success! Rendering preview...")
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    prefix = os.path.join(tmpdir, "preview")
-                    state["renders"] = render_scenario(state["mjcf"], prefix)
+                    prefix = Path(tmpdir) / "preview"
+                    state["renders"] = render_scenario(state["mjcf"], str(prefix))
                     persist_renders(state)
 
                 state["stage"] = "CAD_APPROVAL"
@@ -208,16 +208,16 @@ def render_coding_stage(state):
 
 
 def persist_renders(state):
-    render_dir = os.path.join(".agent_storage", "dashboard_renders")
-    os.makedirs(render_dir, exist_ok=True)
+    render_dir = Path(".agent_storage") / "dashboard_renders"
+    render_dir.mkdir(parents=True, exist_ok=True)
     new_paths = []
     for p in state["renders"]:
-        basename = os.path.basename(p)
-        dest = os.path.join(render_dir, basename)
+        basename = Path(p).name
+        dest = render_dir / basename
         import shutil
 
-        shutil.copy(p, dest)
-        new_paths.append(dest)
+        shutil.copy(str(p), str(dest))
+        new_paths.append(str(dest))
     state["renders"] = new_paths
 
 
@@ -279,8 +279,8 @@ def render_cad_approval_stage(state):
                     }
                 )
                 with tempfile.TemporaryDirectory() as tmpdir:
-                    prefix = os.path.join(tmpdir, "preview")
-                    state["renders"] = render_scenario(state["mjcf"], prefix)
+                    prefix = Path(tmpdir) / "preview"
+                    state["renders"] = render_scenario(state["mjcf"], str(prefix))
                     persist_renders(state)
                 st.success("Re-validation passed!")
                 st.rerun()

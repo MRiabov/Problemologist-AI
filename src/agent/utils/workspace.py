@@ -31,7 +31,7 @@ class Workspace:
         """Append content to a file in the workspace."""
         full_path = self._validate_path(path)
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(full_path, "a", encoding="utf-8") as f:
+        with full_path.open("a", encoding="utf-8") as f:
             f.write(content)
 
     def list_files(self, pattern: str = "*", recursive: bool = False) -> list[str]:

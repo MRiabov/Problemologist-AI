@@ -1,5 +1,5 @@
-import os
 import sys
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -9,9 +9,9 @@ from streamlit_autorefresh import st_autorefresh
 load_dotenv()
 
 # Ensure project root is in sys.path
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
-if root_path not in sys.path:
-    sys.path.insert(0, root_path)
+root_path = Path(__file__).resolve().parent.parent.parent
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
 
 from src.dashboard.components.benchmark_gen import render_benchmark_generator
 from src.dashboard.components.chat import render_chat

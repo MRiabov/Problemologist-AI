@@ -1,5 +1,5 @@
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 # Global cache for descriptions
@@ -13,19 +13,17 @@ def load_descriptions() -> dict[str, Any]:
         return _DESCRIPTIONS
 
     # Locate the assets directory relative to this file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = Path(__file__).resolve().parent
     # Assuming src/cots/utils.py, assets should be at src/assets/cots_descriptions.json
-    assets_path = os.path.join(current_dir, "..", "assets", "cots_descriptions.json")
+    assets_path = current_dir.parent / "assets" / "cots_descriptions.json"
 
-    if not os.path.exists(assets_path):
+    if not assets_path.exists():
         # Fallback if the above path logic fails for some reason
         # (e.g. if we are running from a different worktree structure)
-        assets_path = os.path.abspath(
-            os.path.join(os.getcwd(), "src", "assets", "cots_descriptions.json")
-        )
+        assets_path = Path.cwd() / "src" / "assets" / "cots_descriptions.json"
 
     try:
-        with open(assets_path) as f:
+        with assets_path.open() as f:
             _DESCRIPTIONS = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Warning: Could not load COTS descriptions from {assets_path}: {e}")

@@ -1,5 +1,5 @@
-import os
 import tempfile
+from pathlib import Path
 
 import mujoco
 from build123d import Box, Compound, Pos
@@ -9,6 +9,7 @@ from simulation_engine.builder import SceneCompiler
 
 def test_compiler_basic_scene():
     with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
         # Create environment
         # Obstacle
         b1 = Box(1, 1, 1)
@@ -43,13 +44,12 @@ def test_compiler_basic_scene():
         assert "agent" in xml_str
 
         # Verify it loads in MuJoCo
-        xml_path = os.path.join(tmpdir, "scene.xml")
-        with open(xml_path, "w") as f:
-            f.write(xml_str)
+        xml_path = tmp_path / "scene.xml"
+        xml_path.write_text(xml_str)
 
         # mujoco.MjModel.from_xml_path(xml_path) might fail if meshes aren't found
         # but we saved them to tmpdir.
-        model = mujoco.MjModel.from_xml_path(xml_path)
+        model = mujoco.MjModel.from_xml_path(str(xml_path))
         assert model is not None
 
         # Geoms:
@@ -62,6 +62,7 @@ def test_compiler_basic_scene():
 
 def test_compiler_with_joints():
     with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
         env = Compound([Box(0.1, 0.1, 0.1)])  # Default unnamed obstacle
 
         agent_base = Box(0.2, 0.2, 0.2)
@@ -79,11 +80,10 @@ def test_compiler_with_joints():
         assert 'joint="arm_joint"' in xml_str
         assert 'gear="10"' in xml_str
 
-        xml_path = os.path.join(tmpdir, "scene_with_joints.xml")
-        with open(xml_path, "w") as f:
-            f.write(xml_str)
+        xml_path = tmp_path / "scene_with_joints.xml"
+        xml_path.write_text(xml_str)
 
-        model = mujoco.MjModel.from_xml_path(xml_path)
+        model = mujoco.MjModel.from_xml_path(str(xml_path))
         assert model is not None
         assert model.njnt == 1
         assert model.nu == 1  # 1 actuator

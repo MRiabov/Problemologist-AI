@@ -1,11 +1,12 @@
 import argparse
 import asyncio
-import os
 import sys
 import uuid
+from pathlib import Path
 
 # Add the project root to sys.path to allow importing from src
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+root_path = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(root_path))
 
 from langchain_core.messages import HumanMessage
 from rich.panel import Panel

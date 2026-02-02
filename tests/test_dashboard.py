@@ -1,10 +1,10 @@
-import os
 import sys
+from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
 # Ensure project root is in sys.path for the test runner
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+root_path = str(Path(__file__).parent.parent.resolve())
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
 

@@ -1,6 +1,6 @@
 import json
-import os
 import random
+import shutil
 import uuid
 from pathlib import Path
 
@@ -62,25 +62,22 @@ def execute_build(
     )
 
     # Initialize a temporary workspace for generation
-    workspace = os.path.abspath("workspace_gen")
-    os.makedirs(workspace, exist_ok=True)
+    workspace = Path("workspace_gen").resolve()
+    workspace.mkdir(parents=True, exist_ok=True)
 
     # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files
     if asset_dir:
-        host_asset_path = os.path.join(workspace, asset_dir)
-        if os.path.exists(host_asset_path):
-            import shutil
-
+        host_asset_path = workspace / asset_dir
+        if host_asset_path.exists():
             shutil.rmtree(host_asset_path)
-        os.makedirs(host_asset_path, exist_ok=True)
+        host_asset_path.mkdir(parents=True, exist_ok=True)
 
-    sandbox = PodmanSandbox(workspace)
+    sandbox = PodmanSandbox(str(workspace))
 
     script_name = "template_build.py"
     runner_name = "runner_build.py"
 
-    with open(os.path.join(workspace, script_name), "w") as f:
-        f.write(final_code)
+    (workspace / script_name).write_text(final_code)
 
     asset_dir_val = f"'{asset_dir}'" if asset_dir else "None"
 
@@ -115,8 +112,7 @@ except Exception as e:
 """
 
     try:
-        with open(os.path.join(workspace, runner_name), "w") as f:
-            f.write(runner_script)
+        (workspace / runner_name).write_text(runner_script)
 
         stdout, stderr, rc = sandbox.run_script(runner_name, mount_src=True)
 
@@ -127,10 +123,12 @@ except Exception as e:
         raise ValueError(f"Build execution failed: {error}")
     finally:
         # Clean up
-        if os.path.exists(os.path.join(workspace, runner_name)):
-            os.remove(os.path.join(workspace, runner_name))
-        if os.path.exists(os.path.join(workspace, script_name)):
-            os.remove(os.path.join(workspace, script_name))
+        runner_path = workspace / runner_name
+        if runner_path.exists():
+            runner_path.unlink()
+        script_path = workspace / script_name
+        if script_path.exists():
+            script_path.unlink()
 
 
 @app.command()
@@ -178,15 +176,14 @@ def generate(
 
     template_code = state["code"]
     scenario_id = str(uuid.uuid4())[:8]
-    scenario_dir = os.path.join(output_dir, f"{tier}_{scenario_id}")
-    os.makedirs(scenario_dir, exist_ok=True)
-    os.makedirs(os.path.join(scenario_dir, "assets"), exist_ok=True)
-    os.makedirs(os.path.join(scenario_dir, "images"), exist_ok=True)
+    scenario_dir = Path(output_dir) / f"{tier}_{scenario_id}"
+    scenario_dir.mkdir(parents=True, exist_ok=True)
+    (scenario_dir / "assets").mkdir(parents=True, exist_ok=True)
+    (scenario_dir / "images").mkdir(parents=True, exist_ok=True)
 
     # Save the template script
-    script_path = os.path.join(scenario_dir, "template.py")
-    with open(script_path, "w") as f:
-        f.write(template_code)
+    script_path = scenario_dir / "template.py"
+    script_path.write_text(template_code)
 
     console.print(
         f"[bold green]Template generated successfully![/bold green] (ID: {scenario_id})"
@@ -224,8 +221,8 @@ def generate(
 
                 # 3. Validation
                 print(f"DEBUG: Validating MJCF for seed {seed}")
-                temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
-                report = validate_mjcf(mjcf_xml, asset_dir=temp_assets_path)
+                temp_assets_path = Path("workspace_gen") / rel_temp_assets
+                report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
 
                 if report["is_valid"]:
                     print(f"DEBUG: Seed {seed} is valid, saving artifacts")
@@ -233,32 +230,27 @@ def generate(
                     variation_id = f"var_{seed}"
 
                     # Save MJCF
-                    xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
-                    with open(xml_path, "w") as f:
-                        f.write(mjcf_xml)
+                    xml_path = scenario_dir / f"scene_{seed}.xml"
+                    xml_path.write_text(mjcf_xml)
 
                     # Move temp assets to final assets
-                    temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
-                    final_assets_path = os.path.join(scenario_dir, "assets")
+                    temp_assets_path = Path("workspace_gen") / rel_temp_assets
+                    final_assets_path = scenario_dir / "assets"
                     generated_meshes = []
-                    if os.path.exists(temp_assets_path):
-                        import shutil
-
-                        for mesh_file in os.listdir(temp_assets_path):
+                    if temp_assets_path.exists():
+                        for mesh_file in temp_assets_path.iterdir():
                             shutil.move(
-                                os.path.join(temp_assets_path, mesh_file),
-                                os.path.join(final_assets_path, mesh_file),
+                                str(mesh_file),
+                                str(final_assets_path / mesh_file.name),
                             )
-                            generated_meshes.append(f"assets/{mesh_file}")
+                            generated_meshes.append(f"assets/{mesh_file.name}")
 
                     # Render images
-                    image_prefix = os.path.join(
-                        scenario_dir, "images", f"preview_{seed}"
-                    )
+                    image_prefix = str(scenario_dir / "images" / f"preview_{seed}")
                     image_paths = render_scenario(mjcf_xml, image_prefix)
                     # Convert absolute paths back to relative for manifest
                     rel_image_paths = [
-                        os.path.relpath(p, scenario_dir) for p in image_paths
+                        str(Path(p).relative_to(scenario_dir)) for p in image_paths
                     ]
 
                     # Save Manifest
@@ -283,8 +275,8 @@ def generate(
                         },
                     }
 
-                    manifest_path = os.path.join(scenario_dir, f"manifest_{seed}.json")
-                    with open(manifest_path, "w") as f:
+                    manifest_path = scenario_dir / f"manifest_{seed}.json"
+                    with manifest_path.open("w") as f:
                         json.dump(manifest, f, indent=2)
 
                     valid_variations += 1

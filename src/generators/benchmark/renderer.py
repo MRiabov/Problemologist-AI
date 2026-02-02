@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import mujoco
 from PIL import Image
 
@@ -34,9 +36,9 @@ def render_scenario(
                 renderer.update_scene(data, camera=cam_id)
                 pixels = renderer.render()
                 img = Image.fromarray(pixels)
-                path = f"{output_path_prefix}_cam{cam_id}.png"
-                img.save(path)
-                image_paths.append(path)
+                path = Path(f"{output_path_prefix}_cam{cam_id}.png")
+                img.save(str(path))
+                image_paths.append(str(path))
 
         # 2. Always render from a few default angles to ensure coverage
         # We can use MjvCamera or just manipulate the scene
@@ -48,9 +50,9 @@ def render_scenario(
             renderer.update_scene(data)
             pixels = renderer.render()
             img = Image.fromarray(pixels)
-            path = f"{output_path_prefix}_default.png"
-            img.save(path)
-            image_paths.append(path)
+            path = Path(f"{output_path_prefix}_default.png")
+            img.save(str(path))
+            image_paths.append(str(path))
 
         renderer.close()
 
