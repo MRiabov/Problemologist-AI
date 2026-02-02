@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -9,7 +9,7 @@ class Observation:
 
     file_content: str
     console_output: str
-    last_render_path: Optional[str]
+    last_render_path: str | None
     task_description: str
 
 
@@ -20,7 +20,7 @@ class StepResult:
     observation: Observation
     reward: float
     done: bool
-    info: Dict[str, Any]
+    info: dict[str, Any]
 
 
 class AgenticCADEnv(ABC):
@@ -53,7 +53,7 @@ class AgenticCADEnv(ABC):
         pass
 
     @abstractmethod
-    def render(self) -> Optional[str]:
+    def render(self) -> str | None:
         """
         Returns path to a visual render of the current state.
         """

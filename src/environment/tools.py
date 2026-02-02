@@ -1,10 +1,9 @@
 import os
-import subprocess
-import sys
-from src.rag import search as rag_search
+
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 from src.environment.sandbox import PodmanSandbox
+from src.rag import search as rag_search
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = os.path.abspath("workspace")
@@ -38,7 +37,7 @@ def write_script(content: str, filename: str = "design.py") -> str:
             f.write(content)
         return f"Successfully wrote to {filename}"
     except Exception as e:
-        return f"Error writing to {filename}: {str(e)}"
+        return f"Error writing to {filename}: {e!s}"
 
 
 def edit_script(filename: str, find: str, replace: str) -> str:
@@ -52,7 +51,7 @@ def edit_script(filename: str, find: str, replace: str) -> str:
         return f"Error: File {filename} does not exist."
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         count = content.count(find)
@@ -67,7 +66,7 @@ def edit_script(filename: str, find: str, replace: str) -> str:
 
         return f"Successfully edited {filename}."
     except Exception as e:
-        return f"Error editing {filename}: {str(e)}"
+        return f"Error editing {filename}: {e!s}"
 
 
 def preview_design(filename: str = "design.py") -> str:
@@ -167,7 +166,7 @@ except Exception as e:
             return f"Error generating preview: {error}"
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Error: {e!s}"
 
 
 def search_docs(query: str) -> str:
@@ -191,7 +190,7 @@ def search_parts(query: str) -> str:
             output += f"- {res.id}: {res.name} (Provider: {res.provider})\n"
         return output
     except Exception as e:
-        return f"Error searching parts: {str(e)}"
+        return f"Error searching parts: {e!s}"
 
 
 def preview_part(part_id: str) -> str:
@@ -209,4 +208,4 @@ def preview_part(part_id: str) -> str:
             output += f"Metadata: {preview.metadata}\n"
         return output
     except Exception as e:
-        return f"Error previewing part {part_id}: {str(e)}"
+        return f"Error previewing part {part_id}: {e!s}"

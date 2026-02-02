@@ -1,17 +1,18 @@
-import asyncio
 import argparse
-import sys
+import asyncio
 import os
+import sys
 import uuid
 
 # Add the project root to sys.path to allow importing from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from src.environment.core import CADEnv
-from src.agent.runner import run_agent
-from src.agent.tools.env_adapter import set_active_env
 from rich.console import Console
 from rich.panel import Panel
+
+from src.agent.runner import run_agent
+from src.agent.tools.env_adapter import set_active_env
+from src.environment.core import CADEnv
 
 console = Console()
 
@@ -58,7 +59,7 @@ async def solve_environment(problem_id: str, thread_id: str = None):
     except Exception as e:
         console.print(
             Panel(
-                f"[bold red]Solver Failed:[/bold red] {str(e)}",
+                f"[bold red]Solver Failed:[/bold red] {e!s}",
                 title="Environment Solver",
             )
         )
@@ -83,7 +84,7 @@ async def main():
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Solver interrupted by user.[/bold yellow]")
     except Exception as e:
-        console.print(f"\n[bold red]Error in solver: {str(e)}[/bold red]")
+        console.print(f"\n[bold red]Error in solver: {e!s}[/bold red]")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-from typing import List, Dict, Optional, Any
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -14,14 +14,14 @@ class PartPreview:
     id: str
     image_path: str
     description: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     recipe: str
 
 
 class PartProvider:
     """Interface for a source of COTS parts."""
 
-    def search(self, query: str) -> List[PartSummary]:
+    def search(self, query: str) -> list[PartSummary]:
         """Return parts matching the query string."""
         pass
 
@@ -37,7 +37,7 @@ class PartIndex:
         """Add a new source of parts."""
         pass
 
-    def search(self, query: str) -> List[PartSummary]:
+    def search(self, query: str) -> list[PartSummary]:
         """Aggregate search across all providers."""
         pass
 

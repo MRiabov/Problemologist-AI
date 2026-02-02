@@ -1,19 +1,19 @@
+import json
 import os
 import random
-import json
 import uuid
-from typing import List, Dict, Any, Union
 from pathlib import Path
-import yaml
+
 import typer
+import yaml
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from src.generators.benchmark.agent import generator_agent
-from src.generators.benchmark.validator import validate_mjcf
-from src.generators.benchmark.renderer import render_scenario
-from src.generators.benchmark.types import ScenarioManifest, ValidationReport
 from src.environment.sandbox import PodmanSandbox
+from src.generators.benchmark.agent import generator_agent
+from src.generators.benchmark.renderer import render_scenario
+from src.generators.benchmark.types import ScenarioManifest
+from src.generators.benchmark.validator import validate_mjcf
 
 # Load config
 GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
@@ -119,9 +119,8 @@ except Exception as e:
         if "BUILD_RESULT:" in stdout:
             # Extract XML
             return stdout.split("BUILD_RESULT:")[1].strip()
-        else:
-            error = stdout + stderr
-            raise ValueError(f"Build execution failed: {error}")
+        error = stdout + stderr
+        raise ValueError(f"Build execution failed: {error}")
     finally:
         # Clean up
         if os.path.exists(os.path.join(workspace, runner_name)):

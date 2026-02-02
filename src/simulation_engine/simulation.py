@@ -1,16 +1,15 @@
+import json
+import os
+from dataclasses import asdict, dataclass
+from typing import Any, Protocol, runtime_checkable
+
 import mujoco
 import numpy as np
-import time
-import os
-import json
-from typing import Dict, Any, Optional, List, Protocol, runtime_checkable, Union
-from dataclasses import dataclass, field, asdict
-from src.environment.sandbox import PodmanSandbox
 
 
 @runtime_checkable
 class AgentProtocol(Protocol):
-    def control(self, obs: Dict[str, Any]) -> Union[np.ndarray, List[float]]: ...
+    def control(self, obs: dict[str, Any]) -> np.ndarray | list[float]: ...
 
 
 @dataclass
@@ -78,7 +77,7 @@ class SimulationLoop:
         power = self.data.actuator_force * self.data.actuator_velocity
         self.metrics.energy += float(np.sum(np.abs(power)) * dt)
 
-    def run(self, agent_script: str, max_steps: int = 1000) -> Dict[str, Any]:
+    def run(self, agent_script: str, max_steps: int = 1000) -> dict[str, Any]:
         """
         Runs the simulation with the provided agent script inside a sandbox.
         """
@@ -103,7 +102,7 @@ from src.simulation_engine.simulation import SimulationLoop
 
 # Initialize SimulationLoop inside the sandbox
 sim = SimulationLoop("{container_model_path}")
-agent_script = {repr(agent_script)}
+agent_script = {agent_script!r}
 max_steps = {max_steps}
 
 # Call the internal run logic
@@ -164,7 +163,7 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
                 "metrics": self.metrics.to_dict(),
             }
 
-    def _run_internal(self, agent_script: str, max_steps: int = 1000) -> Dict[str, Any]:
+    def _run_internal(self, agent_script: str, max_steps: int = 1000) -> dict[str, Any]:
         """Actual simulation logic to be run inside sandbox."""
         # Create safe scope
         scope = {
@@ -246,7 +245,7 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
             "ctrl": self.data.ctrl.tolist(),
         }
 
-    def _get_observations(self) -> Dict[str, Any]:
+    def _get_observations(self) -> dict[str, Any]:
         """
         Collects sensors and state for the agent.
         """

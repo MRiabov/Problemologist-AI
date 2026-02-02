@@ -1,11 +1,11 @@
-from typing import Any, Optional
-from src.cots.providers.base import PartProvider
-from src.cots.core import Part, PartSummary, PartPreview
-from bd_warehouse.open_builds import StepperMotor, VSlotLinearRail, CBeamLinearRail
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
-from bd_warehouse.fastener import SocketHeadCapScrew, HexNut
-from src.cots.utils import get_description
+from bd_warehouse.fastener import HexNut, SocketHeadCapScrew
+from bd_warehouse.open_builds import CBeamLinearRail, StepperMotor, VSlotLinearRail
+
+from src.cots.core import Part, PartPreview, PartSummary
+from src.cots.providers.base import PartProvider
 from src.cots.rendering import render_part
+from src.cots.utils import get_description
 
 
 class BDWarehouseProvider(PartProvider):

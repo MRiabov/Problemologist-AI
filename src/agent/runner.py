@@ -1,17 +1,18 @@
-import asyncio
 import argparse
-import sys
+import asyncio
 import os
+import sys
 import uuid
 
 # Add the project root to sys.path to allow importing from src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from langchain_core.messages import HumanMessage
+from rich.panel import Panel
+
 from src.agent.graph.graph import build_graph
 from src.agent.utils.checkpoint import get_checkpointer
-from src.agent.utils.visualize import visualize_event, console
-from rich.panel import Panel
+from src.agent.utils.visualize import console, visualize_event
 
 
 async def run_agent(query: str, thread_id: str = None):
@@ -68,7 +69,7 @@ async def main():
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Agent interrupted by user.[/bold yellow]")
     except Exception as e:
-        console.print(f"\n[bold red]Error running agent: {str(e)}[/bold red]")
+        console.print(f"\n[bold red]Error running agent: {e!s}[/bold red]")
         import traceback
 
         traceback.print_exc()

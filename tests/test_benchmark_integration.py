@@ -1,5 +1,7 @@
 import pytest
+
 from src.generators.benchmark.agent import generator_agent
+
 
 @pytest.mark.benchmark
 @pytest.mark.integration
@@ -73,7 +75,7 @@ To ensure the agent uses parametric logic rather than hardcoded coordinates:
     result = await generator_agent.ainvoke(state)
     
     if not result["validation_passed"]:
-        print(f"\nINTEGRATION TEST FAILED")
+        print("\nINTEGRATION TEST FAILED")
         print(f"Total Attempts: {result.get('attempts')}")
         
         history = result.get("full_history", [])

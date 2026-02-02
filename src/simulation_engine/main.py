@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+
 from src.simulation_engine.api import SimulationRequest, SimulationResponse
 from src.simulation_engine.runner import run_isolated
 
@@ -27,13 +28,12 @@ async def simulate(request: SimulationRequest):
             return SimulationResponse(
                 success=True, outcome="success", result=result_data["result"]
             )
-        else:
-            return SimulationResponse(
-                success=False,
-                outcome=result_data.get("error_type", "error").lower(),
-                error=result_data.get("message"),
-                error_type=result_data.get("error_type"),
-            )
+        return SimulationResponse(
+            success=False,
+            outcome=result_data.get("error_type", "error").lower(),
+            error=result_data.get("message"),
+            error_type=result_data.get("error_type"),
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

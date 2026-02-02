@@ -1,17 +1,18 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker, joinedload
+from sqlalchemy.orm import joinedload, sessionmaker
 
 # Import models from the environment persistence layer
-from src.environment.persistence import Episode, Step, Artifact
+from src.environment.persistence import Artifact, Episode, Step
 
 from .utils import get_project_root
 
 
 class DashboardDataLayer:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         if db_path is None:
             # Default to history.db in the project root
             db_path = str(get_project_root() / "history.db")
@@ -31,13 +32,13 @@ class DashboardDataLayer:
 
         self.SessionLocal = sessionmaker(bind=self.engine)
 
-    def get_all_episodes(self) -> List[Episode]:
+    def get_all_episodes(self) -> list[Episode]:
         """Returns all episodes ordered by start time descending."""
         with self.SessionLocal() as session:
             stmt = select(Episode).order_by(Episode.start_time.desc())
             return list(session.scalars(stmt).all())
 
-    def get_episode_by_id(self, episode_id: uuid.UUID | str) -> Optional[Episode]:
+    def get_episode_by_id(self, episode_id: uuid.UUID | str) -> Episode | None:
         """Returns a single episode with steps and artifacts eagerly loaded."""
         if isinstance(episode_id, str):
             try:
@@ -55,7 +56,7 @@ class DashboardDataLayer:
             # Use unique() because of joinedload with collections
             return session.scalars(stmt).unique().one_or_none()
 
-    def get_step_artifacts(self, step_id: uuid.UUID | str) -> List[Artifact]:
+    def get_step_artifacts(self, step_id: uuid.UUID | str) -> list[Artifact]:
         """Returns all artifacts associated with a specific step."""
         if isinstance(step_id, str):
             step_id = uuid.UUID(step_id)

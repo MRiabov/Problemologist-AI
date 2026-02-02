@@ -1,10 +1,11 @@
-from typing import List, Optional, Literal, Dict, Any
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
 class ToolCall(BaseModel):
     tool_name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
 
 
 class AgentThought(BaseModel):
@@ -16,7 +17,7 @@ class AgentThought(BaseModel):
     thought_process: str = Field(
         ..., description="Key reasoning steps, alternatives considered"
     )
-    plan_update: Optional[str] = Field(
+    plan_update: str | None = Field(
         None, description="Updates to the task list if needed"
     )
     action: ToolCall = Field(..., description="The tool to execute")
@@ -29,7 +30,7 @@ class AgentObjective(BaseModel):
 
     id: str
     description: str
-    constraints: List[str] = []
+    constraints: list[str] = []
     max_steps: int = 20
 
 
@@ -39,7 +40,7 @@ class AgentResult(BaseModel):
     """
 
     status: Literal["success", "failure"]
-    solution_code: Optional[str]
-    artifact_paths: List[str]
+    solution_code: str | None
+    artifact_paths: list[str]
     summary: str
     cost_usd: float

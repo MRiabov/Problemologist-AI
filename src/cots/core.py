@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -14,7 +15,7 @@ class PartPreview:
     id: str
     image_path: str
     description: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     recipe: str = ""
 
 
@@ -22,18 +23,18 @@ class PartPreview:
 class Part:
     id: str
     factory: Callable
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 class PartIndex:
     def __init__(self):
-        self.providers: Dict[str, Any] = {}
+        self.providers: dict[str, Any] = {}
 
     def register_provider(self, name: str, provider: Any):
         """Register a new part provider."""
         self.providers[name] = provider
 
-    def search(self, query: str) -> List[PartSummary]:
+    def search(self, query: str) -> list[PartSummary]:
         """Aggregate search results from all registered providers."""
         results = []
         for provider in self.providers.values():

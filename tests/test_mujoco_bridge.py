@@ -1,7 +1,9 @@
-from pathlib import Path
-import pytest
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from unittest.mock import patch
+
+import pytest
+
 from src.compiler.mujoco_bridge import MujocoBridge, SimResult
 
 

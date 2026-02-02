@@ -1,5 +1,6 @@
-from typing import List, Union
+
 from build123d import Part
+
 from .base import Workbench
 
 
@@ -19,7 +20,7 @@ class Print3DWorkbench(Workbench):
         """
         self.material_cost = material_cost
 
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part for 3D printing.
         Checks for:

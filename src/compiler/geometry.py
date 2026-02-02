@@ -1,5 +1,5 @@
-from typing import List
-from build123d import Part, export_stl, Box
+
+from build123d import Box, Part, export_stl
 
 
 def export_mesh(
@@ -21,7 +21,7 @@ def export_mesh(
     return filepath
 
 
-def generate_colliders(part: Part) -> List[Part]:
+def generate_colliders(part: Part) -> list[Part]:
     """
     Generates convex colliders for a given part.
     For the MVP, this returns the convex hull of the part if possible,

@@ -1,12 +1,13 @@
 import os
+from typing import Any
+
 import yaml
-from typing import Dict, Any
 
 # Cache for loaded prompts
-_PROMPTS_CACHE: Dict[str, Any] = {}
+_PROMPTS_CACHE: dict[str, Any] = {}
 
 
-def load_prompts() -> Dict[str, Any]:
+def load_prompts() -> dict[str, Any]:
     """
     Loads prompts from the prompts.yaml file and caches them.
     """
@@ -22,7 +23,7 @@ def load_prompts() -> Dict[str, Any]:
         # Fallback or error
         raise FileNotFoundError(f"Prompts file not found at {prompts_path}")
 
-    with open(prompts_path, "r") as f:
+    with open(prompts_path) as f:
         _PROMPTS_CACHE = yaml.safe_load(f)
 
     return _PROMPTS_CACHE

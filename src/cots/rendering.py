@@ -1,10 +1,9 @@
-import os
 import hashlib
+import os
+
 import pyvista as pv
-from build123d import export_stl, Part, Compound
-
-
-from PIL import Image, ImageDraw, ImageFont
+from build123d import Compound, Part, export_stl
+from PIL import Image, ImageDraw
 
 
 def render_placeholder_image(output_path: str):

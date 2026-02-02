@@ -1,8 +1,9 @@
-import sys
 import os
+import sys
+
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 from dotenv import load_dotenv
+from streamlit_autorefresh import st_autorefresh
 
 # Load environment variables
 load_dotenv()
@@ -12,10 +13,10 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
 
+from src.dashboard.components.benchmark_gen import render_benchmark_generator
 from src.dashboard.components.chat import render_chat
 from src.dashboard.components.code import render_code
 from src.dashboard.components.sidebar import render_sidebar
-from src.dashboard.components.benchmark_gen import render_benchmark_generator
 from src.dashboard.components.viewer_3d import render_3d_artifact
 from src.dashboard.data import get_latest_episode, get_step_artifacts
 from src.dashboard.utils import resolve_artifact_path

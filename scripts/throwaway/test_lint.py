@@ -1,5 +1,4 @@
 from build123d import *
-import unused_module
 
 
 def build(seed, scale=(1.0, 1.0, 1.0)):

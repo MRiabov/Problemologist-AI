@@ -1,4 +1,5 @@
 import pytest
+
 from src.generators.benchmark.validator import validate_mjcf
 
 

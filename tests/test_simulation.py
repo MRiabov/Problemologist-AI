@@ -1,7 +1,6 @@
-import os
 import mujoco
 import pytest
-import numpy as np
+
 from src.simulation_engine.simulation import SimulationLoop
 
 MJCF = """

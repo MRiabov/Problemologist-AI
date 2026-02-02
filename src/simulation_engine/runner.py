@@ -1,9 +1,9 @@
 import multiprocessing
 import traceback
-from typing import Dict, Any, Optional
 from dataclasses import asdict
+from typing import Any
 
-from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+from src.compiler.mujoco_bridge import MujocoBridge
 
 
 def _run_sim_wrapper(
@@ -11,7 +11,7 @@ def _run_sim_wrapper(
     duration: float,
     queue: multiprocessing.Queue,
     agent_script: str = "",
-    goal_pos: Optional[tuple[float, float, float]] = None,
+    goal_pos: tuple[float, float, float] | None = None,
 ):
     """
     Internal wrapper to run the simulation and put the result in a queue.
@@ -50,8 +50,8 @@ def run_isolated(
     duration: float = 5.0,
     timeout: float = 30.0,
     agent_script: str = "",
-    goal_pos: Optional[tuple[float, float, float]] = None,
-) -> Dict[str, Any]:
+    goal_pos: tuple[float, float, float] | None = None,
+) -> dict[str, Any]:
     """
     Runs the simulation in an isolated process with a timeout.
 

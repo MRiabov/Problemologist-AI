@@ -1,5 +1,3 @@
-import os
-import pytest
 from src.simulation_engine.runner import run_isolated
 
 MJCF = """

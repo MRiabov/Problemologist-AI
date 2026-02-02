@@ -1,7 +1,6 @@
-import subprocess
-import os
 import logging
-from typing import Tuple, List, Optional
+import os
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,8 @@ class PodmanSandbox:
         cpu_quota: int = 50000,
         network: str = "none",
         mount_src: bool = False,
-        extra_mounts: Optional[List[Tuple[str, str]]] = None,
-    ) -> Tuple[str, str, int]:
+        extra_mounts: list[tuple[str, str]] | None = None,
+    ) -> tuple[str, str, int]:
         """
         Runs a script inside the sandbox.
 
@@ -93,10 +92,10 @@ class PodmanSandbox:
             logger.warning(f"Sandbox timeout for {script_name}")
             return "", "Error: Execution timed out (Sandbox limit exceeded).", 124
         except Exception as e:
-            logger.error(f"Sandbox error: {str(e)}")
-            return "", f"Error running Podman: {str(e)}", 1
+            logger.error(f"Sandbox error: {e!s}")
+            return "", f"Error running Podman: {e!s}", 1
 
-    def run_command(self, python_code: str, timeout: int = 30) -> Tuple[str, str, int]:
+    def run_command(self, python_code: str, timeout: int = 30) -> tuple[str, str, int]:
         """
         Runs a snippet of Python code directly.
         """

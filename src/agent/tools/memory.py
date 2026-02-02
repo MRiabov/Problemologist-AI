@@ -1,8 +1,9 @@
 import difflib
 import re
 from datetime import datetime
-from typing import List, Optional
+
 from langchain_core.tools import tool
+
 from src.agent.utils.workspace import Workspace
 
 # Initialize workspace relative to execution context
@@ -64,7 +65,7 @@ def read_journal(topic: str = "") -> str:
 
 
 @tool
-def write_journal(entry: str, tags: Optional[List[str]] = None) -> str:
+def write_journal(entry: str, tags: list[str] | None = None) -> str:
     """
     Write a new entry to the agent's journal (journal.md) for long-term memory.
 

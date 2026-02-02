@@ -1,6 +1,4 @@
-import os
 from pathlib import Path
-from typing import List
 
 
 class Workspace:
@@ -36,7 +34,7 @@ class Workspace:
         with open(full_path, "a", encoding="utf-8") as f:
             f.write(content)
 
-    def list_files(self, pattern: str = "*", recursive: bool = False) -> List[str]:
+    def list_files(self, pattern: str = "*", recursive: bool = False) -> list[str]:
         """List files in the workspace matching a pattern."""
         if recursive:
             return [

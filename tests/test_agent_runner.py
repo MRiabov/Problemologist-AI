@@ -1,7 +1,8 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
 from langchain_core.messages import HumanMessage
+
 from src.agent.runner import run_agent
 
 

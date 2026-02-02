@@ -2,8 +2,10 @@ import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
+
 import mujoco
 import numpy as np
+
 from src.generators.benchmark.types import ValidationReport
 
 
@@ -91,7 +93,7 @@ def validate_mjcf(xml_string: str, asset_dir: str = None) -> ValidationReport:
     except Exception as e:
         return ValidationReport(
             is_valid=False,
-            error_message=f"XML Loading/Runtime Error: {str(e)}",
+            error_message=f"XML Loading/Runtime Error: {e!s}",
             sim_duration=0.0,
             max_energy=0.0,
         )

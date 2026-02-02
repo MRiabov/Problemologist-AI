@@ -1,9 +1,9 @@
-import traceback
 import os
+import traceback
 from pathlib import Path
+from typing import Literal, TypedDict
+
 import yaml
-from typing import TypedDict, Literal, Annotated
-import operator
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
@@ -224,12 +224,11 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
                 "errors": None,
                 "linting_failed": False
             }
-        else:
-            return {
-                "validation_passed": False,
-                "errors": f"Validation failed: {report['error_message']}",
-                "linting_failed": False
-            }
+        return {
+            "validation_passed": False,
+            "errors": f"Validation failed: {report['error_message']}",
+            "linting_failed": False
+        }
 
     except Exception as e:
         return {

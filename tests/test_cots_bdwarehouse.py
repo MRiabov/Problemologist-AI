@@ -1,4 +1,3 @@
-import pytest
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 
 
