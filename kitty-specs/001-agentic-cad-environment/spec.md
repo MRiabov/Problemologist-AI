@@ -10,6 +10,14 @@ The **Agentic CAD Environment** is a specialized software development environmen
 
 Unlike traditional Reinforcement Learning (RL) environments that rely on discrete, low-level actions (e.g., "move cursor", "place box"), this environment implements a **Code-as-Policy** paradigm. The agent interacts with the world by writing, editing, and executing high-level Python scripts using the `build123d` parametric CAD library.
 
+The environment provides the agent with a suite of tools to:
+
+1. **Learn**: Access library documentation via RAG.
+2. **Iterate**: Edit code and request visual previews (renders).
+3. **Validate**: Submit designs for rigorous geometric and physical testing against specific **Problem Scenarios** (e.g., "Move block A to location B").
+
+Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite database using an ORM (SQLAlchemy) into a dataset for future model fine-tuning.
+
 ### 1.1 Superseded/Extended By
 As the project evolved, the following specifications expanded on the foundations laid here:
 * **[Spec 003](../003-mujoco-simulation-engine/spec.md)**: Detailed implementation of the MuJoCo simulation engine and physics bridge.
