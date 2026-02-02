@@ -80,7 +80,9 @@ class SceneCompiler:
         ET.SubElement(visual, "quality", shadowsize="2048")
 
         # Compiler
-        compiler = ET.SubElement(self.root, "compiler", angle="degree", coordinate="local")
+        compiler = ET.SubElement(
+            self.root, "compiler", angle="degree", coordinate="local"
+        )
         if self.asset_dir:
             # Set meshdir. If it is inside /workspace/ (sandbox), use a relative path
             # to ensure MuJoCo inside the container can find it regardless of host mapping.
@@ -162,17 +164,19 @@ class SceneCompiler:
         # Convert to string
         return ET.tostring(self.root, encoding="unicode", method="xml")
 
-    def _process_environment(self, env_compound: Compound, labels: list[str] | None = None):
+    def _process_environment(
+        self, env_compound: Compound, labels: list[str] | None = None
+    ):
         """Processes the environment solids (zones and obstacles)."""
         for i, solid in enumerate(env_compound.solids()):
             # Use explicit label if provided, otherwise check object attribute
             label = None
             if labels and i < len(labels):
                 label = labels[i]
-            
+
             if not label:
                 label = getattr(solid, "label", None)
-            
+
             if not label:
                 label = f"solid_{i}"
 
@@ -248,7 +252,10 @@ class SceneCompiler:
         )
 
     def _process_agent(
-        self, agent_compound: Compound, agent_joints: list[dict] | None, labels: list[str] | None = None
+        self,
+        agent_compound: Compound,
+        agent_joints: list[dict] | None,
+        labels: list[str] | None = None,
     ):
         """Injects agent bodies, joints, and actuators."""
         # T007: Implement Actuator Injection

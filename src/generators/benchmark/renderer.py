@@ -1,4 +1,3 @@
-
 import mujoco
 from PIL import Image
 

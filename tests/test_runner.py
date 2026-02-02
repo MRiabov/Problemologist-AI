@@ -53,5 +53,7 @@ def control_logic(model, data):
 def test_run_isolated_error():
     # Invalid XML or duration
     result = run_isolated("invalid xml", duration=0.1)
-    assert result["success"] is True # MujocoBridge handles this by returning success=False in result
+    assert (
+        result["success"] is True
+    )  # MujocoBridge handles this by returning success=False in result
     assert result["result"]["success"] is False

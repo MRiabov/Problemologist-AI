@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.cots.core import Part, PartIndex, PartPreview, PartSummary
