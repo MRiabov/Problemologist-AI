@@ -10,12 +10,20 @@ def planner_node(state: AgentState):
     """
     Decides the high-level strategy and updates the plan.
     """
-    # If a plan already exists, we might want to revise it or just keep it.
-    # For this simple version, if we have a plan, we don't re-plan unless explicitly triggered (not covered here).
-    if state.get("plan"):
+    # Check if we need to re-plan based on Critic feedback
+    needs_replan = False
+    last_critic_msg = ""
+    for msg in reversed(state["messages"]):
+        if hasattr(msg, "content") and any(x in msg.content for x in ["Replan", "budget", "cost", "HARD_LIMIT"]):
+            needs_replan = True
+            last_critic_msg = msg.content
+            break
+
+    # If a plan already exists and no re-plan is triggered, proceed.
+    if state.get("plan") and not needs_replan:
         return {
             "messages": [
-                AIMessage(content="Plan already exists. Proceeding to execution.")
+                AIMessage(content="Plan already exists and is valid. Proceeding to execution.")
             ]
         }
 
