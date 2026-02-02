@@ -1,9 +1,21 @@
+import sys
+import os
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Ensure project root is in sys.path
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
 
 from src.dashboard.components.chat import render_chat
 from src.dashboard.components.code import render_code
 from src.dashboard.components.sidebar import render_sidebar
+from src.dashboard.components.benchmark_gen import render_benchmark_generator
 from src.dashboard.components.viewer_3d import render_3d_artifact
 from src.dashboard.data import get_latest_episode, get_step_artifacts
 from src.dashboard.utils import resolve_artifact_path
@@ -17,6 +29,8 @@ def init_session_state():
         st.session_state.selected_step_index = 0
     if "live_mode" not in st.session_state:
         st.session_state.live_mode = False
+    if "app_mode" not in st.session_state:
+        st.session_state.app_mode = "Viewer"
 
 def main():
     st.set_page_config(
@@ -27,7 +41,7 @@ def main():
     
     init_session_state()
     
-    # Auto-refresh if in Live Mode
+    # Auto-refresh logic if in Live Mode
     if st.session_state.live_mode:
         st_autorefresh(interval=2000, key="live_refresh")
         # In live mode, force selection of latest
@@ -37,11 +51,15 @@ def main():
             num_steps = len(latest.get("steps", []))
             st.session_state.selected_step_index = max(0, num_steps - 1)
     
-    # Render Sidebar
+    # Render Sidebar (called once)
     episode = render_sidebar()
     
     # Main Content Area
     st.title("Problemologist Agent Dashboard")
+
+    if st.session_state.app_mode == "Benchmark Generator":
+        render_benchmark_generator()
+        return
     
     if episode:
         col1, col2 = st.columns([1, 1])
