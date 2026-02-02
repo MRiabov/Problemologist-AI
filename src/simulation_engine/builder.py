@@ -267,15 +267,26 @@ class SceneCompiler:
         agent_name = "agent"
         agent_root = ET.SubElement(self.worldbody, "body", name=agent_name, pos="0 0 0")
 
+        # Identify parts
+        parts = []
+        if isinstance(agent_compound, Compound):
+            parts = list(agent_compound)
+        else:
+            parts = [agent_compound]
+
         # Add agent geoms (simplified: treat whole compound as one body if no joints)
         if not agent_joints:
             base_label = labels[0] if labels else "agent_base"
             self._add_agent_meshes_to_body(agent_compound, agent_root, base_label)
         else:
-            # If we have joints, we need to split the meshes.
-            # For now, let's just add the base part (anything not in joints)
-            base_label = labels[0] if labels else "agent_base"
-            self._add_agent_meshes_to_body(agent_compound, agent_root, base_label)
+            # If we have joints, we distribute parts:
+            # Part 0 -> Base
+            # Part i+1 -> Link i
+
+            # Base part
+            if parts:
+                base_label = labels[0] if labels else "agent_base"
+                self._add_agent_meshes_to_body(parts[0], agent_root, base_label)
 
             for i, j_data in enumerate(agent_joints):
                 j_name = j_data.get("name", f"joint_{i}")
@@ -291,15 +302,25 @@ class SceneCompiler:
                     child_body, "joint", name=j_name, type=j_type, axis=j_axis
                 )
 
-                # Add placeholder geom so the body has mass/inertia
-                ET.SubElement(
-                    child_body,
-                    "geom",
-                    name=f"geom_link_{i}",
-                    type="sphere",
-                    size="0.02",
-                    rgba="0 0 1 1",
-                )
+                # Check for corresponding part
+                part_index = i + 1
+                if part_index < len(parts):
+                    label = (
+                        labels[part_index]
+                        if labels and part_index < len(labels)
+                        else f"agent_link_{i}"
+                    )
+                    self._add_agent_meshes_to_body(parts[part_index], child_body, label)
+                else:
+                    # Add placeholder geom so the body has mass/inertia
+                    ET.SubElement(
+                        child_body,
+                        "geom",
+                        name=f"geom_link_{i}",
+                        type="sphere",
+                        size="0.02",
+                        rgba="0 0 1 1",
+                    )
 
                 # Actuator
                 ET.SubElement(
@@ -309,6 +330,11 @@ class SceneCompiler:
                     joint=j_name,
                     gear="10",
                 )
+
+            # Attach remaining parts to base to avoid losing geometry
+            for i in range(len(agent_joints) + 1, len(parts)):
+                label = labels[i] if labels and i < len(labels) else f"agent_part_{i}"
+                self._add_agent_meshes_to_body(parts[i], agent_root, label)
 
     def _add_agent_meshes_to_body(
         self, compound: Compound, body_element: ET.Element, prefix: str
