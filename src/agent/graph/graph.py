@@ -79,8 +79,8 @@ def build_graph(
     # Wrap ToolNode to capture state updates from tool outputs
     standard_tool_node = ToolNode(tools)
 
-    def tools_node(state: AgentState):
-        result = standard_tool_node.invoke(state)
+    async def tools_node(state: AgentState):
+        result = await standard_tool_node.ainvoke(state)
         # The result is usually {'messages': [ToolMessage, ...]}
         
         updates = result.copy()

@@ -4,7 +4,7 @@ from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
 from src.agent.tools.env import update_skill
 
-def skill_populator_node(state: AgentState):
+async def skill_populator_node(state: AgentState):
     """
     Populates the skill with insights after a definitive failure or timeout.
     """
@@ -35,6 +35,6 @@ def skill_populator_node(state: AgentState):
     )
     
     messages = [SystemMessage(content=prompt), HumanMessage(content="Populate the skill with lessons learned.")]
-    model.invoke(messages)
+    await model.ainvoke(messages)
     
     return {}
