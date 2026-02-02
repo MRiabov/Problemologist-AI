@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+# Install system dependencies for MuJoCo and Build123d rendering
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libosmesa6 \
+    libglfw3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies
+RUN pip install --no-cache-dir \
+    "build123d>=0.10.0" \
+    "mujoco>=3.4.0" \
+    "numpy" \
+    "bd_warehouse" \
+    "pillow>=12.1.0"
+
+WORKDIR /workspace
