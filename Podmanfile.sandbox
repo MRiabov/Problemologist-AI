@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir \
     "mujoco>=3.4.0" \
     "numpy" \
     "bd_warehouse" \
-    "pillow>=12.1.0"
+    "pillow>=12.1.0" \
+    "gymnasium" \
+    "requests"
 
 WORKDIR /workspace
