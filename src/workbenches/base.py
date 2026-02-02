@@ -31,13 +31,15 @@ class Workbench(ABC):
         return self.validate(part)
 
     @abstractmethod
-    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
 
         Args:
             part: The build123d Part to cost.
             quantity: The number of parts to produce.
+            context: Optional dictionary for tracking reused parts across an assembly.
+                     Keyed by part hash, value could be number of times seen.
 
         Returns:
             The calculated cost as a float.

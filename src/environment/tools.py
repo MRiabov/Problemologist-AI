@@ -349,7 +349,7 @@ _WORKBENCHES = {
 
 
 @functools.lru_cache(maxsize=128)
-def _analyze_cached(file_hash: str, process: str, quantity: int, script_content: str):
+def _analyze_cached(file_hash: str, default_process: str, default_quantity: int, script_content: str):
     """Internal helper to cache analysis results based on file content hash."""
     # Execute the script to get the part
     locs = {}
@@ -367,35 +367,83 @@ def _analyze_cached(file_hash: str, process: str, quantity: int, script_content:
     if not export_obj:
         raise ValueError("No 3D object found in script")
 
-    workbench = _WORKBENCHES.get(process)
-    if not workbench:
-        raise ValueError(f"Unknown manufacturing process: {process}")
+    # Helper to parse label: "quantity:100|process:cnc"
+    def parse_label(label: str):
+        data = {"quantity": default_quantity, "process": default_process}
+        if not label:
+            return data
+        parts = label.split("|")
+        for p in parts:
+            if ":" in p:
+                k, v = p.split(":", 1)
+                if k == "quantity":
+                    try:
+                        data["quantity"] = int(v)
+                    except ValueError:
+                        pass
+                elif k == "process":
+                    data["process"] = v
+        return data
 
-    violations = workbench.validate(export_obj)
-    total_cost = workbench.calculate_cost(export_obj, quantity)
+    all_solids = []
+    if isinstance(export_obj, bd.Compound):
+        all_solids = list(export_obj.solids())
+    elif isinstance(export_obj, bd.Solid):
+        all_solids = [export_obj]
+    else:
+        # Try to extract solids if it's some other shape type
+        try:
+            all_solids = list(export_obj.solids())
+        except:
+            all_solids = []
 
-    # Map to schema
-    status = "pass" if not violations else "fail"
+    total_cost = 0.0
+    all_violations = []
+    reuse_context = {}  # Tracks part hashes for reuse discounts
+    part_reports = []
 
-    # Simple violation mapping for MVP
-    # In a real system, we'd return face indices too
+    for i, solid in enumerate(all_solids):
+        label_data = parse_label(getattr(solid, "label", ""))
+        process = label_data["process"]
+        quantity = label_data["quantity"]
+
+        workbench = _WORKBENCHES.get(process)
+        if not workbench:
+            # Fallback to default if labeled process is unknown
+            workbench = _WORKBENCHES.get(default_process)
+            process = default_process
+
+        violations = workbench.validate(solid)
+        all_violations.extend(violations)
+        
+        cost = workbench.calculate_cost(solid, quantity, context=reuse_context)
+        total_cost += cost
+
+        part_reports.append({
+            "part_index": i,
+            "process": process,
+            "quantity": quantity,
+            "cost": cost,
+            "violations": violations
+        })
+
+    status = "pass" if not all_violations else "fail"
+    
     mapped_violations = []
-    for v in violations:
+    for v in all_violations:
         mapped_violations.append(
-            {"type": "generic_violation", "description": v, "severity": "critical"}
+            {"type": "generic_violation", "description": str(v), "severity": "critical"}
         )
 
     report = {
         "status": status,
-        "process": process,
-        "manufacturability_score": 1.0
-        if status == "pass"
-        else max(0.0, 1.0 - len(violations) * 0.1),
+        "manufacturability_score": 1.0 if status == "pass" else max(0.0, 1.0 - len(all_violations) * 0.1),
         "violations": mapped_violations,
+        "parts": part_reports,
         "cost_analysis": {
-            "quantity": quantity,
-            "unit_cost": total_cost / quantity if quantity > 0 else 0.0,
             "total_cost": total_cost,
+            "unit_cost": total_cost / default_quantity if default_quantity > 0 else 0.0,
+            "target_quantity": default_quantity
         },
     }
     return report

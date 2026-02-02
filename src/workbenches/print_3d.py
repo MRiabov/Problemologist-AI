@@ -55,8 +55,13 @@ class Print3DWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
         """
         Calculates cost based on part volume and quantity.
         """
+        if context is not None:
+            import hashlib
+            part_hash = hashlib.md5(str(part.center()).encode() + str(part.volume).encode()).hexdigest()
+            context[part_hash] = context.get(part_hash, 0) + quantity
+
         return (part.volume * self.material_cost) * quantity

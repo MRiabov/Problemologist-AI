@@ -25,10 +25,14 @@ class CADEnv(gym.Env):
         task_description: str = "Design a part that satisfies geometric constraints.",
         db_url: str = "sqlite:///history.db",
         workspace_dir: str = "workspace",
+        max_unit_cost: float = float("inf"),
+        target_quantity: int = 1,
     ):
         super().__init__()
         self.problem_id = problem_id
         self.task_description = task_description
+        self.max_unit_cost = max_unit_cost
+        self.target_quantity = target_quantity
         self.workspace_dir = str(Path(workspace_dir).resolve())
         Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
         tools.set_workspace_dir(self.workspace_dir)
@@ -39,7 +43,7 @@ class CADEnv(gym.Env):
         self.episode = None
         self.step_count = 0
 
-        # Workbench
+        # Workbench (Default, can be overridden by part labels)
         self.workbench = Print3DWorkbench()
 
         # Simulation
@@ -62,6 +66,7 @@ class CADEnv(gym.Env):
                 "last_render": spaces.Text(min_length=0, max_length=1000),
                 "task_description": spaces.Text(min_length=0, max_length=10000),
                 "error": spaces.Text(min_length=0, max_length=10000),
+                "budget_info": spaces.Text(min_length=0, max_length=1000),
             }
         )
 
@@ -71,6 +76,7 @@ class CADEnv(gym.Env):
             "last_render": "",
             "task_description": self.task_description,
             "error": "",
+            "budget_info": f"Target Quantity: {self.target_quantity}, Max Unit Cost: ${self.max_unit_cost}",
         }
 
     def reset(
@@ -92,6 +98,7 @@ class CADEnv(gym.Env):
             "last_render": "",
             "task_description": self.task_description,
             "error": "",
+            "budget_info": f"Target Quantity: {self.target_quantity}, Max Unit Cost: ${self.max_unit_cost}",
         }
 
         return self.last_obs, {}
@@ -149,13 +156,13 @@ class CADEnv(gym.Env):
                     try:
                         quantity = int(quantity_str)
                     except ValueError:
-                        quantity = 1
+                        quantity = self.target_quantity
                 else:
                     process = arguments if arguments else "cnc"
-                    quantity = 1
+                    quantity = self.target_quantity
                 tool_output = str(tools.check_manufacturability("design.py", process, quantity))
             elif tool_name == "submit_design":
-                reward, tool_output, terminated = self._submit_design()
+                reward, tool_output, terminated = self._submit_design(arguments)
             else:
                 tool_output = f"Unknown tool index: {tool_idx}"
         except Exception as e:
@@ -190,11 +197,19 @@ class CADEnv(gym.Env):
 
         return self.last_obs, reward, terminated, truncated, {}
 
-    def _submit_design(self) -> tuple[float, str, bool]:
+    def _submit_design(self, arguments: str = "") -> tuple[float, str, bool]:
         """Handles the full submission, validation, and simulation pipeline."""
         script_path = Path(self.workspace_dir) / "design.py"
         if not script_path.exists():
             return -10.0, "Error: No design.py found.", False
+
+        # Parse arguments for force submit: "force_submit=True|||reason:..."
+        force_submit = False
+        justification = ""
+        if "force_submit=True" in arguments:
+            force_submit = True
+            if "|||" in arguments:
+                _, justification = arguments.split("|||", 1)
 
         # 1. Process design.py in Sandbox
         runner_filename = "submit_runner.py"
@@ -205,9 +220,12 @@ class CADEnv(gym.Env):
         runner_script = f"""
 import sys
 import json
+import hashlib
 from pathlib import Path
 import build123d as bd
 from src.workbenches.print_3d import Print3DWorkbench
+from src.workbenches.cnc import CNCWorkbench
+from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.compiler import geometry
 
 # Add workspace to path
@@ -217,7 +235,9 @@ result = {{
     "success": False,
     "error": None,
     "violations": [],
-    "stl_path": None
+    "stl_path": None,
+    "total_cost": 0.0,
+    "unit_cost": 0.0
 }}
 
 try:
@@ -240,28 +260,61 @@ try:
     exec(code, ctx, locs)
     
     # 2. Extract Part
-    part = None
+    export_obj = None
     for val in locs.values():
-        if isinstance(val, bd.Part):
-            part = val
+        if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
+            export_obj = val
             break
-        elif isinstance(val, (bd.Solid, bd.Compound, bd.Shape)):
-            part = bd.Part()
-            part.add(val)
+        elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
+            export_obj = val.part
             break
             
-    if not part:
+    if not export_obj:
         result["error"] = "No Part or Solid found in script."
     else:
-        # 3. Validate
-        workbench = Print3DWorkbench()
-        violations = workbench.validate(part)
-        result["violations"] = [str(v) for v in violations]
+        # 3. Cost Analysis & Validation
+        workbenches = {{
+            "print_3d": Print3DWorkbench(),
+            "cnc": CNCWorkbench(),
+            "injection_molding": InjectionMoldingWorkbench()
+        }}
         
-        if not violations:
+        default_q = {self.target_quantity}
+        
+        def parse_label(label):
+            data = {{"quantity": default_q, "process": "print_3d"}}
+            if not label: return data
+            for p in str(label).split("|"):
+                if ":" in p:
+                    k, v = p.split(":", 1)
+                    if k == "quantity": data["quantity"] = int(v)
+                    elif k == "process": data["process"] = v
+            return data
+
+        all_solids = []
+        if isinstance(export_obj, bd.Compound):
+            all_solids = list(export_obj.solids())
+        else:
+            all_solids = [export_obj]
+
+        total_cost = 0.0
+        reuse_ctx = {{}}
+        all_violations = []
+
+        for solid in all_solids:
+            ldata = parse_label(getattr(solid, "label", ""))
+            wb = workbenches.get(ldata["process"], workbenches["print_3d"])
+            all_violations.extend(wb.validate(solid))
+            total_cost += wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
+
+        result["total_cost"] = total_cost
+        result["unit_cost"] = total_cost / default_q if default_q > 0 else 0.0
+        result["violations"] = [str(v) for v in all_violations]
+        
+        if not all_violations:
             # 4. Export Mesh
             stl_path = f"/workspace/{{'stl_filename'}}"
-            geometry.export_mesh(part, stl_path)
+            geometry.export_mesh(export_obj, stl_path)
             result["success"] = True
             result["stl_path"] = "{stl_filename}"
 
@@ -275,11 +328,11 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             # Write runner
             runner_path.write_text(runner_script, encoding="utf-8")
 
-            # Run in sandbox with source mounted for workbench/geometry access
+            # Run in sandbox
             stdout, stderr, returncode = tools._SANDBOX.run_script(
                 runner_filename,
                 mount_src=True,
-                timeout=60,  # Grater timeout for submission
+                timeout=60,
             )
 
             # Clean up runner
@@ -287,8 +340,7 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
                 runner_path.unlink()
 
             if "SUBMIT_RESULT:" not in stdout:
-                error_msg = f"Sandbox execution failed: {stderr}"
-                return -10.0, error_msg, False
+                return -10.0, f"Sandbox execution failed: {stderr}", False
 
             # Parse result
             result_line = [
@@ -299,36 +351,15 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             if res_data["error"]:
                 return -10.0, f"Error processing design: {res_data['error']}", False
 
-            if res_data["violations"]:
+            # HARD BUDGET ENFORCEMENT
+            if res_data["unit_cost"] > self.max_unit_cost and not force_submit:
                 return (
-                    -10.0,
-                    f"Validation Failed: {', '.join(res_data['violations'])}",
+                    -20.0,
+                    f"REJECTED: Unit cost ${res_data['unit_cost']:.2f} exceeds budget ${self.max_unit_cost:.2f}. "
+                    "You must optimize the design. If you believe no further improvement is possible, "
+                    "submit with 'force_submit=True|||reason:<your_justification>'.",
                     False,
                 )
-
-            if not res_data["success"]:
-                return (
-                    -10.0,
-                    "Submission processing failed without specific error.",
-                    False,
-                )
-
-            # str(stl_path) is now in workspace_dir
-        except Exception as e:
-            return -10.0, f"Error during sandboxed submission: {e!s}", False
-
-            if "SUBMIT_RESULT:" not in stdout:
-                error_msg = f"Sandbox execution failed: {stderr}"
-                return -10.0, error_msg, False
-
-            # Parse result
-            result_line = [
-                line for line in stdout.split("\n") if "SUBMIT_RESULT:" in line
-            ][0]
-            res_data = json.loads(result_line.split("SUBMIT_RESULT:")[1])
-
-            if res_data["error"]:
-                return -10.0, f"Error processing design: {res_data['error']}", False
 
             if res_data["violations"]:
                 return (
@@ -338,13 +369,8 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
                 )
 
             if not res_data["success"]:
-                return (
-                    -10.0,
-                    "Submission processing failed without specific error.",
-                    False,
-                )
+                return -10.0, "Submission processing failed.", False
 
-            # STL is now in workspace_dir
         except Exception as e:
             return -10.0, f"Error during sandboxed submission: {e!s}", False
 
