@@ -94,3 +94,15 @@ This document tracks future features, infrastructure components, and research di
   * **Port-Based Mating**: Every COTS part exposes named "Ports" (Coordinate Systems) for attachment (e.g., `motor.mount_face`, `motor.shaft`).
   * **Virtual Fasteners**: Helper tools to "drill" matching holes in custom parts (`bracket -= motor.hole_pattern`) and generate `<weld>` constraints in MuJoCo to simulate screws. -->
   <!-- DEV NOTE: yes - also a library called bd_warehouse exists with all of those snippets. https://bd-warehouse.readthedocs.io/en/latest/ -->
+
+### 012-topology-optimization-module
+
+* **Status**: Missing
+* **Priority**: **Medium** (Advanced Design)
+* **Description**: Integrates algorithmic structural optimization. Instead of the agent manually sketching ribs, it defines load cases and lets an optimizer "grow" the ideal geometry.
+* **Key Functionality**:
+  * **Load Case Definition**: Domain-specific DSL for the agent to specify fixed supports and applied forces (e.g., `fix(face_a)`, `apply_force(face_b, direction=(0,0,-1), magnitude=100N)`).
+  * **SIMP Integration**: Lightweight Solid Isotropic Material with Penalization (SIMP) framework for 2D/3D density-based optimization (e.g., using `TopOpt` or `jax-topopt`).
+  * **Meshing to B-Rep**: Pipeline to convert voxel/density clouds back into smooth `build123d` Solids (via Marching Cubes + Surface Fitting).
+  * **Material Efficiency**: Automatic mass reduction while maintaining safety factors.
+  <!-- DEV NOTE: yes - several open-source frameworks like `TopOpt` (Python), `FEniCS`, or `NLopt` can be integrated. This turns the agent from a "drafter" into a "requirements engineer" who defines the problem space rather than the solution geometry. -->
