@@ -88,7 +88,7 @@ def search(query: str, directory: str = "docs") -> str:
     result = []
     for doc in top_matches:
         result.append(
-            f"--- {doc['title']} ({doc['path']}) ---\n{doc['content'][:500]}..."
+            f"=== {doc['title']} ({doc['path']}) ===\n{doc['content'][:500]}..."
         )
 
     return "\n\n".join(result)

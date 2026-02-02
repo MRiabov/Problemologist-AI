@@ -74,4 +74,4 @@ def test_search_docs():
     result = tools.search_docs("Box")
     assert "Box" in result
     # It might not return stubs.md if other docs outrank it
-    assert result.count("---") == 3
+    assert result.count("===") == 6 # 2 per document (start and end)

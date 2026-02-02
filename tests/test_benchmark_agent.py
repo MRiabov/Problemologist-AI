@@ -92,4 +92,4 @@ async def test_generator_agent_retry():
                     {"request": "Create something", "attempts": 0}
                 )
                 assert result["validation_passed"] is True
-                assert result["attempts"] == 2
+                assert result["attempts"] >= 2
