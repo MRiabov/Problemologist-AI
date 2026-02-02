@@ -23,6 +23,9 @@ class ScenarioManifest(TypedDict):
     tier: str  # "spatial" or "kinematic"
     description: str
     script_path: str
+    target_quantity: int
+    max_unit_cost: float
+    cost_record: float | None  # The lowest unit cost achieved so far
     assets: ScenarioAssets
     randomization: ScenarioRandomization
     validation: ScenarioValidation

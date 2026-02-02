@@ -74,7 +74,13 @@ The system ensures that every generated scenario is robust, randomized, and phys
 - **FR-23**: **Agent Override**: The Agent (Planner) MUST be able to specify custom rescaling limits for specific directions (e.g., "X: 0.8-1.2, Y: 0.5-5.0") based on the geometric constraints of the puzzle.
 - **FR-24**: Rescaling MUST be applied at the CAD generation level to ensure all kinematic relationships (joints, pivots) remain consistent.
 
-### 3.2 Randomization Engine
+### 3.4 Economic Constraints & Record System
+
+- **FR-25**: **Economic Targets**: Every benchmark scenario MUST define a `target_quantity` (e.g., 1, 100, 10,000) and a `max_unit_cost` that the solution part must satisfy.
+- **FR-26**: **Cost-Driven Optimization**: The system MUST support a "Record" system that stores the lowest unit cost achieved by any agent for a specific scenario.
+- **FR-27**: **Iterative Rollouts**: The generator MUST be able to produce "Optimization Tasks" where the goal is to beat the current cost record (e.g., "New Goal: Solve Scenario X for < $160").
+
+### 3.5 Randomization Engine
 
 - **FR-05**: The system **MUST** be able to vary the "Domain Box" (workspace size) dimensions (Length/Width/Height).
 - **FR-06**: The system **MUST** support randomization of start/goal/obstacle positions by at least ±40% of their bounding volumes, as specified by the user.
