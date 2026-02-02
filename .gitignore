@@ -39,5 +39,6 @@ kitty-specs/**/tasks/*.md
 .png
 
 /workspace/
-/worspace_gen/
+/workspace_gen/
+# different folders to avoid clashing in generation.
 /test_datasets/
