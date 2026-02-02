@@ -75,7 +75,15 @@ src/
 2. **Expose Interactive Hooks**: Modify `agent.py` or create wrapper utilities to allow external (UI) injection of plan edits and code overrides.
 3. **Rendering Integration**: Implement `src/generators/benchmark/renderer.py` to produce visual previews for each generation attempt to support UI-based review.
 
-## 7. Success Criteria Verification
+## 7. Phase 4: Advanced Randomization (Rescaling)
+
+**Goal**: Increase dataset diversity by applying non-uniform scaling to environments.
+
+1. **Update Build Signature**: Modify the generator's execution harness to pass a `scale` vector to the `build()` function.
+2. **Planner Limits**: Update the Planner agent to suggest directional scaling limits.
+3. **Manager Implementation**: Generate random scale vectors in `manager.py` based on agent limits (default 0.5-2.0).
+
+## 8. Success Criteria Verification
 
 * **Efficiency**: Run `manager generate --count 10` and measure runtime (Target: < 5 mins).
 * **Yield**: Count valid vs. invalid outputs in the `staging` folder.

@@ -48,6 +48,13 @@ Safety is enforced via `src/generators/benchmark/validator.py`. A scenario is on
 *   **Solver Integrity**: The state vector must remain free of NaN (Not-a-Number) values.
 *   **Zero-Force Settling**: The simulation is run without external actuators to ensure the environment reaches a natural equilibrium under gravity.
 
+## Advanced Randomization: Non-Uniform Rescaling
+
+To maximize dataset diversity, the system applies non-uniform random scaling to every variation:
+- **Default Range**: Each axis (X, Y, Z) is scaled by a random factor between **0.5 and 2.0**.
+- **Agent Overrides**: The Planner can specify custom bounds in the plan if the geometry requires specific constraints (e.g., "keep Z-scale at 1.0 to preserve table height").
+- **Kinematic Consistency**: Scaling is applied at the CAD level, ensuring joints and pivots are correctly recalculated for the new proportions.
+
 ## Visual Previews
 
 Rendered images are saved in the `images/` subdirectory of each scenario:
