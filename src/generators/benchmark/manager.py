@@ -151,6 +151,12 @@ def generate(
         "-t",
         help="Tier of the scenario (e.g., spatial, kinematic)",
     ),
+    target_quantity: int = typer.Option(
+        1, "--quantity", "-q", help="Target production quantity for the solution"
+    ),
+    max_unit_cost: float = typer.Option(
+        1000.0, "--max-cost", help="Maximum allowable unit cost for the solution"
+    ),
 ):
     """
     Generates a benchmark scenario template using the AI agent, then produces randomized variations.
@@ -164,7 +170,14 @@ def generate(
         transient=True,
     ) as progress:
         progress.add_task(description="Agent thinking...", total=None)
-        state = generator_agent.invoke({"request": prompt, "attempts": 0})
+        # Pass cost constraints in the request
+        full_prompt = (
+            f"{prompt}\n\n"
+            f"Economic Constraints:\n"
+            f"- Target Quantity: {target_quantity}\n"
+            f"- Max Unit Cost: ${max_unit_cost}"
+        )
+        state = generator_agent.invoke({"request": full_prompt, "attempts": 0})
 
     if not state.get("validation_passed"):
         console.print(
@@ -259,6 +272,9 @@ def generate(
                         "tier": tier,
                         "description": prompt,
                         "script_path": "template.py",
+                        "target_quantity": target_quantity,
+                        "max_unit_cost": max_unit_cost,
+                        "cost_record": None,  # No record yet
                         "assets": {
                             "mjcf": f"scene_{seed}.xml",
                             "meshes": generated_meshes,

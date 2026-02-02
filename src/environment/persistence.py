@@ -67,6 +67,17 @@ class Artifact(Base):
     step: Mapped["Step"] = relationship(back_populates="artifacts")
 
 
+class CostRecord(Base):
+    __tablename__ = "cost_records"
+
+    scenario_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    best_unit_cost: Mapped[float] = mapped_column(nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
+    episode_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("episodes.id"), nullable=True)
+
+
 class DatabaseManager:
     def __init__(self, db_url: str = "sqlite:///history.db"):
         self.engine = create_engine(db_url)
@@ -157,3 +168,29 @@ class DatabaseManager:
                 episode.result_metrics = result_metrics
             session.commit()
         session.close()
+
+    def get_best_cost(self, scenario_id: str) -> float | None:
+        session = self.get_session()
+        record = session.get(CostRecord, scenario_id)
+        cost = record.best_unit_cost if record else None
+        session.close()
+        return cost
+
+    def update_cost_record(self, scenario_id: str, unit_cost: float, episode_id: uuid.UUID | None = None) -> bool:
+        """Updates the cost record if the new unit_cost is lower than the current best. Returns True if updated."""
+        session = self.get_session()
+        record = session.get(CostRecord, scenario_id)
+        updated = False
+        if not record:
+            record = CostRecord(scenario_id=scenario_id, best_unit_cost=unit_cost, episode_id=episode_id)
+            session.add(record)
+            updated = True
+        elif unit_cost < record.best_unit_cost:
+            record.best_unit_cost = unit_cost
+            record.episode_id = episode_id
+            updated = True
+        
+        if updated:
+            session.commit()
+        session.close()
+        return updated
