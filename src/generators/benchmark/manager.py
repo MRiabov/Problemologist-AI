@@ -11,6 +11,7 @@ from src.generators.benchmark.agent import generator_agent
 from src.generators.benchmark.validator import validate_mjcf
 from src.generators.benchmark.renderer import render_scenario
 from src.generators.benchmark.types import ScenarioManifest, ValidationReport
+from src.environment.sandbox import PodmanSandbox
 
 app = typer.Typer(help="Benchmark Scenario Generator CLI")
 console = Console()
@@ -19,22 +20,64 @@ console = Console()
 def execute_build(
     code: str, seed: int, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 ) -> str:
-    """Executes the build(seed, scale) function from the provided code."""
-    locs = {}
-    # We use a shared dict for globals and locals to behave like a module
-    exec(code, locs, locs)
-    if "build" not in locs:
-        raise ValueError("Function 'build(seed, scale)' not defined in the script.")
+    """Executes the build(seed, scale) function from the provided code inside a sandbox."""
+    # Prepend hardcoded imports to ensure they are never skipped by the LLM
+    final_code = "from build123d import *\nfrom src.simulation_engine.builder import SceneCompiler\n\n" + code
 
+    # Initialize a temporary sandbox for generation
+    # Use a 'generation_workspace' to avoid clashing with agent workspace
+    workspace = os.path.abspath("workspace_gen")
+    os.makedirs(workspace, exist_ok=True)
+    sandbox = PodmanSandbox(workspace)
+
+    script_name = "template_build.py"
+    runner_name = "runner_build.py"
+
+    with open(os.path.join(workspace, script_name), "w") as f:
+        f.write(final_code)
+
+    runner_script = f"""
+import json
+import sys
+import os
+
+sys.path.append("/workspace")
+import template_build
+
+seed = {seed}
+scale = {scale}
+
+try:
     # Try calling with scale first (new signature)
     import inspect
-
-    sig = inspect.signature(locs["build"])
+    sig = inspect.signature(template_build.build)
     if "scale" in sig.parameters:
-        return locs["build"](seed, scale=scale)
+        res = template_build.build(seed, scale=scale)
     else:
-        # Fallback for old scripts without scale parameter
-        return locs["build"](seed)
+        res = template_build.build(seed)
+    print(f"BUILD_RESULT:{{res}}")
+except Exception as e:
+    print(f"BUILD_ERROR:{{str(e)}}")
+"""
+
+    try:
+        with open(os.path.join(workspace, runner_name), "w") as f:
+            f.write(runner_script)
+
+        stdout, stderr, rc = sandbox.run_script(runner_name)
+
+        if "BUILD_RESULT:" in stdout:
+            # Extract XML
+            return stdout.split("BUILD_RESULT:")[1].strip()
+        else:
+            error = stdout + stderr
+            raise ValueError(f"Build execution failed: {error}")
+    finally:
+        # Clean up
+        if os.path.exists(os.path.join(workspace, runner_name)):
+            os.remove(os.path.join(workspace, runner_name))
+        if os.path.exists(os.path.join(workspace, script_name)):
+            os.remove(os.path.join(workspace, script_name))
 
 
 @app.command()
