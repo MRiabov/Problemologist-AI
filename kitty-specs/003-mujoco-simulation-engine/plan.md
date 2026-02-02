@@ -1,35 +1,36 @@
-# Implementation Plan: MuJoCo Simulation Engine
+# Implementation Plan: MuJoCo Simulation Engine & Safe Execution Environment
 
 *Path: kitty-specs/003-mujoco-simulation-engine/plan.md*
 
-**Branch**: `003-mujoco-simulation-engine` | **Date**: 2026-01-31 | **Spec**: [spec.md](spec.md)
+**Branch**: `003-mujoco-simulation-engine` | **Date**: 2026-02-02 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/kitty-specs/003-mujoco-simulation-engine/spec.md`
 
 ## Summary
 
-The **MuJoCo Simulation Engine** is a specialized backend service (FastAPI) responsible for the physics verification of agent-designed CAD models. It bridges the gap between static geometry (`build123d`) and dynamic function (`mujoco`).
+The **MuJoCo Simulation Engine** has been upgraded to a **Safe Execution Environment**. It provides a secure, containerized backend for potentially untrusted agent code execution and physics validation.
 
-It operates as an **ephemeral**, **stateless** service that:
+It operates as a **Sandbox Manager** that:
 
 1. Accepts a **Simulation Bundle** (Environment + Agent Design + Control Script).
 2. Compiles this into a valid MuJoCo `scene.xml` (MJCF) with convex collision meshes.
-3. Simulates the interaction in a **process-isolated sandbox** to execute untrusted agent control code safely.
-4. Returns a **Simulation Report** (Success/Fail metrics) and optionally a replay trace.
+3. Executes the simulation (or arbitrary python code) inside a **Podman Container** with strict resource and network limits.
+4. Returns a **Simulation Report** (Success/Fail metrics) and execution logs.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+
 **Primary Dependencies**:
 
-- `fastapi`, `uvicorn`: API Server
-- `mujoco`: Physics Engine
+- `mujoco`: Physics Engine (runs inside container)
 - `build123d`: Geometry processing and export
-- `numpy`: Numerical data
 - `trimesh`: Mesh convex decomposition (vhacd)
-**Storage**: **Ephemeral**. No database. Artifacts (STL/MJCF/Videos) are temp-only or returned to caller.
+- `podman`: External CLI tool for container management
+- **Docker/Podman Image**: Custom `problemologist-sandbox` image containing pre-installed dependencies.
+
+**Storage**: **Ephemeral**. Artifacts (STL/MJCF/Videos) are written to a temporary workspace volume mounted to the container.
 **Testing**: `pytest` with simple physics scenarios (block dropping, joint rotation).
-**Target Platform**: Docker (Linux). Needs `libgl1-mesa-glx` or similar for headless rendering if video needed.
-**Security**: **Process Isolation** for Agent Scripts. Code is executed in a separate process (using `multiprocessing` or `subprocess`) to prevent main server crashes and allow resource limits.
+**Target Platform**: Linux (requires Podman installed and configured for rootless mode).
+**Security**: **Container Isolation**. Code is executed in a transient Podman container with `network=none` to prevent side-effects and ensuring a clean environment for every run.
 
 ## Constitution Check
 
@@ -54,26 +55,27 @@ kitty-specs/003-mujoco-simulation-engine/
 
 ```
 src/
-└── simulation_engine/  # New Module
-    ├── main.py         # FastAPI App & Entrypoint
-    ├── api.py          # Routes (POST /simulate)
+└── environment/        # Refactored from simulation_engine
+    ├── sandbox.py      # Podman Wrapper (PodmanSandbox)
+    └── runner.py       # High-level execution logic
+└── simulation/         # Simulation Logic (mounts into container)
     ├── builder.py      # Scene Compiler (CAD -> MJCF)
-    ├── simulation.py   # Physics Loop (Mujoco)
-    └── runner.py       # Process Isolation & Sandbox Logic
+    └── loop.py         # Physics Loop (runs INSIDE container)
 ```
 
-**Structure Decision**: A dedicated `simulation_engine` package inside `src/`. It can be run as a library (by importing `runner`) or a server (via `main`).
+**Structure Decision**: Moved core execution logic to `environment/sandbox.py` to support general python execution. Simulation-specific logic resides in `simulation/` and is injected/mounted into the sandbox during runtime.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Process Isolation | Agent code is untrusted and can crash/hang | `eval()` in main loop would crash the entire server one infinite loop or segfault |
-| FastAPI | Decoupling | Allows running simulation on a beefy GPU node separately from the main agent logic later |
+| Container Isolation (Podman) | Agent code is untrusted, needs specific env, and can hang/crash | `multiprocessing` shares system libs and doesn't prevent file system damage or guarantee clean environment state. |
+| Convex Decomposition | Physics engines require convex meshes for stability | Using raw concave STL meshes results in unstable collisions and "explosions" in MuJoCo. |
 
 ## Planning Questions & Discovery
 
-*Resolved during Phase 0*
+*Resolved during Phase 0 & 1*
 
-1. **Isolation Strategy**: How strictly to sandbox? *Decision*: Standard `multiprocessing` with time-limit is sufficient for V1 (Trusted Internal Agent).
+1. **Isolation Strategy**: How strictly to sandbox? *Decision*: **Podman Containers**. It provides near-VM isolation, allowing us to control CPU/Mem/Net and dependencies precisely.
 2. **Mesh Generation**: `build123d` export vs `trimesh`? *Decision*: `build123d` for geometry, passed to `trimesh` for convex hull decomposition.
+3. **Runner Architecture**: How to verify simulation? *Decision*: The "Loop" code runs *inside* the container, returning metrics via JSON to stdout. The Host system just parses the output.
