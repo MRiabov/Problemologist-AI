@@ -88,15 +88,19 @@ class SceneCompiler:
             self.root, "compiler", angle="degree", coordinate="local"
         )
         if self.asset_dir:
-            # Set meshdir. If it is inside /workspace/ (sandbox), use a relative path
-            # to ensure MuJoCo inside the container can find it regardless of host mapping.
-            path = Path(self.asset_dir).resolve()
-            if str(path).startswith("/workspace/"):
-                # Make it relative to /workspace/
-                rel_path = path.relative_to("/workspace/")
-                compiler.set("meshdir", str(rel_path))
+            # If asset_dir is already relative, use it as is
+            if not Path(self.asset_dir).is_absolute():
+                compiler.set("meshdir", self.asset_dir)
             else:
-                compiler.set("meshdir", str(path))
+                # Set meshdir. If it is inside /workspace/ (sandbox), use a relative path
+                # to ensure MuJoCo inside the container can find it regardless of host mapping.
+                path = Path(self.asset_dir).resolve()
+                if str(path).startswith("/workspace/"):
+                    # Make it relative to /workspace/
+                    rel_path = path.relative_to("/workspace/")
+                    compiler.set("meshdir", str(rel_path))
+                else:
+                    compiler.set("meshdir", str(path))
 
         # Assets (Placeholder for mesh assets)
         self.asset = ET.SubElement(self.root, "asset")

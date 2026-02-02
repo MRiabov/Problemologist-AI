@@ -164,9 +164,12 @@ def build_graph(
     def route_critic(
         state: AgentState,
     ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
-        # Logic to decide if we are done or need to loop.
-        # For this prototype, we'll loop back to Planner to allow for re-planning or continuation.
-        # Ideally, the Critic's output (AIMessage) would contain a structured decision or specific text.
+        # Check for success indicators in the last message
+        last_message = state["messages"][-1]
+        if hasattr(last_message, "content"):
+            content = str(last_message.content)
+            if any(x in content for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]):
+                return END
 
         # Check step count to prevent infinite loops
         if state.get("step_count", 0) > Config.MAX_STEPS:

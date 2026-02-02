@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -14,8 +14,9 @@ async def test_graph_simple_run():
     """
     mock_llm = MagicMock()
     mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.ainvoke = AsyncMock()
 
-    def mock_invoke(messages, **kwargs):
+    async def mock_ainvoke(messages, **kwargs):
         # Determine which node is calling based on the system message content
         system_msg = next(
             (m.content for m in messages if isinstance(m, SystemMessage)), ""
@@ -29,7 +30,7 @@ async def test_graph_simple_run():
             return AIMessage(content="Looks good.")
         return AIMessage(content="Default response")
 
-    mock_llm.invoke.side_effect = mock_invoke
+    mock_llm.ainvoke.side_effect = mock_ainvoke
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
@@ -63,10 +64,11 @@ async def test_graph_with_tool_call():
     """
     mock_llm = MagicMock()
     mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.ainvoke = AsyncMock()
 
     call_count = {"actor": 0, "planner": 0}
 
-    def mock_invoke(messages, **kwargs):
+    async def mock_ainvoke(messages, **kwargs):
         system_msg = next(
             (m.content for m in messages if isinstance(m, SystemMessage)), ""
         )
@@ -93,17 +95,22 @@ async def test_graph_with_tool_call():
             return AIMessage(content="The preview looks perfect. Task complete.")
         return AIMessage(content="Default response")
 
-    mock_llm.invoke.side_effect = mock_invoke
+    mock_llm.ainvoke.side_effect = mock_ainvoke
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.actor.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.critic.get_model", return_value=mock_llm),
         patch(
-            "src.agent.tools.env.preview_design_async",
-            return_value="Preview generated: design.svg",
+            "src.agent.tools.env.preview_design",
+            return_value=MagicMock(ainvoke=AsyncMock(return_value="Preview generated: design.svg")),
         ),
     ):
+        # NOTE: patching src.agent.tools.env.preview_design might not be enough because 
+        # graph.py imports it. But we patch the tool's ainvoke if it's used.
+        # Actually, ToolNode will call tool.ainvoke(state).
+        
+        # Let's try a different approach for tool patching if this fails.
         app = build_graph().compile()
         inputs = {
             "messages": [HumanMessage(content="Show me a cube")],

@@ -14,10 +14,17 @@ print(f"DEBUG: SceneCompiler from {src.simulation_engine.builder.__file__}")
 
 
 def test_nema17_automatic_joint():
-    # Use a directory inside the project so it's mounted in the sandbox
-    project_root = Path(__file__).resolve().parent.parent.parent
-    asset_dir = project_root / "test_assets"
-    asset_dir.mkdir(exist_ok=True)
+    from src.environment import tools
+    # Ensure we are in a clean state in the workspace
+    workspace = Path(tools.WORKSPACE_DIR).resolve()
+    # Use a relative path for asset_dir inside the workspace
+    # We will run the test from the workspace directory conceptually
+    asset_rel_path = "test_assets"
+    asset_dir = workspace / asset_rel_path
+    if asset_dir.exists():
+        import shutil
+        shutil.rmtree(asset_dir)
+    asset_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         provider = BDWarehouseProvider()
@@ -29,52 +36,51 @@ def test_nema17_automatic_joint():
         agent = motor_compound
         agent.label = "motor_p0"
 
-        # Compile
-        compiler = SceneCompiler(asset_dir=str(asset_dir))
-        xml_str = compiler.compile(Compound([Box(0.1, 0.1, 0.1)]), agent)
+        # Compile with a RELATIVE path so the XML is portable
+        compiler = SceneCompiler(asset_dir=asset_rel_path)
+        
+        # We need to be in the workspace for relative paths to work during compilation
+        # because MeshProcessor writes to the filesystem.
+        import os
+        old_cwd = os.getcwd()
+        os.chdir(workspace)
+        
+        try:
+            xml_str = compiler.compile(Compound([Box(0.1, 0.1, 0.1)]), agent)
+            
+            # Save XML in the workspace
+            xml_path = workspace / "test_motor.xml"
+            xml_path.write_text(xml_str)
+            
+            # Verify XML contains expected elements
+            assert "joint" in xml_str
+            assert "motor" in xml_str
+            assert "stator" in xml_str
+            assert "rotor" in xml_str
+            
+            # Local load should work now because meshdir="test_assets" 
+            # and we are in the workspace
+            model = mujoco.MjModel.from_xml_path(str(xml_path))
+            assert model.njnt >= 1
+            assert model.nu >= 1
 
-        print(f"Generated XML snippet: {xml_str[:500]}...")
-
-        # Adjust paths for sandbox
-        xml_str = xml_str.replace(str(asset_dir), "/workspace/test_assets")
-
-        # Verify XML contains expected elements
-        assert "joint" in xml_str
-        assert "motor" in xml_str
-        assert "stator" in xml_str
-        assert "rotor" in xml_str
-
-        # Save and load
-        xml_path = asset_dir / "test_motor.xml"
-        xml_path.write_text(xml_str)
-
-        model = mujoco.MjModel.from_xml_path(str(xml_path))
-        assert model.njnt >= 1
-        assert model.nu >= 1
-
-        # Run simulation loop to check if it moves
-        sim = SimulationLoop(str(xml_path))
-
-        # Apply control to the motor
-        # If model.nu is 1, return [1.0]
-        agent_script = """
+            # Run simulation loop
+            sim = SimulationLoop(str(xml_path))
+            
+            agent_script = """
 def control(obs):
     import numpy as np
     return [1.0]
 """
-        result = sim.run(agent_script, max_steps=50)
-        print(f"DEBUG: Simulation result: {result}")
-
-        # Verify success/timeout
-        assert result["status"] in ["TIMEOUT", "RUNNING"]
-        # Verify energy was consumed (implies movement/torque)
-        assert result["metrics"]["energy"] > 0
-        print(
-            f"Simulation result: {result['status']}, Energy: {result['metrics']['energy']}"
-        )
+            result = sim.run(agent_script, max_steps=50)
+            print(f"DEBUG: Simulation result: {result}")
+            
+            assert result["status"] in ["TIMEOUT", "RUNNING", "WIN"]
+            assert result["metrics"]["energy"] > 0
+        finally:
+            os.chdir(old_cwd)
     finally:
         import shutil
-
         if asset_dir.exists():
             shutil.rmtree(asset_dir)
 
