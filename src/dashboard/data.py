@@ -58,14 +58,40 @@ class DashboardDataLayer:
     def get_step_artifacts(self, step_id: uuid.UUID | str) -> List[Artifact]:
         """Returns all artifacts associated with a specific step."""
         if isinstance(step_id, str):
-            episode_id = uuid.UUID(step_id)
+            step_id = uuid.UUID(step_id)
             
         with self.SessionLocal() as session:
             stmt = select(Artifact).where(Artifact.step_id == step_id)
             return list(session.scalars(stmt).all())
 
+    def insert_step(self, episode_id: uuid.UUID | str, type: str, content: str):
+        """Manually inserts a step into an episode."""
+        if isinstance(episode_id, str):
+            episode_id = uuid.UUID(episode_id)
+            
+        with self.SessionLocal() as session:
+            # Get current max sequence index
+            stmt = select(Step).where(Step.episode_id == episode_id).order_by(Step.sequence_index.desc()).limit(1)
+            last_step = session.scalars(stmt).one_or_none()
+            next_index = (last_step.sequence_index + 1) if last_step else 0
+            
+            new_step = Step(
+                episode_id=episode_id,
+                sequence_index=next_index,
+                type=type,
+                tool_input=content,
+                tool_name="manual_insert"
+            )
+            session.add(new_step)
+            session.commit()
+            return new_step
+
 # Singleton instance
 _dal = DashboardDataLayer()
+
+def insert_step(episode_id: str, type: str, content: str):
+    """Inserts a manual step into the database."""
+    return _dal.insert_step(episode_id, type, content)
 
 def get_all_episodes() -> list[dict[str, Any]]:
     """Returns a list of available episodes from database, falling back to mock if empty."""
