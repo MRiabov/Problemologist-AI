@@ -1,6 +1,7 @@
 from build123d import Part, Box, export_stl
 import os
 
+
 def create_pusher_geometry(filepath: str):
     """
     Creates a simple cube pusher geometry.
@@ -8,6 +9,7 @@ def create_pusher_geometry(filepath: str):
     pusher = Box(0.1, 0.1, 0.1)
     export_stl(pusher, filepath)
     return filepath
+
 
 PUSHER_SCRIPT = """
 import mujoco

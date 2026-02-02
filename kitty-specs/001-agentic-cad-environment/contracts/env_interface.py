@@ -2,21 +2,26 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
+
 @dataclass
 class Observation:
     """Agent's view of the world."""
+
     file_content: str
     console_output: str
     last_render_path: Optional[str]
     task_description: str
 
+
 @dataclass
 class StepResult:
     """Result of an action."""
+
     observation: Observation
     reward: float
     done: bool
     info: Dict[str, Any]
+
 
 class AgenticCADEnv(ABC):
     """

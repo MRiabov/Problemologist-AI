@@ -38,12 +38,12 @@ def get_prompt(path: str, default: str = "") -> str:
     """
     prompts = load_prompts()
     keys = path.split(".")
-    
+
     value = prompts
     for key in keys:
         if isinstance(value, dict) and key in value:
             value = value[key]
         else:
             return default
-            
+
     return value if isinstance(value, str) else default

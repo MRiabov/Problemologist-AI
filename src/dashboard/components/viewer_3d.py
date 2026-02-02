@@ -16,15 +16,15 @@ def render_3d_artifact(file_path: Path):
     try:
         # Load mesh
         mesh = pyvista.read(str(file_path))
-        
+
         # Setup Plotter
         plotter = pyvista.Plotter(window_size=[400, 400])
-        plotter.add_mesh(mesh, color='white', lighting=True)
+        plotter.add_mesh(mesh, color="white", lighting=True)
         plotter.add_axes()
         plotter.view_isometric()
-        
+
         # Render
         stpyvista(plotter, key=f"3d_viewer_{file_path.name}")
-        
+
     except Exception as e:
         st.error(f"Error rendering 3D artifact: {e!s}")

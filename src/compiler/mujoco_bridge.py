@@ -152,7 +152,7 @@ class MujocoBridge:
                         name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
                         states[name or f"body_{i}"] = {
                             "pos": data.xpos[i].tolist(),
-                            "quat": data.xquat[i].tolist()
+                            "quat": data.xquat[i].tolist(),
                         }
                     replay_data.append({"time": data.time, "bodies": states})
                     last_log_time = data.time
@@ -161,10 +161,10 @@ class MujocoBridge:
                 power = 0.0
                 if model.nu > 0:
                     power += np.dot(data.qfrc_actuator, data.qvel)
-                
+
                 # Also include applied forces (from agent script)
                 power += np.dot(data.qfrc_applied, data.qvel)
-                
+
                 energy_acc += abs(power) * model.opt.timestep
 
                 # Goal Detection

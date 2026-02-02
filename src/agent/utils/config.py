@@ -15,7 +15,7 @@ class Config:
 
     # OpenAI-compatible API base URL (e.g., OpenRouter)
     OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
-    
+
     # OpenAI-compatible API key
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 

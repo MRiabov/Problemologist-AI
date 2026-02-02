@@ -21,8 +21,8 @@ def get_model(model_name: str, temperature: float = 0.0) -> BaseChatModel:
         An instance of BaseChatModel.
     """
     return ChatOpenAI(
-        model=model_name, 
+        model=model_name,
         temperature=temperature,
         openai_api_base=Config.OPENAI_API_BASE,
-        openai_api_key=Config.OPENAI_API_KEY
+        openai_api_key=Config.OPENAI_API_KEY,
     )

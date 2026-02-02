@@ -218,7 +218,7 @@ class BDWarehouseProvider(PartProvider):
             if params.get("subtype") == "v_slot":
                 recipe = f'from bd_warehouse.open_builds import VSlotLinearRail\npart = VSlotLinearRail(rail_size="{params["rail_size"]}", length={params["length"]})'
             elif params.get("subtype") == "c_beam":
-                recipe = f'from bd_warehouse.open_builds import CBeamLinearRail\npart = CBeamLinearRail(length={params["length"]})'
+                recipe = f"from bd_warehouse.open_builds import CBeamLinearRail\npart = CBeamLinearRail(length={params['length']})"
             else:
                 recipe = "# Unknown beam subtype"
         else:

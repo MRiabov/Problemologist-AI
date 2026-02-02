@@ -1,6 +1,7 @@
 import pytest
 from src.generators.benchmark.validator import validate_mjcf
 
+
 def test_validate_valid_xml():
     valid_xml = """
 <mujoco>
@@ -20,14 +21,16 @@ def test_validate_valid_xml():
     assert report["error_message"] is None
     print(f"DEBUG: max_energy={report['max_energy']}")
 
+
 def test_validate_invalid_xml():
-    invalid_xml = "<mujoco><worldbody><body pos='0 0 1'><joint type='free'/><geom type='box' size='.1 .1 .1'/></worldbody></mujoco>" # Missing closing tag for body
+    invalid_xml = "<mujoco><worldbody><body pos='0 0 1'><joint type='free'/><geom type='box' size='.1 .1 .1'/></worldbody></mujoco>"  # Missing closing tag for body
     report = validate_mjcf(invalid_xml)
     assert report["is_valid"] is False
     assert report["error_message"] is not None
 
+
 def test_validate_unstable_xml():
-    # Large velocity or unstable setup? 
+    # Large velocity or unstable setup?
     # Hard to guarantee without specific params, but let's try a very small box with very high gravity or something.
     # Actually, let's just test a diverging one if possible.
     unstable_xml = """

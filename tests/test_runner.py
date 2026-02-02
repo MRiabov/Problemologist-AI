@@ -16,17 +16,20 @@ MJCF = """
 </mujoco>
 """
 
+
 @pytest.fixture
 def model_path(tmp_path):
     p = tmp_path / "test_model.xml"
     p.write_text(MJCF)
     return str(p)
 
+
 def test_run_isolated_success(model_path):
     script = "def control(obs): return []"
     result = run_isolated(model_path, script, max_steps=10)
     assert result["status"] == "TIMEOUT"  # It didn't win or fail, just finished steps
     assert "metrics" in result
+
 
 def test_run_isolated_timeout(model_path):
     # Script that hangs
@@ -42,6 +45,7 @@ def control(obs):
     assert result["status"] == "TIMEOUT"
     assert "timed out" in result["message"]
 
+
 def test_run_isolated_crash(model_path):
     # Script that crashes the process (e.g., segfault if we could, but let's just do exit)
     script = """
@@ -52,6 +56,7 @@ def control(obs):
     result = run_isolated(model_path, script, max_steps=100)
     assert result["status"] == "CRASH"
     assert "crashed" in result["message"]
+
 
 def test_run_isolated_error(model_path):
     # Script with syntax error or similar
