@@ -71,12 +71,24 @@ def run_isolated(
         args=(xml_string, duration, queue, agent_script, goal_pos),
     )
 
+    # Use a process group to ensure we can kill all sub-processes
+    # This is tricky with multiprocessing.Process, so we'll rely on it for now
+    # but the REAL issue is often child processes of the target.
+
     process.start()
     process.join(timeout=timeout)
 
     if process.is_alive():
+        # On Linux, terminate sends SIGTERM to the process.
+        # To be more aggressive and handle potential orphans, we might want
+        # to use something like psutil to kill the whole tree, or have the
+        # child process manage its own children better.
         process.terminate()
-        process.join()
+        process.join(timeout=2)
+        if process.is_alive():
+            process.kill()
+            process.join()
+
         return {
             "success": False,
             "error_type": "TimeoutError",

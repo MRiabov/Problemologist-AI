@@ -16,8 +16,8 @@ RUFF_RULES = ",".join(config.get("ruff_rules", ["E", "F"]))
 RUFF_IGNORE = ",".join(config.get("ruff_ignore", []))
 
 
-def run_linter(code: str) -> list[str]:
-    """Runs ruff and pyrefly on the provided code and returns formatted errors."""
+def run_linter(code: str) -> list[dict]:
+    """Runs ruff and pyrefly on the provided code and returns structured error data."""
     errors = []
 
     # 1. Run Ruff via stdin
@@ -31,6 +31,8 @@ def run_linter(code: str) -> list[str]:
             "json",
             "--select",
             RUFF_RULES,
+            "--builtins",
+            "show_object",
         ]
         if RUFF_IGNORE:
             ruff_cmd.extend(["--ignore", RUFF_IGNORE])
@@ -44,16 +46,34 @@ def run_linter(code: str) -> list[str]:
             for item in ruff_data:
                 err_code = item["code"]
                 # Skip import sorting, unused items, and stylistic issues from being blocking
-                # I: Isort, F401: Unused import, F841: Unused variable, RUF005: Stylistic unpacking
-                if err_code.startswith("I") or err_code in ["F401", "F841", "RUF005"]:
+                # I: Isort, F401: Unused import, F841: Unused variable,
+                # RUF005: Stylistic unpacking, SIM117: Nested with, E501: Line length
+                ignored_codes = ["F401", "F841", "RUF005", "SIM117", "E501"]
+                if err_code.startswith("I") or err_code in ignored_codes:
                     continue
 
-                msg_text = item["message"]
-                line_idx = item["location"]["row"]
-                msg = f"[Ruff {err_code}] {msg_text} at line {line_idx}"
-                errors.append(msg)
+                # Special case: allow show_object as a global
+
+                if err_code == "F821" and "show_object" in item["message"]:
+                    continue
+
+                errors.append(
+                    {
+                        "linter": "ruff",
+                        "line": item["location"]["row"],
+                        "code": err_code,
+                        "message": item["message"],
+                    }
+                )
     except Exception as e:
-        errors.append(f"[Linter Error] Ruff failed to run: {e}")
+        errors.append(
+            {
+                "linter": "linter-system",
+                "line": 0,
+                "code": "ERR",
+                "message": f"Ruff failed to run: {e}",
+            }
+        )
 
     if len(errors) >= MAX_ERRORS:
         return errors[:MAX_ERRORS]
@@ -81,8 +101,23 @@ def run_linter(code: str) -> list[str]:
 
                     name = item.get("name", "type-error")
                     desc = item.get("concise_description") or item.get("description")
+
+                    # Skip undefined variable errors for show_object in Pyrefly
+                    if "show_object" in desc and (
+                        "undefined" in desc.lower() or "not found" in desc.lower()
+                    ):
+                        continue
+
                     line = item.get("line", "?")
-                    errors.append(f"[Pyrefly {name}] {desc} at line {line}")
+
+                    errors.append(
+                        {
+                            "linter": "pyrefly",
+                            "line": line,
+                            "code": name,
+                            "message": desc,
+                        }
+                    )
     except Exception:
         pass
     finally:
@@ -90,3 +125,26 @@ def run_linter(code: str) -> list[str]:
             tmp_path.unlink()
 
     return errors[:MAX_ERRORS]
+
+
+def format_linter_report(errors: list[dict]) -> str:
+    """Formats the list of linter errors into a markdown report."""
+    if not errors:
+        return ""
+
+    report_lines = ["Linter Feedback:", ""]
+
+    for err in errors:
+        line_info = f"Line {err['line']}" if err["line"] != "?" else "Unknown line"
+        report_lines.append(
+            f"{line_info}: {err['linter']} says: {err['message']} ({err['code']})"
+        )
+        report_lines.append("")
+
+    # Add a generic suggested action for now, or could be more specific based on codes
+    report_lines.append(
+        "Suggested Action: Review the indicated lines and fix the reported issues. "
+        "Ensure all variables are defined and types are consistent."
+    )
+
+    return "\n".join(report_lines)
