@@ -13,7 +13,7 @@ async def test_generator_agent_mock():
 
     def mock_invoke(messages, **kwargs):
         all_content = " ".join([m.content for m in messages]).lower()
-        if "physics puzzle designer" in all_content or "planner" in all_content:
+        if "expert designer" in all_content or "planner" in all_content:
             return AIMessage(
                 content="<reasoning>I should create a box.</reasoning><plan>Plan: Create a box.</plan>"
             )
@@ -37,7 +37,13 @@ async def test_generator_agent_mock():
                     return_value='<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>',
                 ):
                     result = await generator_agent.ainvoke(
-                        {"request": "Create a red box", "attempts": 0}
+                        {
+                            "request": "Create a red box",
+                            "attempts": 0,
+                            "validation_passed": False,
+                            "linting_failed": False,
+                            "full_history": [],
+                        }
                     )
                     assert result["validation_passed"] is True
                     assert "mujoco" in result["mjcf"]
@@ -52,11 +58,11 @@ async def test_generator_agent_retry():
 
     def mock_invoke(messages, **kwargs):
         all_content = " ".join([m.content for m in messages]).lower()
-        if "physics puzzle designer" in all_content or "planner" in all_content:
+        if "expert designer" in all_content or "planner" in all_content:
             return AIMessage(
                 content="<reasoning>Thinking about box.</reasoning><plan>Plan: Create a box.</plan>"
             )
-        elif "build123d" in all_content or "coder" in all_content:
+        elif "expert in build123d" in all_content or "coder" in all_content:
             call_count["coder"] += 1
             if call_count["coder"] == 1:
                 return AIMessage(
@@ -85,7 +91,7 @@ async def test_generator_agent_retry():
             ):
 
                 def mock_execute_build(
-                    code, seed, scale_factors=(1.0, 1.0, 1.0), **kwargs
+                    code, seed, scale_factors=(1.0, 1.0, 1.0), **_kwargs
                 ):
                     if "INVALID XML" in code:
                         return "INVALID XML"
@@ -96,7 +102,13 @@ async def test_generator_agent_retry():
                     side_effect=mock_execute_build,
                 ):
                     result = await generator_agent.ainvoke(
-                        {"request": "Create something", "attempts": 0}
+                        {
+                            "request": "Create something",
+                            "attempts": 0,
+                            "validation_passed": False,
+                            "linting_failed": False,
+                            "full_history": [],
+                        }
                     )
                     assert result["validation_passed"] is True
                     assert result["attempts"] >= 2
