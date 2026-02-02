@@ -56,6 +56,15 @@ class GeneratorState(TypedDict):
 # Nodes
 def planner_node(state: GeneratorState) -> Dict[str, Any]:
     """Generates a plan based on the user request."""
+    # If plan is already provided (e.g. from human-in-the-loop or integration test), skip LLM
+    if state.get("plan"):
+        return {
+            "plan": state["plan"],
+            "planner_reasoning": "Plan provided externally.",
+            "attempts": 0,
+            "validation_passed": False,
+        }
+
     # print(f"--- PLANNER NODE (Attempt {state.get('attempts', 0)}) ---")
     model = get_model(Config.LLM_MODEL)
 
