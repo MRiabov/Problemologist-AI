@@ -1,0 +1,3 @@
+max_attempts: 3
+# Headroom factor for mass production (max_attempts = count * headroom_factor)
+headroom_factor: 3

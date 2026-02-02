@@ -1,5 +1,7 @@
 import traceback
 from typing import TypedDict, Optional, Literal, Dict, Any, List
+from pathlib import Path
+import yaml
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
@@ -15,10 +17,33 @@ from src.generators.benchmark.prompts import (
 )
 from src.generators.benchmark.validator import validate_mjcf
 
+# Load config
+GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
+with GEN_CONFIG_PATH.open("r") as f:
+    gen_config = yaml.safe_load(f)
+
+MAX_ATTEMPTS = gen_config.get("max_attempts", 3)
+
 CAD_TEMPLATE = """from build123d import *
 import build123d as bd
 import math
 import random
+
+def export_mjcf(environment: Compound) -> str:
+    \"\"\"
+    Helper to export a build123d Compound to a MuJoCo MJCF XML string.
+    \"\"\"
+    from src.simulation_engine.builder import SceneCompiler
+    import os
+    import tempfile
+
+    # We use a temporary directory for assets during validation
+    # In production, the manager handles saving them properly.
+    asset_dir = os.path.join(os.getcwd(), ".agent_storage", "temp_assets")
+    os.makedirs(asset_dir, exist_ok=True)
+
+    compiler = SceneCompiler(asset_dir=asset_dir)
+    return compiler.compile(environment)
 """
 
 
@@ -59,7 +84,7 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
 
     if "<reasoning>" in content and "</reasoning>" in content:
         reasoning = content.split("<reasoning>")[1].split("</reasoning>")[0].strip()
-    
+
     if "<plan>" in content and "</plan>" in content:
         plan = content.split("<plan>")[1].split("</plan>")[0].strip()
 
@@ -138,10 +163,23 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
 def linter_node(state: GeneratorState) -> dict[str, any]:
     """Runs static analysis (ruff, pyrefly) on the generated code."""
     code = state["code"]
+    errors = []
+
+    # Heuristic check for common build123d attribute hallucinations
+    common_hallucinations = {
+        ".scaled(": "'component.scaled' is not a valid attribute in build123d. Use 'scale(part, ...)' instead.",
+        # Add more here if needed (e.g., .translated(, .rotated() if they cause issues)
+    }
+
+    for marker, tip in common_hallucinations.items():
+        if marker in code:
+            errors.append(f"[Heuristic] {tip}")
 
     lint_issues = run_linter(code)
-    if lint_issues:
-        error_msg = LINTER_FEEDBACK_PREFIX + "\n".join(lint_issues)
+    errors.extend(lint_issues)
+
+    if errors:
+        error_msg = LINTER_FEEDBACK_PREFIX + "\n".join(errors)
         return {
             "errors": error_msg,
             "validation_passed": False,
@@ -159,7 +197,9 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
         from src.generators.benchmark.manager import execute_build
 
         # Call build with seed 0 and default scale (1,1,1) for base validation
-        mjcf_xml = execute_build(code, 0, scale=(1.0, 1.0, 1.0))
+        # We use a temporary assets dir for validation
+        rel_temp_assets = "temp_assets"
+        mjcf_xml = execute_build(code, 0, scale=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets)
 
         if not isinstance(mjcf_xml, str):
             return {
@@ -200,7 +240,7 @@ workflow.add_edge("coder", "linter")
 
 def should_continue_lint(state: GeneratorState) -> Literal["coder", "validator"]:
     """Decides whether to retry after linting or proceed to simulation."""
-    if state["linting_failed"] and state["attempts"] < 3:
+    if state["linting_failed"] and state["attempts"] < MAX_ATTEMPTS:
         return "coder"
     return "validator"
 
@@ -213,7 +253,7 @@ def should_continue(state: GeneratorState) -> Literal["coder", END]:
     """Decides whether to retry after validation or end."""
     if state["validation_passed"]:
         return END
-    if state["attempts"] >= 3:
+    if state["attempts"] >= MAX_ATTEMPTS:
         return END
     return "coder"
 

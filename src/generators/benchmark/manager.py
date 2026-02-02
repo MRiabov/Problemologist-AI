@@ -3,6 +3,8 @@ import random
 import json
 import uuid
 from typing import List, Dict, Any
+from pathlib import Path
+import yaml
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -13,24 +15,41 @@ from src.generators.benchmark.renderer import render_scenario
 from src.generators.benchmark.types import ScenarioManifest, ValidationReport
 from src.environment.sandbox import PodmanSandbox
 
+# Load config
+GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
+with GEN_CONFIG_PATH.open("r") as f:
+    gen_config = yaml.safe_load(f)
+
+HEADROOM_FACTOR = gen_config.get("headroom_factor", 3)
+
 app = typer.Typer(help="Benchmark Scenario Generator CLI")
 console = Console()
 
 
 def execute_build(
-    code: str, seed: int, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    code: str, seed: int, scale: tuple[float, float, float] = (1.0, 1.0, 1.0), asset_dir: str = None
 ) -> str:
     """Executes the build(seed, scale) function from the provided code inside a sandbox."""
-    # Prepend hardcoded imports to ensure they are never skipped by the LLM
+    # Prepend hardcoded imports and helpers
+    # We use a global variable to pass asset_dir into the build context implicitly
     final_code = (
-        "from build123d import *\nfrom src.simulation_engine.builder import SceneCompiler\n\n"
+        "from build123d import *\n"
+        "from src.simulation_engine.builder import SceneCompiler\n\n"
+        "_ASSET_DIR = None\n\n"
+        "def to_mjcf(env_compound: Compound, agent_compound: Compound = None, agent_joints: list = None) -> str:\n"
+        "    compiler = SceneCompiler(asset_dir=_ASSET_DIR)\n"
+        "    return compiler.compile(env_compound, agent_compound, agent_joints)\n\n"
         + code
     )
 
-    # Initialize a temporary sandbox for generation
-    # Use a 'generation_workspace' to avoid clashing with agent workspace
+    # Initialize a temporary workspace for generation
     workspace = os.path.abspath("workspace_gen")
     os.makedirs(workspace, exist_ok=True)
+    
+    # Ensure asset_dir exists in workspace if provided
+    if asset_dir:
+        os.makedirs(os.path.join(workspace, asset_dir), exist_ok=True)
+
     sandbox = PodmanSandbox(workspace)
 
     script_name = "template_build.py"
@@ -38,6 +57,8 @@ def execute_build(
 
     with open(os.path.join(workspace, script_name), "w") as f:
         f.write(final_code)
+
+    asset_dir_val = f"'/workspace/{asset_dir}'" if asset_dir else "None"
 
     runner_script = f"""
 import json
@@ -47,11 +68,13 @@ import os
 sys.path.append("/workspace")
 import template_build
 
+# Inject asset_dir into the module
+template_build._ASSET_DIR = {asset_dir_val}
+
 seed = {seed}
 scale = {scale}
 
 try:
-    # Try calling with scale first (new signature)
     import inspect
     sig = inspect.signature(template_build.build)
     if "scale" in sig.parameters:
@@ -60,7 +83,9 @@ try:
         res = template_build.build(seed)
     print(f"BUILD_RESULT:{{res}}")
 except Exception as e:
+    import traceback
     print(f"BUILD_ERROR:{{str(e)}}")
+    print(traceback.format_exc())
 """
 
     try:
@@ -145,7 +170,7 @@ def generate(
 
     valid_variations = 0
     attempts = 0
-    max_attempts = count * 3  # Allow some headroom for failures
+    max_attempts = count * HEADROOM_FACTOR  # Allow some headroom for failures
 
     with Progress() as progress:
         task = progress.add_task("[cyan]Producing variations...", total=count)
@@ -162,20 +187,32 @@ def generate(
 
             try:
                 # 2. Batch Processing & Randomization
-                mjcf_xml = execute_build(template_code, seed, scale=scale)
-
+                # We use a temporary assets dir for validation
+                rel_temp_assets = "temp_assets"
+                mjcf_xml = execute_build(template_code, seed, scale=scale, asset_dir=rel_temp_assets)
+                
                 # 3. Validation
                 report = validate_mjcf(mjcf_xml)
-
+                
                 if report["is_valid"]:
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
-
+                    
                     # Save MJCF
                     xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
                     with open(xml_path, "w") as f:
                         f.write(mjcf_xml)
-
+                    
+                    # Move temp assets to final assets
+                    temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
+                    final_assets_path = os.path.join(scenario_dir, "assets")
+                    generated_meshes = []
+                    if os.path.exists(temp_assets_path):
+                        import shutil
+                        for mesh_file in os.listdir(temp_assets_path):
+                            shutil.move(os.path.join(temp_assets_path, mesh_file), os.path.join(final_assets_path, mesh_file))
+                            generated_meshes.append(f"assets/{mesh_file}")
+                    
                     # Render images
                     image_prefix = os.path.join(
                         scenario_dir, "images", f"preview_{seed}"
@@ -186,13 +223,6 @@ def generate(
                         os.path.relpath(p, scenario_dir) for p in image_paths
                     ]
 
-                    # Mock STL saving
-                    # (since build123d normally exports them, but our MJCF might already contain mesh references)
-                    # For now we follow the requirement: Save assets/mesh_{seed}.stl
-                    stl_path = os.path.join(scenario_dir, "assets", f"mesh_{seed}.stl")
-                    with open(stl_path, "w") as f:
-                        f.write("MOCK STL DATA")  # Placeholder
-
                     # Save Manifest
                     manifest: ScenarioManifest = {
                         "id": f"{scenario_id}_{seed}",
@@ -201,7 +231,7 @@ def generate(
                         "script_path": "template.py",
                         "assets": {
                             "mjcf": f"scene_{seed}.xml",
-                            "meshes": [f"assets/mesh_{seed}.stl"],
+                            "meshes": generated_meshes,
                             "images": rel_image_paths,
                         },
                         "randomization": {

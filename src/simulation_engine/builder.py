@@ -80,12 +80,10 @@ class SceneCompiler:
         ET.SubElement(visual, "quality", shadowsize="2048")
 
         # Compiler
-        ET.SubElement(self.root, "compiler", angle="degree", coordinate="local")
+        compiler = ET.SubElement(self.root, "compiler", angle="degree", coordinate="local")
         if self.asset_dir:
-            # We assume meshes are in the same dir as the XML or we use absolute paths
-            # Actually, mujoco uses meshdir. But if we save them to self.asset_dir,
-            # and the XML is also there, it works fine.
-            pass
+            # Set meshdir to the absolute path of asset_dir so MuJoCo can find assets
+            compiler.set("meshdir", os.path.abspath(self.asset_dir))
 
         # Assets (Placeholder for mesh assets)
         self.asset = ET.SubElement(self.root, "asset")
