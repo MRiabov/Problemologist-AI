@@ -125,7 +125,8 @@ def test_energy_calculation(model_path):
     sim.run(
         """
 def control(obs):
-    return [10.0, 10.0]
+    # Apply maximum control to joints
+    return [100.0, 100.0]
 """,
         max_steps=10,
     )
