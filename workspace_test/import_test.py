@@ -1,1 +1,1 @@
-print("Import Success")
+from src.compiler import geometry; print('Import Success')
