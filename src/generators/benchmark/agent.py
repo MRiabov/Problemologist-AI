@@ -24,17 +24,25 @@ with GEN_CONFIG_PATH.open("r") as f:
 
 MAX_ATTEMPTS = gen_config.get("max_attempts", 10)
 
-CAD_TEMPLATE = """from build123d import *
-import build123d as bd
+CAD_TEMPLATE = """
+# Core build123d components
+from build123d import (
+    Box, Cylinder, Sphere, Torus, Cone, Wedge, 
+    Compound, Solid, Part, Location, Rotation, Vector, Axis, Plane,
+    Mode, Align, Unit, Shell
+)
+
+# Common build123d operations
+from build123d import (
+    fillet, chamfer, split, mirror, scale, 
+    extrude, revolve, loft, sweep, offset
+)
+
+# standard builders (Use BuildPart for CSG)
+from build123d import BuildPart, BuildSketch, BuildLine
+
 import math
 import random
-
-# Common build123d patterns for the model to follow
-# 1. Use Box() inside BuildPart() context, not BuildBox.
-# 2. Use Compound(children=list_of_solids) to combine parts.
-# 3. Use scale(objects, by=(sx, sy, sz)) for non-uniform scaling.
-# 4. Use part.translate((x, y, z)) or part.move(Location((x,y,z))). 
-#    CRITICAL: There is NO 'bd.move(part, ...)' function. Use methods on the part itself.
 """
 
 
@@ -151,7 +159,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
     elif "```" in raw_content:
         cleaned_code = raw_content.split("```")[1].split("```")[0].strip()
 
-    if "from build123d import *" not in cleaned_code:
+    if "import build123d" not in cleaned_code and "from build123d" not in cleaned_code:
         cleaned_code = CAD_TEMPLATE + "\n" + cleaned_code
 
     return {
@@ -198,7 +206,7 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
         from src.generators.benchmark.manager import execute_build
 
         # Call build with seed 0 and default scale (1,1,1) for base validation
-        # We use a relative path for assets dir for sandbox compatibility
+        # Use a temp asset dir for the agent validation as well
         rel_temp_assets = ".agent_storage/temp_assets"
         mjcf_xml = execute_build(code, 0, scale_factors=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets)
 
@@ -209,29 +217,29 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
             }
 
         # Validate MJCF
-        report = validate_mjcf(mjcf_xml)
-        
-        # Track history
-        history = state.get("full_history") or []
-        history.append(report)
+        temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
+        report = validate_mjcf(mjcf_xml, asset_dir=temp_assets_path)
+        print(f"DEBUG: validator_node report: {report}")
 
         if report["is_valid"]:
-            return {"validation_passed": True, "mjcf": mjcf_xml, "errors": None, "full_history": history}
+            return {
+                "validation_passed": True, 
+                "mjcf": mjcf_xml, 
+                "errors": None,
+                "linting_failed": False
+            }
         else:
             return {
                 "validation_passed": False,
                 "errors": f"Validation failed: {report['error_message']}",
-                "full_history": history
+                "linting_failed": False
             }
 
     except Exception as e:
-        error_msg = f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}"
-        history = state.get("full_history") or []
-        history.append({"is_valid": False, "error_message": error_msg})
         return {
-            "errors": error_msg,
+            "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
             "validation_passed": False,
-            "full_history": history
+            "linting_failed": False
         }
 
 
