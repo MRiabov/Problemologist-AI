@@ -1,20 +1,20 @@
 import traceback
-from typing import TypedDict, Optional, Literal, Dict, Any, List
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import StateGraph, END
+from typing import TypedDict, Literal
 
-from src.agent.utils.llm import get_model
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, StateGraph
+
 from src.agent.utils.config import Config
+from src.agent.utils.llm import get_model
+from src.generators.benchmark.linter import run_linter
 from src.generators.benchmark.prompts import (
-    PLANNER_PROMPT,
     CODER_PROMPT,
     CRITIC_PROMPT,
     FIXER_PROMPT,
     LINTER_FEEDBACK_PREFIX,
+    PLANNER_PROMPT,
 )
 from src.generators.benchmark.validator import validate_mjcf
-from src.generators.benchmark.linter import run_linter
-
 
 CAD_TEMPLATE = """from build123d import *
 import build123d as bd
@@ -26,19 +26,18 @@ import random
 # Define State
 class GeneratorState(TypedDict):
     request: str
-    plan: Optional[str]
-    code: Optional[str]
-    errors: Optional[str]
-    mjcf: Optional[str]
+    plan: str | None
+    code: str | None
+    errors: str | None
+    mjcf: str | None
     attempts: int
     validation_passed: bool
     linting_failed: bool
 
 
 # Nodes
-def planner_node(state: GeneratorState) -> Dict[str, Any]:
+def planner_node(state: GeneratorState) -> dict[str, any]:
     """Generates a plan based on the user request."""
-    # print(f"--- PLANNER NODE (Attempt {state.get('attempts', 0)}) ---")
     model = get_model(Config.LLM_MODEL)
 
     messages = [
@@ -55,9 +54,8 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
     }
 
 
-def coder_node(state: GeneratorState) -> Dict[str, Any]:
+def coder_node(state: GeneratorState) -> dict[str, any]:
     """Generates or fixes code based on plan and errors."""
-    # print(f"--- CODER NODE (Attempt {state.get('attempts', 0)}) ---")
     model = get_model(Config.LLM_MODEL)
 
     errors = state.get("errors")
@@ -70,7 +68,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         messages = [
             SystemMessage(
                 content=FIXER_PROMPT
-                + f"\n\nIMPORTANT: Your code will be prepended with this template, do not redefine it unless necessary:\n{CAD_TEMPLATE}"
+                + f"\n\nIMPORTANT: Your code will be prepended with this template:\n{CAD_TEMPLATE}"  # noqa: E501
             ),
             HumanMessage(content=full_prompt),
         ]
@@ -79,7 +77,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         messages = [
             SystemMessage(
                 content=CODER_PROMPT.format(plan=plan, errors="None")
-                + f"\n\nIMPORTANT: Start from this template. You only need to provide the implementation inside the build function or additional helper functions:\n{CAD_TEMPLATE}"
+                + f"\n\nIMPORTANT: Start from this template:\n{CAD_TEMPLATE}"
             ),
             HumanMessage(content="Generate the code."),
         ]
@@ -100,7 +98,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
     return {"code": cleaned_code, "attempts": state.get("attempts", 0) + 1}
 
 
-def linter_node(state: GeneratorState) -> Dict[str, Any]:
+def linter_node(state: GeneratorState) -> dict[str, any]:
     """Runs static analysis (ruff, pyrefly) on the generated code."""
     code = state["code"]
 
@@ -116,7 +114,7 @@ def linter_node(state: GeneratorState) -> Dict[str, Any]:
     return {"errors": None, "validation_passed": True, "linting_failed": False}
 
 
-def validator_node(state: GeneratorState) -> Dict[str, Any]:
+def validator_node(state: GeneratorState) -> dict[str, any]:
     """Executes code and runs validation."""
     code = state["code"]
 
@@ -128,7 +126,7 @@ def validator_node(state: GeneratorState) -> Dict[str, Any]:
 
         if not isinstance(mjcf_xml, str):
             return {
-                "errors": f"Function 'build' returned {type(mjcf_xml)}, expected str (MJCF XML).",
+                "errors": f"Function 'build' returned {type(mjcf_xml)}, expected str.",
                 "validation_passed": False,
             }
 
@@ -148,15 +146,6 @@ def validator_node(state: GeneratorState) -> Dict[str, Any]:
             "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
             "validation_passed": False,
         }
-
-
-def should_continue(state: GeneratorState) -> Literal["coder", END]:
-    """Decides whether to retry or end."""
-    if state["validation_passed"]:
-        return END
-    if state["attempts"] >= 3:
-        return END
-    return "coder"
 
 
 # Graph Construction

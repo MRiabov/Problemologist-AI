@@ -12,12 +12,8 @@ with CONFIG_PATH.open("r") as f:
 
 MAX_ERRORS = config.get("max_errors", 10)
 IGNORE_WARNINGS = config.get("ignore_warnings", True)
-RUFF_RULES = ",".join(
-    config.get(
-        "ruff_rules",
-        ["E", "F", "I", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF"],
-    )
-)
+RUFF_RULES = ",".join(config.get("ruff_rules", ["E", "F"]))
+RUFF_IGNORE = ",".join(config.get("ruff_ignore", []))
 
 
 def run_linter(code: str) -> list[str]:
@@ -35,8 +31,11 @@ def run_linter(code: str) -> list[str]:
             "json",
             "--select",
             RUFF_RULES,
-            "-",
         ]
+        if RUFF_IGNORE:
+            ruff_cmd.extend(["--ignore", RUFF_IGNORE])
+        ruff_cmd.append("-")
+
         result = subprocess.run(
             ruff_cmd, input=code, capture_output=True, text=True, check=False
         )
@@ -80,7 +79,6 @@ def run_linter(code: str) -> list[str]:
                     line = item.get("line", "?")
                     errors.append(f"[Pyrefly {name}] {desc} at line {line}")
     except Exception:
-        # Don't fail the whole thing if pyrefly fails
         pass
     finally:
         if tmp_path.exists():
