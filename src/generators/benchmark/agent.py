@@ -30,9 +30,7 @@ import math
 import random
 
 def export_mjcf(environment: Compound) -> str:
-    \"\"\"
-    Helper to export a build123d Compound to a MuJoCo MJCF XML string.
-    \"\"\"
+    # Helper to export a build123d Compound to a MuJoCo MJCF XML string.
     from src.simulation_engine.builder import SceneCompiler
     import os
     import tempfile
@@ -55,6 +53,7 @@ class GeneratorState(TypedDict):
     code: Optional[str]
     coder_reasoning: Optional[str]
     errors: Optional[str]
+    full_history: Optional[List[Dict[str, Any]]]  # List of reports from all attempts
     mjcf: Optional[str]
     attempts: int
     validation_passed: bool
@@ -87,6 +86,9 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
 
     if "<plan>" in content and "</plan>" in content:
         plan = content.split("<plan>")[1].split("</plan>")[0].strip()
+    elif not reasoning and "<plan>" in content:
+        # Fallback: everything before <plan> is reasoning
+        reasoning = content.split("<plan>")[0].strip()
 
     return {
         "plan": plan,
@@ -143,6 +145,13 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
     raw_content = content
     if "<python_code>" in content and "</python_code>" in content:
         raw_content = content.split("<python_code>")[1].split("</python_code>")[0].strip()
+        if not reasoning:
+            # Fallback: everything before <python_code> is reasoning
+            reasoning = content.split("<python_code>")[0].strip()
+    elif not reasoning:
+        # Fallback: everything before triple backticks is reasoning
+        if "```" in content:
+            reasoning = content.split("```")[0].strip()
 
     cleaned_code = raw_content
     if "```python" in raw_content:
@@ -209,19 +218,28 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
 
         # Validate MJCF
         report = validate_mjcf(mjcf_xml)
+        
+        # Track history
+        history = state.get("full_history") or []
+        history.append(report)
 
         if report["is_valid"]:
-            return {"validation_passed": True, "mjcf": mjcf_xml, "errors": None}
+            return {"validation_passed": True, "mjcf": mjcf_xml, "errors": None, "full_history": history}
         else:
             return {
                 "validation_passed": False,
                 "errors": f"Validation failed: {report['error_message']}",
+                "full_history": history
             }
 
     except Exception as e:
+        error_msg = f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}"
+        history = state.get("full_history") or []
+        history.append({"is_valid": False, "error_message": error_msg})
         return {
-            "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
+            "errors": error_msg,
             "validation_passed": False,
+            "full_history": history
         }
 
 

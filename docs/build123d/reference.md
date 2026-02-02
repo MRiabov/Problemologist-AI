@@ -997,3 +997,9 @@ or `Until.LAST`.
     > ::: {.literalinclude language="build123d" start-after="[Ex. 36]" end-before="[Ex. 36]"}
     > general_examples_algebra.py
     > :::
+
+## 37. Scaling the models:
+The `scale` *function* has a signature as follows:
+```
+scale(objects: build123d.topology.shape_core.Shape | collections.abc.Iterable[build123d.topology.shape_core.Shape] | None = None, by: float | tuple[float, float, float] = 1, mode: ~build123d.build_enums.Mode = <Mode.REPLACE>)→ Curve | Sketch | Part | Compound[source]
+```
