@@ -171,6 +171,8 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
             return SimResult(**res_data)
 
         except Exception as e:
+            if "CRASH_DETECTED" in str(e):
+                raise
             print(f"Error initiating sandboxed simulation: {e}")
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
