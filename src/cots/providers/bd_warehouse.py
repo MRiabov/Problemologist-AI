@@ -29,9 +29,21 @@ class BDWarehouseProvider(PartProvider):
                 )
             )
 
+            def make_motor(s=size):
+                m = StepperMotor(s)
+                children = list(m.children)
+                print(f"DEBUG: make_motor {s} children count: {len(children)}")
+                if len(children) >= 2:
+                    children[0].label = "stator"
+                    children[1].label = "rotor"
+                elif len(m.solids()) >= 2:
+                    m.solids()[0].label = "stator"
+                    m.solids()[1].label = "rotor"
+                return m
+
             self.parts[part_id] = Part(
                 id=part_id,
-                factory=lambda s=size: StepperMotor(s),
+                factory=make_motor,
                 params={"size": size, "type": "motor"},
             )
 

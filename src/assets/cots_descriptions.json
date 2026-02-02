@@ -5,6 +5,26 @@
             "type": "motor",
             "category": "stepper",
             "frame_size": "NEMA 17"
+        },
+        "simulation": {
+            "joint_type": "hinge",
+            "joint_axis": "0 0 1",
+            "gear": 10,
+            "damping": 0.1
+        }
+    },
+    "Nema23": {
+        "description": "A standard NEMA 23 stepper motor. Larger and higher torque than NEMA 17.",
+        "metadata": {
+            "type": "motor",
+            "category": "stepper",
+            "frame_size": "NEMA 23"
+        },
+        "simulation": {
+            "joint_type": "hinge",
+            "joint_axis": "0 0 1",
+            "gear": 20,
+            "damping": 0.2
         }
     },
     "608 Bearing": {
