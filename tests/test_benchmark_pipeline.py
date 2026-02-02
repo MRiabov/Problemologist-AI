@@ -6,8 +6,30 @@ from src.generators.benchmark.manager import generate, execute_build
 
 # Mock script that defines a build function
 MOCK_SCRIPT = """
-def build(seed):
-    return f'<mujoco><worldbody><geom name="box_{seed}" type="box" size="1 1 1"/></worldbody></mujoco>'
+# Core build123d components
+from build123d import (
+    Box, Cylinder, Sphere, Torus, Cone, Wedge, 
+    Compound, Solid, Part, Location, Rotation, Vector, Axis, Plane,
+    Mode, Align, Unit, Shell
+)
+
+# Common build123d operations
+from build123d import (
+    fillet, chamfer, split, mirror, scale, 
+    extrude, revolve, loft, sweep, offset
+)
+
+# standard builders (Use BuildPart for CSG)
+from build123d import BuildPart, BuildSketch, BuildLine
+
+import math
+import random
+
+def build(seed, scale_factors=(1,1,1)):
+    with BuildPart() as p:
+        Box(10, 10, 10)
+    # The to_mjcf function is injected by execute_build
+    return to_mjcf(env_compound=p.part, env_labels=[f"obstacle_box_{seed}"])
 """
 
 
@@ -24,19 +46,21 @@ def clean_datasets():
 @pytest.mark.benchmark
 def test_execute_build():
     mjcf = execute_build(MOCK_SCRIPT, 42)
-    assert "box_42" in mjcf
-    assert "<mujoco>" in mjcf
+    assert "geom_obstacle_box" in mjcf
+    assert "<mujoco" in mjcf
 
 
 @pytest.mark.benchmark
+@patch("src.generators.benchmark.manager.render_scenario")
 @patch("src.generators.benchmark.manager.generator_agent.invoke")
-def test_generate_pipeline(mock_invoke, clean_datasets):
+def test_generate_pipeline(mock_invoke, mock_render, clean_datasets):
     # Mock agent returning a valid script
     mock_invoke.return_value = {
         "validation_passed": True,
         "code": MOCK_SCRIPT,
         "request": "Test Prompt",
     }
+    mock_render.return_value = ["test_render.png"]
 
     from typer.testing import CliRunner
     from src.generators.benchmark.manager import app
@@ -48,8 +72,7 @@ def test_generate_pipeline(mock_invoke, clean_datasets):
         app, ["--prompt", "Test Prompt", "--count", "2", "--output-dir", clean_datasets]
     )
 
-    if result.exit_code != 0:
-        print(result.output)
+    print(result.output)
     assert result.exit_code == 0
     assert "Template generated successfully!" in result.output
 

@@ -25,19 +25,20 @@ async def test_generator_agent_mock():
     mock_llm.invoke.side_effect = mock_invoke
 
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
-        with patch(
-            "src.generators.benchmark.agent.validate_mjcf",
-            return_value={"is_valid": True, "error_message": None},
-        ):
+        with patch("src.generators.benchmark.agent.run_linter", return_value=[]):
             with patch(
-                "src.generators.benchmark.manager.execute_build",
-                return_value='<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>',
+                "src.generators.benchmark.agent.validate_mjcf",
+                return_value={"is_valid": True, "error_message": None},
             ):
-                result = await generator_agent.ainvoke(
-                    {"request": "Create a red box", "attempts": 0}
-                )
-                assert result["validation_passed"] is True
-                assert "mujoco" in result["mjcf"]
+                with patch(
+                    "src.generators.benchmark.manager.execute_build",
+                    return_value='<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>',
+                ):
+                    result = await generator_agent.ainvoke(
+                        {"request": "Create a red box", "attempts": 0}
+                    )
+                    assert result["validation_passed"] is True
+                    assert "mujoco" in result["mjcf"]
 
 
 @pytest.mark.benchmark
@@ -69,27 +70,26 @@ async def test_generator_agent_retry():
     mock_llm.invoke.side_effect = mock_invoke
 
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
-
-        def mock_validate(xml):
-            if xml == "INVALID XML":
-                return {"is_valid": False, "error_message": "Invalid XML"}
-            return {"is_valid": True, "error_message": None}
-
-        with patch(
-            "src.generators.benchmark.agent.validate_mjcf", side_effect=mock_validate
-        ):
-
-            def mock_execute_build(code, seed, scale=(1.0, 1.0, 1.0)):
-                if "INVALID XML" in code:
-                    return "INVALID XML"
-                return "<mujoco><worldbody/></mujoco>"
+        with patch("src.generators.benchmark.agent.run_linter", return_value=[]):
+            def mock_validate(xml):
+                if xml == "INVALID XML":
+                    return {"is_valid": False, "error_message": "Invalid XML"}
+                return {"is_valid": True, "error_message": None}
 
             with patch(
-                "src.generators.benchmark.manager.execute_build",
-                side_effect=mock_execute_build,
+                "src.generators.benchmark.agent.validate_mjcf", side_effect=mock_validate
             ):
-                result = await generator_agent.ainvoke(
-                    {"request": "Create something", "attempts": 0}
-                )
-                assert result["validation_passed"] is True
-                assert result["attempts"] >= 2
+                def mock_execute_build(code, seed, scale_factors=(1.0, 1.0, 1.0)):
+                    if "INVALID XML" in code:
+                        return "INVALID XML"
+                    return "<mujoco><worldbody/></mujoco>"
+
+                with patch(
+                    "src.generators.benchmark.manager.execute_build",
+                    side_effect=mock_execute_build,
+                ):
+                    result = await generator_agent.ainvoke(
+                        {"request": "Create something", "attempts": 0}
+                    )
+                    assert result["validation_passed"] is True
+                    assert result["attempts"] >= 2
