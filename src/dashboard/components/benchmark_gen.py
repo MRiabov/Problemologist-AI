@@ -4,7 +4,7 @@ import traceback
 import tempfile
 from typing import Dict, Any, Optional
 
-from src.generators.benchmark.agent import planner_node, coder_node, validator_node
+from src.generators.benchmark.agent import planner_node, coder_node, validator_node, MAX_ATTEMPTS
 from src.generators.benchmark.renderer import render_scenario
 from src.dashboard.components.viewer_3d import render_3d_artifact
 
@@ -70,6 +70,20 @@ def render_input_stage(state):
         else:
             st.error("Please enter a description.")
 
+    st.divider()
+    with st.expander("🛠️ Debug: Insert Own Plan"):
+        plan_input = st.text_area("Implementation Plan", height=150)
+        if st.button("Insert Plan & Skip"):
+            if plan_input:
+                state["request"] = "Manual Plan Insertion"
+                state["plan"] = plan_input
+                state["planner_reasoning"] = "Manually inserted via debug tool."
+                state["stage"] = "PLAN_APPROVAL"
+                st.success("Plan inserted! Skipping to approval...")
+                st.rerun()
+            else:
+                st.error("Please enter a plan.")
+
 
 def render_planning_stage(state):
     with st.spinner("Agent is generating plan..."):
@@ -114,7 +128,7 @@ def render_coding_stage(state):
     with st.spinner("Generating CAD model and self-validating..."):
         try:
             # Iterative Loop for internal validation
-            for i in range(3):
+            for i in range(MAX_ATTEMPTS):
                 # 1. Generate Code
                 coder_result = coder_node(
                     {
@@ -151,7 +165,7 @@ def render_coding_stage(state):
                     state["errors"] = val_result["errors"]
 
             st.error(
-                f"Failed to generate valid CAD model after 3 attempts. Last error: {state['errors']}"
+                f"Failed to generate valid CAD model after {MAX_ATTEMPTS} attempts. Last error: {state['errors']}"
             )
             state["stage"] = "PLAN_APPROVAL"  # Go back to plan
         except Exception as e:
