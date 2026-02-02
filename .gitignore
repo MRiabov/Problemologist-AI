@@ -37,3 +37,6 @@ kitty-specs/**/tasks/*.md
 .env
 .cache/
 .png
+
+/workspace/
+/worspace_gen/
