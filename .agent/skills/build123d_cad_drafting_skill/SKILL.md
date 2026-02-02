@@ -1,5 +1,5 @@
 ---
-name: build123d
+name: build123d_cad_drafting_skill
 description: Expert knowledge for CAD modeling using the build123d library.
 ---
 
