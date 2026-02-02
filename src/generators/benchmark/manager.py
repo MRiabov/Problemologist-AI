@@ -88,36 +88,23 @@ def generate(
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
                     
-                                        # Save MJCF
+                    # Save MJCF
+                    xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
+                    with open(xml_path, "w") as f:
+                        f.write(mjcf_xml)
                     
-                                        xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
+                    # Render images
+                    image_prefix = os.path.join(scenario_dir, "images", f"preview_{seed}")
+                    image_paths = render_scenario(mjcf_xml, image_prefix)
+                    # Convert absolute paths back to relative for manifest
+                    rel_image_paths = [os.path.relpath(p, scenario_dir) for p in image_paths]
                     
-                                        with open(xml_path, "w") as f:
-                    
-                                            f.write(mjcf_xml)
-                    
-                                        
-                    
-                                        # Render images
-                    
-                                        image_prefix = os.path.join(scenario_dir, "images", f"preview_{seed}")
-                    
-                                        image_paths = render_scenario(mjcf_xml, image_prefix)
-                    
-                                        # Convert absolute paths back to relative for manifest
-                    
-                                        rel_image_paths = [os.path.relpath(p, scenario_dir) for p in image_paths]
-                    
-                                        
-                    
-                                        # Mock STL saving
-                    
-                     (since build123d normally exports them, 
-                    # but our MJCF might already contain mesh references)
+                    # Mock STL saving
+                    # (since build123d normally exports them, but our MJCF might already contain mesh references)
                     # For now we follow the requirement: Save assets/mesh_{seed}.stl
                     stl_path = os.path.join(scenario_dir, "assets", f"mesh_{seed}.stl")
                     with open(stl_path, "w") as f:
-                        f.write("MOCK STL DATA") # Placeholder for now as build function returns XML
+                        f.write("MOCK STL DATA") # Placeholder
                     
                     # Save Manifest
                     manifest: ScenarioManifest = {

@@ -4,6 +4,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 
 from src.agent.utils.llm import get_model
+from src.agent.utils.config import Config
 from src.generators.benchmark.prompts import PLANNER_PROMPT, CODER_PROMPT, CRITIC_PROMPT, FIXER_PROMPT
 from src.generators.benchmark.validator import validate_mjcf
 
@@ -23,7 +24,7 @@ class GeneratorState(TypedDict):
 def planner_node(state: GeneratorState) -> Dict[str, Any]:
     """Generates a plan based on the user request."""
     # print(f"--- PLANNER NODE (Attempt {state.get('attempts', 0)}) ---")
-    model = get_model("gpt-4o")
+    model = get_model(Config.LLM_MODEL)
 
     messages = [
         SystemMessage(content=PLANNER_PROMPT.format(request=state["request"])),
@@ -37,7 +38,7 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
 def coder_node(state: GeneratorState) -> Dict[str, Any]:
     """Generates or fixes code based on plan and errors."""
     # print(f"--- CODER NODE (Attempt {state.get('attempts', 0)}) ---")
-    model = get_model("gpt-4o")
+    model = get_model(Config.LLM_MODEL)
 
     errors = state.get("errors")
     code = state.get("code")

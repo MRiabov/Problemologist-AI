@@ -47,10 +47,11 @@ benchmark_generator:
     Request: {request}
 
     Output a structured plan including:
-    1. Components (links, joints).
-    2. Key geometric relationships.
-    3. Randomization parameters (if any).
-    4. Constraints or physics properties required.
+    1. **Learning Objectives**: What is this benchmark supposed to test or teach the AI model? (e.g., precision, friction management, non-linear kinematic chains).
+    2. **Rough Geometry**: Describe the shapes, sizes, and layout.
+    3. **Kinematic Structure**: Components (links, joints) and their relationships.
+    4. **Self-Verification**: Explicitly plan how to ensure parts do not collide with themselves at spawn (initial state) and during normal operation.
+    5. **Randomization**: Key parameters to vary (seed-based).
   coder: "You are an expert in build123d and Python.\nYour task is to write a Python script that defines a function `build(seed: int = 0)`.\nThe script must:\n1. Use `build123d` to create 3D geometry.\n2. NOT show the geometry using `show()` or `show_object()`.\n3. Return the MJCF XML string representation of the model. \n   \nStart your script with imports.\nThe function signature: `def build(seed: int = 0) -> str:`\n\nPlan:\n{plan}\n\nPrevious Errors (if any):\n{errors}\n"
   critic: |
     Review the validation error and provide instructions to fix the code.
