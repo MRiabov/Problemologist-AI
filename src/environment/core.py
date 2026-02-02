@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+import json
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
@@ -187,56 +188,127 @@ class CADEnv(gym.Env):
         if not os.path.exists(script_path):
             return -10.0, "Error: No design.py found.", False
 
-        # 1. Load and execute script to get Part
-        locs = {}
-        try:
-            with open(script_path, "r", encoding="utf-8") as f:
-                code = f.read()
+        # 1. Process design.py in Sandbox
+        runner_filename = "submit_runner.py"
+        runner_path = os.path.join(self.workspace_dir, runner_filename)
+        stl_filename = "design.stl"
+        stl_path = os.path.join(self.workspace_dir, stl_filename)
 
-            import build123d as bd
+        runner_script = f"""
+import os
+import sys
+import json
+import build123d as bd
+from src.workbenches.print_3d import Print3DWorkbench
+from src.compiler import geometry
 
-            # Execution context with common build123d symbols
-            ctx = {
-                "bd": bd,
-                "Part": bd.Part,
-                "Box": bd.Box,
-                "Sphere": bd.Sphere,
-                "Cylinder": bd.Cylinder,
-                "Compound": bd.Compound,
-                "Solid": bd.Solid,
-                "Rotation": bd.Rotation,
-                "Location": bd.Location,
-            }
-            exec(code, ctx, locs)
+# Add workspace to path
+sys.path.append("/workspace")
 
-            part = None
-            for val in locs.values():
-                if isinstance(val, bd.Part):
-                    part = val
-                    break
-                elif isinstance(val, (bd.Solid, bd.Compound, bd.Shape)):
-                    # Wrap raw shapes in a Part
-                    part = bd.Part()
-                    part.add(val)
-                    break
+result = {{
+    "success": False,
+    "error": None,
+    "violations": [],
+    "stl_path": None
+}}
 
-            if not part:
-                return -10.0, "Error: No Part or Solid found in script.", False
-
-        except Exception as e:
-            return -10.0, f"Error executing script: {str(e)}", False
-
-        # 2. WP02: Validate (Manifold/SingleBody)
-        violations = self.workbench.validate(part)
-        if violations:
-            return -10.0, f"Validation Failed: {', '.join(map(str, violations))}", False
-
-        # 3. WP02: Export Mesh
-        stl_path = os.path.join(self.workspace_dir, "design.stl")
-        try:
+try:
+    # 1. Load design.py
+    locs = {{}}
+    ctx = {{
+        "bd": bd,
+        "Part": bd.Part,
+        "Box": bd.Box,
+        "Sphere": bd.Sphere,
+        "Cylinder": bd.Cylinder,
+        "Compound": bd.Compound,
+        "Solid": bd.Solid,
+        "Rotation": bd.Rotation,
+        "Location": bd.Location,
+    }}
+    
+    with open("/workspace/design.py", "r", encoding="utf-8") as f:
+        code = f.read()
+    exec(code, ctx, locs)
+    
+    # 2. Extract Part
+    part = None
+    for val in locs.values():
+        if isinstance(val, bd.Part):
+            part = val
+            break
+        elif isinstance(val, (bd.Solid, bd.Compound, bd.Shape)):
+            part = bd.Part()
+            part.add(val)
+            break
+            
+    if not part:
+        result["error"] = "No Part or Solid found in script."
+    else:
+        # 3. Validate
+        workbench = Print3DWorkbench()
+        violations = workbench.validate(part)
+        result["violations"] = [str(v) for v in violations]
+        
+        if not violations:
+            # 4. Export Mesh
+            stl_path = "/workspace/{stl_filename}"
             geometry.export_mesh(part, stl_path)
+            result["success"] = True
+            result["stl_path"] = "{stl_filename}"
+
+except Exception as e:
+    result["error"] = str(e)
+
+print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
+"""
+
+        try:
+            # Write runner
+            with open(runner_path, "w", encoding="utf-8") as f:
+                f.write(runner_script)
+
+            # Run in sandbox with source mounted for workbench/geometry access
+            stdout, stderr, returncode = tools._SANDBOX.run_script(
+                runner_filename,
+                mount_src=True,
+                timeout=60,  # Grater timeout for submission
+            )
+
+            # Clean up runner
+            if os.path.exists(runner_path):
+                os.remove(runner_path)
+
+            if "SUBMIT_RESULT:" not in stdout:
+                error_msg = f"Sandbox execution failed: {stderr}"
+                return -10.0, error_msg, False
+
+            # Parse result
+            result_line = [
+                line for line in stdout.split("\n") if "SUBMIT_RESULT:" in line
+            ][0]
+            res_data = json.loads(result_line.split("SUBMIT_RESULT:")[1])
+
+            if res_data["error"]:
+                return -10.0, f"Error processing design: {res_data['error']}", False
+
+            if res_data["violations"]:
+                return (
+                    -10.0,
+                    f"Validation Failed: {', '.join(res_data['violations'])}",
+                    False,
+                )
+
+            if not res_data["success"]:
+                return (
+                    -10.0,
+                    "Submission processing failed without specific error.",
+                    False,
+                )
+
+            # STL is now in workspace_dir
         except Exception as e:
-            return -10.0, f"Error exporting mesh: {str(e)}", False
+            return -10.0, f"Error during sandboxed submission: {str(e)}", False
 
         # 4. WP03: Simulation
         try:

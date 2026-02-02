@@ -4,10 +4,14 @@ import sys
 from src.rag import search as rag_search
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
+from src.environment.sandbox import PodmanSandbox
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = os.path.abspath("workspace")
 os.makedirs(WORKSPACE_DIR, exist_ok=True)
+
+# Initialize Sandbox
+_SANDBOX = PodmanSandbox(WORKSPACE_DIR)
 
 # Initialize COTS Part Index (Singleton)
 _PART_INDEX = PartIndex()
@@ -15,9 +19,10 @@ _PART_INDEX.register_provider("bd_warehouse", BDWarehouseProvider())
 
 
 def set_workspace_dir(path: str):
-    global WORKSPACE_DIR
+    global WORKSPACE_DIR, _SANDBOX
     WORKSPACE_DIR = os.path.abspath(path)
     os.makedirs(WORKSPACE_DIR, exist_ok=True)
+    _SANDBOX = PodmanSandbox(WORKSPACE_DIR)
 
 
 def write_script(content: str, filename: str = "design.py") -> str:
@@ -72,31 +77,28 @@ def preview_design(filename: str = "design.py") -> str:
     """
     filename = os.path.basename(filename)
     script_path = os.path.join(WORKSPACE_DIR, filename)
-    output_path = os.path.join(WORKSPACE_DIR, f"{os.path.splitext(filename)[0]}.png")
 
     if not os.path.exists(script_path):
         return f"Error: File {filename} does not exist."
 
-    # For MVP, we will use build123d's export_svg as a fallback if real rendering is hard
-    # But let's try to implement a simple capture if possible.
-    # Since we don't have a full CAD engine running here, we'll simulate the execution.
+    # Use PodmanSandbox for execution
+    # We create a temporary runner script in the workspace
+    runner_filename = f"runner_{filename}"
+    runner_path = os.path.join(WORKSPACE_DIR, runner_filename)
 
     runner_script = f"""
 import os
 import sys
-# WARNING: This script uses exec() which is unsafe for untrusted code.
-# In a production environment, this should be run in a sandboxed container.
-
 import build123d as bd
 from build123d import ExportSVG, Drawing, Unit
 
 # Add workspace to path
-sys.path.append("{WORKSPACE_DIR}")
+sys.path.append("/workspace")
 
 # Execution context
 locs = {{}}
 try:
-    with open("{script_path}", "r") as f:
+    with open("/workspace/{filename}", "r") as f:
         code = f.read()
     exec(code, globals(), locs)
     
@@ -118,8 +120,8 @@ try:
             
     if export_obj:
         # Export as SVG using built-in exporters
-        svg_filename = "{os.path.splitext(os.path.basename(filename))[0]}.svg"
-        svg_path = os.path.join("{WORKSPACE_DIR}", svg_filename)
+        svg_filename = "{os.path.splitext(filename)[0]}.svg"
+        svg_path = os.path.join("/workspace", svg_filename)
         
         try:
             # Create a drawing (projection) for 3D shapes
@@ -128,16 +130,11 @@ try:
             exporter = ExportSVG(unit=Unit.MM)
             exporter.add_layer("visible", line_color=(0,0,0), line_weight=0.2)
             exporter.add_shape(drawing.visible_lines, layer="visible")
-            # exporter.add_layer("hidden", line_color=(100,100,100), line_type=bd.LineType.DASHED)
-            # exporter.add_shape(drawing.hidden_lines, layer="hidden")
             
             exporter.write(svg_path)
             print(f"RENDER_SUCCESS:{{svg_filename}}")
         except Exception as e:
-            # Fallback for 2D shapes that might not work with Drawing(project) directly?
-            # Drawing() should handle Shape, so it should be fine.
             print(f"RENDER_EXCEPTION:{{str(e)}}")
-
     else:
         print("RENDER_ERROR: No 3D object found in script (Solid, Compound, or Shape)")
 except Exception as e:
@@ -145,34 +142,30 @@ except Exception as e:
 """
 
     try:
-        # Run the runner in a separate process to avoid crashing the main process
-        result = subprocess.run(
-            [sys.executable, "-c", runner_script],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        # Write runner script
+        with open(runner_path, "w") as f:
+            f.write(runner_script)
 
-        if "RENDER_SUCCESS" in result.stdout:
-            # Extract filename from stdout if needed
+        # Run in sandbox
+        stdout, stderr, returncode = _SANDBOX.run_script(runner_filename)
+
+        # Clean up runner script
+        if os.path.exists(runner_path):
+            os.remove(runner_path)
+
+        if "RENDER_SUCCESS" in stdout:
             try:
-                # Stdout format: ... RENDER_SUCCESS:filename.svg ...
                 output_line = [
-                    line
-                    for line in result.stdout.split("\n")
-                    if "RENDER_SUCCESS" in line
+                    line for line in stdout.split("\n") if "RENDER_SUCCESS" in line
                 ][0]
                 generated_file = output_line.split("RENDER_SUCCESS:")[1].strip()
                 return f"Preview generated: {generated_file}"
             except IndexError:
-                # Fallback if parsing fails but success code found (shouldn't happen)
-                return f"Preview generated: {os.path.basename(output_path)}"
+                return "Preview generated (Filename unknown)"
         else:
-            error = result.stdout + result.stderr
+            error = stdout + stderr
             return f"Error generating preview: {error}"
 
-    except subprocess.TimeoutExpired:
-        return "Error: Preview generation timed out."
     except Exception as e:
         return f"Error: {str(e)}"
 
