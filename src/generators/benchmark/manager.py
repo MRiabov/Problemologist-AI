@@ -38,6 +38,8 @@ def execute_build(
         "from src.simulation_engine.builder import SceneCompiler\n\n"
         "_ASSET_DIR = None\n\n"
         "def to_mjcf(env_compound: Union[Compound, Shape, list], agent_compound: Union[Compound, Shape, list] = None, agent_joints: list = None, env_labels: list[str] = None, agent_labels: list[str] = None) -> str:\n"
+        "    from build123d import Compound\n"
+        "    from build123d.topology import Shape\n"
         "    # Use fixed absolute path for sandbox consistency\n"
         "    target_dir = _ASSET_DIR or '/workspace/.agent_storage/temp_assets'\n"
         "    import os\n"
@@ -47,7 +49,7 @@ def execute_build(
         "    def ensure_compound(obj):\n"
         "        if obj is None: return None\n"
         "        if isinstance(obj, list): return Compound(children=obj)\n"
-        "        if isinstance(obj, Compound): return obj\n"
+        "        if isinstance(obj, (Compound, Shape)): return obj\n"
         "        return Compound(children=[obj])\n"
         "        \n"
         "    env_c = ensure_compound(env_compound)\n"
@@ -60,9 +62,12 @@ def execute_build(
     workspace = os.path.abspath("workspace_gen")
     os.makedirs(workspace, exist_ok=True)
     
-    # Ensure asset_dir exists in workspace if provided
+    # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files
     if asset_dir:
         host_asset_path = os.path.join(workspace, asset_dir)
+        if os.path.exists(host_asset_path):
+            import shutil
+            shutil.rmtree(host_asset_path)
         os.makedirs(host_asset_path, exist_ok=True)
 
     sandbox = PodmanSandbox(workspace)
@@ -206,12 +211,16 @@ def generate(
                 # 2. Batch Processing & Randomization
                 # We use a temporary assets dir for validation
                 rel_temp_assets = ".agent_storage/temp_assets"
+                print(f"DEBUG: Executing build for seed {seed}")
                 mjcf_xml = execute_build(template_code, seed, scale_factors=scale_factors, asset_dir=rel_temp_assets)
 
                 # 3. Validation
-                report = validate_mjcf(mjcf_xml)
+                print(f"DEBUG: Validating MJCF for seed {seed}")
+                temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
+                report = validate_mjcf(mjcf_xml, asset_dir=temp_assets_path)
 
                 if report["is_valid"]:
+                    print(f"DEBUG: Seed {seed} is valid, saving artifacts")
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
 
@@ -269,6 +278,7 @@ def generate(
                     valid_variations += 1
                     progress.update(task, advance=1)
                 else:
+                    print(f"DEBUG: Seed {seed} FAILED validation: {report['error_message']}")
                     console.print(
                         f"[yellow]Variation with seed {seed} failed validation: {report['error_message']}[/yellow]"
                     )
