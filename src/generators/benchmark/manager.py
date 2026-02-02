@@ -2,7 +2,7 @@ import os
 import random
 import json
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from pathlib import Path
 import yaml
 import typer
@@ -31,7 +31,6 @@ def execute_build(
 ) -> str:
     """Executes the build(seed, scale_factors) function from the provided code inside a sandbox."""
     # Prepend hardcoded imports and helpers
-    # We use a fixed absolute path inside the container for MuJoCo consistency
     final_code = (
         "from build123d import *\n"
         "from build123d.topology import Shape\n"
@@ -45,27 +44,15 @@ def execute_build(
         "    os.makedirs(target_dir, exist_ok=True)\n"
         "    compiler = SceneCompiler(asset_dir=target_dir)\n"
         "    \n"
-    def ensure_compound(obj, labels=None):
-        if obj is None: return None
-        if isinstance(obj, list):
-            c = Compound(children=obj)
-        elif isinstance(obj, Compound):
-            c = obj
-        else:
-            c = Compound(children=[obj])
-            
-        if labels:
-            solids = list(c.solids())
-            for i, solid in enumerate(solids):
-                if i < len(labels): 
-                    # Set the attribute directly on the solid object
-                    setattr(solid, "label", labels[i])
-        return c
-
+        "    def ensure_compound(obj):\n"
+        "        if obj is None: return None\n"
+        "        if isinstance(obj, list): return Compound(children=obj)\n"
+        "        if isinstance(obj, Compound): return obj\n"
+        "        return Compound(children=[obj])\n"
         "        \n"
-        "    env_c = ensure_compound(env_compound, env_labels)\n"
-        "    agent_c = ensure_compound(agent_compound, agent_labels)\n"
-        "    return compiler.compile(env_c, agent_c, agent_joints)\n\n"
+        "    env_c = ensure_compound(env_compound)\n"
+        "    agent_c = ensure_compound(agent_compound)\n"
+        "    return compiler.compile(env_c, agent_c, agent_joints, env_labels, agent_labels)\n\n"
         + code
     )
 
@@ -75,7 +62,6 @@ def execute_build(
     
     # Ensure asset_dir exists in workspace if provided
     if asset_dir:
-        # If it's the .agent_storage path, ensure it exists on host too for mounting
         host_asset_path = os.path.join(workspace, asset_dir)
         os.makedirs(host_asset_path, exist_ok=True)
 
@@ -109,7 +95,6 @@ try:
     if "scale_factors" in sig.parameters:
         res = template_build.build(seed, scale_factors=scale_factors)
     elif "scale" in sig.parameters:
-        # Backward compatibility for 'scale' name
         res = template_build.build(seed, scale=scale_factors)
     else:
         res = template_build.build(seed)
@@ -216,25 +201,25 @@ def generate(
             sy = random.uniform(0.5, 2.0)
             sz = random.uniform(0.5, 2.0)
             scale_factors = (sx, sy, sz)
-            
+
             try:
                 # 2. Batch Processing & Randomization
                 # We use a temporary assets dir for validation
                 rel_temp_assets = ".agent_storage/temp_assets"
                 mjcf_xml = execute_build(template_code, seed, scale_factors=scale_factors, asset_dir=rel_temp_assets)
-                
+
                 # 3. Validation
                 report = validate_mjcf(mjcf_xml)
-                
+
                 if report["is_valid"]:
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
-                    
+
                     # Save MJCF
                     xml_path = os.path.join(scenario_dir, f"scene_{seed}.xml")
                     with open(xml_path, "w") as f:
                         f.write(mjcf_xml)
-                    
+
                     # Move temp assets to final assets
                     temp_assets_path = os.path.join("workspace_gen", rel_temp_assets)
                     final_assets_path = os.path.join(scenario_dir, "assets")
@@ -244,7 +229,7 @@ def generate(
                         for mesh_file in os.listdir(temp_assets_path):
                             shutil.move(os.path.join(temp_assets_path, mesh_file), os.path.join(final_assets_path, mesh_file))
                             generated_meshes.append(f"assets/{mesh_file}")
-                    
+
                     # Render images
                     image_prefix = os.path.join(
                         scenario_dir, "images", f"preview_{seed}"

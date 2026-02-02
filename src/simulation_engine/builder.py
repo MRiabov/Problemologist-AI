@@ -146,25 +146,33 @@ class SceneCompiler:
         env_compound: Compound,
         agent_compound: Optional[Compound] = None,
         agent_joints: Optional[List[Dict]] = None,
+        env_labels: Optional[List[str]] = None,
+        agent_labels: Optional[List[str]] = None,
     ) -> str:
         """
         Compiles the environment and agent into an MJCF XML string.
         """
         # Process Environment (T006)
-        self._process_environment(env_compound)
+        self._process_environment(env_compound, env_labels)
 
         # Process Agent (T007)
         if agent_compound:
-            self._process_agent(agent_compound, agent_joints)
+            self._process_agent(agent_compound, agent_joints, agent_labels)
 
         # Convert to string
         return ET.tostring(self.root, encoding="unicode", method="xml")
 
-    def _process_environment(self, env_compound: Compound):
+    def _process_environment(self, env_compound: Compound, labels: Optional[List[str]] = None):
         """Processes the environment solids (zones and obstacles)."""
         for i, solid in enumerate(env_compound.solids()):
-            # build123d objects might have a label attribute set by the user
-            label = getattr(solid, "label", None)
+            # Use explicit label if provided, otherwise check object attribute
+            label = None
+            if labels and i < len(labels):
+                label = labels[i]
+            
+            if not label:
+                label = getattr(solid, "label", None)
+            
             if not label:
                 label = f"solid_{i}"
 
@@ -240,7 +248,7 @@ class SceneCompiler:
         )
 
     def _process_agent(
-        self, agent_compound: Compound, agent_joints: Optional[List[Dict]]
+        self, agent_compound: Compound, agent_joints: Optional[List[Dict]], labels: Optional[List[str]] = None
     ):
         """Injects agent bodies, joints, and actuators."""
         # T007: Implement Actuator Injection
@@ -251,13 +259,14 @@ class SceneCompiler:
         agent_root = ET.SubElement(self.worldbody, "body", name=agent_name, pos="0 0 0")
 
         # Add agent geoms (simplified: treat whole compound as one body if no joints)
-        # In a real scenario, we might want to split it.
         if not agent_joints:
-            self._add_agent_meshes_to_body(agent_compound, agent_root, "agent_base")
+            base_label = labels[0] if labels else "agent_base"
+            self._add_agent_meshes_to_body(agent_compound, agent_root, base_label)
         else:
             # If we have joints, we need to split the meshes.
             # For now, let's just add the base part (anything not in joints)
-            self._add_agent_meshes_to_body(agent_compound, agent_root, "agent_base")
+            base_label = labels[0] if labels else "agent_base"
+            self._add_agent_meshes_to_body(agent_compound, agent_root, base_label)
 
             for i, j_data in enumerate(agent_joints):
                 j_name = j_data.get("name", f"joint_{i}")
