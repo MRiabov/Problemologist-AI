@@ -7,6 +7,7 @@ import trimesh
 from build123d import Compound, Solid, export_stl
 
 from src.cots.utils import get_description
+from src.generators.benchmark.constants import UNIT_SCALE
 
 
 class MeshProcessor:
@@ -145,7 +146,7 @@ class SceneCompiler:
             "geom",
             name="floor",
             type="plane",
-            size="10 10 .1",
+            size=f"{1000 * UNIT_SCALE} {1000 * UNIT_SCALE} {0.1 * UNIT_SCALE}",
             material="grid",
             condim="3",
             conaffinity="15",
@@ -199,6 +200,8 @@ class SceneCompiler:
     def _add_zone_site(self, solid: Solid, label: str):
         """Adds a non-colliding visual site for a zone."""
         center = solid.center()
+        c_x, c_y, c_z = center.X * UNIT_SCALE, center.Y * UNIT_SCALE, center.Z * UNIT_SCALE
+        
         # For zones, we use a site with a specific color
         rgba = "0 1 0 0.3"  # Default green
         if "goal" in label:
@@ -214,8 +217,8 @@ class SceneCompiler:
             "geom",
             name=label,
             type="box",  # Approximate with box for now or use mesh if complex
-            pos=f"{center.X} {center.Y} {center.Z}",
-            size="0.05 0.05 0.05",  # Should ideally match solid bounds
+            pos=f"{c_x} {c_y} {c_z}",
+            size=f"{50 * UNIT_SCALE} {50 * UNIT_SCALE} {50 * UNIT_SCALE}",  # Default 50mm box
             rgba=rgba,
             conaffinity="0",
             contype="0",
@@ -227,8 +230,8 @@ class SceneCompiler:
             self.worldbody,
             "site",
             name=f"site_{label}",
-            pos=f"{center.X} {center.Y} {center.Z}",
-            size="0.01",
+            pos=f"{c_x} {c_y} {c_z}",
+            size=f"{10 * UNIT_SCALE}", # 10mm
             rgba=rgba,
         )
 
@@ -296,7 +299,15 @@ class SceneCompiler:
 
             for i, j_data in enumerate(agent_joints):
                 j_name = j_data.get("name", f"joint_{i}")
-                j_pos = j_data.get("pos", "0 0 0")
+                j_pos_raw = j_data.get("pos", "0 0 0")
+                
+                # Scale position
+                try:
+                    coords = [float(x) * UNIT_SCALE for x in j_pos_raw.split()]
+                    j_pos = f"{coords[0]} {coords[1]} {coords[2]}"
+                except (ValueError, IndexError):
+                    j_pos = "0 0 0"
+
                 j_axis = j_data.get("axis", "0 0 1")
                 j_type = j_data.get("type", "hinge")
 
@@ -440,7 +451,7 @@ class SceneCompiler:
 
         # 2. Add Rotor in a child body
         rotor_center = rotor_solid.center()
-        center_str = f"{rotor_center.X} {rotor_center.Y} {rotor_center.Z}"
+        center_str = f"{rotor_center.X * UNIT_SCALE} {rotor_center.Y * UNIT_SCALE} {rotor_center.Z * UNIT_SCALE}"
 
         rotor_body = ET.SubElement(
             body_element, "body", name=f"{prefix}_rotor_body", pos="0 0 0"
