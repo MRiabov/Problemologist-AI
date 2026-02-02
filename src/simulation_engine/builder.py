@@ -1,10 +1,10 @@
-import os
 import io
+import os
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Optional
+
 import trimesh
-from build123d import Solid, Compound, export_stl
+from build123d import Compound, Solid, export_stl
 
 
 class MeshProcessor:
@@ -55,7 +55,7 @@ class SceneCompiler:
     Assembles MJCF (MuJoCo XML) from CAD geometry and agent specifications.
     """
 
-    def __init__(self, asset_dir: Optional[str] = None):
+    def __init__(self, asset_dir: str | None = None):
         self.asset_dir = asset_dir
         if self.asset_dir and not os.path.exists(self.asset_dir):
             os.makedirs(self.asset_dir)
@@ -144,10 +144,10 @@ class SceneCompiler:
     def compile(
         self,
         env_compound: Compound,
-        agent_compound: Optional[Compound] = None,
-        agent_joints: Optional[List[Dict]] = None,
-        env_labels: Optional[List[str]] = None,
-        agent_labels: Optional[List[str]] = None,
+        agent_compound: Compound | None = None,
+        agent_joints: list[dict] | None = None,
+        env_labels: list[str] | None = None,
+        agent_labels: list[str] | None = None,
     ) -> str:
         """
         Compiles the environment and agent into an MJCF XML string.
@@ -162,7 +162,7 @@ class SceneCompiler:
         # Convert to string
         return ET.tostring(self.root, encoding="unicode", method="xml")
 
-    def _process_environment(self, env_compound: Compound, labels: Optional[List[str]] = None):
+    def _process_environment(self, env_compound: Compound, labels: list[str] | None = None):
         """Processes the environment solids (zones and obstacles)."""
         for i, solid in enumerate(env_compound.solids()):
             # Use explicit label if provided, otherwise check object attribute
@@ -248,7 +248,7 @@ class SceneCompiler:
         )
 
     def _process_agent(
-        self, agent_compound: Compound, agent_joints: Optional[List[Dict]], labels: Optional[List[str]] = None
+        self, agent_compound: Compound, agent_joints: list[dict] | None, labels: list[str] | None = None
     ):
         """Injects agent bodies, joints, and actuators."""
         # T007: Implement Actuator Injection

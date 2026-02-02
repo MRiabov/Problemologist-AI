@@ -1,14 +1,12 @@
+import json
 import os
 import time
-import uuid
-import json
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import gymnasium as gym
-import numpy as np
 from gymnasium import spaces
 
-from src.compiler import geometry, mujoco_bridge
+from src.compiler import mujoco_bridge
 from src.environment import persistence, tools
 from src.workbenches.print_3d import Print3DWorkbench
 
@@ -76,8 +74,8 @@ class CADEnv(gym.Env):
         }
 
     def reset(
-        self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        self, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         super().reset(seed=seed)
 
         # Create new episode in database
@@ -100,8 +98,8 @@ class CADEnv(gym.Env):
         return self.last_obs, {}
 
     def step(
-        self, action: Dict[str, Any]
-    ) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
+        self, action: dict[str, Any]
+    ) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         self.step_count += 1
         start_time = time.time()
 
@@ -150,7 +148,7 @@ class CADEnv(gym.Env):
             else:
                 tool_output = f"Unknown tool index: {tool_idx}"
         except Exception as e:
-            tool_output = f"Exception during tool execution: {str(e)}"
+            tool_output = f"Exception during tool execution: {e!s}"
             self.last_obs["error"] = str(e)
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -175,14 +173,14 @@ class CADEnv(gym.Env):
         # Update observation
         script_path = os.path.join(self.workspace_dir, "design.py")
         if os.path.exists(script_path):
-            with open(script_path, "r", encoding="utf-8") as f:
+            with open(script_path, encoding="utf-8") as f:
                 self.last_obs["code"] = f.read()
 
         self.last_obs["last_output"] = tool_output
 
         return self.last_obs, reward, terminated, truncated, {}
 
-    def _submit_design(self) -> Tuple[float, str, bool]:
+    def _submit_design(self) -> tuple[float, str, bool]:
         """Handles the full submission, validation, and simulation pipeline."""
         script_path = os.path.join(self.workspace_dir, "design.py")
         if not os.path.exists(script_path):
@@ -308,7 +306,7 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
 
             # STL is now in workspace_dir
         except Exception as e:
-            return -10.0, f"Error during sandboxed submission: {str(e)}", False
+            return -10.0, f"Error during sandboxed submission: {e!s}", False
 
         # 4. WP03: Simulation
         try:
@@ -343,7 +341,7 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             return reward, report, True
 
         except Exception as e:
-            return -10.0, f"Error during simulation: {str(e)}", False
+            return -10.0, f"Error during simulation: {e!s}", False
 
     def render(self):
         return self.last_obs["last_render"]

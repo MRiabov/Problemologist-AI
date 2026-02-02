@@ -1,4 +1,5 @@
-from typing import Dict, Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -12,10 +13,10 @@ class SimulationRequest(BaseModel):
     duration: float = Field(
         default=5.0, description="Simulation duration in logic seconds."
     )
-    goal_pos: Optional[tuple[float, float, float]] = Field(
+    goal_pos: tuple[float, float, float] | None = Field(
         None, description="Optional success zone (x, y, z)."
     )
-    config: Dict[str, Any] = Field(
+    config: dict[str, Any] = Field(
         default_factory=dict, description="Additional configuration parameters."
     )
 
@@ -29,10 +30,10 @@ class SimulationResponse(BaseModel):
     outcome: str = Field(
         ..., description="Status string: success, timeout, crash, or error."
     )
-    result: Optional[Dict[str, Any]] = Field(
+    result: dict[str, Any] | None = Field(
         None, description="Detailed metrics if successful."
     )
-    error: Optional[str] = Field(None, description="Error message if failed.")
-    error_type: Optional[str] = Field(
+    error: str | None = Field(None, description="Error message if failed.")
+    error_type: str | None = Field(
         None, description="The type of error: TimeoutError, CrashError, etc."
     )

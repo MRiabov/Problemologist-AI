@@ -1,6 +1,7 @@
-import pytest
-import os
 import xml.etree.ElementTree as ET
+
+import pytest
+
 from src.compiler.mujoco_bridge import MujocoBridge
 
 

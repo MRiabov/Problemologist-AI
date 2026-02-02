@@ -1,7 +1,9 @@
-import pytest
 import asyncio
 from unittest.mock import MagicMock, patch
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolCall
+
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
 from src.agent.graph.graph import build_graph
 
 
@@ -21,9 +23,9 @@ async def test_graph_simple_run():
 
         if "Lead Mechanical Engineer (Planner)" in system_msg:
             return AIMessage(content="1. Design a cube. 2. Export it.")
-        elif "CAD Engineer (Actor)" in system_msg:
+        if "CAD Engineer (Actor)" in system_msg:
             return AIMessage(content="I have started the design.")
-        elif "Design Reviewer (Critic)" in system_msg:
+        if "Design Reviewer (Critic)" in system_msg:
             return AIMessage(content="Looks good.")
         return AIMessage(content="Default response")
 
@@ -72,7 +74,7 @@ async def test_graph_with_tool_call():
         if "Lead Mechanical Engineer (Planner)" in system_msg:
             call_count["planner"] += 1
             return AIMessage(content="Plan: Use preview_design")
-        elif "CAD Engineer (Actor)" in system_msg:
+        if "CAD Engineer (Actor)" in system_msg:
             call_count["actor"] += 1
             if call_count["actor"] == 1:
                 return AIMessage(
@@ -86,9 +88,8 @@ async def test_graph_with_tool_call():
                         }
                     ],
                 )
-            else:
-                return AIMessage(content="Design finalized.")
-        elif "Design Reviewer (Critic)" in system_msg:
+            return AIMessage(content="Design finalized.")
+        if "Design Reviewer (Critic)" in system_msg:
             return AIMessage(content="The preview looks perfect. Task complete.")
         return AIMessage(content="Default response")
 

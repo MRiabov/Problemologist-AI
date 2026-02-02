@@ -1,10 +1,9 @@
-import os
 import json
-import subprocess
-from typing import Optional, List
-import mujoco
+import os
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
+
+import mujoco
 import numpy as np
 
 
@@ -14,7 +13,7 @@ class SimResult:
     energy: float
     success: bool
     damage: float
-    replay_data: Optional[list[dict]] = None
+    replay_data: list[dict] | None = None
 
 
 class MujocoBridge:
@@ -36,7 +35,7 @@ class MujocoBridge:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Template not found: {path}")
 
-        with open(path, "r") as f:
+        with open(path) as f:
             return f.read()
 
     def inject_design(
@@ -96,7 +95,7 @@ class MujocoBridge:
         xml_string: str,
         duration: float = 5.0,
         agent_script: str = "",
-        goal_pos: Optional[tuple[float, float, float]] = None,
+        goal_pos: tuple[float, float, float] | None = None,
         goal_size: float = 0.5,
     ) -> SimResult:
         """Runs the simulation in a sandbox."""
@@ -117,10 +116,10 @@ from src.compiler.mujoco_bridge import MujocoBridge, SimResult
 sys.path.append("/workspace")
 
 bridge = MujocoBridge()
-xml_string = {repr(xml_string)}
-agent_script = {repr(agent_script)}
-goal_pos = {repr(goal_pos)}
-goal_size = {repr(goal_size)}
+xml_string = {xml_string!r}
+agent_script = {agent_script!r}
+goal_pos = {goal_pos!r}
+goal_size = {goal_size!r}
 duration = {duration}
 
 sim_result = bridge._run_simulation_internal(
@@ -181,7 +180,7 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
         xml_string: str,
         duration: float = 5.0,
         agent_script: str = "",
-        goal_pos: Optional[tuple[float, float, float]] = None,
+        goal_pos: tuple[float, float, float] | None = None,
         goal_size: float = 0.5,
     ) -> SimResult:
         """Actual simulation logic (to be run inside sandbox)."""

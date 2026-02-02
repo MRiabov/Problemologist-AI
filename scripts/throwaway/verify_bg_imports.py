@@ -1,4 +1,4 @@
-from src.generators.benchmark.agent import planner_node, coder_node, validator_node
+from src.generators.benchmark.agent import coder_node, planner_node, validator_node
 from src.generators.benchmark.renderer import render_scenario
 
 

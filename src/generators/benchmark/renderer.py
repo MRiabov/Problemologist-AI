@@ -1,13 +1,11 @@
-import os
+
 import mujoco
-import numpy as np
 from PIL import Image
-from typing import List
 
 
 def render_scenario(
     xml_string: str, output_path_prefix: str, width: int = 640, height: int = 480
-) -> List[str]:
+) -> list[str]:
     """
     Renders a MuJoCo scenario from multiple angles and saves the images.
 

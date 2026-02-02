@@ -1,12 +1,12 @@
 import json
 import os
-from typing import Dict, Any, Optional
+from typing import Any
 
 # Global cache for descriptions
-_DESCRIPTIONS: Optional[Dict[str, Any]] = None
+_DESCRIPTIONS: dict[str, Any] | None = None
 
 
-def load_descriptions() -> Dict[str, Any]:
+def load_descriptions() -> dict[str, Any]:
     """Load COTS descriptions from the assets directory."""
     global _DESCRIPTIONS
     if _DESCRIPTIONS is not None:
@@ -25,7 +25,7 @@ def load_descriptions() -> Dict[str, Any]:
         )
 
     try:
-        with open(assets_path, "r") as f:
+        with open(assets_path) as f:
             _DESCRIPTIONS = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Warning: Could not load COTS descriptions from {assets_path}: {e}")
@@ -34,7 +34,7 @@ def load_descriptions() -> Dict[str, Any]:
     return _DESCRIPTIONS
 
 
-def get_description(part_id: str) -> Dict[str, Any]:
+def get_description(part_id: str) -> dict[str, Any]:
     """
     Get description and metadata for a part ID.
     Supports exact match, partial match, and keyword-based fallback.

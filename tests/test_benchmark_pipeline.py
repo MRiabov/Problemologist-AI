@@ -1,8 +1,10 @@
 import os
 import shutil
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from src.generators.benchmark.manager import generate, execute_build
+
+from src.generators.benchmark.manager import execute_build
 
 # Mock script that defines a build function
 MOCK_SCRIPT = """
@@ -63,6 +65,7 @@ def test_generate_pipeline(mock_invoke, mock_render, clean_datasets):
     mock_render.return_value = ["test_render.png"]
 
     from typer.testing import CliRunner
+
     from src.generators.benchmark.manager import app
 
     runner = CliRunner()

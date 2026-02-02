@@ -1,16 +1,16 @@
-from typing import TypedDict, List, Optional, Dict, Any
+from typing import TypedDict
 
 
 class ScenarioAssets(TypedDict):
     mjcf: str
-    meshes: List[str]
-    images: List[str]
+    meshes: list[str]
+    images: list[str]
 
 
 class ScenarioRandomization(TypedDict):
-    seed_range: List[int]
-    parameters: List[str]
-    scale: List[float]  # [sx, sy, sz]
+    seed_range: list[int]
+    parameters: list[str]
+    scale: list[float]  # [sx, sy, sz]
 
 
 class ScenarioValidation(TypedDict):
@@ -30,6 +30,6 @@ class ScenarioManifest(TypedDict):
 
 class ValidationReport(TypedDict):
     is_valid: bool
-    error_message: Optional[str]
+    error_message: str | None
     sim_duration: float
     max_energy: float

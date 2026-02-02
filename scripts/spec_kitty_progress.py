@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-import os
-import re
 import json
-from pathlib import Path
+import re
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 
 @dataclass
@@ -18,7 +16,7 @@ class WorkPackage:
     spec_slug: str
     spec_number: str
     file_path: Path
-    last_updated: Optional[datetime] = None
+    last_updated: datetime | None = None
 
 
 def parse_frontmatter(content: str) -> dict:
@@ -35,7 +33,7 @@ def parse_frontmatter(content: str) -> dict:
     return data
 
 
-def get_last_activity_time(content: str) -> Optional[datetime]:
+def get_last_activity_time(content: str) -> datetime | None:
     lines = content.splitlines()
     for line in reversed(lines):
         line = line.strip()
@@ -59,7 +57,7 @@ def get_last_activity_time(content: str) -> Optional[datetime]:
 
 def get_wp_status(
     wp_file: Path, spec_slug: str, spec_number: str
-) -> Optional[WorkPackage]:
+) -> WorkPackage | None:
     try:
         content = wp_file.read_text()
         data = parse_frontmatter(content)
@@ -99,7 +97,7 @@ def main():
         print("Error: kitty-specs directory not found.")
         return
 
-    wps: List[WorkPackage] = []
+    wps: list[WorkPackage] = []
 
     for spec_dir in sorted(base_path.iterdir()):
         if not spec_dir.is_dir():
@@ -149,7 +147,7 @@ def main():
             if wp.lane == "doing" and wp.last_updated:
                 # Assuming system time is close enough to UTC or we want relative time
                 # The timestamp is timezone-aware (UTC), so we need aware current time
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 if (now - wp.last_updated) > timedelta(minutes=15):
                     is_stale = True
                     status_char = "🐢"

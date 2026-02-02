@@ -1,6 +1,5 @@
-import os
 import glob
-from typing import List, Dict
+import os
 
 # Hardcoded stubs for build123d when real docs are missing
 STUBS = [
@@ -32,7 +31,7 @@ STUBS = [
 ]
 
 
-def load_docs(directory: str) -> List[Dict[str, str]]:
+def load_docs(directory: str) -> list[dict[str, str]]:
     """
     Simple doc loader that reads .md and .py files.
     """
@@ -43,7 +42,7 @@ def load_docs(directory: str) -> List[Dict[str, str]]:
     for ext in ["*.md", "*.py"]:
         for filename in glob.glob(os.path.join(directory, "**", ext), recursive=True):
             try:
-                with open(filename, "r", encoding="utf-8") as f:
+                with open(filename, encoding="utf-8") as f:
                     docs.append(
                         {
                             "title": os.path.basename(filename),

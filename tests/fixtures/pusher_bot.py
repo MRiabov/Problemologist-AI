@@ -1,5 +1,4 @@
-from build123d import Part, Box, export_stl
-import os
+from build123d import Box, export_stl
 
 
 def create_pusher_geometry(filepath: str):

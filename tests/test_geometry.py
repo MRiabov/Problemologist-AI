@@ -1,6 +1,8 @@
 import os
+
 import pytest
 from build123d import Box
+
 from compiler.geometry import export_mesh, generate_colliders
 
 

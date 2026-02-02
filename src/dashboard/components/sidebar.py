@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.dashboard.data import get_all_episodes, get_episode_by_id, insert_step
+from src.dashboard.data import get_all_episodes, get_episode_by_id
 
 
 def render_sidebar():

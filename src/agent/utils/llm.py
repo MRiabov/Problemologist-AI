@@ -1,7 +1,8 @@
-from langchain_openai import ChatOpenAI
-from langchain_core.language_models.chat_models import BaseChatModel
-import os
+
 from dotenv import load_dotenv
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
+
 from src.agent.utils.config import Config
 
 # Load environment variables

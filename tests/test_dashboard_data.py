@@ -1,9 +1,7 @@
-import os
-import uuid
 import pytest
-from pathlib import Path
+
 from src.dashboard.data import DashboardDataLayer
-from src.environment.persistence import DatabaseManager, Episode, Step, Artifact
+from src.environment.persistence import Artifact, DatabaseManager, Episode, Step
 
 
 @pytest.fixture

@@ -1,6 +1,4 @@
-import os
-import pytest
-from src.environment.tools import search_parts, preview_part
+from src.environment.tools import preview_part, search_parts
 
 
 def test_cots_search_and_preview_integration():

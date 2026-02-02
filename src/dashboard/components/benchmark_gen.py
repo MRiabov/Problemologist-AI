@@ -1,12 +1,17 @@
-import streamlit as st
 import os
-import traceback
 import tempfile
-from typing import Dict, Any, Optional
+import traceback
 
-from src.generators.benchmark.agent import planner_node, coder_node, linter_node, validator_node, MAX_ATTEMPTS
+import streamlit as st
+
+from src.generators.benchmark.agent import (
+    MAX_ATTEMPTS,
+    coder_node,
+    linter_node,
+    planner_node,
+    validator_node,
+)
 from src.generators.benchmark.renderer import render_scenario
-from src.dashboard.components.viewer_3d import render_3d_artifact
 
 
 def init_bg_state():
@@ -180,7 +185,7 @@ def render_coding_stage(state):
                 state["attempt_history"].append(current_attempt)
                 
                 # 4. Render
-                status_placeholder.info(f"Success! Rendering preview...")
+                status_placeholder.info("Success! Rendering preview...")
                 with tempfile.TemporaryDirectory() as tmpdir:
                     prefix = os.path.join(tmpdir, "preview")
                     state["renders"] = render_scenario(state["mjcf"], prefix)
@@ -189,10 +194,9 @@ def render_coding_stage(state):
                 state["stage"] = "CAD_APPROVAL"
                 st.rerun()
                 return
-            else:
-                state["errors"] = val_result["errors"]
-                current_attempt["errors"] = val_result["errors"]
-                state["attempt_history"].append(current_attempt)
+            state["errors"] = val_result["errors"]
+            current_attempt["errors"] = val_result["errors"]
+            state["attempt_history"].append(current_attempt)
 
         # If we reach here, we failed all attempts
         state["stage"] = "CAD_APPROVAL"

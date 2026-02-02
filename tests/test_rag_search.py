@@ -1,4 +1,5 @@
 import pytest
+
 from src.rag.search import load_docs, search
 
 

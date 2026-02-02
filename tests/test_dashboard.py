@@ -1,7 +1,7 @@
-import pytest
-from streamlit.testing.v1 import AppTest
-import sys
 import os
+import sys
+
+from streamlit.testing.v1 import AppTest
 
 # Ensure project root is in sys.path for the test runner
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Union
+
 from build123d import Part
 
 
@@ -11,7 +11,7 @@ class Workbench(ABC):
     """
 
     @abstractmethod
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part against the workbench constraints.
 

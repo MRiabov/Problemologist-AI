@@ -1,7 +1,8 @@
+
 import pytest
-from src.cots.core import PartIndex, PartSummary, PartPreview, Part
+
+from src.cots.core import Part, PartIndex, PartPreview, PartSummary
 from src.cots.providers.base import PartProvider
-from typing import List
 
 
 class MockProvider(PartProvider):
@@ -12,7 +13,7 @@ class MockProvider(PartProvider):
             f"{self.name}:nut1": Part(id=f"{self.name}:nut1", factory=lambda: "nut"),
         }
 
-    def search(self, query: str) -> List[PartSummary]:
+    def search(self, query: str) -> list[PartSummary]:
         return [
             PartSummary(id=pid, name=pid.split(":")[1], provider=self.name)
             for pid in self.parts.keys()

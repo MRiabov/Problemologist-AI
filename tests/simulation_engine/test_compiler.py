@@ -1,7 +1,9 @@
 import os
 import tempfile
+
 import mujoco
 from build123d import Box, Compound, Pos
+
 from simulation_engine.builder import SceneCompiler
 
 

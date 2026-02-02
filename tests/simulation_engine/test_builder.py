@@ -1,6 +1,7 @@
 import pytest
 import trimesh
-from build123d import Box, Sphere, Compound
+from build123d import Box
+
 from simulation_engine.builder import MeshProcessor
 
 

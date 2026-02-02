@@ -1,9 +1,10 @@
 import asyncio
+from typing import Any
+
 from src.environment import tools as env_tools
-from typing import Optional, Any
 
 # Global reference to the active environment (if any)
-_ACTIVE_ENV: Optional[Any] = None
+_ACTIVE_ENV: Any | None = None
 
 
 def set_active_env(env: Any):
@@ -52,7 +53,6 @@ async def submit_design_async(control_path: str) -> str:
         return (
             f"Submission Result: {report}\nReward: {reward}\nTerminated: {terminated}"
         )
-    else:
-        # Fallback/Mock if no environment is active
-        await asyncio.sleep(1)
-        return "Warning: No active environment found. Submission simulated. Result: Success."
+    # Fallback/Mock if no environment is active
+    await asyncio.sleep(1)
+    return "Warning: No active environment found. Submission simulated. Result: Success."

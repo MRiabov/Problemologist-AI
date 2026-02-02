@@ -1,9 +1,8 @@
-import os
-import pytest
 from fastapi.testclient import TestClient
-from src.simulation_engine.main import app
+
 from src.compiler.mujoco_bridge import MujocoBridge
-from tests.fixtures.pusher_bot import create_pusher_geometry, PUSHER_SCRIPT
+from src.simulation_engine.main import app
+from tests.fixtures.pusher_bot import PUSHER_SCRIPT, create_pusher_geometry
 
 client = TestClient(app)
 

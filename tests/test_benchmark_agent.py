@@ -1,7 +1,8 @@
-import pytest
-import asyncio
 from unittest.mock import MagicMock, patch
+
+import pytest
 from langchain_core.messages import AIMessage
+
 from src.generators.benchmark.agent import generator_agent
 
 
@@ -16,7 +17,7 @@ async def test_generator_agent_mock():
             return AIMessage(
                 content="<reasoning>I should create a box.</reasoning><plan>Plan: Create a box.</plan>"
             )
-        elif "build123d" in all_content or "coder" in all_content:
+        if "build123d" in all_content or "coder" in all_content:
             return AIMessage(
                 content='<reasoning>Implementing a box.</reasoning><python_code>```python\ndef build(seed=0):\n    return \'<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>\'\n```</python_code>'
             )
@@ -54,16 +55,15 @@ async def test_generator_agent_retry():
             return AIMessage(
                 content="<reasoning>Thinking about box.</reasoning><plan>Plan: Create a box.</plan>"
             )
-        elif "build123d" in all_content or "coder" in all_content:
+        if "build123d" in all_content or "coder" in all_content:
             call_count["coder"] += 1
             if call_count["coder"] == 1:
                 return AIMessage(
                     content="<reasoning>Fail first.</reasoning><python_code>```python\ndef build(seed=0):\n    return 'INVALID XML'\n```</python_code>"
                 )
-            else:
-                return AIMessage(
-                    content="<reasoning>Succeed second.</reasoning><python_code>```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```</python_code>"
-                )
+            return AIMessage(
+                content="<reasoning>Succeed second.</reasoning><python_code>```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```</python_code>"
+            )
 
         return AIMessage(content="Default")
 

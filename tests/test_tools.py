@@ -1,6 +1,8 @@
 import os
 import shutil
+
 import pytest
+
 from src.environment import tools
 
 
@@ -22,7 +24,7 @@ def test_write_script():
 
     path = os.path.join(tools.WORKSPACE_DIR, "hello.py")
     assert os.path.exists(path)
-    with open(path, "r") as f:
+    with open(path) as f:
         assert f.read() == content
 
 
@@ -32,7 +34,7 @@ def test_edit_script_success():
     assert "Successfully edited" in result
 
     path = os.path.join(tools.WORKSPACE_DIR, "edit.py")
-    with open(path, "r") as f:
+    with open(path) as f:
         content = f.read()
         assert "line_two" in content
         assert "line2" not in content
