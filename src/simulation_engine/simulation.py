@@ -131,10 +131,11 @@ class SimulationLoop:
 
             # Check action shape
             if hasattr(action, "__len__") and len(action) != self.model.nu:
-                # Warn or fail?
-                # For robustness, slice or pad? Or just let assignment fail?
-                # Let's try to assign and catch error
-                pass
+                return {
+                    "status": "ERROR",
+                    "message": f"Action dimension mismatch. Expected {self.model.nu}, got {len(action)}.",
+                    "metrics": self.metrics.to_dict(),
+                }
 
             try:
                 self.data.ctrl[:] = action

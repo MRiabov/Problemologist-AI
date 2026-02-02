@@ -25,6 +25,9 @@ class Config:
     @classmethod
     def validate(cls):
         """Validates that necessary API keys are present."""
-        # Note: We don't necessarily need all of them, just the one for the selected model.
-        # LangChain usually errors out if the specific key is missing.
-        pass
+        if "gpt" in cls.LLM_MODEL.lower() and not os.getenv("OPENAI_API_KEY"):
+            raise ValueError(f"OPENAI_API_KEY is required for model {cls.LLM_MODEL}")
+        if "claude" in cls.LLM_MODEL.lower() and not os.getenv("ANTHROPIC_API_KEY"):
+            raise ValueError(f"ANTHROPIC_API_KEY is required for model {cls.LLM_MODEL}")
+        if "gemini" in cls.LLM_MODEL.lower() and not os.getenv("GOOGLE_API_KEY"):
+            raise ValueError(f"GOOGLE_API_KEY is required for model {cls.LLM_MODEL}")

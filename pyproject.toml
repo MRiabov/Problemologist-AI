@@ -10,8 +10,16 @@ dependencies = [
     "build123d>=0.10.0",
     "fastapi>=0.128.0",
     "gymnasium>=1.2.3",
+    "langchain-anthropic>=0.3.7",
+    "langchain-core>=0.3.35",
+    "langchain-google-genai>=2.0.9",
+    "langchain-openai>=0.3.7",
+    "langgraph>=0.0.26",
+    "langgraph-checkpoint-sqlite>=1.0.0",
     "mujoco>=3.4.0",
     "numpy>=2.4.2",
+    "python-dotenv>=1.0.0",
+    "pyvista>=0.43.0",
     "sqlalchemy>=2.0.46",
     "trimesh[easy]>=4.11.1",
     "uvicorn>=0.40.0",
@@ -34,4 +42,4 @@ ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
