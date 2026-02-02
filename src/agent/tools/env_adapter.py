@@ -74,6 +74,15 @@ async def package_skill_async(skill_name: str) -> str:
     return await asyncio.to_thread(env_tools.package_skill, skill_name)
 
 
+async def run_skill_script_async(
+    skill_name: str, script_name: str, arguments: str = ""
+) -> str:
+    """Async wrapper for running a skill script."""
+    return await asyncio.to_thread(
+        env_tools.run_skill_script, skill_name, script_name, arguments
+    )
+
+
 async def search_parts_async(query: str) -> str:
     """Async wrapper for searching COTS parts."""
     return await asyncio.to_thread(env_tools.search_parts, query)

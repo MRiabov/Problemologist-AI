@@ -11,6 +11,7 @@ cad_agent:
 
          **Economic Constraints & Adaptive Planning**:
          - Adhere to `target_quantity` and `max_unit_cost`.
+         - **MANDATORY**: If economic constraints are specified, you MUST use `read_skill` to consult the `manufacturing-knowledge` skill and use `run_skill_script` to fetch material properties and cost models.
          - **Cost Overrun Handling**: If the Critic reports a budget violation, you must:
            1. **Optimize Geometry**: Suggest reducing volume, thinning walls, or removing non-functional fillets.
            2. **Change Process**: If CNC is too expensive for high volume, switch to Injection Molding.

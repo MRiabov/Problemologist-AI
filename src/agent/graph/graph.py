@@ -21,6 +21,7 @@ from src.agent.tools.env import (
     list_skill_files,
     init_skill,
     package_skill,
+    run_skill_script,
     write_script,
     check_manufacturability,
 )
@@ -57,6 +58,7 @@ def build_graph(
         list_skill_files,
         init_skill,
         package_skill,
+        run_skill_script,
         check_manufacturability,
         read_journal,
         write_journal,
