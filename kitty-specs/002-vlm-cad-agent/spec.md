@@ -17,15 +17,18 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 1. **Autonomous Resolution**: The agent must be able to solve geometric problems from start to finish without human intervention, handling its own errors and edge cases.
 2. **Multimodal Reasoning**: Effectively use the `preview_design` tool to visually inspect geometry and correct spatial errors that are not visible in the code text.
 3. **Structured Cognition**: Enforce a strict separation between **Planning** (understanding the problem, researching docs) and **Execution** (writing code, iterating).
-4. **Self-Correction**: When a submission fails (physics or geometry violation), the agent must analyze the failure report, hypothesize a fix, and retry.
-5. **Long-Term Memory**: Implement a "Journaling" system where the agent can record specific techniques (e.g., "Correct syntax for build123d Loft") to avoid repeating mistakes across sessions.
+4. **Economic Optimization**: Respect `max_unit_cost` and `target_quantity` constraints by iteratively optimizing material volume, part reuse, and manufacturing process selection.
+5. **Budget-Aware Self-Correction**: When a submission is rejected due to cost overruns, the agent must distinguish between "Inefficient Design" (fixable) and "Physical Impossibility" (requires justification).
+6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent can record specific techniques (e.g., "Correct syntax for build123d Loft") into the `build123d_cad_drafting_skill` to avoid repeating mistakes across sessions.
 
 ### 2.2. Success Criteria
 
 * **Solver Rate**: The agent successfully solves >50% of the "Easy" benchmark problems defined in Spec 001 on the first try.
+* **Budget Adherence**: The agent meets or beats the `max_unit_cost` in >70% of successful completions.
 * **Self-Healing**: The agent can recover from at least one syntax error and one geometric violation per session without crashing.
+* **Economic Adaptability**: The agent demonstrates switching from CNC to Injection Molding when production volume increases (e.g., from 1 to 10,000 units).
 * **Visual Utility**: In >30% of iterations, the agent explicitly modifies code after requesting a `preview_design`, indicating active use of visual feedback.
-* **Cost Efficiency**: The reasoning loop optimizes for token usage by summarizing observations rather than keeping full verbose logs in the active context window.
+* **Skill Growth**: The `build123d_cad_drafting_skill` reference directory contains >5 new instruction files after 10 sessions of problem-solving.
 
 ## 3. User Stories
 
@@ -58,16 +61,19 @@ The agent shall be implemented as a **LangGraph** state machine with the followi
     * **Transition**: -> `Critic` (if submission or preview) OR -> `Actor` (if continuing).
 
 3. **Critic Node** (The Validator):
-    * **Role**: Visual and Logic validation.
+    * **Role**: Visual, Logic, and Economic validation.
     * **Trigger**: After `submit_design` or `preview_design`.
-    * **Action**: Checks simulator feedback or vision output.
+    * **Action**:
+        - Checks simulator feedback or vision output.
+        - **Cost Guard**: Compares current unit cost against budget.
+        - **Consensus**: Evaluates `force_submit` justifications. If valid, signals `HARD_LIMIT_REACHED` to Planner.
     * **Transition**:
-        * **Success**: -> `Journaler` -> `End`.
-        * **Failure**: -> `Replanner` (Updates plan) -> `Actor`.
+        - **Success**: -> `Skill Populator` -> `End`.
+        - **Failure/Cost Overrun**: -> `Planner` (Re-planning) -> `Actor`.
 
-4. **Journaler Node**:
-    * **Role**: Long-term memory management.
-    * **Action**: Updates `journal.md` with successful patterns.
+4. **Skill Populator Node**:
+    * **Role**: Procedural memory management.
+    * **Action**: Updates the `build123d_cad_drafting_skill` with successful patterns, lessons learned, or budget optimization strategies.
 
 ### 4.2. Tool Interface
 

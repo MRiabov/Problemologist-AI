@@ -64,10 +64,13 @@ In-memory object tracking the current run.
 | Field | Type | Description |
 |-------|------|-------------|
 | `goal` | str | The user's original prompt |
+| `max_unit_cost` | float | Target budget for the assembly |
+| `target_quantity` | int | Intended production volume |
 | `plan` | List[PlanItem] | Steps to solve the problem |
 | `history` | List[Message] | Chat history (sliding window) |
 | `scratchpad` | Dictionary | Current variables/observations |
 | `attempts` | int | Number of `submit_design` calls |
+| `force_submit_flag`| bool | Whether Actor has signaled cost limit reached |
 
 ### 3.2. Plan Item
 
