@@ -8,7 +8,7 @@
 
 The **VLM CAD Agent** is the autonomous cognitive engine designed to operate within the **Agentic CAD Environment** (Spec 001). It is a specialized Vision-Language Model (VLM) system built using the **DeepAgents** framework (based on LangGraph). It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
 
-Unlike generic coding assistants, this agent leverages the "Deep Agent" architecture to perform long-horizon planning, sub-task delegation, and persistent file-system based memory management. It validates its own work using visual feedback (renders) and simulation results.
+Unlike generic coding assistants, this agent leverages the "Deep Agent" architecture to perform long-horizon planning, sub-task delegation, and persistent **Skill-based Memory Management**. It validates its own work using visual feedback (renders) and simulation results.
 
 ## 2. Goals & Success Criteria
 
@@ -19,7 +19,7 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 3. **Structured Cognition**: Enforce a strict separation between **Planning** (understanding the problem, researching docs) and **Execution** (writing code, iterating).
 4. **Economic Optimization**: Respect `max_unit_cost` and `target_quantity` constraints by iteratively optimizing material volume, part reuse, and manufacturing process selection.
 5. **Budget-Aware Self-Correction**: When a submission is rejected due to cost overruns, the agent must distinguish between "Inefficient Design" (fixable) and "Physical Impossibility" (requires justification).
-6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent can record specific techniques (e.g., "Correct syntax for build123d Loft") into the `build123d_cad_drafting_skill` to avoid repeating mistakes across sessions.
+6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent records specialized knowledge, workflows, and curated patterns into modular **Skills** (e.g., `build123d_cad_drafting_skill`) to avoid repeating mistakes and reuse proven strategies across sessions.
 
 ### 2.2. Success Criteria
 
@@ -28,7 +28,7 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 * **Self-Healing**: The agent can recover from at least one syntax error and one geometric violation per session without crashing.
 * **Economic Adaptability**: The agent demonstrates switching from CNC to Injection Molding when production volume increases (e.g., from 1 to 10,000 units).
 * **Visual Utility**: In >30% of iterations, the agent explicitly modifies code after requesting a `preview_design`, indicating active use of visual feedback.
-* **Skill Growth**: The `build123d_cad_drafting_skill` reference directory contains >5 new instruction files after 10 sessions of problem-solving.
+* **Skill Growth**: The `.agent/skills/` directory contains >5 new reference files or scripts after 10 sessions of problem-solving.
 
 ## 3. User Stories
 
@@ -36,13 +36,13 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 
 * **As a Researcher**, I want to configure the agent to use different backend models (Gemini Pro, GPT-4o) so I can benchmark their spatial reasoning capabilities.
 * **As an Operator**, I want to see a real-time structured log of the agent's "Thought," "Tool Call," and "Observation" so I can debug its reasoning process.
-* **As an Operator**, I want the agent to automatically save its successful strategies to a `knowledge.md` file so it gets smarter over time.
+* **As an Operator**, I want the agent to automatically save its successful strategies to specialized **Skill folders** so it gets smarter over time.
 
 ### 3.2. As the Agent (Internal Monologue)
 
 * **As the Agent**, I want to look up `build123d` documentation before writing complex features to ensure I use the correct API signature.
 * **As the Agent**, I want to render a low-res preview of my part to check if the holes are aligned before submitting the final expensive physics simulation.
-* **As the Agent**, I want to read my past notes on "Press Fit Tolerances" before designing a connector.
+* **As the Agent**, I want to read the `build123d_cad_drafting_skill` to recall proven patterns for "Press Fit Tolerances" before designing a connector.
 
 ## 4. Functional Requirements
 
@@ -51,13 +51,13 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 The agent shall be implemented as a **LangGraph** state machine with the following nodes:
 
 1. **Planner Node**:
-    * **Role**: Analyzes the request and `journal.md`.
-    * **Action**: Generates a structured plan in `plan.md`.
+    * **Role**: Analyzes the request and existing Skills.
+    * **Action**: Discovers relevant skills using `list_skills` and reads them via `read_skill`. Generates a structured plan.
     * **Transition**: -> `Actor`.
 
 2. **Actor Node** (The Builder):
     * **Role**: Executes the current step of the plan.
-    * **Action**: Calls tools (`write_script`, `preview_design`).
+    * **Action**: Calls environment tools (`write_script`, `preview_design`) and skill tools (`read_skill`) to maintain high coding standards.
     * **Transition**: -> `Critic` (if submission or preview) OR -> `Actor` (if continuing).
 
 3. **Critic Node** (The Validator):
@@ -68,50 +68,48 @@ The agent shall be implemented as a **LangGraph** state machine with the followi
         - **Cost Guard**: Compares current unit cost against budget.
         - **Consensus**: Evaluates `force_submit` justifications. If valid, signals `HARD_LIMIT_REACHED` to Planner.
     * **Transition**:
-        - **Success**: -> `Skill Populator` -> `End`.
-        - **Failure/Cost Overrun**: -> `Planner` (Re-planning) -> `Actor`.
+        - **Success/Terminal**: -> `Skill Populator` -> `End`.
+        - **Failure/Iteration**: -> `Planner` (Re-planning) -> `Actor`.
 
 4. **Skill Populator Node**:
-    * **Role**: Procedural memory management.
-    * **Action**: Updates the `build123d_cad_drafting_skill` with successful patterns, lessons learned, or budget optimization strategies.
+    * **Role**: Persistent procedural memory management.
+    * **Action**: Uses `update_skill` to capture new insights, recurring patterns, or bug fixes discovered during the session into the appropriate skill folder.
 
 ### 4.2. Tool Interface
 
-The agent interacts with the environment via **LangChain Tools** (wrapping Spec 001 JSON schema).
+The agent interacts with the environment via **LangChain Tools**.
 
-#### 4.2.1. Environment Tools (Wrapped from Spec 001)
+#### 4.2.1. Environment Tools (CAD & DFM)
 
-* `search_docs(query: str)`
-* `write_script(content: str, path: str)`
-* `edit_script(find: str, replace: str, path: str)`
-* `preview_design()` -> Returns schema with `image_url` (or base64).
-* `submit_design(control_path: str)` -> Returns evaluation report.
+* `search_docs(query: str)`: RAG retrieval from documentation.
+* `write_script(content: str, path: str)`: Creates or overwrites files in the workspace.
+* `edit_script(find: str, replace: str, path: str)`: Targeted text replacement.
+* `preview_design()` -> Visual rendering and spatial check.
+* `submit_design(control_path: str)` -> Full physics simulation and grading.
+* `check_manufacturability(process, quantity)` -> DFM analysis and cost estimation.
 
-#### 4.2.2. Meta-Cognitive Tools
+#### 4.2.2. Skill Management Tools (Persistent Memory)
 
-* `read_journal(topic: str)`: Fuzzy search or full read of the simplified `journal.md` memory file.
-* `write_journal(entry: str, tags: list[str])`: Append a learned lesson to the long-term memory.
-* `update_plan(status: str, notes: str)`: Update the current session's scratchpad.
+* `list_skills()`: Lists available specialized knowledge categories.
+* `read_skill(skill_name, filename)`: Reads instructions (`SKILL.md`) or references.
+* `update_skill(skill_name, content, filename)`: Records new insights or patterns.
+* `init_skill(skill_name)`: Initializes a new skill category.
+* `package_skill(skill_name)`: Validates and distributes a skill.
 
 ### 4.3. LLM Integration
 
 * **Framework**: `langchain-core` / `langchain-anthropic` / `langchain-google-genai`.
-* **Context Management**: Handles by `langgraph` checkpoints and `deepagents` file-system memory.
-* **Image Handling**: Native multimodal support via LangChain's message content types.
-
-### 4.4. Observability & Logging
-
-* **LangSmith**: Primary observability platform (if key provided).
-* **Console**: Rich output via `rich`, streaming graph events.
+* **Context Management**: Progressive disclosure of skills (Metadata -> SKILL.md -> References) to optimize token usage.
+* **Image Handling**: Native multimodal support via LangChain.
 
 ## 5. Technical Design
 
 ### 5.1. Tech Stack
 
 * **Language**: Python 3.10+
-* **Framework**: `deepagents` (presumed library name) / `langgraph` / `langchain`.
-* **Models**: `langchain-openai`, `langchain-google-genai`.
-* **Schema Validation**: `Pydantic` (V2).
+* **Framework**: `langgraph` / `langchain`.
+* **Skills System**: File-system based storage under `.agent/skills/`.
+* **Models**: Gemini 2.0 Pro (preferred), Claude 3.5 Sonnet.
 
 ### 5.2. Component Structure
 
@@ -123,12 +121,13 @@ src/agent/
 │   └── nodes/
 │       ├── planner.py
 │       ├── actor.py
-│       └── critic.py
+│       ├── critic.py
+│       └── skill_populator.py
 ├── tools/
-│   ├── env_tools.py        # LangChain tool wrappers
-│   └── memory_tools.py     # Journaling tools
+│   ├── env.py              # Environment & Skill tools
+│   └── env_adapter.py      # Async wrappers and env mapping
 ├── runner.py               # CLI entry point to run the Graph.
-└── utils/                  # DeepAgents utilities
+└── utils/                  # Prompt management and LLM helpers
 ```
 
 ## 6. Assumptions & Constraints

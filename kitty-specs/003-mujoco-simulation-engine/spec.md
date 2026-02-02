@@ -27,6 +27,7 @@ This system bridges the gap between **Static CAD** (geometry) and **Dynamic Func
 * **Zone Detection**: Validates that "Functionally defined" zones in CAD (e.g., a red box) correctly trigger "collision events" in the physics engine.
 * **Simulation Speed**: Capable of running a 10-second simulation episode in < 2 seconds wall-clock time (headless).
 * **Metrics Capture**: Accurately records Energy (Joules), Task Time (s), and Violation impulses (Ns).
+<!--metrics captures are TODO.-->
 
 ## 3. User Stories
 
@@ -37,6 +38,7 @@ This system bridges the gap between **Static CAD** (geometry) and **Dynamic Func
 * **As an Agent**, I want detailed feedback on *why* I failed (e.g., "Object collided with Red Zone at t=2.5s", "Script timed out") so I can fix my design or code.
 
 ### 3.2. As the Environment (Spec 001)
+<!--note: poorly written. Environment isn't a "user".-->
 
 * **As the Environment**, I want to generate a new randomized obstacle course for every episode to prevent the agent from overfitting to a single layout.
 * **As the Environment**, I want to ensure the agent's control script cannot crash the host process, access the network, or leak data (Sandbox).
