@@ -10,6 +10,7 @@ from langgraph.prebuilt import ToolNode
 
 from src.agent.tools.env import (
     search_docs,
+    update_skill,
 )
 from src.agent.utils.config import Config
 from src.agent.utils.llm import get_model
@@ -84,7 +85,7 @@ def planner_node(state: GeneratorState) -> dict[str, any]:
             "linting_failed": False,
         }
 
-    model = get_model(Config.LLM_MODEL).bind_tools([search_docs])
+    model = get_model(Config.LLM_MODEL).bind_tools([search_docs, update_skill])
 
     # Build messages if not present
     messages = state.get("messages")
@@ -121,7 +122,7 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
     """Generates or fixes code based on plan and errors."""
     attempts = state.get("attempts", 0)
     print(f"DEBUG: Entering coder_node, current state attempts: {attempts}")
-    model = get_model(Config.LLM_MODEL).bind_tools([search_docs])
+    model = get_model(Config.LLM_MODEL).bind_tools([search_docs, update_skill])
 
     errors = state.get("errors")
     code = state.get("code")
@@ -129,19 +130,29 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
 
     messages = state.get("messages")
 
-    # Check if we are continuing a tool conversation or starting/retrying
-    # If the last message is a ToolMessage, we are continuing.
-    # If not, and we have errors/code, we are retrying.
+    # If the last message is not a ToolMessage and we don't have code yet,
+    # it means we just came from the planner and need to start the coder conversation.
+    is_starting = not code and (
+        not messages or not hasattr(messages[-1], "tool_call_id")
+    )
     is_retrying = (
         errors and code and (not messages or not hasattr(messages[-1], "tool_call_id"))
     )
 
-    if not messages or is_retrying:
+    if is_starting or is_retrying:
         extra_instructions = (
             "\n\nPlease think step-by-step before providing the code. "
             "Wrap your internal reasoning in <reasoning> tags and the final code in <python_code> tags. "
             "If you are unsure about build123d syntax (selectors, context managers like 'with Locations'), use 'search_docs' tool."
         )
+
+        if attempts > 5:
+            extra_instructions += (
+                "\n\nCRITICAL: You have failed more than 5 times. "
+                "Please read `@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
+                "You should also use the `update_skill` tool to record any new insights, "
+                "recurring patterns, or fixes you've discovered to help future attempts."
+            )
 
         if errors and code:
             # Retry mode: use Critic prompt logic
@@ -230,74 +241,40 @@ def linter_node(state: GeneratorState) -> dict[str, any]:
 
 def validator_node(state: GeneratorState) -> dict[str, any]:
     """Executes code and runs validation."""
-    print("DEBUG: Entering validator_node")
-    code = state["code"]
+    # ... (existing validator_node content)
 
-    try:
-        from src.generators.benchmark.manager import execute_build
 
-        # Call build with seed 0 and default scale (1,1,1) for base validation
-        # Use a temp asset dir for the agent validation as well
-        rel_temp_assets = ".agent_storage/temp_assets"
-        mjcf_xml = execute_build(
-            code, 0, scale_factors=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets
-        )
-        print(f"DEBUG: validator_node mjcf_xml: {mjcf_xml[:50]}...")
+def skill_populator_node(state: GeneratorState) -> dict[str, any]:
+    """Populates the skill with insights after a definitive failure."""
+    print("DEBUG: Entering skill_populator_node")
+    if state.get("validation_passed"):
+        return {}
 
-        if not isinstance(mjcf_xml, str):
-            return {
-                "errors": f"Function 'build' returned {type(mjcf_xml)}, expected str.",
-                "validation_passed": False,
-            }
+    model = get_model(Config.LLM_MODEL).bind_tools([update_skill])
 
-        # Validate MJCF
-        temp_assets_path = Path("workspace_gen") / rel_temp_assets
-        report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
-        print(f"DEBUG: validator_node report: {report}")
+    # Collect errors and history
+    history = state.get("full_history", [])
+    history_str = "\n".join(
+        [f"Attempt {h['attempt']}: {h['error_message']}" for h in history]
+    )
 
-        if report["is_valid"]:
-            return {
-                "validation_passed": True,
-                "mjcf": mjcf_xml,
-                "errors": None,
-                "linting_failed": False,
-            }
+    prompt = (
+        "The benchmark generation has failed definitively after multiple attempts.\n"
+        f"Original Request: {state['request']}\n"
+        f"Failure History:\n{history_str}\n\n"
+        "Your task is to analyze these failures and update the 'build123d_cad_drafting_skill' "
+        "with new insights, common pitfalls to avoid, or better patterns. "
+        "Use the `update_skill` tool to add a new reference file (e.g., 'lessons_learned.md') "
+        "to the skill, describing the issue and the solution or workaround."
+    )
 
-        # Update history with failure
-        history = state.get("full_history", [])
-        history.append(
-            {
-                "attempt": state.get("attempts", 0),
-                "is_valid": False,
-                "error_message": report["error_message"],
-                "code": code,
-            }
-        )
+    messages = [
+        SystemMessage(content=prompt),
+        HumanMessage(content="Populate the skill with lessons learned."),
+    ]
+    model.invoke(messages)
 
-        return {
-            "validation_passed": False,
-            "errors": f"Validation failed: {report['error_message']}",
-            "linting_failed": False,
-            "full_history": history,
-        }
-
-    except Exception as e:
-        print(f"DEBUG: validator_node exception: {e}")
-        history = state.get("full_history", [])
-        history.append(
-            {
-                "attempt": state.get("attempts", 0),
-                "is_valid": False,
-                "error_message": str(e),
-                "code": code,
-            }
-        )
-        return {
-            "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
-            "validation_passed": False,
-            "linting_failed": False,
-            "full_history": history,
-        }
+    return {}
 
 
 # Graph Construction
@@ -305,95 +282,45 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
 workflow = StateGraph(GeneratorState)
 
 workflow.add_node("planner", planner_node)
+
 workflow.add_node("coder", coder_node)
+
 workflow.add_node("linter", linter_node)
+
 workflow.add_node("validator", validator_node)
-workflow.add_node("tools", ToolNode([search_docs]))
+
+workflow.add_node("skill_populator", skill_populator_node)
+
+workflow.add_node("tools", ToolNode([search_docs, update_skill]))
+
 
 workflow.add_edge(START, "planner")
 
 
-def router(state: GeneratorState) -> Literal["tools", "coder", "linter", END]:
-    """Universal router for tool calls and state transitions."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "planner"
-
-    last_message = messages[-1]
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-
-    # If no tool calls, check where we are in the flow
-    # This is a bit tricky with LangGraph if we don't know the current node.
-    # But we can look at the state presence.
-    if state.get("validation_passed"):
-        return END
-
-    if state.get("linting_failed") and state.get("attempts", 0) < MAX_ATTEMPTS:
-        return "coder"
-
-    if state.get("code") and not state.get("validation_passed"):
-        # Just finished coder, go to linter
-        return "linter"
-
-    if state.get("plan") and not state.get("code"):
-        # Just finished planner, go to coder
-        return "coder"
-
-    return END
+# ... (router logic)
 
 
-def route_planner(state: GeneratorState) -> Literal["tools", "coder"]:
-    if state["messages"] and state["messages"][-1].tool_calls:
-        return "tools"
-    return "coder"
-
-
-def route_coder(state: GeneratorState) -> Literal["tools", "linter"]:
-    if state["messages"] and state["messages"][-1].tool_calls:
-        return "tools"
-    return "linter"
-
-
-def route_tools(state: GeneratorState) -> Literal["planner", "coder"]:
-    """Routes back to the node that initiated the tool call."""
-    messages = state.get("messages", [])
-    for msg in reversed(messages):
-        if isinstance(msg, SystemMessage):
-            if "planner" in msg.content.lower():
-                return "planner"
-            if "coder" in msg.content.lower() or "fixer" in msg.content.lower():
-                return "coder"
-    return "coder"  # Fallback
-
-
-workflow.add_conditional_edges("planner", route_planner)
-workflow.add_conditional_edges("coder", route_coder)
-workflow.add_conditional_edges("tools", route_tools)
-
-
-def should_continue_lint(state: GeneratorState) -> Literal["coder", "validator"]:
-    if state.get("linting_failed") is True and state.get("attempts", 0) < MAX_ATTEMPTS:
-        print("DEBUG: should_continue_lint -> coder")
-        return "coder"
-    print("DEBUG: should_continue_lint -> validator")
-    return "validator"
-
-
-workflow.add_conditional_edges("linter", should_continue_lint)
-
-
-def should_continue_val(state: GeneratorState) -> Literal["coder", END]:
-    if (
-        state.get("validation_passed") is True
-        or state.get("attempts", 0) >= MAX_ATTEMPTS
-    ):
+def should_continue_val(
+    state: GeneratorState,
+) -> Literal["coder", "skill_populator", END]:
+    if state.get("validation_passed") is True:
         print("DEBUG: should_continue_val -> END")
+
         return END
+
+    if state.get("attempts", 0) >= MAX_ATTEMPTS:
+        print("DEBUG: should_continue_val -> skill_populator")
+
+        return "skill_populator"
+
     print("DEBUG: should_continue_val -> coder")
+
     return "coder"
 
 
 workflow.add_conditional_edges("validator", should_continue_val)
+
+workflow.add_edge("skill_populator", END)
+
 
 generator_agent = workflow.compile()

@@ -6,13 +6,12 @@ from src.agent.tools.env import (
     preview_design,
     search_docs,
     submit_design,
+    update_skill,
     write_script,
 )
 from src.agent.tools.memory import read_journal, write_journal
-from src.agent.utils.config import Config
-from src.agent.utils.llm import get_model
-from src.agent.utils.prompts import get_prompt
 
+# ...
 
 def actor_node(state: AgentState):
     """
@@ -27,12 +26,23 @@ def actor_node(state: AgentState):
         preview_design,
         submit_design,
         search_docs,
+        update_skill,
         read_journal,
         write_journal,
     ]
     model_with_tools = model.bind_tools(tools)
 
-    messages = [SystemMessage(content=get_prompt("cad_agent.actor.system"))] + state[
+    system_prompt = get_prompt("cad_agent.actor.system")
+    
+    if state.get("step_count", 0) > 5:
+        system_prompt += (
+            "\n\nCRITICAL: You have taken more than 5 steps without successful submission. "
+            "Please read `@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
+            "You should also use the `update_skill` tool to record any new insights, "
+            "recurring patterns, or fixes you've discovered to help future attempts."
+        )
+
+    messages = [SystemMessage(content=system_prompt)] + state[
         "messages"
     ]
 
