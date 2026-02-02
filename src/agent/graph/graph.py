@@ -16,6 +16,7 @@ from src.agent.tools.env import (
     search_parts,
     submit_design,
     update_skill,
+    read_skill,
     write_script,
     check_manufacturability,
 )
@@ -47,6 +48,7 @@ def build_graph(
         submit_design,
         search_docs,
         update_skill,
+        read_skill,
         check_manufacturability,
         read_journal,
         write_journal,
