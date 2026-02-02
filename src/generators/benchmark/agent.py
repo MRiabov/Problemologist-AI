@@ -100,6 +100,12 @@ def validator_node(state: GeneratorState) -> Dict[str, Any]:
         from src.generators.benchmark.manager import execute_build
         # Call build with seed 0 and default scale (1,1,1) for base validation
         mjcf_xml = execute_build(full_code, 0, scale=(1.0, 1.0, 1.0))
+    except Exception as e:
+        print(f"DEBUG: execute_build failed: {e}")
+        return {
+            "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
+            "validation_passed": False,
+        }
 
         if not isinstance(mjcf_xml, str):
             return {
