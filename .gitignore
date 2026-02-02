@@ -36,3 +36,4 @@ kitty-specs/**/tasks/*.md
 
 .env
 .cache/
+.png
