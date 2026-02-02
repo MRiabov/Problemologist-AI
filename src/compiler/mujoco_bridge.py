@@ -1,8 +1,10 @@
 import os
+import json
+import subprocess
 from typing import Optional, List
 import mujoco
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import numpy as np
 
 
@@ -97,18 +99,85 @@ class MujocoBridge:
         goal_pos: Optional[tuple[float, float, float]] = None,
         goal_size: float = 0.5,
     ) -> SimResult:
-        """Run the simulation headless and return metrics.
+        """Runs the simulation in a sandbox."""
+        from src.environment import tools
 
-        Args:
-            xml_string: The MJCF XML content.
-            duration: Simulation logic time in seconds.
-            agent_script: Python code for control logic.
-            goal_pos: (x, y, z) of the success zone.
-            goal_size: radius of success zone.
+        runner_filename = "sim_runner.py"
+        workspace_dir = tools.WORKSPACE_DIR
+        runner_path = os.path.join(workspace_dir, runner_filename)
 
-        Returns:
-            SimResult object with metrics.
-        """
+        # We need to escape the XML string and agent script for the Python runner
+        runner_script = f"""
+import json
+import os
+import sys
+from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+
+# Add workspace to path
+sys.path.append("/workspace")
+
+bridge = MujocoBridge()
+xml_string = {repr(xml_string)}
+agent_script = {repr(agent_script)}
+goal_pos = {repr(goal_pos)}
+goal_size = {repr(goal_size)}
+duration = {duration}
+
+sim_result = bridge._run_simulation_internal(
+    xml_string=xml_string,
+    duration=duration,
+    agent_script=agent_script,
+    goal_pos=goal_pos,
+    goal_size=goal_size
+)
+
+# Use dataclasses.asdict or manual dict creation
+res_dict = {{
+    "duration": sim_result.duration,
+    "energy": sim_result.energy,
+    "success": sim_result.success,
+    "damage": sim_result.damage,
+    "replay_data": sim_result.replay_data
+}}
+
+print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
+"""
+
+        try:
+            with open(runner_path, "w", encoding="utf-8") as f:
+                f.write(runner_script)
+
+            stdout, stderr, returncode = tools._SANDBOX.run_script(
+                runner_filename, mount_src=True, timeout=int(duration + 10)
+            )
+
+            if os.path.exists(runner_path):
+                os.remove(runner_path)
+
+            if "SIM_RESULT:" not in stdout:
+                print(f"Sandbox Simulation Error: {stderr}")
+                return SimResult(duration, energy=0.0, success=False, damage=100.0)
+
+            result_line = [
+                line for line in stdout.split("\n") if "SIM_RESULT:" in line
+            ][0]
+            res_data = json.loads(result_line.split("SIM_RESULT:")[1])
+
+            return SimResult(**res_data)
+
+        except Exception as e:
+            print(f"Error initiating sandboxed simulation: {e}")
+            return SimResult(duration, energy=0.0, success=False, damage=100.0)
+
+    def _run_simulation_internal(
+        self,
+        xml_string: str,
+        duration: float = 5.0,
+        agent_script: str = "",
+        goal_pos: Optional[tuple[float, float, float]] = None,
+        goal_size: float = 0.5,
+    ) -> SimResult:
+        """Actual simulation logic (to be run inside sandbox)."""
         try:
             model = mujoco.MjModel.from_xml_string(xml_string)
         except Exception as e:
