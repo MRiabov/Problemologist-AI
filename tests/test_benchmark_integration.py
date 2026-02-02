@@ -1,6 +1,6 @@
 import pytest
-
-from src.generators.benchmark.agent import generator_agent
+from langchain_core.messages import HumanMessage
+from src.generators.benchmark.agent import generator_agent, DEFAULT_RUNTIME_CONFIG
 
 
 @pytest.mark.benchmark
@@ -40,59 +40,56 @@ The environment consists of three fixed elements within a 100x100x100mm domain:
 ### 6. Randomization
 To ensure the agent uses parametric logic rather than hardcoded coordinates:
 *   **Obstacle Position**: The center of the pillar shifts by `±10mm` in X and Y.
-*   **Obstacle Height**: The pillar height varies between `60mm` and `80mm`.
+*   **Obstable Height**: The pillar height varies between `60mm` and `80mm`.
 *   **Goal Position**: The Goal Bin rotates around the center of the workspace by `±15 degrees`.
 *   **Ball Diameter**: The ball size varies between `8mm` and `12mm` (requiring the agent to adjust the width of their track/chute).
 """
 
-    # We skip the planner stage by providing the plan directly in the state
+    # New AgentState structure
     state = {
-        "request": "A ball drop puzzle with a pillar obstacle and a goal bin.",
+        "messages": [
+            HumanMessage(
+                content="A ball drop puzzle with a pillar obstacle and a goal bin."
+            )
+        ],
         "plan": plan_content,
-        "attempts": 0,
-        "validation_passed": False,
-        "full_history": [],
+        "runtime_config": DEFAULT_RUNTIME_CONFIG,
+        "step_count": 0,
+        "scratchpad": {},
     }
 
-    # We invoke the agent starting from the 'coder' node to use the provided plan
-    # However, langgraph's compiled graph starts from the entry point.
-    # To start from a specific state, we can use the graph as is,
-    # but we need to ensure the planner doesn't overwrite our plan if we skip it.
+    result = await generator_agent.ainvoke(state, config={"recursion_limit": 50})
 
-    # Let's try invoking the whole thing first, or see if we can jump nodes.
-    # Since we want to test the WHOLE pipeline (including reasoning extraction),
-    # let's just provide the request and let it plan, then we can verify if it follows it.
+    # Check for success in valid messages
+    mjcf = None
+    validation_passed = False
 
-    # result = await generator_agent.ainvoke({"request": "Design a ball drop puzzle exactly as described in the requirements."})
+    for msg in reversed(result["messages"]):
+        content = str(msg.content)
+        if "Validation Passed!" in content and "MJCF Output" in content:
+            validation_passed = True
+            # Extract basic check (or parse if needed)
+            if "<mujoco" in content:
+                mjcf = content
+            break
 
-    # To strictly test the plan provided by the user:
-    # We can use the graph's internal nodes if needed, but ainvoke is better.
-    # If we want to skip planner, we might need a slightly different graph or just a mock planner.
-
-    # Actually, the user wants to test IF PASSING IN A PLAN it completes.
-    # So we should simulate being in the PLAN_APPROVAL stage where plan is already set.
-
-    result = await generator_agent.ainvoke(state)
-
-    if not result["validation_passed"]:
+    if not validation_passed:
         print("\nINTEGRATION TEST FAILED")
-        print(f"Total Attempts: {result.get('attempts')}")
-
-        history = result.get("full_history", [])
-        print(f"--- Attempt History ({len(history)} items) ---")
-        for i, entry in enumerate(history):
+        print(f"Total Steps: {len(result['messages'])}")
+        print("\nDEBUG: Integration Test Messages Trace:")
+        for m in result["messages"]:
             print(
-                f"Attempt {i + 1} Result: {'VALID' if entry['is_valid'] else 'FAILED'}"
+                f"[{type(m).__name__}]: {m.content[:100]}... | ID: {getattr(m, 'id', 'N/A')} | TC: {getattr(m, 'tool_calls', 'N/A')}"
             )
-            if not entry["is_valid"]:
-                print(f"Error: {entry['error_message']}")
-            print("-" * 20)
+        # Print last few messages
+        for m in result["messages"][-5:]:
+            print(f"[{type(m).__name__}]: {m.content[:500]}...")
 
-        if result.get("coder_reasoning"):
-            print(f"Last Coder Reasoning: {result['coder_reasoning'][:500]}...")
-        if result.get("code"):
-            print(f"Last Generated Code Sample: {result['code'][:500]}...")
-
-    assert result["validation_passed"] is True
-    assert result["mjcf"] is not None
-    assert "<mujoco" in result["mjcf"]
+    trace = "\n".join(
+        [
+            f"[{type(m).__name__}]: {m.content[:100]}... | TC: {getattr(m, 'tool_calls', 'N/A')}"
+            for m in result["messages"]
+        ]
+    )
+    assert validation_passed is True, f"Benchmark generation failed. Trace:\n{trace}"
+    assert mjcf is not None
