@@ -34,3 +34,13 @@
 
 *Dependency Setup*: Depends on WP01, WP02 (for integration)
 *Parallelism*: Integration step requires WP02.
+
+### WP04: Interactive Benchmark Generator UI
+
+- [x] T013: Implement mode selector in Sidebar
+- [x] T014: Create `src/dashboard/components/benchmark_gen.py` stage management
+- [x] T015: Implement Stage 1 & 2 (Input & Plan Review)
+- [x] T016: Implement Stage 3 & 4 (CAD Review & Finalization)
+- [x] T017: Integrate with Generator backend hooks
+
+*Dependency Setup*: Depends on Spec 005 WP04

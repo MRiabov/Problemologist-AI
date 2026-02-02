@@ -67,7 +67,15 @@ src/
 2. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
 3. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
 
-## 6. Success Criteria Verification
+## 6. Phase 3: Interactive Pipeline Support
+
+**Goal**: Support human-in-the-loop co-creation via the Dashboard.
+
+1. **Enhance Planner Node**: Update system prompts to include Learning Objectives and Self-Verification strategies.
+2. **Expose Interactive Hooks**: Modify `agent.py` or create wrapper utilities to allow external (UI) injection of plan edits and code overrides.
+3. **Rendering Integration**: Implement `src/generators/benchmark/renderer.py` to produce visual previews for each generation attempt to support UI-based review.
+
+## 7. Success Criteria Verification
 
 * **Efficiency**: Run `manager generate --count 10` and measure runtime (Target: < 5 mins).
 * **Yield**: Count valid vs. invalid outputs in the `staging` folder.
