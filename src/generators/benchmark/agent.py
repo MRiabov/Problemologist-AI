@@ -9,6 +9,11 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from src.agent.tools.env import (
+    init_skill,
+    list_skill_files,
+    list_skills,
+    package_skill,
+    read_skill,
     search_docs,
     update_skill,
 )
@@ -71,12 +76,8 @@ class GeneratorState(TypedDict):
 # Nodes
 def planner_node(state: GeneratorState) -> dict[str, any]:
     """Generates a plan based on the user request."""
-    print(f"DEBUG: Entering planner_node, request: {state.get('request')}")
 
-    # If plan is already provided, just wrap it in a HumanMessage for consistency if needed,
-    # but we can also just return it.
     if state.get("plan"):
-        print("DEBUG: planner_node - plan provided externally")
         return {
             "plan": state["plan"],
             "planner_reasoning": "Plan provided externally.",
@@ -85,20 +86,30 @@ def planner_node(state: GeneratorState) -> dict[str, any]:
             "linting_failed": False,
         }
 
-    model = get_model(Config.LLM_MODEL).bind_tools([search_docs, update_skill])
+    model = get_model(Config.LLM_MODEL).bind_tools(
+        [
+            search_docs,
+            update_skill,
+            read_skill,
+            list_skills,
+            list_skill_files,
+            init_skill,
+            package_skill,
+        ]
+    )
 
     # Build messages if not present
     messages = state.get("messages")
     if not messages:
-        messages = [
-            SystemMessage(
-                content=PLANNER_PROMPT.format(request=state["request"])
-                + "\n\nPlease think step-by-step before providing the plan. "
-                "Wrap your internal reasoning in <reasoning> tags and the final plan in <plan> tags. "
-                "If you are unsure about build123d syntax or available operations, use the 'search_docs' tool."
-            ),
-            HumanMessage(content="Create the plan."),
-        ]
+        system_msg = SystemMessage(content=PLANNER_PROMPT)
+        # Mandatory skill check instruction
+        system_msg.content += (
+            "\n\nMANDATORY: Before planning any `build123d` implementation, "
+            "you MUST use `read_skill` to read `build123d_cad_drafting_skill` (SKILL.md). "
+            "It contains expert knowledge, curated patterns, and critical pitfalls.\n"
+            "Use `list_skills` and `list_skill_files` to discover other knowledge."
+        )
+        messages = [system_msg, HumanMessage(content=state["request"])]
 
     response = model.invoke(messages)
 
@@ -121,17 +132,23 @@ def planner_node(state: GeneratorState) -> dict[str, any]:
 def coder_node(state: GeneratorState) -> dict[str, any]:
     """Generates or fixes code based on plan and errors."""
     attempts = state.get("attempts", 0)
-    print(f"DEBUG: Entering coder_node, current state attempts: {attempts}")
-    model = get_model(Config.LLM_MODEL).bind_tools([search_docs, update_skill])
+    model = get_model(Config.LLM_MODEL).bind_tools(
+        [
+            search_docs,
+            update_skill,
+            read_skill,
+            list_skills,
+            list_skill_files,
+            init_skill,
+            package_skill,
+        ]
+    )
 
     errors = state.get("errors")
     code = state.get("code")
     plan = state.get("plan")
-
     messages = state.get("messages")
 
-    # If the last message is not a ToolMessage and we don't have code yet,
-    # it means we just came from the planner and need to start the coder conversation.
     is_starting = not code and (
         not messages or not hasattr(messages[-1], "tool_call_id")
     )
@@ -141,43 +158,40 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
 
     if is_starting or is_retrying:
         extra_instructions = (
-            "\n\nPlease think step-by-step before providing the code. "
-            "Wrap your internal reasoning in <reasoning> tags and the final code in <python_code> tags. "
-            "If you are unsure about build123d syntax (selectors, context managers like 'with Locations'), use 'search_docs' tool."
+            "\n\nPlease think step-by-step. Wrap reasoning in <reasoning> tags "
+            "and code in <python_code> tags.\n"
+            "MANDATORY: Use `read_skill` to read `build123d_cad_drafting_skill` (SKILL.md) "
+            "before writing code."
         )
 
         if attempts > 5:
             extra_instructions += (
-                "\n\nCRITICAL: You have failed more than 5 times. "
-                "Please read `@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
-                "You should also use the `update_skill` tool to record any new insights, "
-                "recurring patterns, or fixes you've discovered to help future attempts."
+                "\n\nCRITICAL: Multiple failures occurred. "
+                "Consult the skill documentation thoroughly. "
+                "Record any new insights or fixes using `update_skill`."
             )
 
         if errors and code:
-            # Retry mode: use Critic prompt logic
             full_prompt = CRITIC_PROMPT.format(error=errors, code=code)
             messages = [
                 SystemMessage(
                     content=FIXER_PROMPT
-                    + f"\n\nIMPORTANT: Your code will be prepended with this template:\n{CAD_TEMPLATE}\n"
+                    + f"\n\nIMPORTANT: Template:\n{CAD_TEMPLATE}\n"
                     + extra_instructions
                 ),
                 HumanMessage(content=full_prompt),
             ]
         else:
-            # Initial generation
             messages = [
                 SystemMessage(
                     content=CODER_PROMPT.format(plan=plan, errors="None")
-                    + f"\n\nIMPORTANT: Start from this template:\n{CAD_TEMPLATE}\n"
+                    + f"\n\nIMPORTANT: Template:\n{CAD_TEMPLATE}\n"
                     + extra_instructions
                 ),
                 HumanMessage(content="Generate the code."),
             ]
 
     response = model.invoke(messages)
-
     res_dict = {"messages": [response]}
 
     if not response.tool_calls:
@@ -186,7 +200,6 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
         if "<reasoning>" in content and "</reasoning>" in content:
             reasoning = content.split("<reasoning>")[1].split("</reasoning>")[0].strip()
 
-        # Extract code
         raw_content = content
         if "<python_code>" in content and "</python_code>" in content:
             raw_content = (
@@ -209,8 +222,7 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
             {
                 "code": cleaned_code,
                 "coder_reasoning": reasoning,
-                "attempts": state.get("attempts", 0)
-                + (1 if is_retrying or not state.get("code") else 0),
+                "attempts": attempts + (1 if is_retrying or not code else 0),
                 "validation_passed": False,
                 "linting_failed": False,
                 "errors": None,
@@ -222,55 +234,98 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
 
 def linter_node(state: GeneratorState) -> dict[str, any]:
     """Runs static analysis (ruff, pyrefly) on the provided code."""
-    print("DEBUG: Entering linter_node")
     code = state["code"]
-
     lint_issues = run_linter(code)
     if lint_issues:
         error_msg = format_linter_report(lint_issues)
-        print(f"DEBUG: linter_node failed: {error_msg}")
         return {
             "errors": error_msg,
             "validation_passed": False,
             "linting_failed": True,
         }
-
-    print("DEBUG: linter_node passed")
     return {"errors": None, "validation_passed": False, "linting_failed": False}
 
 
 def validator_node(state: GeneratorState) -> dict[str, any]:
     """Executes code and runs validation."""
-    # ... (existing validator_node content)
+    code = state["code"]
+    from src.generators.benchmark.manager import execute_build
+
+    try:
+        mjcf_xml = execute_build(code, seed=0)
+        report = validate_mjcf(mjcf_xml)
+
+        if report["is_valid"]:
+            return {
+                "validation_passed": True,
+                "mjcf": mjcf_xml,
+                "errors": None,
+                "linting_failed": False,
+            }
+
+        history = state.get("full_history", [])
+        history.append(
+            {
+                "attempt": state["attempts"],
+                "error_message": report["error_message"],
+                "code": code,
+            }
+        )
+        return {
+            "validation_passed": False,
+            "errors": report["error_message"],
+            "full_history": history,
+        }
+    except Exception as e:
+        error_msg = traceback.format_exc()
+        history = state.get("full_history", [])
+        history.append(
+            {"attempt": state["attempts"], "error_message": error_msg, "code": code}
+        )
+        return {
+            "validation_passed": False,
+            "errors": f"Execution or validation error: {e!s}",
+            "full_history": history,
+        }
 
 
 def skill_populator_node(state: GeneratorState) -> dict[str, any]:
     """Populates the skill with insights after a definitive failure."""
-    print("DEBUG: Entering skill_populator_node")
     if state.get("validation_passed"):
         return {}
 
-    model = get_model(Config.LLM_MODEL).bind_tools([update_skill])
+    model = get_model(Config.LLM_MODEL).bind_tools(
+        [
+            update_skill,
+            read_skill,
+            list_skills,
+            list_skill_files,
+            init_skill,
+            package_skill,
+        ]
+    )
 
-    # Collect errors and history
     history = state.get("full_history", [])
     history_str = "\n".join(
         [f"Attempt {h['attempt']}: {h['error_message']}" for h in history]
     )
 
     prompt = (
-        "The benchmark generation has failed definitively after multiple attempts.\n"
+        "The benchmark generation has failed definitively.\n"
         f"Original Request: {state['request']}\n"
         f"Failure History:\n{history_str}\n\n"
-        "Your task is to analyze these failures and update the 'build123d_cad_drafting_skill' "
-        "with new insights, common pitfalls to avoid, or better patterns. "
-        "Use the `update_skill` tool to add a new reference file (e.g., 'lessons_learned.md') "
-        "to the skill, describing the issue and the solution or workaround."
+        "Your goal is to extract lessons learned and add them to "
+        "`build123d_cad_drafting_skill` using canonical structure:\n"
+        "1. Use `read_skill` to see current documentation.\n"
+        "2. Add detailed insights to `references/` (e.g., 'common_failures_mjcf.md').\n"
+        "3. (Optional) If you found a recurring code bug, add a Python helper to `scripts/`.\n"
+        "4. Update `SKILL.md` to link to these new resources.\n"
+        "5. Finally, use `package_skill` to validate and finalize changes."
     )
 
     messages = [
         SystemMessage(content=prompt),
-        HumanMessage(content="Populate the skill with lessons learned."),
+        HumanMessage(content="Update the skill with insights from these failures."),
     ]
     model.invoke(messages)
 
@@ -278,49 +333,42 @@ def skill_populator_node(state: GeneratorState) -> dict[str, any]:
 
 
 # Graph Construction
-# Graph Construction
 workflow = StateGraph(GeneratorState)
 
 workflow.add_node("planner", planner_node)
-
 workflow.add_node("coder", coder_node)
-
 workflow.add_node("linter", linter_node)
-
 workflow.add_node("validator", validator_node)
-
 workflow.add_node("skill_populator", skill_populator_node)
 
-workflow.add_node("tools", ToolNode([search_docs, update_skill]))
-
-
 workflow.add_edge(START, "planner")
+workflow.add_edge("planner", "coder")
+workflow.add_edge("coder", "linter")
 
 
-# ... (router logic)
+def should_continue(state: GeneratorState) -> Literal["coder", "validator", "planner"]:
+    if state.get("linting_failed"):
+        return "coder"
+    return "validator"
+
+
+workflow.add_conditional_edges("linter", should_continue)
 
 
 def should_continue_val(
     state: GeneratorState,
 ) -> Literal["coder", "skill_populator", END]:
-    if state.get("validation_passed") is True:
-        print("DEBUG: should_continue_val -> END")
-
+    if state.get("validation_passed"):
         return END
 
     if state.get("attempts", 0) >= MAX_ATTEMPTS:
-        print("DEBUG: should_continue_val -> skill_populator")
-
         return "skill_populator"
-
-    print("DEBUG: should_continue_val -> coder")
 
     return "coder"
 
 
 workflow.add_conditional_edges("validator", should_continue_val)
-
 workflow.add_edge("skill_populator", END)
 
-
-generator_agent = workflow.compile()
+app = workflow.compile()
+generator_agent = app  # Alias for compatibility with tests and manager

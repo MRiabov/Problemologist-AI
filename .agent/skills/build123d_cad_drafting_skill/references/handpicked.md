@@ -109,3 +109,29 @@ with BuildPart() as ibeam:
         make_face()
     extrude(amount=100)
 ```
+
+## 8. Expert Pitfalls & Patterns
+
+### Plural `with Locations` vs Singular `Location`
+
+* **The Trap**: `with Location((0,0,1)):` results in `AttributeError: __enter__`.
+* **The Fix**: Use `with Locations(Location((0,0,1))):` even for a single position. `Locations` is the context manager; `Location` is just the data.
+
+### Implicit Contexts
+
+Many functions implicitly use the "active object" of the current builder:
+
+```python
+with BuildPart() as bp:
+    Box(10, 10, 10)
+    fillet(bp.edges(), radius=1) # bp.edges() contains edges of the Box
+```
+
+### Selector Chaining
+
+```python
+# Select the top-most face
+top_face = bp.faces().sort_by(Axis.Z)[-1]
+# Select all edges except the ones on the bottom plane
+side_edges = bp.edges().filter_by(Axis.Z)
+```

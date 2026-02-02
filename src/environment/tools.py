@@ -1,4 +1,7 @@
+import subprocess
+import sys
 from pathlib import Path
+from typing import Optional
 
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
@@ -165,9 +168,13 @@ except Exception as e:
         return f"Error: {e!s}"
 
 
-def read_skill(skill_name: str, filename: str = "SKILL.md") -> str:
+def read_skill(
+    skill_name: str, filename: str = "SKILL.md", resource_type: Optional[str] = None
+) -> str:
     """
     Reads information from a specialized skill folder.
+    resource_type can be 'scripts', 'references', or 'assets'.
+    If not provided, it tries root, then references, then scripts, then assets.
     """
     skills_dir = Path(".agent/skills") / skill_name
     if not skills_dir.exists():
@@ -176,9 +183,17 @@ def read_skill(skill_name: str, filename: str = "SKILL.md") -> str:
     # Validate filename to prevent path traversal
     filename = Path(filename).name
 
-    target_path = skills_dir / filename
-    if filename != "SKILL.md":
-        target_path = skills_dir / "references" / filename
+    if resource_type:
+        target_path = skills_dir / resource_type / filename
+    else:
+        # Priority search
+        target_path = skills_dir / filename
+        if not target_path.exists():
+            target_path = skills_dir / "references" / filename
+        if not target_path.exists():
+            target_path = skills_dir / "scripts" / filename
+        if not target_path.exists():
+            target_path = skills_dir / "assets" / filename
 
     if not target_path.exists():
         return f"Error: File '{filename}' not found in skill '{skill_name}'."
@@ -189,38 +204,135 @@ def read_skill(skill_name: str, filename: str = "SKILL.md") -> str:
         return f"Error reading skill: {e!s}"
 
 
-def update_skill(skill_name: str, content: str, filename: str = "SKILL.md") -> str:
+def list_skills() -> str:
     """
-    Updates or adds information to a specialized skill folder.
+    Lists all available specialized skills.
     """
-    # Restrict to .agent/skills directory
+    skills_dir = Path(".agent/skills")
+    if not skills_dir.exists():
+        return "No skills found."
+
+    skills = sorted([p.name for p in skills_dir.iterdir() if p.is_dir()])
+    if not skills:
+        return "No skills found."
+
+    return "Available skills:\n- " + "\n- ".join(skills)
+
+
+def list_skill_files(skill_name: str) -> str:
+    """
+    Lists all files within a specialized skill folder, grouped by type.
+    """
     skills_dir = Path(".agent/skills") / skill_name
     if not skills_dir.exists():
         return f"Error: Skill '{skill_name}' does not exist."
 
+    result = [f"Contents of skill '{skill_name}':"]
+
+    if (skills_dir / "SKILL.md").exists():
+        result.append("- SKILL.md")
+
+    for folder in ["scripts", "references", "assets"]:
+        subdir = skills_dir / folder
+        if subdir.exists() and subdir.is_dir():
+            files = sorted(
+                [str(p.relative_to(subdir)) for p in subdir.rglob("*") if p.is_file()]
+            )
+            if files:
+                result.append(f"- {folder}/")
+                for f in files:
+                    result.append(f"  - {f}")
+
+    return "\n".join(result)
+
+
+def update_skill(
+    skill_name: str,
+    content: str,
+    filename: str = "SKILL.md",
+    resource_type: Optional[str] = None,
+) -> str:
+    """
+    Updates or adds information to a specialized skill folder.
+    resource_type can be 'scripts', 'references', or 'assets'.
+    If filename is 'SKILL.md', it goes to root.
+    If filename is not 'SKILL.md' and resource_type is not provided, it defaults to 'references'.
+    """
+    skills_dir = Path(".agent/skills") / skill_name
+    if not skills_dir.exists():
+        return f"Error: Skill '{skill_name}' does not exist. Use init_skill first."
+
     # Validate filename to prevent path traversal
     filename = Path(filename).name
-    if filename not in ["SKILL.md"] and not filename.endswith(".md"):
-        return "Error: Only .md files can be added to skills."
 
-    # If it's a new file, put it in references/
-    target_path = skills_dir / filename
-    if filename != "SKILL.md":
-        target_path = skills_dir / "references" / filename
+    # Validation logic
+    rtype = resource_type
+    if filename == "SKILL.md":
+        target_path = skills_dir / filename
+        rtype = None
+    else:
+        rtype = resource_type or "references"
+        target_path = skills_dir / rtype / filename
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        if filename == "SKILL.md":
-            # For SKILL.md, we might want to append rather than overwrite,
-            # but for now let's allow the agent to manage it.
-            # We'll just write it.
-            target_path.write_text(content, encoding="utf-8")
-        else:
-            target_path.write_text(content, encoding="utf-8")
+    # Check extensions
+    if rtype == "references" and not filename.endswith(".md"):
+        return "Error: Only .md files can be added to references."
+    if rtype == "scripts" and not (
+        filename.endswith(".py") or filename.endswith(".sh")
+    ):
+        return "Error: Only .py or .sh files can be added to scripts."
 
-        return f"Successfully updated skill '{skill_name}' at {filename}"
+    try:
+        target_path.write_text(content, encoding="utf-8")
+        if target_path.suffix in [".py", ".sh"] or rtype == "scripts":
+            target_path.chmod(0o755)
+        rel_path = target_path.relative_to(skills_dir)
+        return f"Successfully updated skill '{skill_name}' at {rel_path}"
     except Exception as e:
         return f"Error updating skill: {e!s}"
+
+
+def init_skill(skill_name: str) -> str:
+    """
+    Initializes a new skill using the canonical init_skill.py script.
+    """
+    init_script = Path(".agent/skills/skill-creator/scripts/init_skill.py")
+    if not init_script.exists():
+        return "Error: init_skill.py not found in skill-creator."
+
+    try:
+        cmd = [sys.executable, str(init_script), skill_name, "--path", ".agent/skills"]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return f"Successfully initialized skill '{skill_name}'.\n{result.stdout}"
+        else:
+            return f"Error initializing skill: {result.stderr or result.stdout}"
+    except Exception as e:
+        return f"Exception initializing skill: {e!s}"
+
+
+def package_skill(skill_name: str) -> str:
+    """
+    Validates and packages a skill using the canonical package_skill.py script.
+    """
+    package_script = Path(".agent/skills/skill-creator/scripts/package_skill.py")
+    if not package_script.exists():
+        return "Error: package_skill.py not found in skill-creator."
+
+    skill_path = Path(".agent/skills") / skill_name
+    if not skill_path.exists():
+        return f"Error: Skill path '{skill_path}' does not exist."
+
+    try:
+        cmd = [sys.executable, str(package_script), str(skill_path)]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return f"Successfully packaged skill '{skill_name}'.\n{result.stdout}"
+        else:
+            return f"Error packaging skill (validation failed):\n{result.stderr or result.stdout}"
+    except Exception as e:
+        return f"Exception packaging skill: {e!s}"
 
 
 def search_docs(query: str) -> str:

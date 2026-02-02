@@ -38,11 +38,15 @@ def run_linter(code: str) -> list[dict]:
             ruff_cmd.extend(["--ignore", RUFF_IGNORE])
         ruff_cmd.append("-")
 
+        print(f"DEBUG: ruff_cmd: {ruff_cmd}")
+        print(f"DEBUG: code to lint:\n{code}")
+
         result = subprocess.run(
             ruff_cmd, input=code, capture_output=True, text=True, check=False
         )
         if result.stdout:
             ruff_data = json.loads(result.stdout)
+            print(f"DEBUG: ruff_data: {ruff_data}")
             for item in ruff_data:
                 err_code = item["code"]
                 # Skip import sorting, unused items, and stylistic issues from being blocking
