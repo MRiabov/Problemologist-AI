@@ -158,3 +158,17 @@ The environment shall expose a new tool to the agent.
 * **Simplification**: We assume "3-Axis Machining" for CNC. 5-axis is out of scope.
 * **Performance**: Detailed DFM checks (especially raycasting) can be slow. Implementation should use coarse meshes or bounding-box approximations where possible to keep runtime < 5s.
 * **Material**: Default to "Aluminum 6061" for CNC and "ABS" for Injection Molding for pricing constants.
+
+## 7. Economic Optimization & Record System
+
+To drive the agent towards highly efficient designs, the environment supports an economic "Record" system.
+
+### 7.1. Cost Targets
+Tasks can be defined with explicit economic constraints:
+* `target_quantity`: The production volume (e.g., 10,000 units).
+* `max_unit_cost`: The maximum allowable per-unit cost.
+
+### 7.2. The Record System
+The system tracks the lowest unit cost achieved for any given benchmark scenario.
+* **Objective**: When a record exists, the agent's primary objective (beyond functional success) is to produce a design with a `unit_cost < current_record`.
+* **RL Rollouts**: This mechanism allows for the generation of "Optimization Rollouts," where the agent iteratively refines a design to reduce material volume, simplify machining orientations, or optimize for injection molding wall thickness to beat previous records.
