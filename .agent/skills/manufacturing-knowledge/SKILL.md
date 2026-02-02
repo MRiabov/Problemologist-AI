@@ -37,3 +37,36 @@ This will return a JSON object containing:
 - **Break-even**: High quantities (>1000) strongly favor Injection Molding.
 - **Volume**: Reducing part volume is the most effective way to lower cost in both processes.
 - **Reuse**: Reusing the same part multiple times reduces total setup/tooling overhead.
+
+## 4. Technical Design Patterns
+
+### Pattern: CNC Fillet Strategy
+When designing for CNC, internal vertical corners must have a radius $\ge$ tool radius.
+```python
+# Expert Pattern: Automatic filleting of internal vertical edges
+internal_edges = part.edges().filter_by(Axis.Z).internal()
+part = fillet(internal_edges, radius=3.1) # 3.1mm for 3.0mm tool clearance
+```
+
+### Pattern: Injection Molding Shelling
+To maintain uniform wall thickness (1.0 - 4.0mm):
+```python
+# Expert Pattern: Creating a shelled plastic part
+part = shell(part, openings=part.faces().sort_by(Axis.Z).last(), amount=-2.0)
+```
+
+### Pattern: Draft for Release
+All faces parallel to the pull direction (+Z) must be tapered.
+```python
+# Expert Pattern: Applying 2-degree draft
+part = draft(part, faces=part.faces().filter_by(Axis.Z), angle=2.0, pull_direction=(0,0,1))
+```
+
+## 5. Optimization Workflow
+
+1. **Query Database**: Call `run_skill_script` to get current rates.
+2. **Select Process**: Based on `target_quantity` (IM for >1000, CNC for <100).
+3. **Model Base Geometry**: Focus on function first.
+4. **Apply DFM**: Add fillets (CNC) or Shell/Draft (IM).
+5. **Analyze Cost**: Call `check_manufacturability` to see the estimate.
+6. **Iterate**: If `unit_cost > max_unit_cost`, reduce volume or simplify geometry.
