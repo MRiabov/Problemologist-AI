@@ -20,3 +20,6 @@ class AgentState(TypedDict):
 
     # Storage for intermediate data, node-specific state, or temporary variables
     scratchpad: dict[str, Any]
+
+    # Runtime configuration updates (e.g. system prompt overrides)
+    runtime_config: dict[str, Any]

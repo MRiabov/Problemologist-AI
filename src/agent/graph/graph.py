@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -11,7 +11,9 @@ from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
     edit_script,
     preview_design,
+    preview_part,
     search_docs,
+    search_parts,
     submit_design,
     update_skill,
     write_script,
@@ -21,17 +23,21 @@ from src.agent.tools.memory import read_journal, write_journal
 from src.agent.utils.config import Config
 
 
-def build_graph():
+from functools import partial
+
+
+def build_graph(
+    extra_tools: Optional[list] = None, validation_tool_name: str = "submit_design"
+):
     """
     Constructs the LangGraph for the VLM CAD Agent.
-    """
-    builder = StateGraph(AgentState)
 
-    # 1. Add Nodes
-    builder.add_node("planner", planner_node)
-    builder.add_node("actor", actor_node)
-    builder.add_node("critic", critic_node)
-    builder.add_node("skill_populator", skill_populator_node)
+    Args:
+        extra_tools: Optional list of additional tools to include.
+        validation_tool_name: The name of the tool that triggers a critic review (default: submit_design).
+    """
+
+    builder = StateGraph(AgentState)
 
     # ToolNode implementation
     tools = [
@@ -44,7 +50,22 @@ def build_graph():
         check_manufacturability,
         read_journal,
         write_journal,
+        search_parts,
+        preview_part,
     ]
+    if extra_tools:
+        tools.extend(extra_tools)
+
+    # 1. Add Nodes
+    builder.add_node("planner", planner_node)
+
+    # Pass all tools to actor so it can bind them
+    actor_with_tools = partial(actor_node, tools=tools)
+    builder.add_node("actor", actor_with_tools)
+
+    builder.add_node("critic", critic_node)
+    builder.add_node("skill_populator", skill_populator_node)
+
     builder.add_node("tools", ToolNode(tools))
 
     # 2. Define Edges
@@ -87,7 +108,7 @@ def build_graph():
         for msg in reversed(messages):
             if hasattr(msg, "tool_calls") and msg.tool_calls:
                 tool_names = [tc["name"] for tc in msg.tool_calls]
-                if "preview_design" in tool_names or "submit_design" in tool_names:
+                if "preview_design" in tool_names or validation_tool_name in tool_names:
                     return "critic"
                 break
 

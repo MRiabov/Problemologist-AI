@@ -16,27 +16,38 @@ from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
 
-def actor_node(state: AgentState):
+def actor_node(state: AgentState, tools: list = None):
     """
     Executes the next step in the plan using tools.
     """
     model = get_model(Config.LLM_MODEL)
 
     # Bind tools to the model
-    tools = [
-        write_script,
-        edit_script,
-        preview_design,
-        submit_design,
-        search_docs,
-        update_skill,
-        read_skill,
-        read_journal,
-        write_journal,
-    ]
+    if tools is None:
+        tools = [
+            write_script,
+            edit_script,
+            preview_design,
+            submit_design,
+            search_docs,
+            update_skill,
+            read_skill,
+            read_journal,
+            write_journal,
+        ]
     model_with_tools = model.bind_tools(tools)
 
-    system_prompt = get_prompt("cad_agent.actor.system")
+    system_prompt_key = "cad_agent.actor.system"
+    system_prompt = get_prompt(system_prompt_key)
+
+    # Check for overrides
+    if (
+        state.get("runtime_config")
+        and "system_prompt_overrides" in state["runtime_config"]
+    ):
+        overrides = state["runtime_config"]["system_prompt_overrides"]
+        if "actor" in overrides:
+            system_prompt = get_prompt(overrides["actor"])
 
     # Mandatory skill check instruction
     system_prompt += (
