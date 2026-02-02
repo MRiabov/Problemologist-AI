@@ -62,7 +62,13 @@ def test_generate_pipeline(mock_invoke, mock_render, clean_datasets):
         "code": MOCK_SCRIPT,
         "request": "Test Prompt",
     }
-    mock_render.return_value = ["test_render.png"]
+
+    # Mock render_scenario to return paths relative to scenario_dir
+    def mock_render_side_effect(_xml, prefix, **_kwargs):
+        # The prefix already includes the scenario_dir/images/...
+        return [f"{prefix}_default.png"]
+
+    mock_render.side_effect = mock_render_side_effect
 
     from typer.testing import CliRunner
 

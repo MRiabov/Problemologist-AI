@@ -1,23 +1,24 @@
 import json
+import textwrap
 from unittest.mock import MagicMock, patch
 
 from src.generators.benchmark.linter import format_linter_report, run_linter
 
 
 def test_run_linter_valid():
-    code = """
-def build(seed=0, scale=(1,1,1)):
-    return "MOCK_MJCF"
-"""
+    code = textwrap.dedent("""
+        def build(seed=0, scale=(1,1,1)):
+            return "MOCK_MJCF"
+    """)
     errors = run_linter(code)
     assert len(errors) == 0
 
 
 def test_run_linter_syntax_error():
-    code = """
-def build(seed=0, scale=(1,1,1))
-    return "MISSING COLON"
-"""
+    code = textwrap.dedent("""
+        def build(seed=0, scale=(1,1,1))
+            return "MISSING COLON"
+    """)
     errors = run_linter(code)
     assert len(errors) > 0
     assert any(e["linter"] == "ruff" for e in errors) or any(
@@ -26,37 +27,25 @@ def build(seed=0, scale=(1,1,1))
 
 
 def test_run_linter_undefined_name():
-    code = """
-def build(seed=0, scale=(1,1,1)):
-    x = undefined_variable
-    return "MOCK"
-"""
+    code = textwrap.dedent("""
+        def build(seed=0, scale=(1,1,1)):
+            x = undefined_variable
+            return "MOCK"
+    """)
     errors = run_linter(code)
     assert len(errors) > 0
     # Pyrefly or Ruff should catch this
     assert any("undefined_variable" in e["message"] for e in errors)
 
 
-# Note: we do NOT want unused imports. we want only hard, blocking errors.
-# def test_run_linter_unused_import():
-#     code = """
-# import os
-# def build(seed=0, scale=(1,1,1)):
-#     return "MOCK"
-# """
-#     errors = run_linter(code)
-#     assert len(errors) > 0
-#     assert any("os" in e and "unused" in e.lower() for e in errors)
-
-
 def test_run_linter_filtering_ruff():
     # F401: unused import (should be filtered)
     # F821: undefined name (should NOT be filtered)
-    code = """
-import os
-def build(seed=0, scale=(1,1,1)):
-    return undefined_func()
-"""
+    code = textwrap.dedent("""
+        import os
+        def build(seed=0, scale=(1,1,1)):
+            return undefined_func()
+    """)
     errors = run_linter(code)
     # Should only have 1 error (undefined name)
     assert len(errors) == 1

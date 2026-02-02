@@ -40,15 +40,17 @@ def actor_node(state: AgentState):
 
     # Mandatory skill check instruction
     system_prompt += (
-        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use the `read_skill` tool "
-        "to read the `build123d_cad_drafting_skill` (SKILL.md). It contains expert knowledge, "
-        "curated patterns, and critical pitfalls that are not in the standard documentation."
+        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use the "
+        "`read_skill` tool to read the `build123d_cad_drafting_skill` (SKILL.md). "
+        "It contains expert knowledge, curated patterns, and critical pitfalls "
+        "that are not in the standard documentation."
     )
 
     if state.get("step_count", 0) > 5:
         system_prompt += (
-            "\n\nCRITICAL: You have taken more than 5 steps without successful submission. "
-            "Please read `@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
+            "\n\nCRITICAL: You have taken more than 5 steps without successful "
+            "submission. Please read "
+            "`@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
             "You should also use the `update_skill` tool to record any new insights, "
             "recurring patterns, or fixes you've discovered to help future attempts."
         )
