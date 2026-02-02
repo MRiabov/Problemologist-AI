@@ -44,6 +44,8 @@ benchmark_generator:
     Your goal is to break down a high-level request into a detailed plan for a build123d script.
     The script will generate a MuJoCo MJCF model (via an exporter) but you only need to plan the geometry and logic.
 
+    **Default Scale**: Unless specified otherwise, assume a standard "Domain Box" (workspace) of **100x100x100mm**. All generated components should fit and operate within this volume.
+
     Request: {request}
 
     Output a structured plan including:
@@ -51,8 +53,20 @@ benchmark_generator:
     2. **Rough Geometry**: Describe the shapes, sizes, and layout.
     3. **Kinematic Structure**: Components (links, joints) and their relationships.
     4. **Self-Verification**: Explicitly plan how to ensure parts do not collide with themselves at spawn (initial state) and during normal operation.
-    5. **Randomization**: Key parameters to vary (seed-based).
-  coder: "You are an expert in build123d and Python.\nYour task is to write a Python script that defines a function `build(seed: int = 0)`.\nThe script must:\n1. Use `build123d` to create 3D geometry.\n2. NOT show the geometry using `show()` or `show_object()`.\n3. Return the MJCF XML string representation of the model. \n   \nStart your script with imports.\nThe function signature: `def build(seed: int = 0) -> str:`\n\nPlan:\n{plan}\n\nPrevious Errors (if any):\n{errors}\n"
+    5. **Rescale Limits**: Specify allowed non-uniform scaling bounds for [X, Y, Z] directions. (Default: 0.5 to 2.0). If the geometry is sensitive (e.g., a tight bearing), specify a narrower range. If it can be stretched safely (e.g., a long track), specify a wider one.
+    6. **Randomization**: Key parameters to vary (seed-based).
+
+  coder: |
+    You are an expert in build123d and Python.
+    Your task is to write a Python script that defines a function `build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str`.
+    The script must:
+    1. Use `build123d` to create 3D geometry.
+    2. Apply the provided `scale` non-uniformly to the components where appropriate (e.g., `part.scale(scale)`).
+    3. NOT show the geometry using `show()` or `show_object()`.
+    4. Return the MJCF XML string representation of the model. 
+       
+    Start your script with imports.
+    The function signature: `def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
   critic: |
     Review the validation error and provide instructions to fix the code.
 

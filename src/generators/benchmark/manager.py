@@ -15,14 +15,22 @@ from src.generators.benchmark.types import ScenarioManifest, ValidationReport
 app = typer.Typer(help="Benchmark Scenario Generator CLI")
 console = Console()
 
-def execute_build(code: str, seed: int) -> str:
-    """Executes the build(seed) function from the provided code."""
+def execute_build(code: str, seed: int, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:
+    """Executes the build(seed, scale) function from the provided code."""
     locs = {}
     # We use a shared dict for globals and locals to behave like a module
     exec(code, locs, locs)
     if "build" not in locs:
-        raise ValueError("Function 'build(seed)' not defined in the script.")
-    return locs["build"](seed)
+        raise ValueError("Function 'build(seed, scale)' not defined in the script.")
+    
+    # Try calling with scale first (new signature)
+    import inspect
+    sig = inspect.signature(locs["build"])
+    if "scale" in sig.parameters:
+        return locs["build"](seed, scale=scale)
+    else:
+        # Fallback for old scripts without scale parameter
+        return locs["build"](seed)
 
 @app.command()
 def generate(
@@ -77,9 +85,15 @@ def generate(
             attempts += 1
             seed = random.randint(0, 1000000)
             
+            # Generate random non-uniform scale (0.5 to 2.0)
+            sx = random.uniform(0.5, 2.0)
+            sy = random.uniform(0.5, 2.0)
+            sz = random.uniform(0.5, 2.0)
+            scale = (sx, sy, sz)
+            
             try:
                 # 2. Batch Processing & Randomization
-                mjcf_xml = execute_build(template_code, seed)
+                mjcf_xml = execute_build(template_code, seed, scale=scale)
                 
                 # 3. Validation
                 report = validate_mjcf(mjcf_xml)
@@ -119,7 +133,8 @@ def generate(
                         },
                         "randomization": {
                             "seed_range": [0, 1000000],
-                            "parameters": ["seed"]
+                            "parameters": ["seed", "scale"],
+                            "scale": [sx, sy, sz]
                         },
                         "validation": {
                             "passed": True,

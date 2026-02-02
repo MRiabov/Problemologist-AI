@@ -8,6 +8,7 @@ class ScenarioAssets(TypedDict):
 class ScenarioRandomization(TypedDict):
     seed_range: List[int]
     parameters: List[str]
+    scale: List[float] # [sx, sy, sz]
 
 class ScenarioValidation(TypedDict):
     passed: bool
