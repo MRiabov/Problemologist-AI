@@ -56,7 +56,8 @@ src/
     ├── components/      # UI components
     │   ├── chat.py      # Reasoning and logs viewer
     │   ├── code.py      # Syntax-highlighted code viewer
-    │   └── viewer_3d.py # interactive PyVista viewport
+    │   ├── viewer_3d.py # interactive PyVista viewport
+    │   └── benchmark_gen.py # Interactive generator pipeline
     └── utils.py         # Path resolution and formatting
 ```
 

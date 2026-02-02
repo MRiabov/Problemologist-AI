@@ -37,3 +37,14 @@
 - [x] T007 Implement CLI Entry Point (`manager.py`)
 - [x] T008 Implement Batch Processing & Randomization Loop
 - [x] T009 Implement Artifact Export logic
+
+### WP04: Interactive Pipeline Support
+
+**Goal**: Support human-in-the-loop co-creation via the Dashboard.
+**Priority**: Medium
+**Dependencies**: WP02
+**File**: [tasks/WP04-interactive-support.md](tasks/WP04-interactive-support.md)
+
+- [x] T010 Enhance Planner Node with Objectives & Collision Strategy
+- [x] T011 Implement Rendering Engine (`renderer.py`)
+- [x] T012 Expose Agent Hooks for UI-based overrides

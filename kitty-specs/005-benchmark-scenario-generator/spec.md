@@ -41,14 +41,30 @@ The system ensures that every generated scenario is robust, randomized, and phys
 5.  **Approval**: The user visually inspects the 8 successful renders. They approve 6 that look challenging but solvable.
 6.  **Commit**: The approved scenarios are saved to `datasets/benchmarks/tier2_kinematic/` with their randomization parameters locked.
 
+### 2.2 Interactive Human-in-the-Loop Generation
+
+**Actor**: Main Developer
+**Goal**: Precisely tune a complex benchmark scenario through iterative feedback.
+
+1.  **Initial Prompt**: User describes a benchmark goal (e.g., "A robotic task to teach gear meshing").
+2.  **Plan Approval**: The system generates a high-level plan (teaching goals, rough geometry, kinematic chain, self-collision strategy). The user reviews and edits this plan.
+3.  **Iterative CAD Coding**: The system generates the `build123d` code. It self-validates through MuJoCo simulation until a stable model is found.
+4.  **Visual Review**: The system provides multiple rendering angles of the stable model. The user reviews the code and visuals, potentially providing manual edits.
+5.  **Fulfillment**: Once the user approves the CAD model, the system generates the final MJCF XML and manifests.
+
 ## 3. Functional Requirements
 
 ### 3.1 Scenario Script Generation
+...
+*   **FR-04**: Scripts MUST include logic to generate "Forbid Zones" (red obstacles) and "Goal Zones" (green targets) within the workspace.
 
-*   **FR-01**: The system **MUST** use an LLM (e.g., Claude 3.5 Sonnet or GPT-4o) to write Python scripts that define a scenario.
-*   **FR-02**: Generated scripts **MUST** utilize `build123d` for all constructive solid geometry (CSG) operations.
-*   **FR-03**: Generated scripts **MUST** define a parameterized `build()` function that accepts a randomization seed or config dict.
-*   **FR-04**: Scripts **MUST** include logic to generate "Forbid Zones" (red obstacles) and "Goal Zones" (green targets) within the workspace.
+### 3.2 Interactive Pipeline (Human-in-the-Loop)
+
+*   **FR-17**: The system MUST support a multi-stage interactive generation loop: Plan -> Code -> XML.
+*   **FR-18**: The Plan stage MUST include explicit "Learning Objectives" and a "Self-Verification" strategy for collisions.
+*   **FR-19**: The system MUST allow the user to edit and override the Agent's Plan before implementation begins.
+*   **FR-20**: The system MUST support a "Self-Correction" loop where the Coder and Validator iterate up to 3 times to find a stable geometry without user intervention.
+*   **FR-21**: The system MUST allow the user to provide manual code edits or natural language feedback on the stable CAD model before final XML generation.
 
 ### 3.2 Randomization Engine
 
