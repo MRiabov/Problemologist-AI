@@ -3,6 +3,10 @@ from langchain_core.messages import SystemMessage
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
     edit_script,
+    init_skill,
+    list_skill_files,
+    list_skills,
+    package_skill,
     preview_design,
     read_skill,
     search_docs,
@@ -32,6 +36,10 @@ def actor_node(state: AgentState, tools: list = None):
             search_docs,
             update_skill,
             read_skill,
+            list_skills,
+            list_skill_files,
+            init_skill,
+            package_skill,
             read_journal,
             write_journal,
         ]
