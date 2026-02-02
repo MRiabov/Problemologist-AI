@@ -22,7 +22,10 @@ def execute_build(
 ) -> str:
     """Executes the build(seed, scale) function from the provided code inside a sandbox."""
     # Prepend hardcoded imports to ensure they are never skipped by the LLM
-    final_code = "from build123d import *\nfrom src.simulation_engine.builder import SceneCompiler\n\n" + code
+    final_code = (
+        "from build123d import *\nfrom src.simulation_engine.builder import SceneCompiler\n\n"
+        + code
+    )
 
     # Initialize a temporary sandbox for generation
     # Use a 'generation_workspace' to avoid clashing with agent workspace
@@ -64,7 +67,7 @@ except Exception as e:
         with open(os.path.join(workspace, runner_name), "w") as f:
             f.write(runner_script)
 
-        stdout, stderr, rc = sandbox.run_script(runner_name)
+        stdout, stderr, rc = sandbox.run_script(runner_name, mount_src=True)
 
         if "BUILD_RESULT:" in stdout:
             # Extract XML

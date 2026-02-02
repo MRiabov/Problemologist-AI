@@ -10,8 +10,10 @@ from src.generators.benchmark.prompts import (
     CODER_PROMPT,
     CRITIC_PROMPT,
     FIXER_PROMPT,
+    LINTER_FEEDBACK_PREFIX,
 )
 from src.generators.benchmark.validator import validate_mjcf
+from src.generators.benchmark.linter import run_linter
 
 
 CAD_TEMPLATE = """from build123d import *
@@ -30,6 +32,7 @@ class GeneratorState(TypedDict):
     mjcf: Optional[str]
     attempts: int
     validation_passed: bool
+    linting_failed: bool
 
 
 # Nodes
@@ -44,7 +47,12 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
     ]
 
     response = model.invoke(messages)
-    return {"plan": response.content, "attempts": 0, "validation_passed": False}
+    return {
+        "plan": response.content,
+        "attempts": 0,
+        "validation_passed": False,
+        "linting_failed": False,
+    }
 
 
 def coder_node(state: GeneratorState) -> Dict[str, Any]:
@@ -90,6 +98,23 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         cleaned_code = CAD_TEMPLATE + "\n" + cleaned_code
 
     return {"code": cleaned_code, "attempts": state.get("attempts", 0) + 1}
+
+
+def linter_node(state: GeneratorState) -> Dict[str, Any]:
+    """Runs static analysis (ruff, pyrefly) on the generated code."""
+    code = state["code"]
+
+    lint_issues = run_linter(code)
+    if lint_issues:
+        error_msg = LINTER_FEEDBACK_PREFIX + "\n".join(lint_issues)
+        return {
+            "errors": error_msg,
+            "validation_passed": False,
+            "linting_failed": True,
+        }
+
+    return {"errors": None, "validation_passed": True, "linting_failed": False}
+
 
 def validator_node(state: GeneratorState) -> Dict[str, Any]:
     """Executes code and runs validation."""
@@ -139,11 +164,35 @@ workflow = StateGraph(GeneratorState)
 
 workflow.add_node("planner", planner_node)
 workflow.add_node("coder", coder_node)
+workflow.add_node("linter", linter_node)
 workflow.add_node("validator", validator_node)
 
 workflow.set_entry_point("planner")
 workflow.add_edge("planner", "coder")
-workflow.add_edge("coder", "validator")
-workflow.add_conditional_edges("validator", should_continue)
+workflow.add_edge("coder", "linter")
+
+
+def should_continue_lint(state: GeneratorState) -> Literal["coder", "validator"]:
+    """Decides whether to retry after linting or proceed to simulation."""
+    if state["linting_failed"] and state["attempts"] < 3:
+        return "coder"
+    return "validator"
+
+
+workflow.add_conditional_edges("linter", should_continue_lint)
+workflow.add_edge("validator", "should_continue_proxy")
+
+
+def should_continue(state: GeneratorState) -> Literal["coder", END]:
+    """Decides whether to retry after validation or end."""
+    if state["validation_passed"]:
+        return END
+    if state["attempts"] >= 3:
+        return END
+    return "coder"
+
+
+workflow.add_node("should_continue_proxy", lambda x: x)
+workflow.add_conditional_edges("should_continue_proxy", should_continue)
 
 generator_agent = workflow.compile()
