@@ -20,7 +20,7 @@ from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
 
-def actor_node(state: AgentState, tools: list = None):
+async def actor_node(state: AgentState, tools: list = None):
     """
     Executes the next step in the plan using tools.
     """
@@ -80,7 +80,7 @@ def actor_node(state: AgentState, tools: list = None):
     if state.get("plan"):
         messages.append(SystemMessage(content=f"Current Plan:\n{state['plan']}"))
 
-    response = model_with_tools.invoke(messages)
+    response = await model_with_tools.ainvoke(messages)
 
     updates = {
         "messages": [response],

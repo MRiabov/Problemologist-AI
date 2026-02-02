@@ -6,7 +6,7 @@ from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
 
-def planner_node(state: AgentState):
+async def planner_node(state: AgentState):
     """
     Decides the high-level strategy and updates the plan.
     """
@@ -69,6 +69,6 @@ def planner_node(state: AgentState):
         ),
     ]
 
-    response = model.invoke(messages)
+    response = await model.ainvoke(messages)
 
     return {"plan": response.content, "messages": [response]}

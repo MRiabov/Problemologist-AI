@@ -6,7 +6,7 @@ from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
 
-def critic_node(state: AgentState):
+async def critic_node(state: AgentState):
     """
     Analyzes the output of the tools (preview/submit) and decides next steps.
     """
@@ -29,6 +29,6 @@ def critic_node(state: AgentState):
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
 
     # We ask the LLM to review the situation
-    response = model.invoke(messages)
+    response = await model.ainvoke(messages)
 
     return {"messages": [response]}
