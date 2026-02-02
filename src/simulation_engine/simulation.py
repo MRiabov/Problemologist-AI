@@ -45,6 +45,15 @@ class SimulationLoop:
         self.target_body_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, "target"
         )
+        # Pre-cache names to avoid expensive lookups in critical loops
+        self.site_names = [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_SITE, i)
+            for i in range(self.model.nsite)
+        ]
+        self.geom_names = [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
+            for i in range(self.model.ngeom)
+        ]
         # If target is not a body, maybe a geom? Prompt said "xpos['target']" which usually refers to body xpos.
         # But if it fails, we assume no win condition based on these names.
 
@@ -252,13 +261,13 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
             "qpos": self.data.qpos.copy(),
             "qvel": self.data.qvel.copy(),
             "time": self.data.time,
-            "sensordata": self.data.sensordata.copy()
-            if self.model.nsensor > 0
-            else np.array([]),
+            "sensordata": (
+                self.data.sensordata.copy()
+                if self.model.nsensor > 0
+                else np.array([])
+            ),
             "site_xpos": {
-                mujoco.mj_id2name(
-                    self.model, mujoco.mjtObj.mjOBJ_SITE, i
-                ): self.data.site_xpos[i].copy()
+                self.site_names[i]: self.data.site_xpos[i].copy()
                 for i in range(self.model.nsite)
             },
         }
@@ -279,11 +288,9 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
         # We need to iterate contacts
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            geom1_id = contact.geom1
-            geom2_id = contact.geom2
-
-            name1 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_id)
-            name2 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_id)
+            # Use cached geometry names instead of looking them up
+            name1 = self.geom_names[contact.geom1]
+            name2 = self.geom_names[contact.geom2]
 
             # Check if one is forbid and other is part of agent
             # We assume "forbid" is in the name of forbidden zone
