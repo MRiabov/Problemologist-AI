@@ -17,50 +17,43 @@ MJCF = """
 """
 
 
-@pytest.fixture
-def model_path(tmp_path):
-    p = tmp_path / "test_model.xml"
-    p.write_text(MJCF)
-    return str(p)
+def test_run_isolated_success():
+    script = "def control_logic(model, data): pass"
+    result = run_isolated(MJCF, agent_script=script, duration=0.1)
+    assert result["success"] is True
+    assert "result" in result
 
 
-def test_run_isolated_success(model_path):
-    script = "def control(obs): return []"
-    result = run_isolated(model_path, script, max_steps=10)
-    assert result["status"] == "TIMEOUT"  # It didn't win or fail, just finished steps
-    assert "metrics" in result
-
-
-def test_run_isolated_timeout(model_path):
+def test_run_isolated_timeout():
     # Script that hangs
     script = """
 import time
-def control(obs):
+def control_logic(model, data):
     while True:
         time.sleep(0.1)
-    return []
 """
     # Short timeout for test
-    result = run_isolated(model_path, script, max_steps=100, timeout=2.0)
-    assert result["status"] == "TIMEOUT"
+    result = run_isolated(MJCF, agent_script=script, duration=5.0, timeout=0.1)
+    assert result["success"] is False
+    assert result["error_type"] == "TimeoutError"
     assert "timed out" in result["message"]
 
 
-def test_run_isolated_crash(model_path):
-    # Script that crashes the process (e.g., segfault if we could, but let's just do exit)
+def test_run_isolated_crash():
+    # Script that crashes the process
     script = """
 import os
-def control(obs):
+def control_logic(model, data):
     os._exit(1)
 """
-    result = run_isolated(model_path, script, max_steps=100)
-    assert result["status"] == "CRASH"
+    result = run_isolated(MJCF, agent_script=script, duration=0.1)
+    assert result["success"] is False
+    assert result["error_type"] == "CrashError"
     assert "crashed" in result["message"]
 
 
-def test_run_isolated_error(model_path):
-    # Script with syntax error or similar
-    script = "invalid script"
-    result = run_isolated(model_path, script, max_steps=10)
-    assert result["status"] == "ERROR"
-    assert "Script execution failed" in result["message"]
+def test_run_isolated_error():
+    # Invalid XML or duration
+    result = run_isolated("invalid xml", duration=0.1)
+    assert result["success"] is True # MujocoBridge handles this by returning success=False in result
+    assert result["result"]["success"] is False

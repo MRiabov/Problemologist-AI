@@ -44,10 +44,12 @@ def test_cots_preview_invalid_id():
     assert "Error previewing part invalid:id" in preview_output
 
 
-def test_cad_env_cots_tools():
+def test_cad_env_cots_tools(tmp_path):
     from src.environment.core import CADEnv
 
-    env = CADEnv()
+    db_path = tmp_path / "test_history.db"
+    workspace_dir = tmp_path / "workspace"
+    env = CADEnv(db_url=f"sqlite:///{db_path}", workspace_dir=str(workspace_dir))
     env.reset()
 
     # Test search_parts (tool index 5)
