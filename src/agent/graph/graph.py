@@ -6,12 +6,14 @@ from langgraph.prebuilt import ToolNode
 from src.agent.graph.nodes.actor import actor_node
 from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
+from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
     edit_script,
     preview_design,
     search_docs,
     submit_design,
+    update_skill,
     write_script,
 )
 from src.agent.tools.memory import read_journal, write_journal
@@ -28,6 +30,7 @@ def build_graph():
     builder.add_node("planner", planner_node)
     builder.add_node("actor", actor_node)
     builder.add_node("critic", critic_node)
+    builder.add_node("skill_populator", skill_populator_node)
 
     # ToolNode implementation
     tools = [
@@ -36,6 +39,7 @@ def build_graph():
         preview_design,
         submit_design,
         search_docs,
+        update_skill,
         read_journal,
         write_journal,
     ]
@@ -90,17 +94,18 @@ def build_graph():
     builder.add_conditional_edges("tools", route_tools)
 
     # Critic -> conditional (loop back or end)
-    def route_critic(state: AgentState) -> Literal["planner", "actor", "__end__"]:
+    def route_critic(state: AgentState) -> Literal["planner", "actor", "skill_populator", "__end__"]:
         # Logic to decide if we are done or need to loop.
         # For this prototype, we'll loop back to Planner to allow for re-planning or continuation.
         # Ideally, the Critic's output (AIMessage) would contain a structured decision or specific text.
 
         # Check step count to prevent infinite loops
         if state.get("step_count", 0) > Config.MAX_STEPS:
-            return END
+            return "skill_populator"
 
         return "planner"
 
     builder.add_conditional_edges("critic", route_critic)
+    builder.add_edge("skill_populator", END)
 
     return builder
