@@ -10,7 +10,7 @@ async def test_benchmark_generation_integration():
     """
     Integration test that uses a real LLM to generate a benchmark from a plan.
     """
-    
+
     plan_content = """
 ### 1. Learning Objective
 This benchmark tests **3D spatial routing and constrained geometry design**. The CAD agent must generate a manifold part that acts as a bridge/ramp.
@@ -51,38 +51,40 @@ To ensure the agent uses parametric logic rather than hardcoded coordinates:
         "plan": plan_content,
         "attempts": 0,
         "validation_passed": False,
-        "full_history": []
+        "full_history": [],
     }
-    
+
     # We invoke the agent starting from the 'coder' node to use the provided plan
     # However, langgraph's compiled graph starts from the entry point.
-    # To start from a specific state, we can use the graph as is, 
+    # To start from a specific state, we can use the graph as is,
     # but we need to ensure the planner doesn't overwrite our plan if we skip it.
-    
+
     # Let's try invoking the whole thing first, or see if we can jump nodes.
     # Since we want to test the WHOLE pipeline (including reasoning extraction),
     # let's just provide the request and let it plan, then we can verify if it follows it.
-    
-    # result = await generator_agent.ainvoke({"request": "Design a ball drop puzzle exactly as described in the requirements."}) 
-    
+
+    # result = await generator_agent.ainvoke({"request": "Design a ball drop puzzle exactly as described in the requirements."})
+
     # To strictly test the plan provided by the user:
     # We can use the graph's internal nodes if needed, but ainvoke is better.
     # If we want to skip planner, we might need a slightly different graph or just a mock planner.
-    
+
     # Actually, the user wants to test IF PASSING IN A PLAN it completes.
     # So we should simulate being in the PLAN_APPROVAL stage where plan is already set.
-    
+
     result = await generator_agent.ainvoke(state)
-    
+
     if not result["validation_passed"]:
         print("\nINTEGRATION TEST FAILED")
         print(f"Total Attempts: {result.get('attempts')}")
-        
+
         history = result.get("full_history", [])
         print(f"--- Attempt History ({len(history)} items) ---")
         for i, entry in enumerate(history):
-            print(f"Attempt {i+1} Result: {'VALID' if entry['is_valid'] else 'FAILED'}")
-            if not entry['is_valid']:
+            print(
+                f"Attempt {i + 1} Result: {'VALID' if entry['is_valid'] else 'FAILED'}"
+            )
+            if not entry["is_valid"]:
                 print(f"Error: {entry['error_message']}")
             print("-" * 20)
 

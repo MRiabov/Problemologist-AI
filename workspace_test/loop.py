@@ -1,1 +1,2 @@
-while True: pass
+while True:
+    pass

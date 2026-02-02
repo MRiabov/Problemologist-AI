@@ -1,1 +1,5 @@
-import socket; s = socket.socket(); s.settimeout(1); print(s.connect_ex(('8.8.8.8', 53)))
+import socket
+
+s = socket.socket()
+s.settimeout(1)
+print(s.connect_ex(("8.8.8.8", 53)))

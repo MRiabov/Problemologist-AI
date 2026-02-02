@@ -27,7 +27,10 @@ console = Console()
 
 
 def execute_build(
-    code: str, seed: int, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0), asset_dir: str = None
+    code: str,
+    seed: int,
+    scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    asset_dir: str = None,
 ) -> str:
     """Executes the build(seed, scale_factors) function from the provided code inside a sandbox."""
     # Prepend hardcoded imports and helpers
@@ -61,12 +64,13 @@ def execute_build(
     # Initialize a temporary workspace for generation
     workspace = os.path.abspath("workspace_gen")
     os.makedirs(workspace, exist_ok=True)
-    
+
     # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files
     if asset_dir:
         host_asset_path = os.path.join(workspace, asset_dir)
         if os.path.exists(host_asset_path):
             import shutil
+
             shutil.rmtree(host_asset_path)
         os.makedirs(host_asset_path, exist_ok=True)
 
@@ -211,7 +215,12 @@ def generate(
                 # We use a temporary assets dir for validation
                 rel_temp_assets = ".agent_storage/temp_assets"
                 print(f"DEBUG: Executing build for seed {seed}")
-                mjcf_xml = execute_build(template_code, seed, scale_factors=scale_factors, asset_dir=rel_temp_assets)
+                mjcf_xml = execute_build(
+                    template_code,
+                    seed,
+                    scale_factors=scale_factors,
+                    asset_dir=rel_temp_assets,
+                )
 
                 # 3. Validation
                 print(f"DEBUG: Validating MJCF for seed {seed}")
@@ -234,8 +243,12 @@ def generate(
                     generated_meshes = []
                     if os.path.exists(temp_assets_path):
                         import shutil
+
                         for mesh_file in os.listdir(temp_assets_path):
-                            shutil.move(os.path.join(temp_assets_path, mesh_file), os.path.join(final_assets_path, mesh_file))
+                            shutil.move(
+                                os.path.join(temp_assets_path, mesh_file),
+                                os.path.join(final_assets_path, mesh_file),
+                            )
                             generated_meshes.append(f"assets/{mesh_file}")
 
                     # Render images
@@ -277,7 +290,9 @@ def generate(
                     valid_variations += 1
                     progress.update(task, advance=1)
                 else:
-                    print(f"DEBUG: Seed {seed} FAILED validation: {report['error_message']}")
+                    print(
+                        f"DEBUG: Seed {seed} FAILED validation: {report['error_message']}"
+                    )
                     console.print(
                         f"[yellow]Variation with seed {seed} failed validation: {report['error_message']}[/yellow]"
                     )

@@ -103,7 +103,7 @@ def render_planning_stage(state):
 
 def render_plan_approval_stage(state):
     st.subheader("2. Review & Edit Plan")
-    
+
     if state["planner_reasoning"]:
         with st.expander("🧠 View Agent Reasoning", expanded=False):
             st.markdown(state["planner_reasoning"])
@@ -139,10 +139,10 @@ def render_coding_stage(state):
         for i in range(MAX_ATTEMPTS):
             attempt_idx = i + 1
             if len(state["attempt_history"]) >= attempt_idx:
-                continue # Already processed this attempt in a previous rerun
+                continue  # Already processed this attempt in a previous rerun
 
             status_placeholder.info(f"Running Attempt {attempt_idx}/{MAX_ATTEMPTS}...")
-            
+
             # 1. Generate Code
             coder_result = coder_node(
                 {
@@ -161,7 +161,7 @@ def render_coding_stage(state):
                 "attempt": attempt_idx,
                 "reasoning": state["coder_reasoning"],
                 "code": state["code"],
-                "errors": None
+                "errors": None,
             }
 
             # 2. Lint
@@ -183,7 +183,7 @@ def render_coding_stage(state):
                 state["errors"] = None
                 current_attempt["errors"] = None
                 state["attempt_history"].append(current_attempt)
-                
+
                 # 4. Render
                 status_placeholder.info("Success! Rendering preview...")
                 with tempfile.TemporaryDirectory() as tmpdir:
@@ -225,7 +225,9 @@ def render_cad_approval_stage(state):
     st.subheader("4. Review CAD Model & Debug Trace")
 
     if state["errors"]:
-        st.error(f"Validation failed after {state['attempts']} attempts. Last error: {state['errors']}")
+        st.error(
+            f"Validation failed after {state['attempts']} attempts. Last error: {state['errors']}"
+        )
     else:
         st.success(f"Validation passed after {state['attempts']} attempts!")
 
@@ -234,7 +236,7 @@ def render_cad_approval_stage(state):
         st.write("### Planner Reasoning")
         st.markdown(state["planner_reasoning"] or "No reasoning provided.")
         st.divider()
-        
+
         st.write("### Coder Attempt History")
         for i, attempt in enumerate(state["attempt_history"]):
             st.write(f"#### Attempt {attempt['attempt']}")
@@ -268,12 +270,14 @@ def render_cad_approval_stage(state):
                 state["mjcf"] = val_result["mjcf"]
                 state["errors"] = None
                 # Add manual edit to history
-                state["attempt_history"].append({
-                    "attempt": "Manual Edit",
-                    "reasoning": "User manually edited code.",
-                    "code": state["code"],
-                    "errors": None
-                })
+                state["attempt_history"].append(
+                    {
+                        "attempt": "Manual Edit",
+                        "reasoning": "User manually edited code.",
+                        "code": state["code"],
+                        "errors": None,
+                    }
+                )
                 with tempfile.TemporaryDirectory() as tmpdir:
                     prefix = os.path.join(tmpdir, "preview")
                     state["renders"] = render_scenario(state["mjcf"], prefix)
@@ -283,12 +287,14 @@ def render_cad_approval_stage(state):
             else:
                 state["errors"] = val_result["errors"]
                 # Add manual edit failure to history
-                state["attempt_history"].append({
-                    "attempt": "Manual Edit (Failed)",
-                    "reasoning": "User manually edited code.",
-                    "code": state["code"],
-                    "errors": val_result["errors"]
-                })
+                state["attempt_history"].append(
+                    {
+                        "attempt": "Manual Edit (Failed)",
+                        "reasoning": "User manually edited code.",
+                        "code": state["code"],
+                        "errors": val_result["errors"],
+                    }
+                )
                 st.error(f"Re-validation failed: {val_result['errors']}")
                 st.rerun()
 

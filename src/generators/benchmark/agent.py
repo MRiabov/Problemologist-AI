@@ -82,7 +82,7 @@ def planner_node(state: GeneratorState) -> dict[str, any]:
 
     messages = [
         SystemMessage(
-            content=PLANNER_PROMPT.format(request=state["request"]) 
+            content=PLANNER_PROMPT.format(request=state["request"])
             + "\n\nPlease think step-by-step before providing the plan. "
             "Wrap your internal reasoning in <reasoning> tags and the final plan in <plan> tags."
         ),
@@ -100,7 +100,7 @@ def planner_node(state: GeneratorState) -> dict[str, any]:
 
     if "<plan>" in content and "</plan>" in content:
         plan = content.split("<plan>")[1].split("</plan>")[0].strip()
-    
+
     return {
         "plan": plan,
         "planner_reasoning": reasoning,
@@ -157,8 +157,10 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
     # Extract code
     raw_content = content
     if "<python_code>" in content and "</python_code>" in content:
-        raw_content = content.split("<python_code>")[1].split("</python_code>")[0].strip()
-    
+        raw_content = (
+            content.split("<python_code>")[1].split("</python_code>")[0].strip()
+        )
+
     cleaned_code = raw_content
     if "```python" in raw_content:
         cleaned_code = raw_content.split("```python")[1].split("```")[0].strip()
@@ -204,7 +206,9 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
         # Call build with seed 0 and default scale (1,1,1) for base validation
         # Use a temp asset dir for the agent validation as well
         rel_temp_assets = ".agent_storage/temp_assets"
-        mjcf_xml = execute_build(code, 0, scale_factors=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets)
+        mjcf_xml = execute_build(
+            code, 0, scale_factors=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets
+        )
 
         if not isinstance(mjcf_xml, str):
             return {
@@ -219,22 +223,22 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
 
         if report["is_valid"]:
             return {
-                "validation_passed": True, 
-                "mjcf": mjcf_xml, 
+                "validation_passed": True,
+                "mjcf": mjcf_xml,
                 "errors": None,
-                "linting_failed": False
+                "linting_failed": False,
             }
         return {
             "validation_passed": False,
             "errors": f"Validation failed: {report['error_message']}",
-            "linting_failed": False
+            "linting_failed": False,
         }
 
     except Exception as e:
         return {
             "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
             "validation_passed": False,
-            "linting_failed": False
+            "linting_failed": False,
         }
 
 
@@ -264,7 +268,9 @@ workflow.add_edge("validator", "should_continue_proxy")
 
 def should_continue(state: GeneratorState) -> Literal["coder", END]:
     """Decides whether to retry after validation or end."""
-    print(f"DEBUG: should_continue - validation_passed: {state.get('validation_passed')}, attempts: {state.get('attempts')}")
+    print(
+        f"DEBUG: should_continue - validation_passed: {state.get('validation_passed')}, attempts: {state.get('attempts')}"
+    )
     if state.get("validation_passed") is True:
         return END
     if state.get("attempts", 0) >= MAX_ATTEMPTS:

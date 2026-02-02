@@ -47,7 +47,7 @@ def run_linter(code: str) -> list[str]:
                 # I: Isort, F401: Unused import, F841: Unused variable, RUF005: Stylistic unpacking
                 if err_code.startswith("I") or err_code in ["F401", "F841", "RUF005"]:
                     continue
-                
+
                 msg_text = item["message"]
                 line_idx = item["location"]["row"]
                 msg = f"[Ruff {err_code}] {msg_text} at line {line_idx}"

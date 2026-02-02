@@ -55,4 +55,6 @@ async def submit_design_async(control_path: str) -> str:
         )
     # Fallback/Mock if no environment is active
     await asyncio.sleep(1)
-    return "Warning: No active environment found. Submission simulated. Result: Success."
+    return (
+        "Warning: No active environment found. Submission simulated. Result: Success."
+    )

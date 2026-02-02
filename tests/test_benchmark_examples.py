@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.generators.benchmark.manager import execute_build
@@ -60,6 +59,7 @@ def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 
     )
 """
 
+
 @pytest.mark.benchmark
 def test_example_1_execution():
     """Verify Example 1 (Peg-in-Hole) executes correctly in the harness."""
@@ -68,6 +68,7 @@ def test_example_1_execution():
     assert 'name="obstacle_hole"' in xml
     assert 'name="site_zone_goal"' in xml
     assert 'mesh="agent_peg_0"' in xml
+
 
 @pytest.mark.benchmark
 def test_example_2_execution():

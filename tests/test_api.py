@@ -18,16 +18,18 @@ MJCF = """
 </mujoco>
 """
 
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+
 def test_simulate_endpoint():
     payload = {
         "mjcf_xml": MJCF,
         "agent_script": "def control_logic(model, data): pass",
-        "duration": 0.1
+        "duration": 0.1,
     }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200
@@ -36,11 +38,12 @@ def test_simulate_endpoint():
     assert data["outcome"] == "success"
     assert "result" in data
 
+
 def test_simulate_crash():
     payload = {
         "mjcf_xml": MJCF,
         "agent_script": "import os\ndef control_logic(model, data): os._exit(1)",
-        "duration": 0.1
+        "duration": 0.1,
     }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200
