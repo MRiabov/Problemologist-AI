@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy import create_engine, select
@@ -8,6 +9,10 @@ from sqlalchemy.orm import Session, sessionmaker, joinedload
 from src.environment.persistence import Episode, Step, Artifact
 
 from .utils import get_project_root
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class DashboardDataLayer:
     def __init__(self, db_path: Optional[str] = None):
@@ -42,6 +47,7 @@ class DashboardDataLayer:
                 episode_id = uuid.UUID(episode_id)
             except ValueError:
                 # Handle mock IDs
+                logger.debug(f"Invalid UUID string: {episode_id}, treating as mock ID.")
                 return None
             
         with self.SessionLocal() as session:
@@ -69,20 +75,24 @@ _dal = DashboardDataLayer()
 
 def get_all_episodes() -> list[dict[str, Any]]:
     """Returns a list of available episodes from database, falling back to mock if empty."""
+    episodes = []
     try:
         episodes = _dal.get_all_episodes()
-        if episodes:
-            return [
-                {
-                    "id": str(ep.id),
-                    "timestamp": ep.start_time,
-                    "name": f"Problem: {ep.problem_id[:8]}..." if ep.problem_id else "Untitled Episode"
-                }
-                for ep in episodes
-            ]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error fetching episodes from DB: {e}")
+        # We proceed to return mock data if DB fails or is empty, but at least we logged it.
 
+    if episodes:
+        return [
+            {
+                "id": str(ep.id),
+                "timestamp": ep.start_time,
+                "name": f"Problem: {ep.problem_id[:8]}..." if ep.problem_id else "Untitled Episode"
+            }
+            for ep in episodes
+        ]
+
+    # Fallback to mock data
     return [
         {
             "id": "ep_001",
@@ -107,16 +117,20 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                 "steps": [
                     {
                         "index": i,
-                        "type": step.type,
-                        "content": step.content,
-                        "tool_calls": step.tool_calls,
+                        "type": "tool", # Synthesized type as DB only has tools
+                        "content": f"Executed tool: {step.tool_name}",
+                        "tool_calls": {
+                            "name": step.tool_name,
+                            "inputs": step.tool_input
+                        },
                         "tool_output": step.tool_output,
-                        "artifacts": [a.name for a in step.artifacts]
+                        "artifacts": [a.file_path for a in step.artifacts] # Using file_path as name wasn't on Artifact either
                     }
                     for i, step in enumerate(ep.steps)
                 ]
             }
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error fetching episode {episode_id} from DB: {e}")
         pass
 
     if episode_id == "ep_001":
