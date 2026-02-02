@@ -165,6 +165,64 @@ except Exception as e:
         return f"Error: {e!s}"
 
 
+def read_skill(skill_name: str, filename: str = "SKILL.md") -> str:
+    """
+    Reads information from a specialized skill folder.
+    """
+    skills_dir = Path(".agent/skills") / skill_name
+    if not skills_dir.exists():
+        return f"Error: Skill '{skill_name}' does not exist."
+
+    # Validate filename to prevent path traversal
+    filename = Path(filename).name
+
+    target_path = skills_dir / filename
+    if filename != "SKILL.md":
+        target_path = skills_dir / "references" / filename
+
+    if not target_path.exists():
+        return f"Error: File '{filename}' not found in skill '{skill_name}'."
+
+    try:
+        return target_path.read_text(encoding="utf-8")
+    except Exception as e:
+        return f"Error reading skill: {e!s}"
+
+
+def update_skill(skill_name: str, content: str, filename: str = "SKILL.md") -> str:
+    """
+    Updates or adds information to a specialized skill folder.
+    """
+    # Restrict to .agent/skills directory
+    skills_dir = Path(".agent/skills") / skill_name
+    if not skills_dir.exists():
+        return f"Error: Skill '{skill_name}' does not exist."
+
+    # Validate filename to prevent path traversal
+    filename = Path(filename).name
+    if filename not in ["SKILL.md"] and not filename.endswith(".md"):
+        return "Error: Only .md files can be added to skills."
+
+    # If it's a new file, put it in references/
+    target_path = skills_dir / filename
+    if filename != "SKILL.md":
+        target_path = skills_dir / "references" / filename
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if filename == "SKILL.md":
+            # For SKILL.md, we might want to append rather than overwrite,
+            # but for now let's allow the agent to manage it.
+            # We'll just write it.
+            target_path.write_text(content, encoding="utf-8")
+        else:
+            target_path.write_text(content, encoding="utf-8")
+
+        return f"Successfully updated skill '{skill_name}' at {filename}"
+    except Exception as e:
+        return f"Error updating skill: {e!s}"
+
+
 def search_docs(query: str) -> str:
     """
     Searches documentation (RAG).

@@ -4,9 +4,11 @@ from src.agent.tools.env_adapter import (
     edit_script_async,
     preview_design_async,
     preview_part_async,
+    read_skill_async,
     search_docs_async,
     search_parts_async,
     submit_design_async,
+    update_skill_async,
     write_script_async,
 )
 
@@ -74,6 +76,23 @@ async def search_docs(query: str) -> str:
         query: The search query or question to look up.
     """
     return await search_docs_async(query)
+
+
+@tool
+async def update_skill(
+    skill_name: str, content: str, filename: str = "SKILL.md"
+) -> str:
+    """
+    Updates or adds information to a specialized skill folder (e.g., 'build123d_cad_drafting_skill').
+    Use this to capture new knowledge, patterns, or documentation discovered during task execution.
+    If filename is not 'SKILL.md', it will be saved in the 'references/' subdirectory.
+
+    Args:
+        skill_name: The name of the skill to update.
+        content: The Markdown content to write.
+        filename: The filename (e.g., 'SKILL.md' or 'common_errors.md').
+    """
+    return await update_skill_async(skill_name, content, filename)
 
 
 @tool

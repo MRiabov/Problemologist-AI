@@ -56,37 +56,53 @@ def load_docs(directory: str) -> list[dict[str, str]]:
 
 def search(query: str, directory: str = "docs") -> str:
     """
-    Simple substring search MVP. Returns top 3 matches formatted as a string.
+    Simple substring search MVP. Searches docs/ and .agent/skills/.
+    Returns top matches formatted as a string.
     """
     query = query.lower()
+
+    # Load from default docs
     docs = load_docs(directory)
 
-    # Always include stubs for now to ensure results
-    all_docs = docs + STUBS
+    # Also load from skills
+    skills_docs = load_docs(".agent/skills")
+
+    all_docs = docs + skills_docs + STUBS
 
     matches = []
     for doc in all_docs:
         # Check title and content
-        if query in doc["title"].lower() or query in doc["content"].lower():
-            # Simple scoring: count occurrences
-            score = doc["title"].lower().count(query) * 2 + doc[
-                "content"
-            ].lower().count(query)
+        title_hits = doc["title"].lower().count(query)
+        content_hits = doc["content"].lower().count(query)
+
+        if title_hits > 0 or content_hits > 0:
+            # Simple scoring
+            score = title_hits * 10 + content_hits
             matches.append((score, doc))
 
     # Sort by score descending
     matches.sort(key=lambda x: x[0], reverse=True)
 
-    # Get top 3
-    top_matches = [m[1] for m in matches[:3]]
+    # Get top 5
+    top_matches = [m[1] for m in matches[:5]]
 
     if not top_matches:
-        return "No relevant documentation found for: " + query
+        return f"No relevant documentation found for: '{query}' in {directory}/ or .agent/skills/"
 
     result = []
     for doc in top_matches:
-        result.append(
-            f"=== {doc['title']} ({doc['path']}) ===\n{doc['content'][:500]}..."
-        )
+        # Try to find the match context
+        content = doc["content"]
+        idx = content.lower().find(query)
+        start = max(0, idx - 200)
+        end = min(len(content), idx + 800)
+
+        snippet = content[start:end]
+        if start > 0:
+            snippet = "..." + snippet
+        if end < len(content):
+            snippet = snippet + "..."
+
+        result.append(f"=== {doc['title']} ({doc['path']}) ===\n{snippet}")
 
     return "\n\n".join(result)

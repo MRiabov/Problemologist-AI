@@ -33,6 +33,18 @@ async def search_docs_async(query: str) -> str:
     return await asyncio.to_thread(env_tools.search_docs, query)
 
 
+async def read_skill_async(skill_name: str, filename: str) -> str:
+    """Async wrapper for reading a skill."""
+    return await asyncio.to_thread(env_tools.read_skill, skill_name, filename)
+
+
+async def update_skill_async(skill_name: str, content: str, filename: str) -> str:
+    """Async wrapper for updating a skill."""
+    return await asyncio.to_thread(
+        env_tools.update_skill, skill_name, content, filename
+    )
+
+
 async def search_parts_async(query: str) -> str:
     """Async wrapper for searching COTS parts."""
     return await asyncio.to_thread(env_tools.search_parts, query)
