@@ -30,27 +30,27 @@ The system ensures that every generated scenario is robust, randomized, and phys
 **Actor**: Main Developer / Dataset Curator
 **Goal**: Populate the "Kinematic" benchmark tier with 10 new lever-based puzzles.
 
-1.  **Prompting**: The user invokes the generator with a high-level intent: "Generate 10 variations of a Class 1 Lever problem where the fulcrum position varies."
-2.  **Generation**: The system's LLM drafts 10 distinct Python scripts. Each script utilizes `build123d` for geometry and `mujoco` logic for physics constraints.
-3.  **Compilation & Validation**: The system automatically runs each script:
+1. **Prompting**: The user invokes the generator with a high-level intent: "Generate 10 variations of a Class 1 Lever problem where the fulcrum position varies."
+2. **Generation**: The system's LLM drafts 10 distinct Python scripts. Each script utilizes `build123d` for geometry and `mujoco` logic for physics constraints.
+3. **Compilation & Validation**: The system automatically runs each script:
     - Generates STL meshes for the base, lever, and load.
     - Generates the MJCF (XML) file.
     - Checks for mesh manifoldness and XML syntax errors.
     - Simulates 100 steps to ensure the scene doesn't explode immediately (stability check).
-4.  **Review**: The user opens the review interface (CLI or future Dashboard), sees 8 successes and 2 failures.
-5.  **Approval**: The user visually inspects the 8 successful renders. They approve 6 that look challenging but solvable.
-6.  **Commit**: The approved scenarios are saved to `datasets/benchmarks/tier2_kinematic/` with their randomization parameters locked.
+4. **Review**: The user opens the review interface (CLI or future Dashboard), sees 8 successes and 2 failures.
+5. **Approval**: The user visually inspects the 8 successful renders. They approve 6 that look challenging but solvable.
+6. **Commit**: The approved scenarios are saved to `datasets/benchmarks/tier2_kinematic/` with their randomization parameters locked.
 
 ### 2.2 Interactive Human-in-the-Loop Generation
 
 **Actor**: Main Developer
 **Goal**: Precisely tune a complex benchmark scenario through iterative feedback.
 
-1.  **Initial Prompt**: User describes a benchmark goal (e.g., "A robotic task to teach gear meshing").
-2.  **Plan Approval**: The system generates a high-level plan (teaching goals, rough geometry, kinematic chain, self-collision strategy). The user reviews and edits this plan.
-3.  **Iterative CAD Coding**: The system generates the `build123d` code. It self-validates through MuJoCo simulation until a stable model is found.
-4.  **Visual Review**: The system provides multiple rendering angles of the stable model. The user reviews the code and visuals, potentially providing manual edits.
-5.  **Fulfillment**: Once the user approves the CAD model, the system generates the final MJCF XML and manifests.
+1. **Initial Prompt**: User describes a benchmark goal (e.g., "A robotic task to teach gear meshing").
+2. **Plan Approval**: The system generates a high-level plan (teaching goals, rough geometry, kinematic chain, self-collision strategy). The user reviews and edits this plan.
+3. **Iterative CAD Coding**: The system generates the `build123d` code. It self-validates through MuJoCo simulation until a stable model is found.
+4. **Visual Review**: The system provides multiple rendering angles of the stable model. The user reviews the code and visuals, potentially providing manual edits.
+5. **Fulfillment**: Once the user approves the CAD model, the system generates the final MJCF XML and manifests.
 
 ## 3. Functional Requirements
 
@@ -119,6 +119,6 @@ The system ensures that every generated scenario is robust, randomized, and phys
 ## 6. Assumptions
 
 - **Default Workspace**: Unless otherwise specified, the system assumes a standard "Domain Box" of **100x100x100mm** for all benchmark scenarios.
-- The LLM has sufficient knowledge of `build123d` syntax (or we provide few-shot examples in the prompt).
+- **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax, the syntax as a whole. The system MUST provide the agent with a `search_docs` tool to verify syntax during plan and code generation.
 - We can run MuJoCo headless in the dev environment for the stability checks.
 - The "Human-in-the-loop" UI (Feature 007) will consume the file structure defined here, but this feature (005) does not build the UI itself (only the CLI and artifacts).
