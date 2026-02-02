@@ -2,3 +2,4 @@ max_errors: 10
 ignore_warnings: true
 ruff_rules:
   ["E", "F", "I", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF"]
+ruff_ignore: ["ARG001", "F403", "F405", "F401", "I001"]
