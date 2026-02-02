@@ -67,8 +67,8 @@ def control(obs):
     assert result["status"] == "TIMEOUT"
     assert result["steps"] == 10
     # Check if controls were applied (last step)
-    assert sim.data.ctrl[0] == 1.0
-    assert sim.data.ctrl[1] == 0.5
+    assert result["ctrl"][0] == 1.0
+    assert result["ctrl"][1] == 0.5
 
 
 def test_win_condition(model_path):
