@@ -1,5 +1,6 @@
 import tempfile
 import traceback
+import asyncio
 from pathlib import Path
 
 import streamlit as st
@@ -148,9 +149,9 @@ def render_coding_stage(state):
 
         # Invoke the graph
         # This runs until completion or recursion limit
-        final_state = generator_agent.invoke(
+        final_state = asyncio.run(generator_agent.ainvoke(
             input_state, config={"recursion_limit": 50}
-        )
+        ))
 
         # Analyze results from final_state
         # We need to extract the last code, MJCF, and status
