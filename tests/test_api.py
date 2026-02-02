@@ -17,28 +17,33 @@ MJCF = """
 </mujoco>
 """
 
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+
 def test_simulate_endpoint():
     payload = {
         "model_xml": MJCF,
         "agent_script": "def control(obs): return []",
-        "max_steps": 10
+        "max_steps": 10,
     }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "TIMEOUT"  # Or SUCCESS if it won, but here it just times out on steps
+    assert (
+        data["status"] == "TIMEOUT"
+    )  # Or SUCCESS if it won, but here it just times out on steps
     assert "metrics" in data
+
 
 def test_simulate_crash():
     payload = {
         "model_xml": MJCF,
         "agent_script": "import os\ndef control(obs): os._exit(1)",
-        "max_steps": 10
+        "max_steps": 10,
     }
     response = client.post("/simulate", json=payload)
     assert response.status_code == 200

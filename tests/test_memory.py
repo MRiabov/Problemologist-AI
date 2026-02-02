@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from src.agent.tools.memory import read_journal, write_journal, workspace
 
+
 @pytest.fixture(autouse=True)
 def setup_memory_workspace():
     # Use a separate test workspace for memory tests to avoid conflicts
@@ -26,15 +27,18 @@ def setup_memory_workspace():
     # Restore original root (though not strictly necessary if process ends)
     workspace.root_dir = original_root
 
+
 def test_read_empty_journal():
     result = read_journal.invoke({"topic": ""})
     assert result == "Journal is empty."
+
 
 def test_write_and_read_journal():
     write_journal.invoke({"entry": "Test Entry", "tags": ["test"]})
     result = read_journal.invoke({"topic": ""})
     assert "Test Entry" in result
     assert "Tags: test" in result
+
 
 def test_filter_journal_by_content():
     write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})
@@ -44,6 +48,7 @@ def test_filter_journal_by_content():
     assert "Apple pie recipe" in result
     assert "Car maintenance" not in result
 
+
 def test_filter_journal_by_tag():
     write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})
     write_journal.invoke({"entry": "Car maintenance", "tags": ["auto"]})
@@ -52,11 +57,13 @@ def test_filter_journal_by_tag():
     assert "Car maintenance" in result
     assert "Apple pie recipe" not in result
 
+
 def test_filter_no_match():
     write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})
 
     result = read_journal.invoke({"topic": "space"})
     assert "No journal entries found matching topic: 'space'" in result
+
 
 def test_filter_case_insensitive():
     write_journal.invoke({"entry": "Apple pie recipe", "tags": ["food"]})

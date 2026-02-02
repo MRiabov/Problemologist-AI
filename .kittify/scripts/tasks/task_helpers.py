@@ -105,7 +105,9 @@ def find_repo_root(start: Path | None = None) -> Path:
     raise TaskCliError("Unable to locate repository root (missing .git or .kittify).")
 
 
-def run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
+def run_git(
+    args: list[str], cwd: Path, check: bool = True
+) -> subprocess.CompletedProcess:
     """Run a git command inside the repository."""
     try:
         return subprocess.run(
@@ -127,7 +129,9 @@ def run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.Comple
 def ensure_lane(value: str) -> str:
     lane = value.strip().lower()
     if lane not in LANES:
-        raise TaskCliError(f"Invalid lane '{value}'. Expected one of {', '.join(LANES)}.")
+        raise TaskCliError(
+            f"Invalid lane '{value}'. Expected one of {', '.join(LANES)}."
+        )
     return lane
 
 
@@ -187,7 +191,9 @@ def detect_conflicting_wp_status(
             return parts[0]
         return Path(*parts[1:]).as_posix()
 
-    suffixes = {suffix for suffix in (_wp_suffix(old_path), _wp_suffix(new_path)) if suffix}
+    suffixes = {
+        suffix for suffix in (_wp_suffix(old_path), _wp_suffix(new_path)) if suffix
+    }
     conflicts = []
     for line in status_lines:
         path = line[3:] if len(line) > 3 else ""
@@ -242,7 +248,9 @@ def set_scalar(frontmatter: str, key: str, value: str) -> str:
         )
 
     insertion = f"{replacement_line}\n"
-    history_match = re.compile(r"^\s*history:\s*$", flags=re.MULTILINE).search(frontmatter)
+    history_match = re.compile(r"^\s*history:\s*$", flags=re.MULTILINE).search(
+        frontmatter
+    )
     if history_match:
         idx = history_match.start()
         return frontmatter[:idx] + insertion + frontmatter[idx:]
@@ -372,7 +380,9 @@ def locate_work_package(repo_root: Path, feature: str, wp_id: str) -> WorkPackag
     feature_path = repo_root / "kitty-specs" / feature
     tasks_root = feature_path / "tasks"
     if not tasks_root.exists():
-        raise TaskCliError(f"Feature '{feature}' has no tasks directory at {tasks_root}.")
+        raise TaskCliError(
+            f"Feature '{feature}' has no tasks directory at {tasks_root}."
+        )
 
     # Use exact WP ID matching with word boundary to avoid WP04 matching WP04b
     # Matches: WP04.md, WP04-something.md, WP04_something.md
@@ -402,7 +412,9 @@ def locate_work_package(repo_root: Path, feature: str, wp_id: str) -> WorkPackag
                 candidates.append((lane, path, tasks_root))
 
     if not candidates:
-        raise TaskCliError(f"Work package '{wp_id}' not found under kitty-specs/{feature}/tasks.")
+        raise TaskCliError(
+            f"Work package '{wp_id}' not found under kitty-specs/{feature}/tasks."
+        )
     if len(candidates) > 1:
         joined = "\n".join(str(item[1].relative_to(repo_root)) for item in candidates)
         raise TaskCliError(
@@ -456,6 +468,7 @@ def get_lane_from_frontmatter(wp_path: Path, warn_on_missing: bool = True) -> st
             # Import here to avoid circular dependency issues
             try:
                 from rich.console import Console
+
                 console = Console(stderr=True)
                 console.print(
                     f"[yellow]Warning: {wp_path.name} missing lane field, "
@@ -463,16 +476,16 @@ def get_lane_from_frontmatter(wp_path: Path, warn_on_missing: bool = True) -> st
                 )
             except ImportError:
                 import sys
+
                 print(
                     f"Warning: {wp_path.name} missing lane field, defaulting to 'planned'",
-                    file=sys.stderr
+                    file=sys.stderr,
                 )
         return "planned"
 
     if lane not in LANES:
         raise ValueError(
-            f"Invalid lane '{lane}' in {wp_path.name}. "
-            f"Valid lanes: {', '.join(LANES)}"
+            f"Invalid lane '{lane}' in {wp_path.name}. Valid lanes: {', '.join(LANES)}"
         )
 
     return lane

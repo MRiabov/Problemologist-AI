@@ -131,15 +131,13 @@ class CADEnv(gym.Env):
                     find, replace = arguments.split("|||", 1)
                     tool_output = tools.edit_script("design.py", find, replace)
                 else:
-                    tool_output = (
-                        "Error: edit_script requires 'find|||replace' format."
-                    )
+                    tool_output = "Error: edit_script requires 'find|||replace' format."
             elif tool_name == "preview_design":
                 tool_output = tools.preview_design()
                 if "Preview generated:" in tool_output:
-                    self.last_obs["last_render"] = (
-                        tool_output.split("Preview generated:")[1].strip()
-                    )
+                    self.last_obs["last_render"] = tool_output.split(
+                        "Preview generated:"
+                    )[1].strip()
             elif tool_name == "search_docs":
                 tool_output = tools.search_docs(arguments)
             elif tool_name == "search_parts":

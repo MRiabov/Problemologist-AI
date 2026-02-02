@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+
 @dataclass
 class PartSummary:
     id: str
     name: str
     provider: str
+
 
 @dataclass
 class PartPreview:
@@ -15,11 +17,13 @@ class PartPreview:
     metadata: Dict[str, Any] = field(default_factory=dict)
     recipe: str = ""
 
+
 @dataclass
 class Part:
     id: str
     factory: Callable
     params: Dict[str, Any] = field(default_factory=dict)
+
 
 class PartIndex:
     def __init__(self):
@@ -39,12 +43,14 @@ class PartIndex:
     def _get_provider_for_id(self, part_id: str):
         """Extract provider name from ID and return the provider instance."""
         if ":" not in part_id:
-            raise ValueError(f"Invalid part ID: {part_id}. Expected 'provider:id' format.")
-        
+            raise ValueError(
+                f"Invalid part ID: {part_id}. Expected 'provider:id' format."
+            )
+
         provider_name, _ = part_id.split(":", 1)
         if provider_name not in self.providers:
             raise ValueError(f"No provider registered with name: {provider_name}")
-        
+
         return self.providers[provider_name]
 
     def get_part(self, part_id: str) -> Part:

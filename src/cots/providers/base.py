@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 from src.cots.core import Part, PartPreview, PartSummary
 
+
 class PartProvider(ABC):
     @abstractmethod
     def search(self, query: str) -> List[PartSummary]:

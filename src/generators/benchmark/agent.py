@@ -5,7 +5,12 @@ from langgraph.graph import StateGraph, END
 
 from src.agent.utils.llm import get_model
 from src.agent.utils.config import Config
-from src.generators.benchmark.prompts import PLANNER_PROMPT, CODER_PROMPT, CRITIC_PROMPT, FIXER_PROMPT
+from src.generators.benchmark.prompts import (
+    PLANNER_PROMPT,
+    CODER_PROMPT,
+    CRITIC_PROMPT,
+    FIXER_PROMPT,
+)
 from src.generators.benchmark.validator import validate_mjcf
 
 
@@ -20,6 +25,7 @@ def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) ->
     '''
     random.seed(seed)
 """
+
 
 # Define State
 class GeneratorState(TypedDict):
@@ -60,13 +66,19 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         # Retry mode: use Critic prompt logic
         full_prompt = CRITIC_PROMPT.format(error=errors, code=code)
         messages = [
-            SystemMessage(content=FIXER_PROMPT + f"\n\nIMPORTANT: Your code will be prepended with this template, do not redefine it unless necessary:\n{CAD_TEMPLATE}"),
+            SystemMessage(
+                content=FIXER_PROMPT
+                + f"\n\nIMPORTANT: Your code will be prepended with this template, do not redefine it unless necessary:\n{CAD_TEMPLATE}"
+            ),
             HumanMessage(content=full_prompt),
         ]
     else:
         # Initial generation
         messages = [
-            SystemMessage(content=CODER_PROMPT.format(plan=plan, errors="None") + f"\n\nIMPORTANT: Start from this template. You only need to provide the implementation inside the build function or additional helper functions:\n{CAD_TEMPLATE}"),
+            SystemMessage(
+                content=CODER_PROMPT.format(plan=plan, errors="None")
+                + f"\n\nIMPORTANT: Start from this template. You only need to provide the implementation inside the build function or additional helper functions:\n{CAD_TEMPLATE}"
+            ),
             HumanMessage(content="Generate the code."),
         ]
 
@@ -90,7 +102,7 @@ def validator_node(state: GeneratorState) -> Dict[str, Any]:
     """Executes code and runs validation."""
     # print("--- VALIDATOR NODE ---")
     code = state["code"]
-    
+
     # Prepend template if not already present (or just always prepend for safety)
     full_code = code
     if "from build123d import *" not in code:
@@ -98,6 +110,7 @@ def validator_node(state: GeneratorState) -> Dict[str, Any]:
 
     try:
         from src.generators.benchmark.manager import execute_build
+
         # Call build with seed 0 and default scale (1,1,1) for base validation
         mjcf_xml = execute_build(full_code, 0, scale=(1.0, 1.0, 1.0))
     except Exception as e:

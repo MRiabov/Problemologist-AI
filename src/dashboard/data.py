@@ -9,17 +9,19 @@ from src.environment.persistence import Episode, Step, Artifact
 
 from .utils import get_project_root
 
+
 class DashboardDataLayer:
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
             # Default to history.db in the project root
             db_path = str(get_project_root() / "history.db")
-        
+
         db_url = f"sqlite:///{db_path}"
         self.engine = create_engine(db_url)
-        
+
         # Configure SQLite for concurrent read access using WAL mode
         from sqlalchemy import event
+
         @event.listens_for(self.engine, "connect")
         def set_sqlite_pragma(dbapi_connection, _connection_record):
             cursor = dbapi_connection.cursor()
@@ -43,14 +45,12 @@ class DashboardDataLayer:
             except ValueError:
                 # Handle mock IDs
                 return None
-            
+
         with self.SessionLocal() as session:
             stmt = (
                 select(Episode)
                 .where(Episode.id == episode_id)
-                .options(
-                    joinedload(Episode.steps).joinedload(Step.artifacts)
-                )
+                .options(joinedload(Episode.steps).joinedload(Step.artifacts))
             )
             # Use unique() because of joinedload with collections
             return session.scalars(stmt).unique().one_or_none()
@@ -59,7 +59,7 @@ class DashboardDataLayer:
         """Returns all artifacts associated with a specific step."""
         if isinstance(step_id, str):
             step_id = uuid.UUID(step_id)
-            
+
         with self.SessionLocal() as session:
             stmt = select(Artifact).where(Artifact.step_id == step_id)
             return list(session.scalars(stmt).all())
@@ -68,30 +68,38 @@ class DashboardDataLayer:
         """Manually inserts a step into an episode."""
         if isinstance(episode_id, str):
             episode_id = uuid.UUID(episode_id)
-            
+
         with self.SessionLocal() as session:
             # Get current max sequence index
-            stmt = select(Step).where(Step.episode_id == episode_id).order_by(Step.sequence_index.desc()).limit(1)
+            stmt = (
+                select(Step)
+                .where(Step.episode_id == episode_id)
+                .order_by(Step.sequence_index.desc())
+                .limit(1)
+            )
             last_step = session.scalars(stmt).one_or_none()
             next_index = (last_step.sequence_index + 1) if last_step else 0
-            
+
             new_step = Step(
                 episode_id=episode_id,
                 sequence_index=next_index,
                 type=type,
                 tool_input=content,
-                tool_name="manual_insert"
+                tool_name="manual_insert",
             )
             session.add(new_step)
             session.commit()
             return new_step
 
+
 # Singleton instance
 _dal = DashboardDataLayer()
+
 
 def insert_step(episode_id: str, type: str, content: str):
     """Inserts a manual step into the database."""
     return _dal.insert_step(episode_id, type, content)
+
 
 def get_all_episodes() -> list[dict[str, Any]]:
     """Returns a list of available episodes from database, falling back to mock if empty."""
@@ -102,7 +110,9 @@ def get_all_episodes() -> list[dict[str, Any]]:
                 {
                     "id": str(ep.id),
                     "timestamp": ep.start_time,
-                    "name": f"Problem: {ep.problem_id[:8]}..." if ep.problem_id else "Untitled Episode"
+                    "name": f"Problem: {ep.problem_id[:8]}..."
+                    if ep.problem_id
+                    else "Untitled Episode",
                 }
                 for ep in episodes
             ]
@@ -113,14 +123,15 @@ def get_all_episodes() -> list[dict[str, Any]]:
         {
             "id": "ep_001",
             "timestamp": datetime(2026, 2, 1, 10, 0, 0),
-            "name": "Designing a Cube"
+            "name": "Designing a Cube",
         },
         {
             "id": "ep_002",
             "timestamp": datetime(2026, 2, 1, 11, 30, 0),
-            "name": "Complex Linkage Attempt"
-        }
+            "name": "Complex Linkage Attempt",
+        },
     ]
+
 
 def get_episode_by_id(episode_id: str) -> dict[str, Any]:
     """Returns full episode details including steps from database or mock."""
@@ -137,10 +148,10 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                         "content": step.content,
                         "tool_calls": step.tool_calls,
                         "tool_output": step.tool_output,
-                        "artifacts": [a.name for a in step.artifacts]
+                        "artifacts": [a.name for a in step.artifacts],
                     }
                     for i, step in enumerate(ep.steps)
-                ]
+                ],
             }
     except Exception:
         pass
@@ -154,13 +165,13 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                     "index": 0,
                     "type": "user",
                     "content": "Create a 10mm cube.",
-                    "tool_calls": None
+                    "tool_calls": None,
                 },
                 {
                     "index": 1,
                     "type": "thought",
                     "content": "I need to design a 10mm cube using build123d.",
-                    "tool_calls": None
+                    "tool_calls": None,
                 },
                 {
                     "index": 2,
@@ -169,16 +180,17 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                     "tool_calls": {
                         "name": "write_file",
                         "inputs": {
-                            "path": "design.py", 
-                            "content": "from build123d import *\nwith BuildPart() as p:\n    Box(10, 10, 10)"  # noqa: E501
-                        }
+                            "path": "design.py",
+                            "content": "from build123d import *\nwith BuildPart() as p:\n    Box(10, 10, 10)",  # noqa: E501
+                        },
                     },
                     "tool_output": "Successfully wrote design.py",
-                    "artifacts": ["design.stl"]
-                }
-            ]
+                    "artifacts": ["design.stl"],
+                },
+            ],
         }
     return {"id": episode_id, "steps": []}
+
 
 def get_step_artifacts(episode_id: str, step_index: int) -> list[str]:
     """Returns artifacts for a given step."""
@@ -189,6 +201,7 @@ def get_step_artifacts(episode_id: str, step_index: int) -> list[str]:
     if step_index < len(steps):
         return steps[step_index].get("artifacts", [])
     return []
+
 
 def get_latest_episode() -> dict[str, Any] | None:
     """Returns the latest episode."""
