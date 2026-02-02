@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.dashboard.data import get_all_episodes, get_episode_by_id
+from src.dashboard.data import get_all_episodes, get_episode_by_id, insert_step
 
 
 def render_sidebar():
@@ -75,6 +75,17 @@ def render_sidebar():
             )
             st.session_state.selected_step_index = step_index
             
+        st.sidebar.divider()
+        with st.sidebar.expander("🛠️ Debug: Insert Own Plan"):
+            plan_input = st.text_area("Implementation Plan", height=150)
+            if st.button("Insert Plan"):
+                if plan_input:
+                    insert_step(episode_id, "thought", plan_input)
+                    st.success("Plan inserted!")
+                    st.rerun()
+                else:
+                    st.error("Please enter a plan.")
+
         return episode
         
     return None
