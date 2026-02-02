@@ -44,8 +44,9 @@ async def planner_node(state: AgentState):
     # Mandatory skill check instruction
     system_prompt += (
         "\n\nMANDATORY: Before planning any `build123d` implementation, "
-        "you MUST use the `read_skill` tool to read the `build123d_cad_drafting_skill` (SKILL.md). "
-        "It contains expert knowledge, curated patterns, and critical pitfalls."
+        "you MUST use the `read_skill` tool to read the `build123d_cad_drafting_skill` "
+        "and `manufacturing-knowledge` skills. These contain expert knowledge, "
+        "curated patterns, and critical pitfalls."
     )
 
     # Check for overrides

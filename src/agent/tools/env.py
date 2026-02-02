@@ -11,6 +11,7 @@ from src.agent.tools.env_adapter import (
     preview_design_async,
     preview_part_async,
     read_skill_async,
+    run_skill_script_async,
     search_docs_async,
     search_parts_async,
     submit_design_async,
@@ -164,6 +165,22 @@ async def package_skill(skill_name: str) -> str:
         skill_name: The name of the skill to package.
     """
     return await package_skill_async(skill_name)
+
+
+@tool
+async def run_skill_script(
+    skill_name: str, script_name: str, arguments: str = ""
+) -> str:
+    """
+    Executes a specialized script located within a skill's 'scripts' folder.
+    Use this to perform deterministic tasks or fetch dynamic data defined by a skill.
+
+    Args:
+        skill_name: The name of the skill containing the script.
+        script_name: The filename of the script (e.g., 'fetch_data.py').
+        arguments: Optional string of arguments to pass to the script.
+    """
+    return await run_skill_script_async(skill_name, script_name, arguments)
 
 
 @tool

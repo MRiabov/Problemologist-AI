@@ -210,6 +210,39 @@ def read_skill(
         return f"Error reading skill: {e!s}"
 
 
+def run_skill_script(
+    skill_name: str, script_name: str, arguments: str = ""
+) -> str:
+    """
+    Executes a script from a specialized skill's 'scripts' folder.
+    """
+    script_path = Path(".agent/skills") / skill_name / "scripts" / script_name
+    if not script_path.exists():
+        return f"Error: Script '{script_name}' not found in skill '{skill_name}'."
+
+    try:
+        # Determine execution command
+        if script_path.suffix == ".py":
+            cmd = [sys.executable, str(script_path)]
+        elif script_path.suffix == ".sh":
+            cmd = ["bash", str(script_path)]
+        else:
+            return f"Error: Unsupported script type '{script_path.suffix}'"
+
+        if arguments:
+            import shlex
+            cmd.extend(shlex.split(arguments))
+
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        output = result.stdout
+        if result.stderr:
+            output += f"\nSTDERR:\n{result.stderr}"
+        
+        return output if output else "Script executed successfully (no output)."
+    except Exception as e:
+        return f"Error executing skill script: {e!s}"
+
+
 def list_skills() -> str:
     """
     Lists all available specialized skills.
