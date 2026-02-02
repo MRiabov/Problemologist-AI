@@ -36,9 +36,10 @@ class CNCWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
         """
         Calculates CNC cost: Setup + (Material + Run) * Quantity.
+        If part is reused (found in context), setup cost is discounted.
         """
         material_cfg = self.materials[self.default_material]
         
@@ -57,6 +58,15 @@ class CNCWorkbench(Workbench):
         # 3. Setup Cost
         # Assume 1 hour setup for simple 3-axis job
         setup_cost = material_cfg["machine_hourly_rate"]
+        
+        # Apply reuse discount if part hash is in context
+        if context is not None:
+            import hashlib
+            part_hash = hashlib.md5(str(part.center()).encode() + str(part.volume).encode()).hexdigest()
+            if part_hash in context:
+                # 50% discount on setup for identical part reuse (e.g. same CAM program)
+                setup_cost *= 0.5
+            context[part_hash] = context.get(part_hash, 0) + quantity
 
         total_cost = setup_cost + (material_cost_per_part + run_cost_per_part) * quantity
         return total_cost

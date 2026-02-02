@@ -185,7 +185,7 @@ async def preview_part(part_id: str) -> str:
     Returns a description and a Python recipe to instantiate it.
 
     Args:
-        part_id: The namespaced ID of the part (e.g., 'bd_warehouse:motor:Nema17').
+        part_id: The namespaces ID of the part (e.g., 'bd_warehouse:motor:Nema17').
     """
     return await preview_part_async(part_id)
 

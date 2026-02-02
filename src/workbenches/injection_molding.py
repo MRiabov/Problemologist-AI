@@ -74,10 +74,11 @@ class InjectionMoldingWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part, quantity: int = 1) -> float:
+    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
         """
         Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
         Tooling cost depends on surface area (complexity proxy).
+        If part is reused, tooling cost is waived or heavily discounted.
         """
         material_cfg = self.materials[self.default_material]
 
@@ -88,6 +89,15 @@ class InjectionMoldingWorkbench(Workbench):
             self.costs_cfg["base_mold_cost"]
             + surface_area_cm2 * self.costs_cfg["mold_cost_per_surface_area_cm2"]
         )
+
+        # Apply reuse discount if part hash is in context
+        if context is not None:
+            import hashlib
+            part_hash = hashlib.md5(str(part.center()).encode() + str(part.volume).encode()).hexdigest()
+            if part_hash in context:
+                # 90% discount on tooling for identical part reuse (reusing the mold)
+                tooling_cost *= 0.1
+            context[part_hash] = context.get(part_hash, 0) + quantity
 
         # 2. Material Cost per Unit
         volume_cm3 = part.volume / 1000.0
