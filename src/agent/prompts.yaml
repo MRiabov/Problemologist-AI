@@ -97,7 +97,8 @@ benchmark_generator:
               1. **PRIORITIZE CSG**: Primarily use Constructive Solid Geometry (CSG) primitives (Box, Cylinder, Sphere, etc.) and boolean operations (Mode.SUBTRACT, etc.) inside `BuildPart()`. CSG is significantly easier to use and less prone to errors than sketches. Use `BuildSketch` only as a fallback for complex 2D profiles.
               2. Apply non-uniform `scale_factors` tuple using the `scale(obj, by=scale_factors)` FUNCTION.
               3. **CRITICAL**: The `.scale()` METHOD only supports uniform scaling (single float). **DO NOT** pass a tuple to it.
-              4. Return MJCF XML by calling `to_mjcf(env_compound=..., agent_compound=..., agent_joints=..., env_labels=..., agent_labels=...)`.
+              4. **Locations vs Location**: **CRITICAL**: Use `with Locations(...):` (plural) as a context manager. `with Location(...):` (singular) will FAIL as it is not a context manager.
+              5. Return MJCF XML by calling `to_mjcf(env_compound=..., agent_compound=..., agent_joints=..., env_labels=..., agent_labels=...)`.
                  - Use `env_labels` and `agent_labels` to name your parts.
                  - `obstacle_<name>`: For solid, colliding objects.
                  - `zone_goal`: For the target trigger area.
@@ -111,7 +112,8 @@ benchmark_generator:
                   # 1. Static Hole (Environment)
                   with BuildPart() as hole_part:
                       Box(40, 40, 10)
-                      Cylinder(radius=5.5, height=10, mode=Mode.SUBTRACT)
+                      with Locations((0, 0, 0)): # Example of using plural Locations context
+                          Cylinder(radius=5.5, height=10, mode=Mode.SUBTRACT)
                       hole_env = scale(hole_part.part, by=scale_factors)
           
                   # 2. Goal Zone (Transparent trigger)

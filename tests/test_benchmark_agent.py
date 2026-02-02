@@ -23,6 +23,7 @@ async def test_generator_agent_mock():
             )
         return AIMessage(content="Default")
 
+    mock_llm.bind_tools.return_value = mock_llm
     mock_llm.invoke.side_effect = mock_invoke
 
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
@@ -55,7 +56,7 @@ async def test_generator_agent_retry():
             return AIMessage(
                 content="<reasoning>Thinking about box.</reasoning><plan>Plan: Create a box.</plan>"
             )
-        if "build123d" in all_content or "coder" in all_content:
+        elif "build123d" in all_content or "coder" in all_content:
             call_count["coder"] += 1
             if call_count["coder"] == 1:
                 return AIMessage(
@@ -67,6 +68,7 @@ async def test_generator_agent_retry():
 
         return AIMessage(content="Default")
 
+    mock_llm.bind_tools.return_value = mock_llm
     mock_llm.invoke.side_effect = mock_invoke
 
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
@@ -82,7 +84,9 @@ async def test_generator_agent_retry():
                 side_effect=mock_validate,
             ):
 
-                def mock_execute_build(code, seed, scale_factors=(1.0, 1.0, 1.0)):
+                def mock_execute_build(
+                    code, seed, scale_factors=(1.0, 1.0, 1.0), **kwargs
+                ):
                     if "INVALID XML" in code:
                         return "INVALID XML"
                     return "<mujoco><worldbody/></mujoco>"
