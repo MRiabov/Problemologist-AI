@@ -30,8 +30,25 @@ def planner_node(state: AgentState):
             original_request = msg.content
             break
 
+    system_prompt_key = "cad_agent.planner.system"
+    system_prompt = get_prompt(system_prompt_key)
+
+    # Check for overrides
+    if (
+        state.get("runtime_config")
+        and "system_prompt_overrides" in state["runtime_config"]
+    ):
+        overrides = state["runtime_config"]["system_prompt_overrides"]
+        if "planner" in overrides:
+            system_prompt = get_prompt(overrides["planner"])
+            # If the override is raw text (not dot-path), get_prompt returns default if not found,
+            # but we assume overrides might be direct keys to prompts.yaml or even raw text?
+            # get_prompt splits by dot. If we pass "benchmark_generator.planner", it works.
+            # If we pass raw text, get_prompt returns default "" unless it happens to match a key.
+            # Let's assume overrides are KEYS into prompts.yaml.
+
     messages = [
-        SystemMessage(content=get_prompt("cad_agent.planner.system")),
+        SystemMessage(content=system_prompt),
         HumanMessage(
             content=f"Original Request: {original_request}\n\nPlease generate a technical plan."
         ),

@@ -15,9 +15,18 @@ def critic_node(state: AgentState):
     # We look at the last message, which should be a ToolMessage from the execution
     # or the sequence of messages leading up to it.
 
-    messages = [SystemMessage(content=get_prompt("cad_agent.critic.system"))] + state[
-        "messages"
-    ]
+    system_prompt_key = "cad_agent.critic.system"
+    system_prompt = get_prompt(system_prompt_key)
+
+    if (
+        state.get("runtime_config")
+        and "system_prompt_overrides" in state["runtime_config"]
+    ):
+        overrides = state["runtime_config"]["system_prompt_overrides"]
+        if "critic" in overrides:
+            system_prompt = get_prompt(overrides["critic"])
+
+    messages = [SystemMessage(content=system_prompt)] + state["messages"]
 
     # We ask the LLM to review the situation
     response = model.invoke(messages)
