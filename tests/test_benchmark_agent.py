@@ -9,10 +9,10 @@ async def test_generator_agent_mock():
     mock_llm = MagicMock()
     
     def mock_invoke(messages, **kwargs):
-        system_content = messages[0].content
-        if "detailed plan" in system_content:
+        all_content = " ".join([m.content for m in messages]).lower()
+        if "expert physics puzzle designer" in all_content or "detailed plan" in all_content or "planner" in all_content:
             return AIMessage(content="Plan: Create a box.")
-        elif "build(seed: int = 0)" in system_content:
+        elif "build(seed: int = 0)" in all_content or "expert build123d coder" in all_content or "coder" in all_content:
             return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody><geom type=\"box\" size=\"0.1 0.1 0.1\"/></worldbody></mujoco>'\n```")
         return AIMessage(content="Default")
 
@@ -30,19 +30,24 @@ async def test_generator_agent_retry():
     
     call_count = {"coder": 0}
 
-    def mock_invoke(messages, **kwargs):
-        system_content = messages[0].content
-        if "detailed plan" in system_content:
-            return AIMessage(content="Plan: Create a box.")
-        elif "build(seed: int = 0)" in system_content or "expert build123d coder" in system_content:
-            call_count["coder"] += 1
-            if call_count["coder"] == 1:
-                return AIMessage(content="```python\ndef build(seed=0):\n    return 'INVALID XML'\n```")
-            else:
-                return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```")
-        return AIMessage(content="Default")
-
-    mock_llm.invoke.side_effect = mock_invoke
+        def mock_invoke(messages, **kwargs):
+            all_content = " ".join([m.content for m in messages]).lower()
+            if "expert physics puzzle designer" in all_content or "detailed plan" in all_content or "planner" in all_content:
+                return AIMessage(content="Plan: Create a box.")
+            elif "build(seed: int = 0)" in all_content or "expert build123d coder" in all_content or "coder" in all_content or "fix the code" in all_content.lower():
+                call_count["coder"] += 1
+                # For test_generator_agent_retry
+                if "invalid xml" in all_content and call_count["coder"] == 1:
+                     return AIMessage(content="```python\ndef build(seed=0):\n    return 'INVALID XML'\n```")
+                
+                if "invalid xml" in all_content:
+                     return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```")
+                
+                # Default success for coder
+                return AIMessage(content="```python\ndef build(seed=0):\n    return '<mujoco><worldbody><geom type=\"box\" size=\"0.1 0.1 0.1\"/></worldbody></mujoco>'\n```")
+            
+            return AIMessage(content="Default")
+        mock_llm.invoke.side_effect = mock_invoke
     
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
         def mock_validate(xml):
