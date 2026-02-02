@@ -18,7 +18,9 @@ def render_benchmark_generator():
             "stage": "INPUT",  # INPUT, PLANNING, PLAN_APPROVAL, CODING, CAD_APPROVAL, FINAL
             "request": "",
             "plan": "",
+            "planner_reasoning": "",
             "code": "",
+            "coder_reasoning": "",
             "mjcf": "",
             "errors": None,
             "attempts": 0,
@@ -75,6 +77,7 @@ def render_planning_stage(state):
         try:
             result = planner_node({"request": state["request"], "attempts": 0})
             state["plan"] = result["plan"]
+            state["planner_reasoning"] = result.get("planner_reasoning", "")
             state["stage"] = "PLAN_APPROVAL"
             st.rerun()
         except Exception as e:
@@ -84,6 +87,11 @@ def render_planning_stage(state):
 
 def render_plan_approval_stage(state):
     st.subheader("2. Review & Edit Plan")
+    
+    if state["planner_reasoning"]:
+        with st.expander("🧠 View Agent Reasoning", expanded=False):
+            st.markdown(state["planner_reasoning"])
+
     st.info(
         "The plan includes test objectives, rough geometry, and self-collision verification strategy."
     )
@@ -118,6 +126,7 @@ def render_coding_stage(state):
                     }
                 )
                 state["code"] = coder_result["code"]
+                state["coder_reasoning"] = coder_result.get("coder_reasoning", "")
                 state["attempts"] = coder_result["attempts"]
 
                 # 2. Validate
@@ -166,6 +175,10 @@ def persist_renders(state):
 
 def render_cad_approval_stage(state):
     st.subheader("3. Review CAD Model & Renderings")
+
+    if state["coder_reasoning"]:
+        with st.expander("🧠 View Agent Reasoning", expanded=False):
+            st.markdown(state["coder_reasoning"])
 
     col1, col2 = st.columns([1, 1])
 

@@ -5,30 +5,22 @@ from langchain_core.messages import AIMessage
 from src.generators.benchmark.agent import generator_agent
 
 
+@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_generator_agent_mock():
     mock_llm = MagicMock()
 
     def mock_invoke(messages, **kwargs):
-        system_content = messages[0].content
-        # Combine all message content for easier matching
-        all_content = system_content + " ".join([m.content for m in messages[1:]])
-
-        if (
-            "expert physics puzzle designer" in all_content
-            or "detailed plan" in all_content
-        ):
-            return AIMessage(content="Plan: Create a box.")
-        elif (
-            "build(seed: int = 0)" in all_content
-            or "expert build123d coder" in all_content
-        ):
+        all_content = " ".join([m.content for m in messages]).lower()
+        if "physics puzzle designer" in all_content or "planner" in all_content:
             return AIMessage(
-                content='```python\ndef build(seed=0, scale=(1,1,1)):\n    return \'<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>\'\n```'
+                content="<reasoning>I should create a box.</reasoning><plan>Plan: Create a box.</plan>"
             )
-        return AIMessage(
-            content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
-        )
+        elif "build123d" in all_content or "coder" in all_content:
+            return AIMessage(
+                content='<reasoning>Implementing a box.</reasoning><python_code>```python\ndef build(seed=0):\n    return \'<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>\'\n```</python_code>'
+            )
+        return AIMessage(content="Default")
 
     mock_llm.invoke.side_effect = mock_invoke
 
@@ -48,6 +40,7 @@ async def test_generator_agent_mock():
                 assert "mujoco" in result["mjcf"]
 
 
+@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_generator_agent_retry():
     mock_llm = MagicMock()
@@ -55,28 +48,23 @@ async def test_generator_agent_retry():
     call_count = {"coder": 0}
 
     def mock_invoke(messages, **kwargs):
-        all_content = " ".join([m.content for m in messages])
-
-        if "physics puzzle designer" in all_content or "detailed plan" in all_content:
-            return AIMessage(content="Plan: Create a box.")
-
-        # Coder or Fixer
-        if "expert" in all_content and (
-            "build" in all_content or "fix" in all_content or "code" in all_content
-        ):
+        all_content = " ".join([m.content for m in messages]).lower()
+        if "physics puzzle designer" in all_content or "planner" in all_content:
+            return AIMessage(
+                content="<reasoning>Thinking about box.</reasoning><plan>Plan: Create a box.</plan>"
+            )
+        elif "build123d" in all_content or "coder" in all_content:
             call_count["coder"] += 1
             if call_count["coder"] == 1:
                 return AIMessage(
-                    content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return 'INVALID XML'\n```"
+                    content="<reasoning>Fail first.</reasoning><python_code>```python\ndef build(seed=0):\n    return 'INVALID XML'\n```</python_code>"
                 )
             else:
                 return AIMessage(
-                    content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
+                    content="<reasoning>Succeed second.</reasoning><python_code>```python\ndef build(seed=0):\n    return '<mujoco><worldbody/></mujoco>'\n```</python_code>"
                 )
 
-        return AIMessage(
-            content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
-        )
+        return AIMessage(content="Default")
 
     mock_llm.invoke.side_effect = mock_invoke
 

@@ -20,6 +20,4 @@ Examples of commit names:
 - (refactor) Make webhook logic more modular
 - (debug) fix the test failure at [...]
 
-In addition, don't stage throwaway scripts. If (most commonly in backend) a script has names like "repro_", "debug_...", "verify_...", "check_"... and they are especially in root repo, it's likely intermediate, throwawy reproduction scripts that I don't need. Notify me about them. Maybe put them into `/scripts/throwaway/` folder.
-
-Note: always start with backend folder (if any significant changes) because we have pre-commit hooks that update the PWA with OpenAPI schema automatically; if you start with backend they'll run before you commit.
+In addition, don't stage throwaway scripts. If (most commonly in backend) a script has names like "repro_", "debug_...", "verify_...", "check_"... and they are especially in root repo, it's likely intermediate, throwaway reproduction scripts that I don't need. Notify me about them. Maybe put them into `/scripts/throwaway/` folder.

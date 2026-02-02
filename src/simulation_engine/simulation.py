@@ -76,7 +76,7 @@ class SimulationLoop:
         # Power = actuator_force * actuator_velocity
         # Energy = sum(|power|) * dt
         power = self.data.actuator_force * self.data.actuator_velocity
-        self.metrics.energy += np.sum(np.abs(power)) * dt
+        self.metrics.energy += float(np.sum(np.abs(power)) * dt)
 
     def run(self, agent_script: str, max_steps: int = 1000) -> Dict[str, Any]:
         """
@@ -130,7 +130,7 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
 
             if rc != 0:
                 return {
-                    "status": "ERROR",
+                    "status": "TIMEOUT" if rc == 124 else "ERROR",
                     "message": f"Sandbox execution failed (code {rc}): {stderr}",
                     "error_type": "CrashError" if rc != 124 else "TimeoutError",
                     "metrics": self.metrics.to_dict(),

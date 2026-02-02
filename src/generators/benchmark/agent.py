@@ -1,6 +1,5 @@
 import traceback
-from typing import TypedDict, Literal
-
+from typing import TypedDict, Optional, Literal, Dict, Any, List
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
@@ -26,41 +25,65 @@ import random
 # Define State
 class GeneratorState(TypedDict):
     request: str
-    plan: str | None
-    code: str | None
-    errors: str | None
-    mjcf: str | None
+    plan: Optional[str]
+    planner_reasoning: Optional[str]
+    code: Optional[str]
+    coder_reasoning: Optional[str]
+    errors: Optional[str]
+    mjcf: Optional[str]
     attempts: int
     validation_passed: bool
     linting_failed: bool
 
 
 # Nodes
-def planner_node(state: GeneratorState) -> dict[str, any]:
+def planner_node(state: GeneratorState) -> Dict[str, Any]:
     """Generates a plan based on the user request."""
+    # print(f"--- PLANNER NODE (Attempt {state.get('attempts', 0)}) ---")
     model = get_model(Config.LLM_MODEL)
 
     messages = [
-        SystemMessage(content=PLANNER_PROMPT.format(request=state["request"])),
+        SystemMessage(
+            content=PLANNER_PROMPT.format(request=state["request"])
+            + "\n\nPlease think step-by-step before providing the plan. "
+            "Wrap your internal reasoning in <reasoning> tags and the final plan in <plan> tags."
+        ),
         HumanMessage(content="Create the plan."),
     ]
 
     response = model.invoke(messages)
+    content = response.content
+
+    reasoning = ""
+    plan = content
+
+    if "<reasoning>" in content and "</reasoning>" in content:
+        reasoning = content.split("<reasoning>")[1].split("</reasoning>")[0].strip()
+    
+    if "<plan>" in content and "</plan>" in content:
+        plan = content.split("<plan>")[1].split("</plan>")[0].strip()
+
     return {
-        "plan": response.content,
+        "plan": plan,
+        "planner_reasoning": reasoning,
         "attempts": 0,
         "validation_passed": False,
-        "linting_failed": False,
     }
 
 
-def coder_node(state: GeneratorState) -> dict[str, any]:
+def coder_node(state: GeneratorState) -> Dict[str, Any]:
     """Generates or fixes code based on plan and errors."""
+    # print(f"--- CODER NODE (Attempt {state.get('attempts', 0)}) ---")
     model = get_model(Config.LLM_MODEL)
 
     errors = state.get("errors")
     code = state.get("code")
     plan = state.get("plan")
+
+    extra_instructions = (
+        "\n\nPlease think step-by-step before providing the code. "
+        "Wrap your internal reasoning in <reasoning> tags and the final code in <python_code> tags."
+    )
 
     if errors and code:
         # Retry mode: use Critic prompt logic
@@ -68,7 +91,8 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
         messages = [
             SystemMessage(
                 content=FIXER_PROMPT
-                + f"\n\nIMPORTANT: Your code will be prepended with this template:\n{CAD_TEMPLATE}"  # noqa: E501
+                + f"\n\nIMPORTANT: Your code will be prepended with this template, do not redefine it unless necessary:\n{CAD_TEMPLATE}"
+                + extra_instructions
             ),
             HumanMessage(content=full_prompt),
         ]
@@ -77,15 +101,24 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
         messages = [
             SystemMessage(
                 content=CODER_PROMPT.format(plan=plan, errors="None")
-                + f"\n\nIMPORTANT: Start from this template:\n{CAD_TEMPLATE}"
+                + f"\n\nIMPORTANT: Start from this template. You only need to provide the implementation inside the build function or additional helper functions:\n{CAD_TEMPLATE}"
+                + extra_instructions
             ),
             HumanMessage(content="Generate the code."),
         ]
 
     response = model.invoke(messages)
+    content = response.content
+
+    reasoning = ""
+    if "<reasoning>" in content and "</reasoning>" in content:
+        reasoning = content.split("<reasoning>")[1].split("</reasoning>")[0].strip()
 
     # Extract code
-    raw_content = response.content
+    raw_content = content
+    if "<python_code>" in content and "</python_code>" in content:
+        raw_content = content.split("<python_code>")[1].split("</python_code>")[0].strip()
+
     cleaned_code = raw_content
     if "```python" in raw_content:
         cleaned_code = raw_content.split("```python")[1].split("```")[0].strip()
@@ -95,7 +128,11 @@ def coder_node(state: GeneratorState) -> dict[str, any]:
     if "from build123d import *" not in cleaned_code:
         cleaned_code = CAD_TEMPLATE + "\n" + cleaned_code
 
-    return {"code": cleaned_code, "attempts": state.get("attempts", 0) + 1}
+    return {
+        "code": cleaned_code,
+        "coder_reasoning": reasoning,
+        "attempts": state.get("attempts", 0) + 1,
+    }
 
 
 def linter_node(state: GeneratorState) -> dict[str, any]:

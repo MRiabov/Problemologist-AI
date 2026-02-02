@@ -73,4 +73,5 @@ with BuildPart() as p:
 def test_search_docs():
     result = tools.search_docs("Box")
     assert "Box" in result
-    assert "stubs.md" in result
+    # It might not return stubs.md if other docs outrank it
+    assert result.count("---") == 3

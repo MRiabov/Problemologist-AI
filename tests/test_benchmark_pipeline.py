@@ -21,12 +21,14 @@ def clean_datasets():
         shutil.rmtree(output_dir)
 
 
+@pytest.mark.benchmark
 def test_execute_build():
     mjcf = execute_build(MOCK_SCRIPT, 42)
     assert "box_42" in mjcf
     assert "<mujoco>" in mjcf
 
 
+@pytest.mark.benchmark
 @patch("src.generators.benchmark.manager.generator_agent.invoke")
 def test_generate_pipeline(mock_invoke, clean_datasets):
     # Mock agent returning a valid script
