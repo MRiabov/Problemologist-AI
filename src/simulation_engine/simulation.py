@@ -236,6 +236,7 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
                     "status": status,
                     "metrics": self.metrics.to_dict(),
                     "steps": self.metrics.steps,
+                    "ctrl": self.data.ctrl.tolist(),
                 }
 
         return {
