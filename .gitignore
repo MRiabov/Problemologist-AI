@@ -40,3 +40,4 @@ kitty-specs/**/tasks/*.md
 
 /workspace/
 /worspace_gen/
+/test_datasets/
