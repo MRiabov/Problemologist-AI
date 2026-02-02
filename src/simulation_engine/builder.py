@@ -6,6 +6,8 @@ from pathlib import Path
 import trimesh
 from build123d import Compound, Solid, export_stl
 
+from src.cots.utils import get_description
+
 
 class MeshProcessor:
     """
@@ -336,19 +338,169 @@ class SceneCompiler:
                 label = labels[i] if labels and i < len(labels) else f"agent_part_{i}"
                 self._add_agent_meshes_to_body(parts[i], agent_root, label)
 
+        # Add a placeholder for automatic actuators if not already handled
+        # This allows mixed manual/auto but we mostly care about pure auto for now
+        self._inject_auto_actuators(agent_root, actuator_root)
+
+    def _inject_auto_actuators(self, agent_root: ET.Element, actuator_root: ET.Element):
+        """Scan for stator/rotor pairs and inject joints and actuators."""
+        # Find all geoms under worldbody specifically for the agent
+        # (Though they are already in agent_root)
+
+        # We need to find geoms with "stator" and "rotor" in their names or labels.
+        # However, the geoms were added with names based on 'label'.
+        # Let's look at how geoms are named in _add_agent_meshes_to_body.
+        pass  # We will instead do it during mesh processing
+
     def _add_agent_meshes_to_body(
         self, compound: Compound, body_element: ET.Element, prefix: str
     ):
         """Helper to add meshes from a compound to a specific body element."""
-        for i, solid in enumerate(compound.solids()):
-            label = f"{prefix}_{i}"
-            stl_data = MeshProcessor.export_stl(solid)
+        print(f"DEBUG: STARTing _add_agent_meshes_to_body with prefix {prefix}")
+        print(
+            f"DEBUG: Compound type: {type(compound)}, label: '{getattr(compound, 'label', '')}'"
+        )
 
-            mesh_filename = f"{label}.stl"
-            if self.asset_dir:
-                asset_path = Path(self.asset_dir)
-                file_path = asset_path / mesh_filename
-                file_path.write_bytes(stl_data)
+        # We iterate over top-level children of the compound to find motors
+        # If it's a single solid, it will have no children but solids() will have 1.
 
+        children = getattr(compound, "children", [])
+        print(f"DEBUG: Children count: {len(children)}")
+        if not children and isinstance(compound, Solid):
+            children = [compound]
+
+        # If the compound itself is what we want to process (e.g. from the test)
+        # but it's wrapped in another compound, we might need to look deeper.
+        # For now, let's just make it handle the case where 'compound' IS the motor.
+
+        # Check if the compound itself has the labels
+        stator_solid = None
+        rotor_solid = None
+        for child in children:
+            label = getattr(child, "label", "").lower()
+            if "stator" in label:
+                stator_solid = list(child.solids())[0] if list(child.solids()) else None
+            elif "rotor" in label:
+                rotor_solid = list(child.solids())[0] if list(child.solids()) else None
+
+        # If found in children, processed it as a motor
+        if stator_solid and rotor_solid:
+            self._process_motor_element(
+                compound, stator_solid, rotor_solid, body_element, prefix
+            )
+            return
+
+        # If not, iterate through children and see if any of them are motors
+        remaining_solids = list(compound.solids())
+        processed_solids = set()
+
+        for i, child in enumerate(children):
+            c_stator = None
+            c_rotor = None
+            child_children = getattr(child, "children", [])
+            print(f"DEBUG: Child {i} has {len(child_children)} children")
+            for cc in child_children:
+                cc_label = getattr(cc, "label", "").lower()
+                print(f"DEBUG: Grandchild label: '{cc_label}'")
+                if "stator" in cc_label:
+                    c_stator = list(cc.solids())[0] if list(cc.solids()) else None
+                elif "rotor" in cc_label:
+                    c_rotor = list(cc.solids())[0] if list(cc.solids()) else None
+
+            if c_stator and c_rotor:
+                print(f"DEBUG: Motor detected in child {i}!")
+                c_prefix = f"{prefix}_p{i}"
+                self._process_motor_element(
+                    child, c_stator, c_rotor, body_element, c_prefix
+                )
+                for s in child.solids():
+                    processed_solids.add(id(s))
+            else:
+                # If child is not a motor, but it's a compound, we should probably recurse
+                # or just let the fallback handle its solids.
+                pass
+
+        # Fallback: add all unprocessed solids
+        for i, solid in enumerate(remaining_solids):
+            if id(solid) not in processed_solids:
+                label = f"{prefix}_{i}"
+                self._add_solid_to_body(solid, body_element, label)
+
+    def _process_motor_element(
+        self, motor_compound, stator_solid, rotor_solid, body_element, prefix
+    ):
+        """Internal helper to add motor components and joints."""
+        # 1. Add Stator to current body
+        stator_label = f"{prefix}_stator"
+        self._add_solid_to_body(stator_solid, body_element, stator_label)
+
+        # 2. Add Rotor in a child body
+        rotor_center = rotor_solid.center()
+        center_str = f"{rotor_center.X} {rotor_center.Y} {rotor_center.Z}"
+
+        rotor_body = ET.SubElement(
+            body_element, "body", name=f"{prefix}_rotor_body", pos="0 0 0"
+        )
+
+        # Get simulation metadata
+        sim_meta = {"joint_type": "hinge", "joint_axis": "0 0 1", "gear": "10"}
+        # Try to find a part name in any label
+        all_labels = [getattr(motor_compound, "label", "")] + [
+            getattr(s, "label", "") for s in motor_compound.solids()
+        ]
+        label_text = " ".join(all_labels).lower()
+
+        if "nema17" in label_text:
+            meta = get_description("Nema17")
+            sim_meta.update(meta.get("simulation", {}))
+        elif "nema23" in label_text:
+            meta = get_description("Nema23")
+            sim_meta.update(meta.get("simulation", {}))
+
+        j_name = f"joint_{prefix}"
+        ET.SubElement(
+            rotor_body,
+            "joint",
+            name=j_name,
+            type=sim_meta["joint_type"],
+            pos=center_str,
+            axis=sim_meta["joint_axis"],
+            damping=str(sim_meta.get("damping", 0.1)),
+        )
+
+        rotor_label = f"{prefix}_rotor"
+        self._add_solid_to_body(rotor_solid, rotor_body, rotor_label)
+
+        # 3. Add Actuator
+        actuator_root = self.root.find("actuator")
+        if actuator_root is None:
+            actuator_root = ET.SubElement(self.root, "actuator")
+
+        ET.SubElement(
+            actuator_root,
+            "motor",
+            name=f"motor_{prefix}",
+            joint=j_name,
+            gear=str(sim_meta["gear"]),
+        )
+
+        # Add any other solids in the motor_compound to the base body
+        for i, s in enumerate(motor_compound.solids()):
+            if id(s) != id(stator_solid) and id(s) != id(rotor_solid):
+                self._add_solid_to_body(s, body_element, f"{prefix}_m_{i}")
+
+    def _add_solid_to_body(self, solid: Solid, body_element: ET.Element, label: str):
+        """Exports a solid to STL and adds it as a geom to the body."""
+        stl_data = MeshProcessor.export_stl(solid)
+        mesh_filename = f"{label}.stl"
+
+        if self.asset_dir:
+            asset_path = Path(self.asset_dir)
+            file_path = asset_path / mesh_filename
+            file_path.write_bytes(stl_data)
+
+        # Ensure mesh asset exists
+        if self.asset.find(f"mesh[@name='{label}']") is None:
             ET.SubElement(self.asset, "mesh", name=label, file=mesh_filename)
-            ET.SubElement(body_element, "geom", type="mesh", mesh=label, rgba="0 0 1 1")
+
+        ET.SubElement(body_element, "geom", type="mesh", mesh=label, rgba="0 0 1 1")
