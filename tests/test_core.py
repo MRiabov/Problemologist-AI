@@ -68,7 +68,7 @@ def test_env_step_submit_invalid(env):
 
     obs, reward, terminated, truncated, info = env.step({"tool": 4, "arguments": ""})
     assert reward == -10.0
-    assert "Error executing script" in obs["last_output"]
+    assert "Error processing design" in obs["last_output"]
     assert not terminated
 
 
