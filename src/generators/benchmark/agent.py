@@ -18,12 +18,6 @@ CAD_TEMPLATE = """from build123d import *
 import build123d as bd
 import math
 import random
-
-def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:
-    '''
-    Generates a MuJoCo MJCF XML string for a benchmark scenario.
-    '''
-    random.seed(seed)
 """
 
 
@@ -97,28 +91,15 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
 
     return {"code": cleaned_code, "attempts": state.get("attempts", 0) + 1}
 
-
 def validator_node(state: GeneratorState) -> Dict[str, Any]:
     """Executes code and runs validation."""
-    # print("--- VALIDATOR NODE ---")
     code = state["code"]
-
-    # Prepend template if not already present (or just always prepend for safety)
-    full_code = code
-    if "from build123d import *" not in code:
-        full_code = CAD_TEMPLATE + "\n" + code
 
     try:
         from src.generators.benchmark.manager import execute_build
 
         # Call build with seed 0 and default scale (1,1,1) for base validation
-        mjcf_xml = execute_build(full_code, 0, scale=(1.0, 1.0, 1.0))
-    except Exception as e:
-        print(f"DEBUG: execute_build failed: {e}")
-        return {
-            "errors": f"Syntax/Runtime Error: {e}\n{traceback.format_exc()}",
-            "validation_passed": False,
-        }
+        mjcf_xml = execute_build(code, 0, scale=(1.0, 1.0, 1.0))
 
         if not isinstance(mjcf_xml, str):
             return {

@@ -59,14 +59,26 @@ benchmark_generator:
   coder: |
     You are an expert in build123d and Python.
     Your task is to write a Python script that defines a function `build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str`.
+    
+    **Environment Note**: The following imports are already automatically prepended to your script. Do NOT include them:
+    ```python
+    from build123d import *
+    from src.simulation_engine.builder import SceneCompiler
+    ```
+
     The script must:
-    1. Use `build123d` to create 3D geometry.
-    2. Apply the provided `scale` non-uniformly to the components where appropriate (e.g., `part.scale(scale)`).
-    3. NOT show the geometry using `show()` or `show_object()`.
-    4. Return the MJCF XML string representation of the model. 
+    1. Use the pre-imported `build123d` symbols for all geometric operations.
+    2. Use the pre-imported `SceneCompiler` to assemble the final model.
+    3. Create 3D geometry using `BuildPart`, `BuildSketch`, or `BuildLine` contexts.
+    4. Apply the provided `scale` non-uniformly to components (e.g., `part.scale(scale)`).
+    5. Label solids using the `.label` attribute:
+       - `obstacle_<name>`: For solid, colliding objects.
+       - `zone_<name>`: For non-colliding trigger/goal areas.
+       - `agent_<name>`: For parts belonging to the mobile agent.
+    6. Return the MJCF XML string by calling `compiler.compile(...)`.
+    7. NOT show the geometry using `show()` or `show_object()`.
        
-    Start your script with imports.
-    The function signature: `def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
+    Start your script directly with the function definition: `def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
   critic: |
     Review the validation error and provide instructions to fix the code.
 
