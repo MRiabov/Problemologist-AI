@@ -72,6 +72,7 @@ This document tracks future features, infrastructure components, and research di
   * **Ingestion**: Indexing `build123d` recipes (Gears, Fasteners, Hinges).
   * **Skill Promotion**: Automatically saving successful agent designs (e.g., a working linkage) back into the library for future reuse.
   * **Semantic Search**: Embedding-based retrieval (Vector DB).
+  * **Build123d Documentation Reference**: A condensed, LLM-friendly reference (`llms.txt`) of `build123d` syntax and best practices to minimize hallucination.
   <!-- DEV NOTE: yes - also a library called bd_warehouse exists with all of those snippets. https://bd-warehouse.readthedocs.io/en/latest/ -->
 
 <!-- ### 010-cloud-infrastructure
@@ -93,4 +94,3 @@ This document tracks future features, infrastructure components, and research di
   * **Port-Based Mating**: Every COTS part exposes named "Ports" (Coordinate Systems) for attachment (e.g., `motor.mount_face`, `motor.shaft`).
   * **Virtual Fasteners**: Helper tools to "drill" matching holes in custom parts (`bracket -= motor.hole_pattern`) and generate `<weld>` constraints in MuJoCo to simulate screws. -->
   <!-- DEV NOTE: yes - also a library called bd_warehouse exists with all of those snippets. https://bd-warehouse.readthedocs.io/en/latest/ -->
-  
