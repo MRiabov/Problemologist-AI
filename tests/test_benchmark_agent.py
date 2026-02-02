@@ -14,11 +14,21 @@ async def test_generator_agent_mock():
         # Combine all message content for easier matching
         all_content = system_content + " ".join([m.content for m in messages[1:]])
 
-        if "expert physics puzzle designer" in all_content or "detailed plan" in all_content:
+        if (
+            "expert physics puzzle designer" in all_content
+            or "detailed plan" in all_content
+        ):
             return AIMessage(content="Plan: Create a box.")
-        elif "build(seed: int = 0)" in all_content or "expert build123d coder" in all_content:
-            return AIMessage(content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody><geom type=\"box\" size=\"0.1 0.1 0.1\"/></worldbody></mujoco>'\n```")
-        return AIMessage(content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```")
+        elif (
+            "build(seed: int = 0)" in all_content
+            or "expert build123d coder" in all_content
+        ):
+            return AIMessage(
+                content='```python\ndef build(seed=0, scale=(1,1,1)):\n    return \'<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>\'\n```'
+            )
+        return AIMessage(
+            content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
+        )
 
     mock_llm.invoke.side_effect = mock_invoke
 
@@ -27,11 +37,15 @@ async def test_generator_agent_mock():
             "src.generators.benchmark.agent.validate_mjcf",
             return_value={"is_valid": True, "error_message": None},
         ):
-            result = await generator_agent.ainvoke(
-                {"request": "Create a red box", "attempts": 0}
-            )
-            assert result["validation_passed"] is True
-            assert "mujoco" in result["mjcf"]
+            with patch(
+                "src.generators.benchmark.manager.execute_build",
+                return_value='<mujoco><worldbody><geom type="box" size="0.1 0.1 0.1"/></worldbody></mujoco>',
+            ):
+                result = await generator_agent.ainvoke(
+                    {"request": "Create a red box", "attempts": 0}
+                )
+                assert result["validation_passed"] is True
+                assert "mujoco" in result["mjcf"]
 
 
 @pytest.mark.asyncio
@@ -45,16 +59,24 @@ async def test_generator_agent_retry():
 
         if "physics puzzle designer" in all_content or "detailed plan" in all_content:
             return AIMessage(content="Plan: Create a box.")
-        
+
         # Coder or Fixer
-        if "expert" in all_content and ("build" in all_content or "fix" in all_content or "code" in all_content):
+        if "expert" in all_content and (
+            "build" in all_content or "fix" in all_content or "code" in all_content
+        ):
             call_count["coder"] += 1
             if call_count["coder"] == 1:
-                 return AIMessage(content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return 'INVALID XML'\n```")
+                return AIMessage(
+                    content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return 'INVALID XML'\n```"
+                )
             else:
-                 return AIMessage(content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```")
+                return AIMessage(
+                    content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
+                )
 
-        return AIMessage(content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```")
+        return AIMessage(
+            content="```python\ndef build(seed=0, scale=(1,1,1)):\n    return '<mujoco><worldbody/></mujoco>'\n```"
+        )
 
     mock_llm.invoke.side_effect = mock_invoke
 
@@ -68,8 +90,18 @@ async def test_generator_agent_retry():
         with patch(
             "src.generators.benchmark.agent.validate_mjcf", side_effect=mock_validate
         ):
-            result = await generator_agent.ainvoke(
-                {"request": "Create something", "attempts": 0}
-            )
-            assert result["validation_passed"] is True
-            assert result["attempts"] == 2
+
+            def mock_execute_build(code, seed, scale=(1.0, 1.0, 1.0)):
+                if "INVALID XML" in code:
+                    return "INVALID XML"
+                return "<mujoco><worldbody/></mujoco>"
+
+            with patch(
+                "src.generators.benchmark.manager.execute_build",
+                side_effect=mock_execute_build,
+            ):
+                result = await generator_agent.ainvoke(
+                    {"request": "Create something", "attempts": 0}
+                )
+                assert result["validation_passed"] is True
+                assert result["attempts"] == 2
