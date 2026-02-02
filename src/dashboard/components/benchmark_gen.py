@@ -130,100 +130,145 @@ def render_plan_approval_stage(state):
             st.rerun()
 
 
+import re
+
 def render_coding_stage(state):
     st.subheader("3. Generating CAD Model")
-    status_placeholder = st.empty()
-    status_placeholder.info("Running DeepAgents Graph...")
+    
+    # We use a status container for detailed progress
+    with st.status("DeepAgents Graph is active...", expanded=True) as status:
+        # Clear history for new run if just started
+        if state["attempts"] == 0:
+            state["attempt_history"] = []
 
-    # Clear history for new run if just started
-    if state["attempts"] == 0:
-        state["attempt_history"] = []
+        try:
+            input_state = {
+                "messages": [HumanMessage(content=state["request"])],
+                "plan": state["plan"],
+                "step_count": 0,
+                "runtime_config": DEFAULT_RUNTIME_CONFIG,
+            }
 
-    try:
-        input_state = {
-            "messages": [HumanMessage(content=state["request"])],
-            "plan": state["plan"],
-            "step_count": 0,
-            "runtime_config": DEFAULT_RUNTIME_CONFIG,
-        }
+            # We'll collect the final state here
+            final_state = None
+            
+            async def run_and_stream():
+                nonlocal final_state
+                # We use 'updates' mode to see node transitions
+                async for event in generator_agent.astream(
+                    input_state, 
+                    config={"recursion_limit": 50},
+                    stream_mode="updates"
+                ):
+                    for node_name, updates in event.items():
+                        if node_name == "planner":
+                            status.update(label="Step: Refining implementation plan...", state="running")
+                        elif node_name == "actor":
+                            status.write("🤖 **Agent** is generating code or calling tools...")
+                            status.update(label="Step: Agent implementation...", state="running")
+                        elif node_name == "tools":
+                            if "messages" in updates:
+                                for msg in updates["messages"]:
+                                    if hasattr(msg, "name"):
+                                        status.write(f"🛠️ Tool `{msg.name}` executed.")
+                                        if msg.name == "validate_benchmark_model":
+                                            if "Validation Passed!" in msg.content:
+                                                status.write("✅ Validation **passed**!")
+                                            else:
+                                                status.write("❌ Validation **failed**.")
+                        elif node_name == "critic":
+                            status.update(label="Step: Critic reviewing work...", state="running")
+                            status.write("🧐 **Critic** is checking the result...")
+                        elif node_name == "skill_populator":
+                            status.update(label="Step: Recording lessons learned...", state="running")
+                            status.write("📝 Updating specialized CAD skills...")
+                    
+                    # Merge updates into a local state to keep track of the latest
+                    if final_state is None:
+                        final_state = input_state.copy()
+                    
+                    # Update messages (append)
+                    if "messages" in updates:
+                        final_state["messages"].extend(updates["messages"])
+                    # Update other fields (overwrite)
+                    for k, v in updates.items():
+                        if k != "messages":
+                            final_state[k] = v
 
-        # Invoke the graph
-        # This runs until completion or recursion limit
-        final_state = asyncio.run(generator_agent.ainvoke(
-            input_state, config={"recursion_limit": 50}
-        ))
+            # Run the async stream
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(run_and_stream())
+            
+            # If final_state is still None, something went wrong
+            if final_state is None:
+                raise ValueError("Graph execution did not return any state.")
 
-        # Analyze results from final_state
-        # We need to extract the last code, MJCF, and status
-        messages = final_state["messages"]
+            # Analyze results from final_state
+            messages = final_state["messages"]
 
-        # Check for success
-        # The actor logs success or the critic does?
-        # Ideally we look for ToolMessage from validate_benchmark_model
+            last_mjcf = ""
+            last_code = ""
 
-        last_mjcf = ""
-        last_code = ""
-        errors = None
-
-        # Backwards scan for validation
-        for msg in reversed(messages):
-            if hasattr(msg, "tool_calls") and msg.tool_calls:
-                # Check if this was a validation call
-                pass
-            if hasattr(msg, "content"):
-                if "Validation Passed!" in str(msg.content):
-                    # Found success output from tool
-                    # Extract MJCF
-                    import re
-
+            # Extraction using markers
+            for msg in reversed(messages):
+                content_str = str(msg.content)
+                if "---FULL_MJCF_START---" in content_str:
                     match = re.search(
-                        r"MJCF Output.*:\n(<mujoco.*)", str(msg.content), re.DOTALL
+                        r"---FULL_MJCF_START---\n(.*?)\n---FULL_MJCF_END---", 
+                        content_str, 
+                        re.DOTALL
                     )
                     if match:
                         last_mjcf = match.group(1)
-                    else:
-                        # Maybe full content is mjcf?
-                        if "<mujoco" in str(msg.content):
-                            last_mjcf = str(msg.content)
-                    break
-
-        # Extract code (find last write_script call or code block?)
-        # DeepAgents actor uses write_script tool? Or just outputs code?
-        # New actor uses tools. `validate_benchmark_model` takes code as arg.
-        # So we can find the `validate_benchmark_model` call in messages.
-        for msg in reversed(messages):
-            if hasattr(msg, "tool_calls"):
-                for tc in msg.tool_calls:
-                    if tc["name"] == "validate_benchmark_model":
-                        last_code = tc["args"].get("code", "")
                         break
-            if last_code:
-                break
 
-        state["code"] = last_code
-        state["mjcf"] = last_mjcf
-        state["attempts"] = final_state.get("step_count", 0)  # Approximation
+            # Extract code from the last validation call
+            for msg in reversed(messages):
+                if hasattr(msg, "tool_calls"):
+                    for tc in msg.tool_calls:
+                        if tc["name"] == "validate_benchmark_model":
+                            last_code = tc["args"].get("code", "")
+                            break
+                if last_code:
+                    break
+            
+            # Fallback for code: check write_script
+            if not last_code:
+                for msg in reversed(messages):
+                    if hasattr(msg, "tool_calls"):
+                        for tc in msg.tool_calls:
+                            if tc["name"] == "write_script":
+                                last_code = tc["args"].get("content", "")
+                                break
+                    if last_code:
+                        break
 
-        if last_mjcf:
-            state["errors"] = None
-            status_placeholder.success("Generation Successful!")
+            state["code"] = last_code
+            state["mjcf"] = last_mjcf
+            state["attempts"] = final_state.get("step_count", 0)
 
-            # Render
-            with tempfile.TemporaryDirectory() as tmpdir:
-                prefix = Path(tmpdir) / "preview"
-                state["renders"] = render_scenario(state["mjcf"], str(prefix))
-                persist_renders(state)
+            if last_mjcf:
+                state["errors"] = None
+                status.update(label="Generation Successful!", state="complete")
+                
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    prefix = Path(tmpdir) / "preview"
+                    state["renders"] = render_scenario(state["mjcf"], str(prefix))
+                    persist_renders(state)
 
-            state["stage"] = "CAD_APPROVAL"
-            st.rerun()
-        else:
-            state["errors"] = "Generation failed to produce valid MJCF within limits."
-            state["stage"] = "CAD_APPROVAL"
-            st.rerun()
+                state["stage"] = "CAD_APPROVAL"
+                st.rerun()
+            else:
+                state["errors"] = "Generation failed to produce valid MJCF within limits."
+                status.update(label="Generation Failed", state="error")
+                state["stage"] = "CAD_APPROVAL"
+                st.rerun()
 
-    except Exception as e:
-        st.error(f"Coding stage failed: {e}\n{traceback.format_exc()}")
-        state["stage"] = "PLAN_APPROVAL"
+        except Exception as e:
+            st.error(f"Coding stage failed: {e}")
+            st.code(traceback.format_exc())
+            state["stage"] = "PLAN_APPROVAL"
 
 
 def persist_renders(state):
