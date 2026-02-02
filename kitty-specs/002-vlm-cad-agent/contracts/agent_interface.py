@@ -31,6 +31,8 @@ class AgentObjective(BaseModel):
     id: str
     description: str
     constraints: list[str] = []
+    max_unit_cost: float = float("inf")
+    target_quantity: int = 1
     max_steps: int = 20
 
 
@@ -43,4 +45,5 @@ class AgentResult(BaseModel):
     solution_code: str | None
     artifact_paths: list[str]
     summary: str
-    cost_usd: float
+    total_cost_usd: float
+    unit_cost_usd: float
