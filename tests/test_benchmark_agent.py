@@ -71,14 +71,17 @@ async def test_generator_agent_retry():
 
     with patch("src.generators.benchmark.agent.get_model", return_value=mock_llm):
         with patch("src.generators.benchmark.agent.run_linter", return_value=[]):
-            def mock_validate(xml):
+
+            def mock_validate(xml, asset_dir=None):
                 if xml == "INVALID XML":
                     return {"is_valid": False, "error_message": "Invalid XML"}
                 return {"is_valid": True, "error_message": None}
 
             with patch(
-                "src.generators.benchmark.agent.validate_mjcf", side_effect=mock_validate
+                "src.generators.benchmark.agent.validate_mjcf",
+                side_effect=mock_validate,
             ):
+
                 def mock_execute_build(code, seed, scale_factors=(1.0, 1.0, 1.0)):
                     if "INVALID XML" in code:
                         return "INVALID XML"
