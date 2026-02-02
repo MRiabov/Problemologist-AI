@@ -18,6 +18,12 @@ class AgentState(TypedDict):
     # Tracking the number of steps taken to prevent infinite loops
     step_count: int
 
+    # The reasoning from the coder/actor
+    coder_reasoning: str
+
+    # History of attempts (code and errors)
+    full_history: list[dict[str, Any]]
+
     # Storage for intermediate data, node-specific state, or temporary variables
     scratchpad: dict[str, Any]
 

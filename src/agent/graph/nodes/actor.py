@@ -74,8 +74,14 @@ def actor_node(state: AgentState, tools: list = None):
 
     response = model_with_tools.invoke(messages)
 
-    return {
+    updates = {
         "messages": [response],
         # Increment step count to avoid infinite loops
         "step_count": state.get("step_count", 0) + 1,
     }
+
+    # Extract reasoning if possible
+    if hasattr(response, "content") and response.content:
+        updates["coder_reasoning"] = response.content
+
+    return updates
