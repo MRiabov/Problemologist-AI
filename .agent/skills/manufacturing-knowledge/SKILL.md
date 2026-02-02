@@ -9,39 +9,53 @@ This skill provides the procedural and domain knowledge required to design parts
 
 ## 1. Dynamic Data Access
 
-To get the most up-to-date material properties, density, and cost constants, you MUST run the provided data script.
+To get the most up-to-date material properties, density, and cost constants, you MUST run the provided data script. **Do not rely on your internal knowledge or hardcoded values in this file.**
 
 **Action**: Use `run_skill_script(skill_name="manufacturing-knowledge", script_name="get_material_data.py")`
 
-This will return a JSON object containing:
-- CNC material properties (Aluminum 6061)
-- Injection Molding material properties (ABS)
-- Machine hourly rates
-- Tooling/Setup costs
+## 2. CNC Milling (3-Axis)
 
-## 2. Design Constraints (Summary)
+**Best for**: Low volumes (1-100 units), high strength, aluminum parts.
 
-### CNC Milling (3-Axis)
-- **Undercuts**: Strictly forbidden from the +Z approach.
-- **Internal Corners**: Must be filleted (Minimum tool radius is usually 3mm).
-- **Process**: Subtractive. Use shared setups (identical parts) to reduce cost.
+### Cost Formula
+$$Total = Setup + (Material + Run) \times Quantity$$
+- **Setup Cost**: Fixed cost (~$80.00) for machine programming and fixturing.
+- **Material Cost**: $\frac{Volume \, (cm^3) \times Density \, (g/cm^3)}{1000} \times Price/kg$.
+- **Run Cost**: Machining time based on volume removal rate (~1000 $mm^3/min$).
 
-### Injection Molding (IM)
-- **Draft Angles**: Mandatory for vertical faces (Minimum 2.0 degrees).
-- **Wall Thickness**: Keep uniform (1.0mm - 4.0mm) to prevent defects.
-- **Undercuts**: Forbidden in simple 2-part molds.
+### Design Constraints
+- **Undercuts**: Strictly forbidden. All geometry must be reachable from the top (+Z axis).
+- **Internal Corners**: Minimum tool radius is **3mm**. Use `fillet()` on all internal vertical edges.
 
-## 3. Economic Strategy
+---
 
-- **Setup vs. Unit Cost**: CNC has low setup but high unit cost. IM has high setup (tooling) but very low unit cost.
-- **Break-even**: High quantities (>1000) strongly favor Injection Molding.
-- **Volume**: Reducing part volume is the most effective way to lower cost in both processes.
-- **Reuse**: Reusing the same part multiple times reduces total setup/tooling overhead.
+## 3. Injection Molding (IM)
 
-## 4. Technical Design Patterns
+**Best for**: High volumes (>1,000 units), plastic parts, low unit cost.
+
+### Cost Formula
+$$Total = Tooling + (Material + Cycle) \times Quantity$$
+- **Tooling Cost**: High fixed cost (~$5,000+). Driven by part surface area (complexity).
+- **Material Cost**: $\frac{Volume \, (cm^3) \times Density \, (g/cm^3)}{1000} \times Price/kg$.
+- **Cycle Cost**: Cooling time proportional to part volume.
+
+### Design Constraints
+- **Draft Angles**: Mandatory for all vertical faces. Minimum **2.0 degrees**. Use the `draft()` operation.
+- **Wall Thickness**: Keep between **1.0mm and 4.0mm**. Avoid thick sections to prevent sink marks.
+- **Undercuts**: Forbidden in a simple 2-part mold.
+
+---
+
+## 4. Economic Strategy
+
+- **Quantity < 100**: Prefer **CNC** or **3D Printing**.
+- **Quantity > 1000**: Always prefer **Injection Molding** if geometry allows.
+- **Volume Optimization**: Reducing part volume directly reduces material cost and run/cycle time.
+- **Part Reuse**: Using multiple instances of the *same* part ID is significantly cheaper than multiple unique parts due to shared setup/tooling costs (50% discount for CNC setup, 90% discount for IM tooling).
+
+## 5. Technical Design Patterns
 
 ### Pattern: CNC Fillet Strategy
-When designing for CNC, internal vertical corners must have a radius $\ge$ tool radius.
 ```python
 # Expert Pattern: Automatic filleting of internal vertical edges
 internal_edges = part.edges().filter_by(Axis.Z).internal()
@@ -49,24 +63,14 @@ part = fillet(internal_edges, radius=3.1) # 3.1mm for 3.0mm tool clearance
 ```
 
 ### Pattern: Injection Molding Shelling
-To maintain uniform wall thickness (1.0 - 4.0mm):
 ```python
 # Expert Pattern: Creating a shelled plastic part
 part = shell(part, openings=part.faces().sort_by(Axis.Z).last(), amount=-2.0)
 ```
 
 ### Pattern: Draft for Release
-All faces parallel to the pull direction (+Z) must be tapered.
 ```python
 # Expert Pattern: Applying 2-degree draft
 part = draft(part, faces=part.faces().filter_by(Axis.Z), angle=2.0, pull_direction=(0,0,1))
 ```
 
-## 5. Optimization Workflow
-
-1. **Query Database**: Call `run_skill_script` to get current rates.
-2. **Select Process**: Based on `target_quantity` (IM for >1000, CNC for <100).
-3. **Model Base Geometry**: Focus on function first.
-4. **Apply DFM**: Add fillets (CNC) or Shell/Draft (IM).
-5. **Analyze Cost**: Call `check_manufacturability` to see the estimate.
-6. **Iterate**: If `unit_cost > max_unit_cost`, reduce volume or simplify geometry.

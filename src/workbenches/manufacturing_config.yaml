@@ -5,7 +5,7 @@ cnc:
   materials:
     aluminum_6061:
       density_g_cm3: 2.7
-      cost_per_kg: 5.50
+      cost_per_kg: 6.00
       machine_hourly_rate: 80.00
   constraints:
     min_tool_radius_mm: 3.0
