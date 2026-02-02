@@ -28,6 +28,16 @@ from src.generators.benchmark.prompts import (
 )
 from src.generators.benchmark.validator import validate_mjcf
 
+ALL_TOOLS = [
+    init_skill,
+    list_skill_files,
+    list_skills,
+    package_skill,
+    read_skill,
+    search_docs,
+    update_skill,
+]
+
 # Load config
 GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
 with GEN_CONFIG_PATH.open("r") as f:
@@ -341,18 +351,44 @@ workflow.add_node("linter", linter_node)
 workflow.add_node("validator", validator_node)
 workflow.add_node("skill_populator", skill_populator_node)
 
+# Tool Nodes
+workflow.add_node("planner_tools", ToolNode(ALL_TOOLS))
+workflow.add_node("coder_tools", ToolNode(ALL_TOOLS))
+
 workflow.add_edge(START, "planner")
-workflow.add_edge("planner", "coder")
-workflow.add_edge("coder", "linter")
 
 
-def should_continue(state: GeneratorState) -> Literal["coder", "validator", "planner"]:
+# Conditional logic for Planner
+def should_continue_planner(state: GeneratorState) -> Literal["planner_tools", "coder"]:
+    messages = state.get("messages", [])
+    if messages and hasattr(messages[-1], "tool_calls") and messages[-1].tool_calls:
+        return "planner_tools"
+    return "coder"
+
+
+workflow.add_conditional_edges("planner", should_continue_planner)
+workflow.add_edge("planner_tools", "planner")
+
+
+# Conditional logic for Coder
+def should_continue_coder(state: GeneratorState) -> Literal["coder_tools", "linter"]:
+    messages = state.get("messages", [])
+    if messages and hasattr(messages[-1], "tool_calls") and messages[-1].tool_calls:
+        return "coder_tools"
+    return "linter"
+
+
+workflow.add_conditional_edges("coder", should_continue_coder)
+workflow.add_edge("coder_tools", "coder")
+
+
+def should_continue_lint(state: GeneratorState) -> Literal["coder", "validator"]:
     if state.get("linting_failed"):
         return "coder"
     return "validator"
 
 
-workflow.add_conditional_edges("linter", should_continue)
+workflow.add_conditional_edges("linter", should_continue_lint)
 
 
 def should_continue_val(
