@@ -30,7 +30,8 @@ class SimulationLoop:
         Initialize the simulation loop with a path to MJCF model.
         """
         try:
-            self.model = mujoco.MjModel.from_xml_path(model_path)
+            self.model_path = os.path.abspath(model_path)
+            self.model = mujoco.MjModel.from_xml_path(self.model_path)
         except Exception as e:
             raise ValueError(f"Failed to load model from {model_path}: {e}")
 
@@ -89,54 +90,105 @@ class SimulationLoop:
         runner_filename = "sim_engine_runner.py"
         runner_path = os.path.join(workspace, runner_filename)
 
-        # We need a way to run the simulation loop inside the sandbox
-        # But SimulationLoop uses MjModel/MjData which are hard to serialize.
-        # So we run the WHOLE SimulationLoop.run inside the sandbox.
-
-        # For simplicity in this legacy/prototype file, we will re-implement
-        # the run loop inside the sandboxed script or call the internal logic.
+        # In-container path for the model
+        # We'll mount the host's model_path to /workspace/model.xml
+        container_model_path = "/workspace/model.xml"
 
         runner_script = f"""
 import json
 import os
 import sys
 import numpy as np
-import mujoco
 from src.simulation_engine.simulation import SimulationLoop
 
-# Add workspace to path
-sys.path.append("/workspace")
+# Initialize SimulationLoop inside the sandbox
+sim = SimulationLoop("{container_model_path}")
+agent_script = {repr(agent_script)}
+max_steps = {max_steps}
 
-# We need a model file. Since SimulationLoop was init with a path, 
-# we hope it's accessible or in workspace.
-# But SimulationLoop might have been init with a path on host.
-# For the sandbox to work, we'll assume the model is in the workspace.
+# Call the internal run logic
+# We need to expose the internal run logic since we are technically calling it
+# But we can just use _run_internal if we define one.
+# For now, we'll just implement it here to avoid deep refactoring.
+result = sim._run_internal(agent_script, max_steps)
 
-model_path = "/workspace/model.xml" # Placeholder or passed 
-# Actually, the host's SimulationLoop already has the model.
-# This makes it hard to 'just' call it without passing everything.
-
-# Given this is a prototype, we'll implement a sandboxed execution wrapper.
-# Since I've already secured the main MujocoBridge, I'll keep this one 
-# as a simpler 'exec into sandbox' if possible.
+print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
 """
-        # Actually, if I look at MujocoBridge, I moved the logic to _run_simulation_internal.
-        # I'll do something similar here if I want to be 100% correct.
+        try:
+            with open(runner_path, "w", encoding="utf-8") as f:
+                f.write(runner_script)
 
-        # But wait, if this file is UNUSED, maybe I shouldn't over-engineer it.
-        # I'll just change the exec() to a warning or a basic sandbox call.
+            stdout, stderr, rc = sandbox.run_script(
+                runner_filename,
+                mount_src=True,
+                extra_mounts=[(self.model_path, container_model_path)],
+                timeout=60,
+            )
 
-        # Let's just use the sandbox for the exec(agent_script) part if possible?
-        # No, the agent_script defines a FUNCTION that is called EVERY TICK.
-        # The tick MUST run on the host or the WHOLE loop must run in the sandbox.
+            if os.path.exists(runner_path):
+                os.remove(runner_path)
 
-        # I'll opt to run the WHOLE loop in the sandbox.
+            if rc != 0:
+                return {
+                    "status": "ERROR",
+                    "message": f"Sandbox execution failed (code {rc}): {stderr}",
+                    "error_type": "CrashError" if rc != 124 else "TimeoutError",
+                    "metrics": self.metrics.to_dict(),
+                }
 
-        return {
-            "status": "ERROR",
-            "message": "SimulationEngine.SimulationLoop is deprecated. Use src.compiler.mujoco_bridge instead which is secured with Podman.",
-            "metrics": self.metrics.to_dict(),
+            if "SIM_ENGINE_RESULT:" not in stdout:
+                return {
+                    "status": "ERROR",
+                    "message": f"Sandbox simulation failed: {stderr}",
+                    "metrics": self.metrics.to_dict(),
+                }
+
+            result_line = [
+                line for line in stdout.split("\n") if "SIM_ENGINE_RESULT:" in line
+            ][0]
+            res_data = json.loads(result_line.split("SIM_ENGINE_RESULT:")[1])
+
+            # Update local metrics for tests that inspect them
+            if "metrics" in res_data:
+                self.metrics.steps = res_data["metrics"]["steps"]
+                self.metrics.time = res_data["metrics"]["time"]
+                self.metrics.energy = res_data["metrics"]["energy"]
+                self.metrics.collisions = res_data["metrics"]["collisions"]
+
+            return res_data
+
+        except Exception as e:
+            return {
+                "status": "ERROR",
+                "message": f"Error initiating sandboxed simulation: {e}",
+                "metrics": self.metrics.to_dict(),
+            }
+
+    def _run_internal(self, agent_script: str, max_steps: int = 1000) -> Dict[str, Any]:
+        """Actual simulation logic to be run inside sandbox."""
+        # Create safe scope
+        scope = {
+            "np": np,
+            "numpy": np,
+            "math": __import__("math"),
         }
+
+        # Exec script
+        try:
+            exec(agent_script, scope)
+        except Exception as e:
+            return {
+                "status": "ERROR",
+                "message": f"Script execution failed: {e}",
+                "metrics": self.metrics.to_dict(),
+            }
+
+        if "control" not in scope:
+            return {
+                "status": "ERROR",
+                "message": "No 'control' function found in script",
+                "metrics": self.metrics.to_dict(),
+            }
 
         control_func = scope["control"]
 

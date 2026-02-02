@@ -1,7 +1,7 @@
 import subprocess
 import os
 import logging
-from typing import Tuple, Optional
+from typing import Tuple, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +25,19 @@ class PodmanSandbox:
         cpu_quota: int = 50000,
         network: str = "none",
         mount_src: bool = False,
+        extra_mounts: Optional[List[Tuple[str, str]]] = None,
     ) -> Tuple[str, str, int]:
         """
         Runs a script inside the sandbox.
+
+        Args:
+            script_name: Name of the script in the workspace.
+            timeout: Maximum execution time in seconds.
+            memory_limit: RAM limit (e.g., '1g').
+            cpu_quota: CPU time quota.
+            network: Network mode ('none' by default).
+            mount_src: Whether to mount the project's src directory.
+            extra_mounts: List of (host_path, container_path) tuples.
 
         Returns:
             (stdout, stderr, return_code)
@@ -49,6 +59,10 @@ class PodmanSandbox:
             "-v",
             f"{self.workspace_dir}:{container_workspace}:Z",
         ]
+
+        if extra_mounts:
+            for host_path, container_path in extra_mounts:
+                cmd.extend(["-v", f"{host_path}:{container_path}:ro"])
 
         if mount_src:
             project_root = os.path.abspath(
