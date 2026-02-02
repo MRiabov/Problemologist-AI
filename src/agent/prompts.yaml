@@ -78,21 +78,25 @@ benchmark_generator:
     The script must:
     1. Use the pre-imported `build123d` symbols for all geometric operations.
     2. Create 3D geometry using `BuildPart`, `BuildSketch`, or `BuildLine` contexts.
-    4. **Scaling**: Apply the provided `scale` non-uniformly to your parts.
-       **CRITICAL**: Use the `scale(part, scale)` function or `part.scale(scale)` method. 
-       **DO NOT** use `.scaled(scale)` as it is not a valid attribute in `build123d`. 
-       Example: `scaled_part = part.scale(scale)` or `scaled_part = scale(part, scale)`.
-    5. **Labeling`:
-       - `obstacle_<name>`: For solid, colliding objects.
-       - `zone_goal`: For the target trigger area.
-       - `zone_start`: For the starting area.
-       - `zone_forbid`: For obstacles that cause failure on contact.
+    3. Apply the provided `scale` non-uniformly to components.
+       **CRITICAL**: `build123d` has different behavior for the `scale` method vs function:
+       - **Method**: `part.scale(factor: float)` ONLY supports UNIFORM scaling (single float).
+       - **Function**: `scale(part, by=(sx, sy, sz))` supports NON-UNIFORM scaling (tuple).
+       
+       **DO NOT** use `part.scale(scale)` with a tuple; it will throw a `TypeError`.
+       
+       Correct Non-Uniform Usage:
+       - `scaled_part = scale(part, by=scale)`
+       - `scaled_part = scale(part, by=Vector(scale))`
+    4. Label solids using the `.label` attribute:
     5. Return the MJCF XML string (starting with `<mujoco>`) by calling the `to_mjcf(...)` helper.
     6. NOT show the geometry using `show()` or `show_object()`.
        
     Start your script directly with the function definition: `def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
   critic: |
     Review the validation error and provide instructions to fix the code.
+    
+    **Troubleshooting**: If you are unsure about `build123d` syntax (e.g., how to scale, translate, or use selectors), you MUST refer to the condensed documentation at `docs/build123d/cheat_sheet.md`. Use the `build123d_docs` skill if available.
 
     Validation Error:
     {error}
@@ -102,7 +106,9 @@ benchmark_generator:
 
     Provide specific concise instructions on how to modify the code to fix the error.
   fixer: |
-    You are an expert build123d coder. Fix the code based on the error. Return the full corrected script.
+    You are an expert build123d coder. Fix the code based on the error. 
+    Refer to `docs/build123d/cheat_sheet.md` to verify syntax and avoid common attribute errors.
+    Return the full corrected script.
 common:
   tool_error: |
     The previous tool execution failed with the following error:
