@@ -1,16 +1,46 @@
+import os
+import shutil
+import tempfile
+import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 from src.generators.benchmark.types import ValidationReport
 
 
-def validate_mjcf(xml_string: str) -> ValidationReport:
+def validate_mjcf(xml_string: str, asset_dir: str = None) -> ValidationReport:
     """
     Validates a MuJoCo XML string by loading it and running a short simulation
     to check for stability (no NaNs, no excessive velocities).
     """
     try:
-        # Load the model from XML string
-        model = mujoco.MjModel.from_xml_string(xml_string)
+        # Strip meshdir from XML to avoid absolute path issues during validation
+        # We will use a temporary directory if asset_dir is provided
+        root = ET.fromstring(xml_string)
+        compiler = root.find("compiler")
+        if compiler is not None and "meshdir" in compiler.attrib:
+            del compiler.attrib["meshdir"]
+        
+        # Also, if we don't have an asset_dir, we might want to strip all <mesh> assets 
+        # or replace them with primitives to allow basic physics validation if possible.
+        # But for now, we assume if meshes are present, asset_dir MUST be provided or they must be in cwd.
+        
+        processed_xml = ET.tostring(root, encoding="unicode")
+
+        # Load the model
+        if asset_dir:
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                # Copy assets to tmp_dir
+                if os.path.exists(asset_dir):
+                    for f in os.listdir(asset_dir):
+                        shutil.copy(os.path.join(asset_dir, f), tmp_dir)
+                
+                xml_path = os.path.join(tmp_dir, "scene.xml")
+                with open(xml_path, "w") as f:
+                    f.write(processed_xml)
+                model = mujoco.MjModel.from_xml_path(xml_path)
+        else:
+            model = mujoco.MjModel.from_xml_string(processed_xml)
+            
         data = mujoco.MjData(model)
 
         # Simulation parameters
