@@ -22,26 +22,19 @@ GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
 with GEN_CONFIG_PATH.open("r") as f:
     gen_config = yaml.safe_load(f)
 
-MAX_ATTEMPTS = gen_config.get("max_attempts", 3)
+MAX_ATTEMPTS = gen_config.get("max_attempts", 10)
 
 CAD_TEMPLATE = """from build123d import *
 import build123d as bd
 import math
 import random
 
-def export_mjcf(environment: Compound) -> str:
-    # Helper to export a build123d Compound to a MuJoCo MJCF XML string.
-    from src.simulation_engine.builder import SceneCompiler
-    import os
-    import tempfile
-
-    # We use a temporary directory for assets during validation
-    # In production, the manager handles saving them properly.
-    asset_dir = os.path.join(os.getcwd(), ".agent_storage", "temp_assets")
-    os.makedirs(asset_dir, exist_ok=True)
-
-    compiler = SceneCompiler(asset_dir=asset_dir)
-    return compiler.compile(environment)
+# Common build123d patterns for the model to follow
+# 1. Use Box() inside BuildPart() context, not BuildBox.
+# 2. Use Compound(children=list_of_solids) to combine parts.
+# 3. Use scale(objects, by=(sx, sy, sz)) for non-uniform scaling.
+# 4. Use part.translate((x, y, z)) or part.move(Location((x,y,z))). 
+#    CRITICAL: There is NO 'bd.move(part, ...)' function. Use methods on the part itself.
 """
 
 
@@ -68,7 +61,7 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
 
     messages = [
         SystemMessage(
-            content=PLANNER_PROMPT.format(request=state["request"])
+            content=PLANNER_PROMPT.format(request=state["request"]) 
             + "\n\nPlease think step-by-step before providing the plan. "
             "Wrap your internal reasoning in <reasoning> tags and the final plan in <plan> tags."
         ),
@@ -86,10 +79,7 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
 
     if "<plan>" in content and "</plan>" in content:
         plan = content.split("<plan>")[1].split("</plan>")[0].strip()
-    elif not reasoning and "<plan>" in content:
-        # Fallback: everything before <plan> is reasoning
-        reasoning = content.split("<plan>")[0].strip()
-
+    
     return {
         "plan": plan,
         "planner_reasoning": reasoning,
@@ -145,14 +135,7 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
     raw_content = content
     if "<python_code>" in content and "</python_code>" in content:
         raw_content = content.split("<python_code>")[1].split("</python_code>")[0].strip()
-        if not reasoning:
-            # Fallback: everything before <python_code> is reasoning
-            reasoning = content.split("<python_code>")[0].strip()
-    elif not reasoning:
-        # Fallback: everything before triple backticks is reasoning
-        if "```" in content:
-            reasoning = content.split("```")[0].strip()
-
+    
     cleaned_code = raw_content
     if "```python" in raw_content:
         cleaned_code = raw_content.split("```python")[1].split("```")[0].strip()
@@ -206,9 +189,9 @@ def validator_node(state: GeneratorState) -> dict[str, any]:
         from src.generators.benchmark.manager import execute_build
 
         # Call build with seed 0 and default scale (1,1,1) for base validation
-        # We use a temporary assets dir for validation
-        rel_temp_assets = "temp_assets"
-        mjcf_xml = execute_build(code, 0, scale=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets)
+        # We use a relative path for assets dir for sandbox compatibility
+        rel_temp_assets = ".agent_storage/temp_assets"
+        mjcf_xml = execute_build(code, 0, scale_factors=(1.0, 1.0, 1.0), asset_dir=rel_temp_assets)
 
         if not isinstance(mjcf_xml, str):
             return {

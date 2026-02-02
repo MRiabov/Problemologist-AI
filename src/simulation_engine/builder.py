@@ -82,8 +82,15 @@ class SceneCompiler:
         # Compiler
         compiler = ET.SubElement(self.root, "compiler", angle="degree", coordinate="local")
         if self.asset_dir:
-            # Set meshdir to the absolute path of asset_dir so MuJoCo can find assets
-            compiler.set("meshdir", os.path.abspath(self.asset_dir))
+            # Set meshdir. If it is inside /workspace/ (sandbox), use a relative path
+            # to ensure MuJoCo inside the container can find it regardless of host mapping.
+            path = os.path.abspath(self.asset_dir)
+            if path.startswith("/workspace/"):
+                # Make it relative to /workspace/
+                rel_path = os.path.relpath(path, "/workspace/")
+                compiler.set("meshdir", rel_path)
+            else:
+                compiler.set("meshdir", path)
 
         # Assets (Placeholder for mesh assets)
         self.asset = ET.SubElement(self.root, "asset")
@@ -157,7 +164,7 @@ class SceneCompiler:
         """Processes the environment solids (zones and obstacles)."""
         for i, solid in enumerate(env_compound.solids()):
             # build123d objects might have a label attribute set by the user
-            label = getattr(solid, "label", "")
+            label = getattr(solid, "label", None)
             if not label:
                 label = f"solid_{i}"
 

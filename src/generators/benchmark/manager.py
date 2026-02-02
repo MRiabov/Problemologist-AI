@@ -27,18 +27,45 @@ console = Console()
 
 
 def execute_build(
-    code: str, seed: int, scale: tuple[float, float, float] = (1.0, 1.0, 1.0), asset_dir: str = None
+    code: str, seed: int, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0), asset_dir: str = None
 ) -> str:
-    """Executes the build(seed, scale) function from the provided code inside a sandbox."""
+    """Executes the build(seed, scale_factors) function from the provided code inside a sandbox."""
     # Prepend hardcoded imports and helpers
-    # We use a global variable to pass asset_dir into the build context implicitly
+    # We use a fixed absolute path inside the container for MuJoCo consistency
     final_code = (
         "from build123d import *\n"
+        "from build123d.topology import Shape\n"
+        "from typing import Union\n"
         "from src.simulation_engine.builder import SceneCompiler\n\n"
         "_ASSET_DIR = None\n\n"
-        "def to_mjcf(env_compound: Compound, agent_compound: Compound = None, agent_joints: list = None) -> str:\n"
-        "    compiler = SceneCompiler(asset_dir=_ASSET_DIR)\n"
-        "    return compiler.compile(env_compound, agent_compound, agent_joints)\n\n"
+        "def to_mjcf(env_compound: Union[Compound, Shape, list], agent_compound: Union[Compound, Shape, list] = None, agent_joints: list = None, env_labels: list[str] = None, agent_labels: list[str] = None) -> str:\n"
+        "    # Use fixed absolute path for sandbox consistency\n"
+        "    target_dir = _ASSET_DIR or '/workspace/.agent_storage/temp_assets'\n"
+        "    import os\n"
+        "    os.makedirs(target_dir, exist_ok=True)\n"
+        "    compiler = SceneCompiler(asset_dir=target_dir)\n"
+        "    \n"
+    def ensure_compound(obj, labels=None):
+        if obj is None: return None
+        if isinstance(obj, list):
+            c = Compound(children=obj)
+        elif isinstance(obj, Compound):
+            c = obj
+        else:
+            c = Compound(children=[obj])
+            
+        if labels:
+            solids = list(c.solids())
+            for i, solid in enumerate(solids):
+                if i < len(labels): 
+                    # Set the attribute directly on the solid object
+                    setattr(solid, "label", labels[i])
+        return c
+
+        "        \n"
+        "    env_c = ensure_compound(env_compound, env_labels)\n"
+        "    agent_c = ensure_compound(agent_compound, agent_labels)\n"
+        "    return compiler.compile(env_c, agent_c, agent_joints)\n\n"
         + code
     )
 
@@ -48,7 +75,9 @@ def execute_build(
     
     # Ensure asset_dir exists in workspace if provided
     if asset_dir:
-        os.makedirs(os.path.join(workspace, asset_dir), exist_ok=True)
+        # If it's the .agent_storage path, ensure it exists on host too for mounting
+        host_asset_path = os.path.join(workspace, asset_dir)
+        os.makedirs(host_asset_path, exist_ok=True)
 
     sandbox = PodmanSandbox(workspace)
 
@@ -58,7 +87,7 @@ def execute_build(
     with open(os.path.join(workspace, script_name), "w") as f:
         f.write(final_code)
 
-    asset_dir_val = f"'/workspace/{asset_dir}'" if asset_dir else "None"
+    asset_dir_val = f"'{asset_dir}'" if asset_dir else "None"
 
     runner_script = f"""
 import json
@@ -68,17 +97,20 @@ import os
 sys.path.append("/workspace")
 import template_build
 
-# Inject asset_dir into the module
+# Inject asset_dir as relative path for SceneCompiler logic
 template_build._ASSET_DIR = {asset_dir_val}
 
 seed = {seed}
-scale = {scale}
+scale_factors = {scale_factors}
 
 try:
     import inspect
     sig = inspect.signature(template_build.build)
-    if "scale" in sig.parameters:
-        res = template_build.build(seed, scale=scale)
+    if "scale_factors" in sig.parameters:
+        res = template_build.build(seed, scale_factors=scale_factors)
+    elif "scale" in sig.parameters:
+        # Backward compatibility for 'scale' name
+        res = template_build.build(seed, scale=scale_factors)
     else:
         res = template_build.build(seed)
     print(f"BUILD_RESULT:{{res}}")
@@ -183,13 +215,13 @@ def generate(
             sx = random.uniform(0.5, 2.0)
             sy = random.uniform(0.5, 2.0)
             sz = random.uniform(0.5, 2.0)
-            scale = (sx, sy, sz)
-
+            scale_factors = (sx, sy, sz)
+            
             try:
                 # 2. Batch Processing & Randomization
                 # We use a temporary assets dir for validation
-                rel_temp_assets = "temp_assets"
-                mjcf_xml = execute_build(template_code, seed, scale=scale, asset_dir=rel_temp_assets)
+                rel_temp_assets = ".agent_storage/temp_assets"
+                mjcf_xml = execute_build(template_code, seed, scale_factors=scale_factors, asset_dir=rel_temp_assets)
                 
                 # 3. Validation
                 report = validate_mjcf(mjcf_xml)

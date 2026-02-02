@@ -57,42 +57,97 @@ benchmark_generator:
     2. **Static Geometry**: Describe the fixed environment parts (funnels, containers, obstacles).
     3. **Interactive Elements**: Describe any mobile parts (balls, sliders) and how they are expected to move under gravity or external influence.
     4. **Success Criteria**: Define the "Win Condition" in spatial terms (e.g., "The ball must reach Zone X") (Note: we define the spatial "win condition", if the goal object reaches a target zone, which is an axis-aligned bounding box somewhere in your benchmark).
-    5. **Rescale Limits**: Specify allowed non-uniform scaling bounds for [X, Y, Z] directions (Default: 0.5 to 2.0).
-    6. **Randomization**: Key environment parameters to vary (seed-based) to ensure the solution must be parametric.
-
-  coder: |
-    You are an expert in build123d and Python.
-    Your task is to write a Python script that defines a function `build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str`.
-
-    **Environment Note**: The following imports and helpers are already automatically prepended to your script. Do NOT include them:
-    ```python
-    from build123d import *
-    from src.simulation_engine.builder import SceneCompiler
+        5. **Rescale Limits**: Specify allowed non-uniform scaling bounds for [X, Y, Z] directions (Default: 0.5 to 2.0).
+        6. **Randomization**: Key environment parameters to vary (seed-based) to ensure the solution must be parametric.
     
-    # Helper to compile the scene easily
-    def to_mjcf(env_compound: Compound, agent_compound: Compound = None, agent_joints: list = None) -> str:
-        compiler = SceneCompiler()
-        return compiler.compile(env_compound, agent_compound, agent_joints)
-    ```
+      coder: |
+        You are an expert in build123d and Python.
+        Your task is to write a Python script that defines a function `build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str`.
+    
+        **Environment Note**: The following imports and helpers are already automatically prepended to your script. Do NOT include them:
+        ```python
+        from build123d import *
+        from build123d.topology import Shape
+        from typing import Union
+        from src.simulation_engine.builder import SceneCompiler
+        
+            # Helper to compile the scene easily
+            def to_mjcf(env_compound: Union[Compound, Shape, list], agent_compound: Union[Compound, Shape, list] = None, agent_joints: list = None, env_labels: list[str] = None, agent_labels: list[str] = None) -> str:
+                # Implementation details hidden... handles non-compounds and labeling automatically.
+            ```
+        
+            **Rules**:
+            1. Use `from build123d import *` style (pre-imported).
+            2. Apply non-uniform `scale_factors` tuple using the `scale(obj, by=scale_factors)` FUNCTION.
+            3. **CRITICAL**: The `.scale()` METHOD only supports uniform scaling (single float). **DO NOT** pass a tuple to it.
+            4. Return MJCF XML by calling `to_mjcf(env_compound=..., agent_compound=..., agent_joints=..., env_labels=..., agent_labels=...)`.
+               - Use `env_labels` and `agent_labels` to name your parts.
+               - `obstacle_<name>`: For solid, colliding objects.
+               - `zone_goal`: For the target trigger area.
+               - `zone_start`: For the starting area.
+               - `zone_forbid`: For obstacles that cause failure on contact.
+               - `agent_<name>`: For parts belonging to the mobile agent.
+        
+            **Example 1: Static Peg-in-Hole Benchmark**
+            ```python
+            def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:
+                # 1. Static Hole (Environment)
+                with BuildPart() as hole_part:
+                    Box(40, 40, 10)
+                    Cylinder(radius=5.5, height=10, mode=Mode.SUBTRACT)
+                    hole_env = scale(hole_part.part, by=scale_factors)
+        
+                # 2. Goal Zone (Transparent trigger)
+                with BuildPart() as goal:
+                    Cylinder(radius=5.5, height=5)
+                    goal_env = scale(goal.part, by=scale_factors)
+        
+                # 3. Mobile Peg (Agent)
+                with BuildPart() as peg:
+                    Cylinder(radius=5.0, height=30)
+                    peg_agent = scale(peg.part, by=scale_factors)
+        
+                return to_mjcf(
+                    env_compound=[hole_env, goal_env], 
+                    agent_compound=peg_agent,
+                    env_labels=["obstacle_hole", "zone_goal"],
+                    agent_labels=["agent_peg"]
+                )
+            ```
+        
+            **Example 2: Moving Slider Benchmark**
+            ```python
+            def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:
+                # 1. Fixed Base
+                with BuildPart() as base:
+                    Box(100, 20, 5)
+                    scaled_base = scale(base.part, by=scale_factors)
+        
+                # 2. Moving Block
+                with BuildPart() as block:
+                    Box(15, 15, 15)
+                    scaled_block = scale(block.part, by=scale_factors)
+        
+                # 3. Define kinematic relationship
+                joints = [{
+                    "name": "slider_x",
+                    "type": "slide",
+                    "pos": "0 0 0.01",
+                    "axis": "1 0 0"
+                }]
+        
+                return to_mjcf(
+                    env_compound=scaled_base, 
+                    agent_compound=scaled_block, 
+                    agent_joints=joints,
+                    env_labels=["obstacle_base"],
+                    agent_labels=["agent_block"]
+                )
+            ```
+                Start your script directly with the function definition: `def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
+    
 
-    The script must:
-    1. Use the pre-imported `build123d` symbols for all geometric operations.
-    2. Create 3D geometry using `BuildPart`, `BuildSketch`, or `BuildLine` contexts.
-    3. Apply the provided `scale` non-uniformly to components.
-       **CRITICAL**: `build123d` has different behavior for the `scale` method vs function:
-       - **Method**: `part.scale(factor: float)` ONLY supports UNIFORM scaling (single float).
-       - **Function**: `scale(part, by=(sx, sy, sz))` supports NON-UNIFORM scaling (tuple).
-       
-       **DO NOT** use `part.scale(scale)` with a tuple; it will throw a `TypeError`.
-       
-       Correct Non-Uniform Usage:
-       - `scaled_part = scale(part, by=scale)`
-       - `scaled_part = scale(part, by=Vector(scale))`
-    4. Label solids using the `.label` attribute:
-    5. Return the MJCF XML string (starting with `<mujoco>`) by calling the `to_mjcf(...)` helper.
-    6. NOT show the geometry using `show()` or `show_object()`.
-       
-    Start your script directly with the function definition: `def build(seed: int = 0, scale: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str:`
+  
   critic: |
     Review the validation error and provide instructions to fix the code.
     
