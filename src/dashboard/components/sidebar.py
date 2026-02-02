@@ -73,15 +73,6 @@ def render_sidebar():
             st.session_state.selected_step_index = step_index
 
         st.sidebar.divider()
-        with st.sidebar.expander("🛠️ Debug: Insert Own Plan"):
-            plan_input = st.text_area("Implementation Plan", height=150)
-            if st.button("Insert Plan"):
-                if plan_input:
-                    insert_step(episode_id, "thought", plan_input)
-                    st.success("Plan inserted!")
-                    st.rerun()
-                else:
-                    st.error("Please enter a plan.")
 
         return episode
 
