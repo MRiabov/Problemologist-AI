@@ -7,6 +7,8 @@ import pytest
 from src.environment.core import CADEnv
 
 
+from unittest.mock import patch, MagicMock
+
 @pytest.fixture
 def env():
     # Setup a clean workspace for testing
@@ -18,7 +20,23 @@ def env():
     if db_path.exists():
         db_path.unlink()
 
-    env = CADEnv(workspace_dir=str(workspace), db_url=f"sqlite:///{db_path}")
+    # Set a low budget for testing rejection
+    env = CADEnv(
+        workspace_dir=str(workspace), 
+        db_url=f"sqlite:///{db_path}",
+        max_unit_cost=100.0, # High enough for simple parts
+        target_quantity=1
+    )
+    
+    # Mock sim bridge
+    env.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
+    env.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
+    mock_res = MagicMock()
+    mock_res.success = True
+    mock_res.energy = 10.0
+    mock_res.damage = 0.0
+    env.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
+    
     yield env
 
     # Cleanup
@@ -29,6 +47,41 @@ def env():
         p = Path(f"test_history.db{suffix}")
         if p.exists():
             p.unlink()
+
+
+def test_env_budget_rejection(env):
+    env.reset()
+    env.max_unit_cost = 1.0 # Set low budget for this specific test
+    # Write a part that definitely costs more than $1.0 (e.g. 10x10x10 cube)
+    # Default 3D print cost is 0.05 per mm3 -> 1000 * 0.05 = $50.0
+    env.step(
+        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+    )
+
+    obs, reward, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
+    
+    assert reward == -20.0
+    assert "REJECTED" in obs["last_output"]
+    assert "exceeds budget" in obs["last_output"]
+    assert not terminated
+
+def test_env_force_submit(env):
+    env.reset()
+    env.step(
+        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+    )
+
+    # Force submit should bypass budget check
+    action = {
+        "tool": 4,
+        "arguments": "force_submit=True|||reason:Testing bypass"
+    }
+    obs, reward, terminated, _, _ = env.step(action)
+    
+    # It should pass budget check and reach simulation (which might fail or pass)
+    assert "REJECTED" not in obs["last_output"]
+    # reward would be from simulation
+    assert terminated
 
 
 def test_env_reset(env):

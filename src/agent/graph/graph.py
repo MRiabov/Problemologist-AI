@@ -66,7 +66,41 @@ def build_graph(
     builder.add_node("critic", critic_node)
     builder.add_node("skill_populator", skill_populator_node)
 
-    builder.add_node("tools", ToolNode(tools))
+    # Wrap ToolNode to capture state updates from tool outputs
+    standard_tool_node = ToolNode(tools)
+
+    def tools_node(state: AgentState):
+        result = standard_tool_node.invoke(state)
+        # The result is usually {'messages': [ToolMessage, ...]}
+        
+        updates = result.copy()
+        
+        # Check if we just ran validation
+        last_ai_msg = None
+        for msg in reversed(state["messages"]):
+             if hasattr(msg, "tool_calls") and msg.tool_calls:
+                 last_ai_msg = msg
+                 break
+        
+        if last_ai_msg:
+            for tc in last_ai_msg.tool_calls:
+                if tc["name"] == validation_tool_name:
+                    # Capture the attempt in full_history
+                    history = state.get("full_history", [])
+                    # The tool output is in the first message of result
+                    tool_output = result["messages"][0].content if result["messages"] else "N/A"
+                    
+                    history.append({
+                        "attempt": len(history) + 1,
+                        "code": tc["args"].get("code", ""),
+                        "reasoning": state.get("coder_reasoning", ""),
+                        "errors": None if "Validation Passed!" in tool_output else tool_output
+                    })
+                    updates["full_history"] = history
+        
+        return updates
+
+    builder.add_node("tools", tools_node)
 
     # 2. Define Edges
 

@@ -12,6 +12,7 @@ import functools
 import build123d as bd
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
+from src.workbenches.print_3d import Print3DWorkbench
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = str(Path("workspace").resolve())
@@ -345,6 +346,7 @@ _WORKBENCHES = {
     "cnc": CNCWorkbench(),
     "cnc_milling": CNCWorkbench(),
     "injection_molding": InjectionMoldingWorkbench(),
+    "print_3d": Print3DWorkbench(),
 }
 
 
@@ -355,16 +357,19 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
     locs = {}
     exec(script_content, globals(), locs)
 
-    export_obj = None
+    # Collect all exportable objects
+    exportable_objects = []
     for val in locs.values():
         if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
-            export_obj = val
-            break
+            exportable_objects.append(val)
+        elif isinstance(val, list):
+            for item in val:
+                if isinstance(item, (bd.Compound, bd.Solid, bd.Shape)):
+                    exportable_objects.append(item)
         elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
-            export_obj = val.part
-            break
+            exportable_objects.append(val.part)
 
-    if not export_obj:
+    if not exportable_objects:
         raise ValueError("No 3D object found in script")
 
     # Helper to parse label: "quantity:100|process:cnc"
@@ -372,7 +377,7 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
         data = {"quantity": default_quantity, "process": default_process}
         if not label:
             return data
-        parts = label.split("|")
+        parts = str(label).split("|")
         for p in parts:
             if ":" in p:
                 k, v = p.split(":", 1)
@@ -385,17 +390,37 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
                     data["process"] = v
         return data
 
+    all_solids_raw = []
+    for obj in exportable_objects:
+        if isinstance(obj, bd.Compound):
+            all_solids_raw.extend(list(obj.solids()))
+        elif isinstance(obj, bd.Solid):
+            all_solids_raw.append(obj)
+        else:
+            try:
+                all_solids_raw.extend(list(obj.solids()))
+            except:
+                pass
+    
+    # Deduplicate by geometric hash
     all_solids = []
-    if isinstance(export_obj, bd.Compound):
-        all_solids = list(export_obj.solids())
-    elif isinstance(export_obj, bd.Solid):
-        all_solids = [export_obj]
-    else:
-        # Try to extract solids if it's some other shape type
+    seen_hashes = set()
+    seen_ids = set() # Fallback for non-solid shapes if any
+    for s in all_solids_raw:
+        # Create a simple hash based on center and volume
         try:
-            all_solids = list(export_obj.solids())
+            c = s.center()
+            geom_hash = hashlib.md5(
+                f"{c.X:.4f},{c.Y:.4f},{c.Z:.4f},{s.volume:.4f}".encode()
+            ).hexdigest()
+            if geom_hash not in seen_hashes:
+                all_solids.append(s)
+                seen_hashes.add(geom_hash)
         except:
-            all_solids = []
+            # If center() or volume fails, fallback to ID just in case
+            if id(s) not in seen_ids:
+                all_solids.append(s)
+                seen_ids.add(id(s))
 
     total_cost = 0.0
     all_violations = []

@@ -40,9 +40,13 @@ def validate_benchmark_model(code: str, seed: int = 0) -> str:
         report = validate_mjcf(mjcf_xml)
 
         if report["is_valid"]:
-            # We return a specific prefix that the critic can look for?
-            # Or just allow the critic to read "Validation Passed!"
-            return f"Validation Passed!\nMJCF Output (truncated):\n{mjcf_xml[:500]}..."
+            # We return markers so the dashboard can extract the full MJCF even if it's large.
+            # We still provide a truncated preview for the LLM to avoid context bloat.
+            return (
+                f"Validation Passed!\n"
+                f"---FULL_MJCF_START---\n{mjcf_xml}\n---FULL_MJCF_END---\n"
+                f"MJCF Preview:\n{mjcf_xml[:500]}..."
+            )
 
         return f"Validation Failed:\n{report['error_message']}"
     except Exception:
