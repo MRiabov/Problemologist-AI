@@ -11,7 +11,7 @@ class PodmanSandbox:
     Provides isolated execution of Python code using Podman containers.
     """
 
-    def __init__(self, workspace_dir: str, image: str = "cad-sandbox"):
+    def __init__(self, workspace_dir: str, image: str = "problemologist-sandbox"):
         self.workspace_dir = os.path.abspath(workspace_dir)
         self.image = image
         # Ensure workspace exists
@@ -46,6 +46,7 @@ class PodmanSandbox:
 
         # We use --rm to remove the container after exit
         # We mount the workspace with :Z for SELinux context labeling if on Fedora/RHEL
+        print(f"DEBUG: PodmanSandbox using image: {self.image}")
         cmd = [
             "podman",
             "run",
