@@ -24,11 +24,22 @@ def _run_sim_wrapper(
         )
         queue.put({"success": True, "result": asdict(result)})
     except Exception as e:
+        error_type = "RuntimeError"
+        message = str(e)
+        if "CRASH_DETECTED" in message:
+            error_type = "CrashError"
+            # Extract exit code and stderr if possible
+            parts = message.split(":", 2)
+            if len(parts) >= 3:
+                message = f"Sandbox crashed (code {parts[1]}): {parts[2]}"
+            else:
+                message = "Sandbox crashed."
+
         queue.put(
             {
                 "success": False,
-                "error_type": "RuntimeError",
-                "message": str(e),
+                "error_type": error_type,
+                "message": message,
                 "traceback": traceback.format_exc(),
             }
         )

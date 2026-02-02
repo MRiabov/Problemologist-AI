@@ -154,6 +154,11 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
             if os.path.exists(runner_path):
                 os.remove(runner_path)
 
+            if returncode != 0:
+                if returncode == 124:  # Timeout
+                    return SimResult(duration, energy=0.0, success=False, damage=100.0)
+                raise RuntimeError(f"CRASH_DETECTED:{returncode}:{stderr}")
+
             if "SIM_RESULT:" not in stdout:
                 print(f"Sandbox Simulation Error: {stderr}")
                 return SimResult(duration, energy=0.0, success=False, damage=100.0)
