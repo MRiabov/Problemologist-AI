@@ -1,7 +1,9 @@
 import traceback
-from typing import TypedDict, Optional, Literal, Dict, Any, List
+import os
 from pathlib import Path
 import yaml
+from typing import TypedDict, Literal, Annotated
+import operator
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 
@@ -49,28 +51,30 @@ import random
 # Define State
 class GeneratorState(TypedDict):
     request: str
-    plan: Optional[str]
-    planner_reasoning: Optional[str]
-    code: Optional[str]
-    coder_reasoning: Optional[str]
-    errors: Optional[str]
-    full_history: Optional[List[Dict[str, Any]]]  # List of reports from all attempts
-    mjcf: Optional[str]
+    plan: str | None
+    planner_reasoning: str | None
+    code: str | None
+    coder_reasoning: str | None
+    errors: str | None
+    mjcf: str | None
     attempts: int
     validation_passed: bool
     linting_failed: bool
 
 
 # Nodes
-def planner_node(state: GeneratorState) -> Dict[str, Any]:
+def planner_node(state: GeneratorState) -> dict[str, any]:
     """Generates a plan based on the user request."""
+    print(f"DEBUG: Entering planner_node, request: {state.get('request')}")
     # If plan is already provided (e.g. from human-in-the-loop or integration test), skip LLM
     if state.get("plan"):
+        print("DEBUG: planner_node - plan provided externally")
         return {
             "plan": state["plan"],
             "planner_reasoning": "Plan provided externally.",
             "attempts": 0,
             "validation_passed": False,
+            "linting_failed": False,
         }
 
     # print(f"--- PLANNER NODE (Attempt {state.get('attempts', 0)}) ---")
@@ -102,12 +106,14 @@ def planner_node(state: GeneratorState) -> Dict[str, Any]:
         "planner_reasoning": reasoning,
         "attempts": 0,
         "validation_passed": False,
+        "linting_failed": False,
     }
 
 
-def coder_node(state: GeneratorState) -> Dict[str, Any]:
+def coder_node(state: GeneratorState) -> dict[str, any]:
     """Generates or fixes code based on plan and errors."""
-    # print(f"--- CODER NODE (Attempt {state.get('attempts', 0)}) ---")
+    attempts = state.get("attempts", 0)
+    print(f"DEBUG: Entering coder_node, current state attempts: {attempts}")
     model = get_model(Config.LLM_MODEL)
 
     errors = state.get("errors")
@@ -166,36 +172,26 @@ def coder_node(state: GeneratorState) -> Dict[str, Any]:
         "code": cleaned_code,
         "coder_reasoning": reasoning,
         "attempts": state.get("attempts", 0) + 1,
+        "validation_passed": False,
+        "linting_failed": False,
     }
 
 
 def linter_node(state: GeneratorState) -> dict[str, any]:
-    """Runs static analysis (ruff, pyrefly) on the generated code."""
+    """Runs static analysis (ruff, pyrefly) on the provided code."""
+    print("DEBUG: Entering linter_node")
     code = state["code"]
-    errors = []
-
-    # Heuristic check for common build123d attribute hallucinations
-    common_hallucinations = {
-        ".scaled(": "'component.scaled' is not a valid attribute in build123d. Use 'scale(part, ...)' instead.",
-        # Add more here if needed (e.g., .translated(, .rotated() if they cause issues)
-    }
-
-    for marker, tip in common_hallucinations.items():
-        if marker in code:
-            errors.append(f"[Heuristic] {tip}")
 
     lint_issues = run_linter(code)
-    errors.extend(lint_issues)
-
-    if errors:
-        error_msg = LINTER_FEEDBACK_PREFIX + "\n".join(errors)
+    if lint_issues:
+        error_msg = LINTER_FEEDBACK_PREFIX + "\n".join(lint_issues)
         return {
             "errors": error_msg,
             "validation_passed": False,
             "linting_failed": True,
         }
 
-    return {"errors": None, "validation_passed": True, "linting_failed": False}
+    return {"errors": None, "validation_passed": False, "linting_failed": False}
 
 
 def validator_node(state: GeneratorState) -> dict[str, any]:
@@ -258,7 +254,7 @@ workflow.add_edge("coder", "linter")
 
 def should_continue_lint(state: GeneratorState) -> Literal["coder", "validator"]:
     """Decides whether to retry after linting or proceed to simulation."""
-    if state["linting_failed"] and state["attempts"] < MAX_ATTEMPTS:
+    if state.get("linting_failed") is True and state.get("attempts", 0) < MAX_ATTEMPTS:
         return "coder"
     return "validator"
 
@@ -269,9 +265,10 @@ workflow.add_edge("validator", "should_continue_proxy")
 
 def should_continue(state: GeneratorState) -> Literal["coder", END]:
     """Decides whether to retry after validation or end."""
-    if state["validation_passed"]:
+    print(f"DEBUG: should_continue - validation_passed: {state.get('validation_passed')}, attempts: {state.get('attempts')}")
+    if state.get("validation_passed") is True:
         return END
-    if state["attempts"] >= MAX_ATTEMPTS:
+    if state.get("attempts", 0) >= MAX_ATTEMPTS:
         return END
     return "coder"
 
