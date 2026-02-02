@@ -7,6 +7,17 @@ def render_sidebar():
     """Renders the dashboard sidebar for navigation."""
     st.sidebar.header("Dashboard Controls")
     
+    # Mode Selector
+    mode = st.sidebar.radio(
+        "Dashboard Mode", 
+        ["Viewer", "Benchmark Generator"],
+        key="dashboard_mode_selector"
+    )
+    st.session_state.app_mode = mode
+    
+    if mode == "Benchmark Generator":
+        return None
+
     # Mode Toggle
     st.session_state.live_mode = st.sidebar.checkbox(
         "Live Mode", 
