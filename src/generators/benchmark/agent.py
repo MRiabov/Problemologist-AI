@@ -1,3 +1,4 @@
+from src.agent.utils.config import Config
 from src.agent.graph.graph import build_graph
 from src.agent.tools.benchmark_tools import (
     run_benchmark_linter,
@@ -5,7 +6,7 @@ from src.agent.tools.benchmark_tools import (
 )
 
 # Constants used by dashboard
-MAX_ATTEMPTS = 10
+MAX_ATTEMPTS = Config.MAX_STEPS
 
 
 # Helper to build the configured agent

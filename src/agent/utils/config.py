@@ -27,7 +27,7 @@ class Config:
     WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "./workspace")
 
     # Safety limits
-    MAX_STEPS = int(os.getenv("MAX_STEPS", "50"))
+    MAX_STEPS = int(os.getenv("MAX_STEPS", "100"))
 
     @classmethod
     def validate(cls):
