@@ -1,3 +1,6 @@
+import pytest
+from pathlib import Path
+
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 
 
@@ -36,9 +39,6 @@ def test_bdwarehouse_search():
     assert len(results) > 0
 
 
-import os
-
-
 def test_bdwarehouse_get_preview_details():
     provider = BDWarehouseProvider()
 
@@ -47,7 +47,7 @@ def test_bdwarehouse_get_preview_details():
 
     # 1. Verify image path
     assert preview.image_path != ""
-    assert os.path.exists(preview.image_path)
+    assert Path(preview.image_path).exists()
     assert preview.image_path.endswith(".png")
 
     # 2. Verify description is not default
@@ -55,9 +55,9 @@ def test_bdwarehouse_get_preview_details():
     assert "stepper motor" in preview.description.lower()
 
     # Bearing preview
-    bearing_id = [s.id for s in provider.summaries if "bearing" in s.id][0]
+    bearing_id = next(s.id for s in provider.summaries if "bearing" in s.id)
     preview = provider.get_preview(bearing_id)
-    assert os.path.exists(preview.image_path)
+    assert Path(preview.image_path).exists()
     assert "No description available" not in preview.description
 
 
@@ -70,19 +70,19 @@ def test_bdwarehouse_instantiation():
     assert obj is not None
 
     # Test Bearing
-    bearing_id = [s.id for s in provider.summaries if "bearing" in s.id][0]
+    bearing_id = next(s.id for s in provider.summaries if "bearing" in s.id)
     part = provider.get_part(bearing_id)
     obj = part.factory()
     assert obj is not None
 
     # Test Fastener
-    screw_id = [s.id for s in provider.summaries if "screw" in s.id][0]
+    screw_id = next(s.id for s in provider.summaries if "screw" in s.id)
     part = provider.get_part(screw_id)
     obj = part.factory()
     assert obj is not None
 
     # Test Beam
-    beam_id = [s.id for s in provider.summaries if "beam" in s.id][0]
+    beam_id = next(s.id for s in provider.summaries if "beam" in s.id)
     part = provider.get_part(beam_id)
     obj = part.factory()
     assert obj is not None

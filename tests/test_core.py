@@ -1,5 +1,5 @@
-import os
 import shutil
+from pathlib import Path
 
 import gymnasium as gym
 import pytest
@@ -10,33 +10,32 @@ from src.environment.core import CADEnv
 @pytest.fixture
 def env():
     # Setup a clean workspace for testing
-    workspace = "test_workspace"
-    if os.path.exists(workspace):
+    workspace = Path("test_workspace")
+    if workspace.exists():
         shutil.rmtree(workspace)
 
-    db_url = "sqlite:///test_history.db"
-    if os.path.exists("test_history.db"):
-        os.remove("test_history.db")
+    db_path = Path("test_history.db")
+    if db_path.exists():
+        db_path.unlink()
 
-    env = CADEnv(workspace_dir=workspace, db_url=db_url)
+    env = CADEnv(workspace_dir=str(workspace), db_url=f"sqlite:///{db_path}")
     yield env
 
     # Cleanup
-    if os.path.exists(workspace):
+    if workspace.exists():
         shutil.rmtree(workspace)
-    if os.path.exists("test_history.db"):
-        os.remove("test_history.db")
-    if os.path.exists("test_history.db-shm"):
-        os.remove("test_history.db-shm")
-    if os.path.exists("test_history.db-wal"):
-        os.remove("test_history.db-wal")
+
+    for suffix in ["", "-shm", "-wal"]:
+        p = Path(f"test_history.db{suffix}")
+        if p.exists():
+            p.unlink()
 
 
 def test_env_reset(env):
-    obs, info = env.reset()
+    obs, _ = env.reset()
     assert "code" in obs
     assert obs["last_output"] == "Environment reset. Ready for new design."
-    assert os.path.exists(os.path.join(env.workspace_dir, "design.py"))
+    assert (Path(env.workspace_dir) / "design.py").exists()
 
 
 def test_env_step_write(env):
@@ -45,7 +44,7 @@ def test_env_step_write(env):
         "tool": 0,  # write_script
         "arguments": "from build123d import Box\npart = Box(10, 10, 10)",
     }
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, _, _, _, _ = env.step(action)
     assert "Successfully wrote to design.py" in obs["last_output"]
     assert "Box(10, 10, 10)" in obs["code"]
 
@@ -57,10 +56,10 @@ def test_env_step_preview(env):
         {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
     )
 
-    obs, reward, terminated, truncated, info = env.step({"tool": 2, "arguments": ""})
+    obs, _, _, _, _ = env.step({"tool": 2, "arguments": ""})
     assert "Preview generated:" in obs["last_output"]
     assert obs["last_render"].endswith(".svg")
-    assert os.path.exists(os.path.join(env.workspace_dir, obs["last_render"]))
+    assert (Path(env.workspace_dir) / obs["last_render"]).exists()
 
 
 def test_env_step_submit_invalid(env):
@@ -68,13 +67,13 @@ def test_env_step_submit_invalid(env):
     # Write invalid script
     env.step({"tool": 0, "arguments": "invalid python code"})
 
-    obs, reward, terminated, truncated, info = env.step({"tool": 4, "arguments": ""})
+    obs, reward, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
     assert reward == -10.0
     assert "Error processing design" in obs["last_output"]
     assert not terminated
 
 
-def test_env_step_submit_success(env, monkeypatch):
+def test_env_step_submit_success(env):
     env.reset()
     # Write valid script
     env.step(
@@ -85,7 +84,7 @@ def test_env_step_submit_success(env, monkeypatch):
     # but we have a bridge that should handle it if MuJoCo is installed.
     # Let's see if it works without mocking first.
 
-    obs, reward, terminated, truncated, info = env.step({"tool": 4, "arguments": ""})
+    obs, _, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
     # If MuJoCo works and template exists, it should be success or failure but terminated
     assert terminated
     assert "Submission Result:" in obs["last_output"]

@@ -1,7 +1,7 @@
 import io
-import os
 import tempfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import trimesh
 from build123d import Compound, Solid, export_stl
@@ -57,8 +57,10 @@ class SceneCompiler:
 
     def __init__(self, asset_dir: str | None = None):
         self.asset_dir = asset_dir
-        if self.asset_dir and not os.path.exists(self.asset_dir):
-            os.makedirs(self.asset_dir)
+        if self.asset_dir:
+            asset_path = Path(self.asset_dir)
+            if not asset_path.exists():
+                asset_path.mkdir(parents=True, exist_ok=True)
 
         self.root = ET.Element("mujoco", model="problemologist_scene")
         self._setup_basic_xml()
@@ -86,13 +88,13 @@ class SceneCompiler:
         if self.asset_dir:
             # Set meshdir. If it is inside /workspace/ (sandbox), use a relative path
             # to ensure MuJoCo inside the container can find it regardless of host mapping.
-            path = os.path.abspath(self.asset_dir)
-            if path.startswith("/workspace/"):
+            path = Path(self.asset_dir).resolve()
+            if str(path).startswith("/workspace/"):
                 # Make it relative to /workspace/
-                rel_path = os.path.relpath(path, "/workspace/")
-                compiler.set("meshdir", rel_path)
+                rel_path = path.relative_to("/workspace/")
+                compiler.set("meshdir", str(rel_path))
             else:
-                compiler.set("meshdir", path)
+                compiler.set("meshdir", str(path))
 
         # Assets (Placeholder for mesh assets)
         self.asset = ET.SubElement(self.root, "asset")
@@ -233,9 +235,9 @@ class SceneCompiler:
         mesh_filename = f"{label}.stl"
 
         if self.asset_dir:
-            file_path = os.path.join(self.asset_dir, mesh_filename)
-            with open(file_path, "wb") as f:
-                f.write(stl_data)
+            asset_path = Path(self.asset_dir)
+            file_path = asset_path / mesh_filename
+            file_path.write_bytes(stl_data)
 
         # Add mesh to asset
         ET.SubElement(self.asset, "mesh", name=mesh_name, file=mesh_filename)
@@ -318,9 +320,9 @@ class SceneCompiler:
 
             mesh_filename = f"{label}.stl"
             if self.asset_dir:
-                file_path = os.path.join(self.asset_dir, mesh_filename)
-                with open(file_path, "wb") as f:
-                    f.write(stl_data)
+                asset_path = Path(self.asset_dir)
+                file_path = asset_path / mesh_filename
+                file_path.write_bytes(stl_data)
 
             ET.SubElement(self.asset, "mesh", name=label, file=mesh_filename)
             ET.SubElement(body_element, "geom", type="mesh", mesh=label, rgba="0 0 1 1")

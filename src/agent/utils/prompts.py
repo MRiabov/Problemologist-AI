@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -16,14 +16,14 @@ def load_prompts() -> dict[str, Any]:
         return _PROMPTS_CACHE
 
     # Locate the prompts.yaml relative to this file
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    prompts_path = os.path.join(base_dir, "prompts.yaml")
+    base_dir = Path(__file__).resolve().parent.parent
+    prompts_path = base_dir / "prompts.yaml"
 
-    if not os.path.exists(prompts_path):
+    if not prompts_path.exists():
         # Fallback or error
         raise FileNotFoundError(f"Prompts file not found at {prompts_path}")
 
-    with open(prompts_path) as f:
+    with prompts_path.open() as f:
         _PROMPTS_CACHE = yaml.safe_load(f)
 
     return _PROMPTS_CACHE

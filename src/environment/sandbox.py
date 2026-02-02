@@ -1,6 +1,6 @@
 import logging
-import os
 import subprocess
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +11,10 @@ class PodmanSandbox:
     """
 
     def __init__(self, workspace_dir: str, image: str = "problemologist-sandbox"):
-        self.workspace_dir = os.path.abspath(workspace_dir)
+        self.workspace_dir = str(Path(workspace_dir).resolve())
         self.image = image
         # Ensure workspace exists
-        os.makedirs(self.workspace_dir, exist_ok=True)
+        Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
 
     def run_script(
         self,
@@ -65,10 +65,8 @@ class PodmanSandbox:
                 cmd.extend(["-v", f"{host_path}:{container_path}:ro"])
 
         if mount_src:
-            project_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "../..")
-            )
-            src_path = os.path.join(project_root, "src")
+            project_root = Path(__file__).resolve().parent.parent.parent
+            src_path = project_root / "src"
             # Mount src to /app/src and set PYTHONPATH to /app
             cmd.extend(["-v", f"{src_path}:/app/src:ro", "-e", "PYTHONPATH=/app"])
 

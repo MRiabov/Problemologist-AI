@@ -1,7 +1,7 @@
 import json
-import os
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from pathlib import Path
 
 import mujoco
 import numpy as np
@@ -20,7 +20,7 @@ class MujocoBridge:
     def __init__(self):
         # Assumes this file is in src/compiler/
         # and templates are in src/compiler/templates/
-        self.template_dir = os.path.join(os.path.dirname(__file__), "templates")
+        self.template_dir = Path(__file__).resolve().parent / "templates"
 
     def load_template(self, template_name: str = "standard.xml") -> str:
         """Load a standard template and return its XML string content.
@@ -31,12 +31,11 @@ class MujocoBridge:
         Returns:
             The raw string content of the XML file.
         """
-        path = os.path.join(self.template_dir, template_name)
-        if not os.path.exists(path):
+        path = self.template_dir / template_name
+        if not path.exists():
             raise FileNotFoundError(f"Template not found: {path}")
 
-        with open(path) as f:
-            return f.read()
+        return path.read_text()
 
     def inject_design(
         self,
@@ -68,7 +67,7 @@ class MujocoBridge:
             else:
                 root.append(asset)
 
-        mesh_name = os.path.basename(mesh_path).replace(".", "_")
+        mesh_name = Path(mesh_path).name.replace(".", "_")
 
         # Avoid duplicate mesh entries
         existing_mesh = asset.find(f"./mesh[@name='{mesh_name}']")
@@ -101,9 +100,10 @@ class MujocoBridge:
         """Runs the simulation in a sandbox."""
         from src.environment import tools
 
+        _ = tools.WORKSPACE_DIR  # used indirectly via workspace_dir logic if updated
         runner_filename = "sim_runner.py"
-        workspace_dir = tools.WORKSPACE_DIR
-        runner_path = os.path.join(workspace_dir, runner_filename)
+        workspace_dir = Path(tools.WORKSPACE_DIR)
+        runner_path = workspace_dir / runner_filename
 
         # We need to escape the XML string and agent script for the Python runner
         runner_script = f"""
@@ -143,15 +143,14 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
 """
 
         try:
-            with open(runner_path, "w", encoding="utf-8") as f:
-                f.write(runner_script)
+            runner_path.write_text(runner_script, encoding="utf-8")
 
             stdout, stderr, returncode = tools._SANDBOX.run_script(
                 runner_filename, mount_src=True, timeout=int(duration + 10)
             )
 
-            if os.path.exists(runner_path):
-                os.remove(runner_path)
+            if runner_path.exists():
+                runner_path.unlink()
 
             if returncode != 0:
                 if returncode == 124:  # Timeout

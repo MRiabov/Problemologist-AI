@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 from build123d import Box
@@ -8,11 +8,11 @@ from compiler.geometry import export_mesh, generate_colliders
 
 def test_export_mesh(tmp_path):
     box = Box(10, 10, 10)
-    stl_path = str(tmp_path / "test.stl")
-    result = export_mesh(box, stl_path)
-    assert result == stl_path
-    assert os.path.exists(stl_path)
-    assert os.path.getsize(stl_path) > 0
+    stl_path = tmp_path / "test.stl"
+    result = export_mesh(box, str(stl_path))
+    assert result == str(stl_path)
+    assert stl_path.exists()
+    assert stl_path.stat().st_size > 0
 
 
 def test_generate_colliders():
