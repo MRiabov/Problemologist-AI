@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir \
     "sqlalchemy>=2.0.46" \
     "trimesh[easy]>=4.11.1" \
     "pyyaml>=6.0.2" \
+    "pyvista>=0.46.5" \
     "alembic>=1.18.3"
 
 WORKDIR /workspace
