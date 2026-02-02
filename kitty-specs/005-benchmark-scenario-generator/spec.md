@@ -66,6 +66,12 @@ The system ensures that every generated scenario is robust, randomized, and phys
 *   **FR-20**: The system MUST support a "Self-Correction" loop where the Coder and Validator iterate up to 3 times to find a stable geometry without user intervention.
 *   **FR-21**: The system MUST allow the user to provide manual code edits or natural language feedback on the stable CAD model before final XML generation.
 
+### 3.3 Advanced Randomization (Rescaling)
+
+*   **FR-22**: **Random Rescaling**: After the core geometry is planned, the system MUST support randomly rescaling the entire environment by a factor of **0.5 to 2.0** independently in all three directions (X, Y, Z).
+*   **FR-23**: **Agent Override**: The Agent (Planner) MUST be able to specify custom rescaling limits for specific directions (e.g., "X: 0.8-1.2, Y: 0.5-5.0") based on the geometric constraints of the puzzle.
+*   **FR-24**: Rescaling MUST be applied at the CAD generation level to ensure all kinematic relationships (joints, pivots) remain consistent.
+
 ### 3.2 Randomization Engine
 
 *   **FR-05**: The system **MUST** be able to vary the "Domain Box" (workspace size) dimensions (Length/Width/Height).
@@ -110,6 +116,7 @@ The system ensures that every generated scenario is robust, randomized, and phys
 
 ## 6. Assumptions
 
+*   **Default Workspace**: Unless otherwise specified, the system assumes a standard "Domain Box" of **100x100x100mm** for all benchmark scenarios.
 *   The LLM has sufficient knowledge of `build123d` syntax (or we provide few-shot examples in the prompt).
 *   We can run MuJoCo headless in the dev environment for the stability checks.
 *   The "Human-in-the-loop" UI (Feature 007) will consume the file structure defined here, but this feature (005) does not build the UI itself (only the CLI and artifacts).

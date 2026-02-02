@@ -48,3 +48,14 @@
 - [x] T010 Enhance Planner Node with Objectives & Collision Strategy
 - [x] T011 Implement Rendering Engine (`renderer.py`)
 - [x] T012 Expose Agent Hooks for UI-based overrides
+
+### WP05: Advanced Randomization (Rescaling)
+
+**Goal**: Implement non-uniform random scaling of environments.
+**Priority**: Low
+**Dependencies**: WP03
+**File**: [tasks/WP05-rescaling.md](tasks/WP05-rescaling.md)
+
+- [ ] T013 Update `build()` function signature to include `scale`
+- [ ] T014 Implement random scale generation in `manager.py` (Default 0.5-2.0)
+- [ ] [P] Update Planner prompts to support Scale Limit overrides
