@@ -41,6 +41,7 @@ class Step(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     sequence_index: Mapped[int] = mapped_column(Integer)
+    type: Mapped[str] = mapped_column(String(50), default="thought") # thought, tool, user
     tool_name: Mapped[str] = mapped_column(String(255))
     tool_input: Mapped[str] = mapped_column(Text)
     tool_output: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -105,6 +106,7 @@ class DatabaseManager:
         tool_input: str,
         tool_output: str | None = None,
         duration_ms: int | None = None,
+        type: str = "tool",
     ) -> Step:
         session = self.get_session()
         step = Step(
@@ -114,6 +116,7 @@ class DatabaseManager:
             tool_input=tool_input,
             tool_output=tool_output,
             duration_ms=duration_ms,
+            type=type,
         )
         session.add(step)
         session.commit()
