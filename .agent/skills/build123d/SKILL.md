@@ -38,6 +38,8 @@ result = box - hole
 
 ## References
 
-- See `docs/llms.txt` for a condensed syntax reference.
-- See `docs/examples.md` for detailed templates and common patterns.
+- **Build123d Hierarchy**:
+  - `docs/build123d/cheat_sheet.md`: Syntax summary and quick lookup.
+  - `docs/build123d/handpicked.md`: Curated, high-quality code patterns.
+  - `docs/build123d/reference.md`: Exhaustive list of examples for deep reference.
 - Use the `build123d_docs` skill to find more specific documentation if needed.

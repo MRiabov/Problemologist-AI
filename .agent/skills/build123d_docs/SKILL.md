@@ -9,17 +9,20 @@ Use this skill to quickly reference `build123d` syntax and best practices from t
 
 ## Instructions
 
-1. **Locate Reference**: The primary condensed reference is located at `docs/llms.txt`.
-2. **Search Documentation**: If you are unsure about a specific function or selector, read `docs/llms.txt` using the `view_file` tool.
+1. **Locate Reference**: The primary condensed reference is located at `docs/build123d/cheat_sheet.md`.
+2. **Search Strategy**:
+   - Use `docs/build123d/cheat_sheet.md` for syntax and core concepts.
+   - Use `docs/build123d/handpicked.md` for best-practice code patterns.
+   - Use `docs/build123d/reference.md` for exhaustive troubleshooting.
 3. **Verify Syntax**: Always check the reference before implementing complex boolean operations or selector chains to avoid common pitfalls like context shadowing.
 4. **Condensed Knowledge**: This documentation is optimized for LLMs to reduce tokens while maintaining high accuracy of syntax.
 
-## Key Reference Locations
+### Key Reference Locations
 
-- **Main Reference**: `docs/llms.txt`
-- **Detailed Examples**: `docs/examples.md`
-- **Future RAG Storage**: `docs/knowledge_base/` (planned)
+1. **`docs/build123d/cheat_sheet.md`**: Core syntax and selector reference.
+2. **`docs/build123d/handpicked.md`**: Practical code snippets (Booleans, Holes, Lofts, etc).
+3. **`docs/build123d/reference.md`**: Full introductory examples from official docs.
 
 ## Usage Example
 
-"I need to remember the arguments for `PolarLocations`. I will check `docs/llms.txt` via `view_file` to verify."
+"I need to remember the arguments for `PolarLocations`. I will check `docs/build123d/cheat_sheet.md` via `view_file` to verify."
