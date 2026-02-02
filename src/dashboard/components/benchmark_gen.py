@@ -4,13 +4,9 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.generators.benchmark.agent import (
-    MAX_ATTEMPTS,
-    coder_node,
-    linter_node,
-    planner_node,
-    validator_node,
-)
+from langchain_core.messages import HumanMessage
+from src.agent.graph.nodes.planner import planner_node
+from src.generators.benchmark.agent import DEFAULT_RUNTIME_CONFIG, generator_agent
 from src.generators.benchmark.renderer import render_scenario
 
 
@@ -91,13 +87,20 @@ def render_planning_stage(state):
     with st.spinner("Agent is generating plan..."):
         # We simulate the planner node call
         try:
-            result = planner_node({"request": state["request"], "attempts": 0})
+            input_state = {
+                "messages": [HumanMessage(content=state["request"])],
+                "step_count": 0,
+                "runtime_config": DEFAULT_RUNTIME_CONFIG,
+            }
+            result = planner_node(input_state)
             state["plan"] = result["plan"]
-            state["planner_reasoning"] = result.get("planner_reasoning", "")
+            # Extract reasoning if available (not explicitly returned by new planner_node, but could be in messages)
+            state["planner_reasoning"] = "Plan generated via DeepAgents planner."
             state["stage"] = "PLAN_APPROVAL"
             st.rerun()
         except Exception as e:
             st.error(f"Planning failed: {e}")
+            st.code(traceback.format_exc())
             state["stage"] = "INPUT"
 
 
@@ -129,78 +132,93 @@ def render_plan_approval_stage(state):
 def render_coding_stage(state):
     st.subheader("3. Generating CAD Model")
     status_placeholder = st.empty()
+    status_placeholder.info("Running DeepAgents Graph...")
 
     # Clear history for new run if just started
     if state["attempts"] == 0:
         state["attempt_history"] = []
 
     try:
-        # Iterative Loop for internal validation
-        for i in range(MAX_ATTEMPTS):
-            attempt_idx = i + 1
-            if len(state["attempt_history"]) >= attempt_idx:
-                continue  # Already processed this attempt in a previous rerun
+        input_state = {
+            "messages": [HumanMessage(content=state["request"])],
+            "plan": state["plan"],
+            "step_count": 0,
+            "runtime_config": DEFAULT_RUNTIME_CONFIG,
+        }
 
-            status_placeholder.info(f"Running Attempt {attempt_idx}/{MAX_ATTEMPTS}...")
+        # Invoke the graph
+        # This runs until completion or recursion limit
+        final_state = generator_agent.invoke(
+            input_state, config={"recursion_limit": 50}
+        )
 
-            # 1. Generate Code
-            coder_result = coder_node(
-                {
-                    "request": state["request"],
-                    "plan": state["plan"],
-                    "code": state.get("code"),
-                    "errors": state.get("errors"),
-                    "attempts": state["attempts"],
-                }
-            )
-            state["code"] = coder_result["code"]
-            state["coder_reasoning"] = coder_result.get("coder_reasoning", "")
-            state["attempts"] = coder_result["attempts"]
+        # Analyze results from final_state
+        # We need to extract the last code, MJCF, and status
+        messages = final_state["messages"]
 
-            current_attempt = {
-                "attempt": attempt_idx,
-                "reasoning": state["coder_reasoning"],
-                "code": state["code"],
-                "errors": None,
-            }
+        # Check for success
+        # The actor logs success or the critic does?
+        # Ideally we look for ToolMessage from validate_benchmark_model
 
-            # 2. Lint
-            status_placeholder.info(f"Linting Attempt {attempt_idx}...")
-            lint_result = linter_node({"code": state["code"]})
-            if lint_result.get("linting_failed"):
-                current_attempt["errors"] = lint_result["errors"]
-                state["errors"] = lint_result["errors"]
-                state["attempt_history"].append(current_attempt)
-                # We let the loop continue to next attempt
-                continue
+        last_mjcf = ""
+        last_code = ""
+        errors = None
 
-            # 3. Validate
-            status_placeholder.info(f"Validating Attempt {attempt_idx} in MuJoCo...")
-            val_result = validator_node({"code": state["code"]})
+        # Backwards scan for validation
+        for msg in reversed(messages):
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                # Check if this was a validation call
+                pass
+            if hasattr(msg, "content"):
+                if "Validation Passed!" in str(msg.content):
+                    # Found success output from tool
+                    # Extract MJCF
+                    import re
 
-            if val_result.get("validation_passed"):
-                state["mjcf"] = val_result["mjcf"]
-                state["errors"] = None
-                current_attempt["errors"] = None
-                state["attempt_history"].append(current_attempt)
+                    match = re.search(
+                        r"MJCF Output.*:\n(<mujoco.*)", str(msg.content), re.DOTALL
+                    )
+                    if match:
+                        last_mjcf = match.group(1)
+                    else:
+                        # Maybe full content is mjcf?
+                        if "<mujoco" in str(msg.content):
+                            last_mjcf = str(msg.content)
+                    break
 
-                # 4. Render
-                status_placeholder.info("Success! Rendering preview...")
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    prefix = Path(tmpdir) / "preview"
-                    state["renders"] = render_scenario(state["mjcf"], str(prefix))
-                    persist_renders(state)
+        # Extract code (find last write_script call or code block?)
+        # DeepAgents actor uses write_script tool? Or just outputs code?
+        # New actor uses tools. `validate_benchmark_model` takes code as arg.
+        # So we can find the `validate_benchmark_model` call in messages.
+        for msg in reversed(messages):
+            if hasattr(msg, "tool_calls"):
+                for tc in msg.tool_calls:
+                    if tc["name"] == "validate_benchmark_model":
+                        last_code = tc["args"].get("code", "")
+                        break
+            if last_code:
+                break
 
-                state["stage"] = "CAD_APPROVAL"
-                st.rerun()
-                return
-            state["errors"] = val_result["errors"]
-            current_attempt["errors"] = val_result["errors"]
-            state["attempt_history"].append(current_attempt)
+        state["code"] = last_code
+        state["mjcf"] = last_mjcf
+        state["attempts"] = final_state.get("step_count", 0)  # Approximation
 
-        # If we reach here, we failed all attempts
-        state["stage"] = "CAD_APPROVAL"
-        st.rerun()
+        if last_mjcf:
+            state["errors"] = None
+            status_placeholder.success("Generation Successful!")
+
+            # Render
+            with tempfile.TemporaryDirectory() as tmpdir:
+                prefix = Path(tmpdir) / "preview"
+                state["renders"] = render_scenario(state["mjcf"], str(prefix))
+                persist_renders(state)
+
+            state["stage"] = "CAD_APPROVAL"
+            st.rerun()
+        else:
+            state["errors"] = "Generation failed to produce valid MJCF within limits."
+            state["stage"] = "CAD_APPROVAL"
+            st.rerun()
 
     except Exception as e:
         st.error(f"Coding stage failed: {e}\n{traceback.format_exc()}")
@@ -219,6 +237,10 @@ def persist_renders(state):
         shutil.copy(str(p), str(dest))
         new_paths.append(str(dest))
     state["renders"] = new_paths
+
+
+from src.generators.benchmark.manager import execute_build
+from src.generators.benchmark.validator import validate_mjcf
 
 
 def render_cad_approval_stage(state):
@@ -265,37 +287,54 @@ def render_cad_approval_stage(state):
 
         if st.button("Re-validate with Edits"):
             state["code"] = edited_code
-            val_result = validator_node({"code": state["code"]})
-            if val_result.get("validation_passed"):
-                state["mjcf"] = val_result["mjcf"]
-                state["errors"] = None
-                # Add manual edit to history
+            try:
+                mjcf_xml = execute_build(state["code"], seed=0)
+                report = validate_mjcf(mjcf_xml)
+
+                if report["is_valid"]:
+                    state["mjcf"] = mjcf_xml
+                    state["errors"] = None
+                    # Add manual edit to history
+                    state["attempt_history"].append(
+                        {
+                            "attempt": "Manual Edit",
+                            "reasoning": "User manually edited code.",
+                            "code": state["code"],
+                            "errors": None,
+                        }
+                    )
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        prefix = Path(tmpdir) / "preview"
+                        state["renders"] = render_scenario(state["mjcf"], str(prefix))
+                        persist_renders(state)
+                    st.success("Re-validation passed!")
+                    st.rerun()
+                else:
+                    errors = report["error_message"]
+                    state["errors"] = errors
+                    # Add manual edit failure to history
+                    state["attempt_history"].append(
+                        {
+                            "attempt": "Manual Edit (Failed)",
+                            "reasoning": "User manually edited code.",
+                            "code": state["code"],
+                            "errors": errors,
+                        }
+                    )
+                    st.error(f"Re-validation failed: {errors}")
+                    st.rerun()
+            except Exception as e:
+                err_msg = f"Execution error: {e}"
+                state["errors"] = err_msg
                 state["attempt_history"].append(
                     {
-                        "attempt": "Manual Edit",
+                        "attempt": "Manual Edit (Error)",
                         "reasoning": "User manually edited code.",
                         "code": state["code"],
-                        "errors": None,
+                        "errors": err_msg,
                     }
                 )
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    prefix = Path(tmpdir) / "preview"
-                    state["renders"] = render_scenario(state["mjcf"], str(prefix))
-                    persist_renders(state)
-                st.success("Re-validation passed!")
-                st.rerun()
-            else:
-                state["errors"] = val_result["errors"]
-                # Add manual edit failure to history
-                state["attempt_history"].append(
-                    {
-                        "attempt": "Manual Edit (Failed)",
-                        "reasoning": "User manually edited code.",
-                        "code": state["code"],
-                        "errors": val_result["errors"],
-                    }
-                )
-                st.error(f"Re-validation failed: {val_result['errors']}")
+                st.error(err_msg)
                 st.rerun()
 
     with col2:
