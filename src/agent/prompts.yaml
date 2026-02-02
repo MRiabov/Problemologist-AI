@@ -49,8 +49,9 @@ benchmark_generator:
     2. **Passive Dynamics**: Puzzles should generally rely on gravity, collisions, and passive mechanics.
     3. **CAD Task Focus**: The benchmark should define a "Problem" (e.g., obstacles, fixed supports, start/goal zones) that requires a CAD agent to design a "Solution" part to bridge the gap or fulfill a function.
     4. **Default Scale**: Unless specified otherwise, assume a standard "Domain Box" (workspace) of **100x100x100mm**. All generated components should fit and operate within this volume.
+    5. **CSG Priority**: Design plans that can be easily implemented using Constructive Solid Geometry (CSG) primitives (Box, Cylinder, Sphere) rather than complex sketches.
 
-    Request: {request}
+    Request: {{request}}
 
     Output a structured plan including:
     1. **Learning Objective**: What is this benchmark supposed to test or teach the AI model? What specific CAD capability is being tested? (e.g., obstacle avoidance, tight tolerances, load bearing).
@@ -59,14 +60,30 @@ benchmark_generator:
     4. **Success Criteria**: Define the "Win Condition" in spatial terms (e.g., "The ball must reach Zone X") (Note: we define the spatial "win condition", if the goal object reaches a target zone, which is an axis-aligned bounding box somewhere in your benchmark).
         5. **Rescale Limits**: Specify allowed non-uniform scaling bounds for [X, Y, Z] directions (Default: 0.5 to 2.0).
         6. **Randomization**: Key environment parameters to vary (seed-based) to ensure the solution must be parametric.
-    
-      coder: |
+
         You are an expert in build123d and Python.
         Your task is to write a Python script that defines a function `build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0)) -> str`.
     
         **Environment Note**: The following imports and helpers are already automatically prepended to your script. Do NOT include them:
         ```python
-        from build123d import *
+        # Core build123d components
+        from build123d import (
+            Box, Cylinder, Sphere, Torus, Cone, Wedge, 
+            Compound, Solid, Part, Location, Rotation, Vector, Axis, Plane,
+            Mode, Align, Unit
+        )
+
+        # Common build123d operations
+        from build123d import (
+            fillet, chamfer, split, shell, mirror, scale, 
+            extrude, revolve, loft, sweep, offset
+        )
+
+        # standard builders
+        from build123d import BuildPart, BuildSketch, BuildLine
+
+        import math
+        import random
         from build123d.topology import Shape
         from typing import Union
         from src.simulation_engine.builder import SceneCompiler
@@ -77,7 +94,7 @@ benchmark_generator:
             ```
         
             **Rules**:
-            1. Use `from build123d import *` style (pre-imported).
+            1. **PRIORITIZE CSG**: Primarily use Constructive Solid Geometry (CSG) primitives (Box, Cylinder, Sphere, etc.) and boolean operations (Mode.SUBTRACT, etc.) inside `BuildPart()`. CSG is significantly easier to use and less prone to errors than sketches. Use `BuildSketch` only as a fallback for complex 2D profiles.
             2. Apply non-uniform `scale_factors` tuple using the `scale(obj, by=scale_factors)` FUNCTION.
             3. **CRITICAL**: The `.scale()` METHOD only supports uniform scaling (single float). **DO NOT** pass a tuple to it.
             4. Return MJCF XML by calling `to_mjcf(env_compound=..., agent_compound=..., agent_joints=..., env_labels=..., agent_labels=...)`.
@@ -129,12 +146,12 @@ benchmark_generator:
                     scaled_block = scale(block.part, by=scale_factors)
         
                 # 3. Define kinematic relationship
-                joints = [{
+                joints = [{{
                     "name": "slider_x",
                     "type": "slide",
                     "pos": "0 0 0.01",
                     "axis": "1 0 0"
-                }]
+                }}]
         
                 return to_mjcf(
                     env_compound=scaled_base, 
