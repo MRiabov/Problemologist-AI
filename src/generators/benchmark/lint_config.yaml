@@ -1,0 +1,4 @@
+max_errors: 10
+ignore_warnings: true
+ruff_rules:
+  ["E", "F", "I", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF"]
