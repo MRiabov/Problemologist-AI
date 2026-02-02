@@ -13,6 +13,12 @@ class Config:
     # Default model to use
     LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")
 
+    # OpenAI-compatible API base URL (e.g., OpenRouter)
+    OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+    
+    # OpenAI-compatible API key
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
     # Default temperature for generation
     TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.0"))
 
