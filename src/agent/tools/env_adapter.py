@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any
+from typing import Any, Optional
 
 from src.environment import tools as env_tools
 
@@ -33,16 +33,45 @@ async def search_docs_async(query: str) -> str:
     return await asyncio.to_thread(env_tools.search_docs, query)
 
 
-async def read_skill_async(skill_name: str, filename: str) -> str:
+async def read_skill_async(
+    skill_name: str, filename: str, resource_type: Optional[str] = None
+) -> str:
     """Async wrapper for reading a skill."""
-    return await asyncio.to_thread(env_tools.read_skill, skill_name, filename)
+    return await asyncio.to_thread(
+        env_tools.read_skill, skill_name, filename, resource_type
+    )
 
 
-async def update_skill_async(skill_name: str, content: str, filename: str) -> str:
+async def list_skills_async() -> str:
+    """Async wrapper for listing skills."""
+    return await asyncio.to_thread(env_tools.list_skills)
+
+
+async def list_skill_files_async(skill_name: str) -> str:
+    """Async wrapper for listing skill files."""
+    return await asyncio.to_thread(env_tools.list_skill_files, skill_name)
+
+
+async def update_skill_async(
+    skill_name: str,
+    content: str,
+    filename: str,
+    resource_type: Optional[str] = None,
+) -> str:
     """Async wrapper for updating a skill."""
     return await asyncio.to_thread(
-        env_tools.update_skill, skill_name, content, filename
+        env_tools.update_skill, skill_name, content, filename, resource_type
     )
+
+
+async def init_skill_async(skill_name: str) -> str:
+    """Async wrapper for initializing a skill."""
+    return await asyncio.to_thread(env_tools.init_skill, skill_name)
+
+
+async def package_skill_async(skill_name: str) -> str:
+    """Async wrapper for packaging a skill."""
+    return await asyncio.to_thread(env_tools.package_skill, skill_name)
 
 
 async def search_parts_async(query: str) -> str:

@@ -1,7 +1,13 @@
+from typing import Optional
+
 from langchain_core.tools import tool
 
 from src.agent.tools.env_adapter import (
     edit_script_async,
+    init_skill_async,
+    list_skill_files_async,
+    list_skills_async,
+    package_skill_async,
     preview_design_async,
     preview_part_async,
     read_skill_async,
@@ -80,19 +86,83 @@ async def search_docs(query: str) -> str:
 
 @tool
 async def update_skill(
-    skill_name: str, content: str, filename: str = "SKILL.md"
+    skill_name: str,
+    content: str,
+    filename: str = "SKILL.md",
+    resource_type: Optional[str] = None,
 ) -> str:
     """
     Updates or adds information to a specialized skill folder (e.g., 'build123d_cad_drafting_skill').
     Use this to capture new knowledge, patterns, or documentation discovered during task execution.
-    If filename is not 'SKILL.md', it will be saved in the 'references/' subdirectory.
 
     Args:
         skill_name: The name of the skill to update.
-        content: The Markdown content to write.
-        filename: The filename (e.g., 'SKILL.md' or 'common_errors.md').
+        content: The Markdown or Python content to write.
+        filename: The filename (e.g., 'SKILL.md', 'patterns.md', 'helper.py').
+        resource_type: Mandatory if filename is not 'SKILL.md'. One of: 'scripts', 'references', 'assets'.
     """
-    return await update_skill_async(skill_name, content, filename)
+    return await update_skill_async(skill_name, content, filename, resource_type)
+
+
+@tool
+async def read_skill(
+    skill_name: str, filename: str = "SKILL.md", resource_type: Optional[str] = None
+) -> str:
+    """
+    Reads the content of a specialized skill.
+    MANDATORY: You must read the 'build123d_cad_drafting_skill' before writing any build123d code.
+
+    Args:
+        skill_name: The name of the skill to read.
+        filename: The filename (e.g., 'SKILL.md').
+        resource_type: Optional. One of: 'scripts', 'references', 'assets'.
+    """
+    return await read_skill_async(skill_name, filename, resource_type)
+
+
+@tool
+async def list_skills() -> str:
+    """
+    Lists all available specialized skills.
+    Use this to discover what knowledge categories are available.
+    """
+    return await list_skills_async()
+
+
+@tool
+async def list_skill_files(skill_name: str) -> str:
+    """
+    Lists all files within a specialized skill folder, grouped by type.
+    Use this to see the available reference documents or scripts for a skill.
+
+    Args:
+        skill_name: The name of the skill to inspect.
+    """
+    return await list_skill_files_async(skill_name)
+
+
+@tool
+async def init_skill(skill_name: str) -> str:
+    """
+    Initializes a new skill directory with the canonical structure (SKILL.md, scripts/, references/, assets/).
+    Use this when you want to create a new category of specialized knowledge.
+
+    Args:
+        skill_name: The name of the skill to create (hyphen-case, e.g., 'my-new-skill').
+    """
+    return await init_skill_async(skill_name)
+
+
+@tool
+async def package_skill(skill_name: str) -> str:
+    """
+    Validates and packages a skill into a distributable .skill file.
+    Use this when you have finished developing or updating a skill.
+
+    Args:
+        skill_name: The name of the skill to package.
+    """
+    return await package_skill_async(skill_name)
 
 
 @tool

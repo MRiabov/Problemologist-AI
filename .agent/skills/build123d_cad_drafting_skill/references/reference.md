@@ -37,9 +37,46 @@ likely need to add 1 & 2 to the provided code below for them to work:
 >     Formats](https://build123d.readthedocs.io/en/latest/import_export.html)
 :::
 
-::: {.contents backlinks="entry"}
-List of Examples
-:::
+## Table of Contents
+
+1. Simple Rectangular Plate (L81)
+2. Plate with Hole (L100)
+3. An extruded prismatic solid (L127)
+4. Building Profiles using lines and arcs (L160)
+5. Moving the current working point (L199)
+6. Using Point Lists (L225)
+7. Polygons (L255)
+8. Polylines (L278)
+9. Selectors, Fillets, and Chamfers (L300)
+10. Select Last and Hole (L328)
+11. Face as plane & GridLocations (L360)
+12. Defining an Edge with a Spline (L406)
+13. CounterBoreHoles, CounterSinkHoles, PolarLocations (L425)
+14. Position on line with '@', '%' and Sweep (L453)
+15. Mirroring Symmetric Geometry (L497)
+16. Mirroring 3D Objects (L521)
+17. Mirroring From Faces (L541)
+18. Creating Workplanes on Faces (L561)
+19. Locating workplane on vertex (L584)
+20. Offset Sketch Workplane (L623)
+21. Workplanes in center of another shape (L643)
+22. Rotated Workplanes (L663)
+23. Revolve (L691)
+24. Loft (L718)
+25. Offset Sketch (L742)
+26. Offset Part (Shelling) (L768)
+27. Splitting an Object (L794)
+28. Locating features based on Faces (L813)
+29. Non-planar workplanes (L838)
+30. Creating a helix (L862)
+31. Holes on a sphere (L887)
+32. Slots (L912)
+33. Tangent Arcs (L937)
+34. SVG Import (L962)
+35. Text (L987)
+36. Assembly (L1012)
+
+---
 
 ## 1. Simple Rectangular Plate {#ex 1}
 
@@ -998,8 +1035,10 @@ or `Until.LAST`.
     > general_examples_algebra.py
     > :::
 
-## 37. Scaling the models:
+## 37. Scaling the models
+
 The `scale` *function* has a signature as follows:
+
 ```
 scale(objects: build123d.topology.shape_core.Shape | collections.abc.Iterable[build123d.topology.shape_core.Shape] | None = None, by: float | tuple[float, float, float] = 1, mode: ~build123d.build_enums.Mode = <Mode.REPLACE>)→ Curve | Sketch | Part | Compound[source]
 ```

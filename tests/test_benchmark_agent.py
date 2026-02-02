@@ -58,6 +58,7 @@ async def test_generator_agent_retry():
 
     def mock_invoke(messages, **kwargs):
         all_content = " ".join([m.content for m in messages]).lower()
+        print(f"DEBUG: mock_invoke all_content: {all_content[:150]}")
         if "expert designer" in all_content or "planner" in all_content:
             return AIMessage(
                 content="<reasoning>Thinking about box.</reasoning><plan>Plan: Create a box.</plan>"
@@ -93,6 +94,7 @@ async def test_generator_agent_retry():
                 def mock_execute_build(
                     code, seed, scale_factors=(1.0, 1.0, 1.0), **_kwargs
                 ):
+                    print(f"DEBUG: mock_execute_build code snippet: {code[:100]}")
                     if "INVALID XML" in code:
                         return "INVALID XML"
                     return "<mujoco><worldbody/></mujoco>"

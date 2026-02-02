@@ -1,45 +1,52 @@
 ---
 name: build123d_cad_drafting_skill
-description: Expert knowledge for CAD modeling using the build123d library.
+description: Expert CAD modeling using build123d. Includes builder modes, semantic selectors, and MJCF-compatible boolean strategies.
 ---
 
-# build123d CAD Expert
+# build123d CAD Drafting Expert
 
-Use this skill when you need to design 3D parts, 2D sketches, or 1D lines using the `build123d` library.
+**MANDATORY**: Before planning any `build123d` implementation, you MUST use the `read_skill` tool to read this file (`SKILL.md`). It contains expert knowledge and links to critical patterns.
 
-## Core Instructions
+## Core Directives
 
-1. **Prefer Builder Mode**: Use `with BuildPart()`, `with BuildSketch()`, and `with BuildLine()` contexts. This is more robust for complex geometry.
-2. **Selector Mastery**: Use semantic selectors (`faces()`, `edges()`, `vertices()`) combined with sorting (`sort_by(Axis.Z)`) rather than index-based selection when possible.
-3. **Context Sensitivity**: Be aware that many functions (like `extrude()`, `fillet()`) implicitly use the current builder's active object or selected features if not passed explicitly.
-4. **Coordinate Systems**: Use `Location` and `Rotation` for precise placement. Use `Plane` for defining workplanes (e.g., `Plane.XY.offset(10)`).
-5. **Booleans**: Leverage the `mode` parameter (`Mode.ADD`, `Mode.SUBTRACT`) within builders to perform operations incrementally.
+1. **Builder Dominance**: Prefer `with BuildPart()`, `with BuildSketch()`, and `with BuildLine()`.
+2. **Semantic Selectors**: Avoid indices. Use `faces()`, `edges()`, `vertices()` with `sort_by(Axis.Z)` or `last()`/`first()`.
+3. **MJCF Compliance**: Ensure parts are non-intersecting if they belong to different simulation links.
 
-## Common Code Patterns
+## References & Contents
 
-### 3D Part with Sketch
+### [cheat_sheet.md](file:///references/cheat_sheet.md) (Syntax Reference)
 
-```python
-with BuildPart() as bp:
-    with BuildSketch() as bs:
-        Rectangle(10, 20)
-    extrude(amount=5)
-    # Fillet the top edges
-    fillet(bp.edges().sort_by(Axis.Z)[-1], radius=1)
-```
+- Core Builders (L5)
+- Sketching & Surfaces (L15)
+- Modeling Operations 3D (L22)
+- Feature Selection & Modification (L30)
+- Direct Geometry / Algebra Mode (L40)
+- IO & Export (L49)
+- Common Pitfalls for LLMs (L55)
 
-### Algebra Mode (Stateless)
+### [handpicked.md](file:///references/handpicked.md) (Expert Patterns)
 
-```python
-box = Box(10, 10, 10)
-hole = Cylinder(2, 10)
-result = box - hole
-```
+- Simple Parts & Boolean Operations (L5)
+- Sketches & Extrusion (L21)
+- Advanced Features: Holes & Locations (L33)
+- Selection & Modification: Fillets/Chamfers (L48)
+- Loft & Sweep (L61)
+- Complex Geometry: The OCC Bottle (L77)
+- Mirroring & Symmetries (L99)
+- **Expert Pitfalls & Patterns (L113)**: `with Locations` Plural Trap, Implicit Contexts.
 
-## References
+### [reference.md](file:///references/reference.md) (Exhaustive Examples)
 
-- **Build123d Hierarchy**:
-  - `docs/build123d/cheat_sheet.md`: Syntax summary and quick lookup.
-  - `docs/build123d/handpicked.md`: Curated, high-quality code patterns.
-  - `docs/build123d/reference.md`: Exhaustive list of examples for deep reference.
-- Use the `build123d_docs` skill to find more specific documentation if needed.
+- 1-2: Simple Plates & Holes (L81)
+- 3-5: Prismatic Solids & Locations (L127)
+- 6-8: Point Lists, Polygons, Polylines (L225)
+- 9-10: Selectors, Fillets, Chamfers, Holes (L300)
+- 11-13: Grid/Polar Locations, Workplanes, Counterbore (L360)
+- 14-17: Sweep, Mirroring, Profiles (L453)
+- 18-22: Workplanes on Faces/Vertices, Rotated Planes (L561)
+- 23-28: Revolve, Loft, Shelling, Slitting (L691)
+- *Full Table of Contents (36 examples) available inside the file.*
+
+> [!TIP]
+> Use `list_skill_files "build123d_cad_drafting_skill"` to see all available reference guides.
