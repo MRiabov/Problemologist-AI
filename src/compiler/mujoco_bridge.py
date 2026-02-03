@@ -7,6 +7,9 @@ import mujoco
 import numpy as np
 
 from src.environment.sandbox_utils import run_sandboxed_script
+from src.agent.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -190,7 +193,10 @@ with open("/workspace/{result_file}", "w") as f:
                  raise RuntimeError(res["message"])
 
             # Print error for legacy compatibility
-            print(f"Sandbox Simulation Error: {res.get('stderr') or res.get('message')}")
+            logger.error(
+                "Sandbox Simulation Error",
+                error=res.get("stderr") or res.get("message"),
+            )
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
         return SimResult(**res)
@@ -207,7 +213,7 @@ with open("/workspace/{result_file}", "w") as f:
         try:
             model = mujoco.MjModel.from_xml_string(xml_string)
         except Exception as e:
-            print(f"MuJoCo Load Error: {e}")
+            logger.error("MuJoCo Load Error", error=str(e))
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
         data = mujoco.MjData(model)
@@ -221,7 +227,7 @@ with open("/workspace/{result_file}", "w") as f:
                 if "control_logic" in namespace:
                     control_func = namespace["control_logic"]
             except Exception as e:
-                print(f"Control Script Error: {e}")
+                logger.error("Control Script Error", error=str(e))
                 return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
         energy_acc = 0.0
@@ -278,7 +284,7 @@ with open("/workspace/{result_file}", "w") as f:
                             # break
 
         except Exception as e:
-            print(f"Simulation Runtime Error: {e}")
+            logger.error("Simulation Runtime Error", error=str(e))
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
 
         # Final Success check if no goal zone but position is valid
