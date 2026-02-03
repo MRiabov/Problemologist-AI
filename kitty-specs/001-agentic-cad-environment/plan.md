@@ -59,8 +59,6 @@ src/
 ├── workbenches/
 │   ├── base.py           # Workbench ABC
 │   └── print_3d.py       # MVP Workbench (Watertight + Cost)
-├── compiler/
-│   └── sim_client.py     # HTTP Client for Spec 003 Simulation Engine
 └── rag/
     └── search.py         # Simple Grep-based documentation search
 ```

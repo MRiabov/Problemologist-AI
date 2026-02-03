@@ -47,7 +47,7 @@ kitty-specs/003-mujoco-simulation-engine/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
 ├── data-model.md        # Phase 1 output (API Schema)
-├── contracts/           # Phase 1 output (OpenAPI spec)
+├── contracts/           # Phase 1 output (Interface Definitions)
 └── tasks.md             # Phase 2 output
 ```
 
@@ -55,15 +55,16 @@ kitty-specs/003-mujoco-simulation-engine/
 
 ```
 src/
-└── environment/        # Refactored from simulation_engine
+└── environment/        # Core Runtime & Sandbox
     ├── sandbox.py      # Podman Wrapper (PodmanSandbox)
     └── runner.py       # High-level execution logic
-└── simulation/         # Simulation Logic (mounts into container)
+└── simulation_engine/  # Simulation Logic (mounts into container)
     ├── builder.py      # Scene Compiler (CAD -> MJCF)
-    └── loop.py         # Physics Loop (runs INSIDE container)
+    ├── simulation.py   # Physics Loop (runs INSIDE container)
+    └── api.py          # Internal Logic
 ```
 
-**Structure Decision**: Moved core execution logic to `environment/sandbox.py` to support general python execution. Simulation-specific logic resides in `simulation/` and is injected/mounted into the sandbox during runtime.
+**Structure Decision**: Moved core execution logic to `environment/sandbox.py` to support general python execution. Simulation-specific logic resides in `src/simulation_engine/` and is injected/mounted into the sandbox during runtime.
 
 ## Complexity Tracking
 
@@ -78,4 +79,4 @@ src/
 
 1. **Isolation Strategy**: How strictly to sandbox? *Decision*: **Podman Containers**. It provides near-VM isolation, allowing us to control CPU/Mem/Net and dependencies precisely.
 2. **Mesh Generation**: `build123d` export vs `trimesh`? *Decision*: `build123d` for geometry, passed to `trimesh` for convex hull decomposition.
-3. **Runner Architecture**: How to verify simulation? *Decision*: The "Loop" code runs *inside* the container, returning metrics via JSON to stdout. The Host system just parses the output.
+3. **Runner Architecture**: How to verify simulation? *Decision*: The "Loop" code runs *inside* the container, writing metrics to a JSON file. The Host system reads this file after execution (avoiding stdout parsing).
