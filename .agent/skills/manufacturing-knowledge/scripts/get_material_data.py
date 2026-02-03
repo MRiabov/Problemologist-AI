@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 def get_data():
-    config_path = Path("src/workbenches/manufacturing_config.yaml")
+    config_path = Path("config/manufacturing_config.yaml")
     if not config_path.exists():
         print(f"Error: Configuration not found at {config_path.absolute()}")
         return

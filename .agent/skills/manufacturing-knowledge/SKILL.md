@@ -16,33 +16,35 @@ To get the most up-to-date material properties, density, and cost constants, you
 ## 2. CNC Milling (3-Axis)
 
 **Best for**: Low volumes (1-100 units), high strength, aluminum parts.
+**Detailed Reference**: [references/cnc.md](references/cnc.md)
 
 ### Cost Formula
 $$Total = Setup + (Material + Run) \times Quantity$$
-- **Setup Cost**: Fixed cost (~$80.00) for machine programming and fixturing.
-- **Material Cost**: $\frac{Volume \, (cm^3) \times Density \, (g/cm^3)}{1000} \times Price/kg$.
-- **Run Cost**: Machining time based on volume removal rate (~1000 $mm^3/min$).
+- **Setup Cost**: Fixed cost (~$80.00). 50% discount on reuse.
+- **Material Cost**: Based on **Stock Bounding Box** volume.
+- **Run Cost**: Machining time based on **Removed Volume** ($Stock - Part$).
 
 ### Design Constraints
-- **Undercuts**: Strictly forbidden. All geometry must be reachable from the top (+Z axis).
-- **Internal Corners**: Minimum tool radius is **3mm**. Use `fillet()` on all internal vertical edges.
+- **Undercuts**: Forbidden. All faces must be accessible from +Z.
+- **Internal Corners**: Minimum tool radius is **3.0mm**. Use `fillet(radius=3.1)`.
 
 ---
 
 ## 3. Injection Molding (IM)
 
 **Best for**: High volumes (>1,000 units), plastic parts, low unit cost.
+**Detailed Reference**: [references/injection_molding.md](references/injection_molding.md)
 
 ### Cost Formula
 $$Total = Tooling + (Material + Cycle) \times Quantity$$
-- **Tooling Cost**: High fixed cost (~$5,000+). Driven by part surface area (complexity).
-- **Material Cost**: $\frac{Volume \, (cm^3) \times Density \, (g/cm^3)}{1000} \times Price/kg$.
-- **Cycle Cost**: Cooling time proportional to part volume.
+- **Tooling Cost**: High fixed cost. Amortized over volume. 90% discount on mold reuse.
+- **Material Cost**: Based on actual part volume.
+- **Cycle Cost**: Driven by **Cooling Time** ($CoolingTime \propto Thickness^2$).
 
 ### Design Constraints
-- **Draft Angles**: Mandatory for all vertical faces. Minimum **2.0 degrees**. Use the `draft()` operation.
-- **Wall Thickness**: Keep between **1.0mm and 4.0mm**. Avoid thick sections to prevent sink marks.
-- **Undercuts**: Forbidden in a simple 2-part mold.
+- **Draft Angles**: Mandatory for vertical faces. Minimum **2.0 degrees**.
+- **Wall Thickness**: Keep between **1.0mm and 4.0mm**. Thick walls exponentially increase cycle cost.
+- **Undercuts**: Faces must be reachable from either +Z or -Z (2-part mold).
 
 ---
 
