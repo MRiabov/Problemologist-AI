@@ -128,31 +128,37 @@ class MujocoBridge:
         """Runs the simulation in a sandbox."""
         runner_filename = "sim_runner.py"
         result_file = "sim_result.json"
+        xml_file = "sim_model.xml"
+        script_file = "sim_agent.py"
 
-        # We need to escape the XML string and agent script for the Python runner
+        # 1. Save XML and agent script to files in the workspace
+        workspace = self.workspace_dir
+        (workspace / xml_file).write_text(xml_string, encoding="utf-8")
+        (workspace / script_file).write_text(agent_script, encoding="utf-8")
+
+        # 2. Build the runner script (now much cleaner)
         runner_script = f"""
 import json
 import os
 import sys
-from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+from src.compiler.mujoco_bridge import MujocoBridge
 from dataclasses import asdict
 
 # Add workspace to path
 sys.path.append("/workspace")
 
 bridge = MujocoBridge()
-xml_string = {xml_string!r}
-agent_script = {agent_script!r}
-goal_pos = {goal_pos!r}
-goal_size = {goal_size!r}
-duration = {duration}
+
+# Load inputs from files
+xml_content = open("/workspace/{xml_file}").read()
+agent_code = open("/workspace/{script_file}").read()
 
 sim_result = bridge._run_simulation_internal(
-    xml_string=xml_string,
-    duration=duration,
-    agent_script=agent_script,
-    goal_pos=goal_pos,
-    goal_size=goal_size
+    xml_string=xml_content,
+    duration={duration},
+    agent_script=agent_code,
+    goal_pos={goal_pos!r},
+    goal_size={goal_size}
 )
 
 # Use dataclasses.asdict for robust serialization
@@ -187,25 +193,12 @@ with open("/workspace/{result_file}", "w") as f:
                 success=False, total_energy=0.0, total_damage=100.0, observations=[]
             )
 
-        # Reconstruct observations
-        observations = [
-            Observation(
-                step=o["step"],
-                time=o["time"],
-                state_vector=list(o["state_vector"]),
-                energy_consumed=o["energy_consumed"],
-                damage_detected=o["damage_detected"],
+        if not res or "observations" not in res:
+            return SimResult(
+                success=False, total_energy=0.0, total_damage=100.0, observations=[]
             )
-            for o in res.get("observations", [])
-        ]
 
-        return SimResult(
-            success=res.get("success", False),
-            total_energy=res.get("total_energy", 0.0),
-            total_damage=res.get("total_damage", 0.0),
-            observations=observations,
-            metadata=res.get("metadata", {}),
-        )
+        return SimResult.from_dict(res)
 
     def _run_simulation_internal(
         self,

@@ -42,6 +42,10 @@ class Observation:
 
 
 @dataclass
+class SimResult:
+    success: bool
+    total_energy: float
+    total_damage: float
     observations: list[Observation]
     metadata: dict[str, Any] = field(default_factory=dict)
 
