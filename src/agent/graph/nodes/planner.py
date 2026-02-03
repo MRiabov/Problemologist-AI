@@ -4,6 +4,9 @@ from src.agent.graph.state import AgentState
 from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
+from src.agent.utils.prompts import get_prompt
+from src.agent.utils.llm import get_model
+from src.agent.tools.env_adapter import start_session_async
 
 
 async def planner_node(state: AgentState):
@@ -12,6 +15,10 @@ async def planner_node(state: AgentState):
     """
     set_current_role("Planner")
     log_to_env("Planning high-level strategy...", agent_role="Planner")
+
+    # Start persistent sandbox session if not already active
+    # This ensures follow-up run_command calls will work
+    await start_session_async("vlm-cad-session")
 
     # Check if we need to re-plan based on Critic feedback
     needs_replan = False
@@ -62,8 +69,9 @@ async def planner_node(state: AgentState):
     # Mandatory skill check instruction
     system_prompt += (
         "\n\nMANDATORY: Before planning any `build123d` implementation, "
-        "you MUST use the `read_skill` tool to read the `build123d_cad_drafting_skill` "
-        "and `manufacturing-knowledge` skills. These contain expert knowledge, "
+        "you MUST use `view_file` to read the documentation at: "
+        "`docs/skills/build123d_cad_drafting_skill/SKILL.md` "
+        "and `docs/skills/manufacturing-knowledge/SKILL.md`. These contain expert knowledge, "
         "curated patterns, and critical pitfalls."
     )
 
