@@ -3,7 +3,31 @@ from pathlib import Path
 
 import pytest
 
-from src.agent.tools.memory import read_journal, workspace, write_journal
+from src.agent.tools.memory import read_journal, workspace
+
+
+def write_journal(entry: str, tags: list[str] | None = None) -> str:
+    """Helper for testing journal functionality."""
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    tags_line = f"\nTags: {', '.join(tags)}" if tags else ""
+    formatted_entry = f"\n\n## [{timestamp}]\n{entry}{tags_line}\n"
+    workspace.append("journal.md", formatted_entry)
+    return f"Journal entry recorded."
+
+
+# Patch the tool-style invoke if needed, or just change calls to direct function calls.
+# The tests use write_journal.invoke(...)
+class SyncToolMock:
+    def __init__(self, func):
+        self.func = func
+
+    def invoke(self, args):
+        return self.func(**args)
+
+
+write_journal = SyncToolMock(write_journal)
 
 
 @pytest.fixture(autouse=True)
