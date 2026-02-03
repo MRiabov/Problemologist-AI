@@ -113,7 +113,7 @@ class CADEnv:
                         self.last_obs["last_render"] = tool_output.split(
                             "Preview generated:"
                         )[1].strip()
-                    except:
+                    except IndexError:
                         pass
 
         except Exception as e:
