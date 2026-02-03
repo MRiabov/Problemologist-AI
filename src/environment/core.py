@@ -161,6 +161,32 @@ class CADEnv:
 
         return tool_output
 
+    def step(
+        self, action: dict[str, Any]
+    ) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
+        """
+        Gym-like step method.
+        action: {"tool": "tool_name", "arguments": { ... }}
+        """
+        tool_name = action.get("tool")
+        arguments = action.get("arguments", {})
+
+        output = self.dispatch(tool_name, arguments)
+
+        reward = 0.0
+        terminated = False
+        info = {"output": output}
+
+        try:
+            res = json.loads(output)
+            reward = float(res.get("reward", 0.0))
+            terminated = bool(res.get("terminated", False))
+            info.update(res)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+        return self.last_obs, reward, terminated, False, info
+
     def render(self):
         return self.last_obs["last_render"]
 
