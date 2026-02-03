@@ -34,4 +34,5 @@ class Config:
         """Validates that necessary API keys are present."""
         # Note: We don't necessarily need all of them, just the one for the selected model.
         # LangChain usually errors out if the specific key is missing.
-        pass
+        if not cls.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY is missing. Please set it in your .env file or environment.")

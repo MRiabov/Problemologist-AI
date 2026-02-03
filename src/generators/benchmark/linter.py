@@ -118,8 +118,15 @@ def run_linter(code: str) -> list[dict]:
                             "message": desc,
                         }
                     )
-    except Exception:
-        pass
+    except Exception as e:
+        errors.append(
+            {
+                "linter": "pyrefly",
+                "line": 0,
+                "code": "ERR",
+                "message": f"Pyrefly failed to run: {e}",
+            }
+        )
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
