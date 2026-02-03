@@ -2,13 +2,15 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-# Import models from the environment persistence layer
+# Import models from the environment persistence layer and shared compiler models
+from src.compiler.models import DashEpisode, DashStep, EpisodeSummary
 from src.environment.persistence import Artifact, DatabaseManager, Episode, Step
+
 from .utils import get_project_root
 
 logger = logging.getLogger(__name__)
@@ -114,117 +116,121 @@ def insert_step(episode_id: str, type: str, content: str):
         return None
 
 
-def get_all_episodes() -> List[dict[str, Any]]:
+def get_all_episodes() -> List[EpisodeSummary]:
     """Returns a list of available episodes from database, falling back to mock if empty."""
     try:
         episodes = _dal.get_all_episodes()
         if episodes:
             return [
-                {
-                    "id": str(ep.id),
-                    "timestamp": ep.start_time,
-                    "name": f"Problem: {ep.problem_id[:8]}..."
+                EpisodeSummary(
+                    id=str(ep.id),
+                    timestamp=ep.start_time,
+                    name=f"Problem: {ep.problem_id[:8]}..."
                     if ep.problem_id
                     else "Untitled Episode",
-                }
+                )
                 for ep in episodes
             ]
     except Exception as e:
-        logger.warning(f"Failed to retrieve episodes from DB, using mock data. Error: {e}")
+        logger.warning(
+            f"Failed to retrieve episodes from DB, using mock data. Error: {e}"
+        )
 
     # Mock fallback
     return [
-        {
-            "id": "ep_001",
-            "timestamp": datetime(2026, 2, 1, 10, 0, 0),
-            "name": "Designing a Cube (Mock)",
-        },
-        {
-            "id": "ep_002",
-            "timestamp": datetime(2026, 2, 1, 11, 30, 0),
-            "name": "Complex Linkage Attempt (Mock)",
-        },
+        EpisodeSummary(
+            id="ep_001",
+            timestamp=datetime(2026, 2, 1, 10, 0, 0),
+            name="Designing a Cube (Mock)",
+        ),
+        EpisodeSummary(
+            id="ep_002",
+            timestamp=datetime(2026, 2, 1, 11, 30, 0),
+            name="Complex Linkage Attempt (Mock)",
+        ),
     ]
 
 
-def get_episode_by_id(episode_id: str) -> dict[str, Any]:
+def get_episode_by_id(episode_id: str) -> DashEpisode:
     """Returns full episode details including steps from database or mock."""
     try:
         ep = _dal.get_episode_by_id(episode_id)
         if ep:
-            return {
-                "id": str(ep.id),
-                "name": f"Problem: {ep.problem_id}",
-                "steps": [
-                    {
-                        "index": i,
-                        "type": step.type,
-                        "agent_role": step.agent_role,
-                        "content": step.content,
-                        "tool_name": step.tool_name,
-                        "tool_input": step.tool_input,
-                        "tool_output": step.tool_output,
-                        "metadata": step.metadata_json,
-                        "artifacts": [a.file_path for a in step.artifacts],
-                    }
-                    for i, step in enumerate(ep.steps)
-                ],
-            }
+            steps = [
+                DashStep(
+                    index=i,
+                    type=step.type,
+                    agent_role=step.agent_role,
+                    content=step.content,
+                    tool_name=step.tool_name,
+                    tool_input=step.tool_input,
+                    tool_output=step.tool_output,
+                    metadata=step.metadata_json or {},
+                    artifacts=[a.file_path for a in step.artifacts],
+                )
+                for i, step in enumerate(ep.steps)
+            ]
+            return DashEpisode(
+                id=str(ep.id), name=f"Problem: {ep.problem_id}", steps=steps
+            )
     except Exception as e:
         logger.warning(f"Failed to retrieve episode {episode_id} from DB. Error: {e}")
 
     # Mock Data Fallback
     if episode_id == "ep_001":
-        return {
-            "id": "ep_001",
-            "name": "Designing a Cube (Mock)",
-            "steps": [
-                {
-                    "index": 0,
-                    "type": "user",
-                    "content": "Create a 10mm cube.",
-                    "tool_calls": None,
-                },
-                {
-                    "index": 1,
-                    "type": "thought",
-                    "content": "I need to design a 10mm cube using build123d.",
-                    "tool_calls": None,
-                },
-                {
-                    "index": 2,
-                    "type": "tool",
-                    "content": "Writing the script...",
-                    "tool_calls": {
-                        "name": "write_file",
-                        "inputs": {
-                            "path": "design.py",
-                            "content": "from build123d import *\nwith BuildPart() as p:\n    Box(10, 10, 10)",
-                        },
-                    },
-                    "tool_output": "Successfully wrote design.py",
-                    "artifacts": ["design.stl"],
-                },
-            ],
-        }
-    return {"id": episode_id, "steps": []}
+        steps = [
+            DashStep(
+                index=0,
+                type="user",
+                agent_role=None,
+                content="Create a 10mm cube.",
+                tool_name=None,
+                tool_input=None,
+                tool_output=None,
+                metadata={},
+                artifacts=[],
+            ),
+            DashStep(
+                index=1,
+                type="thought",
+                agent_role="Planner",
+                content="I need to design a 10mm cube using build123d.",
+                tool_name=None,
+                tool_input=None,
+                tool_output=None,
+                metadata={},
+                artifacts=[],
+            ),
+            DashStep(
+                index=2,
+                type="tool",
+                agent_role="Draftsman",
+                content="Writing the script...",
+                tool_name="write_file",
+                tool_input="design.py",
+                tool_output="Successfully wrote design.py",
+                metadata={"path": "design.py"},
+                artifacts=["design.stl"],
+            ),
+        ]
+        return DashEpisode(id="ep_001", name="Designing a Cube (Mock)", steps=steps)
+    return DashEpisode(id=episode_id, name="Unknown", steps=[])
 
 
 def get_step_artifacts(episode_id: str, step_index: int) -> List[str]:
     """Returns artifacts for a given step."""
     episode = get_episode_by_id(episode_id)
-    if not episode:
+    if not episode or not episode.steps:
         return []
-    steps = episode.get("steps", [])
-    if step_index < len(steps):
-        return steps[step_index].get("artifacts", [])
+    if step_index < len(episode.steps):
+        return episode.steps[step_index].artifacts
     return []
 
 
-def get_latest_episode() -> Optional[dict[str, Any]]:
+def get_latest_episode() -> Optional[DashEpisode]:
     """Returns the latest episode."""
     episodes = get_all_episodes()
     if not episodes:
         return None
-    sorted_episodes = sorted(episodes, key=lambda x: x["timestamp"], reverse=True)
-    return get_episode_by_id(sorted_episodes[0]["id"])
+    sorted_episodes = sorted(episodes, key=lambda x: x.timestamp, reverse=True)
+    return get_episode_by_id(sorted_episodes[0].id)
