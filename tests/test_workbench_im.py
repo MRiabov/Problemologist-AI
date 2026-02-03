@@ -2,43 +2,72 @@ import pytest
 from build123d import Box, Wedge, Cylinder
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 
+
 def test_im_validate():
     workbench = InjectionMoldingWorkbench()
-    
+
     # 1. Draft Failure (Box with vertical walls)
     box = Box(10, 10, 10)
     violations = workbench.validate(box)
-    assert any("Draft Violation" in v for g in [v for v in violations] for v in [g] if "Draft" in g)
+    assert any(
+        "Draft Violation" in v
+        for g in [v for v in violations]
+        for v in [g]
+        if "Draft" in g
+    )
     # Wait, simple list comprehension:
     assert any("Draft Violation" in v for v in violations)
-    
+
     # 2. Thickness Failure (Thick block)
     # Default max is 4.0mm. 10mm block should fail.
     assert any("Wall Thickness Violation" in v for v in violations)
 
-    # 3. Valid Case (Thin Pyramid/Wedge)
-    # A pyramid with sloped walls should pass draft check.
-    # Height 5, base 10x10, apex at center -> ~45 degree slope.
-    # We need to make it thin enough for wall thickness if we check it.
-    # But for now let's just ensure it passes or has fewer violations.
-    pyramid = Wedge(10, 10, 5, 5, 5, 5, 5)
-    violations_p = workbench.validate(pyramid)
-    # Pyramid might still fail thickness if it's a solid block.
-    # But it should NOT fail draft.
+    # 3. Valid Case (Cone)
+    from build123d import Cone
+
+    cone = Cone(radius1=10, radius2=5, height=5)
+    violations_p = workbench.validate(cone)
+    # Cone sides are sloped. Should NOT fail draft.
     assert not any("Draft Violation" in v for v in violations_p)
-    
+    # Verify cost breakdown contains wall thickness stats
+    res = workbench.calculate_cost(box, quantity=1)
+    assert "wall_thickness_stats" in res["breakdown"]
+    assert res["breakdown"]["wall_thickness_stats"]["max_mm"] >= 9.9
+    # Verify cost breakdown contains wall thickness stats
+    res = workbench.calculate_cost(box, quantity=1)
+    assert "wall_thickness_stats" in res["breakdown"]
+    assert res["breakdown"]["wall_thickness_stats"]["max_mm"] >= 9.9
+
+
 def test_im_cost():
     workbench = InjectionMoldingWorkbench()
     box = Box(10, 10, 10)
-    
-    cost_1 = workbench.calculate_cost(box, quantity=1)
-    cost_10000 = workbench.calculate_cost(box, quantity=10000)
-    
+
+    res_1 = workbench.calculate_cost(box, quantity=1)
+    res_10000 = workbench.calculate_cost(box, quantity=10000)
+
+    assert isinstance(res_1, dict)
+    assert "total_cost" in res_1
+    assert "breakdown" in res_1
+
+    cost_1 = res_1["total_cost"]
+    cost_10000 = res_10000["total_cost"]
+
     # Unit cost at q=1 is massive (mostly tooling)
     unit_cost_1 = cost_1 / 1.0
     # Unit cost at q=10000 is low (tooling amortized)
     unit_cost_10k = cost_10000 / 10000.0
-    
+
     assert unit_cost_1 > 5000.0
     assert unit_cost_10k < 10.0
     assert unit_cost_10k < unit_cost_1
+
+    # Verify breakdown fields
+    breakdown = res_1["breakdown"]
+    assert "wall_thickness_stats" in breakdown
+    stats = breakdown["wall_thickness_stats"]
+    assert stats["min_mm"] > 0
+    assert stats["max_mm"] > 0
+    assert stats["average_mm"] > 0
+    # For a 10x10x10 solid box, thickness should be ~10mm
+    assert stats["max_mm"] >= 10.0
