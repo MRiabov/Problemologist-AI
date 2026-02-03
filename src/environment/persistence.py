@@ -43,11 +43,14 @@ class Step(Base):
     sequence_index: Mapped[int] = mapped_column(Integer)
     type: Mapped[str] = mapped_column(
         String(50), default="thought"
-    )  # thought, tool, user
-    tool_name: Mapped[str] = mapped_column(String(255))
-    tool_input: Mapped[str] = mapped_column(Text)
+    )  # thought, tool, user, handoff
+    agent_role: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tool_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tool_input: Mapped[str | None] = mapped_column(Text, nullable=True)
     tool_output: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     episode: Mapped["Episode"] = relationship(back_populates="steps")
     artifacts: Mapped[list["Artifact"]] = relationship(
@@ -75,7 +78,9 @@ class CostRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
-    episode_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("episodes.id"), nullable=True)
+    episode_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("episodes.id"), nullable=True
+    )
 
 
 class DatabaseManager:
@@ -115,11 +120,14 @@ class DatabaseManager:
         self,
         episode_id: uuid.UUID,
         sequence_index: int,
-        tool_name: str,
-        tool_input: str,
+        tool_name: str | None = None,
+        tool_input: str | None = None,
         tool_output: str | None = None,
         duration_ms: int | None = None,
         type: str = "tool",
+        agent_role: str | None = None,
+        content: str | None = None,
+        metadata_json: dict[str, Any] | None = None,
     ) -> Step:
         session = self.get_session()
         step = Step(
@@ -130,6 +138,9 @@ class DatabaseManager:
             tool_output=tool_output,
             duration_ms=duration_ms,
             type=type,
+            agent_role=agent_role,
+            content=content,
+            metadata_json=metadata_json,
         )
         session.add(step)
         session.commit()
@@ -176,20 +187,24 @@ class DatabaseManager:
         session.close()
         return cost
 
-    def update_cost_record(self, scenario_id: str, unit_cost: float, episode_id: uuid.UUID | None = None) -> bool:
+    def update_cost_record(
+        self, scenario_id: str, unit_cost: float, episode_id: uuid.UUID | None = None
+    ) -> bool:
         """Updates the cost record if the new unit_cost is lower than the current best. Returns True if updated."""
         session = self.get_session()
         record = session.get(CostRecord, scenario_id)
         updated = False
         if not record:
-            record = CostRecord(scenario_id=scenario_id, best_unit_cost=unit_cost, episode_id=episode_id)
+            record = CostRecord(
+                scenario_id=scenario_id, best_unit_cost=unit_cost, episode_id=episode_id
+            )
             session.add(record)
             updated = True
         elif unit_cost < record.best_unit_cost:
             record.best_unit_cost = unit_cost
             record.episode_id = episode_id
             updated = True
-        
+
         if updated:
             session.commit()
         session.close()

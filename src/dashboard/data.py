@@ -146,10 +146,13 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                     {
                         "index": i,
                         "type": step.type,
+                        "agent_role": step.agent_role,
                         "content": step.content,
-                        "tool_calls": step.tool_calls,
+                        "tool_name": step.tool_name,
+                        "tool_input": step.tool_input,
                         "tool_output": step.tool_output,
-                        "artifacts": [a.name for a in step.artifacts],
+                        "metadata": step.metadata_json,
+                        "artifacts": [a.file_path for a in step.artifacts],
                     }
                     for i, step in enumerate(ep.steps)
                 ],

@@ -104,7 +104,7 @@ class CADEnv(gym.Env):
         return self.last_obs, {}
 
     def step(
-        self, action: dict[str, Any]
+        self, action: dict[str, Any], agent_role: str | None = None
     ) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         self.step_count += 1
         start_time = time.time()
@@ -160,7 +160,9 @@ class CADEnv(gym.Env):
                 else:
                     process = arguments if arguments else "cnc"
                     quantity = self.target_quantity
-                tool_output = str(tools.check_manufacturability("design.py", process, quantity))
+                tool_output = str(
+                    tools.check_manufacturability("design.py", process, quantity)
+                )
             elif tool_name == "submit_design":
                 reward, tool_output, terminated = self._submit_design(arguments)
             else:
@@ -179,6 +181,7 @@ class CADEnv(gym.Env):
             tool_input=arguments,
             tool_output=tool_output,
             duration_ms=duration_ms,
+            agent_role=agent_role,
         )
 
         if tool_name == "preview_design" and self.last_obs["last_render"]:
@@ -196,6 +199,24 @@ class CADEnv(gym.Env):
         self.last_obs["last_output"] = tool_output
 
         return self.last_obs, reward, terminated, truncated, {}
+
+    def log_message(
+        self,
+        content: str,
+        type: str = "thought",
+        agent_role: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ):
+        """Logs a non-action message (thought, handoff, user) to the database."""
+        self.step_count += 1
+        self.db.log_step(
+            episode_id=self.episode.id,
+            sequence_index=self.step_count,
+            type=type,
+            content=content,
+            agent_role=agent_role,
+            metadata_json=metadata,
+        )
 
     def _submit_design(self, arguments: str = "") -> tuple[float, str, bool]:
         """Handles the full submission, validation, and simulation pipeline."""
@@ -254,11 +275,11 @@ try:
         "Rotation": bd.Rotation,
         "Location": bd.Location,
     }}
-    
+
     with Path("/workspace/design.py").open("r", encoding="utf-8") as f:
         code = f.read()
     exec(code, ctx, locs)
-    
+
     # 2. Extract Part
     export_obj = None
     for val in locs.values():
@@ -268,7 +289,7 @@ try:
         elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
             export_obj = val.part
             break
-            
+
     if not export_obj:
         result["error"] = "No Part or Solid found in script."
     else:
@@ -278,9 +299,9 @@ try:
             "cnc": CNCWorkbench(),
             "injection_molding": InjectionMoldingWorkbench()
         }}
-        
+
         default_q = {self.target_quantity}
-        
+
         def parse_label(label):
             data = {{"quantity": default_q, "process": "print_3d"}}
             if not label: return data
@@ -310,7 +331,7 @@ try:
         result["total_cost"] = total_cost
         result["unit_cost"] = total_cost / default_q if default_q > 0 else 0.0
         result["violations"] = [str(v) for v in all_violations]
-        
+
         if not all_violations:
             # 4. Export Mesh
             stl_path = f"/workspace/{{'stl_filename'}}"
