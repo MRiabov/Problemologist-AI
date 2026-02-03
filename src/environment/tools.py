@@ -90,50 +90,8 @@ def preview_design(filename: str = "design.py") -> str:
 
 
 @_deprecated
-def read_skill(
-    skill_name: str, filename: str = "SKILL.md", resource_type: Optional[str] = None
-) -> str:
-    return _RUNTIME.read_skill(skill_name, filename, resource_type)
-
-
-@_deprecated
 def run_command(command: str, timeout: int = 60) -> str:
     return _RUNTIME.run_command(command, timeout)
-
-
-@_deprecated
-def run_skill_script(skill_name: str, script_name: str, arguments: str = "") -> str:
-    return _RUNTIME.run_skill_script(skill_name, script_name, arguments)
-
-
-@_deprecated
-def list_skills() -> str:
-    return _RUNTIME.list_skills()
-
-
-@_deprecated
-def list_skill_files(skill_name: str) -> str:
-    return _RUNTIME.list_skill_files(skill_name)
-
-
-@_deprecated
-def update_skill(
-    skill_name: str,
-    content: str,
-    filename: str = "SKILL.md",
-    resource_type: Optional[str] = None,
-) -> str:
-    return _RUNTIME.update_skill(skill_name, content, filename, resource_type)
-
-
-@_deprecated
-def init_skill(skill_name: str) -> str:
-    return _RUNTIME.init_skill(skill_name)
-
-
-@_deprecated
-def package_skill(skill_name: str) -> str:
-    return _RUNTIME.package_skill(skill_name)
 
 
 @_deprecated
