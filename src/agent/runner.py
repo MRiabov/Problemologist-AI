@@ -14,12 +14,13 @@ from rich.panel import Panel
 from src.agent.graph.graph import build_graph
 from src.agent.utils.checkpoint import get_checkpointer
 from src.agent.utils.visualize import console, visualize_event
-
+from src.agent.utils.logging import setup_logging
 
 async def run_agent(query: str, thread_id: str = None):
     """
     Initializes and runs the agent graph with the given query.
     """
+    setup_logging()
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 

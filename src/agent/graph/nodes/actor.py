@@ -3,19 +3,20 @@ from typing import Optional
 from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.tools.registry import AGENT_TOOLS
 from src.agent.utils.config import Config
-from src.agent.utils.env_log import log_to_env
+from src.agent.utils.logging import get_logger
 from src.agent.utils.prompts import get_prompt
+
+logger = get_logger(__name__)
 
 
 async def actor_node(state: AgentState, tools: Optional[list] = None):
     """
     Executes the next step in the plan using tools.
     """
-    set_current_role("Actor")
-    log_to_env("Executing current step...", agent_role="Actor")
+    log = logger.bind(agent_role="Actor")
+    log.info("Executing current step")
     model = get_model(Config.LLM_MODEL)
 
     # Use provided tools or fall back to registry
@@ -59,14 +60,10 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
     # Extract reasoning if possible
     if hasattr(response, "content") and response.content:
         updates["coder_reasoning"] = response.content
-        log_to_env(response.content, type="thought", agent_role="Actor")
+        log.info(response.content, type="thought")
 
     if hasattr(response, "tool_calls") and response.tool_calls:
         tool_names = [tc["name"] for tc in response.tool_calls]
-        log_to_env(
-            f"Handing off to tools: {', '.join(tool_names)}",
-            type="handoff",
-            agent_role="Actor",
-        )
+        log.info(f"Handing off to tools: {', '.join(tool_names)}", type="handoff")
 
     return updates

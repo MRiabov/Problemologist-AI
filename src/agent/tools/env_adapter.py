@@ -5,10 +5,7 @@ from langchain_core.tools import tool
 
 from src.environment.runtime import ToolRuntime
 
-# Global reference to the active environment (if any)
-# Note: We keep this for backward compatibility and potential CADEnv logging,
-# but favor explicit tool_runtime passing.
-_ACTIVE_ENV: Any | None = None
+# Runtimes management
 _DEFAULT_RUNTIME_ID: str = "default"
 _RUNTIMES: dict[str, ToolRuntime] = {}
 _FALLBACK_RUNTIME: ToolRuntime | None = None
@@ -46,30 +43,24 @@ def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
 
 
 def set_active_env(env: Any):
-    """Sets the active environment instance (legacy support)."""
-    global _ACTIVE_ENV
-    _ACTIVE_ENV = env
+    """Legacy support - No-op."""
+    pass
 
 
 def get_active_env() -> Any | None:
-    """Returns the currently active environment instance."""
-    return _ACTIVE_ENV
+    """Legacy support - Returns None."""
+    return None
 
 
 def set_current_role(role: str | None):
-    """Sets the current agent role for logging (legacy support)."""
-    # Role can be handled via context or passed to CADEnv if needed.
+    """Legacy support - No-op."""
     pass
 
 
 async def _execute_tool(
     tool_name: str, tool_runtime: Optional[ToolRuntime], **kwargs
 ) -> Any:
-    """Dispatches tool call to runtime or active environment."""
-    # If we have an active CADEnv, we might want to route through it for database logging.
-    if _ACTIVE_ENV and hasattr(_ACTIVE_ENV, "dispatch"):
-        return await asyncio.to_thread(_ACTIVE_ENV.dispatch, tool_name, kwargs)
-
+    """Dispatches tool call to runtime."""
     rt = tool_runtime or get_runtime()
     return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
 
@@ -168,15 +159,15 @@ async def check_manufacturability(
     tool_runtime: Optional[Any] = None,
 ) -> dict:
     """
-    Checks if the design can be manufactured.
+    Provides a detailed DFM (Design for Manufacturing) report and pricing breakdown.
+    Use this to identify manufacturability violations (draft, undercuts, thickness)
+    and to understand cost drivers (e.g. cooling time for IM, stock volume for CNC).
     Args:
         design_file: The name of the script file to analyze.
         process: The manufacturing process ('cnc' or 'injection_molding').
         quantity: Target production quantity.
         tool_runtime: Injected runtime (do not provide).
     """
-    # Note: CADEnv.dispatch currently returns a string, but this tool expects a dict if possible.
-    # We'll need to ensure runtime.dispatch returns a dict for this specific tool or parse it.
     output = await _execute_tool(
         "check_manufacturability",
         tool_runtime,
