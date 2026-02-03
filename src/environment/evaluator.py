@@ -1,7 +1,9 @@
 import hashlib
-import json
+
 from pathlib import Path
 from typing import Any
+
+from src.environment.sandbox_utils import run_sandboxed_script
 
 
 class Evaluator:
@@ -14,7 +16,7 @@ class Evaluator:
         self.sandbox = sandbox
         self.workspace_dir = str(Path(workspace_dir).resolve())
 
-    def _get_runner_script_prefix(self, filename: str) -> str:
+    def _get_runner_script_prefix(self) -> str:
         return """
 import sys
 import json
@@ -68,13 +70,10 @@ def parse_label(label, default_q, default_p):
             return f"Error: File {filename} does not exist."
 
         runner_filename = f"runner_{filename}"
-        runner_path = Path(self.workspace_dir) / runner_filename
-
-        # Use a result file instead of stdout marker for robustness
         result_file = "preview_result.json"
 
         runner_script = (
-            self._get_runner_script_prefix(filename)
+            self._get_runner_script_prefix()
             + f"""
 from build123d import ExportSVG, Drawing, Unit
 
@@ -117,40 +116,24 @@ with open("/workspace/{result_file}", "w") as f:
 """
         )
 
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
+        res = run_sandboxed_script(
+            sandbox=self.sandbox,
+            script_content=runner_script,
+            result_file_name=result_file,
+            runner_file_name=runner_filename,
+            session_id=session_id,
+        )
 
-            # Remove old result file if exists
-            (Path(self.workspace_dir) / result_file).unlink(missing_ok=True)
+        # Check for system/sandbox errors
+        if res.get("status") == "error" and "error_type" in res:
+            # This is a sandbox error (timeout, crash, etc)
+            return f"Error generating preview: {res.get('message')}"
 
-            stdout, stderr, _ = self.sandbox.run_script(
-                runner_filename, session_id=session_id, mount_src=True
-            )
+        # Check for script errors (from the JSON result)
+        if res.get("status") == "success":
+            return f"Preview generated: {res['preview_file']}"
 
-            if runner_path.exists():
-                runner_path.unlink()
-
-            # Check result file
-            result_path = Path(self.workspace_dir) / result_file
-            if result_path.exists():
-                try:
-                    res = json.loads(result_path.read_text())
-                    if res["status"] == "success":
-                        return f"Preview generated: {res['preview_file']}"
-                    return f"Error generating preview: {res['error']}"
-                except json.JSONDecodeError:
-                    return "Error reading preview result: JSON decode error."
-
-            # Fallback to stdout check if file write failed (legacy/crash)
-            if "RENDER_SUCCESS" in stdout:
-                line = [l for l in stdout.split("\n") if "RENDER_SUCCESS" in l][0]
-                gen_file = line.split("RENDER_SUCCESS:")[1].strip()
-                return f"Preview generated: {gen_file}"
-
-            return f"Error generating preview (no result file): {stdout}{stderr}"
-
-        except Exception as e:
-            return f"Error: {e!s}"
+        return f"Error generating preview: {res.get('error', 'Unknown error')}"
 
     def validate_and_export(
         self,
@@ -170,12 +153,11 @@ with open("/workspace/{result_file}", "w") as f:
         runner_filename = (
             f"val_runner_{hashlib.md5(design_file.encode()).hexdigest()[:8]}.py"
         )
-        runner_path = Path(self.workspace_dir) / runner_filename
-        stl_filename = "design.stl"
         result_file = "validation_result.json"
+        stl_filename = "design.stl"
 
         runner_script = (
-            self._get_runner_script_prefix(design_file)
+            self._get_runner_script_prefix()
             + f"""
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
@@ -252,32 +234,15 @@ with open("/workspace/{result_file}", "w") as f:
 """
         )
 
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
+        res = run_sandboxed_script(
+            sandbox=self.sandbox,
+            script_content=runner_script,
+            result_file_name=result_file,
+            runner_file_name=runner_filename,
+            session_id=session_id,
+        )
 
-            # Remove old result file
-            (Path(self.workspace_dir) / result_file).unlink(missing_ok=True)
+        if res.get("status") == "error" and "error_type" in res:
+            return {"error": f"Exec failed: {res.get('message')}"}
 
-            stdout, stderr, _ = self.sandbox.run_script(
-                runner_filename, session_id=session_id, mount_src=True
-            )
-
-            if runner_path.exists():
-                runner_path.unlink()
-
-            result_path = Path(self.workspace_dir) / result_file
-            if result_path.exists():
-                try:
-                    return json.loads(result_path.read_text())
-                except json.JSONDecodeError:
-                    return {"error": "JSON decode error in validation result"}
-
-            # Fallback
-            if "VAL_RESULT:" in stdout:
-                line = [l for l in stdout.split("\n") if "VAL_RESULT:" in l][0]
-                return json.loads(line.split("VAL_RESULT:")[1].strip())
-
-            return {"error": f"Exec failed (no result): {stdout}{stderr}"}
-
-        except Exception as e:
-            return {"error": f"Host error: {e!s}"}
+        return res

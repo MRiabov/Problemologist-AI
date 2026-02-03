@@ -118,20 +118,23 @@ def control_logic(model, data):
 @patch("src.environment.tools._SANDBOX")
 @patch("src.environment.tools.WORKSPACE_DIR", "/tmp/test_workspace")
 def test_run_simulation_sandboxed(mock_sandbox, bridge):
-    # Setup mock
+    # Configure mock sandbox
+    mock_sandbox.workspace_dir = "/tmp/test_workspace"
+
+    workspace_path = Path("/tmp/test_workspace")
+    if not workspace_path.exists():
+        workspace_path.mkdir(parents=True, exist_ok=True)
+
     res_json = (
         '{"duration": 5.0, "energy": 10.0, "success": true, '
         '"damage": 0.0, "replay_data": []}'
     )
-    mock_sandbox.run_script.return_value = (
-        f"SIM_RESULT:{res_json}",
-        "",
-        0,
-    )
 
-    workspace_path = Path("/tmp/test_workspace")
-    if not workspace_path.exists():
-        workspace_path.mkdir(parents=True)
+    def side_effect(*args, **kwargs):
+        (workspace_path / "sim_result.json").write_text(res_json)
+        return "", "", 0
+
+    mock_sandbox.run_script.side_effect = side_effect
 
     xml_string = "<mujoco></mujoco>"
     result = bridge.run_simulation(xml_string, duration=5.0)
@@ -141,6 +144,6 @@ def test_run_simulation_sandboxed(mock_sandbox, bridge):
     assert mock_sandbox.run_script.called
 
     # Cleanup mock workspace
-    # if workspace_path.exists():
-    #     import shutil
-    #     shutil.rmtree(workspace_path)
+    import shutil
+    if workspace_path.exists():
+         shutil.rmtree(workspace_path)
