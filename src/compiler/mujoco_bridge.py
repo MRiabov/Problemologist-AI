@@ -5,14 +5,15 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from src.compiler.mjcf_lint import validate_mjcf
 from src.compiler.models import Observation, SimResult
 
 
 class MujocoBridge:
     def __init__(
         self,
-        workspace_dir: str | Path | None = None,
-        sandbox: Any | None = None,
+        workspace_dir: str | Path,
+        sandbox: Any,
     ):
         """
         Initialize MujocoBridge.
@@ -21,34 +22,11 @@ class MujocoBridge:
             workspace_dir: Path to the workspace directory.
             sandbox: PodmanSandbox instance for running simulations.
         """
-        self._sandbox = sandbox
-        self._workspace_dir = Path(workspace_dir) if workspace_dir else None
+        self.sandbox = sandbox
+        self.workspace_dir = Path(workspace_dir)
         # Assumes this file is in src/compiler/
         # and templates are in src/compiler/templates/
         self.template_dir = Path(__file__).resolve().parent / "templates"
-
-    @property
-    def workspace_dir(self) -> Path:
-        """Get workspace directory."""
-        if self._workspace_dir:
-            return self._workspace_dir
-
-        from src.agent.utils.config import Config
-
-        return Config.WORKSPACE_DIR
-
-    @property
-    def sandbox(self) -> Any:
-        """Get sandbox, initializing a default one if needed."""
-        if self._sandbox:
-            return self._sandbox
-
-        # Lazy initialization for host-side runs
-        from src.environment.sandbox import PodmanSandbox
-
-        wdir = str(self.workspace_dir)
-        self._sandbox = PodmanSandbox(wdir)
-        return self._sandbox
 
     def load_template(self, template_name: str = "standard.xml") -> str:
         """Load a standard template and return its XML string content.
@@ -117,15 +95,35 @@ class MujocoBridge:
 
         return ET.tostring(root, encoding="unicode")
 
-    def run_simulation(
+    async def run_simulation(
         self,
         xml_string: str,
-        duration: float = 5.0,
+        duration: float = 10.0,
         agent_script: str = "",
-        goal_pos: tuple[float, float, float] | None = None,
-        goal_size: float = 0.5,
+        goal_pos: tuple[float, float, float] = (0, 0, 0),
+        goal_size: float = 0.05,
     ) -> SimResult:
-        """Runs the simulation in a sandbox."""
+        """
+        Runs the simulation in a sandbox and returns the results.
+
+        Args:
+            xml_string: The MJCF model XML.
+            duration: Maximum simulation time in seconds.
+            agent_script: Python code for the controller.
+            goal_pos: Target coordinates for success detection.
+            goal_size: Tolerance for goal reaching.
+        """
+        # 1. MJCF Linting
+        errors = validate_mjcf(xml_string)
+        if errors:
+            # We wrap the errors in a SimResult so the agent sees them as a failed run
+            return SimResult(
+                success=False,
+                total_energy=0.0,
+                total_damage=0.0,
+                observations=[],
+                metadata={"lint_errors": errors},
+            )
         runner_filename = "sim_runner.py"
         result_file = "sim_result.json"
         xml_file = "sim_model.xml"
