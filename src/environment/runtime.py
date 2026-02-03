@@ -1,24 +1,20 @@
-import hashlib
 import json
-import subprocess
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import build123d as bd
-
+from src.agent.utils.config import Config
 from src.agent.utils.linter import format_linter_report, run_linter
 from src.compiler import mujoco_bridge
+from src.compiler.models import ValidationReport
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 from src.environment.evaluator import Evaluator
+from src.environment.persistence import DatabaseManager
 from src.environment.sandbox import PodmanSandbox
-from src.environment.sandbox_utils import run_sandboxed_script
 from src.rag import search as rag_search
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.workbenches.print_3d import Print3DWorkbench
-from src.agent.utils.config import Config
 
 
 class ToolRuntime:
@@ -27,7 +23,7 @@ class ToolRuntime:
     Replaces global state from the legacy tools.py module.
     """
 
-    def __init__(self, workspace_dir: str, db: Any = None):
+    def __init__(self, workspace_dir: str, db: DatabaseManager | None = None):
         self.workspace_dir = str(Path(workspace_dir).resolve())
         Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
 
@@ -35,7 +31,7 @@ class ToolRuntime:
         self.evaluator = Evaluator(self.sandbox, self.workspace_dir)
         self.db = db
 
-        self.active_session_id: Optional[str] = None
+        self.active_session_id: str | None = None
 
         # Simulation
         self.sim_bridge = mujoco_bridge.MujocoBridge()
@@ -61,11 +57,10 @@ class ToolRuntime:
 
     def stop_session(self) -> str:
         """Stops the current active sandbox session."""
-        if self.active_session_id:
-            if self.sandbox.stop_session(self.active_session_id):
-                sid = self.active_session_id
-                self.active_session_id = None
-                return f"Session {sid} stopped."
+        if self.active_session_id and self.sandbox.stop_session(self.active_session_id):
+            sid = self.active_session_id
+            self.active_session_id = None
+            return f"Session {sid} stopped."
         return "No active session to stop."
 
     def write_file(self, content: str, path: str, mode: str = "overwrite") -> str:
@@ -168,7 +163,7 @@ class ToolRuntime:
         process: str = "cnc",
         quantity: int = 1,
         export_stl: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> ValidationReport:
         """Validates design for manufacturability and optionally exports STL."""
         return self.evaluator.validate_and_export(
             design_file=design_file,
@@ -180,7 +175,7 @@ class ToolRuntime:
 
     def check_manufacturability(
         self, design_file: str = "design.py", process: str = "cnc", quantity: int = 1
-    ) -> Dict[str, Any]:
+    ) -> ValidationReport:
         """Wrapper for validate_and_export (Legacy compatibility)."""
         return self.validate_and_export(
             design_file, process, quantity, export_stl=False
@@ -194,29 +189,35 @@ class ToolRuntime:
         target_quantity: int = 1,
         max_unit_cost: float = float("inf"),
         force_submit: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Runs the current design script, performs full Workbench validation,
         and optionally runs a host-side simulation.
         """
+        temp_file = Path(design_file).name
+        try:
+            (Path(self.workspace_dir) / temp_file).read_text(encoding="utf-8")
+        except Exception as e:
+            return {"status": "error", "message": f"Could not read script: {e}"}
+
         # 1. Validate and Export STL
-        res = self.validate_and_export(
+        res: ValidationReport = self.validate_and_export(
             design_file=design_file,
             process=process,
             quantity=target_quantity,
             export_stl=True,
         )
 
-        if "error" in res and res["error"]:
+        if res.error:
             return {
                 "status": "fail",
                 "reward": -10.0,
-                "message": f"Error processing design: {res['error']}",
+                "message": f"Error processing design: {res.error}",
                 "terminated": False,
             }
 
         # 2. Budget Check
-        unit_cost = res.get("cost_analysis", {}).get("unit_cost", 0.0)
+        unit_cost = res.cost_analysis.unit_cost
         if unit_cost > max_unit_cost and not force_submit:
             return {
                 "status": "fail",
@@ -226,10 +227,8 @@ class ToolRuntime:
             }
 
         # 3. Validation Check
-        if res.get("status") == "fail":
-            v_str = ", ".join(
-                [v.get("description", "Unknown") for v in res.get("violations", [])]
-            )
+        if res.status == "fail":
+            v_str = ", ".join([v.description for v in res.violations])
             return {
                 "status": "fail",
                 "reward": -10.0,
@@ -237,7 +236,7 @@ class ToolRuntime:
                 "terminated": False,
             }
 
-        if not res.get("stl_path"):
+        if not res.stl_path:
             return {
                 "status": "fail",
                 "reward": -10.0,
@@ -245,9 +244,20 @@ class ToolRuntime:
                 "terminated": False,
             }
 
-        # 4. Simulation (Host side)
+        # 4. Save to Database for Observability if persistence is active
+        # Episode/Step logic should ideally be handled at the agent level or injected
+        # For now, we update best cost if possible
+        if self.db:
+            # If db is passed, it should be a DatabaseManager
+            self.db.update_cost_record(
+                scenario_id=control_path,
+                unit_cost=unit_cost,
+                episode_id=self.active_session_id,
+            )
+
+        # 5. Simulation (Host side)
         try:
-            stl_path = Path(self.workspace_dir) / res["stl_path"]
+            stl_path = Path(self.workspace_dir) / res.stl_path
             template_xml = self.sim_bridge.load_template()
             injected_xml = self.sim_bridge.inject_design(template_xml, stl_path)
             sim_result = self.sim_bridge.run_simulation(injected_xml)
@@ -279,7 +289,7 @@ class ToolRuntime:
                 "terminated": False,
             }
 
-    def dispatch(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+    def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> str:
         """Dispatches a tool call to the appropriate method."""
         tool_map = {
             "write_file": self.write_file,
@@ -362,7 +372,7 @@ class ToolRuntime:
         self,
         skill_name: str,
         filename: str = "SKILL.md",
-        resource_type: Optional[str] = None,
+        resource_type: str | None = None,
     ) -> str:
         sdir = Config.SKILLS_DIR / skill_name
         if not sdir.exists():
@@ -388,9 +398,7 @@ class ToolRuntime:
         cmd = ["python3", script_path] + args
 
         if self.active_session_id:
-            stdout, stderr, rc = self.sandbox.exec_command(
-                self.active_session_id, cmd
-            )
+            stdout, stderr, rc = self.sandbox.exec_command(self.active_session_id, cmd)
         else:
             # Fallback to transient run with skills mounted
             stdout, stderr, rc = self.sandbox.run_script(
@@ -420,7 +428,7 @@ class ToolRuntime:
         skill_name: str,
         content: str,
         filename: str = "SKILL.md",
-        resource_type: Optional[str] = None,
+        resource_type: str | None = None,
     ) -> str:
         """Updates a skill file on host after (optional) sandboxed validation."""
         # TODO: Implement sandboxed linting/validation here before writing to host
@@ -438,9 +446,7 @@ class ToolRuntime:
         cmd = ["python3", script_path, skill_name, "--path", "/workspace/docs/skills"]
 
         if self.active_session_id:
-            stdout, stderr, rc = self.sandbox.exec_command(
-                self.active_session_id, cmd
-            )
+            stdout, stderr, rc = self.sandbox.exec_command(self.active_session_id, cmd)
         else:
             stdout, stderr, rc = self.sandbox.run_script(
                 "-c",
@@ -457,9 +463,7 @@ class ToolRuntime:
         cmd = ["python3", script_path, target_path]
 
         if self.active_session_id:
-            stdout, stderr, rc = self.sandbox.exec_command(
-                self.active_session_id, cmd
-            )
+            stdout, stderr, rc = self.sandbox.exec_command(self.active_session_id, cmd)
         else:
             stdout, stderr, rc = self.sandbox.run_script(
                 "-c",

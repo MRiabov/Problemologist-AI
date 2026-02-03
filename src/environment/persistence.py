@@ -1,9 +1,19 @@
 import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any, Generator
+from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -12,6 +22,8 @@ from sqlalchemy.orm import (
     relationship,
     sessionmaker,
 )
+
+from src.compiler.models import CostBreakdown, ValidationReport
 
 
 class Base(DeclarativeBase):
@@ -56,6 +68,44 @@ class Step(Base):
     episode: Mapped["Episode"] = relationship(back_populates="steps")
     artifacts: Mapped[list["Artifact"]] = relationship(
         back_populates="step", cascade="all, delete-orphan"
+    )
+
+
+class ValidationRecord(Base):
+    __tablename__ = "validation_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    step_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("steps.id"))
+    status: Mapped[str] = mapped_column(String(50))
+    manufacturability_score: Mapped[float] = mapped_column(Float)
+    violations_json: Mapped[dict[str, Any]] = mapped_column(JSON)
+    stl_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    step: Mapped["Step"] = relationship()
+    cost_breakdown: Mapped["CostBreakdownRecord"] = relationship(
+        back_populates="validation_record", uselist=False, cascade="all, delete-orphan"
+    )
+
+
+class CostBreakdownRecord(Base):
+    __tablename__ = "cost_breakdowns"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    validation_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("validation_records.id"), nullable=True
+    )
+    process: Mapped[str] = mapped_column(String(50))
+    total_cost: Mapped[float] = mapped_column(Float)
+    unit_cost: Mapped[float] = mapped_column(Float)
+    material_cost_per_unit: Mapped[float] = mapped_column(Float)
+    setup_cost: Mapped[float] = mapped_column(Float, default=0.0)
+    is_reused: Mapped[bool] = mapped_column(default=False)
+    details_json: Mapped[dict[str, Any]] = mapped_column(JSON)
+    pricing_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    validation_record: Mapped["ValidationRecord"] = relationship(
+        back_populates="cost_breakdown"
     )
 
 
@@ -204,7 +254,10 @@ class DatabaseManager:
     def update_cost_record(
         self, scenario_id: str, unit_cost: float, episode_id: uuid.UUID | None = None
     ) -> bool:
-        """Updates the cost record if the new unit_cost is lower than the current best. Returns True if updated."""
+        """
+        Updates the cost record if the new unit_cost is lower than the current best.
+        Returns True if updated.
+        """
         with self.session_scope() as session:
             record = session.get(CostRecord, scenario_id)
             updated = False
@@ -221,3 +274,39 @@ class DatabaseManager:
                 record.episode_id = episode_id
                 updated = True
             return updated
+
+    def save_validation_report(
+        self, step_id: uuid.UUID, report: ValidationReport
+    ) -> ValidationRecord:
+        """Saves a ValidationReport and its associated CostBreakdown to the database."""
+        with self.session_scope() as session:
+            record = ValidationRecord(
+                step_id=step_id,
+                status=report.status,
+                manufacturability_score=report.manufacturability_score,
+                violations_json=[
+                    {"description": v.description, "severity": v.severity}
+                    for v in report.violations
+                ],
+                stl_path=report.stl_path,
+                error=report.error,
+            )
+            session.add(record)
+            session.flush()
+
+            cost_data = report.cost_analysis
+            cost_record = CostBreakdownRecord(
+                validation_record_id=record.id,
+                process=cost_data.process,
+                total_cost=cost_data.total_cost,
+                unit_cost=cost_data.unit_cost,
+                material_cost_per_unit=cost_data.material_cost_per_unit,
+                setup_cost=cost_data.setup_cost,
+                is_reused=cost_data.is_reused,
+                details_json=cost_data.details,
+                pricing_explanation=cost_data.pricing_explanation,
+            )
+            session.add(cost_record)
+            session.flush()
+            session.refresh(record)
+            return record
