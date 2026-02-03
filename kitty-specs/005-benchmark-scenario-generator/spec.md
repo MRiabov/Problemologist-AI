@@ -109,7 +109,8 @@ The system ensures that every generated scenario is robust, randomized, and phys
 - **Language**: Python 3.10+
 - **CAD Kernel**: `build123d` (essential for programmatic generation).
 - **Physics Engine**: `mujoco` (standard for the project).
-- **LLM Interface**: `langchain` or direct API calls (consistent with Agent implementation).
+- **Agent Interface**: Standard Agent (Shell + File Access).
+- **LLM Interface**: `langchain` or direct API calls.
 - **File Structure**:
   - `src/generators/`: The generation logic.
   - `scenarios/staging/`: Temporary hold for generated items.
@@ -125,6 +126,6 @@ The system ensures that every generated scenario is robust, randomized, and phys
 ## 6. Assumptions
 
 - **Default Workspace**: Unless otherwise specified, the system assumes a standard "Domain Box" of **100x100x100mm** for all benchmark scenarios.
-- **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax, the syntax as a whole. The system MUST provide the agent with a `search_docs` tool to verify syntax during plan and code generation.
+- **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax. The system **MUST** provide the agent with access to `docs/skills/` via standard file viewing tools to verify syntax.
 - We can run MuJoCo headless in the dev environment for the stability checks.
 - The "Human-in-the-loop" UI (Feature 007) will consume the file structure defined here, but this feature (005) does not build the UI itself (only the CLI and artifacts).

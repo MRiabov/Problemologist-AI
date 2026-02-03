@@ -14,11 +14,12 @@ This system bridges the gap between **Static CAD** (geometry) and **Dynamic Func
 
 ### 2.1. Primary Goals
 
-1. **Secure Execution Sandbox**: Execute all untrusted agent code (Python scripts, control policies) inside transient Podman containers with strict resource limits (CPU, Memory) and network isolation.
-2. **Automated MJCF Generation**: Convert `build123d` Compound objects into valid MuJoCo XML (MJCF) assets with convex hull decomposition for accurate collisions.
-3. **Zone-Based Logic**: Automatically detect special transparent volumes in the environment model (named "goal", "forbid", "start") to configure simulation logic.
-4. **Complete Python Environment**: Support execution of arbitrary Python logic, not just simulation steps. This allows agents to perform computation, data analysis, or complex reasoning tasks within the safe environment.
-5. **Deterministic Randomization**: Support defining "Scenario Generators" where obstacles and goals are randomized per episode but reproducible via seed.
+1. **Secure Execution Sandbox**: Execute all untrusted agent code (Python scripts, control policies) inside isolated Podman containers.
+2. **Persistent Sessions**: Support long-running container sessions where agents can execute multiple commands (`ls`, `edit`, `python run.py`) sequentially without losing state or incurring startup latency.
+3. **Automated MJCF Generation**: Convert `build123d` Compound objects into valid MuJoCo XML (MJCF) assets with convex hull decomposition for accurate collisions.
+4. **Zone-Based Logic**: Automatically detect special transparent volumes in the environment model (named "goal", "forbid", "start") to configure simulation logic.
+5. **Complete Python Environment**: Support execution of arbitrary Python logic, not just simulation steps.
+6. **Deterministic Randomization**: Support defining "Scenario Generators" where obstacles and goals are randomized per episode but reproducible via seed.
 
 ### 2.2. Success Criteria
 
