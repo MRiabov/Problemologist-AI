@@ -147,19 +147,22 @@ async def read_skill_async(
     skill_name: str, filename: str, resource_type: Optional[str] = None
 ) -> str:
     """Async wrapper for reading a skill."""
-    return await asyncio.to_thread(
-        _get_runtime().read_skill, skill_name, filename, resource_type
+    return await _run_env_step(
+        "read_skill",
+        skill_name=skill_name,
+        filename=filename,
+        resource_type=resource_type,
     )
 
 
 async def list_skills_async() -> str:
     """Async wrapper for listing skills."""
-    return await asyncio.to_thread(_get_runtime().list_skills)
+    return await _run_env_step("list_skills")
 
 
 async def list_skill_files_async(skill_name: str) -> str:
     """Async wrapper for listing skill files."""
-    return await asyncio.to_thread(_get_runtime().list_skill_files, skill_name)
+    return await _run_env_step("list_skill_files", skill_name=skill_name)
 
 
 async def update_skill_async(
@@ -169,55 +172,62 @@ async def update_skill_async(
     resource_type: Optional[str] = None,
 ) -> str:
     """Async wrapper for updating a skill."""
-    return await asyncio.to_thread(
-        _get_runtime().update_skill, skill_name, content, filename, resource_type
+    return await _run_env_step(
+        "update_skill",
+        skill_name=skill_name,
+        content=content,
+        filename=filename,
+        resource_type=resource_type,
     )
 
 
 async def init_skill_async(skill_name: str) -> str:
     """Async wrapper for initializing a skill."""
-    return await asyncio.to_thread(_get_runtime().init_skill, skill_name)
+    return await _run_env_step("init_skill", skill_name=skill_name)
 
 
 async def package_skill_async(skill_name: str) -> str:
     """Async wrapper for packaging a skill."""
-    return await asyncio.to_thread(_get_runtime().package_skill, skill_name)
+    return await _run_env_step("package_skill", skill_name=skill_name)
 
 
 async def run_skill_script_async(
     skill_name: str, script_name: str, arguments: str = ""
 ) -> str:
     """Async wrapper for running a skill script."""
-    return await asyncio.to_thread(
-        _get_runtime().run_skill_script, skill_name, script_name, arguments
+    return await _run_env_step(
+        "run_skill_script",
+        skill_name=skill_name,
+        script_name=script_name,
+        arguments=arguments,
     )
 
 
 async def read_script_async(path: str) -> str:
     """Async wrapper for reading a script."""
-    return await asyncio.to_thread(_get_runtime().read_script, path)
+    return await _run_env_step("read_script", filename=path)
 
 
 async def view_file_async(path: str) -> str:
     """Async wrapper for viewing a file."""
-    return await asyncio.to_thread(_get_runtime().view_file, path)
+    return await _run_env_step("view_file", path=path)
 
 
 async def run_command_async(command: str) -> str:
     """Async wrapper for running a command."""
-    return await asyncio.to_thread(_get_runtime().run_command, command)
+    return await _run_env_step("run_command", command=command)
 
 
 async def start_session_async(session_id: str) -> str:
     """Async wrapper for starting a session."""
-    return await asyncio.to_thread(_get_runtime().start_session, session_id)
+    return await _run_env_step("start_session", session_id=session_id)
 
 
 async def stop_session_async() -> str:
     """Async wrapper for stopping a session."""
-    return await asyncio.to_thread(_get_runtime().stop_session)
+    return await _run_env_step("stop_session")
 
 
 async def lint_script_async(filename: str) -> str:
     """Async wrapper for linting a script."""
-    return await asyncio.to_thread(_get_runtime().lint_script, filename)
+    return await _run_env_step("lint_script", filename=filename)
