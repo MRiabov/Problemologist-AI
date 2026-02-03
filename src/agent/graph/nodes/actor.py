@@ -59,14 +59,6 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
         if "actor" in overrides:
             system_prompt = get_prompt(overrides["actor"])
 
-    # Mandatory skill check instruction
-    system_prompt += (
-        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use `view_file` "
-        "to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. "
-        "It contains expert knowledge, curated patterns, and critical pitfalls."
-        "\n\nNOTE: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal."
-    )
-
     if state.get("step_count", 0) > 5:
         system_prompt += (
             "\n\nCRITICAL: You have taken more than 5 steps without successful "

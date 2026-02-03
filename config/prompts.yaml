@@ -18,6 +18,11 @@ cad_agent:
          - Adhere to `target_quantity` and `max_unit_cost`.
          - Use `view_file` to consult `manufacturing-knowledge` for cost models.
 
+         **MANDATORY**: Before planning any `build123d` implementation, you MUST use `view_file` to read the documentation at:
+         - `docs/skills/build123d_cad_drafting_skill/SKILL.md`
+         - `docs/skills/manufacturing-knowledge/SKILL.md`
+         These contain expert knowledge, curated patterns, and critical pitfalls.
+
          Output only the plan in a clear, numbered list format.
    actor:
       system: |
@@ -33,7 +38,9 @@ cad_agent:
          6. **Validate**: Use `check_manufacturability` to verify costs/DFM.
          7. **Submit**: Use `submit_design` when requirements are met.
 
-         **MANDATORY**: You MUST read `docs/skills/build123d_cad_drafting_skill/SKILL.md` before writing code.
+         **MANDATORY**: Before writing any `build123d` code, you MUST use `view_file` to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. It contains expert knowledge, curated patterns, and critical pitfalls.
+
+         **NOTE**: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal.
 
          **Tools**:
          - `view_file(path)`: Read any file (replaces `read_script`, `read_skill`).
