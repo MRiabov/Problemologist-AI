@@ -1,6 +1,7 @@
 import uuid
+from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Generator
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, create_engine
 from sqlalchemy.orm import (
@@ -98,7 +99,10 @@ class DatabaseManager:
                 cursor.close()
 
         self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False,
+            bind=self.engine,
         )
 
     def create_tables(self):
@@ -110,6 +114,19 @@ class DatabaseManager:
 
     def get_session(self) -> Session:
         return self.SessionLocal()
+
+    @contextmanager
+    def session_scope(self) -> Generator[Session, None, None]:
+        """Provide a transactional scope around a series of operations."""
+        session = self.SessionLocal()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def create_episode(self, problem_id: str) -> Episode:
         session = self.get_session()
