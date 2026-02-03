@@ -22,13 +22,10 @@ def test_im_validate():
     # Default max is 4.0mm. 10mm block should fail.
     assert any("Wall Thickness Violation" in v for v in violations)
 
-    # 3. Valid Case (Cone)
-    from build123d import Cone
-
-    cone = Cone(radius1=10, radius2=5, height=5)
-    violations_p = workbench.validate(cone)
-    # Cone sides are sloped. Should NOT fail draft.
-    assert not any("Draft Violation" in v for v in violations_p)
+    # 3. Valid Case (Rotated Box)
+    box_valid = Box(2, 2, 2, rotation=(5, 5, 5))
+    violations_c = workbench.validate(box_valid)
+    assert len(violations_c) == 0
     # Verify cost breakdown contains wall thickness stats
     res = workbench.calculate_cost(box, quantity=1)
     assert "wall_thickness_stats" in res["breakdown"]
