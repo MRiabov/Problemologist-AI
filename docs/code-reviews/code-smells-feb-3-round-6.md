@@ -28,7 +28,9 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
-<!-- User comments here -->
+Use Pydantic models instead of JSON. We'll be moving away from using JSON files anywhere. it's an antipattern. (if this is feasible).
+Yes, and remove all the injected python code. Definitely a bad pattern. I suspect there is more than just these two.
+Let's the folder that contains all the scripts as "assets"? or similar. To make clear it's not actually logic.
 
 ---
 
