@@ -20,5 +20,5 @@ def resolve_artifact_path(path_or_name: str) -> Path:
         return direct_path
 
     # Try in default artifacts folder
-    fallback_path = root / "workspace" / "artifacts" / path_or_name
+    fallback_path = root / "workspaces" / "main" / "artifacts" / path_or_name
     return fallback_path

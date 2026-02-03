@@ -235,7 +235,7 @@ def generate(
 
                 # 3. Validation
                 print(f"DEBUG: Validating MJCF for seed {seed}")
-                temp_assets_path = Path("workspace_gen") / rel_temp_assets
+                temp_assets_path = Path("workspaces/gen").resolve() / rel_temp_assets
                 report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
 
                 if report["is_valid"]:
@@ -248,7 +248,9 @@ def generate(
                     xml_path.write_text(mjcf_xml)
 
                     # Move temp assets to final assets
-                    temp_assets_path = Path("workspace_gen") / rel_temp_assets
+                    temp_assets_path = (
+                        Path("workspaces/gen").resolve() / rel_temp_assets
+                    )
                     final_assets_path = scenario_dir / "assets"
                     generated_meshes = []
                     if temp_assets_path.exists():
