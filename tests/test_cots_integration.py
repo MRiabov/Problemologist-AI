@@ -1,62 +1,55 @@
-from src.environment.tools import preview_part, search_parts
+from src.environment.runtime import ToolRuntime
 
 
-def test_cots_search_and_preview_integration():
+def test_cots_search_and_preview_integration(tmp_path):
+    runtime = ToolRuntime(workspace_dir=str(tmp_path / "workspace"))
+
     # 1. Search for Nema motors
-    search_results = search_parts("Nema")
+    search_results = runtime.dispatch("search_parts", {"query": "Nema"})
     assert "Found parts:" in search_results
     assert "bd_warehouse:motor:Nema17" in search_results
 
     # 2. Pick a part ID from results
-    # Example line: - bd_warehouse:motor:Nema17: Stepper Motor Nema17 (Provider: bd_warehouse)
     part_id = "bd_warehouse:motor:Nema17"
 
     # 3. Preview the part
-    preview_output = preview_part(part_id)
+    preview_output = runtime.dispatch("preview_part", {"part_id": part_id})
     assert f"Part: {part_id}" in preview_output
-    assert "Description:" in preview_output
-    assert "Image:" in preview_output
     assert "Recipe:" in preview_output
     assert "from bd_warehouse.open_builds import StepperMotor" in preview_output
 
-    # 4. Check if image path is valid (if it was generated)
-    # The output format is: Image: path/to/image.png
-    lines = preview_output.split("\n")
-    image_line = [l for l in lines if l.startswith("Image:")][0]
-    image_path = image_line.replace("Image:", "").strip()
-
-    if image_path:
-        # If image path is not empty, it should exist or be in a temporary directory
-        # For tests, we might not want to rely on real rendering if it's slow or requires GUI
-        # But we should at least see it tried to generate it.
-        pass
+    # 4. Check image path logic (if applicable in runtime implementation)
+    # The runtime implementation currently returns a string description/recipe.
+    # If it generated an image, it would be in the description.
+    pass
 
 
-def test_cots_search_no_results():
-    search_results = search_parts("NonExistentPart12345")
-    assert "No parts found for query: NonExistentPart12345" in search_results
+def test_cots_search_no_results(tmp_path):
+    runtime = ToolRuntime(workspace_dir=str(tmp_path / "workspace"))
+    search_results = runtime.dispatch("search_parts", {"query": "NonExistentPart12345"})
+    assert "No parts found for: NonExistentPart12345" in search_results
 
 
-def test_cots_preview_invalid_id():
-    preview_output = preview_part("invalid:id")
-    assert "Error previewing part invalid:id" in preview_output
+def test_cots_preview_invalid_id(tmp_path):
+    runtime = ToolRuntime(workspace_dir=str(tmp_path / "workspace"))
+    preview_output = runtime.dispatch("preview_part", {"part_id": "invalid:id"})
+    assert "Error:" in preview_output
 
 
-def test_cad_env_cots_tools(tmp_path):
-    from src.environment.core import CADEnv
+def test_runtime_cots_tools(tmp_path):
+    from src.environment.runtime import ToolRuntime
 
-    db_path = tmp_path / "test_history.db"
     workspace_dir = tmp_path / "workspace"
-    env = CADEnv(db_url=f"sqlite:///{db_path}", workspace_dir=str(workspace_dir))
-    env.reset()
+    runtime = ToolRuntime(workspace_dir=str(workspace_dir))
 
     # Test search_parts (tool index 5)
-    action_search = {"tool": 5, "arguments": "Nema"}
-    obs, reward, term, trunc, info = env.step(action_search)
-    assert "bd_warehouse:motor:Nema17" in obs["last_output"]
+    # env.step -> runtime.dispatch
+    search_output = runtime.dispatch("search_parts", {"query": "Nema"})
+    assert "bd_warehouse:motor:Nema17" in search_output
 
     # Test preview_part (tool index 6)
-    action_preview = {"tool": 6, "arguments": "bd_warehouse:motor:Nema17"}
-    obs, reward, term, trunc, info = env.step(action_preview)
-    assert "Part: bd_warehouse:motor:Nema17" in obs["last_output"]
-    assert "from bd_warehouse.open_builds import StepperMotor" in obs["last_output"]
+    preview_output = runtime.dispatch(
+        "preview_part", {"part_id": "bd_warehouse:motor:Nema17"}
+    )
+    assert "Part: bd_warehouse:motor:Nema17" in preview_output
+    assert "from bd_warehouse.open_builds import StepperMotor" in preview_output

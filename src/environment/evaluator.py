@@ -1,5 +1,5 @@
 import hashlib
-
+import json
 from pathlib import Path
 from typing import Any
 
@@ -17,48 +17,22 @@ class Evaluator:
         self.sandbox = sandbox
         self.workspace_dir = str(Path(workspace_dir).resolve())
 
-    def _get_runner_script_prefix(self) -> str:
-        return """
-import sys
-import json
-import hashlib
-from pathlib import Path
-import build123d as bd
+    def _load_script_asset(self, script_name: str) -> str:
+        """Loads a helper script from the assets directory."""
+        # Assume assets/scripts is relative to src/assets/scripts
+        # We need to find the project root or use relative path from this file
 
-sys.path.append("/workspace")
+        # This file is in src/environment/evaluator.py
+        # scripts are in src/assets/scripts/
+        base_path = Path(__file__).parent.parent / "assets" / "scripts"
+        script_path = base_path / script_name
 
-def get_export_obj(locs):
-    # Prefer 'result' if it exists and is a valid shape or list of shapes
-    if "result" in locs:
-        val = locs["result"]
-        if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
-            return val
-        if isinstance(val, list) and all(isinstance(x, (bd.Compound, bd.Solid, bd.Shape)) for x in val):
-            return bd.Compound(val)
+        if not script_path.exists():
+            raise FileNotFoundError(
+                f"Runner script {script_name} not found at {script_path}"
+            )
 
-    for val in locs.values():
-        if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
-            return val
-        elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
-            return val.part
-        elif hasattr(val, "sketch") and isinstance(val.sketch, bd.Shape):
-            return val.sketch
-        elif hasattr(val, "line") and isinstance(val.line, bd.Shape):
-            return val.line
-    return None
-
-def parse_label(label, default_q, default_p):
-    data = {"quantity": default_q, "process": default_p}
-    if not label: return data
-    for p in str(label).split("|"):
-        if ":" in p:
-            k, v = p.split(":", 1)
-            if k == "quantity":
-                try: data["quantity"] = int(v)
-                except: pass
-            elif k == "process": data["process"] = v
-    return data
-"""
+        return script_path.read_text(encoding="utf-8")
 
     def preview_design(
         self, filename: str = "design.py", session_id: str | None = None
@@ -70,67 +44,93 @@ def parse_label(label, default_q, default_p):
         if not script_path.exists():
             return f"Error: File {filename} does not exist."
 
-        runner_filename = f"runner_{filename}"
-        result_file = "preview_result.json"
+        runner_filename = "runner_preview.py"
+        config_filename = "preview_config.json"
 
-        runner_script = (
-            self._get_runner_script_prefix()
-            + f"""
-from build123d import ExportSVG, Drawing, Unit
+        # 1. Prepare Config
+        config = {"filename": filename, "output_path": "preview_result.json"}
 
-result = {{
-    "status": "error",
-    "preview_file": None,
-    "error": None
-}}
+        # 2. Write Config and Runner to workspace (via sandbox helper or file write)
+        # Assuming we can write files via sandbox helper or tool?
+        # Actually run_sandboxed_script takes script_content.
+        # But we want to run the script file we loaded.
 
-try:
-    locs = {{}}
-    with Path("/workspace/{filename}").open("r", encoding="utf-8") as f:
-        code = f.read()
-    exec(code, globals(), locs)
+        runner_content = self._load_script_asset("preview_runner.py")
 
-    export_obj = get_export_obj(locs)
+        # We need to write the config file first.
+        # Since run_sandboxed_script only runs ONE file, we might need a wrapper or
+        # use a tool to write the config first.
+        # However, for simplicity/compatibility, we can inject the config creation at the top
+        # of the runner script if we really have to, OR we can depend on the agent writing it?
+        # No, the evaluator should be self-contained.
 
-    if export_obj:
-        svg_filename = f"{{Path('{filename}').stem}}.svg"
-        svg_path = Path("/workspace") / svg_filename
+        # HACK: Prepend the config writing to the runner content?
+        # "with open('config.json', 'w') as f: json.dump(..., f)"
+        # Or just pass arguments via command line?
+        # run_sandboxed_script runs `python <file>`. We can't easily pass args unless supported.
+        # Let's check `run_sandboxed_script` signature/impl. It likely just runs `python script.py`.
 
-        try:
-            drawing = Drawing(export_obj)
-            exporter = ExportSVG(unit=Unit.MM)
-            exporter.add_layer("visible", line_color=(0,0,0), line_weight=0.2)
-            exporter.add_shape(drawing.visible_lines, layer="visible")
-            exporter.write(str(svg_path))
-            result["status"] = "success"
-            result["preview_file"] = svg_filename
-        except Exception as e:
-            result["error"] = str(e)
-    else:
-        result["error"] = "No 3D object found"
+        # Alternative: We wrap the runner.
+        # We'll use a tiny bootstrapper string that writes the config and then the real runner logic.
 
-except Exception as e:
-    result["error"] = str(e)
+        bootstrap_script = f'''
+import json
+import sys
 
-with open("/workspace/{result_file}", "w") as f:
-    json.dump(result, f)
+config = {json.dumps(config)}
+with open("{config_filename}", "w") as f:
+    json.dump(config, f)
+
+# Embed the actual runner code here to ensure it runs
+{runner_content}
+
+# Now we need to make sure the runner's main() is called with the config arg
+if __name__ == "__main__":
+    sys.argv = ["preview_runner.py", "{config_filename}"]
+    main()
+'''
+        # Note: The imported runner script has `if __name__ == "__main__": main()` at the bottom.
+        # We need to be careful not to trigger it twice or with wrong args.
+        # If we paste the content, the `if __name__` block will execute.
+        # Since we control the pasted content, we can strip the last lines or just override sys.argv BEFORE the paste.
+        # Better: The pasted content defines main(). We just call it.
+
+        # Let's simplify: We'll overwrite the `if __name__ == "__main__":` block in the loaded content
+        # or just rely on the fact that if we use `run_sandboxed_script`, it saves the content to `runner_filename`.
+        # And runs `python runner_filename`.
+        # So we can just bake the arg into the script or use a fixed config filename.
+
+        # Let's bake the config into a file using a preamble.
+
+        runner_with_config = (
+            f"""
+import json
+import sys
+
+# Write config
+with open("{config_filename}", "w") as f:
+    f.write({repr(json.dumps(config))})
+
+# Set args so main() picks it up
+sys.argv = ["runner.py", "{config_filename}"]
+
 """
+            + runner_content
         )
 
         res = run_sandboxed_script(
             sandbox=self.sandbox,
-            script_content=runner_script,
-            result_file_name=result_file,
+            script_content=runner_with_config,
+            result_file_name="preview_result.json",
             runner_file_name=runner_filename,
             session_id=session_id,
         )
 
         # Check for system/sandbox errors
         if res.get("status") == "error" and "error_type" in res:
-            # This is a sandbox error (timeout, crash, etc)
             return f"Error generating preview: {res.get('message')}"
 
-        # Check for script errors (from the JSON result)
+        # Check for script errors
         if res.get("status") == "success":
             return f"Preview generated: {res['preview_file']}"
 
@@ -149,92 +149,57 @@ with open("/workspace/{result_file}", "w") as f:
         script_path = Path(self.workspace_dir) / design_file
 
         if not script_path.exists():
-            return {"error": f"File {design_file} does not exist."}
+            return ValidationReport(
+                status="fail",
+                manufacturability_score=0.0,
+                violations=[],
+                cost_analysis=CostBreakdown(
+                    process=process,
+                    total_cost=0.0,
+                    unit_cost=0.0,
+                    material_cost_per_unit=0.0,
+                ),
+                error=f"File {design_file} does not exist.",
+            )
 
         runner_filename = (
             f"val_runner_{hashlib.md5(design_file.encode()).hexdigest()[:8]}.py"
         )
+        config_filename = "validation_config.json"
         result_file = "validation_result.json"
-        stl_filename = "design.stl"
 
-        runner_script = (
-            self._get_runner_script_prefix()
-            + f"""
-from src.workbenches.cnc import CNCWorkbench
-from src.workbenches.injection_molding import InjectionMoldingWorkbench
-from src.workbenches.print_3d import Print3DWorkbench
-from src.compiler import geometry
+        # 1. Prepare Config
+        config = {
+            "design_file": design_file,
+            "process": process,
+            "quantity": quantity,
+            "export_stl": export_stl,
+            "output_path": result_file,
+        }
 
-result = {{
-    "status": "fail",
-    "manufacturability_score": 0.0,
-    "violations": [],
-    "parts": [],
-    "cost_analysis": {{"total_cost": 0.0, "unit_cost": 0.0, "target_quantity": {quantity}}},
-    "stl_path": None,
-    "error": None
-}}
+        # 2. Load runner code
+        runner_content = self._load_script_asset("validation_runner.py")
 
-try:
-    locs = {{}}
-    with Path("/workspace/{design_file}").open("r", encoding="utf-8") as f:
-        code = f.read()
-    exec(code, globals(), locs)
+        # 3. Inject config writer preamble
+        runner_with_config = (
+            f"""
+import json
+import sys
 
-    export_obj = get_export_obj(locs)
-    if not export_obj:
-        raise ValueError("No 3D object found")
+# Write config
+with open("{config_filename}", "w") as f:
+    f.write({repr(json.dumps(config))})
 
-    all_solids = list(export_obj.solids()) if isinstance(export_obj, bd.Compound) else [export_obj]
+# Set args
+sys.argv = ["runner.py", "{config_filename}"]
 
-    workbenches = {{
-        "cnc": CNCWorkbench(), "injection_molding": InjectionMoldingWorkbench(), "print_3d": Print3DWorkbench()
-    }}
-
-    total_cost, all_violations, part_reports, reuse_ctx = 0.0, [], [], {{}}
-
-    for i, solid in enumerate(all_solids):
-        ldata = parse_label(getattr(solid, "label", ""), {quantity}, "{process}")
-        wb = workbenches.get(ldata["process"], workbenches.get("{process}", workbenches["print_3d"]))
-
-        violations = wb.validate(solid)
-        all_violations.extend(violations)
-        cost_res = wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
-        
-        # cost_res is now a CostBreakdown dataclass
-        # Convert to dict for JSON serialization
-        import dataclasses
-        breakdown_dict = dataclasses.asdict(cost_res)
-        cost = cost_res.total_cost
-
-        total_cost += cost
-
-        part_reports.append({{
-            "part_index": i, "process": ldata["process"], "quantity": ldata["quantity"],
-            "cost": cost, "breakdown": breakdown_dict, "violations": [str(v) for v in violations]
-        }})
-
-    result["status"] = "pass" if not all_violations else "fail"
-    result["manufacturability_score"] = max(0.0, 1.0 - len(all_violations)*0.1)
-    result["violations"] = [{{"description": str(v)}} for v in all_violations]
-    result["parts"], result["cost_analysis"]["total_cost"] = part_reports, total_cost
-    result["cost_analysis"]["unit_cost"] = total_cost / {quantity} if {quantity} > 0 else 0.0
-
-    if {export_stl} and not all_violations:
-        geometry.export_mesh(export_obj, "/workspace/{stl_filename}")
-        result["stl_path"] = "{stl_filename}"
-
-except Exception as e:
-    result["error"] = str(e)
-
-with open("/workspace/{result_file}", "w") as f:
-    json.dump(result, f)
 """
+            + runner_content
         )
 
         res = run_sandboxed_script(
             sandbox=self.sandbox,
-            script_content=runner_script,
+            script_content=runner_with_config,
             result_file_name=result_file,
             runner_file_name=runner_filename,
             session_id=session_id,
@@ -255,12 +220,15 @@ with open("/workspace/{result_file}", "w") as f:
             )
 
         # Reconstruct models from JSON response
+        # Note: ValidationReport expects objects, but pydantic can validate from dict if configured.
+        # But we are constructing it manually here to be safe and explicit.
+
         cost_info = res.get("cost_analysis", {})
         cost_breakdown = CostBreakdown(
-            process=process,  # Root process
+            process=process,
             total_cost=cost_info.get("total_cost", 0.0),
             unit_cost=cost_info.get("unit_cost", 0.0),
-            material_cost_per_unit=0.0,  # Aggregated doesn't have a single material cost
+            material_cost_per_unit=0.0,  # This is lost in aggregation unless we check details
             setup_cost=0.0,
             details={"parts": res.get("parts", [])},
         )

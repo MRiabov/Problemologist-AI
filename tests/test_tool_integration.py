@@ -1,5 +1,5 @@
-from src.environment.runtime import ToolRuntime
 from src.compiler.models import ValidationReport
+from src.environment.runtime import ToolRuntime
 
 
 def test_agent_exposure(tmp_path):

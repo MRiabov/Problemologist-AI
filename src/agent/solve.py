@@ -16,7 +16,7 @@ console = Console()
 
 async def solve_environment(problem_id: str, thread_id: str | None = None):
     """
-    Initializes a CADEnv and has the agent solve it autonomously.
+    Initializes a ToolRuntime and has the agent solve it autonomously.
     """
     if thread_id is None:
         thread_id = f"solve_{str(uuid.uuid4())[:8]}"

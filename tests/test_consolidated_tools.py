@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 import pytest
-from src.environment.core import CADEnv
+
 from src.environment.runtime import ToolRuntime
 from src.agent.utils.config import Config
 
@@ -20,12 +20,7 @@ def runtime(test_workspace):
     return ToolRuntime(test_workspace)
 
 
-@pytest.fixture
-def env(test_workspace, tmp_path):
-    db_path = tmp_path / "test.db"
-    env = CADEnv(db_url=f"sqlite:///{db_path}", workspace_dir=test_workspace)
-    env.reset()
-    return env
+# CADEnv fixture removed
 
 
 def test_runtime_write_file(runtime, test_workspace):
@@ -96,30 +91,6 @@ def test_runtime_edit_file_ambiguous(runtime):
     assert "Error: 'find' string is ambiguous" in result
 
 
-def test_cadenv_dispatch_integration(env, test_workspace):
-    # Test dispatching a tool call through CADEnv (which logs to DB)
-    tool_name = "write_file"
-    arguments = {"content": "new content", "path": "sub/test.txt", "mode": "overwrite"}
-
-    output = env.dispatch(tool_name, arguments)
-
-    assert "Successfully wrote" in output
-    full_path = Path(test_workspace) / "sub/test.txt"
-    assert full_path.exists()
-    assert full_path.read_text() == "new content"
-
-    # Verify persistence (implicit check as dispatch worked and we didn't crash)
-    assert env.step_count == 1
-
-
-def test_cadenv_dispatch_edit_file(env, test_workspace):
-    # Pre-write a file
-    Path(test_workspace, "edit_test.txt").write_text("hello world")
-
-    tool_name = "edit_file"
-    arguments = {"path": "edit_test.txt", "find": "world", "replace": "universe"}
-
-    output = env.dispatch(tool_name, arguments)
-
-    assert "Successfully edited" in output
-    assert Path(test_workspace, "edit_test.txt").read_text() == "hello universe"
+# CADEnv tests removed as CADEnv is deprecated.
+# ToolRuntime dispatch logic is tested implicitly by agent integration tests and explicitly in test_core.py.
+# The remaining tests in this file focused on ToolRuntime specific methods are still valid.
