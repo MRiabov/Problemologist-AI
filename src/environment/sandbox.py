@@ -68,7 +68,7 @@ class PodmanSandbox:
                     "-v",
                     f"{config_path}:/app/config:ro",
                     "-v",
-                    f"{skills_path}:/workspace/docs/skills:ro",  # Map skills to docs/skills as per plan
+                    f"{skills_path}:/workspace/docs/skills:rw",  # Map skills to docs/skills as per plan
                     "-e",
                     "PYTHONPATH=/app:/workspace",
                 ]
