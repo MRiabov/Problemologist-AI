@@ -10,7 +10,11 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.environment.sandbox import PodmanSandbox
-from src.generators.benchmark.agent import generator_agent
+from src.generators.benchmark.agent import (
+    DEFAULT_RUNTIME_CONFIG,
+    _DEFAULT_RUNTIME,
+    generator_agent,
+)
 from src.generators.benchmark.renderer import render_scenario
 from src.generators.benchmark.types import ScenarioManifest
 from src.generators.benchmark.validator import validate_mjcf
@@ -178,7 +182,15 @@ def generate(
             f"- Target Quantity: {target_quantity}\n"
             f"- Max Unit Cost: ${max_unit_cost}"
         )
-        state = generator_agent.invoke({"request": full_prompt, "attempts": 0})
+        config = {"configurable": {"runtime": _DEFAULT_RUNTIME}}
+        state = generator_agent.invoke(
+            {
+                "request": full_prompt,
+                "attempts": 0,
+                "runtime_config": DEFAULT_RUNTIME_CONFIG,
+            },
+            config=config,
+        )
 
     if not state.get("validation_passed"):
         console.print(

@@ -4,23 +4,28 @@ from src.agent.tools.benchmark_tools import (
     run_benchmark_linter,
     validate_benchmark_model,
 )
-from src.agent.tools.env import view_file
+from src.environment.runtime import ToolRuntime
 
 # Constants used by dashboard
 MAX_ATTEMPTS = Config.MAX_STEPS
 
+# Default runtime for module-level agent instance
+_DEFAULT_RUNTIME = ToolRuntime("workspace")
+
 
 # Helper to build the configured agent
-def build_benchmark_agent():
+def build_benchmark_agent(runtime: ToolRuntime = _DEFAULT_RUNTIME):
     """
     Builds the VLM CAD Agent configured for Benchmark Generation.
     It injects:
     1. Benchmark-specific tools (linter, validator).
     2. Benchmark-specific system prompts (via runtime_config).
     """
-    tools = [run_benchmark_linter, validate_benchmark_model, view_file]
+    tools = [run_benchmark_linter, validate_benchmark_model]
     return build_graph(
-        extra_tools=tools, validation_tool_name="validate_benchmark_model"
+        runtime=runtime,
+        extra_tools=tools,
+        validation_tool_name="validate_benchmark_model",
     )
 
 

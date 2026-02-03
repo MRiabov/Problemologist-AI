@@ -1,26 +1,42 @@
+import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import StructuredTool
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env import update_skill
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.llm import get_model
 
 
-async def skill_populator_node(state: AgentState):
+async def skill_populator_node(state: AgentState, config: RunnableConfig):
     """
     Populates the skill with insights after a definitive failure or timeout.
     """
-    set_current_role("SkillPopulator")
+    runtime = config.get("configurable", {}).get("runtime")
     log_to_env(
         "Analyzing failure and populating skills with lessons learned...",
         agent_role="SkillPopulator",
+        runtime=runtime,
     )
 
     # Check if we actually failed (e.g., step_count > MAX_STEPS or explicit failure)
     # For now, we assume this node is only reached on failure path.
 
+    async def update_skill_func(
+        skill_name: str,
+        content: str,
+        filename: str = "SKILL.md",
+        resource_type: str | None = None,
+    ) -> str:
+        """
+        Updates or adds information to a specialized skill folder.
+        """
+        return await asyncio.to_thread(
+            runtime.update_skill, skill_name, content, filename, resource_type
+        )
+
+    update_skill = StructuredTool.from_function(update_skill_func, name="update_skill")
     model = get_model(Config.LLM_MODEL).bind_tools([update_skill])
 
     # Extract conversation summary or last few messages to understand failure

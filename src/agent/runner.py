@@ -14,21 +14,27 @@ from rich.panel import Panel
 from src.agent.graph.graph import build_graph
 from src.agent.utils.checkpoint import get_checkpointer
 from src.agent.utils.visualize import console, visualize_event
+from src.environment.runtime import ToolRuntime
 
 
-async def run_agent(query: str, thread_id: str = None):
+async def run_agent(
+    query: str, thread_id: str = None, runtime: ToolRuntime | None = None
+):
     """
     Initializes and runs the agent graph with the given query.
     """
     if thread_id is None:
         thread_id = str(uuid.uuid4())
 
+    if runtime is None:
+        runtime = ToolRuntime("workspace")
+
     # 1. Initialize Checkpointer
     # get_checkpointer returns an AsyncSqliteSaver (which is an async context manager)
     async with get_checkpointer() as checkpointer:
         # 2. Build and Compile Graph
         # We use the checkpointer for persistence
-        app = build_graph().compile(checkpointer=checkpointer)
+        app = build_graph(runtime=runtime).compile(checkpointer=checkpointer)
 
         # 3. Prepare initial state and config
         initial_state = {
@@ -38,7 +44,7 @@ async def run_agent(query: str, thread_id: str = None):
             "scratchpad": {},
         }
 
-        config = {"configurable": {"thread_id": thread_id}}
+        config = {"configurable": {"thread_id": thread_id, "runtime": runtime}}
 
         console.print(
             Panel(

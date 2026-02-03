@@ -8,33 +8,24 @@ from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
-from src.agent.tools.env import (
-    write_file,
-    edit_file,
-    submit_design,
-    check_manufacturability,
-    view_file,
-    run_command,
-    preview_design,
-    search_docs,
-    search_parts,
-    preview_part,
-    lint_script,
-)
-from src.agent.tools.memory import read_journal
+from src.agent.tools.factory import create_tools
 from src.agent.utils.config import Config
+from src.environment.runtime import ToolRuntime
 
 
 from functools import partial
 
 
 def build_graph(
-    extra_tools: Optional[list] = None, validation_tool_name: str = "submit_design"
+    runtime: ToolRuntime,
+    extra_tools: Optional[list] = None,
+    validation_tool_name: str = "submit_design",
 ):
     """
     Constructs the LangGraph for the VLM CAD Agent.
 
     Args:
+        runtime: The ToolRuntime instance to bind tools to.
         extra_tools: Optional list of additional tools to include.
         validation_tool_name: The name of the tool that triggers a critic review (default: submit_design).
     """
@@ -42,20 +33,7 @@ def build_graph(
     builder = StateGraph(AgentState)
 
     # ToolNode implementation
-    tools = [
-        write_file,
-        edit_file,
-        view_file,
-        run_command,
-        preview_design,
-        submit_design,
-        search_docs,
-        check_manufacturability,
-        read_journal,
-        search_parts,
-        preview_part,
-        lint_script,
-    ]
+    tools = create_tools(runtime)
     if extra_tools:
         tools.extend(extra_tools)
 

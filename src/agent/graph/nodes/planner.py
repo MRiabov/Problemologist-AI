@@ -1,24 +1,25 @@
+import asyncio
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
 from src.agent.utils.llm import get_model
-from src.agent.tools.env_adapter import start_session_async
 
 
-async def planner_node(state: AgentState):
+async def planner_node(state: AgentState, config: RunnableConfig):
     """
     Decides the high-level strategy and updates the plan.
     """
-    set_current_role("Planner")
-    log_to_env("Planning high-level strategy...", agent_role="Planner")
+    runtime = config.get("configurable", {}).get("runtime")
+    log_to_env("Planning high-level strategy...", agent_role="Planner", runtime=runtime)
 
     # Start persistent sandbox session if not already active
     # This ensures follow-up run_command calls will work
-    await start_session_async("vlm-cad-session")
+    if runtime:
+        await asyncio.to_thread(runtime.start_session, "vlm-cad-session")
 
     # Check if we need to re-plan based on Critic feedback
     needs_replan = False
@@ -67,13 +68,7 @@ async def planner_node(state: AgentState):
     system_prompt = get_prompt(system_prompt_key)
 
     # Mandatory skill check instruction
-    system_prompt += (
-        "\n\nMANDATORY: Before planning any `build123d` implementation, "
-        "you MUST use `view_file` to read the documentation at: "
-        "`docs/skills/build123d_cad_drafting_skill/SKILL.md` "
-        "and `docs/skills/manufacturing-knowledge/SKILL.md`. These contain expert knowledge, "
-        "curated patterns, and critical pitfalls."
-    )
+    system_prompt += get_prompt("cad_agent.planner.mandatory_instruction")
 
     # Check for overrides
     if (

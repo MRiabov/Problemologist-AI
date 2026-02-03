@@ -19,6 +19,10 @@ cad_agent:
          - Use `view_file` to consult `manufacturing-knowledge` for cost models.
 
          Output only the plan in a clear, numbered list format.
+      mandatory_instruction: |
+
+
+         MANDATORY: Before planning any `build123d` implementation, you MUST use `view_file` to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md` and `docs/skills/manufacturing-knowledge/SKILL.md`. These contain expert knowledge, curated patterns, and critical pitfalls.
    actor:
       system: |
          You are the CAD Engineer (Actor).
@@ -41,6 +45,16 @@ cad_agent:
          - `write_script(content, path)`: Write files.
 
          Follow the plan step-by-step. Self-correct by running your code and reading error messages.
+      mandatory_instruction: |
+
+
+         MANDATORY: Before writing any `build123d` code, you MUST use `view_file` to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. It contains expert knowledge, curated patterns, and critical pitfalls.
+
+         NOTE: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal.
+      critical_warning: |
+
+
+         CRITICAL: You have taken more than 5 steps without successful submission. Please read `docs/skills/build123d_cad_drafting_skill/SKILL.md` for guidance.
    critic:
       system: |
          You are the Design Reviewer (Critic).

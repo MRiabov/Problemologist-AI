@@ -1,19 +1,23 @@
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
 
-async def critic_node(state: AgentState):
+async def critic_node(state: AgentState, config: RunnableConfig):
     """
     Analyzes the output of the tools (preview/submit) and decides next steps.
     """
-    set_current_role("Critic")
-    log_to_env("Analyzing results and providing feedback...", agent_role="Critic")
+    runtime = config.get("configurable", {}).get("runtime")
+    log_to_env(
+        "Analyzing results and providing feedback...",
+        agent_role="Critic",
+        runtime=runtime,
+    )
     model = get_model(Config.LLM_MODEL)
 
     # We look at the last message, which should be a ToolMessage from the execution
@@ -36,7 +40,14 @@ async def critic_node(state: AgentState):
     response = await model.ainvoke(messages)
 
     if hasattr(response, "content") and response.content:
-        log_to_env(response.content, type="thought", agent_role="Critic")
-        log_to_env("Returning feedback to team.", type="handoff", agent_role="Critic")
+        log_to_env(
+            response.content, type="thought", agent_role="Critic", runtime=runtime
+        )
+        log_to_env(
+            "Returning feedback to team.",
+            type="handoff",
+            agent_role="Critic",
+            runtime=runtime,
+        )
 
     return {"messages": [response]}

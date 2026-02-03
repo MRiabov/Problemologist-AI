@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.panel import Panel
 
 from src.agent.runner import run_agent
-from src.agent.tools.env_adapter import set_active_env
 from src.environment.core import CADEnv
 
 console = Console()
@@ -28,10 +27,7 @@ async def solve_environment(problem_id: str, thread_id: str = None):
     # We use the defaults which will set up history.db and workspace/
     env = CADEnv(problem_id=problem_id)
 
-    # 2. Register environment for tools
-    set_active_env(env)
-
-    # 3. Reset to get the task
+    # 2. Reset to get the task
     obs, info = env.reset()
     task_description = obs["task_description"]
 
@@ -49,7 +45,7 @@ async def solve_environment(problem_id: str, thread_id: str = None):
     # We pass the task_description as the starting query.
     # The agent will use its tools to interact with the environment (via files and sim bridge).
     try:
-        await run_agent(task_description, thread_id=thread_id)
+        await run_agent(task_description, thread_id=thread_id, runtime=env.runtime)
         console.print(
             Panel(
                 "[bold green]Agent solving sequence finished.[/bold green]",

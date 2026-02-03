@@ -36,6 +36,10 @@ class CADEnv(gym.Env):
 
         # Initialize Runtime
         self.runtime = ToolRuntime(workspace_dir, None)
+        self.runtime.constraints = {
+            "max_unit_cost": self.max_unit_cost,
+            "target_quantity": self.target_quantity,
+        }
         self.workspace_dir = self.runtime.workspace_dir  # Expose absolute path
 
         # Persistence

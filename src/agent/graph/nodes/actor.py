@@ -1,50 +1,28 @@
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 from typing import Optional
 from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env import (
-    write_file,
-    edit_file,
-    view_file,
-    run_command,
-    preview_design,
-    submit_design,
-    search_docs,
-    check_manufacturability,
-    search_parts,
-    preview_part,
-)
-from src.agent.tools.env_adapter import set_current_role
-from src.agent.tools.memory import read_journal
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
 
 
-async def actor_node(state: AgentState, tools: Optional[list] = None):
+async def actor_node(
+    state: AgentState, config: RunnableConfig, tools: Optional[list] = None
+):
     """
     Executes the next step in the plan using tools.
     """
-    set_current_role("Actor")
-    log_to_env("Executing current step...", agent_role="Actor")
+    runtime = config.get("configurable", {}).get("runtime")
+    log_to_env("Executing current step...", agent_role="Actor", runtime=runtime)
     model = get_model(Config.LLM_MODEL)
 
     # Bind tools to the model
     if tools is None:
-        tools = [
-            write_file,
-            edit_file,
-            view_file,
-            run_command,
-            preview_design,
-            submit_design,
-            search_docs,
-            check_manufacturability,
-            read_journal,
-            search_parts,
-            preview_part,
-        ]
+        raise ValueError("Tools must be provided to actor_node")
+
     model_with_tools = model.bind_tools(tools)
 
     system_prompt_key = "cad_agent.actor.system"
@@ -60,19 +38,10 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
             system_prompt = get_prompt(overrides["actor"])
 
     # Mandatory skill check instruction
-    system_prompt += (
-        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use `view_file` "
-        "to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. "
-        "It contains expert knowledge, curated patterns, and critical pitfalls."
-        "\n\nNOTE: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal."
-    )
+    system_prompt += get_prompt("cad_agent.actor.mandatory_instruction")
 
     if state.get("step_count", 0) > 5:
-        system_prompt += (
-            "\n\nCRITICAL: You have taken more than 5 steps without successful "
-            "submission. Please read "
-            "`docs/skills/build123d_cad_drafting_skill/SKILL.md` for guidance."
-        )
+        system_prompt += get_prompt("cad_agent.actor.critical_warning")
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
 
@@ -91,7 +60,9 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
     # Extract reasoning if possible
     if hasattr(response, "content") and response.content:
         updates["coder_reasoning"] = response.content
-        log_to_env(response.content, type="thought", agent_role="Actor")
+        log_to_env(
+            response.content, type="thought", agent_role="Actor", runtime=runtime
+        )
 
     if hasattr(response, "tool_calls") and response.tool_calls:
         tool_names = [tc["name"] for tc in response.tool_calls]
@@ -99,6 +70,7 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
             f"Handing off to tools: {', '.join(tool_names)}",
             type="handoff",
             agent_role="Actor",
+            runtime=runtime,
         )
 
     return updates
