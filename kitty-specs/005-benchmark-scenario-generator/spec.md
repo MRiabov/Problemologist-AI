@@ -141,13 +141,14 @@ The system ensures that every generated scenario is robust, randomized, and phys
 
 ## 5. Success Criteria
 
-- **Efficiency**: Can generate and validate 10 candidate scenarios in under 5 minutes.
+- **Efficiency**: Can generate and validate 10 candidate scenarios in under 5 minutes on a standard developer machine (e.g., 8-core CPU, 16GB RAM).
 - **Yield Rate**: At least 50% of generated scripts compile and pass the stability check (Simulation Load + 1s run).
 - **Coverage**: Successfully generates at least one scenario for **Tier 1 (Spatial)** and one for **Tier 2 (Kinematic)** that meets human approval.
 - **Randomization**: A single generated script can produce at least 5 distinct, valid geometric variations (verified by differing mesh hashes/volumes).
 
 ## 6. Assumptions
 
+- **Headless Execution**: The system MUST be "headless-first," allowing all generation and validation steps to run without a GUI, suitable for CI/CD environments.
 - **Default Workspace**: Unless otherwise specified, the system assumes a standard "Domain Box" of **100x100x100mm** for all benchmark scenarios.
 - **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax, the syntax as a whole. The system MUST provide the agent with a `search_docs` tool to verify syntax during plan and code generation.
 - We can run MuJoCo headless in the dev environment for the stability checks.
