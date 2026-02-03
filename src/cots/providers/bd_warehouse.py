@@ -216,27 +216,46 @@ class BDWarehouseProvider(PartProvider):
         part = self.parts[part_id]
         params = part.params
 
-        # Recipe generation
-        if params.get("type") == "motor":
-            recipe = f'from bd_warehouse.open_builds import StepperMotor\npart = StepperMotor("{params["size"]}")'
-        elif params.get("type") == "bearing":
-            recipe = f'from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing\npart = SingleRowDeepGrooveBallBearing(size="{params["size"]}", bearing_type="{params["bearing_type"]}")'
-        elif params.get("type") == "fastener":
-            if params.get("subtype") == "screw":
-                recipe = f'from bd_warehouse.fastener import SocketHeadCapScrew\npart = SocketHeadCapScrew(size="{params["size"]}", length={params["length"]}, fastener_type="{params["fastener_type"]}")'
-            elif params.get("subtype") == "nut":
-                recipe = f'from bd_warehouse.fastener import HexNut\npart = HexNut(size="{params["size"]}", fastener_type="{params["fastener_type"]}")'
-            else:
-                recipe = "# Unknown fastener subtype"
-        elif params.get("type") == "beam":
-            if params.get("subtype") == "v_slot":
-                recipe = f'from bd_warehouse.open_builds import VSlotLinearRail\npart = VSlotLinearRail(rail_size="{params["rail_size"]}", length={params["length"]})'
-            elif params.get("subtype") == "c_beam":
-                recipe = f"from bd_warehouse.open_builds import CBeamLinearRail\npart = CBeamLinearRail(length={params['length']})"
-            else:
-                recipe = "# Unknown beam subtype"
-        else:
-            recipe = "# Recipe not implemented"
+        # Recipe generation using Python 3.12 match statements
+        match params.get("type"):
+            case "motor":
+                recipe = f'from bd_warehouse.open_builds import StepperMotor\npart = StepperMotor("{params["size"]}")'
+            case "bearing":
+                recipe = f'from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing\npart = SingleRowDeepGrooveBallBearing(size="{params["size"]}", bearing_type="{params["bearing_type"]}")'
+            case "fastener":
+                match params.get("subtype"):
+                    case "screw":
+                        recipe = (
+                            f"from bd_warehouse.fastener import SocketHeadCapScrew\n"
+                            f'part = SocketHeadCapScrew(size="{params["size"]}", '
+                            f"length={params['length']}, "
+                            f'fastener_type="{params["fastener_type"]}")'
+                        )
+                    case "nut":
+                        recipe = (
+                            f"from bd_warehouse.fastener import HexNut\n"
+                            f'part = HexNut(size="{params["size"]}", '
+                            f'fastener_type="{params["fastener_type"]}")'
+                        )
+                    case _:
+                        recipe = "# Unknown fastener subtype"
+            case "beam":
+                match params.get("subtype"):
+                    case "v_slot":
+                        recipe = (
+                            f"from bd_warehouse.open_builds import VSlotLinearRail\n"
+                            f'part = VSlotLinearRail(rail_size="{params["rail_size"]}", '
+                            f"length={params['length']})"
+                        )
+                    case "c_beam":
+                        recipe = (
+                            f"from bd_warehouse.open_builds import CBeamLinearRail\n"
+                            f"part = CBeamLinearRail(length={params['length']})"
+                        )
+                    case _:
+                        recipe = "# Unknown beam subtype"
+            case _:
+                recipe = "# Recipe not implemented"
 
         # T015/T016: Load description and metadata
         desc_data = get_description(part_id)
