@@ -1,7 +1,6 @@
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Any
-import numpy as np
 
 
 @dataclass
@@ -37,7 +36,7 @@ class ValidationReport:
 class Observation:
     step: int
     time: float
-    state_vector: np.ndarray
+    state_vector: list[float]
     energy_consumed: float
     damage_detected: float
 
