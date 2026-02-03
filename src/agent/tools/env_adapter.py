@@ -134,7 +134,7 @@ async def check_manufacturability_async(
         import json
 
         return json.loads(output)
-    except:
+    except Exception:
         return {"output": output}
 
 

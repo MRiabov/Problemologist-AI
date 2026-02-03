@@ -5,7 +5,10 @@ from bd_warehouse.open_builds import CBeamLinearRail, StepperMotor, VSlotLinearR
 from src.cots.core import Part, PartPreview, PartSummary
 from src.cots.providers.base import PartProvider
 from src.cots.rendering import render_part
+import logging
 from src.cots.utils import get_description
+
+logger = logging.getLogger(__name__)
 
 
 class BDWarehouseProvider(PartProvider):
@@ -32,7 +35,6 @@ class BDWarehouseProvider(PartProvider):
             def make_motor(s=size):
                 m = StepperMotor(s)
                 children = list(m.children)
-                print(f"DEBUG: make_motor {s} children count: {len(children)}")
                 if len(children) >= 2:
                     children[0].label = "stator"
                     children[1].label = "rotor"
@@ -77,7 +79,7 @@ class BDWarehouseProvider(PartProvider):
                     },
                 )
         except Exception as e:
-            print(f"Warning: Failed to index bearings: {e}")
+            logger.warning(f"Failed to index bearings: {e}")
 
     def _index_fasteners(self):
         # Index Screws (SocketHeadCapScrew)
@@ -113,7 +115,7 @@ class BDWarehouseProvider(PartProvider):
                     },
                 )
         except Exception as e:
-            print(f"Warning: Failed to index screws: {e}")
+            logger.warning(f"Failed to index screws: {e}")
 
         # Index Nuts (HexNut)
         try:
@@ -138,7 +140,7 @@ class BDWarehouseProvider(PartProvider):
                     },
                 )
         except Exception as e:
-            print(f"Warning: Failed to index nuts: {e}")
+            logger.warning(f"Failed to index nuts: {e}")
 
     def _index_beams(self):
         # Index V-Slot and C-Beam profiles
@@ -193,7 +195,7 @@ class BDWarehouseProvider(PartProvider):
                 },
             )
         except Exception as e:
-            print(f"Warning: Failed to index beams: {e}")
+            logger.warning(f"Failed to index beams: {e}")
 
     def search(self, query: str) -> list[PartSummary]:
         return [
@@ -244,7 +246,7 @@ class BDWarehouseProvider(PartProvider):
             part_obj = part.factory()
             image_path = render_part(part_obj, part_id)
         except Exception as e:
-            print(f"Warning: Failed to generate render for {part_id}: {e}")
+            logger.warning(f"Failed to generate render for {part_id}: {e}")
             image_path = ""
 
         return PartPreview(
