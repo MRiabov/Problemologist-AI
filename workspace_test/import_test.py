@@ -1,1 +1,0 @@
-from src.compiler import geometry; print('Import Success')
