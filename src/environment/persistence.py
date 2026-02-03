@@ -104,6 +104,10 @@ class DatabaseManager:
     def create_tables(self):
         Base.metadata.create_all(bind=self.engine)
 
+    def close(self):
+        """Disposes the engine connection pool."""
+        self.engine.dispose()
+
     def get_session(self) -> Session:
         return self.SessionLocal()
 

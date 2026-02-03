@@ -7,8 +7,8 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from src.compiler import mujoco_bridge
-from src.environment import persistence, tools
-from src.workbenches.print_3d import Print3DWorkbench
+from src.environment import persistence
+from src.environment.runtime import ToolRuntime
 
 
 class CADEnv(gym.Env):
@@ -33,27 +33,29 @@ class CADEnv(gym.Env):
         self.task_description = task_description
         self.max_unit_cost = max_unit_cost
         self.target_quantity = target_quantity
-        self.workspace_dir = str(Path(workspace_dir).resolve())
-        Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
-        tools.set_workspace_dir(self.workspace_dir)
+
+        # Initialize Runtime
+        self.runtime = ToolRuntime(
+            workspace_dir, None
+        )  # DB pass later if needed inside runtime
 
         # Persistence
         self.db = persistence.DatabaseManager(db_url)
         self.db.create_tables()
+        self.runtime.db = self.db  # Inject DB
+
         self.episode = None
         self.step_count = 0
-
-        # Workbench (Default, can be overridden by part labels)
-        self.workbench = Print3DWorkbench()
 
         # Simulation
         self.sim_bridge = mujoco_bridge.MujocoBridge()
 
         # Action Space
-        # tool: 0=write, 1=edit, 2=preview, 3=search, 4=submit, 5=search_parts, 6=preview_part, 7=manufacturability
+        # tool: String name of the tool (e.g., "write_file", "edit_file")
+        # arguments: JSON string of arguments
         self.action_space = spaces.Dict(
             {
-                "tool": spaces.Discrete(8),
+                "tool": spaces.Text(min_length=0, max_length=50),
                 "arguments": spaces.Text(min_length=0, max_length=100000),
             }
         )
@@ -89,8 +91,11 @@ class CADEnv(gym.Env):
         self.step_count = 0
 
         # Reset workspace - clear the design script
-        design_path = Path(self.workspace_dir) / "design.py"
+        design_path = Path(self.runtime.workspace_dir) / "design.py"
         design_path.write_text("", encoding="utf-8")
+
+        # Stop any existing session? Maybe not needed as session is persistent across resets usually,
+        # but logically we might want a fresh start. For now keeping session alive.
 
         self.last_obs = {
             "code": "",
@@ -109,20 +114,20 @@ class CADEnv(gym.Env):
         self.step_count += 1
         start_time = time.time()
 
-        tool_idx = action.get("tool")
-        arguments = action.get("arguments", "")
+        tool_name = action.get("tool", "unknown")
+        raw_arguments = action.get("arguments", "{}")
 
-        tool_map = {
-            0: "write_script",
-            1: "edit_script",
-            2: "preview_design",
-            3: "search_docs",
-            4: "submit_design",
-            5: "search_parts",
-            6: "preview_part",
-            7: "check_manufacturability",
-        }
-        tool_name = tool_map.get(tool_idx, "unknown")
+        # 1. Parse Arguments
+        arguments = {}
+        try:
+            if isinstance(raw_arguments, str) and raw_arguments.strip().startswith("{"):
+                arguments = json.loads(raw_arguments)
+            elif isinstance(raw_arguments, dict):
+                arguments = raw_arguments
+            else:
+                arguments = {"value": raw_arguments}
+        except json.JSONDecodeError:
+            arguments = {"value": raw_arguments}
 
         tool_output = ""
         reward = 0.0
@@ -130,43 +135,30 @@ class CADEnv(gym.Env):
         truncated = False
 
         try:
-            if tool_name == "write_script":
-                tool_output = tools.write_script(arguments)
-            elif tool_name == "edit_script":
-                if "|||" in arguments:
-                    find, replace = arguments.split("|||", 1)
-                    tool_output = tools.edit_script("design.py", find, replace)
-                else:
-                    tool_output = "Error: edit_script requires 'find|||replace' format."
-            elif tool_name == "preview_design":
-                tool_output = tools.preview_design()
-                if "Preview generated:" in tool_output:
-                    self.last_obs["last_render"] = tool_output.split(
-                        "Preview generated:"
-                    )[1].strip()
-            elif tool_name == "search_docs":
-                tool_output = tools.search_docs(arguments)
-            elif tool_name == "search_parts":
-                tool_output = tools.search_parts(arguments)
-            elif tool_name == "preview_part":
-                tool_output = tools.preview_part(arguments)
-            elif tool_name == "check_manufacturability":
-                if "|||" in arguments:
-                    process, quantity_str = arguments.split("|||", 1)
-                    try:
-                        quantity = int(quantity_str)
-                    except ValueError:
-                        quantity = self.target_quantity
-                else:
-                    process = arguments if arguments else "cnc"
-                    quantity = self.target_quantity
-                tool_output = str(
-                    tools.check_manufacturability("design.py", process, quantity)
-                )
-            elif tool_name == "submit_design":
+            # 2. Dispatch Tool
+            if tool_name == "submit_design":
+                # Special handling for submit_design which is complex and specific to Env logic (simulation, reward)
+                # Although ToolRuntime could have submit_design, the reward calculation is here.
+                # So we keep _submit_design here, but maybe move the sandbox execution part to Runtime?
+                # _submit_design uses sandbox.run_script.
+                # Let's keep it here for now as it orchestrates simulation too.
                 reward, tool_output, terminated = self._submit_design(arguments)
             else:
-                tool_output = f"Unknown tool index: {tool_idx}"
+                # Dispatch to Runtime
+                tool_output = self.runtime.dispatch(tool_name, arguments)
+
+                # Side effects checking
+                if (
+                    tool_name == "preview_design"
+                    and "Preview generated:" in tool_output
+                ):
+                    try:
+                        self.last_obs["last_render"] = tool_output.split(
+                            "Preview generated:"
+                        )[1].strip()
+                    except:
+                        pass
+
         except Exception as e:
             tool_output = f"Exception during tool execution: {e!s}"
             self.last_obs["error"] = str(e)
@@ -178,7 +170,9 @@ class CADEnv(gym.Env):
             episode_id=self.episode.id,
             sequence_index=self.step_count,
             tool_name=tool_name,
-            tool_input=arguments,
+            tool_input=json.dumps(arguments)
+            if isinstance(arguments, dict)
+            else str(arguments),
             tool_output=tool_output,
             duration_ms=duration_ms,
             agent_role=agent_role,
@@ -192,7 +186,7 @@ class CADEnv(gym.Env):
             )
 
         # Update observation
-        script_path = Path(self.workspace_dir) / "design.py"
+        script_path = Path(self.runtime.workspace_dir) / "design.py"
         if script_path.exists():
             self.last_obs["code"] = script_path.read_text(encoding="utf-8")
 
@@ -218,26 +212,41 @@ class CADEnv(gym.Env):
             metadata_json=metadata,
         )
 
-    def _submit_design(self, arguments: str = "") -> tuple[float, str, bool]:
+    def _submit_design(
+        self, arguments: str | dict[str, Any] = ""
+    ) -> tuple[float, str, bool]:
         """Handles the full submission, validation, and simulation pipeline."""
-        script_path = Path(self.workspace_dir) / "design.py"
+        script_path = Path(self.runtime.workspace_dir) / "design.py"
         if not script_path.exists():
             return -10.0, "Error: No design.py found.", False
 
-        # Parse arguments for force submit: "force_submit=True|||reason:..."
+        # Parse arguments for force submit
         force_submit = False
-        justification = ""
-        if "force_submit=True" in arguments:
-            force_submit = True
-            if "|||" in arguments:
-                _, justification = arguments.split("|||", 1)
 
-        # 1. Process design.py in Sandbox
+        if isinstance(arguments, dict):
+            force_submit = arguments.get("force_submit", False)
+            if isinstance(force_submit, str):
+                force_submit = force_submit.lower() == "true"
+        elif isinstance(arguments, str):
+            if "force_submit=True" in arguments:
+                force_submit = True
+
+        # Reuse ToolRuntime's manufacturability check which is now secure!
+        # But wait, submit_design does MORE than check_manufacturability.
+        # It generates STL and runs simulation.
+        # And it enforces budget.
+
+        # We need a secure way to generate STL.
+        # The runtime has check_manufacturability, but maybe we need a generate_stl method there too?
+        # Or we can treat submit_design as a special "super-tool" in Runtime?
+
+        # For now, let's replicate the secure runner pattern here using self.runtime.sandbox
+
         runner_filename = "submit_runner.py"
-        runner_path = Path(self.workspace_dir) / runner_filename
+        runner_path = Path(self.runtime.workspace_dir) / runner_filename
         stl_filename = "design.stl"
-        stl_path = Path(self.workspace_dir) / stl_filename
 
+        # This runner is similar to runtime.check_manufacturability but also exports STL
         runner_script = f"""
 import sys
 import json
@@ -249,7 +258,6 @@ from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.compiler import geometry
 
-# Add workspace to path
 sys.path.append("/workspace")
 
 result = {{
@@ -262,25 +270,11 @@ result = {{
 }}
 
 try:
-    # 1. Load design.py
     locs = {{}}
-    ctx = {{
-        "bd": bd,
-        "Part": bd.Part,
-        "Box": bd.Box,
-        "Sphere": bd.Sphere,
-        "Cylinder": bd.Cylinder,
-        "Compound": bd.Compound,
-        "Solid": bd.Solid,
-        "Rotation": bd.Rotation,
-        "Location": bd.Location,
-    }}
-
     with Path("/workspace/design.py").open("r", encoding="utf-8") as f:
         code = f.read()
-    exec(code, ctx, locs)
+    exec(code, globals(), locs)
 
-    # 2. Extract Part
     export_obj = None
     for val in locs.values():
         if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
@@ -293,22 +287,24 @@ try:
     if not export_obj:
         result["error"] = "No Part or Solid found in script."
     else:
-        # 3. Cost Analysis & Validation
         workbenches = {{
             "print_3d": Print3DWorkbench(),
             "cnc": CNCWorkbench(),
             "injection_molding": InjectionMoldingWorkbench()
         }}
-
+        
+        # Simplified costing/validation (similar to Runtime)
         default_q = {self.target_quantity}
-
+        
         def parse_label(label):
             data = {{"quantity": default_q, "process": "print_3d"}}
             if not label: return data
             for p in str(label).split("|"):
                 if ":" in p:
                     k, v = p.split(":", 1)
-                    if k == "quantity": data["quantity"] = int(v)
+                    if k == "quantity": 
+                        try: data["quantity"] = int(v)
+                        except: pass
                     elif k == "process": data["process"] = v
             return data
 
@@ -333,8 +329,7 @@ try:
         result["violations"] = [str(v) for v in all_violations]
 
         if not all_violations:
-            # 4. Export Mesh
-            stl_path = f"/workspace/{{'stl_filename'}}"
+            stl_path = f"/workspace/{{'{stl_filename}'}}"
             geometry.export_mesh(export_obj, stl_path)
             result["success"] = True
             result["stl_path"] = "{stl_filename}"
@@ -346,24 +341,21 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
 """
 
         try:
-            # Write runner
             runner_path.write_text(runner_script, encoding="utf-8")
 
-            # Run in sandbox
-            stdout, stderr, returncode = tools._SANDBOX.run_script(
+            # Run in sandbox via Runtime
+            stdout, stderr, returncode = self.runtime.sandbox.run_script(
                 runner_filename,
+                session_id=self.runtime.active_session_id,  # Use active session!
                 mount_src=True,
-                timeout=60,
             )
 
-            # Clean up runner
             if runner_path.exists():
                 runner_path.unlink()
 
             if "SUBMIT_RESULT:" not in stdout:
                 return -10.0, f"Sandbox execution failed: {stderr}", False
 
-            # Parse result
             result_line = [
                 line for line in stdout.split("\n") if "SUBMIT_RESULT:" in line
             ][0]
@@ -372,13 +364,10 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             if res_data["error"]:
                 return -10.0, f"Error processing design: {res_data['error']}", False
 
-            # HARD BUDGET ENFORCEMENT
             if res_data["unit_cost"] > self.max_unit_cost and not force_submit:
                 return (
                     -20.0,
-                    f"REJECTED: Unit cost ${res_data['unit_cost']:.2f} exceeds budget ${self.max_unit_cost:.2f}. "
-                    "You must optimize the design. If you believe no further improvement is possible, "
-                    "submit with 'force_submit=True|||reason:<your_justification>'.",
+                    f"REJECTED: Unit cost ${res_data['unit_cost']:.2f} exceeds budget ${self.max_unit_cost:.2f}.",
                     False,
                 )
 
@@ -392,22 +381,23 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
             if not res_data["success"]:
                 return -10.0, "Submission processing failed.", False
 
+            stl_path = Path(self.runtime.workspace_dir) / stl_filename
+
         except Exception as e:
             return -10.0, f"Error during sandboxed submission: {e!s}", False
 
-        # 4. WP03: Simulation
+        # Simulation (Host side for now as it needs MujocoBridge which might not be in container yet?
+        # Actually SimBridge usually runs on host using compiled binary or Python bindings)
         try:
             template_xml = self.sim_bridge.load_template()
             injected_xml = self.sim_bridge.inject_design(template_xml, stl_path)
             sim_result = self.sim_bridge.run_simulation(injected_xml)
 
-            # 5. Calculate Reward
-            # Success (100) - Energy*0.1 - Damage*10
             if sim_result.success:
                 reward = 100.0 - (sim_result.energy * 0.1) - (sim_result.damage * 10.0)
                 status = "success"
             else:
-                reward = -50.0  # Penalty for physical failure
+                reward = -50.0
                 status = "failure"
 
             self.db.update_episode_status(
@@ -432,3 +422,12 @@ print(f"SUBMIT_RESULT:{{json.dumps(result)}}")
 
     def render(self):
         return self.last_obs["last_render"]
+
+    def close(self):
+        """Cleanup resources."""
+        if self.db:
+            self.db.close()
+        if hasattr(self.runtime, "stop_session"):
+            # Optional: stop sandbox session if strictly bound to env checking
+            pass
+        super().close()

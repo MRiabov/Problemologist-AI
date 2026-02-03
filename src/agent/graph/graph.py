@@ -9,9 +9,9 @@ from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
-    edit_script,
+    write_file,
+    edit_file,
     submit_design,
-    write_script,
     check_manufacturability,
     view_file,
     run_command,
@@ -21,7 +21,7 @@ from src.agent.tools.env import (
     preview_part,
     lint_script,
 )
-from src.agent.tools.memory import read_journal, write_journal
+from src.agent.tools.memory import read_journal
 from src.agent.utils.config import Config
 
 
@@ -43,8 +43,8 @@ def build_graph(
 
     # ToolNode implementation
     tools = [
-        write_script,
-        edit_script,
+        write_file,
+        edit_file,
         view_file,
         run_command,
         preview_design,
@@ -52,7 +52,6 @@ def build_graph(
         search_docs,
         check_manufacturability,
         read_journal,
-        write_journal,
         search_parts,
         preview_part,
         lint_script,
