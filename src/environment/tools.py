@@ -4,7 +4,6 @@ This file is kept for backward compatibility with scripts that might import thes
 """
 
 import functools
-import warnings
 from typing import Optional, Any
 
 from src.environment.runtime import ToolRuntime
@@ -134,20 +133,6 @@ def init_skill(skill_name: str) -> str:
 @_deprecated
 def package_skill(skill_name: str) -> str:
     return _RUNTIME.package_skill(skill_name)
-
-
-@_deprecated
-def _analyze_cached(
-    file_hash: str, default_process: str, default_quantity: int, script_content: str
-):
-    # This was an internal method, mapping to tool runtime logical implementation
-    # But check_manufacturability in Runtime now handles this.
-    # Exposing specific cache method is hard.
-    warnings.warn(
-        "_analyze_cached is deprecated and no longer supported directly.",
-        DeprecationWarning,
-    )
-    return {}
 
 
 @_deprecated
