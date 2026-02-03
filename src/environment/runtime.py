@@ -23,14 +23,22 @@ class ToolRuntime:
     Replaces global state from the legacy tools.py module.
     """
 
-    def __init__(self, workspace_dir: str, db: DatabaseManager | None = None):
+    def __init__(
+        self,
+        workspace_dir: str,
+        db: DatabaseManager | None = None,
+        problem_id: str = "default_problem",
+    ):
         self.workspace_dir = str(Path(workspace_dir).resolve())
         Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
 
         self.sandbox = PodmanSandbox(self.workspace_dir)
         self.evaluator = Evaluator(self.sandbox, self.workspace_dir)
         self.db = db
+        self.problem_id = problem_id
 
+        self.episode = None
+        self.step_count = 0
         self.active_session_id: str | None = None
 
         # Simulation
@@ -49,9 +57,15 @@ class ToolRuntime:
         }
 
     def start_session(self, session_id: str = "agent-session") -> str:
-        """Starts a persistent sandbox session."""
+        """Starts a persistent sandbox session and initializes an episode."""
         if self.sandbox.start_session(session_id):
             self.active_session_id = session_id
+
+            # Episode management (Persistence)
+            if self.db:
+                self.episode = self.db.create_episode(self.problem_id)
+                self.step_count = 0
+
             return f"Session {session_id} started."
         return f"Failed to start session {session_id}."
 
@@ -293,8 +307,16 @@ class ToolRuntime:
                 "terminated": False,
             }
 
-    def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> str:
-        """Dispatches a tool call to the appropriate method."""
+    def dispatch(
+        self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
+    ) -> str:
+        """Dispatches a tool call, handles persistence, and returns the output."""
+        import time
+
+        start_time = time.time()
+        tool_output = ""
+
+        # 1. Routing and Execution
         tool_map = {
             "write_file": self.write_file,
             "edit_file": self.edit_file,
@@ -319,19 +341,52 @@ class ToolRuntime:
 
         func = tool_map.get(tool_name)
         if not func:
-            return f"Unknown tool: {tool_name}"
+            tool_output = f"Unknown tool: {tool_name}"
+        else:
+            try:
+                # Add agent_role to arguments if it's submit_design?
+                # Actually, dispatch should handle the metadata.
+                result = func(**arguments)
 
-        try:
-            result = func(**arguments)
-            if hasattr(result, "__dataclass_fields__"):
-                from dataclasses import asdict
+                if hasattr(result, "__dataclass_fields__"):
+                    from dataclasses import asdict
 
-                return json.dumps(asdict(result))
-            return (
-                json.dumps(result) if isinstance(result, (dict, list)) else str(result)
+                    tool_output = json.dumps(asdict(result))
+                elif isinstance(result, (dict, list)):
+                    tool_output = json.dumps(result)
+                else:
+                    tool_output = str(result)
+            except Exception as e:
+                tool_output = f"Error executing tool {tool_name}: {e!s}"
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # 2. Persistence (Consolidated from CADEnv)
+        if self.db and self.episode:
+            self.step_count += 1
+            db_step = self.db.log_step(
+                episode_id=self.episode.id,
+                sequence_index=self.step_count,
+                tool_name=tool_name,
+                tool_input=json.dumps(arguments),
+                tool_output=tool_output,
+                duration_ms=duration_ms,
+                agent_role=agent_role,
             )
-        except Exception as e:
-            return f"Error executing tool {tool_name}: {e!s}"
+
+            # Special case for artifacts
+            if tool_name == "preview_design" and "Preview generated:" in tool_output:
+                try:
+                    artifact_path = tool_output.split("Preview generated:")[1].strip()
+                    self.db.save_artifact(
+                        step_id=db_step.id,
+                        artifact_type="image",
+                        file_path=artifact_path,
+                    )
+                except IndexError:
+                    pass
+
+        return tool_output
 
     # Handing remaining methods (search_docs, etc.) by delegating to originals or simplified versions
     def search_docs(self, query: str) -> str:
