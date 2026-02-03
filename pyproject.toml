@@ -37,6 +37,7 @@ dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.14.14",
     "spec-kitty-cli>=0.13.20",
 ]
@@ -52,7 +53,7 @@ ignore = []
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "src"]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration' -n auto"
 markers = [
     "integration: marks tests as integration tests (may use real LLM)",
     "benchmark: marks tests related to the benchmark generator",
