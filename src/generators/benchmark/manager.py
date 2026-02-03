@@ -10,6 +10,7 @@ import yaml
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from src.agent.utils.config import Config
 from src.environment.sandbox import PodmanSandbox
 from src.generators.benchmark.agent import generator_agent
 from src.generators.benchmark.renderer import render_scenario
@@ -17,8 +18,7 @@ from src.generators.benchmark.types import ScenarioManifest
 from src.generators.benchmark.validator import validate_mjcf
 
 # Load config
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-GEN_CONFIG_PATH = PROJECT_ROOT / "config" / "generator_config.yaml"
+GEN_CONFIG_PATH = Config.PROJECT_ROOT / "config" / "generator_config.yaml"
 with GEN_CONFIG_PATH.open("r") as f:
     gen_config = yaml.safe_load(f)
 
@@ -65,7 +65,7 @@ def execute_build(
     )
 
     # Initialize a temporary workspace for generation
-    workspace = Path("workspaces/gen").resolve()
+    workspace = Config.GEN_WORKSPACE_DIR
     workspace.mkdir(parents=True, exist_ok=True)
 
     # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files
@@ -237,7 +237,7 @@ def generate(
 
                 # 3. Validation
                 logger.debug(f"Validating MJCF for seed {seed}")
-                temp_assets_path = Path("workspaces/gen").resolve() / rel_temp_assets
+                temp_assets_path = Config.GEN_WORKSPACE_DIR / rel_temp_assets
                 report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
 
                 if report["is_valid"]:
@@ -250,9 +250,7 @@ def generate(
                     xml_path.write_text(mjcf_xml)
 
                     # Move temp assets to final assets
-                    temp_assets_path = (
-                        Path("workspaces/gen").resolve() / rel_temp_assets
-                    )
+                    temp_assets_path = Config.GEN_WORKSPACE_DIR / rel_temp_assets
                     final_assets_path = scenario_dir / "assets"
                     generated_meshes = []
                     if temp_assets_path.exists():
