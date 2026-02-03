@@ -31,6 +31,6 @@ def test_agent_exposure(tmp_path):
 
     # 4. Assert tool output is present in observations
     assert "last_output" in _obs
-    assert "'status': 'fail'" in _obs["last_output"]  # Box has undercuts from Z
-    assert "'process': 'cnc'" in _obs["last_output"]
-    assert "'quantity': 10" in _obs["last_output"]
+    assert '"status": "fail"' in _obs["last_output"]
+    assert '"process": "cnc"' in _obs["last_output"]
+    assert '"quantity": 10' in _obs["last_output"]
