@@ -84,10 +84,10 @@ async def planner_node(state: AgentState):
         if "planner" in overrides:
             system_prompt = get_prompt(overrides["planner"])
             # If the override is raw text (not dot-path), get_prompt returns default if not found,
-            # but we assume overrides might be direct keys to prompts.yaml or even raw text?
+            # but we assume overrides might be direct keys to config/prompts.yaml or even raw text?
             # get_prompt splits by dot. If we pass "benchmark_generator.planner", it works.
             # If we pass raw text, get_prompt returns default "" unless it happens to match a key.
-            # Let's assume overrides are KEYS into prompts.yaml.
+            # Let's assume overrides are KEYS into config/prompts.yaml.
 
     messages = [
         SystemMessage(content=system_prompt),

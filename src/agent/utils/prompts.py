@@ -15,9 +15,9 @@ def load_prompts() -> dict[str, Any]:
     if _PROMPTS_CACHE:
         return _PROMPTS_CACHE
 
-    # Locate the prompts.yaml relative to this file
-    base_dir = Path(__file__).resolve().parent.parent
-    prompts_path = base_dir / "prompts.yaml"
+    # Locate the config/prompts.yaml relative to project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    prompts_path = project_root / "config" / "prompts.yaml"
 
     if not prompts_path.exists():
         # Fallback or error

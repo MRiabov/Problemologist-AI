@@ -23,6 +23,7 @@ from src.agent.tools.env_adapter import (
     start_session_async,
     stop_session_async,
     run_skill_script_async,
+    lint_script_async,
 )
 
 
@@ -273,3 +274,15 @@ async def start_session(session_id: str) -> str:
 async def stop_session() -> str:
     """Stops the sandbox session for the agent."""
     return await stop_session_async()
+
+
+@tool
+async def lint_script(filename: str = "design.py") -> str:
+    """
+    Runs static analysis (Ruff, Pyrefly) on a script in the workspace.
+    Use this to find syntax errors or potential bugs before running or submitting.
+
+    Args:
+        filename: The name of the script to lint (default: 'design.py').
+    """
+    return await lint_script_async(filename)
