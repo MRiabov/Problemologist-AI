@@ -12,13 +12,17 @@ A JSON metadata file accompanying each generated benchmark.
   "tier": "kinematic",
   "description": "Class 1 lever with variable fulcrum",
   "script_path": "scripts/tier2_lever_001.py",
+  "target_quantity": 1000,
+  "max_unit_cost": 5.50,
+  "cost_record": 4.25,
   "assets": {
     "mjcf": "assets/tier2_lever_001.xml",
     "meshes": ["assets/base.stl", "assets/arm.stl"]
   },
   "randomization": {
     "seed_range": [0, 9999],
-    "parameters": ["fulcrum_pos", "load_mass"]
+    "parameters": ["fulcrum_pos", "load_mass"],
+    "scale": [1.0, 1.0, 1.0]
   },
   "validation": {
     "passed": true,
