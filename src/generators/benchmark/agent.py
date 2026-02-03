@@ -4,7 +4,7 @@ from src.agent.tools.benchmark_tools import (
     run_benchmark_linter,
     validate_benchmark_model,
 )
-from src.agent.tools.env import read_script
+from src.agent.tools.env import view_file
 
 # Constants used by dashboard
 MAX_ATTEMPTS = Config.MAX_STEPS
@@ -18,7 +18,7 @@ def build_benchmark_agent():
     1. Benchmark-specific tools (linter, validator).
     2. Benchmark-specific system prompts (via runtime_config).
     """
-    tools = [run_benchmark_linter, validate_benchmark_model, read_script]
+    tools = [run_benchmark_linter, validate_benchmark_model, view_file]
     return build_graph(
         extra_tools=tools, validation_tool_name="validate_benchmark_model"
     )

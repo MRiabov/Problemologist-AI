@@ -63,7 +63,7 @@ def execute_build(
     )
 
     # Initialize a temporary workspace for generation
-    workspace = Path("workspace_gen").resolve()
+    workspace = Path("workspaces/gen").resolve()
     workspace.mkdir(parents=True, exist_ok=True)
 
     # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files

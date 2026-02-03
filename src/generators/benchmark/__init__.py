@@ -1,3 +1,1 @@
-from .manager import app as generate_app
-
-__all__ = ["generate_app"]
+# Empty to prevent side effects when importing submodules (like constants) in the sandbox
