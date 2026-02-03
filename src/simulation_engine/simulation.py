@@ -54,6 +54,13 @@ class SimulationLoop:
             for i in range(self.model.nsite)
         ]
 
+        # Cache forbidden geom IDs
+        self.forbidden_geom_ids = set()
+        for i in range(self.model.ngeom):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
+            if name and "forbid" in name.lower():
+                self.forbidden_geom_ids.add(i)
+
     def step(self):
         """
         Performs one physics tick and updates metrics.
@@ -268,17 +275,10 @@ with open("/workspace/{result_file}", "w") as f:
         # We need to iterate contacts
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            geom1_id = contact.geom1
-            geom2_id = contact.geom2
-
-            name1 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_id)
-            name2 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_id)
-
-            # Check if one is forbid and other is part of agent
-            # We assume "forbid" is in the name of forbidden zone
-            if name1 and "forbid" in name1.lower():
-                return "FAIL"
-            if name2 and "forbid" in name2.lower():
+            if (
+                contact.geom1 in self.forbidden_geom_ids
+                or contact.geom2 in self.forbidden_geom_ids
+            ):
                 return "FAIL"
 
         return "RUNNING"
