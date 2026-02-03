@@ -28,12 +28,16 @@ def register_runtime(runtime_id: str, runtime: ToolRuntime):
 
 
 def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
-    """Gets a registered runtime by ID, or fallback."""
+    """
+    Gets a registered runtime by ID.
+
+    Lookup order:
+    1. Explicit runtime_id if provided and registered
+    2. Default runtime if registered
+    3. Lazy-created fallback runtime (for standalone usage)
+    """
     if runtime_id and runtime_id in _RUNTIMES:
         return _RUNTIMES[runtime_id]
-
-    if _ACTIVE_ENV and hasattr(_ACTIVE_ENV, "runtime"):
-        return _ACTIVE_ENV.runtime
 
     if _DEFAULT_RUNTIME_ID in _RUNTIMES:
         return _RUNTIMES[_DEFAULT_RUNTIME_ID]
@@ -68,6 +72,20 @@ async def _execute_tool(
 
     rt = tool_runtime or get_runtime()
     return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
+
+
+async def start_session_async(session_id: str = "vlm-cad-session") -> str:
+    """
+    Starts a persistent sandbox session asynchronously.
+
+    Args:
+        session_id: Identifier for the session (default: vlm-cad-session).
+
+    Returns:
+        Status message indicating success or failure.
+    """
+    rt = get_runtime()
+    return await asyncio.to_thread(rt.start_session, session_id)
 
 
 # --- Agent Tools ---

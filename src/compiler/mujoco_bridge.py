@@ -17,10 +17,43 @@ class SimResult:
 
 
 class MujocoBridge:
-    def __init__(self):
+    def __init__(
+        self,
+        workspace_dir: str | Path | None = None,
+        sandbox: "PodmanSandbox | None" = None,
+    ):
+        """
+        Initialize MujocoBridge.
+
+        Args:
+            workspace_dir: Path to the workspace directory. If None, uses legacy fallback.
+            sandbox: PodmanSandbox instance for running simulations. If None, uses legacy fallback.
+        """
         # Assumes this file is in src/compiler/
         # and templates are in src/compiler/templates/
         self.template_dir = Path(__file__).resolve().parent / "templates"
+        self._workspace_dir = Path(workspace_dir) if workspace_dir else None
+        self._sandbox = sandbox
+
+    @property
+    def workspace_dir(self) -> Path:
+        """Get workspace directory, falling back to legacy global if not set."""
+        if self._workspace_dir:
+            return self._workspace_dir
+        # Lazy legacy fallback
+        from src.environment import tools
+
+        return Path(tools.WORKSPACE_DIR)
+
+    @property
+    def sandbox(self) -> "PodmanSandbox":
+        """Get sandbox, falling back to legacy global if not set."""
+        if self._sandbox:
+            return self._sandbox
+        # Lazy legacy fallback
+        from src.environment import tools
+
+        return tools._SANDBOX
 
     def load_template(self, template_name: str = "standard.xml") -> str:
         """Load a standard template and return its XML string content.
@@ -98,12 +131,8 @@ class MujocoBridge:
         goal_size: float = 0.5,
     ) -> SimResult:
         """Runs the simulation in a sandbox."""
-        from src.environment import tools
-
-        _ = tools.WORKSPACE_DIR  # used indirectly via workspace_dir logic if updated
         runner_filename = "sim_runner.py"
-        workspace_dir = Path(tools.WORKSPACE_DIR)
-        runner_path = workspace_dir / runner_filename
+        runner_path = self.workspace_dir / runner_filename
 
         # We need to escape the XML string and agent script for the Python runner
         runner_script = f"""
@@ -145,7 +174,7 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
         try:
             runner_path.write_text(runner_script, encoding="utf-8")
 
-            stdout, stderr, returncode = tools._SANDBOX.run_script(
+            stdout, stderr, returncode = self.sandbox.run_script(
                 runner_filename, mount_src=True, timeout=int(duration + 10)
             )
 
