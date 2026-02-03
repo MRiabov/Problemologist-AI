@@ -57,12 +57,10 @@ def load_docs(directory: str) -> list[dict[str, str]]:
 def search(query: str, directory: str = "docs") -> str:
     """
     Simple substring search MVP. Searches docs/ and .agent/skills/.
-    Returns top matches formatted as a string.
 
-    TODO: Replace with proper embedding-based RAG for semantic search.
-    Current implementation uses naive substring matching which fails for
-    complex queries, synonyms, and semantic similarity. Consider integrating
-    a vector store (e.g., ChromaDB, FAISS) with sentence embeddings.
+    Note: For small datasets (30-100 items), substring matching is sufficient.
+    For significantly larger datasets, consider integrating a vector store
+    (e.g., ChromaDB, FAISS) with sentence embeddings for semantic retrieval.
     """
     query = query.lower()
 

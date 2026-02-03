@@ -1,4 +1,3 @@
-import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -34,7 +33,7 @@ class SimulationLoop:
             self.model_path = str(Path(model_path).resolve())
             self.model = mujoco.MjModel.from_xml_path(self.model_path)
         except Exception as e:
-            raise ValueError(f"Failed to load model from {model_path}: {e}")
+            raise ValueError(f"Failed to load model from {model_path}: {e}") from e
 
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
@@ -86,21 +85,15 @@ class SimulationLoop:
         """
         # Legacy fallback if sandbox is not provided
         if sandbox is None:
-            try:
-                from src.environment import tools
-                sandbox = tools._SANDBOX
-            except ImportError:
-                raise ValueError("Sandbox must be provided to run()")
+            raise ValueError("Sandbox must be provided to run()")
 
         if workspace_dir is None:
             if hasattr(sandbox, "workspace_dir"):
                 workspace_dir = sandbox.workspace_dir
             else:
-                try:
-                    from src.environment import tools
-                    workspace_dir = tools.WORKSPACE_DIR
-                except ImportError:
-                    raise ValueError("Workspace directory could not be determined")
+                from src.agent.utils.config import Config
+
+                workspace_dir = Config.WORKSPACE_DIR
 
         container_model_path = "/workspace/model.xml"
         runner_filename = "sim_engine_runner.py"
@@ -138,11 +131,11 @@ with open("/workspace/{result_file}", "w") as f:
         )
 
         if res.get("status") == "error":
-             return {
-                 "status": "ERROR",
-                 "message": res.get("message", "Unknown error"),
-                 "metrics": self.metrics.to_dict()
-             }
+            return {
+                "status": "ERROR",
+                "message": res.get("message", "Unknown error"),
+                "metrics": self.metrics.to_dict(),
+            }
 
         # Update local metrics for tests that inspect them
         if "metrics" in res:

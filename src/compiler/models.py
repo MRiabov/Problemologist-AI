@@ -1,3 +1,4 @@
+from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Any
 import numpy as np
@@ -34,17 +35,44 @@ class ValidationReport:
 
 @dataclass
 class Observation:
-    qpos: np.ndarray
-    qvel: np.ndarray
+    step: int
     time: float
-    sensordata: np.ndarray
-    site_xpos: dict[str, np.ndarray]
+    state_vector: np.ndarray
+    energy_consumed: float
+    damage_detected: float
 
 
 @dataclass
 class SimResult:
-    duration: float
-    energy: float
     success: bool
-    damage: float
-    replay_data: list[dict[str, Any]] | None = None
+    total_energy: float
+    total_damage: float
+    observations: list[Observation]
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class EpisodeSummary:
+    id: str
+    timestamp: datetime
+    name: str
+
+
+@dataclass
+class DashStep:
+    index: int
+    type: str
+    agent_role: str | None
+    content: str | None
+    tool_name: str | None
+    tool_input: str | None
+    tool_output: str | None
+    metadata: dict[str, Any]
+    artifacts: list[str] = field(default_factory=list)
+
+
+@dataclass
+class DashEpisode:
+    id: str
+    name: str
+    steps: list[DashStep]
