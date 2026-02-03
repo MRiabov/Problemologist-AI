@@ -22,7 +22,7 @@ def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 
         peg_agent = scale(peg.part, by=scale_factors)
 
     return to_mjcf(
-        env_compound=[hole_env, goal_env], 
+        env_compound=[hole_env, goal_env],
         agent_compound=peg_agent,
         env_labels=["obstacle_hole", "zone_goal"],
         agent_labels=["agent_peg"]
@@ -51,8 +51,8 @@ def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 
     }]
 
     return to_mjcf(
-        env_compound=scaled_base, 
-        agent_compound=scaled_block, 
+        env_compound=scaled_base,
+        agent_compound=scaled_block,
         agent_joints=joints,
         env_labels=["obstacle_base"],
         agent_labels=["agent_block"]
