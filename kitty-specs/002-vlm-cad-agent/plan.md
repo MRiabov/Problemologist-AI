@@ -9,7 +9,7 @@
 
 ## Summary
 
-Implement the **VLM CAD Agent** using the **DeepAgents** framework (powered by **LangGraph**). This cognitive engine autonomously solves geometric problems by interacting with the `001-agentic-cad-environment`. The agent uses a graph-based "Think, Plan, Act" workflow, leveraging file-system memory (Journal and Skills) for long-horizon tasks.
+Implement the **VLM CAD Agent** using the **LangGraph** framework. This cognitive engine autonomously solves geometric problems by interacting with the `001-agentic-cad-environment` via `ToolRuntime`. The agent uses a graph-based "Think, Plan, Act" workflow, leveraging file-system memory (Journal and Skills) for long-horizon tasks.
 
 ## Technical Context
 
@@ -17,7 +17,6 @@ Implement the **VLM CAD Agent** using the **DeepAgents** framework (powered by *
 **Primary Dependencies**:
 
 - `langgraph`: Core orchestration engine (Graph, State, Nodes).
-- `deepagents`: High-level agent capabilities (planning, file-system memory).
 - `langchain-core` / `langchain-openai`: LLM Interface & Tool Abstractions.
 - `pydantic`: State and Tool validation.
 - `rich`: Terminal UI.
@@ -79,6 +78,6 @@ src/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 | --- | --- | --- |
-| LangGraph + DeepAgents | Replaces custom `while` loop | Provides robust state persistence, time-travel debugging, and formalized "Planning" steps. |
+| LangGraph | Replaces custom `while` loop | Provides robust state persistence, time-travel debugging, and formalized "Planning" steps. |
 | File-based Memory | Simple, human-readable long-term memory | Vector DB is overkill; file-based approach enables direct agent manipulation via `write_file`. |
 | Skill Populator | Automated learning loop | Manual documentation updates are prone to being skipped. |
