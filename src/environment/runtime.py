@@ -8,10 +8,12 @@ from typing import Any, Dict, List, Optional
 import build123d as bd
 
 from src.agent.utils.linter import format_linter_report, run_linter
+from src.compiler import mujoco_bridge
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 from src.environment.evaluator import Evaluator
 from src.environment.sandbox import PodmanSandbox
+from src.environment.sandbox_utils import run_sandboxed_script
 from src.rag import search as rag_search
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
@@ -34,6 +36,9 @@ class ToolRuntime:
         self.db = db
 
         self.active_session_id: Optional[str] = None
+
+        # Simulation
+        self.sim_bridge = mujoco_bridge.MujocoBridge()
 
         # Initialize COTS Part Index
         self.part_index = PartIndex()
@@ -181,12 +186,106 @@ class ToolRuntime:
             design_file, process, quantity, export_stl=False
         )
 
+    def submit_design(
+        self,
+        control_path: str,
+        design_file: str = "design.py",
+        process: str = "print_3d",
+        target_quantity: int = 1,
+        max_unit_cost: float = float("inf"),
+        force_submit: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Runs the current design script, performs full Workbench validation,
+        and optionally runs a host-side simulation.
+        """
+        # 1. Validate and Export STL
+        res = self.validate_and_export(
+            design_file=design_file,
+            process=process,
+            quantity=target_quantity,
+            export_stl=True,
+        )
+
+        if "error" in res and res["error"]:
+            return {
+                "status": "fail",
+                "reward": -10.0,
+                "message": f"Error processing design: {res['error']}",
+                "terminated": False,
+            }
+
+        # 2. Budget Check
+        unit_cost = res.get("cost_analysis", {}).get("unit_cost", 0.0)
+        if unit_cost > max_unit_cost and not force_submit:
+            return {
+                "status": "fail",
+                "reward": -20.0,
+                "message": f"REJECTED: Unit cost ${unit_cost:.2f} exceeds budget ${max_unit_cost:.2f}.",
+                "terminated": False,
+            }
+
+        # 3. Validation Check
+        if res.get("status") == "fail":
+            v_str = ", ".join(
+                [v.get("description", "Unknown") for v in res.get("violations", [])]
+            )
+            return {
+                "status": "fail",
+                "reward": -10.0,
+                "message": f"Validation Failed: {v_str}",
+                "terminated": False,
+            }
+
+        if not res.get("stl_path"):
+            return {
+                "status": "fail",
+                "reward": -10.0,
+                "message": "Submission failed: No STL exported.",
+                "terminated": False,
+            }
+
+        # 4. Simulation (Host side)
+        try:
+            stl_path = Path(self.workspace_dir) / res["stl_path"]
+            template_xml = self.sim_bridge.load_template()
+            injected_xml = self.sim_bridge.inject_design(template_xml, stl_path)
+            sim_result = self.sim_bridge.run_simulation(injected_xml)
+
+            reward = (
+                (100.0 - (sim_result.energy * 0.1) - (sim_result.damage * 10.0))
+                if sim_result.success
+                else -50.0
+            )
+            status = "success" if sim_result.success else "failure"
+
+            return {
+                "status": status,
+                "reward": reward,
+                "message": f"Submission Result: {status.upper()}. Energy: {sim_result.energy:.2f}",
+                "terminated": True,
+                "metrics": {
+                    "energy": sim_result.energy,
+                    "damage": sim_result.damage,
+                    "success": sim_result.success,
+                },
+            }
+
+        except Exception as e:
+            return {
+                "status": "error",
+                "reward": -10.0,
+                "message": f"Simulation Error: {e!s}",
+                "terminated": False,
+            }
+
     def dispatch(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """Dispatches a tool call to the appropriate method."""
         tool_map = {
             "write_file": self.write_file,
             "edit_file": self.edit_file,
             "preview_design": self.preview_design,
+            "submit_design": self.submit_design,
             "search_docs": self.search_docs,
             "search_parts": self.search_parts,
             "preview_part": self.preview_part,
@@ -280,19 +379,27 @@ class ToolRuntime:
     def run_skill_script(
         self, skill_name: str, script_name: str, arguments: str = ""
     ) -> str:
-        path = Config.SKILLS_DIR / skill_name / "scripts" / script_name
-        if not path.exists():
-            return f"Error: {script_name} missing"
-        try:
-            cmd = [sys.executable, str(path)]
-            if arguments:
-                import shlex
+        """Executes a specialized script located within a skill inside the sandbox."""
+        import shlex
 
-                cmd.extend(shlex.split(arguments))
-            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            return f"{res.stdout}{res.stderr}"
-        except Exception as e:
-            return f"Error: {e!s}"
+        # Skill scripts are mounted at docs/skills/ inside the sandbox
+        script_path = f"docs/skills/{skill_name}/scripts/{script_name}"
+        args = shlex.split(arguments)
+        cmd = ["python3", script_path] + args
+
+        if self.active_session_id:
+            stdout, stderr, rc = self.sandbox.exec_command(
+                self.active_session_id, cmd
+            )
+        else:
+            # Fallback to transient run with skills mounted
+            stdout, stderr, rc = self.sandbox.run_script(
+                "-c",
+                f"import subprocess, sys; r=subprocess.run({cmd}, capture_output=True, text=True); print(r.stdout); print(r.stderr, file=sys.stderr); sys.exit(r.returncode)",
+                mount_src=True,
+                extra_mounts=[(str(Config.SKILLS_DIR), "/workspace/docs/skills")],
+            )
+        return f"{stdout}{stderr}\nReturn Code: {rc}"
 
     def list_skills(self) -> str:
         sdir = Config.SKILLS_DIR
@@ -315,28 +422,49 @@ class ToolRuntime:
         filename: str = "SKILL.md",
         resource_type: Optional[str] = None,
     ) -> str:
+        """Updates a skill file on host after (optional) sandboxed validation."""
+        # TODO: Implement sandboxed linting/validation here before writing to host
         sdir = Config.SKILLS_DIR / skill_name
         if not sdir.exists():
             return f"Error: {skill_name} missing"
         tpath = sdir / (resource_type or "") / Path(filename).name
         tpath.parent.mkdir(parents=True, exist_ok=True)
         tpath.write_text(content, encoding="utf-8")
-        return f"Updated {tpath}"
+        return f"Updated {tpath} (Host-side)"
 
     def init_skill(self, skill_name: str) -> str:
-        script = Config.SKILL_CREATOR_DIR / "scripts/init_skill.py"
-        res = subprocess.run(
-            [sys.executable, str(script), skill_name, "--path", str(Config.SKILLS_DIR)],
-            capture_output=True,
-            text=True,
-        )
-        return res.stdout or res.stderr
+        """Initializes a new skill using the skill-creator inside the sandbox."""
+        script_path = "docs/skills/skill-creator/scripts/init_skill.py"
+        cmd = ["python3", script_path, skill_name, "--path", "/workspace/docs/skills"]
+
+        if self.active_session_id:
+            stdout, stderr, rc = self.sandbox.exec_command(
+                self.active_session_id, cmd
+            )
+        else:
+            stdout, stderr, rc = self.sandbox.run_script(
+                "-c",
+                f"import subprocess, sys; r=subprocess.run({cmd}, capture_output=True, text=True); print(r.stdout); print(r.stderr, file=sys.stderr); sys.exit(r.returncode)",
+                mount_src=True,
+                extra_mounts=[(str(Config.SKILLS_DIR), "/workspace/docs/skills")],
+            )
+        return f"{stdout}{stderr}"
 
     def package_skill(self, skill_name: str) -> str:
-        script = Config.SKILL_CREATOR_DIR / "scripts/package_skill.py"
-        res = subprocess.run(
-            [sys.executable, str(script), str(Config.SKILLS_DIR / skill_name)],
-            capture_output=True,
-            text=True,
-        )
-        return res.stdout or res.stderr
+        """Packages a skill using the skill-creator inside the sandbox."""
+        script_path = "docs/skills/skill-creator/scripts/package_skill.py"
+        target_path = f"/workspace/docs/skills/{skill_name}"
+        cmd = ["python3", script_path, target_path]
+
+        if self.active_session_id:
+            stdout, stderr, rc = self.sandbox.exec_command(
+                self.active_session_id, cmd
+            )
+        else:
+            stdout, stderr, rc = self.sandbox.run_script(
+                "-c",
+                f"import subprocess, sys; r=subprocess.run({cmd}, capture_output=True, text=True); print(r.stdout); print(r.stderr, file=sys.stderr); sys.exit(r.returncode)",
+                mount_src=True,
+                extra_mounts=[(str(Config.SKILLS_DIR), "/workspace/docs/skills")],
+            )
+        return f"{stdout}{stderr}"

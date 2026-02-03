@@ -51,11 +51,17 @@ class InjectionMoldingWorkbench(Workbench):
             )
 
         # 2. Undercut Detection
-        undercuts = check_undercuts(mesh, (0, 0, 1))
-        if undercuts:
+        # For IM, a face is a violation only if it is occluded from BOTH pull directions.
+        undercuts_plus = set(check_undercuts(mesh, (0, 0, 1)))
+        undercuts_minus = set(check_undercuts(mesh, (0, 0, -1)))
+        
+        # Intersection of both sets means it's unreachable from either side
+        real_undercuts = undercuts_plus.intersection(undercuts_minus)
+        
+        if real_undercuts:
             violations.append(
-                f"IM Undercut Violation: {len(undercuts)} undercut faces detected. "
-                "Simple 2-part mold cannot eject geometry trapped in the pull direction."
+                f"IM Undercut Violation: {len(real_undercuts)} undercut faces detected. "
+                "These faces are occluded from both mold opening directions (+Z and -Z)."
             )
 
         # 3. Wall Thickness Analysis
@@ -113,17 +119,21 @@ class InjectionMoldingWorkbench(Workbench):
         material_cost_per_part = mass_kg * material_cfg["cost_per_kg"]
 
         # 3. Cycle Cost per Unit
-        # Formula: (Volume / injection_rate) * machine_rate
-        # Refined: Cycle time is often limited by cooling time, which is proportional to thickness^2.
-        # But stick to spec formula for now or simple enhancements?
-        # User requested "how we determine the pricing".
-        # Let's add cooling time factor based on max thickness if meaningful?
-        # For now, keep simple volume rate but REPORT thickness so agent sees it.
-
+        # Formula: max(Injection Time, Cooling Time) * Machine Rate
+        # Injection time: Volume / injection_rate
         injection_rate_cm3_s = self.costs_cfg.get("injection_rate_cm3_s", 10.0)
+        injection_time_s = volume_cm3 / injection_rate_cm3_s
+
+        # Cooling time: factor * thickness^2
+        # For ABS, factor is ~2.0 s/mm^2 (rule of thumb: 2mm -> 8s)
+        cooling_factor = self.costs_cfg.get("cooling_factor_s_mm2", 2.0)
+        max_thickness_mm = thickness_stats["max_mm"]
+        cooling_time_s = cooling_factor * (max_thickness_mm**2)
+
+        cycle_time_s = max(injection_time_s, cooling_time_s)
         machine_rate_s = self.costs_cfg.get("machine_hourly_rate", 60.0) / 3600.0
 
-        cycle_cost_per_part = (volume_cm3 / injection_rate_cm3_s) * machine_rate_s
+        cycle_cost_per_part = cycle_time_s * machine_rate_s
 
         unit_cost = material_cost_per_part + cycle_cost_per_part
         total_cost = tooling_cost + (unit_cost * quantity)
@@ -145,5 +155,15 @@ class InjectionMoldingWorkbench(Workbench):
                     "max_mm": round(thickness_stats["max_mm"], 2),
                     "average_mm": round(thickness_stats["average_mm"], 2),
                 },
+                "cycle_metrics": {
+                    "injection_time_s": round(injection_time_s, 2),
+                    "cooling_time_s": round(cooling_time_s, 2),
+                    "total_cycle_time_s": round(cycle_time_s, 2),
+                },
+                "pricing_explanation": (
+                    f"Tooling cost (${tooling_cost:.2f}) is driven by surface area. "
+                    f"Unit cost is driven by material volume and cooling time. "
+                    f"Max thickness ({max_thickness_mm:.2f}mm) dictates cooling time ({cooling_time_s:.2f}s)."
+                ),
             },
         }
