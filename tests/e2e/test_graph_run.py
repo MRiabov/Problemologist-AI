@@ -36,7 +36,6 @@ async def test_graph_simple_run():
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.actor.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.critic.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.planner.start_session_async", new_callable=AsyncMock),
     ):
         app = build_graph().compile()
         inputs = {
@@ -102,17 +101,13 @@ async def test_graph_with_tool_call():
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.actor.get_model", return_value=mock_llm),
         patch("src.agent.graph.nodes.critic.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.planner.start_session_async", new_callable=AsyncMock),
         patch(
-            "src.agent.tools.env.preview_design",
-            return_value=MagicMock(ainvoke=AsyncMock(return_value="Preview generated: design.svg")),
+            "src.agent.tools.env_adapter._execute_tool",
+            new_callable=AsyncMock,
+            return_value="Preview generated: design.svg",
         ),
     ):
-        # NOTE: patching src.agent.tools.env.preview_design might not be enough because 
-        # graph.py imports it. But we patch the tool's ainvoke if it's used.
-        # Actually, ToolNode will call tool.ainvoke(state).
-        
-        # Let's try a different approach for tool patching if this fails.
+        # Patch _execute_tool to mock all tool calls
         app = build_graph().compile()
         inputs = {
             "messages": [HumanMessage(content="Show me a cube")],
