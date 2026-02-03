@@ -12,9 +12,16 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
-def test_simulate_success():
+from unittest.mock import MagicMock, patch
+from src.agent.utils.config import Config
+
+
+@patch("src.simulation_engine.main.run_isolated")
+def test_simulate_success(mock_run_isolated):
+    mock_run_isolated.return_value = {"success": True, "result": {"duration": 0.1}}
     # Use MujocoBridge to get a standard template
-    bridge = MujocoBridge()
+    sandbox = MagicMock()
+    bridge = MujocoBridge(workspace_dir=Config.WORKSPACE_DIR, sandbox=sandbox)
     xml_content = bridge.load_template()
 
     payload = {"mjcf_xml": xml_content, "duration": 0.1, "config": {"timeout": 10.0}}
@@ -28,9 +35,16 @@ def test_simulate_success():
     assert "duration" in data["result"]
 
 
-def test_simulate_timeout():
+@patch("src.simulation_engine.main.run_isolated")
+def test_simulate_timeout(mock_run_isolated):
+    mock_run_isolated.return_value = {
+        "success": False,
+        "error_type": "TimeoutError",
+        "message": "Simulation timed out.",
+    }
     # Create an XML that might be slow or just force a tiny timeout
-    bridge = MujocoBridge()
+    sandbox = MagicMock()
+    bridge = MujocoBridge(workspace_dir=Config.WORKSPACE_DIR, sandbox=sandbox)
     xml_content = bridge.load_template()
 
     payload = {
@@ -46,7 +60,13 @@ def test_simulate_timeout():
     assert data["outcome"] == "timeouterror"
 
 
-def test_simulate_crash():
+@patch("src.simulation_engine.main.run_isolated")
+def test_simulate_crash(mock_run_isolated):
+    mock_run_isolated.return_value = {
+        "success": False,
+        "error_type": "CrashError",
+        "message": "Generative crush.",
+    }
     # Invalid XML to trigger a load error which we handle as a crash or error
     payload = {"mjcf_xml": "invalid xml", "duration": 0.1}
 
@@ -55,4 +75,4 @@ def test_simulate_crash():
     data = response.json()
     # Based on MujocoBridge implementation, it returns success=False result,
     # but in our wrapper we might catch it.
-    assert data["success"] is True or data["outcome"] == "runtimeerror"
+    assert data["success"] is True or data["outcome"] == "crasherror"
