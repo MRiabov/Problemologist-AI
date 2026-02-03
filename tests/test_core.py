@@ -50,7 +50,7 @@ def test_env_budget_rejection(env):
         },
     )
 
-    output = env.dispatch("submit_design", {})
+    output = env.dispatch("submit_design", {"control_path": "control.py"})
 
     assert "REJECTED" in output
     assert "exceeds budget" in output
@@ -73,7 +73,7 @@ def test_env_force_submit(env):
 
     # Force submit should bypass budget check
     output = env.dispatch(
-        "submit_design", {"force_submit": True, "reason": "Testing bypass"}
+        "submit_design", {"force_submit": True, "control_path": "control.py"}
     )
 
     assert "REJECTED" not in output
@@ -121,7 +121,7 @@ def test_env_dispatch_submit_invalid(env):
     env.reset()
     env.dispatch("write_file", {"content": "invalid python code", "path": "design.py"})
 
-    output = env.dispatch("submit_design", {})
+    output = env.dispatch("submit_design", {"control_path": "control.py"})
     assert "Error processing design" in output
 
 
@@ -135,7 +135,7 @@ def test_env_dispatch_submit_success(env):
         },
     )
 
-    output = env.dispatch("submit_design", {})
+    output = env.dispatch("submit_design", {"control_path": "control.py"})
     assert "[TERMINATED]" in output
     assert "Submission Result: SUCCESS" in output
 
