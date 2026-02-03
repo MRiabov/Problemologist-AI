@@ -11,7 +11,7 @@ from src.environment.runtime import ToolRuntime
 
 # Global runtime instance for backward compatibility
 # Note: This uses the default "workspace" directory.
-_RUNTIME = ToolRuntime("workspace")
+_RUNTIME = ToolRuntime("workspaces/main")
 
 
 def _deprecated(func):
