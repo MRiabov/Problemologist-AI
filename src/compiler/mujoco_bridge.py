@@ -140,7 +140,6 @@ import json
 import os
 import sys
 from src.compiler.mujoco_bridge import MujocoBridge
-from dataclasses import asdict
 
 # Add workspace to path
 sys.path.append("/workspace")
@@ -159,8 +158,8 @@ sim_result = bridge._run_simulation_internal(
     goal_size={goal_size}
 )
 
-# Use dataclasses.asdict for robust serialization
-res_dict = asdict(sim_result)
+# Use Pydantic's model_dump for serialization
+res_dict = sim_result.model_dump()
 
 with open("/workspace/{result_file}", "w") as f:
     json.dump(res_dict, f)
@@ -196,7 +195,7 @@ with open("/workspace/{result_file}", "w") as f:
                 success=False, total_energy=0.0, total_damage=100.0, observations=[]
             )
 
-        return SimResult.from_dict(res)
+        return SimResult.model_validate(res)
 
     def _run_simulation_internal(
         self,
