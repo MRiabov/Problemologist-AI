@@ -16,10 +16,10 @@ Unlike generic coding assistants, this agent leverages the "Deep Agent" architec
 
 1. **Autonomous Resolution**: The agent must be able to solve geometric problems from start to finish without human intervention, handling its own errors and edge cases.
 2. **Multimodal Reasoning**: Effectively use the `preview_design` tool to visually inspect geometry and correct spatial errors that are not visible in the code text.
-3. **Structured Cognition**: Enforce a strict separation between **Planning** (understanding the problem, researching docs) and **Execution** (writing code, iterating).
-4. **Economic Optimization**: Respect `max_unit_cost` and `target_quantity` constraints by iteratively optimizing material volume, part reuse, and manufacturing process selection.
-5. **Budget-Aware Self-Correction**: When a submission is rejected due to cost overruns, the agent must distinguish between "Inefficient Design" (fixable) and "Physical Impossibility" (requires justification).
-6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent records specialized knowledge, workflows, and curated patterns into modular **Skills** (e.g., `build123d_cad_drafting_skill`) to avoid repeating mistakes and reuse proven strategies across sessions.
+3. **Structured Cognition**: Enforce a separation between **Planning** (understanding the problem) and **Execution** (writing code).
+4. **Standard Agent Interface**: The agent operates like a human developer, using standard tools (`view_file`, `edit_file`, `run_command`) effectively in a persistent environment, rather than relying on narrow, custom API calls.
+5. **Economic Optimization**: Respect `max_unit_cost` and `target_quantity` constraints.
+6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent records specialized knowledge into `docs/skills/` to reuse proven strategies strategies.
 
 ### 2.2. Success Criteria
 
@@ -64,12 +64,12 @@ The agent shall be implemented as a **LangGraph** state machine with the followi
     * **Role**: Visual, Logic, and Economic validation.
     * **Trigger**: After `submit_design` or `preview_design`.
     * **Action**:
-        - Checks simulator feedback or vision output.
-        - **Cost Guard**: Compares current unit cost against budget.
-        - **Consensus**: Evaluates `force_submit` justifications. If valid, signals `HARD_LIMIT_REACHED` to Planner.
+        * Checks simulator feedback or vision output.
+        * **Cost Guard**: Compares current unit cost against budget.
+        * **Consensus**: Evaluates `force_submit` justifications. If valid, signals `HARD_LIMIT_REACHED` to Planner.
     * **Transition**:
-        - **Success/Terminal**: -> `Skill Populator` -> `End`.
-        - **Failure/Iteration**: -> `Planner` (Re-planning) -> `Actor`.
+        * **Success/Terminal**: -> `Skill Populator` -> `End`.
+        * **Failure/Iteration**: -> `Planner` (Re-planning) -> `Actor`.
 
 4. **Skill Populator Node**:
     * **Role**: Persistent procedural memory management.
