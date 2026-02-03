@@ -1,4 +1,8 @@
+import hashlib
+
 from build123d import Part
+
+from src.compiler.models import CostBreakdown
 
 from .base import Workbench
 
@@ -55,13 +59,34 @@ class Print3DWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
+    def calculate_cost(
+        self, part: Part, quantity: int = 1, context: dict | None = None
+    ) -> CostBreakdown:
         """
         Calculates cost based on part volume and quantity.
         """
+        is_reused = False
         if context is not None:
-            import hashlib
-            part_hash = hashlib.md5(str(part.center()).encode() + str(part.volume).encode()).hexdigest()
+            part_hash = hashlib.md5(
+                str(part.center()).encode() + str(part.volume).encode()
+            ).hexdigest()
+            if part_hash in context:
+                is_reused = True
             context[part_hash] = context.get(part_hash, 0) + quantity
 
-        return (part.volume * self.material_cost) * quantity
+        unit_cost = part.volume * self.material_cost
+        total_cost = unit_cost * quantity
+
+        return CostBreakdown(
+            process="print_3d",
+            total_cost=total_cost,
+            unit_cost=unit_cost,
+            material_cost_per_unit=unit_cost,
+            setup_cost=0.0,
+            is_reused=is_reused,
+            details={
+                "part_volume": part.volume,
+                "material_cost_rate": self.material_cost,
+            },
+            pricing_explanation=f"Cost is purely volume-based (${self.material_cost}/mm3).",
+        )
