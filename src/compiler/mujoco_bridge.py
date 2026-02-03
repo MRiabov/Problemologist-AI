@@ -5,8 +5,11 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from src.agent.utils.logging import get_logger
 from src.compiler.mjcf_lint import validate_mjcf
 from src.compiler.models import Observation, SimResult
+
+logger = get_logger(__name__)
 
 
 class MujocoBridge:
@@ -183,8 +186,9 @@ with open("/workspace/{result_file}", "w") as f:
             if "CRASH_DETECTED" in res.get("message", ""):
                 raise RuntimeError(res["message"])
 
-            print(
-                f"Sandbox Simulation Error: {res.get('stderr') or res.get('message')}"
+            logger.error(
+                "Sandbox Simulation Error",
+                error=res.get("stderr") or res.get("message"),
             )
             return SimResult(
                 success=False, total_energy=0.0, total_damage=100.0, observations=[]
@@ -209,7 +213,7 @@ with open("/workspace/{result_file}", "w") as f:
         try:
             model = mujoco.MjModel.from_xml_string(xml_string)
         except Exception as e:
-            print(f"MuJoCo Load Error: {e}")
+            logger.error("MuJoCo Load Error", error=str(e))
             return SimResult(
                 success=False, total_energy=0.0, total_damage=100.0, observations=[]
             )
@@ -225,7 +229,7 @@ with open("/workspace/{result_file}", "w") as f:
                 if "control_logic" in namespace:
                     control_func = namespace["control_logic"]
             except Exception as e:
-                print(f"Control Script Error: {e}")
+                logger.error("Control Script Error", error=str(e))
                 return SimResult(
                     success=False, total_energy=0.0, total_damage=100.0, observations=[]
                 )
@@ -289,7 +293,7 @@ with open("/workspace/{result_file}", "w") as f:
                             # break
 
         except Exception as e:
-            print(f"Simulation Runtime Error: {e}")
+            logger.error("Simulation Runtime Error", error=str(e))
             return SimResult(
                 success=False, total_energy=0.0, total_damage=100.0, observations=[]
             )

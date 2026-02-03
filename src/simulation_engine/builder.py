@@ -8,6 +8,9 @@ from build123d import Compound, Solid, export_stl
 
 from src.cots.utils import get_description
 from src.generators.benchmark.constants import UNIT_SCALE
+from src.agent.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class MeshProcessor:
@@ -377,16 +380,18 @@ class SceneCompiler:
         self, compound: Compound, body_element: ET.Element, prefix: str
     ):
         """Helper to add meshes from a compound to a specific body element."""
-        print(f"DEBUG: STARTing _add_agent_meshes_to_body with prefix {prefix}")
-        print(
-            f"DEBUG: Compound type: {type(compound)}, label: '{getattr(compound, 'label', '')}'"
+        logger.debug("STARTing _add_agent_meshes_to_body", prefix=prefix)
+        logger.debug(
+            "Compound info",
+            type=str(type(compound)),
+            label=getattr(compound, "label", ""),
         )
 
         # We iterate over top-level children of the compound to find motors
         # If it's a single solid, it will have no children but solids() will have 1.
 
         children = getattr(compound, "children", [])
-        print(f"DEBUG: Children count: {len(children)}")
+        logger.debug("Children count", count=len(children))
         if not children and isinstance(compound, Solid):
             children = [compound]
 
@@ -419,17 +424,17 @@ class SceneCompiler:
             c_stator = None
             c_rotor = None
             child_children = getattr(child, "children", [])
-            print(f"DEBUG: Child {i} has {len(child_children)} children")
+            logger.debug("Child processing", index=i, child_count=len(child_children))
             for cc in child_children:
                 cc_label = getattr(cc, "label", "").lower()
-                print(f"DEBUG: Grandchild label: '{cc_label}'")
+                logger.debug("Grandchild label", label=cc_label)
                 if "stator" in cc_label:
                     c_stator = list(cc.solids())[0] if list(cc.solids()) else None
                 elif "rotor" in cc_label:
                     c_rotor = list(cc.solids())[0] if list(cc.solids()) else None
 
             if c_stator and c_rotor:
-                print(f"DEBUG: Motor detected in child {i}!")
+                logger.debug("Motor detected", child_index=i)
                 c_prefix = f"{prefix}_p{i}"
                 self._process_motor_element(
                     child, c_stator, c_rotor, body_element, c_prefix

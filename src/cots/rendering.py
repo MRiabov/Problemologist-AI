@@ -5,6 +5,10 @@ import pyvista as pv
 from build123d import Compound, Part, export_stl
 from PIL import Image, ImageDraw
 
+from src.agent.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def render_placeholder_image(output_path: str):
     """Generate a simple 'Preview Not Available' placeholder image."""
@@ -57,7 +61,7 @@ def render_part(part_obj, part_id: str, cache_dir: str = ".cache/cots") -> str:
         plotter.close()
 
     except Exception as e:
-        print(f"Warning: Failed to render part {part_id}: {e}")
+        logger.warning("Failed to render part", part_id=part_id, error=str(e))
         # Create a placeholder if rendering fails
         render_placeholder_image(str(image_path))
     finally:

@@ -1,6 +1,10 @@
 from pathlib import Path
 from functools import lru_cache
 
+from src.agent.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
 # Hardcoded stubs for build123d when real docs are missing
 STUBS = [
     {
@@ -52,7 +56,7 @@ def load_docs(directory: str) -> list[dict[str, str]]:
                     }
                 )
             except Exception as e:
-                print(f"Error loading {filename}: {e}")
+                logger.error("Error loading file", filename=filename, error=str(e))
     return docs
 
 

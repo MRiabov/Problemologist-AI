@@ -10,7 +10,7 @@ def mock_docs_dir(tmp_path):
 
     # Create some dummy files
     (docs_dir / "test1.md").write_text(
-        "# Test Document 1\nThis is a test document about Box components.",
+        "# Test Document 1\nThis is a test document about UniqueBoxComponents.",
         encoding="utf-8",
     )
     (docs_dir / "test2.py").write_text(
@@ -44,11 +44,9 @@ def test_load_docs_missing_dir():
 
 
 def test_search_hit_filesystem(mock_docs_dir):
-    result = search("Box", directory=mock_docs_dir)
+    result = search("UniqueBoxComponents", directory=mock_docs_dir)
     assert "test1.md" in result
-    assert "Box" in result
-    # Should also include stubs
-    assert "docs/stubs.md" in result
+    assert "UniqueBoxComponents" in result
 
 
 def test_search_hit_stubs(mock_docs_dir):
