@@ -2,6 +2,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
 from src.agent.utils.config import Config
+from src.agent.utils.env_log import log_to_env
 from src.agent.utils.llm import get_model
 from src.agent.utils.prompts import get_prompt
 
@@ -10,22 +11,39 @@ async def planner_node(state: AgentState):
     """
     Decides the high-level strategy and updates the plan.
     """
+    log_to_env("Planning high-level strategy...", agent_role="Planner")
+
     # Check if we need to re-plan based on Critic feedback
     needs_replan = False
     last_critic_msg = ""
     for msg in reversed(state["messages"]):
-        if hasattr(msg, "content") and any(x in msg.content for x in ["Replan", "budget", "cost", "HARD_LIMIT"]):
+        if hasattr(msg, "content") and any(
+            x in msg.content for x in ["Replan", "budget", "cost", "HARD_LIMIT"]
+        ):
             needs_replan = True
             last_critic_msg = msg.content
             break
 
     # If a plan already exists and no re-plan is triggered, proceed.
     if state.get("plan") and not needs_replan:
+        log_to_env(
+            "Existing plan is valid. Handing off to Actor.",
+            type="handoff",
+            agent_role="Planner",
+        )
         return {
             "messages": [
-                AIMessage(content="Plan already exists and is valid. Proceeding to execution.")
+                AIMessage(
+                    content="Plan already exists and is valid. Proceeding to execution."
+                )
             ]
         }
+
+    if needs_replan:
+        log_to_env(
+            f"Critic requested re-plan: {last_critic_msg[:100]}...",
+            agent_role="Planner",
+        )
 
     model = get_model(Config.LLM_MODEL)
 
