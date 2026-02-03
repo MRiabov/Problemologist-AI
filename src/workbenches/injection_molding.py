@@ -1,16 +1,17 @@
 import hashlib
-from typing import List, Union
+from typing import Any
 
 from build123d import Part
 
-from src.workbenches.base import Workbench
 from src.workbenches.analysis_utils import (
-    part_to_trimesh,
+    analyze_wall_thickness,
     check_draft_angle,
     check_undercuts,
     check_wall_thickness,
     load_config,
+    part_to_trimesh,
 )
+from src.workbenches.base import Workbench
 
 
 class InjectionMoldingWorkbench(Workbench):
@@ -26,7 +27,7 @@ class InjectionMoldingWorkbench(Workbench):
         # Default to ABS for now
         self.default_material = "abs"
 
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part for injection molding.
         Checks for:
@@ -72,14 +73,19 @@ class InjectionMoldingWorkbench(Workbench):
         return violations
 
     def calculate_cost(
-        self, part: Part, quantity: int = 1, context: dict = None
-    ) -> float:
+        self, part: Part, quantity: int = 1, context: dict | None = None
+    ) -> dict[str, Any]:
         """
         Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
         Tooling cost depends on surface area (complexity proxy).
         If part is reused, tooling cost is waived or heavily discounted.
+        Returns detailed breakdown.
         """
         material_cfg = self.materials[self.default_material]
+
+        # 0. Geometric Analysis (Needed for pricing metrics)
+        mesh = part_to_trimesh(part)
+        thickness_stats = analyze_wall_thickness(mesh)
 
         # 1. Tooling (Fixed) Cost
         # Base cost + surface area factor
@@ -90,6 +96,7 @@ class InjectionMoldingWorkbench(Workbench):
         )
 
         # Apply reuse discount if part hash is in context
+        is_reused = False
         if context is not None:
             part_hash = hashlib.md5(
                 str(part.center()).encode() + str(part.volume).encode()
@@ -97,6 +104,7 @@ class InjectionMoldingWorkbench(Workbench):
             if part_hash in context:
                 # 90% discount on tooling for identical part reuse (reusing the mold)
                 tooling_cost *= 0.1
+                is_reused = True
             context[part_hash] = context.get(part_hash, 0) + quantity
 
         # 2. Material Cost per Unit
@@ -106,6 +114,12 @@ class InjectionMoldingWorkbench(Workbench):
 
         # 3. Cycle Cost per Unit
         # Formula: (Volume / injection_rate) * machine_rate
+        # Refined: Cycle time is often limited by cooling time, which is proportional to thickness^2.
+        # But stick to spec formula for now or simple enhancements?
+        # User requested "how we determine the pricing".
+        # Let's add cooling time factor based on max thickness if meaningful?
+        # For now, keep simple volume rate but REPORT thickness so agent sees it.
+
         injection_rate_cm3_s = self.costs_cfg.get("injection_rate_cm3_s", 10.0)
         machine_rate_s = self.costs_cfg.get("machine_hourly_rate", 60.0) / 3600.0
 
@@ -113,4 +127,23 @@ class InjectionMoldingWorkbench(Workbench):
 
         unit_cost = material_cost_per_part + cycle_cost_per_part
         total_cost = tooling_cost + (unit_cost * quantity)
-        return total_cost
+
+        return {
+            "total_cost": total_cost,
+            "unit_cost": total_cost / quantity if quantity > 0 else 0.0,
+            "breakdown": {
+                "process": "injection_molding",
+                "material_name": self.default_material,
+                "tooling_cost": round(tooling_cost, 2),
+                "is_reused": is_reused,
+                "material_cost_per_unit": round(material_cost_per_part, 4),
+                "cycle_cost_per_unit": round(cycle_cost_per_part, 4),
+                "part_volume_cm3": round(volume_cm3, 2),
+                "surface_area_cm2": round(surface_area_cm2, 2),
+                "wall_thickness_stats": {
+                    "min_mm": round(thickness_stats["min_mm"], 2),
+                    "max_mm": round(thickness_stats["max_mm"], 2),
+                    "average_mm": round(thickness_stats["average_mm"], 2),
+                },
+            },
+        }
