@@ -307,6 +307,7 @@ Paths are hardcoded relative to working directory or computed from `__file__`. T
 - Running from a different directory
 - Installed as a package
 - Running in Docker with different mount points
+<!-- dev note - we can fix this by using a config file that specifies the root directory; in fact we already have /config/ dir. -->
 
 ---
 
@@ -379,13 +380,13 @@ If they're deprecated, remove them or add `warnings.warn()`.
 
 ### Short-term (Architecture)
 
-4. Introduce dependency injection for environment/role context
+1. Introduce dependency injection for environment/role context
 2. Create tool registry to eliminate three-layer duplication
 3. Properly implement session scoping for SQLAlchemy
 
 ### Medium-term (Tech Debt)
 
-7. Remove Gymnasium interface if not needed for RL
+1. Remove Gymnasium interface if not needed for RL
 2. Consolidate sync/async model
 3. Replace Config class with Pydantic BaseSettings
 4. Remove deprecated functions
