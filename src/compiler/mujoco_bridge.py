@@ -1,32 +1,31 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
 import mujoco
 import numpy as np
 
 from src.compiler.models import Observation, SimResult
-from src.environment.sandbox import PodmanSandbox
-from src.environment.sandbox_utils import run_sandboxed_script
 
 
 class MujocoBridge:
     def __init__(
         self,
         workspace_dir: str | Path | None = None,
-        sandbox: PodmanSandbox | None = None,
+        sandbox: Any | None = None,
     ):
         """
         Initialize MujocoBridge.
 
         Args:
-            workspace_dir: Path to the workspace directory. If None, uses legacy fallback.
-            sandbox: PodmanSandbox instance for running simulations. If None, uses legacy fallback.
+            workspace_dir: Path to the workspace directory.
+            sandbox: PodmanSandbox instance for running simulations.
         """
+        self._sandbox = sandbox
+        self._workspace_dir = Path(workspace_dir) if workspace_dir else None
         # Assumes this file is in src/compiler/
         # and templates are in src/compiler/templates/
         self.template_dir = Path(__file__).resolve().parent / "templates"
-        self._workspace_dir = Path(workspace_dir) if workspace_dir else None
-        self._sandbox = sandbox
 
     @property
     def workspace_dir(self) -> Path:
@@ -39,13 +38,17 @@ class MujocoBridge:
         return Config.WORKSPACE_DIR
 
     @property
-    def sandbox(self) -> PodmanSandbox:
-        """Get sandbox."""
+    def sandbox(self) -> Any:
+        """Get sandbox, initializing a default one if needed."""
         if self._sandbox:
             return self._sandbox
-        raise RuntimeError(
-            "Sandbox not initialized in MujocoBridge. Ensure it is passed during __init__ or via ToolRuntime."
-        )
+
+        # Lazy initialization for host-side runs
+        from src.environment.sandbox import PodmanSandbox
+
+        wdir = str(self.workspace_dir)
+        self._sandbox = PodmanSandbox(wdir)
+        return self._sandbox
 
     def load_template(self, template_name: str = "standard.xml") -> str:
         """Load a standard template and return its XML string content.
@@ -132,6 +135,7 @@ import json
 import os
 import sys
 from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+from dataclasses import asdict
 
 # Add workspace to path
 sys.path.append("/workspace")
@@ -151,27 +155,14 @@ sim_result = bridge._run_simulation_internal(
     goal_size=goal_size
 )
 
-# Use dataclasses.asdict or manual dict creation
-res_dict = {{
-    "success": sim_result.success,
-    "total_energy": sim_result.total_energy,
-    "total_damage": sim_result.total_damage,
-    "observations": [
-        {{
-            "step": obs.step,
-            "time": obs.time,
-            "state_vector": obs.state_vector.tolist(),
-            "energy_consumed": obs.energy_consumed,
-            "damage_detected": obs.damage_detected
-        }}
-        for obs in sim_result.observations
-    ],
-    "metadata": sim_result.metadata
-}}
+# Use dataclasses.asdict for robust serialization
+res_dict = asdict(sim_result)
 
 with open("/workspace/{result_file}", "w") as f:
     json.dump(res_dict, f)
 """
+        from src.environment.sandbox_utils import run_sandboxed_script
+
         res = run_sandboxed_script(
             sandbox=self.sandbox,
             script_content=runner_script,
@@ -201,7 +192,7 @@ with open("/workspace/{result_file}", "w") as f:
             Observation(
                 step=o["step"],
                 time=o["time"],
-                state_vector=np.array(o["state_vector"]),
+                state_vector=list(o["state_vector"]),
                 energy_consumed=o["energy_consumed"],
                 damage_detected=o["damage_detected"],
             )
@@ -229,7 +220,9 @@ with open("/workspace/{result_file}", "w") as f:
             model = mujoco.MjModel.from_xml_string(xml_string)
         except Exception as e:
             print(f"MuJoCo Load Error: {e}")
-            return SimResult(duration, energy=0.0, success=False, damage=100.0)
+            return SimResult(
+                success=False, total_energy=0.0, total_damage=100.0, observations=[]
+            )
 
         data = mujoco.MjData(model)
 
@@ -243,7 +236,9 @@ with open("/workspace/{result_file}", "w") as f:
                     control_func = namespace["control_logic"]
             except Exception as e:
                 print(f"Control Script Error: {e}")
-                return SimResult(duration, energy=0.0, success=False, damage=100.0)
+                return SimResult(
+                    success=False, total_energy=0.0, total_damage=100.0, observations=[]
+                )
 
         energy_acc = 0.0
         damage_acc = 0.0
@@ -273,7 +268,7 @@ with open("/workspace/{result_file}", "w") as f:
                     obs = Observation(
                         step=len(observations),
                         time=data.time,
-                        state_vector=np.array(state_vector),
+                        state_vector=list(state_vector),
                         energy_consumed=energy_acc,
                         damage_detected=damage_acc,
                     )
@@ -305,7 +300,9 @@ with open("/workspace/{result_file}", "w") as f:
 
         except Exception as e:
             print(f"Simulation Runtime Error: {e}")
-            return SimResult(duration, energy=0.0, success=False, damage=100.0)
+            return SimResult(
+                success=False, total_energy=0.0, total_damage=100.0, observations=[]
+            )
 
         # Final Success check if no goal zone but position is valid
         if goal_pos is None:

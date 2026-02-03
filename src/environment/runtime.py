@@ -263,7 +263,11 @@ class ToolRuntime:
             sim_result = self.sim_bridge.run_simulation(injected_xml)
 
             reward = (
-                (100.0 - (sim_result.energy * 0.1) - (sim_result.damage * 10.0))
+                (
+                    100.0
+                    - (sim_result.total_energy * 0.1)
+                    - (sim_result.total_damage * 10.0)
+                )
                 if sim_result.success
                 else -50.0
             )
@@ -272,11 +276,11 @@ class ToolRuntime:
             return {
                 "status": status,
                 "reward": reward,
-                "message": f"Submission Result: {status.upper()}. Energy: {sim_result.energy:.2f}",
+                "message": f"Submission Result: {status.upper()}. Energy: {sim_result.total_energy:.2f}",
                 "terminated": True,
                 "metrics": {
-                    "energy": sim_result.energy,
-                    "damage": sim_result.damage,
+                    "energy": sim_result.total_energy,
+                    "damage": sim_result.total_damage,
                     "success": sim_result.success,
                 },
             }
@@ -319,6 +323,10 @@ class ToolRuntime:
 
         try:
             result = func(**arguments)
+            if hasattr(result, "__dataclass_fields__"):
+                from dataclasses import asdict
+
+                return json.dumps(asdict(result))
             return (
                 json.dumps(result) if isinstance(result, (dict, list)) else str(result)
             )
