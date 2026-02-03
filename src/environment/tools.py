@@ -13,6 +13,7 @@ import build123d as bd
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.workbenches.print_3d import Print3DWorkbench
+from src.agent.utils.linter import run_linter, format_linter_report
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = str(Path("workspace").resolve())
@@ -71,7 +72,11 @@ def write_script(content: str, filename: str = "design.py") -> str:
 
     try:
         path.write_text(content, encoding="utf-8")
-        return f"Successfully wrote to {filename}"
+        result = f"Successfully wrote to {filename}"
+        if filename.endswith(".py"):
+            lint_report = lint_script(filename)
+            result += f"\n\n{lint_report}"
+        return result
     except Exception as e:
         return f"Error writing to {filename}: {e!s}"
 
@@ -139,7 +144,11 @@ def edit_script(filename: str, find: str, replace: str) -> str:
         new_content = content.replace(find, replace)
         path.write_text(new_content, encoding="utf-8")
 
-        return f"Successfully edited {filename}."
+        result = f"Successfully edited {filename}."
+        if filename.endswith(".py"):
+            lint_report = lint_script(filename)
+            result += f"\n\n{lint_report}"
+        return result
     except Exception as e:
         return f"Error editing {filename}: {e!s}"
 
@@ -682,3 +691,24 @@ def preview_part(part_id: str) -> str:
         return output
     except Exception as e:
         return f"Error previewing part {part_id}: {e!s}"
+
+
+def lint_script(filename: str = "design.py") -> str:
+    """
+    Runs static analysis (Ruff, Pyrefly) on a script in the workspace.
+    Returns a formatted report of errors and suggestions.
+    """
+    filename = Path(filename).name
+    path = Path(WORKSPACE_DIR) / filename
+
+    if not path.exists():
+        return f"Error: File {filename} does not exist."
+
+    try:
+        code = path.read_text(encoding="utf-8")
+        errors = run_linter(code)
+        if not errors:
+            return "No linting errors found. Code looks clean!"
+        return format_linter_report(errors)
+    except Exception as e:
+        return f"Error running linter: {e!s}"

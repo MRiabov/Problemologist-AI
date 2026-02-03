@@ -181,3 +181,8 @@ async def start_session_async(session_id: str) -> str:
 async def stop_session_async() -> str:
     """Async wrapper for stopping a session."""
     return await asyncio.to_thread(env_tools.stop_session)
+
+
+async def lint_script_async(filename: str) -> str:
+    """Async wrapper for linting a script."""
+    return await asyncio.to_thread(env_tools.lint_script, filename)

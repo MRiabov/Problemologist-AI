@@ -1,18 +1,19 @@
 from langchain_core.messages import SystemMessage
+from typing import Optional
+from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
     edit_script,
-    init_skill,
-    list_skill_files,
-    list_skills,
-    package_skill,
     preview_design,
-    read_skill,
-    search_docs,
     submit_design,
-    update_skill,
     write_script,
+    check_manufacturability,
+    view_file,
+    run_command,
+    search_docs,
+    search_parts,
+    preview_part,
 )
 from src.agent.tools.env_adapter import set_current_role
 from src.agent.tools.memory import read_journal, write_journal
@@ -21,7 +22,7 @@ from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
 
 
-async def actor_node(state: AgentState, tools: list = None):
+async def actor_node(state: AgentState, tools: Optional[list] = None):
     """
     Executes the next step in the plan using tools.
     """
@@ -34,17 +35,16 @@ async def actor_node(state: AgentState, tools: list = None):
         tools = [
             write_script,
             edit_script,
+            view_file,
+            run_command,
             preview_design,
             submit_design,
             search_docs,
-            update_skill,
-            read_skill,
-            list_skills,
-            list_skill_files,
-            init_skill,
-            package_skill,
+            check_manufacturability,
             read_journal,
             write_journal,
+            search_parts,
+            preview_part,
         ]
     model_with_tools = model.bind_tools(tools)
 
@@ -62,19 +62,16 @@ async def actor_node(state: AgentState, tools: list = None):
 
     # Mandatory skill check instruction
     system_prompt += (
-        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use the "
-        "`read_skill` tool to read the `build123d_cad_drafting_skill` (SKILL.md). "
-        "It contains expert knowledge, curated patterns, and critical pitfalls "
-        "that are not in the standard documentation."
+        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use `view_file` "
+        "to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. "
+        "It contains expert knowledge, curated patterns, and critical pitfalls."
     )
 
     if state.get("step_count", 0) > 5:
         system_prompt += (
             "\n\nCRITICAL: You have taken more than 5 steps without successful "
             "submission. Please read "
-            "`@file:.agent/skills/build123d_cad_drafting_skill/SKILL.md` for guidance. "
-            "You should also use the `update_skill` tool to record any new insights, "
-            "recurring patterns, or fixes you've discovered to help future attempts."
+            "`docs/skills/build123d_cad_drafting_skill/SKILL.md` for guidance."
         )
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
