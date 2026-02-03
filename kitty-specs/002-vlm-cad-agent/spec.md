@@ -57,7 +57,7 @@ The agent shall be implemented as a **LangGraph** state machine with the followi
 
 2. **Actor Node** (The Builder):
     * **Role**: Executes the current step of the plan.
-    * **Action**: Calls environment tools (`write_script`, `preview_design`) and skill tools (`read_skill`) to maintain high coding standards.
+    * **Action**: Calls environment tools (`write_file`, `preview_design`) and skill tools (`read_skill`) to maintain high coding standards.
     * **Transition**: -> `Critic` (if submission or preview) OR -> `Actor` (if continuing).
 
 3. **Critic Node** (The Validator):
@@ -82,11 +82,15 @@ The agent interacts with the environment via **LangChain Tools**.
 #### 4.2.1. Environment Tools (CAD & DFM)
 
 * `search_docs(query: str)`: RAG retrieval from documentation.
-* `write_script(content: str, path: str)`: Creates or overwrites files in the workspace.
-* `edit_script(find: str, replace: str, path: str)`: Targeted text replacement.
-* `preview_design()` -> Visual rendering and spatial check.
+* `view_file(path: str)`: Reads the content of any file (scripts, documentation, skills).
+* `write_file(content: str, path: str, mode: str)`: Creates, overwrites, or appends to files. Handles `journal.md` specially.
+* `edit_file(path: str, find: str, replace: str)`: Targeted text replacement in files.
+* `run_command(command: str)`: Executes shell commands (e.g., `python design.py`) in the sandbox.
+* `preview_design(path: str)` -> Visual rendering (SVG) and spatial check.
 * `submit_design(control_path: str)` -> Full physics simulation and grading.
-* `check_manufacturability(process, quantity)` -> DFM analysis and cost estimation.
+* `check_manufacturability(design_file, process, quantity)` -> DFM analysis and cost estimation.
+* `search_parts(query: str)`: Search for COTS components.
+* `preview_part(part_id: str)`: Detailed metadata and recipe for a COTS part.
 
 #### 4.2.2. Skill Management Tools (Persistent Memory)
 
@@ -95,6 +99,8 @@ The agent interacts with the environment via **LangChain Tools**.
 * `update_skill(skill_name, content, filename)`: Records new insights or patterns.
 * `init_skill(skill_name)`: Initializes a new skill category.
 * `package_skill(skill_name)`: Validates and distributes a skill.
+* `list_skill_files(skill_name)`: Lists files within a skill folder.
+* `run_skill_script(skill_name, script_name, arguments)`: Runs a deterministic helper from a skill.
 
 ### 4.3. LLM Integration
 
@@ -113,7 +119,7 @@ The agent interacts with the environment via **LangChain Tools**.
 
 ### 5.2. Component Structure
 
-```
+```text
 src/agent/
 ├── graph/
 │   ├── graph.py            # Definition of Nodes and Edges
