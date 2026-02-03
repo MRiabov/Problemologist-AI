@@ -10,6 +10,7 @@ import build123d as bd
 from src.agent.utils.linter import format_linter_report, run_linter
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
+from src.environment.evaluator import Evaluator
 from src.environment.sandbox import PodmanSandbox
 from src.rag import search as rag_search
 from src.workbenches.cnc import CNCWorkbench
@@ -28,6 +29,7 @@ class ToolRuntime:
         Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
 
         self.sandbox = PodmanSandbox(self.workspace_dir)
+        self.evaluator = Evaluator(self.sandbox, self.workspace_dir)
         self.db = db
 
         self.active_session_id: Optional[str] = None
@@ -148,103 +150,9 @@ class ToolRuntime:
         except Exception as e:
             return f"Error reading {path}: {e!s}"
 
-    def _get_runner_script_prefix(self, filename: str) -> str:
-        return f"""
-import sys
-import json
-import hashlib
-from pathlib import Path
-import build123d as bd
-
-sys.path.append("/workspace")
-
-def get_export_obj(locs):
-    for val in locs.values():
-        if isinstance(val, (bd.Compound, bd.Solid, bd.Shape)):
-            return val
-        elif hasattr(val, "part") and isinstance(val.part, bd.Shape):
-            return val.part
-        elif hasattr(val, "sketch") and isinstance(val.sketch, bd.Shape):
-            return val.sketch
-        elif hasattr(val, "line") and isinstance(val.line, bd.Shape):
-            return val.line
-    return None
-
-def parse_label(label, default_q, default_p):
-    data = {{"quantity": default_q, "process": default_p}}
-    if not label: return data
-    for p in str(label).split("|"):
-        if ":" in p:
-            k, v = p.split(":", 1)
-            if k == "quantity": 
-                try: data["quantity"] = int(v)
-                except: pass
-            elif k == "process": data["process"] = v
-    return data
-"""
-
     def preview_design(self, filename: str = "design.py") -> str:
         """Executes the script and renders result to SVG."""
-        filename = Path(filename).name
-        script_path = Path(self.workspace_dir) / filename
-
-        if not script_path.exists():
-            return f"Error: File {filename} does not exist."
-
-        runner_filename = f"runner_{filename}"
-        runner_path = Path(self.workspace_dir) / runner_filename
-
-        runner_script = (
-            self._get_runner_script_prefix(filename)
-            + f"""
-from build123d import ExportSVG, Drawing, Unit
-
-try:
-    locs = {{}}
-    with Path("/workspace/{filename}").open("r", encoding="utf-8") as f:
-        code = f.read()
-    exec(code, globals(), locs)
-    
-    export_obj = get_export_obj(locs)
-            
-    if export_obj:
-        svg_filename = f"{{Path('{filename}').stem}}.svg"
-        svg_path = Path("/workspace") / svg_filename
-        
-        try:
-            drawing = Drawing(export_obj)
-            exporter = ExportSVG(unit=Unit.MM)
-            exporter.add_layer("visible", line_color=(0,0,0), line_weight=0.2)
-            exporter.add_shape(drawing.visible_lines, layer="visible")
-            exporter.write(str(svg_path))
-            print(f"RENDER_SUCCESS:{{svg_filename}}")
-        except Exception as e:
-            print(f"RENDER_EXCEPTION:{{str(e)}}")
-    else:
-        print("RENDER_ERROR: No 3D object found")
-except Exception as e:
-    print(f"RENDER_EXCEPTION:{{str(e)}}")
-"""
-        )
-
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
-            stdout, stderr, _ = self.sandbox.run_script(
-                runner_filename, session_id=self.active_session_id, mount_src=True
-            )
-
-            if runner_path.exists():
-                runner_path.unlink()
-
-            if "RENDER_SUCCESS" in stdout:
-                line = [l for l in stdout.split("\n") if "RENDER_SUCCESS" in l][0]
-                gen_file = line.split("RENDER_SUCCESS:")[1].strip()
-                return f"Preview generated: {gen_file}"
-
-            return f"Error generating preview: {stdout}{stderr}"
-
-        except Exception as e:
-            return f"Error: {e!s}"
+        return self.evaluator.preview_design(filename, session_id=self.active_session_id)
 
     def validate_and_export(
         self,
@@ -254,102 +162,13 @@ except Exception as e:
         export_stl: bool = False,
     ) -> Dict[str, Any]:
         """Validates design for manufacturability and optionally exports STL."""
-        design_file = Path(design_file).name
-        script_path = Path(self.workspace_dir) / design_file
-
-        if not script_path.exists():
-            return {"error": f"File {design_file} does not exist."}
-
-        runner_filename = (
-            f"val_runner_{hashlib.md5(design_file.encode()).hexdigest()[:8]}.py"
+        return self.evaluator.validate_and_export(
+            design_file=design_file,
+            process=process,
+            quantity=quantity,
+            export_stl=export_stl,
+            session_id=self.active_session_id,
         )
-        runner_path = Path(self.workspace_dir) / runner_filename
-        stl_filename = "design.stl"
-
-        runner_script = (
-            self._get_runner_script_prefix(design_file)
-            + f"""
-from src.workbenches.cnc import CNCWorkbench
-from src.workbenches.injection_molding import InjectionMoldingWorkbench
-from src.workbenches.print_3d import Print3DWorkbench
-from src.compiler import geometry
-
-result = {{
-    "status": "fail", 
-    "manufacturability_score": 0.0,
-    "violations": [],
-    "parts": [],
-    "cost_analysis": {{"total_cost": 0.0, "unit_cost": 0.0, "target_quantity": {quantity}}},
-    "stl_path": None,
-    "error": None
-}}
-
-try:
-    locs = {{}}
-    with Path("/workspace/{design_file}").open("r", encoding="utf-8") as f:
-        code = f.read()
-    exec(code, globals(), locs)
-    
-    export_obj = get_export_obj(locs)
-    if not export_obj:
-        raise ValueError("No 3D object found")
-
-    all_solids = list(export_obj.solids()) if isinstance(export_obj, bd.Compound) else [export_obj]
-
-    workbenches = {{
-        "cnc": CNCWorkbench(), "injection_molding": InjectionMoldingWorkbench(), "print_3d": Print3DWorkbench()
-    }}
-    
-    total_cost, all_violations, part_reports, reuse_ctx = 0.0, [], [], {{}}
-
-    for i, solid in enumerate(all_solids):
-        ldata = parse_label(getattr(solid, "label", ""), {quantity}, "{process}")
-        wb = workbenches.get(ldata["process"], workbenches.get("{process}", workbenches["print_3d"]))
-        
-        violations = wb.validate(solid)
-        all_violations.extend(violations)
-        cost = wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
-        total_cost += cost
-        
-        part_reports.append({{
-            "part_index": i, "process": ldata["process"], "quantity": ldata["quantity"],
-            "cost": cost, "violations": [str(v) for v in violations]
-        }})
-        
-    result["status"] = "pass" if not all_violations else "fail"
-    result["manufacturability_score"] = max(0.0, 1.0 - len(all_violations)*0.1)
-    result["violations"] = [{{"description": str(v)}} for v in all_violations]
-    result["parts"], result["cost_analysis"]["total_cost"] = part_reports, total_cost
-    result["cost_analysis"]["unit_cost"] = total_cost / {quantity} if {quantity} > 0 else 0.0
-
-    if {export_stl} and not all_violations:
-        geometry.export_mesh(export_obj, "/workspace/{stl_filename}")
-        result["stl_path"] = "{stl_filename}"
-
-except Exception as e:
-    result["error"] = str(e)
-
-print(f"VAL_RESULT:{{json.dumps(result)}}")
-"""
-        )
-
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
-            stdout, stderr, _ = self.sandbox.run_script(
-                runner_filename, session_id=self.active_session_id, mount_src=True
-            )
-
-            if runner_path.exists():
-                runner_path.unlink()
-
-            if "VAL_RESULT:" in stdout:
-                line = [l for l in stdout.split("\n") if "VAL_RESULT:" in l][0]
-                return json.loads(line.split("VAL_RESULT:")[1].strip())
-
-            return {"error": f"Exec failed: {stdout}{stderr}"}
-
-        except Exception as e:
-            return {"error": f"Host error: {e!s}"}
 
     def check_manufacturability(
         self, design_file: str = "design.py", process: str = "cnc", quantity: int = 1
