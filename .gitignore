@@ -41,3 +41,4 @@ kitty-specs/**/tasks/*.md
 /workspaces/
 /tests/output/
 /test_datasets/
+/scripts/throwaway/
