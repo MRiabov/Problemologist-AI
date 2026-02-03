@@ -43,9 +43,13 @@ def test_pusher_e2e_success(tmp_path):
     assert response.status_code == 200
 
     data = response.json()
-    assert data["success"] is True
+    if not data["success"]:
+        print(
+            f"DEBUG: Simulation failed with outcome: {data.get('outcome')} and error: {data.get('error')}"
+        )  # FIXME why not proper logging? we have a module for that.
+        print(f"DEBUG: Full Response: {data}")
+    assert data["success"] is True, f"Simulation failed. Full Response: {data}"
     assert data["outcome"] == "success"
-    assert data["result"]["success"] is True
-    assert data["result"]["energy"] > 0
-    assert "replay_data" in data["result"]
-    assert len(data["result"]["replay_data"]) > 0
+    assert data["result"]["total_energy"] > 0
+    assert "observations" in data["result"]
+    assert len(data["result"]["observations"]) > 0
