@@ -73,38 +73,28 @@ class CADEnv:
 
         return self.last_obs, {}
 
-    def step(
-        self, action: dict[str, Any], agent_role: str | None = None
-    ) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
+    def dispatch(
+        self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
+    ) -> str:
+        """
+        Dispatches a tool call, logs it to persistence, and returns the tool output.
+        """
         self.step_count += 1
         start_time = time.time()
 
-        tool_name = action.get("tool", "unknown")
-        raw_args = action.get("arguments", "{}")
-
-        # Parse Arguments
-        try:
-            if isinstance(raw_args, str) and raw_args.strip().startswith("{"):
-                arguments = json.loads(raw_args)
-            elif isinstance(raw_args, dict):
-                arguments = raw_args
-            else:
-                arguments = {"value": raw_args}
-        except json.JSONDecodeError:
-            arguments = {"value": raw_args}
-
         tool_output = ""
-        reward = 0.0
-        terminated = False
-        truncated = False
 
         try:
             if tool_name == "submit_design":
+                # Special handling for submission (reward, termination, simulation)
                 reward, tool_output, terminated = self._submit_design(arguments)
+                # We could log reward/terminated to tool_output or just persistence
+                if terminated:
+                    tool_output += f"\n\n[TERMINATED] Reward: {reward}"
             else:
                 tool_output = self.runtime.dispatch(tool_name, arguments)
 
-                # Update last_render if preview generated
+                # Update last_render if preview generated (for legacy/persistence)
                 if (
                     tool_name == "preview_design"
                     and "Preview generated:" in tool_output
@@ -127,9 +117,7 @@ class CADEnv:
             episode_id=self.episode.id,
             sequence_index=self.step_count,
             tool_name=tool_name,
-            tool_input=json.dumps(arguments)
-            if isinstance(arguments, dict)
-            else str(arguments),
+            tool_input=json.dumps(arguments),
             tool_output=tool_output,
             duration_ms=duration_ms,
             agent_role=agent_role,
@@ -142,14 +130,13 @@ class CADEnv:
                 file_path=self.last_obs["last_render"],
             )
 
-        # Update observation code
+        # Update last_obs (legacy but kept for internal state tracking)
         spath = Path(self.workspace_dir) / "design.py"
         if spath.exists():
             self.last_obs["code"] = spath.read_text(encoding="utf-8")
-
         self.last_obs["last_output"] = tool_output
 
-        return self.last_obs, reward, terminated, truncated, {}
+        return tool_output
 
     def _submit_design(self, arguments: dict[str, Any]) -> tuple[float, str, bool]:
         """Handles submission via ToolRuntime validation and host-side simulation."""

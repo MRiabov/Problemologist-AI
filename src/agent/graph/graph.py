@@ -8,7 +8,7 @@ from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
-from src.agent.tools.env import (
+from src.agent.tools.env_adapter import (
     write_file,
     edit_file,
     submit_design,
@@ -20,6 +20,7 @@ from src.agent.tools.env import (
     search_parts,
     preview_part,
     lint_script,
+    get_runtime,
 )
 from src.agent.tools.memory import read_journal
 from src.agent.utils.config import Config
@@ -73,6 +74,15 @@ def build_graph(
     standard_tool_node = ToolNode(tools)
 
     async def tools_node(state: AgentState):
+        # Inject runtime into tool calls
+        runtime_id = state.get("runtime_id", "default")
+        runtime = get_runtime(runtime_id)
+
+        last_msg = state["messages"][-1]
+        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+            for tc in last_msg.tool_calls:
+                tc["args"]["tool_runtime"] = runtime
+
         result = await standard_tool_node.ainvoke(state)
         # The result is usually {'messages': [ToolMessage, ...]}
 

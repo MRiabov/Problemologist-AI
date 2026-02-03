@@ -66,15 +66,6 @@ async def planner_node(state: AgentState):
     system_prompt_key = "cad_agent.planner.system"
     system_prompt = get_prompt(system_prompt_key)
 
-    # Mandatory skill check instruction
-    system_prompt += (
-        "\n\nMANDATORY: Before planning any `build123d` implementation, "
-        "you MUST use `view_file` to read the documentation at: "
-        "`docs/skills/build123d_cad_drafting_skill/SKILL.md` "
-        "and `docs/skills/manufacturing-knowledge/SKILL.md`. These contain expert knowledge, "
-        "curated patterns, and critical pitfalls."
-    )
-
     # Check for overrides
     if (
         state.get("runtime_config")

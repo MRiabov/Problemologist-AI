@@ -4,7 +4,7 @@ from src.agent.tools.benchmark_tools import (
     run_benchmark_linter,
     validate_benchmark_model,
 )
-from src.agent.tools.env import view_file
+from src.agent.tools.env_adapter import view_file
 
 # Constants used by dashboard
 MAX_ATTEMPTS = Config.MAX_STEPS

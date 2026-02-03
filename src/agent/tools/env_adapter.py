@@ -1,15 +1,16 @@
 import asyncio
+import json
 from typing import Any, Optional
+from langchain_core.tools import tool
 
-# Remove direct import of tools module to force usage of Runtime
-# from src.environment import tools as env_tools
 from src.environment.runtime import ToolRuntime
 
 # Global reference to the active environment (if any)
+# Note: We keep this for backward compatibility and potential CADEnv logging,
+# but favor explicit tool_runtime passing.
 _ACTIVE_ENV: Any | None = None
-_CURRENT_ROLE: str | None = None
-
-# Fallback runtime for when no env is active
+_DEFAULT_RUNTIME_ID: str = "default"
+_RUNTIMES: dict[str, ToolRuntime] = {}
 _FALLBACK_RUNTIME: ToolRuntime | None = None
 
 
@@ -20,8 +21,28 @@ def _get_fallback_runtime() -> ToolRuntime:
     return _FALLBACK_RUNTIME
 
 
+def register_runtime(runtime_id: str, runtime: ToolRuntime):
+    """Registers a runtime instance."""
+    global _RUNTIMES
+    _RUNTIMES[runtime_id] = runtime
+
+
+def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
+    """Gets a registered runtime by ID, or fallback."""
+    if runtime_id and runtime_id in _RUNTIMES:
+        return _RUNTIMES[runtime_id]
+
+    if _ACTIVE_ENV and hasattr(_ACTIVE_ENV, "runtime"):
+        return _ACTIVE_ENV.runtime
+
+    if _DEFAULT_RUNTIME_ID in _RUNTIMES:
+        return _RUNTIMES[_DEFAULT_RUNTIME_ID]
+
+    return _get_fallback_runtime()
+
+
 def set_active_env(env: Any):
-    """Sets the active environment instance for tool interaction."""
+    """Sets the active environment instance (legacy support)."""
     global _ACTIVE_ENV
     _ACTIVE_ENV = env
 
@@ -32,148 +53,218 @@ def get_active_env() -> Any | None:
 
 
 def set_current_role(role: str | None):
-    """Sets the current agent role for logging."""
-    global _CURRENT_ROLE
-    _CURRENT_ROLE = role
+    """Sets the current agent role for logging (legacy support)."""
+    # Role can be handled via context or passed to CADEnv if needed.
+    pass
 
 
-def _get_runtime() -> ToolRuntime:
-    """Helper to get the active runtime or fallback."""
-    if _ACTIVE_ENV and hasattr(_ACTIVE_ENV, "runtime"):
-        return _ACTIVE_ENV.runtime
-    return _get_fallback_runtime()
+async def _execute_tool(
+    tool_name: str, tool_runtime: Optional[ToolRuntime], **kwargs
+) -> Any:
+    """Dispatches tool call to runtime or active environment."""
+    # If we have an active CADEnv, we might want to route through it for database logging.
+    if _ACTIVE_ENV and hasattr(_ACTIVE_ENV, "dispatch"):
+        return await asyncio.to_thread(_ACTIVE_ENV.dispatch, tool_name, kwargs)
+
+    rt = tool_runtime or get_runtime()
+    return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
 
 
-async def _run_env_step(tool_name: str, **kwargs) -> str:
-    """Helper to run a step in the active environment or fallback to direct tool call."""
-    global _ACTIVE_ENV, _CURRENT_ROLE
-
-    # Check if arguments are passed as a single string (legacy fallback or LLM quirks)
-    if (
-        "arguments" in kwargs
-        and isinstance(kwargs["arguments"], str)
-        and len(kwargs) == 1
-    ):
-        import json
-
-        try:
-            if kwargs["arguments"].strip().startswith("{"):
-                kwargs = json.loads(kwargs["arguments"])
-        except Exception:
-            pass
-
-    if _ACTIVE_ENV:
-        import json
-
-        action = {"tool": tool_name, "arguments": json.dumps(kwargs)}
-        try:
-            obs, reward, terminated, truncated, info = await asyncio.to_thread(
-                _ACTIVE_ENV.step, action, agent_role=_CURRENT_ROLE
-            )
-            return obs["last_output"]
-        except Exception as e:
-            return f"Error executing tool {tool_name}: {e}"
-
-    # Fallback to direct runtime dispatch
-    runtime = _get_fallback_runtime()
-    return await asyncio.to_thread(runtime.dispatch, tool_name, kwargs)
+# --- Agent Tools ---
 
 
-async def write_file_async(content: str, path: str, mode: str = "overwrite") -> str:
-    """Async wrapper for writing a file."""
-    return await _run_env_step("write_file", content=content, path=path, mode=mode)
+@tool
+async def write_file(
+    content: str, path: str, mode: str = "overwrite", tool_runtime: Optional[Any] = None
+) -> str:
+    """
+    Writes content to a specific file or appends to it.
+    Args:
+        content: The text content to write.
+        path: The path where the file should be saved.
+        mode: Either 'overwrite' or 'append' (default: 'overwrite').
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool(
+        "write_file", tool_runtime, content=content, path=path, mode=mode
+    )
 
 
-async def edit_file_async(path: str, find: str, replace: str) -> str:
-    """Async wrapper for editing a file."""
-    return await _run_env_step("edit_file", path=path, find=find, replace=replace)
+@tool
+async def edit_file(
+    path: str, find: str, replace: str, tool_runtime: Optional[Any] = None
+) -> str:
+    """
+    Performs string replacement on the specified file.
+    Args:
+        path: The path of the file to edit.
+        find: The exact string to look for.
+        replace: The string to replace it with.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool(
+        "edit_file", tool_runtime, path=path, find=find, replace=replace
+    )
 
 
-async def write_script_async(content: str, path: str) -> str:
-    """[DEPRECATED] Async wrapper for writing a script."""
-    return await write_file_async(content, path, mode="overwrite")
+@tool
+async def preview_design(
+    path: str = "design.py", tool_runtime: Optional[Any] = None
+) -> str:
+    """
+    Runs the current design script, exports a render, and returns the view.
+    Args:
+        path: Path to the script to preview (default: design.py).
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("preview_design", tool_runtime, filename=path)
 
 
-async def edit_script_async(path: str, find: str, replace: str) -> str:
-    """[DEPRECATED] Async wrapper for editing a script."""
-    return await edit_file_async(path, find, replace)
+@tool
+async def submit_design(control_path: str, tool_runtime: Optional[Any] = None) -> str:
+    """
+    Runs the current design script, performs full Workbench validation, and returns final grades.
+    Args:
+        control_path: Path to the controller script to be used in simulation.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("submit_design", tool_runtime, control_path=control_path)
 
 
-async def preview_design_async(path: str) -> str:
-    """Async wrapper for previewing a design."""
-    return await _run_env_step("preview_design", filename=path)
+@tool
+async def search_docs(query: str, tool_runtime: Optional[Any] = None) -> str:
+    """
+    RAG retrieval from build123d and problemologist technical documentation.
+    Args:
+        query: The search query or question to look up.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("search_docs", tool_runtime, query=query)
 
 
-async def search_docs_async(query: str) -> str:
-    """Async wrapper for searching documentation."""
-    return await _run_env_step("search_docs", query=query)
-
-
-async def search_parts_async(query: str) -> str:
-    """Async wrapper for searching COTS parts."""
-    return await _run_env_step("search_parts", query=query)
-
-
-async def preview_part_async(part_id: str) -> str:
-    """Async wrapper for previewing a COTS part."""
-    return await _run_env_step("preview_part", part_id=part_id)
-
-
-async def check_manufacturability_async(
-    design_file: str, process: str, quantity: int
+@tool
+async def check_manufacturability(
+    design_file: str = "design.py",
+    process: str = "cnc",
+    quantity: int = 1,
+    tool_runtime: Optional[Any] = None,
 ) -> dict:
-    """Async wrapper for check_manufacturability."""
-    # env step returns string, we parse it
-    output = await _run_env_step(
+    """
+    Checks if the design can be manufactured.
+    Args:
+        design_file: The name of the script file to analyze.
+        process: The manufacturing process ('cnc' or 'injection_molding').
+        quantity: Target production quantity.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    # Note: CADEnv.dispatch currently returns a string, but this tool expects a dict if possible.
+    # We'll need to ensure runtime.dispatch returns a dict for this specific tool or parse it.
+    output = await _execute_tool(
         "check_manufacturability",
+        tool_runtime,
         design_file=design_file,
         process=process,
         quantity=quantity,
     )
-    try:
-        import json
-
-        return json.loads(output)
-    except Exception:
-        return {"output": output}
-
-
-async def submit_design_async(control_path: str) -> str:
-    """Async wrapper for submitting a design."""
-    return await _run_env_step("submit_design", value=control_path)
+    if isinstance(output, str):
+        try:
+            return json.loads(output)
+        except Exception:
+            return {"error": output}
+    return output
 
 
-async def read_skill_async(
-    skill_name: str, filename: str, resource_type: Optional[str] = None
+@tool
+async def view_file(path: str, tool_runtime: Optional[Any] = None) -> str:
+    """
+    Reads the content of any file in the workspace or documentation.
+    Args:
+        path: Relative path to the file.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("view_file", tool_runtime, path=path)
+
+
+@tool
+async def run_command(command: str, tool_runtime: Optional[Any] = None) -> str:
+    """
+    Executes a shell command inside the persistent sandbox environment.
+    Args:
+        command: The shell command to execute.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("run_command", tool_runtime, command=command)
+
+
+@tool
+async def lint_script(
+    filename: str = "design.py", tool_runtime: Optional[Any] = None
 ) -> str:
-    """Async wrapper for reading a skill."""
-    return await _run_env_step(
+    """
+    Runs static analysis (Ruff, Pyrefly) on a script.
+    Args:
+        filename: The name of the script to lint.
+        tool_runtime: Injected runtime (do not provide).
+    """
+    return await _execute_tool("lint_script", tool_runtime, filename=filename)
+
+
+# --- Skill Tools ---
+
+
+@tool
+async def read_skill(
+    skill_name: str,
+    filename: str = "SKILL.md",
+    resource_type: Optional[str] = None,
+    tool_runtime: Optional[Any] = None,
+) -> str:
+    """Reads the content of a specialized skill."""
+    return await _execute_tool(
         "read_skill",
+        tool_runtime,
         skill_name=skill_name,
         filename=filename,
         resource_type=resource_type,
     )
 
 
-async def list_skills_async() -> str:
-    """Async wrapper for listing skills."""
-    return await _run_env_step("list_skills")
+@tool
+async def list_skills(tool_runtime: Optional[Any] = None) -> str:
+    """Lists all available specialized skills."""
+    return await _execute_tool("list_skills", tool_runtime)
 
 
-async def list_skill_files_async(skill_name: str) -> str:
-    """Async wrapper for listing skill files."""
-    return await _run_env_step("list_skill_files", skill_name=skill_name)
+@tool
+async def list_skill_files(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+    """Lists all files within a specialized skill folder."""
+    return await _execute_tool("list_skill_files", tool_runtime, skill_name=skill_name)
 
 
-async def update_skill_async(
+@tool
+async def init_skill(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+    """Initializes a new skill directory."""
+    return await _execute_tool("init_skill", tool_runtime, skill_name=skill_name)
+
+
+@tool
+async def package_skill(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+    """Validates and packages a skill."""
+    return await _execute_tool("package_skill", tool_runtime, skill_name=skill_name)
+
+
+@tool
+async def update_skill(
     skill_name: str,
     content: str,
-    filename: str,
+    filename: str = "SKILL.md",
     resource_type: Optional[str] = None,
+    tool_runtime: Optional[Any] = None,
 ) -> str:
-    """Async wrapper for updating a skill."""
-    return await _run_env_step(
+    """Updates or adds information to a specialized skill folder."""
+    return await _execute_tool(
         "update_skill",
+        tool_runtime,
         skill_name=skill_name,
         content=content,
         filename=filename,
@@ -181,53 +272,33 @@ async def update_skill_async(
     )
 
 
-async def init_skill_async(skill_name: str) -> str:
-    """Async wrapper for initializing a skill."""
-    return await _run_env_step("init_skill", skill_name=skill_name)
-
-
-async def package_skill_async(skill_name: str) -> str:
-    """Async wrapper for packaging a skill."""
-    return await _run_env_step("package_skill", skill_name=skill_name)
-
-
-async def run_skill_script_async(
-    skill_name: str, script_name: str, arguments: str = ""
+@tool
+async def run_skill_script(
+    skill_name: str,
+    script_name: str,
+    arguments: str = "",
+    tool_runtime: Optional[Any] = None,
 ) -> str:
-    """Async wrapper for running a skill script."""
-    return await _run_env_step(
+    """Executes a specialized script located within a skill."""
+    return await _execute_tool(
         "run_skill_script",
+        tool_runtime,
         skill_name=skill_name,
         script_name=script_name,
         arguments=arguments,
     )
 
 
-async def read_script_async(path: str) -> str:
-    """Async wrapper for reading a script."""
-    return await _run_env_step("read_script", filename=path)
+# --- COTS Tools ---
 
 
-async def view_file_async(path: str) -> str:
-    """Async wrapper for viewing a file."""
-    return await _run_env_step("view_file", path=path)
+@tool
+async def search_parts(query: str, tool_runtime: Optional[Any] = None) -> str:
+    """Search for COTS parts by name or ID."""
+    return await _execute_tool("search_parts", tool_runtime, query=query)
 
 
-async def run_command_async(command: str) -> str:
-    """Async wrapper for running a command."""
-    return await _run_env_step("run_command", command=command)
-
-
-async def start_session_async(session_id: str) -> str:
-    """Async wrapper for starting a session."""
-    return await _run_env_step("start_session", session_id=session_id)
-
-
-async def stop_session_async() -> str:
-    """Async wrapper for stopping a session."""
-    return await _run_env_step("stop_session")
-
-
-async def lint_script_async(filename: str) -> str:
-    """Async wrapper for linting a script."""
-    return await _run_env_step("lint_script", filename=filename)
+@tool
+async def preview_part(part_id: str, tool_runtime: Optional[Any] = None) -> str:
+    """Get visual preview and details for a specific COTS part ID."""
+    return await _execute_tool("preview_part", tool_runtime, part_id=part_id)

@@ -3,7 +3,7 @@ from typing import Optional
 from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env import (
+from src.agent.tools.env_adapter import (
     write_file,
     edit_file,
     view_file,
@@ -58,14 +58,6 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
         overrides = state["runtime_config"]["system_prompt_overrides"]
         if "actor" in overrides:
             system_prompt = get_prompt(overrides["actor"])
-
-    # Mandatory skill check instruction
-    system_prompt += (
-        "\n\nMANDATORY: Before writing any `build123d` code, you MUST use `view_file` "
-        "to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. "
-        "It contains expert knowledge, curated patterns, and critical pitfalls."
-        "\n\nNOTE: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal."
-    )
 
     if state.get("step_count", 0) > 5:
         system_prompt += (
