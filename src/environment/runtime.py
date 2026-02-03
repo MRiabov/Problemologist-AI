@@ -15,6 +15,7 @@ from src.rag import search as rag_search
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.workbenches.print_3d import Print3DWorkbench
+from src.agent.utils.config import Config
 
 
 class ToolRuntime:
@@ -127,7 +128,7 @@ class ToolRuntime:
         """Reads content of any file in workspace or mounted docs."""
         if path.startswith("docs/skills/"):
             skill_rel = path.replace("docs/skills/", "")
-            host_path = Path(".agent/skills") / skill_rel
+            host_path = Config.SKILLS_DIR / skill_rel
             if host_path.exists():
                 try:
                     return host_path.read_text(encoding="utf-8")
@@ -178,7 +179,7 @@ def parse_label(label, default_q, default_p):
             k, v = p.split(":", 1)
             if k == "quantity": 
                 try: data["quantity"] = int(v)
-                except: pass
+                except (ValueError, TypeError): pass
             elif k == "process": data["process"] = v
     return data
 """
@@ -443,7 +444,7 @@ print(f"VAL_RESULT:{{json.dumps(result)}}")
         filename: str = "SKILL.md",
         resource_type: Optional[str] = None,
     ) -> str:
-        sdir = Path(".agent/skills") / skill_name
+        sdir = Config.SKILLS_DIR / skill_name
         if not sdir.exists():
             return f"Error: {skill_name} missing"
         tpath = (
@@ -458,7 +459,7 @@ print(f"VAL_RESULT:{{json.dumps(result)}}")
     def run_skill_script(
         self, skill_name: str, script_name: str, arguments: str = ""
     ) -> str:
-        path = Path(".agent/skills") / skill_name / "scripts" / script_name
+        path = Config.SKILLS_DIR / skill_name / "scripts" / script_name
         if not path.exists():
             return f"Error: {script_name} missing"
         try:
@@ -473,13 +474,13 @@ print(f"VAL_RESULT:{{json.dumps(result)}}")
             return f"Error: {e!s}"
 
     def list_skills(self) -> str:
-        sdir = Path(".agent/skills")
+        sdir = Config.SKILLS_DIR
         return "Skills:\n- " + "\n- ".join(
             sorted([p.name for p in sdir.iterdir() if p.is_dir()])
         )
 
     def list_skill_files(self, skill_name: str) -> str:
-        sdir = Path(".agent/skills") / skill_name
+        sdir = Config.SKILLS_DIR / skill_name
         if not sdir.exists():
             return f"Error: {skill_name} missing"
         return "\n".join(
@@ -493,7 +494,7 @@ print(f"VAL_RESULT:{{json.dumps(result)}}")
         filename: str = "SKILL.md",
         resource_type: Optional[str] = None,
     ) -> str:
-        sdir = Path(".agent/skills") / skill_name
+        sdir = Config.SKILLS_DIR / skill_name
         if not sdir.exists():
             return f"Error: {skill_name} missing"
         tpath = sdir / (resource_type or "") / Path(filename).name
@@ -502,18 +503,18 @@ print(f"VAL_RESULT:{{json.dumps(result)}}")
         return f"Updated {tpath}"
 
     def init_skill(self, skill_name: str) -> str:
-        script = Path(".agent/skills/skill-creator/scripts/init_skill.py")
+        script = Config.SKILL_CREATOR_DIR / "scripts/init_skill.py"
         res = subprocess.run(
-            [sys.executable, str(script), skill_name, "--path", ".agent/skills"],
+            [sys.executable, str(script), skill_name, "--path", str(Config.SKILLS_DIR)],
             capture_output=True,
             text=True,
         )
         return res.stdout or res.stderr
 
     def package_skill(self, skill_name: str) -> str:
-        script = Path(".agent/skills/skill-creator/scripts/package_skill.py")
+        script = Config.SKILL_CREATOR_DIR / "scripts/package_skill.py"
         res = subprocess.run(
-            [sys.executable, str(script), str(Path(".agent/skills") / skill_name)],
+            [sys.executable, str(script), str(Config.SKILLS_DIR / skill_name)],
             capture_output=True,
             text=True,
         )

@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 import shutil
 import uuid
@@ -25,6 +26,7 @@ HEADROOM_FACTOR = gen_config.get("headroom_factor", 3)
 
 app = typer.Typer(help="Benchmark Scenario Generator CLI")
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 def execute_build(
@@ -225,7 +227,7 @@ def generate(
                 # 2. Batch Processing & Randomization
                 # We use a temporary assets dir for validation
                 rel_temp_assets = ".agent_storage/temp_assets"
-                print(f"DEBUG: Executing build for seed {seed}")
+                logger.debug(f"Executing build for seed {seed}")
                 mjcf_xml = execute_build(
                     template_code,
                     seed,
@@ -234,12 +236,12 @@ def generate(
                 )
 
                 # 3. Validation
-                print(f"DEBUG: Validating MJCF for seed {seed}")
+                logger.debug(f"Validating MJCF for seed {seed}")
                 temp_assets_path = Path("workspaces/gen").resolve() / rel_temp_assets
                 report = validate_mjcf(mjcf_xml, asset_dir=str(temp_assets_path))
 
                 if report["is_valid"]:
-                    print(f"DEBUG: Seed {seed} is valid, saving artifacts")
+                    logger.debug(f"Seed {seed} is valid, saving artifacts")
                     # 4. Artifact Export
                     variation_id = f"var_{seed}"
 
@@ -301,8 +303,8 @@ def generate(
                     valid_variations += 1
                     progress.update(task, advance=1)
                 else:
-                    print(
-                        f"DEBUG: Seed {seed} FAILED validation: {report['error_message']}"
+                    logger.debug(
+                        f"Seed {seed} FAILED validation: {report['error_message']}"
                     )
                     console.print(
                         f"[yellow]Variation with seed {seed} failed validation: {report['error_message']}[/yellow]"

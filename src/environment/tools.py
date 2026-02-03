@@ -7,10 +7,11 @@ import functools
 from typing import Optional, Any
 
 from src.environment.runtime import ToolRuntime
+from src.agent.utils.config import Config
 
 # Global runtime instance for backward compatibility
-# Note: This uses the default "workspace" directory.
-_RUNTIME = ToolRuntime("workspaces/main")
+# Note: This uses the configured workspace directory.
+_RUNTIME = ToolRuntime(Config.WORKSPACE_DIR)
 
 
 def _deprecated(func):
