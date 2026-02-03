@@ -17,7 +17,6 @@ async def skill_populator_node(state: AgentState):
         "Analyzing failure and populating skills with lessons learned...",
         agent_role="SkillPopulator",
     )
-    print("DEBUG: Entering CAD skill_populator_node")
 
     # Check if we actually failed (e.g., step_count > MAX_STEPS or explicit failure)
     # For now, we assume this node is only reached on failure path.

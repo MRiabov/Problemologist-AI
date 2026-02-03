@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -24,7 +25,13 @@ class Config:
     TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.0"))
 
     # Work directory for scripts and artifacts
-    WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "./workspace")
+    WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "./workspaces/main")
+
+    # Skills directory
+    SKILLS_DIR = Path(".agent/skills")
+
+    # Skill creator directory
+    SKILL_CREATOR_DIR = SKILLS_DIR / "skill-creator"
 
     # Safety limits
     MAX_STEPS = int(os.getenv("MAX_STEPS", "100"))

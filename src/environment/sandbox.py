@@ -59,10 +59,14 @@ class PodmanSandbox:
 
         if mount_src:
             # Mount src to /app/src and set PYTHONPATH to /app
+            # Also mount config to /app/config
+            config_path = project_root / "config"
             cmd.extend(
                 [
                     "-v",
                     f"{src_path}:/app/src:ro",
+                    "-v",
+                    f"{config_path}:/app/config:ro",
                     "-v",
                     f"{skills_path}:/workspace/docs/skills:ro",  # Map skills to docs/skills as per plan
                     "-e",
@@ -173,7 +177,17 @@ class PodmanSandbox:
         if mount_src:
             project_root = Path(__file__).resolve().parent.parent.parent
             src_path = project_root / "src"
-            cmd.extend(["-v", f"{src_path}:/app/src:ro", "-e", "PYTHONPATH=/app"])
+            config_path = project_root / "config"
+            cmd.extend(
+                [
+                    "-v",
+                    f"{src_path}:/app/src:ro",
+                    "-v",
+                    f"{config_path}:/app/config:ro",
+                    "-e",
+                    "PYTHONPATH=/app",
+                ]
+            )
 
         cmd.extend(
             [
