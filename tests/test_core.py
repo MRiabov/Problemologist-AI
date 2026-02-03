@@ -9,11 +9,10 @@ from src.environment.core import CADEnv
 
 
 @pytest.fixture
-def env():
-    # Setup a clean workspace for testing
-    workspace = Path("test_workspace")
-    if workspace.exists():
-        shutil.rmtree(workspace)
+def env(tmp_path):
+    # Setup a clean workspace for testing using tmp_path
+    workspace = tmp_path / "test_workspace"
+    workspace.mkdir()
 
     # Set a low budget for testing rejection
     env = CADEnv(
@@ -23,14 +22,14 @@ def env():
         target_quantity=1,
     )
 
-    # Mock sim bridge
-    env.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
-    env.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
+    # Mock sim bridge in runtime
+    env.runtime.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
+    env.runtime.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
     mock_res = MagicMock()
     mock_res.success = True
     mock_res.energy = 10.0
     mock_res.damage = 0.0
-    env.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
+    env.runtime.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
 
     yield env
 
