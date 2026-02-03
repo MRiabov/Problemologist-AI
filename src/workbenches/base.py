@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import List, Union, Dict, Any
 
 from build123d import Part
 
@@ -12,7 +12,7 @@ class Workbench(ABC):
     """
 
     @abstractmethod
-    def validate(self, part: Part) -> list[Exception | str]:
+    def validate(self, part: Part) -> List[Union[Exception, str]]:
         """
         Validates the part against the workbench constraints.
 
@@ -31,7 +31,9 @@ class Workbench(ABC):
         return self.validate(part)
 
     @abstractmethod
-    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
+    def calculate_cost(
+        self, part: Part, quantity: int = 1, context: dict | None = None
+    ) -> Union[float, Dict[str, Any]]:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
 
@@ -42,6 +44,7 @@ class Workbench(ABC):
                      Keyed by part hash, value could be number of times seen.
 
         Returns:
-            The calculated cost as a float.
+            The calculated cost as a float OR a dictionary with detailed breakdown.
+            If a dictionary, it MUST contain a "total_cost" key.
         """
         pass

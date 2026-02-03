@@ -1,12 +1,12 @@
-import io
 import functools
-from pathlib import Path
-import yaml
-import trimesh
-import numpy as np
-from build123d import Part, export_stl
-import tempfile
 import os
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import trimesh
+import yaml
+from build123d import Part, export_stl
 
 
 @functools.lru_cache(maxsize=1)
@@ -17,7 +17,7 @@ def load_config() -> dict:
     if not config_path.exists():
         raise FileNotFoundError(f"Manufacturing config not found at {config_path}")
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         return yaml.safe_load(f)
 
 
@@ -125,3 +125,35 @@ def check_wall_thickness(
 
     violated_indices = np.where((distances < min_mm) | (distances > max_mm))[0]
     return violated_indices.tolist()
+
+
+def analyze_wall_thickness(mesh: trimesh.Trimesh) -> dict:
+    """
+    Computes wall thickness statistics using raycasting.
+    Returns a dictionary with min, max, and specific 'thickest_point' details.
+    """
+    normals = mesh.face_normals
+    epsilon = 1e-4
+    origins = mesh.triangles_center - (normals * epsilon)
+    directions = -normals
+
+    locations, index_ray, _ = mesh.ray.intersects_location(
+        origins, directions, multiple_hits=False
+    )
+
+    distances = np.full(len(mesh.faces), np.inf)
+    if len(index_ray) > 0:
+        actual_origins = origins[index_ray]
+        dist = np.linalg.norm(locations - actual_origins, axis=1)
+        distances[index_ray] = dist
+
+    valid_distances = distances[distances != np.inf]
+
+    if len(valid_distances) == 0:
+        return {"min_mm": 0.0, "max_mm": 0.0, "average_mm": 0.0}
+
+    return {
+        "min_mm": float(np.min(valid_distances)),
+        "max_mm": float(np.max(valid_distances)),
+        "average_mm": float(np.mean(valid_distances)),
+    }

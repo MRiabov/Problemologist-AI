@@ -1,7 +1,7 @@
-import json
 import hashlib
+import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class Evaluator:
@@ -15,7 +15,7 @@ class Evaluator:
         self.workspace_dir = str(Path(workspace_dir).resolve())
 
     def _get_runner_script_prefix(self, filename: str) -> str:
-        return f"""
+        return """
 import sys
 import json
 import hashlib
@@ -45,7 +45,7 @@ def get_export_obj(locs):
     return None
 
 def parse_label(label, default_q, default_p):
-    data = {{"quantity": default_q, "process": default_p}}
+    data = {"quantity": default_q, "process": default_p}
     if not label: return data
     for p in str(label).split("|"):
         if ":" in p:
@@ -58,7 +58,7 @@ def parse_label(label, default_q, default_p):
 """
 
     def preview_design(
-        self, filename: str = "design.py", session_id: Optional[str] = None
+        self, filename: str = "design.py", session_id: str | None = None
     ) -> str:
         """Executes the script and renders result to SVG."""
         filename = Path(filename).name
@@ -139,7 +139,7 @@ with open("/workspace/{result_file}", "w") as f:
                         return f"Preview generated: {res['preview_file']}"
                     return f"Error generating preview: {res['error']}"
                 except json.JSONDecodeError:
-                    return f"Error reading preview result: JSON decode error."
+                    return "Error reading preview result: JSON decode error."
 
             # Fallback to stdout check if file write failed (legacy/crash)
             if "RENDER_SUCCESS" in stdout:
@@ -158,8 +158,8 @@ with open("/workspace/{result_file}", "w") as f:
         process: str = "cnc",
         quantity: int = 1,
         export_stl: bool = False,
-        session_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
         """Validates design for manufacturability and optionally exports STL."""
         design_file = Path(design_file).name
         script_path = Path(self.workspace_dir) / design_file
@@ -216,12 +216,22 @@ try:
 
         violations = wb.validate(solid)
         all_violations.extend(violations)
-        cost = wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
+        cost_res = wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
+        
+        cost = 0.0
+        breakdown = None
+
+        if isinstance(cost_res, dict):
+             cost = cost_res.get("total_cost", 0.0)
+             breakdown = cost_res.get("breakdown")
+        else:
+             cost = float(cost_res)
+
         total_cost += cost
 
         part_reports.append({{
             "part_index": i, "process": ldata["process"], "quantity": ldata["quantity"],
-            "cost": cost, "violations": [str(v) for v in violations]
+            "cost": cost, "breakdown": breakdown, "violations": [str(v) for v in violations]
         }})
 
     result["status"] = "pass" if not all_violations else "fail"
