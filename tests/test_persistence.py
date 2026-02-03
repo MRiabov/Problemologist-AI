@@ -26,11 +26,11 @@ def test_log_step(db_manager):
     step = db_manager.log_step(
         episode_id=episode.id,
         sequence_index=0,
-        tool_name="write_script",
+        tool_name="write_file",
         tool_input='print("hello")',
     )
     assert step.episode_id == episode.id
-    assert step.tool_name == "write_script"
+    assert step.tool_name == "write_file"
 
     # Verify relationship
     session = db_manager.get_session()

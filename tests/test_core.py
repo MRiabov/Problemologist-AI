@@ -1,13 +1,12 @@
+import json
 import shutil
 from pathlib import Path
+from unittest.mock import MagicMock
 
-import gymnasium as gym
 import pytest
 
 from src.environment.core import CADEnv
 
-
-from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def env():
@@ -16,18 +15,19 @@ def env():
     if workspace.exists():
         shutil.rmtree(workspace)
 
-    db_path = Path("test_history.db")
-    if db_path.exists():
-        db_path.unlink()
+    # Use in-memory DB to avoid I/O errors and locking
+    # db_path = Path("test_history.db")
+    # if db_path.exists():
+    #     db_path.unlink()
 
     # Set a low budget for testing rejection
     env = CADEnv(
-        workspace_dir=str(workspace), 
-        db_url=f"sqlite:///{db_path}",
-        max_unit_cost=100.0, # High enough for simple parts
-        target_quantity=1
+        workspace_dir=str(workspace),
+        db_url="sqlite:///:memory:",
+        max_unit_cost=100.0,  # High enough for simple parts
+        target_quantity=1,
     )
-    
+
     # Mock sim bridge
     env.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
     env.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
@@ -36,10 +36,15 @@ def env():
     mock_res.energy = 10.0
     mock_res.damage = 0.0
     env.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
-    
+
     yield env
 
     # Cleanup
+    try:
+        env.close()
+    except:
+        pass
+
     if workspace.exists():
         shutil.rmtree(workspace)
 
@@ -49,35 +54,60 @@ def env():
             p.unlink()
 
 
+import json
+
+
 def test_env_budget_rejection(env):
     env.reset()
-    env.max_unit_cost = 1.0 # Set low budget for this specific test
+    env.max_unit_cost = 1.0  # Set low budget for this specific test
     # Write a part that definitely costs more than $1.0 (e.g. 10x10x10 cube)
     # Default 3D print cost is 0.05 per mm3 -> 1000 * 0.05 = $50.0
     env.step(
-        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+        {
+            "tool": "write_file",
+            "arguments": json.dumps(
+                {
+                    "content": "from build123d import Box\npart = Box(10, 10, 10)",
+                    "path": "design.py",
+                }
+            ),
+        }
     )
 
-    obs, reward, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
-    
+    obs, reward, terminated, _, _ = env.step(
+        {"tool": "submit_design", "arguments": "{}"}
+    )
+
+    if reward != -20.0:
+        print(f"DEBUG: Reward={reward}, Output={obs['last_output']}")
+
     assert reward == -20.0
     assert "REJECTED" in obs["last_output"]
     assert "exceeds budget" in obs["last_output"]
     assert not terminated
 
+
 def test_env_force_submit(env):
     env.reset()
     env.step(
-        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+        {
+            "tool": "write_file",
+            "arguments": json.dumps(
+                {
+                    "content": "from build123d import Box\npart = Box(10, 10, 10)",
+                    "path": "design.py",
+                }
+            ),
+        }
     )
 
     # Force submit should bypass budget check
     action = {
-        "tool": 4,
-        "arguments": "force_submit=True|||reason:Testing bypass"
+        "tool": "submit_design",
+        "arguments": json.dumps({"force_submit": True, "reason": "Testing bypass"}),
     }
     obs, reward, terminated, _, _ = env.step(action)
-    
+
     # It should pass budget check and reach simulation (which might fail or pass)
     assert "REJECTED" not in obs["last_output"]
     # reward would be from simulation
@@ -94,8 +124,13 @@ def test_env_reset(env):
 def test_env_step_write(env):
     env.reset()
     action = {
-        "tool": 0,  # write_script
-        "arguments": "from build123d import Box\npart = Box(10, 10, 10)",
+        "tool": "write_file",
+        "arguments": json.dumps(
+            {
+                "content": "from build123d import Box\npart = Box(10, 10, 10)",
+                "path": "design.py",
+            }
+        ),
     }
     obs, _, _, _, _ = env.step(action)
     assert "Successfully wrote to design.py" in obs["last_output"]
@@ -106,10 +141,18 @@ def test_env_step_preview(env):
     env.reset()
     # Write a simple script first
     env.step(
-        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+        {
+            "tool": "write_file",
+            "arguments": json.dumps(
+                {
+                    "content": "from build123d import Box\npart = Box(10, 10, 10)",
+                    "path": "design.py",
+                }
+            ),
+        }
     )
 
-    obs, _, _, _, _ = env.step({"tool": 2, "arguments": ""})
+    obs, _, _, _, _ = env.step({"tool": "preview_design", "arguments": "{}"})
     assert "Preview generated:" in obs["last_output"]
     assert obs["last_render"].endswith(".svg")
     assert (Path(env.workspace_dir) / obs["last_render"]).exists()
@@ -118,9 +161,18 @@ def test_env_step_preview(env):
 def test_env_step_submit_invalid(env):
     env.reset()
     # Write invalid script
-    env.step({"tool": 0, "arguments": "invalid python code"})
+    env.step(
+        {
+            "tool": "write_file",
+            "arguments": json.dumps(
+                {"content": "invalid python code", "path": "design.py"}
+            ),
+        }
+    )
 
-    obs, reward, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
+    obs, reward, terminated, _, _ = env.step(
+        {"tool": "submit_design", "arguments": "{}"}
+    )
     assert reward == -10.0
     assert "Error processing design" in obs["last_output"]
     assert not terminated
@@ -130,19 +182,28 @@ def test_env_step_submit_success(env):
     env.reset()
     # Write valid script
     env.step(
-        {"tool": 0, "arguments": "from build123d import Box\npart = Box(10, 10, 10)"}
+        {
+            "tool": "write_file",
+            "arguments": json.dumps(
+                {
+                    "content": "from build123d import Box\npart = Box(10, 10, 10)",
+                    "path": "design.py",
+                }
+            ),
+        }
     )
 
     # Mock simulation to ensure it passes without actual MuJoCo complexities if needed,
     # but we have a bridge that should handle it if MuJoCo is installed.
     # Let's see if it works without mocking first.
 
-    obs, _, terminated, _, _ = env.step({"tool": 4, "arguments": ""})
+    obs, _, terminated, _, _ = env.step({"tool": "submit_design", "arguments": "{}"})
     # If MuJoCo works and template exists, it should be success or failure but terminated
     assert terminated
     assert "Submission Result:" in obs["last_output"]
 
 
 def test_env_registration():
-    env = gym.make("CADEnv-v0")
-    assert isinstance(env.unwrapped, CADEnv)
+    # Registration is removed, but we can check if direct instantiation works
+    env = CADEnv()
+    assert isinstance(env, CADEnv)

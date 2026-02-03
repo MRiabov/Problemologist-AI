@@ -18,9 +18,9 @@ def setup_workspace():
     # shutil.rmtree(tools.WORKSPACE_DIR)
 
 
-def test_write_script():
+def test_write_file():
     content = "print('hello')"
-    result = tools.write_script(content, "hello.py")
+    result = tools.write_file(content, "hello.py")
     assert "Successfully wrote" in result
 
     path = Path(tools.WORKSPACE_DIR) / "hello.py"
@@ -28,9 +28,9 @@ def test_write_script():
     assert path.read_text() == content
 
 
-def test_edit_script_success():
-    tools.write_script("line1\nline2\nline3", "edit.py")
-    result = tools.edit_script("edit.py", "line2", "line_two")
+def test_edit_file_success():
+    tools.write_file("line1\nline2\nline3", "edit.py")
+    result = tools.edit_file("edit.py", "line2", "line_two")
     assert "Successfully edited" in result
 
     path = Path(tools.WORKSPACE_DIR) / "edit.py"
@@ -39,15 +39,15 @@ def test_edit_script_success():
     assert "line2" not in content
 
 
-def test_edit_script_not_found():
-    tools.write_script("line1", "edit.py")
-    result = tools.edit_script("edit.py", "missing", "found")
+def test_edit_file_not_found():
+    tools.write_file("line1", "edit.py")
+    result = tools.edit_file("edit.py", "missing", "found")
     assert "Error: 'find' string not found" in result
 
 
-def test_edit_script_ambiguous():
-    tools.write_script("line\nline", "edit.py")
-    result = tools.edit_script("edit.py", "line", "new")
+def test_edit_file_ambiguous():
+    tools.write_file("line\nline", "edit.py")
+    result = tools.edit_file("edit.py", "line", "new")
     assert "Error: 'find' string is ambiguous" in result
 
 
@@ -58,7 +58,7 @@ from build123d import *
 with BuildPart() as p:
     Box(10, 10, 10)
 """
-    tools.write_script(content, "design.py")
+    tools.write_file(content, "design.py")
     result = tools.preview_design("design.py")
     assert "Preview generated" in result
 
@@ -88,7 +88,7 @@ part2 = Box(5, 5, 5).translate((20, 0, 0))
 part2.label = "quantity:1|process:print_3d"
 result = [part1, part2]
 """
-    tools.write_script(content, "design.py")
+    tools.write_file(content, "design.py")
     report = tools.check_manufacturability("design.py", process="print_3d", quantity=1)
 
     print(f"DEBUG: Report: {report}")
@@ -116,7 +116,7 @@ def test_standard_tools_session():
         assert "hello-tools" in cmd_res
 
         # Test view_file (standard file)
-        tools.write_script("content", "test.txt")
+        tools.write_file("content", "test.txt")
         view_res = tools.view_file("test.txt")
         assert view_res == "content"
 

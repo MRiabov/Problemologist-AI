@@ -7,7 +7,7 @@ from src.environment.sandbox import PodmanSandbox
 class TestSandbox(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.workspace = Path("workspace_test").resolve()
+        cls.workspace = Path("tests/output/sandbox_test").resolve()
         cls.workspace.mkdir(parents=True, exist_ok=True)
         cls.sandbox = PodmanSandbox(str(cls.workspace))
 
