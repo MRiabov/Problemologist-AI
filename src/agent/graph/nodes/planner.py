@@ -1,16 +1,16 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
+from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
-from src.agent.utils.llm import get_model
-from src.agent.utils.prompts import get_prompt
 
 
 async def planner_node(state: AgentState):
     """
     Decides the high-level strategy and updates the plan.
     """
+    set_current_role("Planner")
     log_to_env("Planning high-level strategy...", agent_role="Planner")
 
     # Check if we need to re-plan based on Critic feedback
@@ -89,5 +89,12 @@ async def planner_node(state: AgentState):
     ]
 
     response = await model.ainvoke(messages)
+
+    log_to_env(
+        f"Strategy developed:\n{response.content}", type="thought", agent_role="Planner"
+    )
+    log_to_env(
+        "Handing off to Actor for execution.", type="handoff", agent_role="Planner"
+    )
 
     return {"plan": response.content, "messages": [response]}

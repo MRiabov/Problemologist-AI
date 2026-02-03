@@ -14,9 +14,10 @@ from src.agent.tools.env import (
     update_skill,
     write_script,
 )
+from src.agent.tools.env_adapter import set_current_role
 from src.agent.tools.memory import read_journal, write_journal
 from src.agent.utils.config import Config
-from src.agent.utils.llm import get_model
+from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
 
 
@@ -24,6 +25,8 @@ async def actor_node(state: AgentState, tools: list = None):
     """
     Executes the next step in the plan using tools.
     """
+    set_current_role("Actor")
+    log_to_env("Executing current step...", agent_role="Actor")
     model = get_model(Config.LLM_MODEL)
 
     # Bind tools to the model
@@ -91,5 +94,14 @@ async def actor_node(state: AgentState, tools: list = None):
     # Extract reasoning if possible
     if hasattr(response, "content") and response.content:
         updates["coder_reasoning"] = response.content
+        log_to_env(response.content, type="thought", agent_role="Actor")
+
+    if hasattr(response, "tool_calls") and response.tool_calls:
+        tool_names = [tc["name"] for tc in response.tool_calls]
+        log_to_env(
+            f"Handing off to tools: {', '.join(tool_names)}",
+            type="handoff",
+            agent_role="Actor",
+        )
 
     return updates
