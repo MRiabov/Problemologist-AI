@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Dict, Any
+from typing import Union
 
 from build123d import Part
+
+from src.compiler.models import CostBreakdown
 
 
 class Workbench(ABC):
@@ -12,7 +14,7 @@ class Workbench(ABC):
     """
 
     @abstractmethod
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part against the workbench constraints.
 
@@ -24,7 +26,7 @@ class Workbench(ABC):
         """
         pass
 
-    def validate_geometry(self, part: Part) -> List[Union[Exception, str]]:
+    def validate_geometry(self, part: Part) -> list[Exception | str]:
         """
         Alias for validate, as per spec requirements.
         """
@@ -33,7 +35,7 @@ class Workbench(ABC):
     @abstractmethod
     def calculate_cost(
         self, part: Part, quantity: int = 1, context: dict | None = None
-    ) -> Union[float, Dict[str, Any]]:
+    ) -> CostBreakdown:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
 
@@ -44,7 +46,6 @@ class Workbench(ABC):
                      Keyed by part hash, value could be number of times seen.
 
         Returns:
-            The calculated cost as a float OR a dictionary with detailed breakdown.
-            If a dictionary, it MUST contain a "total_cost" key.
+            The calculated cost as a CostBreakdown dataclass.
         """
         pass
