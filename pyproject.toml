@@ -39,7 +39,7 @@ dev = [
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.14.14",
+    "ruff>=0.15.0",
     "spec-kitty-cli>=0.13.20",
 ]
 
