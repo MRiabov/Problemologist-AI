@@ -9,21 +9,15 @@ from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
-    edit_script,
-    preview_design,
-    preview_part,
-    search_docs,
-    search_parts,
     submit_design,
-    update_skill,
-    read_skill,
-    list_skills,
-    list_skill_files,
-    init_skill,
-    package_skill,
-    run_skill_script,
     write_script,
     check_manufacturability,
+    view_file,
+    run_command,
+    preview_design,
+    search_docs,
+    search_parts,
+    preview_part,
 )
 from src.agent.tools.memory import read_journal, write_journal
 from src.agent.utils.config import Config
@@ -48,17 +42,11 @@ def build_graph(
     # ToolNode implementation
     tools = [
         write_script,
-        edit_script,
+        view_file,
+        run_command,
         preview_design,
         submit_design,
         search_docs,
-        update_skill,
-        read_skill,
-        list_skills,
-        list_skill_files,
-        init_skill,
-        package_skill,
-        run_skill_script,
         check_manufacturability,
         read_journal,
         write_journal,
@@ -84,32 +72,38 @@ def build_graph(
     async def tools_node(state: AgentState):
         result = await standard_tool_node.ainvoke(state)
         # The result is usually {'messages': [ToolMessage, ...]}
-        
+
         updates = result.copy()
-        
+
         # Check if we just ran validation
         last_ai_msg = None
         for msg in reversed(state["messages"]):
-             if hasattr(msg, "tool_calls") and msg.tool_calls:
-                 last_ai_msg = msg
-                 break
-        
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                last_ai_msg = msg
+                break
+
         if last_ai_msg:
             for tc in last_ai_msg.tool_calls:
                 if tc["name"] == validation_tool_name:
                     # Capture the attempt in full_history
                     history = state.get("full_history", [])
                     # The tool output is in the first message of result
-                    tool_output = result["messages"][0].content if result["messages"] else "N/A"
-                    
-                    history.append({
-                        "attempt": len(history) + 1,
-                        "code": tc["args"].get("code", ""),
-                        "reasoning": state.get("coder_reasoning", ""),
-                        "errors": None if "Validation Passed!" in tool_output else tool_output
-                    })
+                    tool_output = (
+                        result["messages"][0].content if result["messages"] else "N/A"
+                    )
+
+                    history.append(
+                        {
+                            "attempt": len(history) + 1,
+                            "code": tc["args"].get("code", ""),
+                            "reasoning": state.get("coder_reasoning", ""),
+                            "errors": None
+                            if "Validation Passed!" in tool_output
+                            else tool_output,
+                        }
+                    )
                     updates["full_history"] = history
-        
+
         return updates
 
     builder.add_node("tools", tools_node)
@@ -170,7 +164,10 @@ def build_graph(
         last_message = state["messages"][-1]
         if hasattr(last_message, "content"):
             content = str(last_message.content)
-            if any(x in content for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]):
+            if any(
+                x in content
+                for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]
+            ):
                 return END
 
         # Check step count to prevent infinite loops
