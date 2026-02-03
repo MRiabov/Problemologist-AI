@@ -1,39 +1,40 @@
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 
-@dataclass
-class CostBreakdown:
+
+class CostBreakdown(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     process: str
     total_cost: float
     unit_cost: float
     material_cost_per_unit: float
     setup_cost: float = 0.0
     is_reused: bool = False
-    details: dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
     pricing_explanation: str = ""
 
 
-@dataclass
-class ValidationViolation:
+class ValidationViolation(BaseModel):
     description: str
     severity: str = "error"  # error, warning
 
 
-@dataclass
-class ValidationReport:
+class ValidationReport(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     status: str  # "pass", "fail"
     manufacturability_score: float
     violations: list[ValidationViolation]
     cost_analysis: CostBreakdown
-    parts: list[dict[str, Any]] = field(default_factory=list)
+    parts: list[dict[str, Any]] = Field(default_factory=list)
     stl_path: str | None = None
     error: str | None = None
 
 
-@dataclass
-class Observation:
+class Observation(BaseModel):
     step: int
     time: float
     state_vector: list[float]
@@ -41,45 +42,25 @@ class Observation:
     damage_detected: float
 
 
-@dataclass
-class SimResult:
+class SimResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     success: bool
     total_energy: float
     total_damage: float
     observations: list[Observation]
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
-    @staticmethod
-    def from_dict(data: dict[str, Any]) -> "SimResult":
-        """Reconstructs SimResult from a dictionary (e.g., from JSON output)."""
-        observations = [
-            Observation(
-                step=o["step"],
-                time=o["time"],
-                state_vector=o["state_vector"],
-                energy_consumed=o["energy_consumed"],
-                damage_detected=o["damage_detected"],
-            )
-            for o in data.get("observations", [])
-        ]
-        return SimResult(
-            success=data.get("success", False),
-            total_energy=data.get("total_energy", 0.0),
-            total_damage=data.get("total_damage", 0.0),
-            observations=observations,
-            metadata=data.get("metadata", {}),
-        )
+    # Note: No need for from_dict anymore, use model_validate() or model_validate_json()
 
 
-@dataclass
-class EpisodeSummary:
+class EpisodeSummary(BaseModel):
     id: str
     timestamp: datetime
     name: str
 
 
-@dataclass
-class DashStep:
+class DashStep(BaseModel):
     index: int
     type: str
     agent_role: str | None
@@ -88,11 +69,10 @@ class DashStep:
     tool_input: str | None
     tool_output: str | None
     metadata: dict[str, Any]
-    artifacts: list[str] = field(default_factory=list)
+    artifacts: list[str] = Field(default_factory=list)
 
 
-@dataclass
-class DashEpisode:
+class DashEpisode(BaseModel):
     id: str
     name: str
     steps: list[DashStep]
