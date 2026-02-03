@@ -1,39 +1,41 @@
 import argparse
 import asyncio
-import os
-import sys
 import uuid
-
-# Add the project root to sys.path to allow importing from src
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from rich.console import Console
 from rich.panel import Panel
 
 from src.agent.runner import run_agent
-from src.agent.tools.env_adapter import set_active_env
-from src.environment.core import CADEnv
+from src.agent.tools.env_adapter import register_runtime
+from src.environment.persistence import DatabaseManager
+from src.environment.runtime import ToolRuntime
+from src.utils.paths import get_workspace_dir
 
 console = Console()
 
 
-async def solve_environment(problem_id: str, thread_id: str = None):
+async def solve_environment(problem_id: str, thread_id: str | None = None):
     """
     Initializes a CADEnv and has the agent solve it autonomously.
     """
     if thread_id is None:
         thread_id = f"solve_{str(uuid.uuid4())[:8]}"
 
-    # 1. Initialize the Environment
-    # We use the defaults which will set up history.db and workspace/
-    env = CADEnv(problem_id=problem_id)
+    # 1. Initialize the Environment (ToolRuntime)
+    workspace = get_workspace_dir() / thread_id
+    db = DatabaseManager()  # Default to history.db
 
-    # 2. Register environment for tools
-    set_active_env(env)
+    runtime = ToolRuntime(workspace_dir=workspace, db=db, problem_id=problem_id)
 
-    # 3. Reset to get the task
-    obs, info = env.reset()
-    task_description = obs["task_description"]
+    # 2. Register runtime for tools
+    register_runtime(thread_id, runtime)
+
+    # 3. Start session (which initializes the episode)
+    runtime.start_session(thread_id)
+
+    # Task description is usually passed from outside or loaded from problem
+    # For now, we use a placeholder or load from problem_id if supported
+    task_description = f"Solve CAD problem: {problem_id}"
 
     console.print(
         Panel(
@@ -49,7 +51,7 @@ async def solve_environment(problem_id: str, thread_id: str = None):
     # We pass the task_description as the starting query.
     # The agent will use its tools to interact with the environment (via files and sim bridge).
     try:
-        await run_agent(task_description, thread_id=thread_id)
+        await run_agent(task_description, thread_id=thread_id, runtime_id=thread_id)
         console.print(
             Panel(
                 "[bold green]Agent solving sequence finished.[/bold green]",

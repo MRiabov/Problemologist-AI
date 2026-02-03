@@ -3,7 +3,9 @@ import traceback
 from dataclasses import asdict
 from typing import Any
 
+from src.agent.utils.config import Config
 from src.compiler.mujoco_bridge import MujocoBridge
+from src.environment.sandbox import PodmanSandbox
 
 
 def _run_sim_wrapper(
@@ -18,7 +20,11 @@ def _run_sim_wrapper(
     This runs in a separate process.
     """
     try:
-        bridge = MujocoBridge()
+        # Explicitly initialize dependencies for the isolated process
+        workspace_dir = Config.WORKSPACE_DIR
+        sandbox = PodmanSandbox(str(workspace_dir))
+
+        bridge = MujocoBridge(workspace_dir=workspace_dir, sandbox=sandbox)
         result = bridge.run_simulation(
             xml_string, duration=duration, agent_script=agent_script, goal_pos=goal_pos
         )
