@@ -56,8 +56,9 @@ The system ensures that every generated scenario is robust, randomized, and phys
 
 ### 3.1 Scenario Script Generation
 
-...
-
+- **FR-01**: The system MUST generate standalone Python scripts that import `build123d` and define a `build(seed: int, scale_factors: tuple[float, float, float]) -> str` function.
+- **FR-02**: Generated scripts MUST be deterministic for a given seed and scale factor.
+- **FR-03**: The `build()` function MUST return a valid MJCF (MuJoCo XML) string.
 - **FR-04**: Scripts MUST include logic to generate "Forbid Zones" (red obstacles) and "Goal Zones" (green targets) within the workspace.
 
 ### 3.2 Interactive Pipeline (Human-in-the-Loop)
@@ -68,49 +69,71 @@ The system ensures that every generated scenario is robust, randomized, and phys
 - **FR-20**: The system MUST support a "Self-Correction" loop where the Coder and Validator iterate up to 3 times to find a stable geometry without user intervention.
 - **FR-21**: The system MUST allow the user to provide manual code edits or natural language feedback on the stable CAD model before final XML generation.
 
-### 3.3 Advanced Randomization (Rescaling)
+### 3.3 Randomization Engine
+
+- **FR-05**: The system **MUST** be able to vary the "Domain Box" (workspace size) dimensions (Length/Width/Height).
+- **FR-06**: The system **MUST** support randomization of start/goal/obstacle positions by at least **±40% of the workspace dimension** in which they are moving, as specified by the user.
+- **FR-30**: **Overlap Prevention**: Randomized objects MUST NOT intersect with `zone_start` or `zone_goal` volumes. The system MUST perform a boolean intersection check during randomization and retry up to 5 times to find a clear position before failing.
+- **FR-07**: Randomization logic **MUST** ensure objects remain within the global workspace bounds (no spawning outside the box).
+
+### 3.4 Advanced Randomization (Rescaling)
 
 - **FR-22**: **Random Rescaling**: After the core geometry is planned, the system MUST support randomly rescaling the entire environment by a factor of **0.5 to 2.0** independently in all three directions (X, Y, Z).
 - **FR-23**: **Agent Override**: The Agent (Planner) MUST be able to specify custom rescaling limits for specific directions (e.g., "X: 0.8-1.2, Y: 0.5-5.0") based on the geometric constraints of the puzzle.
 - **FR-24**: Rescaling MUST be applied at the CAD generation level to ensure all kinematic relationships (joints, pivots) remain consistent.
+  - **Joint Scaling**: Joint positions and axes MUST be scaled proportionally with the bodies they connect to maintain kinematic integrity.
+- **FR-29**: **Bound Enforcement**: If a rescale operation causes any body to exceed the **100x100x100mm** Domain Box, the scale factor MUST be automatically clipped to the maximum allowed value for that dimension.
 
-### 3.4 Economic Constraints & Record System
+### 3.5 Economic Constraints & Record System
 
 - **FR-25**: **Economic Targets**: Every benchmark scenario MUST define a `target_quantity` (e.g., 1, 100, 10,000) and a `max_unit_cost` that the solution part must satisfy.
 - **FR-26**: **Cost-Driven Optimization**: The system MUST support a "Record" system that stores the lowest unit cost achieved by any agent for a specific scenario.
-- **FR-27**: **Iterative Rollouts**: The generator MUST be able to produce "Optimization Tasks" where the goal is to beat the current cost record (e.g., "New Goal: Solve Scenario X for < $160").
+  - **Persistence**: Records MUST be persisted in the shared `history.db` SQLite database using the `cost_records` table.
+  - **Cost Model Integration**: Unit costs MUST be calculated using the workbench models defined in **Spec 004 (Advanced Manufacturing Workbenches)**.
+- **FR-27**: **Iterative Rollouts**: The generator MUST be able to produce "Optimization Tasks" where the goal is to beat the current cost record.
+  - **Quantification**: A record is considered "beaten" if the new unit cost is strictly lower than the existing record ($UnitCost_{new} < UnitCost_{record}$).
+  - **Cold Start**: If no record exists for a scenario, the `max_unit_cost` defined in the scenario manifest serves as the initial threshold to beat.
+  - **Context Delivery**: The generator MUST inject the current record cost into the agent's prompt if a record exists for the scenario (e.g., "Current Best: $4.25. Your goal: < $4.25").
 
-### 3.5 Randomization Engine
-
-- **FR-05**: The system **MUST** be able to vary the "Domain Box" (workspace size) dimensions (Length/Width/Height).
-- **FR-06**: The system **MUST** support randomization of start/goal/obstacle positions by at least ±40% of their bounding volumes, as specified by the user.
-- **FR-07**: Randomization logic **MUST** ensure objects remain within the global workspace bounds (no spawning outside the box).
-
-### 3.3 Artifact Compilation
+### 3.6 Artifact Compilation
 
 - **FR-08**: The system **MUST** execute the generated Python scripts to produce simulation assets.
 - **FR-09**: It **MUST** export all solid parts as independent STL or OBJ files.
 - **FR-10**: It **MUST** generate a valid MJCF (XML) file that references these meshes and defines the necessary joints/actuators.
 
-### 3.4 Automated Validation
+### 3.7 Automated Validation
 
 - **FR-11**: **Geometric Check**: The system **MUST** verify that generated meshes are watertight (manifold) and have non-zero volume.
+  - **Volume Threshold**: Every solid part MUST have a volume $> 10 mm^3$.
+  - **Workspace Bounds**: All generated geometry MUST reside within the **100x100x100mm** Domain Box (or the rescaled equivalent).
 - **FR-12**: **Physics Check**: The system **MUST** attempt to load the generated MJCF in MuJoCo and run for 1 second (sim time).
-- **FR-13**: **Stability Check**: If the maximum velocity of any body exceeds a threshold (e.g., 100 m/s) during the stability check, the generation is marked as "Failed/Exploded".
+  - **Simulation Parameters**: The check MUST use a default timestep of **0.002s**, the **RK4** integrator, and standard Earth gravity (**-9.81 m/s²** on Z).
+- **FR-13**: **Stability Check**: A generation is marked as "Failed/Exploded" if any of the following occur during the 1s run:
+  - **Velocity**: Maximum absolute velocity of any body exceeds **100.0 m/s**.
+  - **Energy**: Total system energy (kinetic + potential) increases by more than **10%** between steps (detecting divergence).
+  - **NaNs**: Any state vector component (position or velocity) becomes NaN.
+- **FR-28**: **Kinematic Validity (Tier 2)**: Scenarios involving joints MUST:
+  - Define explicit `range` limits for all hinge and slide joints.
+  - Ensure that the "Base" components (fixed to world) do not intersect with the mobile components in the initial state.
 
-### 3.5 Review & Export
+### 3.8 Review & Export
 
 - **FR-14**: The system **MUST** save successful runs to a staging directory.
 - **FR-15**: It **MUST** generate a static preview image (snapshot) of the scene for the reviewer.
 - **FR-16**: It **MUST** provide a CLI command to "promote" a staged scenario to the permanent benchmark suite.
+  - **Promotion Criteria**: A scenario is eligible for promotion ONLY if it:
+    1. Passes all **Geometric** and **Stability** checks.
+    2. Has a valid `target_quantity` and `max_unit_cost` defined.
+    3. Is visually inspected for "solvability" (e.g., goal isn't completely encased in an obstacle).
+  - **Reference Solution**: Every promoted scenario SHOULD be accompanied by at least one "Reference Solution" CAD script that successfully achieves the goal zone.
+  - **Duplicate Detection**: The promotion process MUST check for geometric duplication by comparing the SHA-256 hashes of the STL meshes against the existing suite. Duplicates MUST be rejected.
 
 ## 4. Technical Constraints
 
 - **Language**: Python 3.10+
 - **CAD Kernel**: `build123d` (essential for programmatic generation).
 - **Physics Engine**: `mujoco` (standard for the project).
-- **Agent Interface**: Standard Agent (Shell + File Access).
-- **LLM Interface**: `langchain` or direct API calls.
+- **LLM Interface**: `langchain` or direct API calls (consistent with Agent implementation).
 - **File Structure**:
   - `src/generators/`: The generation logic.
   - `scenarios/staging/`: Temporary hold for generated items.
@@ -126,6 +149,6 @@ The system ensures that every generated scenario is robust, randomized, and phys
 ## 6. Assumptions
 
 - **Default Workspace**: Unless otherwise specified, the system assumes a standard "Domain Box" of **100x100x100mm** for all benchmark scenarios.
-- **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax. The system **MUST** provide the agent with access to `docs/skills/` via standard file viewing tools to verify syntax.
+- **Documentation Necessity**: Previous experience shows that the LLM lacks sufficient knowledge of specific `build123d` syntax, the syntax as a whole. The system MUST provide the agent with a `search_docs` tool to verify syntax during plan and code generation.
 - We can run MuJoCo headless in the dev environment for the stability checks.
 - The "Human-in-the-loop" UI (Feature 007) will consume the file structure defined here, but this feature (005) does not build the UI itself (only the CLI and artifacts).
