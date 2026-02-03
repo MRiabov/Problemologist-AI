@@ -47,10 +47,11 @@ graph TB
 |-----------|---------------|----------|
 | `graph.py` | Define node topology & routing | Import domain logic directly |
 | `nodes/*.py` | LLM prompting & response parsing | Manage sessions or execute code |
-| `state.py` | TypedDict for LangGraph state | Contain mutable singletons |
+| `routing.py` | State-based graph transitions | Use magic string matching for control flow |
 
 > [!IMPORTANT]
 > Graph nodes are **stateless orchestrators**. Side effects (session start, file I/O) belong in the Runtime layer.
+> Control flow transitions MUST use structured state flags (e.g., `state["task_complete"]`) rather than parsing LLM content for magic strings like "Task complete".
 
 ### 2.2 Tool Layer (`src/agent/tools/`)
 
@@ -66,9 +67,13 @@ graph TB
 
 | Component | Responsibility | MUST NOT |
 |-----------|---------------|----------|
-| `runtime.py` | `ToolRuntime` class—single source of tool implementations | Import from `src/agent/` |
+| `runtime.py` | `ToolRuntime` class—Sole orchestrator of tool execution | Import from `src/agent/` |
+| `evaluator.py` | Shared `Evaluator` for design analysis & costing | Duplicate logic in tools |
 | `sandbox.py` | Podman orchestration | Execute code on host |
 | `persistence.py` | SQLAlchemy episode/step logging | Create inline sessions |
+
+> [!NOTE]
+> `CADEnv` has been deprecated/removed in favor of direct `ToolRuntime` usage to eliminate global state.
 
 ### 2.4 Domain Layer
 
@@ -85,49 +90,44 @@ graph TB
 ### 3.1 Security: Sandbox Enforcement
 
 > [!CAUTION]
-> **All agent-generated code MUST execute inside the Podman sandbox.**
+> **All agent-generated code MUST execute inside the Podman sandbox.** This includes design scripts, skill updates, and analysis routines.
 
 | Operation | Allowed | Forbidden |
 |-----------|---------|-----------|
 | `exec()` / `eval()` on agent code | ❌ Host | ✅ Sandbox only |
+| `subprocess.run` on agent code | ❌ Host | ✅ Sandbox only |
 | File writes to workspace | ✅ Via `ToolRuntime` | ❌ Direct `Path.write_text()` |
 | Network access | ❌ Always disabled | — |
 
-**Enforcement**: The `ToolRuntime.run_command()` and preview/submit methods proxy to `Sandbox.run_script()`.
+**Enforcement**:
+
+- The `ToolRuntime` proxies all command/script execution to `Sandbox.run_script()`.
+- Use of `subprocess` or `exec` on the host with agent-provided strings is a critical security violation.
+- Skill updates via `update_skill` must be validated/linted within the sandbox before being synced to the host.
 
 ### 3.2 Single Source of Truth: Tool Registry
 
-All tools available to the agent MUST be defined in **one location**:
+To prevent quadruplication and ensure consistency, all tools available to the agent MUST be defined in **one location**:
 
 ```python
-# src/agent/tools/registry.py (TO BE CREATED)
-from src.agent.tools.env_adapter import (
-    write_file, edit_file, view_file, run_command,
-    preview_design, submit_design, search_docs,
-    check_manufacturability, lint_script,
-    search_parts, preview_part,
-)
+# src/agent/tools/registry.py
+from src.agent.tools.env_adapter import (...)
 from src.agent.tools.memory import read_journal
 
-AGENT_TOOLS = [
-    write_file, edit_file, view_file, run_command,
-    preview_design, submit_design, search_docs,
-    check_manufacturability, read_journal,
-    search_parts, preview_part, lint_script,
-]
+AGENT_TOOLS = [ ... ]
 ```
 
-Consumers (`graph.py`, `actor.py` fallback) import from `registry.py`.
+**Consumers**: `graph.py` and fallback logic in `actor.py` MUST import from `registry.py`. Adding a tool to the system must only require adding it to this registry.
 
 ### 3.3 No Global Mutable State
 
 | Pattern | Status |
 |---------|--------|
-| `_ACTIVE_ENV` global | ⚠️ Legacy, do not extend |
-| `_RUNTIMES` registry | ✅ Acceptable (keyed by ID) |
+| `_ACTIVE_ENV` / `_CURRENT_ROLE` | ❌ Forbidden (Legacy—must be removed) |
+| `_RUNTIMES` registry | ✅ Acceptable (keyed by UUID) |
 | Creating fallback singletons | ❌ Forbidden |
 
-**Preferred**: Pass `runtime_id` through `AgentState`, retrieve via `get_runtime(runtime_id)`.
+**Requirement**: Tools must receive the `ToolRuntime` instance via dependency injection (the `tool_runtime` argument in `@tool` functions). Never rely on module-level globals for environment or session state.
 
 ### 3.4 Error Handling
 
@@ -146,14 +146,37 @@ except SpecificError as e:
     return fallback_value
 ```
 
-### 3.5 Logging Over Print
+### 3.5 Communication Protocol: Structured JSON
 
-| Pattern | Status |
-|---------|--------|
+> [!WARNING]
+> **Avoid "Marker Protocols"** (e.g., parsing `stdout` for `SUBMIT_RESULT: { ... }`).
+
+**Requirement**: Communication between the host and sandboxed runner scripts MUST use structured file-based I/O:
+
+1. Runner script writes its results to a pre-defined JSON file (e.g., `result.json`) in the workspace.
+2. `ToolRuntime` reads and parses this file after the script terminates.
+3. Magic strings in `stdout` are strictly for human-readable logging and MUST NOT be used for control logic.
+
+### 3.6 Structured Logging
+
+| Pattern               | Status       |
+|-----------------------|--------------|
 | `print("DEBUG: ...")` | ❌ Forbidden |
-| `logger.debug(...)` | ✅ Required |
+| `logger.debug(...)`   | ✅ Required  |
 
-Use `logging.getLogger(__name__)` at module level.
+**Standard**:
+
+- Use `logging.getLogger(__name__)` at the module level.
+- Prefer structured logging (e.g., passing context as dict) to allow machine parsing.
+- Debug statements MUST NOT be left in production code unless using an appropriate low log level.
+
+### 3.7 Workspace Isolation
+
+To enable parallel execution (e.g., `pytest -n auto`) and prevent race conditions:
+
+- **Test Workspaces**: Every test run MUST use a unique, isolated directory (e.g., via `uuid.uuid4()` or `pytest`'s `tmp_path`).
+- **Generator Workspaces**: Benchmark and scenario generation runs MUST use unique subdirectories within the main workspace to prevent cross-contamination.
+- **Teardown**: Automated cleanup of temporary workspaces is required unless explicitly disabled for debugging.
 
 ---
 
@@ -225,6 +248,9 @@ Path constants:
 - `Config.SKILLS_DIR` — `.agent/skills/` location
 - `Config.PROMPTS_PATH` — `config/prompts.yaml`
 
+> [!IMPORTANT]
+> **ALL paths MUST be absolute** and derived from `Config`. Hardcoding paths relative to the current working directory is strictly forbidden as it breaks portability and tests.
+
 ---
 
 ## 6. Decision Log
@@ -239,6 +265,6 @@ Path constants:
 
 ## 7. Future Considerations
 
-1. **Multi-Agent Support**: Replace `_ACTIVE_ENV` with explicit runtime passing via state.
-2. **Proper RAG**: Replace substring matching with embedding-based retrieval.
-3. **Structured Completion Signals**: Use `AgentState.task_complete` flag instead of magic string matching.
+1. **Proper RAG**: Replace substring matching with embedding-based retrieval and a vector database.
+2. **Context Window Management**: Implement automated message windowing/summarization to keep token costs down and reasoning quality high.
+3. **Multi-Part Project Support**: Move beyond the single `design.py` assumption to support hierarchical project structures.
