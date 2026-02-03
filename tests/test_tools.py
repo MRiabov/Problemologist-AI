@@ -78,6 +78,7 @@ def test_search_docs():
     # Count can vary based on docs, just check it's non-zero
     assert result.count("===") >= 6
 
+
 def test_check_manufacturability_assembly():
     content = """
 from build123d import Box
@@ -89,11 +90,11 @@ result = [part1, part2]
 """
     tools.write_script(content, "design.py")
     report = tools.check_manufacturability("design.py", process="print_3d", quantity=1)
-    
+
     print(f"DEBUG: Report: {report}")
     if "status" not in report:
         pytest.fail(f"Report missing status: {report}")
-    
+
     if report["status"] != "pass":
         print(f"DEBUG: Violations: {report['violations']}")
     assert report["status"] == "pass"
@@ -102,3 +103,34 @@ result = [part1, part2]
     # Part 2 volume = 125, Cost = 125 * 0.05 = 6.25
     # Total = 56.25
     assert pytest.approx(report["cost_analysis"]["total_cost"]) == 56.25
+
+
+def test_standard_tools_session():
+    # Test session lifecycle and run_command
+    start_res = tools.start_session("test-tools-session")
+    assert "started" in start_res
+
+    try:
+        # Test run_command
+        cmd_res = tools.run_command("echo hello-tools")
+        assert "hello-tools" in cmd_res
+
+        # Test view_file (standard file)
+        tools.write_script("content", "test.txt")
+        view_res = tools.view_file("test.txt")
+        assert view_res == "content"
+
+        # Test view_file (skill file pattern)
+        # Note: This checks if the logic correctly tries to read from .agent/skills
+        # We need a dummy skill to test this properly or just check it doesn't crash
+        skill_res = tools.view_file("docs/skills/build123d_cad_drafting_skill/SKILL.md")
+        assert "# build123d" in skill_res or "Error" not in skill_res
+    finally:
+        stop_res = tools.stop_session()
+        assert "stopped" in stop_res
+
+
+def test_view_file_skill_mapping():
+    # Verify that docs/skills/... maps to .agent/skills/...
+    res = tools.view_file("docs/skills/build123d_cad_drafting_skill/SKILL.md")
+    assert "build123d" in res.lower()
