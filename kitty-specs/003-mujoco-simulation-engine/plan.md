@@ -79,3 +79,10 @@ src/
 1. **Isolation Strategy**: How strictly to sandbox? *Decision*: **Podman Containers**. It provides near-VM isolation, allowing us to control CPU/Mem/Net and dependencies precisely.
 2. **Mesh Generation**: `build123d` export vs `trimesh`? *Decision*: `build123d` for geometry, passed to `trimesh` for convex hull decomposition.
 3. **Runner Architecture**: How to verify simulation? *Decision*: The "Loop" code runs *inside* the container, returning metrics via JSON to stdout. The Host system just parses the output.
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Stateless Simulation**: Ensure `builder.py` and `loop.py` operate as pure functions or context-manager-scoped instances without reliance on global state.
+2.  **Performance Caching**: Optimization (e.g., `lru_cache`) must be restricted to pure computational functions (mesh generation) and must NOT cache side-effects (like execution results).

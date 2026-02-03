@@ -69,3 +69,10 @@ src/
 |-----------|------------|-------------------------------------|
 | stpyvista | Specialized 3D visualization | `st.code` or static images are insufficient for debugging complex geometry. |
 | SQLite WAL | Concurrent access | Standard mode would cause database locks when the agent and dashboard access `history.db` simultaneously. |
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Decoupling**: The Dashboard must interact *only* with the `history.db` and the filesystem. It must NOT import or depend on the Agent's running state (e.g., no imports from `src/agent/` except for shared Pydantic models).
+2.  **Config**: Dashboard configuration should use the shared Pydantic `Config` settings for paths (e.g., `Config.WORKSPACE_DIR`) instead of hardcoded paths.

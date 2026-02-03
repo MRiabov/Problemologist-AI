@@ -61,3 +61,10 @@ src/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | Abstract Provider Pattern | Future extension for custom/STEP parts | Hardcoding `bd_warehouse` would require rewrite when adding new sources |
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Tool Registration**: `search_parts` and `preview_part` must be registered via the `ToolRuntime` registry mechanism, not by hardcoding into a `tools.py` dispatcher.
+2.  **Statelessness**: The COTS index (in-memory) should be initialized within the `ToolRuntime` or a dedicated singleton service managed by the runtime, avoiding module-level global state.

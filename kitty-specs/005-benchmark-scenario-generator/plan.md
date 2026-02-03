@@ -88,3 +88,10 @@ src/
 - **Efficiency**: Run `manager generate --count 10` and measure runtime (Target: < 5 mins).
 - **Yield**: Count valid vs. invalid outputs in the `staging` folder.
 - **Quality**: Manual review of the generated "Tier 2" lever mechanisms.
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Secure Execution**: The `Validator` (executing generated code) and `Randomizer` must execute within the `PodmanSandbox`. Direct use of `exec()` or `subprocess` on the host machine is forbidden for untrusted generated code.
+2.  **Linting**: The generated code must be linted *before* execution to catch basic syntax errors and ensure safety conventions.

@@ -65,3 +65,10 @@ src/
 |-----------|------------|-------------------------------------|
 | `trimesh` dependency | Advanced geometric queries (raycasting for undercuts) | `build123d`/OCP native kernels are complex/slow for discrete raycasting tasks; `trimesh` is industry standard for this. |
 | YAML Config | Hot-swappable pricing/constraints | Hardcoding prevents easy tuning of the economic model without code changes. |
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Domain Layer Separation**: Workbenches (`src/workbenches/`) must remain pure domain logic and must NOT import from `src/agent/`.
+2.  **Sandbox Safety**: If `check_manufacturability` executes dynamic analysis code, it must do so within the `PodmanSandbox` or ensure that the analysis code (`trimesh`) is safe to run on host (i.e., NO `exec` of user input).

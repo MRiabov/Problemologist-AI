@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement the infrastructure for the **Agentic CAD Environment**, a `gymnasium`-compatible interface that allows an autonomous agent to generate `build123d` CAD models, validate them against physics tasks in `mujoco`, and persistently log all interactions.
+Implement the infrastructure for the **Agentic CAD Environment**, a custom `ToolRuntime` interface that allows an autonomous agent to generate `build123d` CAD models, validate them against physics tasks in `mujoco`, and persistently log all interactions.
 
 Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM).
 
@@ -18,7 +18,6 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 
 - `build123d`: Code-based CAD kernel
 - `mujoco`: Physics engine
-- `gymnasium`: Standard RL interface patterns
 - `numpy`: Numerical operations
 **Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
 **Testing**: `pytest` for unit tests of tools and compiler; visual regression tests for rendering.
@@ -28,7 +27,7 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 - `submit_design`: < 10 seconds for geometry compilation + simulation.
 **Constraints**:
 - Single-threaded execution.
-- Security relies on containerization (out of scope for valid code, but Env sandbox should ideally limit imports).
+- Security relies on containerization (Env sandbox limits imports).
 
 ## Constitution Check
 
@@ -54,7 +53,7 @@ kitty-specs/001-agentic-cad-environment/
 ```
 src/
 ├── environment/
-│   ├── core.py           # Main Gymnasium-like Env class
+│   ├── runtime.py        # Main ToolRuntime class (Replaces core.py/Gym)
 │   ├── tools.py          # Tool definitions (RAG, Edit, Preview)
 │   └── persistence.py    # SQLite logger
 ├── workbenches/
@@ -73,3 +72,12 @@ src/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | Custom Geometry Compiler | Need to automate CAD -> Physics collision mesh generation | standard export doesn't handle convex decomposition for stable physics |
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Eliminate Gymnasium Interface**: `CADEnv` (extending `gym.Env`) is deprecated. Use `ToolRuntime` to manage state and tool execution directly.
+2.  **Tool Consolidation**: Refactor the three-layer tool definition (`tools.py`, `env_adapter.py`, `env.py`) into a single registry within `ToolRuntime`.
+3.  **Eliminate Global State**: Remove global variables like `_ACTIVE_ENV`. Pass `runtime` explicitly to tools.
+4.  **Security**: Ensure all dynamic code execution (e.g., `exec` in preview/submit) uses the `PodmanSandbox`.

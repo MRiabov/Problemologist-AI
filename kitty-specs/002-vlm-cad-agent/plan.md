@@ -65,15 +65,14 @@ src/
 │   │       ├── critic.py
 │   │       └── skill_populator.py
 │   ├── tools/
-│   │   ├── env.py          # LangChain Tool Wrappers
-│   │   ├── env_adapter.py  # Async Sandbox Adapters
-│   │   └── memory.py       # Journal reading tools
+│   │   ├── registry.py     # Tool Registry (Replacing env/env_adapter duplication)
+│   │   ├── memory.py       # Journal reading tools
 │   └── runner.py           # Entry point
 └── environment/
-    └── tools.py            # Core environmental implementations
+    └── runtime.py          # ToolRuntime (Execution Logic)
 ```
 
-**Structure Decision**: Clean separation of `src/agent` (cognitive) from `src/environment` (execution). Tools are defined in `src/environment` and wrapped in `src/agent/tools/env.py` for LangChain compatibility.
+**Structure Decision**: Clean separation of `src/agent` (cognitive) from `src/environment` (execution). Tools are defined in `src/environment` and registered via `src/agent/tools/registry.py` for LangChain compatibility.
 
 ## Complexity Tracking
 
@@ -82,3 +81,12 @@ src/
 | LangGraph + DeepAgents | Replaces custom `while` loop | Provides robust state persistence, time-travel debugging, and formalized "Planning" steps. |
 | File-based Memory | Simple, human-readable long-term memory | Vector DB is overkill; file-based approach enables direct agent manipulation via `write_file`. |
 | Skill Populator | Automated learning loop | Manual documentation updates are prone to being skipped. |
+
+## Refactoring & Alignment (Feb 3)
+
+Based on the [Architecture Review](../../docs/code-smells-feb-3.md), the following changes are required:
+
+1.  **Dependency Injection**: Tools must accept `tool_runtime` injected by the graph/executor, removing the need for global `_ACTIVE_ENV`.
+2.  **Tool Registry**: Consolidate tool definitions into a single registry (`registry.py`) to eliminate the 3-layer indirection (`tools.py` -> `env_adapter.py` -> `env.py`).
+3.  **Config Management**: Migrate configuration to Pydantic Settings (`Config` class) to replace bare `os.getenv` calls.
+4.  **Error Handling**: Replace bare `except:` clauses with specific exception handling.
