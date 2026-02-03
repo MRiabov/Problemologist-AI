@@ -1,13 +1,12 @@
-from pathlib import Path
-import shutil
 from fastapi.testclient import TestClient
 
+from src.agent.utils.config import Config
 from src.compiler.mujoco_bridge import MujocoBridge
 from src.simulation_engine.main import app
 from tests.fixtures.pusher_bot import PUSHER_SCRIPT, create_pusher_geometry
-from src.environment import tools
 
 client = TestClient(app)
+
 
 def test_pusher_e2e_success(tmp_path):
     """
@@ -16,7 +15,7 @@ def test_pusher_e2e_success(tmp_path):
     bridge = MujocoBridge()
 
     # 1. Prepare Geometry in the workspace
-    workspace_dir = Path(tools.WORKSPACE_DIR).resolve()
+    workspace_dir = Config.WORKSPACE_DIR.resolve()
     mesh_filename = "pusher.stl"
     mesh_path = str(workspace_dir / mesh_filename)
     create_pusher_geometry(mesh_path)
