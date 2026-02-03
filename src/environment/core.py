@@ -3,21 +3,16 @@ import time
 from pathlib import Path
 from typing import Any
 
-import gymnasium as gym
-from gymnasium import spaces
-
 from src.compiler import mujoco_bridge
 from src.environment import persistence
 from src.environment.runtime import ToolRuntime
 
 
-class CADEnv(gym.Env):
+class CADEnv:
     """
     Agentic CAD Environment.
-    Implements a Gymnasium-compatible interface for LLM-based mechanical engineering agents.
+    Implements an interface for LLM-based mechanical engineering agents.
     """
-
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(
         self,
@@ -28,7 +23,6 @@ class CADEnv(gym.Env):
         max_unit_cost: float = float("inf"),
         target_quantity: int = 1,
     ):
-        super().__init__()
         self.problem_id = problem_id
         self.task_description = task_description
         self.max_unit_cost = max_unit_cost
@@ -49,26 +43,6 @@ class CADEnv(gym.Env):
         # Simulation
         self.sim_bridge = mujoco_bridge.MujocoBridge()
 
-        # Action Space
-        self.action_space = spaces.Dict(
-            {
-                "tool": spaces.Text(min_length=0, max_length=50),
-                "arguments": spaces.Text(min_length=0, max_length=100000),
-            }
-        )
-
-        # Observation Space
-        self.observation_space = spaces.Dict(
-            {
-                "code": spaces.Text(min_length=0, max_length=100000),
-                "last_output": spaces.Text(min_length=0, max_length=100000),
-                "last_render": spaces.Text(min_length=0, max_length=1000),
-                "task_description": spaces.Text(min_length=0, max_length=10000),
-                "error": spaces.Text(min_length=0, max_length=10000),
-                "budget_info": spaces.Text(min_length=0, max_length=1000),
-            }
-        )
-
         self.last_obs = {
             "code": "",
             "last_output": "",
@@ -81,8 +55,6 @@ class CADEnv(gym.Env):
     def reset(
         self, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        super().reset(seed=seed)
-
         self.episode = self.db.create_episode(self.problem_id)
         self.step_count = 0
 
@@ -253,4 +225,3 @@ class CADEnv(gym.Env):
     def close(self):
         if self.db:
             self.db.close()
-        super().close()
