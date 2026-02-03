@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from src.utils.paths import get_project_root
 
 # Cache for loaded prompts
 _PROMPTS_CACHE: dict[str, Any] = {}
@@ -16,8 +17,7 @@ def load_prompts() -> dict[str, Any]:
         return _PROMPTS_CACHE
 
     # Locate the config/prompts.yaml relative to project root
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
-    prompts_path = project_root / "config" / "prompts.yaml"
+    prompts_path = get_project_root() / "config" / "prompts.yaml"
 
     if not prompts_path.exists():
         # Fallback or error

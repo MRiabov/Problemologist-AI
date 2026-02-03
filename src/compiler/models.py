@@ -42,12 +42,29 @@ class Observation:
 
 
 @dataclass
-class SimResult:
-    success: bool
-    total_energy: float
-    total_damage: float
     observations: list[Observation]
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "SimResult":
+        """Reconstructs SimResult from a dictionary (e.g., from JSON output)."""
+        observations = [
+            Observation(
+                step=o["step"],
+                time=o["time"],
+                state_vector=o["state_vector"],
+                energy_consumed=o["energy_consumed"],
+                damage_detected=o["damage_detected"],
+            )
+            for o in data.get("observations", [])
+        ]
+        return SimResult(
+            success=data.get("success", False),
+            total_energy=data.get("total_energy", 0.0),
+            total_damage=data.get("total_damage", 0.0),
+            observations=observations,
+            metadata=data.get("metadata", {}),
+        )
 
 
 @dataclass
