@@ -7,6 +7,7 @@ from src.agent.graph.nodes.actor import actor_node
 from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
+from src.agent.graph.nodes.journaler import journaler_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
     edit_script,
@@ -69,6 +70,7 @@ def build_graph(
 
     builder.add_node("critic", critic_node)
     builder.add_node("skill_populator", skill_populator_node)
+    builder.add_node("journaler", journaler_node)
 
     # Wrap ToolNode to capture state updates from tool outputs
     standard_tool_node = ToolNode(tools)
@@ -163,7 +165,7 @@ def build_graph(
     # Critic -> conditional (loop back or end)
     def route_critic(
         state: AgentState,
-    ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
+    ) -> Literal["planner", "actor", "skill_populator", "journaler"]:
         # Check for success indicators in the last message
         last_message = state["messages"][-1]
         if hasattr(last_message, "content"):
@@ -172,7 +174,7 @@ def build_graph(
                 x in content
                 for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]
             ):
-                return END
+                return "journaler"
 
         # Check step count to prevent infinite loops
         if state.get("step_count", 0) > Config.MAX_STEPS:
@@ -182,5 +184,6 @@ def build_graph(
 
     builder.add_conditional_edges("critic", route_critic)
     builder.add_edge("skill_populator", END)
+    builder.add_edge("journaler", END)
 
     return builder

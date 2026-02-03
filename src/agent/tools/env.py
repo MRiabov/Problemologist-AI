@@ -275,3 +275,8 @@ async def lint_script(filename: str = "design.py") -> str:
         filename: The name of the script to lint (default: 'design.py').
     """
     return await lint_script_async(filename)
+
+
+# Aliases for backward compatibility and prompt adherence
+write_script = write_file
+edit_script = edit_file

@@ -1,6 +1,7 @@
 import difflib
 import re
 from datetime import datetime
+from typing import Optional
 
 from langchain_core.tools import tool
 
@@ -64,4 +65,23 @@ def read_journal(topic: str = "") -> str:
     return content
 
 
-# write_journal is now handled by write_file tool in env.py
+@tool
+def write_journal(entry: str, tags: Optional[list[str]] = None) -> str:
+    """
+    Write a new entry to the agent's journal (journal.md).
+    This appends the entry with a timestamp and tags.
+
+    Args:
+        entry: The text content of the journal entry.
+        tags: A list of tags or categories for the entry (default: ['General']).
+    """
+    if tags is None:
+        tags = ["General"]
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    tags_str = ", ".join(tags)
+    # Format matches what read_journal expects (header with brackets)
+    # and what tests expect (Tags: ...)
+    formatted_entry = f"\n\n## [{tags_str}] {timestamp}\n{entry}\nTags: {tags_str}"
+    workspace.append("journal.md", formatted_entry)
+    return f"Successfully wrote journal entry with tags: {tags_str}"
