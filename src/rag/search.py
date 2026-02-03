@@ -58,6 +58,11 @@ def search(query: str, directory: str = "docs") -> str:
     """
     Simple substring search MVP. Searches docs/ and .agent/skills/.
     Returns top matches formatted as a string.
+
+    TODO: Replace with proper embedding-based RAG for semantic search.
+    Current implementation uses naive substring matching which fails for
+    complex queries, synonyms, and semantic similarity. Consider integrating
+    a vector store (e.g., ChromaDB, FAISS) with sentence embeddings.
     """
     query = query.lower()
 

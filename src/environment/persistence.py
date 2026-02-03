@@ -129,13 +129,12 @@ class DatabaseManager:
             session.close()
 
     def create_episode(self, problem_id: str) -> Episode:
-        session = self.get_session()
-        episode = Episode(problem_id=problem_id)
-        session.add(episode)
-        session.commit()
-        session.refresh(episode)
-        session.close()
-        return episode
+        with self.session_scope() as session:
+            episode = Episode(problem_id=problem_id)
+            session.add(episode)
+            session.flush()
+            session.refresh(episode)
+            return episode
 
     def log_step(
         self,
@@ -150,24 +149,23 @@ class DatabaseManager:
         content: str | None = None,
         metadata_json: dict[str, Any] | None = None,
     ) -> Step:
-        session = self.get_session()
-        step = Step(
-            episode_id=episode_id,
-            sequence_index=sequence_index,
-            tool_name=tool_name,
-            tool_input=tool_input,
-            tool_output=tool_output,
-            duration_ms=duration_ms,
-            type=step_type,
-            agent_role=agent_role,
-            content=content,
-            metadata_json=metadata_json,
-        )
-        session.add(step)
-        session.commit()
-        session.refresh(step)
-        session.close()
-        return step
+        with self.session_scope() as session:
+            step = Step(
+                episode_id=episode_id,
+                sequence_index=sequence_index,
+                tool_name=tool_name,
+                tool_input=tool_input,
+                tool_output=tool_output,
+                duration_ms=duration_ms,
+                type=step_type,
+                agent_role=agent_role,
+                content=content,
+                metadata_json=metadata_json,
+            )
+            session.add(step)
+            session.flush()
+            session.refresh(step)
+            return step
 
     def save_artifact(
         self,
@@ -176,57 +174,50 @@ class DatabaseManager:
         file_path: str,
         content_hash: str | None = None,
     ) -> Artifact:
-        session = self.get_session()
-        artifact = Artifact(
-            step_id=step_id,
-            artifact_type=artifact_type,
-            file_path=file_path,
-            content_hash=content_hash,
-        )
-        session.add(artifact)
-        session.commit()
-        session.refresh(artifact)
-        session.close()
-        return artifact
+        with self.session_scope() as session:
+            artifact = Artifact(
+                step_id=step_id,
+                artifact_type=artifact_type,
+                file_path=file_path,
+                content_hash=content_hash,
+            )
+            session.add(artifact)
+            session.flush()
+            session.refresh(artifact)
+            return artifact
 
     def update_episode_status(
         self, episode_id: uuid.UUID, status: str, result_metrics: dict | None = None
     ):
-        session = self.get_session()
-        episode = session.get(Episode, episode_id)
-        if episode:
-            episode.status = status
-            if result_metrics:
-                episode.result_metrics = result_metrics
-            session.commit()
-        session.close()
+        with self.session_scope() as session:
+            episode = session.get(Episode, episode_id)
+            if episode:
+                episode.status = status
+                if result_metrics:
+                    episode.result_metrics = result_metrics
 
     def get_best_cost(self, scenario_id: str) -> float | None:
-        session = self.get_session()
-        record = session.get(CostRecord, scenario_id)
-        cost = record.best_unit_cost if record else None
-        session.close()
-        return cost
+        with self.session_scope() as session:
+            record = session.get(CostRecord, scenario_id)
+            return record.best_unit_cost if record else None
 
     def update_cost_record(
         self, scenario_id: str, unit_cost: float, episode_id: uuid.UUID | None = None
     ) -> bool:
         """Updates the cost record if the new unit_cost is lower than the current best. Returns True if updated."""
-        session = self.get_session()
-        record = session.get(CostRecord, scenario_id)
-        updated = False
-        if not record:
-            record = CostRecord(
-                scenario_id=scenario_id, best_unit_cost=unit_cost, episode_id=episode_id
-            )
-            session.add(record)
-            updated = True
-        elif unit_cost < record.best_unit_cost:
-            record.best_unit_cost = unit_cost
-            record.episode_id = episode_id
-            updated = True
-
-        if updated:
-            session.commit()
-        session.close()
-        return updated
+        with self.session_scope() as session:
+            record = session.get(CostRecord, scenario_id)
+            updated = False
+            if not record:
+                record = CostRecord(
+                    scenario_id=scenario_id,
+                    best_unit_cost=unit_cost,
+                    episode_id=episode_id,
+                )
+                session.add(record)
+                updated = True
+            elif unit_cost < record.best_unit_cost:
+                record.best_unit_cost = unit_cost
+                record.episode_id = episode_id
+                updated = True
+            return updated
