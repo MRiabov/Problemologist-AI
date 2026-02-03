@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
@@ -117,8 +118,8 @@ def get_all_episodes() -> list[dict[str, Any]]:
                 }
                 for ep in episodes
             ]
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"Failed to fetch episodes from DB: {e}")
 
     return [
         {
@@ -154,8 +155,8 @@ def get_episode_by_id(episode_id: str) -> dict[str, Any]:
                     for i, step in enumerate(ep.steps)
                 ],
             }
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"Failed to fetch episode {episode_id} from DB: {e}")
 
     if episode_id == "ep_001":
         return {

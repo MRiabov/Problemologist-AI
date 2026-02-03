@@ -1,4 +1,5 @@
 import json
+import logging
 import subprocess
 import tempfile
 from pathlib import Path
@@ -118,8 +119,8 @@ def run_linter(code: str) -> list[dict]:
                             "message": desc,
                         }
                     )
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning(f"Pyrefly linter failed: {e}")
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
