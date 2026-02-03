@@ -6,6 +6,8 @@ from typing import Any, Protocol, runtime_checkable
 import mujoco
 import numpy as np
 
+from src.environment.sandbox_utils import run_sandboxed_script
+
 
 @runtime_checkable
 class AgentProtocol(Protocol):
@@ -45,21 +47,17 @@ class SimulationLoop:
         self.target_body_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, "target"
         )
-        # If target is not a body, maybe a geom? Prompt said "xpos['target']" which usually refers to body xpos.
-        # But if it fails, we assume no win condition based on these names.
+
+        # Cache site names to optimize _get_observations
+        self.site_names = [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_SITE, i)
+            for i in range(self.model.nsite)
+        ]
 
     def step(self):
         """
         Performs one physics tick and updates metrics.
         """
-        # Calculate energy for this step before stepping?
-        # Energy = Power * dt = (Force * Velocity) * dt
-        # We can approximate Force as ctrl (if direct) or actuator force.
-        # For now, simplistic approximation using ctrl and qvel (if dimensions match approx)
-        # But accurately, we should use mjData.actuator_force and mjData.actuator_velocity if available
-        # or just skip complex energy calc as 'approximation' is requested.
-        # T011 says: sum(torque * velocity * dt)
-
         # Apply standard stepping
         mujoco.mj_step(self.model, self.data)
 
@@ -73,25 +71,40 @@ class SimulationLoop:
 
         # Energy calculation
         # Power = actuator_force * actuator_velocity
-        # Energy = sum(|power|) * dt
         power = self.data.actuator_force * self.data.actuator_velocity
         self.metrics.energy += float(np.sum(np.abs(power)) * dt)
 
-    def run(self, agent_script: str, max_steps: int = 1000) -> dict[str, Any]:
+    def run(
+        self,
+        agent_script: str,
+        max_steps: int = 1000,
+        sandbox: Any = None,
+        workspace_dir: str | Path | None = None,
+    ) -> dict[str, Any]:
         """
         Runs the simulation with the provided agent script inside a sandbox.
         """
-        from src.environment import tools
+        # Legacy fallback if sandbox is not provided
+        if sandbox is None:
+            try:
+                from src.environment import tools
+                sandbox = tools._SANDBOX
+            except ImportError:
+                raise ValueError("Sandbox must be provided to run()")
 
-        workspace = Path(tools.WORKSPACE_DIR)
-        sandbox = tools._SANDBOX
+        if workspace_dir is None:
+            if hasattr(sandbox, "workspace_dir"):
+                workspace_dir = sandbox.workspace_dir
+            else:
+                try:
+                    from src.environment import tools
+                    workspace_dir = tools.WORKSPACE_DIR
+                except ImportError:
+                    raise ValueError("Workspace directory could not be determined")
 
-        runner_filename = "sim_engine_runner.py"
-        runner_path = workspace / runner_filename
-
-        # In-container path for the model
-        # We'll mount the host's model_path to /workspace/model.xml
         container_model_path = "/workspace/model.xml"
+        runner_filename = "sim_engine_runner.py"
+        result_file = "sim_result.json"
 
         runner_script = f"""
 import json
@@ -106,61 +119,39 @@ agent_script = {agent_script!r}
 max_steps = {max_steps}
 
 # Call the internal run logic
-# We need to expose the internal run logic since we are technically calling it
-# But we can just use _run_internal if we define one.
-# For now, we'll just implement it here to avoid deep refactoring.
 result = sim._run_internal(agent_script, max_steps)
 
-print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
+# Write result to file
+with open("/workspace/{result_file}", "w") as f:
+    json.dump(result, f)
 """
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
 
-            stdout, stderr, rc = sandbox.run_script(
-                runner_filename,
-                mount_src=True,
-                extra_mounts=[(self.model_path, container_model_path)],
-                timeout=60,
-            )
+        extra_mounts = [(self.model_path, container_model_path)]
 
-            if runner_path.exists():
-                runner_path.unlink()
+        res = run_sandboxed_script(
+            sandbox=sandbox,
+            script_content=runner_script,
+            result_file_name=result_file,
+            runner_file_name=runner_filename,
+            extra_mounts=extra_mounts,
+            mount_src=True,
+        )
 
-            if rc != 0:
-                return {
-                    "status": "TIMEOUT" if rc == 124 else "ERROR",
-                    "message": f"Sandbox execution failed (code {rc}): {stderr}",
-                    "error_type": "CrashError" if rc != 124 else "TimeoutError",
-                    "metrics": self.metrics.to_dict(),
-                }
+        if res.get("status") == "error":
+             return {
+                 "status": "ERROR",
+                 "message": res.get("message", "Unknown error"),
+                 "metrics": self.metrics.to_dict()
+             }
 
-            if "SIM_ENGINE_RESULT:" not in stdout:
-                return {
-                    "status": "ERROR",
-                    "message": f"Sandbox simulation failed: {stderr}",
-                    "metrics": self.metrics.to_dict(),
-                }
+        # Update local metrics for tests that inspect them
+        if "metrics" in res:
+            self.metrics.steps = res["metrics"]["steps"]
+            self.metrics.time = res["metrics"]["time"]
+            self.metrics.energy = res["metrics"]["energy"]
+            self.metrics.collisions = res["metrics"]["collisions"]
 
-            result_line = [
-                line for line in stdout.split("\n") if "SIM_ENGINE_RESULT:" in line
-            ][0]
-            res_data = json.loads(result_line.split("SIM_ENGINE_RESULT:")[1])
-
-            # Update local metrics for tests that inspect them
-            if "metrics" in res_data:
-                self.metrics.steps = res_data["metrics"]["steps"]
-                self.metrics.time = res_data["metrics"]["time"]
-                self.metrics.energy = res_data["metrics"]["energy"]
-                self.metrics.collisions = res_data["metrics"]["collisions"]
-
-            return res_data
-
-        except Exception as e:
-            return {
-                "status": "ERROR",
-                "message": f"Error initiating sandboxed simulation: {e}",
-                "metrics": self.metrics.to_dict(),
-            }
+        return res
 
     def _run_internal(self, agent_script: str, max_steps: int = 1000) -> dict[str, Any]:
         """Actual simulation logic to be run inside sandbox."""
@@ -256,10 +247,8 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
             if self.model.nsensor > 0
             else np.array([]),
             "site_xpos": {
-                mujoco.mj_id2name(
-                    self.model, mujoco.mjtObj.mjOBJ_SITE, i
-                ): self.data.site_xpos[i].copy()
-                for i in range(self.model.nsite)
+                name: self.data.site_xpos[i].copy()
+                for i, name in enumerate(self.site_names)
             },
         }
 
@@ -287,10 +276,6 @@ print(f"SIM_ENGINE_RESULT:{{json.dumps(result)}}")
 
             # Check if one is forbid and other is part of agent
             # We assume "forbid" is in the name of forbidden zone
-            # And we need to know what is the agent.
-            # Assuming if one is forbid and other is NOT forbid and NOT ground, it's a fail?
-            # Or if "forbid" is touched by anything?
-
             if name1 and "forbid" in name1.lower():
                 return "FAIL"
             if name2 and "forbid" in name2.lower():

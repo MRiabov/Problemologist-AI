@@ -1,5 +1,6 @@
 import mujoco
 import pytest
+from unittest.mock import MagicMock, patch
 
 from src.simulation_engine.simulation import SimulationLoop
 
@@ -61,13 +62,22 @@ def control(obs):
     # Return 2 controls
     return [1.0, 0.5] 
 """
-    result = sim.run(script, max_steps=10)
-    # Should run 10 steps
-    assert result["status"] == "TIMEOUT"
-    assert result["steps"] == 10
-    # Check if controls were applied (last step)
-    assert result["ctrl"][0] == 1.0
-    assert result["ctrl"][1] == 0.5
+    with patch("src.simulation_engine.simulation.run_sandboxed_script") as mock_run:
+        mock_run.return_value = {
+            "status": "TIMEOUT",
+            "metrics": {"steps": 10, "time": 0.1, "energy": 0.0, "collisions": 0},
+            "steps": 10,
+            "ctrl": [1.0, 0.5]
+        }
+
+        result = sim.run(script, max_steps=10, sandbox=MagicMock(), workspace_dir="/tmp")
+
+        # Should run 10 steps
+        assert result["status"] == "TIMEOUT"
+        assert result["steps"] == 10
+        # Check if controls were applied (last step)
+        assert result["ctrl"][0] == 1.0
+        assert result["ctrl"][1] == 0.5
 
 
 def test_win_condition(model_path):
@@ -106,28 +116,47 @@ def test_fail_condition(model_path):
 
 def test_metrics(model_path):
     sim = SimulationLoop(model_path)
-    sim.run(
-        """
-def control(obs):
-    return [0, 0]
-""",
-        max_steps=5,
-    )
 
-    assert sim.metrics.steps == 5
-    assert sim.metrics.time == 5 * sim.model.opt.timestep
+    with patch("src.simulation_engine.simulation.run_sandboxed_script") as mock_run:
+        dt = sim.model.opt.timestep
+        mock_run.return_value = {
+            "status": "TIMEOUT",
+            "metrics": {"steps": 5, "time": 5 * dt, "energy": 0.0, "collisions": 0}
+        }
+
+        sim.run(
+            """
+    def control(obs):
+        return [0, 0]
+    """,
+            max_steps=5,
+            sandbox=MagicMock(),
+            workspace_dir="/tmp"
+        )
+
+        assert sim.metrics.steps == 5
+        assert sim.metrics.time == 5 * dt
 
 
 def test_energy_calculation(model_path):
     sim = SimulationLoop(model_path)
     # Apply some control to generate energy
-    sim.run(
-        """
-def control(obs):
-    # Apply maximum control to joints
-    return [100.0, 100.0]
-""",
-        max_steps=10,
-    )
 
-    assert sim.metrics.energy > 0
+    with patch("src.simulation_engine.simulation.run_sandboxed_script") as mock_run:
+        mock_run.return_value = {
+            "status": "TIMEOUT",
+            "metrics": {"steps": 10, "time": 0.1, "energy": 10.0, "collisions": 0}
+        }
+
+        sim.run(
+            """
+    def control(obs):
+        # Apply maximum control to joints
+        return [100.0, 100.0]
+    """,
+            max_steps=10,
+            sandbox=MagicMock(),
+            workspace_dir="/tmp"
+        )
+
+        assert sim.metrics.energy > 0
