@@ -13,9 +13,19 @@ def set_active_env(env: Any):
     _ACTIVE_ENV = env
 
 
+def get_active_env() -> Any | None:
+    """Returns the currently active environment instance."""
+    return _ACTIVE_ENV
+
+
 async def write_script_async(content: str, path: str) -> str:
     """Async wrapper for writing a script."""
     return await asyncio.to_thread(env_tools.write_script, content, path)
+
+
+async def read_script_async(path: str) -> str:
+    """Async wrapper for reading a script."""
+    return await asyncio.to_thread(env_tools.read_script, path)
 
 
 async def edit_script_async(path: str, find: str, replace: str) -> str:

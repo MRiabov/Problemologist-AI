@@ -11,7 +11,7 @@ from src.agent.tools.env_adapter import (
     preview_design_async,
     preview_part_async,
     read_skill_async,
-    run_skill_script_async,
+    read_script_async,
     search_docs_async,
     search_parts_async,
     submit_design_async,
@@ -32,6 +32,18 @@ async def write_script(content: str, path: str) -> str:
         path: The path where the script should be saved.
     """
     return await write_script_async(content, path)
+
+
+@tool
+async def read_script(path: str = "design.py") -> str:
+    """
+    Reads the content of a script from the workspace.
+    Use this to inspect your existing code before editing or refactoring.
+
+    Args:
+        path: The path of the file to read (default: 'design.py').
+    """
+    return await read_script_async(path)
 
 
 @tool
