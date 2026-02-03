@@ -1,19 +1,20 @@
+import functools
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
 
+import build123d as bd
+
+from src.agent.utils.linter import format_linter_report, run_linter
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 from src.environment.sandbox import PodmanSandbox
 from src.rag import search as rag_search
-import hashlib
-import functools
-import build123d as bd
 from src.workbenches.cnc import CNCWorkbench
 from src.workbenches.injection_molding import InjectionMoldingWorkbench
 from src.workbenches.print_3d import Print3DWorkbench
-from src.agent.utils.linter import run_linter, format_linter_report
 
 # Define a workspace directory for the agent's files
 WORKSPACE_DIR = str(Path("workspace").resolve())
@@ -62,23 +63,86 @@ def set_workspace_dir(path: str):
     _SANDBOX = PodmanSandbox(WORKSPACE_DIR)
 
 
-def write_script(content: str, filename: str = "design.py") -> str:
+def write_file(content: str, path: str, mode: str = "overwrite") -> str:
     """
-    Writes content to a file in the workspace.
+    Writes content to a file in the workspace or appends to it.
+    If path is 'journal.md', automatically adds timestamps for append mode.
     """
-    # Ensure filename is just a name, not a path that escapes the workspace
-    filename = Path(filename).name
-    path = Path(WORKSPACE_DIR) / filename
+    # Ensure filename is just a name or a safe relative path
+    # For now, let's keep it simple and just use the name for safety unless we want subdirs
+    # But user might want to write to "journal.md" or "design.py"
+    full_path = Path(WORKSPACE_DIR) / path
+
+    # Basic security check: ensure the path is within the workspace
+    if not str(full_path.resolve()).startswith(str(Path(WORKSPACE_DIR).resolve())):
+        return f"Error: Path {path} is outside the workspace."
 
     try:
-        path.write_text(content, encoding="utf-8")
-        result = f"Successfully wrote to {filename}"
-        if filename.endswith(".py"):
-            lint_report = lint_script(filename)
+        if mode == "append":
+            if path == "journal.md":
+                from datetime import datetime
+
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                content = f"\n\n## [{timestamp}]\n{content}\n"
+
+            with full_path.open("a", encoding="utf-8") as f:
+                f.write(content)
+            result = f"Successfully appended to {path}"
+        else:
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(content, encoding="utf-8")
+            result = f"Successfully wrote to {path}"
+
+        if path.endswith(".py"):
+            lint_report = lint_script(path)
             result += f"\n\n{lint_report}"
         return result
     except Exception as e:
-        return f"Error writing to {filename}: {e!s}"
+        return f"Error writing to {path}: {e!s}"
+
+
+def edit_file(path: str, find: str, replace: str) -> str:
+    """
+    Replaces a unique 'find' string with 'replace' string in the specified file.
+    """
+    full_path = Path(WORKSPACE_DIR) / path
+
+    if not full_path.exists():
+        return f"Error: File {path} does not exist."
+
+    try:
+        content = full_path.read_text(encoding="utf-8")
+
+        count = content.count(find)
+        if count == 0:
+            return f"Error: 'find' string not found in {path}."
+        if count > 1:
+            return f"Error: 'find' string is ambiguous (found {count} occurrences) in {path}."
+
+        new_content = content.replace(find, replace)
+        full_path.write_text(new_content, encoding="utf-8")
+
+        result = f"Successfully edited {path}."
+        if path.endswith(".py"):
+            lint_report = lint_script(path)
+            result += f"\n\n{lint_report}"
+        return result
+    except Exception as e:
+        return f"Error editing {path}: {e!s}"
+
+
+def write_script(content: str, filename: str = "design.py") -> str:
+    """
+    [DEPRECATED] Writes content to a file in the workspace. Use write_file instead.
+    """
+    return write_file(content, filename, mode="overwrite")
+
+
+def edit_script(filename: str, find: str, replace: str) -> str:
+    """
+    [DEPRECATED] Replaces a unique 'find' string with 'replace' string. Use edit_file instead.
+    """
+    return edit_file(filename, find, replace)
 
 
 def read_script(filename: str = "design.py") -> str:
@@ -120,37 +184,6 @@ def view_file(path: str) -> str:
         return full_path.read_text(encoding="utf-8")
     except Exception as e:
         return f"Error reading {path}: {e!s}"
-
-
-def edit_script(filename: str, find: str, replace: str) -> str:
-    """
-    Replaces a unique 'find' string with 'replace' string in the specified file.
-    """
-    filename = Path(filename).name
-    path = Path(WORKSPACE_DIR) / filename
-
-    if not path.exists():
-        return f"Error: File {filename} does not exist."
-
-    try:
-        content = path.read_text(encoding="utf-8")
-
-        count = content.count(find)
-        if count == 0:
-            return f"Error: 'find' string not found in {filename}."
-        if count > 1:
-            return f"Error: 'find' string is ambiguous (found {count} occurrences) in {filename}."
-
-        new_content = content.replace(find, replace)
-        path.write_text(new_content, encoding="utf-8")
-
-        result = f"Successfully edited {filename}."
-        if filename.endswith(".py"):
-            lint_report = lint_script(filename)
-            result += f"\n\n{lint_report}"
-        return result
-    except Exception as e:
-        return f"Error editing {filename}: {e!s}"
 
 
 def preview_design(filename: str = "design.py") -> str:
