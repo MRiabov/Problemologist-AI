@@ -1,3 +1,6 @@
+import re
+import yaml
+from contextlib import suppress
 from typing import Literal, Optional
 
 from langgraph.graph import END, START, StateGraph
@@ -80,9 +83,8 @@ def build_graph(
                         result["messages"][0].content if result["messages"] else "N/A"
                     )
 
-                    # Check for successful validation
-                    if "Validation Passed!" in tool_output:
-                        task_complete = True
+                    # Success detection moved to Critic node (structured YAML)
+                    task_complete = False
 
                     history.append(
                         {
@@ -151,19 +153,36 @@ def build_graph(
     def route_critic(
         state: AgentState,
     ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
-        # Check structured completion signal first (preferred)
-        if state.get("task_complete", False):
+        last_message = state["messages"][-1]
+        if not hasattr(last_message, "content") or not last_message.content:
+            return "planner"
+
+        content = str(last_message.content)
+
+        # Parse YAML frontmatter
+        match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+        metadata = {}
+        if match:
+            with suppress(Exception):
+                metadata = yaml.safe_load(match.group(1))
+
+        # Check task_complete from metadata
+        if metadata.get("task_complete"):
             return END
 
-        # Fallback: Check for success indicators in the last message (backward compat)
-        last_message = state["messages"][-1]
-        if hasattr(last_message, "content"):
-            content = str(last_message.content)
-            if any(
-                x in content
-                for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]
-            ):
-                return END
+        # Check status from metadata
+        status = metadata.get("status")
+        if status == "pass":
+            return END
+        if status == "replan":
+            return "planner"
+
+        # Fallback: Check for legacy success indicators
+        if any(
+            x in content
+            for x in ["Validation Passed!", "Task complete", "TASK_COMPLETE"]
+        ):
+            return END
 
         # Check step count to prevent infinite loops
         if state.get("step_count", 0) > Config.MAX_STEPS:
