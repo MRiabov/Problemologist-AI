@@ -1,4 +1,4 @@
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, trim_messages
 from typing import Optional
 from src.agent.utils.llm import get_model
 
@@ -49,7 +49,24 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
     if state.get("plan"):
         messages.append(SystemMessage(content=f"Current Plan:\n{state['plan']}"))
 
-    response = await model_with_tools.ainvoke(messages)
+    # Trim messages to avoid context bloat (keep last 15)
+    trimmed_messages = trim_messages(
+        messages,
+        strategy="last",
+        token_limit=15,
+        include_system=True,
+        allow_partial=False,
+    )
+    # Note: If token_limit is small, it acts as message count in some versions or we might need a larger limit for tokens.
+    # Given the ambiguity, let's use a safe 4000 token limit which is usually plenty for last 15 messages.
+    trimmed_messages = trim_messages(
+        messages,
+        strategy="last",
+        token_limit=4000,
+        include_system=True,
+    )
+
+    response = await model_with_tools.ainvoke(trimmed_messages)
 
     updates = {
         "messages": [response],

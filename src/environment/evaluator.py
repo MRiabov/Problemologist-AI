@@ -3,6 +3,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from src.compiler.models import CostBreakdown, ValidationReport, ValidationViolation
 from src.environment.sandbox_utils import run_sandboxed_script
 
 
@@ -142,7 +143,7 @@ with open("/workspace/{result_file}", "w") as f:
         quantity: int = 1,
         export_stl: bool = False,
         session_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ValidationReport:
         """Validates design for manufacturability and optionally exports STL."""
         design_file = Path(design_file).name
         script_path = Path(self.workspace_dir) / design_file
@@ -200,20 +201,17 @@ try:
         all_violations.extend(violations)
         cost_res = wb.calculate_cost(solid, ldata["quantity"], context=reuse_ctx)
         
-        cost = 0.0
-        breakdown = None
-
-        if isinstance(cost_res, dict):
-             cost = cost_res.get("total_cost", 0.0)
-             breakdown = cost_res.get("breakdown")
-        else:
-             cost = float(cost_res)
+        # cost_res is now a CostBreakdown dataclass
+        # Convert to dict for JSON serialization
+        import dataclasses
+        breakdown_dict = dataclasses.asdict(cost_res)
+        cost = cost_res.total_cost
 
         total_cost += cost
 
         part_reports.append({{
             "part_index": i, "process": ldata["process"], "quantity": ldata["quantity"],
-            "cost": cost, "breakdown": breakdown, "violations": [str(v) for v in violations]
+            "cost": cost, "breakdown": breakdown_dict, "violations": [str(v) for v in violations]
         }})
 
     result["status"] = "pass" if not all_violations else "fail"
@@ -243,6 +241,41 @@ with open("/workspace/{result_file}", "w") as f:
         )
 
         if res.get("status") == "error" and "error_type" in res:
-            return {"error": f"Exec failed: {res.get('message')}"}
+            return ValidationReport(
+                status="fail",
+                manufacturability_score=0.0,
+                violations=[],
+                cost_analysis=CostBreakdown(
+                    process=process,
+                    total_cost=0.0,
+                    unit_cost=0.0,
+                    material_cost_per_unit=0.0,
+                ),
+                error=f"Exec failed: {res.get('message')}",
+            )
 
-        return res
+        # Reconstruct models from JSON response
+        cost_info = res.get("cost_analysis", {})
+        cost_breakdown = CostBreakdown(
+            process=process,  # Root process
+            total_cost=cost_info.get("total_cost", 0.0),
+            unit_cost=cost_info.get("unit_cost", 0.0),
+            material_cost_per_unit=0.0,  # Aggregated doesn't have a single material cost
+            setup_cost=0.0,
+            details={"parts": res.get("parts", [])},
+        )
+
+        violations = [
+            ValidationViolation(description=v["description"])
+            for v in res.get("violations", [])
+        ]
+
+        return ValidationReport(
+            status=res.get("status", "fail"),
+            manufacturability_score=res.get("manufacturability_score", 0.0),
+            violations=violations,
+            cost_analysis=cost_breakdown,
+            parts=res.get("parts", []),
+            stl_path=res.get("stl_path"),
+            error=res.get("error"),
+        )

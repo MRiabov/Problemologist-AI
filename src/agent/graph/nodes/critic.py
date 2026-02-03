@@ -1,4 +1,4 @@
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, trim_messages
 
 from src.agent.graph.state import AgentState
 from src.agent.utils.config import Config
@@ -22,20 +22,31 @@ async def critic_node(state: AgentState):
 
     system_prompt_key = "cad_agent.critic.system"
     system_prompt = get_prompt(system_prompt_key)
-    system_prompt += "\n\nIMPORTANT: If the design failed validation or exceeded the budget, you MUST include '[REPLAN]' in your feedback to trigger a strategy update."
-
-    if (
-        state.get("runtime_config")
-        and "system_prompt_overrides" in state["runtime_config"]
-    ):
-        overrides = state["runtime_config"]["system_prompt_overrides"]
-        if "critic" in overrides:
-            system_prompt = get_prompt(overrides["critic"])
+    system_prompt += (
+        "\n\nIMPORTANT: You MUST provide your review in Markdown format with a YAML frontmatter block at the very beginning. "
+        "The YAML block must contain two fields:\n"
+        "1. `status`: one of 'pass', 'fail', or 'replan'. Use 'replan' if a major strategy shift is needed.\n"
+        "2. `task_complete`: a boolean indicating if the original goal has been fully met.\n\n"
+        "Format example:\n"
+        "---\n"
+        "status: pass\n"
+        "task_complete: true\n"
+        "---\n\n"
+        "Review content follows here..."
+    )
 
     messages = [SystemMessage(content=system_prompt)] + state["messages"]
 
+    # Trim messages to avoid context bloat
+    trimmed_messages = trim_messages(
+        messages,
+        strategy="last",
+        token_limit=4000,
+        include_system=True,
+    )
+
     # We ask the LLM to review the situation
-    response = await model.ainvoke(messages)
+    response = await model.ainvoke(trimmed_messages)
 
     if hasattr(response, "content") and response.content:
         log.info(response.content, type="thought")

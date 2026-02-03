@@ -1,28 +1,19 @@
-import json
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from pathlib import Path
 
 import mujoco
 import numpy as np
 
+from src.compiler.models import Observation, SimResult
+from src.environment.sandbox import PodmanSandbox
 from src.environment.sandbox_utils import run_sandboxed_script
-
-
-@dataclass
-class SimResult:
-    duration: float
-    energy: float
-    success: bool
-    damage: float
-    replay_data: list[dict] | None = None
 
 
 class MujocoBridge:
     def __init__(
         self,
         workspace_dir: str | Path | None = None,
-        sandbox: "PodmanSandbox | None" = None,
+        sandbox: PodmanSandbox | None = None,
     ):
         """
         Initialize MujocoBridge.
@@ -39,23 +30,22 @@ class MujocoBridge:
 
     @property
     def workspace_dir(self) -> Path:
-        """Get workspace directory, falling back to legacy global if not set."""
+        """Get workspace directory."""
         if self._workspace_dir:
             return self._workspace_dir
-        # Lazy legacy fallback
-        from src.environment import tools
 
-        return Path(tools.WORKSPACE_DIR)
+        from src.agent.utils.config import Config
+
+        return Config.WORKSPACE_DIR
 
     @property
-    def sandbox(self) -> "PodmanSandbox":
-        """Get sandbox, falling back to legacy global if not set."""
+    def sandbox(self) -> PodmanSandbox:
+        """Get sandbox."""
         if self._sandbox:
             return self._sandbox
-        # Lazy legacy fallback
-        from src.environment import tools
-
-        return tools._SANDBOX
+        raise RuntimeError(
+            "Sandbox not initialized in MujocoBridge. Ensure it is passed during __init__ or via ToolRuntime."
+        )
 
     def load_template(self, template_name: str = "standard.xml") -> str:
         """Load a standard template and return its XML string content.
@@ -163,11 +153,20 @@ sim_result = bridge._run_simulation_internal(
 
 # Use dataclasses.asdict or manual dict creation
 res_dict = {{
-    "duration": sim_result.duration,
-    "energy": sim_result.energy,
     "success": sim_result.success,
-    "damage": sim_result.damage,
-    "replay_data": sim_result.replay_data
+    "total_energy": sim_result.total_energy,
+    "total_damage": sim_result.total_damage,
+    "observations": [
+        {{
+            "step": obs.step,
+            "time": obs.time,
+            "state_vector": obs.state_vector.tolist(),
+            "energy_consumed": obs.energy_consumed,
+            "damage_detected": obs.damage_detected
+        }}
+        for obs in sim_result.observations
+    ],
+    "metadata": sim_result.metadata
 }}
 
 with open("/workspace/{result_file}", "w") as f:
@@ -184,16 +183,38 @@ with open("/workspace/{result_file}", "w") as f:
 
         if res.get("status") == "error":
             if res.get("error_type") == "TimeoutError":
-                return SimResult(duration, energy=0.0, success=False, damage=100.0)
+                return SimResult(
+                    success=False, total_energy=0.0, total_damage=100.0, observations=[]
+                )
             if "CRASH_DETECTED" in res.get("message", ""):
-                 # Check if we should re-raise
-                 raise RuntimeError(res["message"])
+                raise RuntimeError(res["message"])
 
-            # Print error for legacy compatibility
-            print(f"Sandbox Simulation Error: {res.get('stderr') or res.get('message')}")
-            return SimResult(duration, energy=0.0, success=False, damage=100.0)
+            print(
+                f"Sandbox Simulation Error: {res.get('stderr') or res.get('message')}"
+            )
+            return SimResult(
+                success=False, total_energy=0.0, total_damage=100.0, observations=[]
+            )
 
-        return SimResult(**res)
+        # Reconstruct observations
+        observations = [
+            Observation(
+                step=o["step"],
+                time=o["time"],
+                state_vector=np.array(o["state_vector"]),
+                energy_consumed=o["energy_consumed"],
+                damage_detected=o["damage_detected"],
+            )
+            for o in res.get("observations", [])
+        ]
+
+        return SimResult(
+            success=res.get("success", False),
+            total_energy=res.get("total_energy", 0.0),
+            total_damage=res.get("total_damage", 0.0),
+            observations=observations,
+            metadata=res.get("metadata", {}),
+        )
 
     def _run_simulation_internal(
         self,
@@ -227,10 +248,7 @@ with open("/workspace/{result_file}", "w") as f:
         energy_acc = 0.0
         damage_acc = 0.0
         success = False
-        replay_data = []
-
-        # Cache body names
-        body_names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i) or f"body_{i}" for i in range(model.nbody)]
+        observations = []
 
         try:
             # Determine logging interval (e.g., every 0.1s)
@@ -243,15 +261,23 @@ with open("/workspace/{result_file}", "w") as f:
 
                 mujoco.mj_step(model, data)
 
-                # State Logging for Replay
+                # State Logging (Observation)
                 if data.time >= last_log_time + log_interval:
-                    states = {}
+                    state_vector = []
                     for i in range(model.nbody):
-                        states[body_names[i]] = {
-                            "pos": data.xpos[i].tolist(),
-                            "quat": data.xquat[i].tolist(),
-                        }
-                    replay_data.append({"time": data.time, "bodies": states})
+                        # Use mj_id2name to get body name if needed
+                        # names = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
+                        state_vector.extend(data.xpos[i].tolist())
+                        state_vector.extend(data.xquat[i].tolist())
+
+                    obs = Observation(
+                        step=len(observations),
+                        time=data.time,
+                        state_vector=np.array(state_vector),
+                        energy_consumed=energy_acc,
+                        damage_detected=damage_acc,
+                    )
+                    observations.append(obs)
                     last_log_time = data.time
 
                 # Energy Metric: Accumulate |power| = |force . velocity|
@@ -292,9 +318,9 @@ with open("/workspace/{result_file}", "w") as f:
                     success = True
 
         return SimResult(
-            duration=duration,
-            energy=energy_acc,
             success=success,
-            damage=damage_acc,
-            replay_data=replay_data,
+            total_energy=energy_acc,
+            total_damage=damage_acc,
+            observations=observations,
+            metadata={"duration": duration, "final_time": data.time},
         )

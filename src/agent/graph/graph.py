@@ -1,6 +1,5 @@
 from typing import Literal, Optional
 
-from langchain_core.messages import trim_messages
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
@@ -29,32 +28,6 @@ def build_graph(
     """
 
     builder = StateGraph(AgentState)
-
-    # 0. Trimmer Node
-    async def trimmer_node(state: AgentState):
-        # Keep last 15 messages to ensure enough context while avoiding bloat
-        # We always keep the first human message (the original request)
-        if len(state["messages"]) <= 15:
-            return {"messages": []}
-        
-        trimmed = trim_messages(
-            state["messages"],
-            strategy="last",
-            token_limit=15, # This is 'count' in some versions of trim_messages
-            include_system=True,
-            allow_partial=False,
-        )
-        # Note: trim_messages behavior varies by langchain version. 
-        # If it expects tokens, 15 is too small. If it expects count, it's fine.
-        # Let's use a simple manual slice for robustness if count is intended.
-        if len(state["messages"]) > 20:
-             # Keep first message and last 19
-             new_msgs = [state["messages"][0]] + state["messages"][-19:]
-             # We can't easily 'replace' the message list in langgraph without specific configuration,
-             # but we can return the new list if the state is configured to replace.
-             # StateGraph usually appends by default.
-             # If we want to replace, we need to use a reducer like 'lambda x, y: y'.
-             pass # For now, we'll let it grow but recommend windowing.
 
     # Use the canonical tool registry
     tools = AGENT_TOOLS.copy()
