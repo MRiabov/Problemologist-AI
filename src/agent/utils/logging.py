@@ -14,7 +14,7 @@ def setup_logging(level: str = "INFO"):
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
-        structlog.processors.TimeStamps(fmt="iso"),
+        structlog.processors.TimeStamper(fmt="iso"),
     ]
 
     # Console-friendly output for interactive use
