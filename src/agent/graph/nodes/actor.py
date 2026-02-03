@@ -4,19 +4,19 @@ from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
-    edit_script,
-    preview_design,
-    submit_design,
-    write_script,
-    check_manufacturability,
+    write_file,
+    edit_file,
     view_file,
     run_command,
+    preview_design,
+    submit_design,
     search_docs,
+    check_manufacturability,
     search_parts,
     preview_part,
 )
 from src.agent.tools.env_adapter import set_current_role
-from src.agent.tools.memory import read_journal, write_journal
+from src.agent.tools.memory import read_journal
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
@@ -33,8 +33,8 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
     # Bind tools to the model
     if tools is None:
         tools = [
-            write_script,
-            edit_script,
+            write_file,
+            edit_file,
             view_file,
             run_command,
             preview_design,
@@ -42,7 +42,6 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
             search_docs,
             check_manufacturability,
             read_journal,
-            write_journal,
             search_parts,
             preview_part,
         ]
@@ -65,6 +64,7 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
         "\n\nMANDATORY: Before writing any `build123d` code, you MUST use `view_file` "
         "to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. "
         "It contains expert knowledge, curated patterns, and critical pitfalls."
+        "\n\nNOTE: Use `write_file` with `path='journal.md'` and `mode='append'` to record entries in your journal."
     )
 
     if state.get("step_count", 0) > 5:

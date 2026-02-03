@@ -3,20 +3,13 @@ from typing import Optional
 from langchain_core.tools import tool
 
 from src.agent.tools.env_adapter import (
-    edit_script_async,
-    init_skill_async,
-    list_skill_files_async,
-    list_skills_async,
-    package_skill_async,
+    write_file_async,
+    edit_file_async,
     preview_design_async,
     preview_part_async,
-    read_skill_async,
-    read_script_async,
     search_docs_async,
     search_parts_async,
     submit_design_async,
-    update_skill_async,
-    write_script_async,
     check_manufacturability_async,
     view_file_async,
     run_command_async,
@@ -24,46 +17,42 @@ from src.agent.tools.env_adapter import (
     stop_session_async,
     run_skill_script_async,
     lint_script_async,
+    read_skill_async,
+    list_skills_async,
+    list_skill_files_async,
+    init_skill_async,
+    package_skill_async,
+    update_skill_async,
 )
 
 
 @tool
-async def write_script(content: str, path: str) -> str:
+async def write_file(content: str, path: str, mode: str = "overwrite") -> str:
     """
-    Writes content to a specific file (e.g., 'design.py', 'controller.py').
-    Use this to create or overwrite scripts in the workspace.
+    Writes content to a specific file or appends to it.
+    Use this to create scripts, update logs, or record journal entries.
+    If path is 'journal.md', automatic timestamping is applied in append mode.
 
     Args:
-        content: The full content of the script.
-        path: The path where the script should be saved.
+        content: The text content to write.
+        path: The path where the file should be saved (e.g., 'design.py', 'journal.md').
+        mode: Either 'overwrite' or 'append' (default: 'overwrite').
     """
-    return await write_script_async(content, path)
+    return await write_file_async(content, path, mode)
 
 
 @tool
-async def read_script(path: str = "design.py") -> str:
-    """
-    Reads the content of a script from the workspace.
-    Use this to inspect your existing code before editing or refactoring.
-
-    Args:
-        path: The path of the file to read (default: 'design.py').
-    """
-    return await read_script_async(path)
-
-
-@tool
-async def edit_script(find: str, replace: str, path: str) -> str:
+async def edit_file(path: str, find: str, replace: str) -> str:
     """
     Performs string replacement on the specified file.
-    Use this to make targeted changes to existing scripts without rewriting the whole file.
+    Use this to make targeted changes to existing files without rewriting them.
 
     Args:
-        find: The string to look for in the file.
-        replace: The string to replace it with.
         path: The path of the file to edit.
+        find: The exact string to look for.
+        replace: The string to replace it with.
     """
-    return await edit_script_async(path, find, replace)
+    return await edit_file_async(path, find, replace)
 
 
 @tool

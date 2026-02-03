@@ -38,10 +38,8 @@ async def _run_env_step(tool_idx: int, arguments: str) -> str:
 
     # Fallback to direct tool calls if no env is active
     tool_map = {
-        0: lambda args: env_tools.write_script(args),
-        1: lambda args: env_tools.edit_script("design.py", *args.split("|||", 1))
-        if "|||" in args
-        else "Error",
+        0: lambda args: env_tools.write_file(*args.split("|||", 2)),
+        1: lambda args: env_tools.edit_file(*args.split("|||", 2)),
         2: lambda args: env_tools.preview_design(args or "design.py"),
         3: lambda args: env_tools.search_docs(args),
         5: lambda args: env_tools.search_parts(args),
@@ -59,14 +57,24 @@ async def _run_env_step(tool_idx: int, arguments: str) -> str:
     return f"Error: Tool {tool_idx} not implemented in fallback mode."
 
 
+async def write_file_async(content: str, path: str, mode: str = "overwrite") -> str:
+    """Async wrapper for writing a file."""
+    return await _run_env_step(0, f"{content}|||{path}|||{mode}")
+
+
+async def edit_file_async(path: str, find: str, replace: str) -> str:
+    """Async wrapper for editing a file."""
+    return await _run_env_step(1, f"{path}|||{find}|||{replace}")
+
+
 async def write_script_async(content: str, path: str) -> str:
-    """Async wrapper for writing a script."""
-    return await _run_env_step(0, content)
+    """[DEPRECATED] Async wrapper for writing a script."""
+    return await write_file_async(content, path, mode="overwrite")
 
 
 async def edit_script_async(path: str, find: str, replace: str) -> str:
-    """Async wrapper for editing a script."""
-    return await _run_env_step(1, f"{find}|||{replace}")
+    """[DEPRECATED] Async wrapper for editing a script."""
+    return await edit_file_async(path, find, replace)
 
 
 async def preview_design_async(path: str) -> str:
