@@ -1,26 +1,22 @@
-from typing import Any
-
 import streamlit as st
 
+from src.compiler.models import DashStep
 
-def render_code(step: dict[str, Any]):
+
+def render_code(step: DashStep):
     """Renders the code generated or modified in the current step."""
     code_content = None
+    filename = "script.py"
 
-    # Strategy 1: Look for code in tool_calls (e.g., write_file)
-    tool_calls = step.get("tool_calls")
-    if (
-        tool_calls
-        and isinstance(tool_calls, dict)
-        and tool_calls.get("name") in ["write_file", "edit_file", "write_script"]
-    ):
-        inputs = tool_calls.get("inputs", {})
-        code_content = inputs.get("content")
-        filename = inputs.get("path", "script.py")
+    # Strategy 1: Look for code in metadata or tool_input
+    if step.tool_name in ["write_file", "edit_file", "write_script"]:
+        # Look for content in tool_input or metadata
+        code_content = step.metadata.get("content")
+        filename = step.metadata.get("path", "script.py")
 
     # Strategy 2: Look for markdown code blocks in content
-    if not code_content and step.get("content"):
-        content = step["content"]
+    if not code_content and step.content:
+        content = step.content
         if "```python" in content:
             code_content = content.split("```python")[1].split("```")[0]
             filename = "Inferred from chat"

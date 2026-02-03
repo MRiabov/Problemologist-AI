@@ -32,8 +32,7 @@ def render_sidebar():
 
     episodes = get_all_episodes()
     episode_options = {
-        f"[{ep['timestamp'].strftime('%H:%M')}] {ep['name']}": ep["id"]
-        for ep in episodes
+        f"[{ep.timestamp.strftime('%H:%M')}] {ep.name}": ep.id for ep in episodes
     }
 
     if st.session_state.selected_episode_id is None:
@@ -60,7 +59,7 @@ def render_sidebar():
 
         # Fetch full episode data
         episode = get_episode_by_id(episode_id)
-        steps = episode.get("steps", [])
+        steps = episode.steps
 
         if steps:
             st.sidebar.subheader("Step Navigation")
