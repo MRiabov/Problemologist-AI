@@ -1,14 +1,18 @@
+import asyncio
+import re
+import shutil
 import tempfile
 import traceback
-import asyncio
 from pathlib import Path
 
 import streamlit as st
-
 from langchain_core.messages import HumanMessage
+
 from src.agent.graph.nodes.planner import planner_node
 from src.generators.benchmark.agent import DEFAULT_RUNTIME_CONFIG, generator_agent
+from src.generators.benchmark.manager import execute_build
 from src.generators.benchmark.renderer import render_scenario
+from src.generators.benchmark.validator import validate_mjcf
 
 
 def init_bg_state():
@@ -95,7 +99,6 @@ def render_planning_stage(state):
             }
             result = planner_node(input_state)
             state["plan"] = result["plan"]
-            # Extract reasoning if available (not explicitly returned by new planner_node, but could be in messages)
             state["planner_reasoning"] = "Plan generated via DeepAgents planner."
             state["stage"] = "PLAN_APPROVAL"
             st.rerun()
@@ -113,7 +116,7 @@ def render_plan_approval_stage(state):
             st.markdown(state["planner_reasoning"])
 
     st.info(
-        "The plan includes test objectives, rough geometry, and self-collision verification strategy."
+        "The plan includes test objectives, rough geometry, and self-collision checks."
     )
 
     edited_plan = st.text_area("Edit Plan", value=state["plan"], height=300)
@@ -130,11 +133,9 @@ def render_plan_approval_stage(state):
             st.rerun()
 
 
-import re
-
 def render_coding_stage(state):
     st.subheader("3. Generating CAD Model")
-    
+
     # We use a status container for detailed progress
     with st.status("DeepAgents Graph is active...", expanded=True) as status:
         # Clear history for new run if just started
@@ -151,21 +152,26 @@ def render_coding_stage(state):
 
             # We'll collect the final state here
             final_state = None
-            
+
             async def run_and_stream():
                 nonlocal final_state
                 # We use 'updates' mode to see node transitions
                 async for event in generator_agent.astream(
-                    input_state, 
-                    config={"recursion_limit": 50},
-                    stream_mode="updates"
+                    input_state, config={"recursion_limit": 200}, stream_mode="updates"
                 ):
                     for node_name, updates in event.items():
                         if node_name == "planner":
-                            status.update(label="Step: Refining implementation plan...", state="running")
+                            status.update(
+                                label="Step: Refining implementation plan...",
+                                state="running",
+                            )
                         elif node_name == "actor":
-                            status.write("🤖 **Agent** is generating code or calling tools...")
-                            status.update(label="Step: Agent implementation...", state="running")
+                            status.write(
+                                "🤖 **Agent** is generating code or calling tools..."
+                            )
+                            status.update(
+                                label="Step: Agent implementation...", state="running"
+                            )
                         elif node_name == "tools":
                             if "messages" in updates:
                                 for msg in updates["messages"]:
@@ -173,20 +179,29 @@ def render_coding_stage(state):
                                         status.write(f"🛠️ Tool `{msg.name}` executed.")
                                         if msg.name == "validate_benchmark_model":
                                             if "Validation Passed!" in msg.content:
-                                                status.write("✅ Validation **passed**!")
+                                                status.write(
+                                                    "✅ Validation **passed**!"
+                                                )
                                             else:
-                                                status.write("❌ Validation **failed**.")
+                                                status.write(
+                                                    "❌ Validation **failed**."
+                                                )
                         elif node_name == "critic":
-                            status.update(label="Step: Critic reviewing work...", state="running")
+                            status.update(
+                                label="Step: Critic reviewing work...", state="running"
+                            )
                             status.write("🧐 **Critic** is checking the result...")
                         elif node_name == "skill_populator":
-                            status.update(label="Step: Recording lessons learned...", state="running")
+                            status.update(
+                                label="Step: Recording lessons learned...",
+                                state="running",
+                            )
                             status.write("📝 Updating specialized CAD skills...")
-                    
+
                     # Merge updates into a local state to keep track of the latest
                     if final_state is None:
                         final_state = input_state.copy()
-                    
+
                     # Update messages (append)
                     if "messages" in updates:
                         final_state["messages"].extend(updates["messages"])
@@ -199,7 +214,7 @@ def render_coding_stage(state):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(run_and_stream())
-            
+
             # If final_state is still None, something went wrong
             if final_state is None:
                 raise ValueError("Graph execution did not return any state.")
@@ -215,9 +230,9 @@ def render_coding_stage(state):
                 content_str = str(msg.content)
                 if "---FULL_MJCF_START---" in content_str:
                     match = re.search(
-                        r"---FULL_MJCF_START---\n(.*?)\n---FULL_MJCF_END---", 
-                        content_str, 
-                        re.DOTALL
+                        r"---FULL_MJCF_START---\n(.*?)\n---FULL_MJCF_END---",
+                        content_str,
+                        re.DOTALL,
                     )
                     if match:
                         last_mjcf = match.group(1)
@@ -232,7 +247,7 @@ def render_coding_stage(state):
                             break
                 if last_code:
                     break
-            
+
             # Fallback for code: check write_script
             if not last_code:
                 for msg in reversed(messages):
@@ -251,7 +266,7 @@ def render_coding_stage(state):
             if last_mjcf:
                 state["errors"] = None
                 status.update(label="Generation Successful!", state="complete")
-                
+
                 with tempfile.TemporaryDirectory() as tmpdir:
                     prefix = Path(tmpdir) / "preview"
                     state["renders"] = render_scenario(state["mjcf"], str(prefix))
@@ -260,7 +275,9 @@ def render_coding_stage(state):
                 state["stage"] = "CAD_APPROVAL"
                 st.rerun()
             else:
-                state["errors"] = "Generation failed to produce valid MJCF within limits."
+                state["errors"] = (
+                    "Generation failed to produce valid MJCF within limits."
+                )
                 status.update(label="Generation Failed", state="error")
                 state["stage"] = "CAD_APPROVAL"
                 st.rerun()
@@ -278,15 +295,9 @@ def persist_renders(state):
     for p in state["renders"]:
         basename = Path(p).name
         dest = render_dir / basename
-        import shutil
-
         shutil.copy(str(p), str(dest))
         new_paths.append(str(dest))
     state["renders"] = new_paths
-
-
-from src.generators.benchmark.manager import execute_build
-from src.generators.benchmark.validator import validate_mjcf
 
 
 def render_cad_approval_stage(state):
@@ -294,7 +305,8 @@ def render_cad_approval_stage(state):
 
     if state["errors"]:
         st.error(
-            f"Validation failed after {state['attempts']} attempts. Last error: {state['errors']}"
+            f"Validation failed after {state['attempts']} attempts. "
+            f"Last error: {state['errors']}"
         )
     else:
         st.success(f"Validation passed after {state['attempts']} attempts!")
@@ -306,7 +318,7 @@ def render_cad_approval_stage(state):
         st.divider()
 
         st.write("### Coder Attempt History")
-        for i, attempt in enumerate(state["attempt_history"]):
+        for attempt in state["attempt_history"]:
             st.write(f"#### Attempt {attempt['attempt']}")
             col_a, col_b = st.columns([1, 1])
             with col_a:
