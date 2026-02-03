@@ -80,7 +80,7 @@ graph TB
 | Component | Location | Responsibility |
 |-----------|----------|---------------|
 | Workbenches | `src/workbenches/` | DFM validation & cost models |
-| Simulation | `src/simulation_engine/`, `src/compiler/` | MuJoCo bridge & mesh generation |
+| Simulation | `src/simulation_engine/`, `src/compiler/` | MuJoCo bridge, MJCF schema validation & mesh generation |
 | RAG | `src/rag/` | Documentation retrieval |
 
 ---
@@ -249,7 +249,7 @@ Path constants:
 - `Config.PROMPTS_PATH` — `config/prompts.yaml`
 
 > [!IMPORTANT]
-> **ALL paths MUST be absolute** and derived from `Config`. Hardcoding paths relative to the current working directory is strictly forbidden as it breaks portability and tests.
+> **ALL paths MUST be absolute** and derived from `Config` (for legacy) or `src/utils/paths.py` (preferred). Hardcoding paths relative to the current working directory is strictly forbidden.
 
 ---
 
@@ -260,6 +260,8 @@ Path constants:
 | 2026-02-03 | Remove Gymnasium `gym.Env` inheritance | Not training RL; added complexity without benefit |
 | 2026-02-03 | Consolidate to `ToolRuntime` | Eliminate global state, enable multi-agent |
 | 2026-02-03 | Require sandbox for all exec | Security; prevent host compromise |
+| 2026-02-03 | File-based Simulation Exchange | Robustness; decouple simulation from shell injection |
+| 2026-02-03 | MJCF Schema Linting | Early error detection for generated models |
 
 ---
 
