@@ -6,6 +6,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from src.environment.sandbox_utils import run_sandboxed_script
+
 
 @dataclass
 class SimResult:
@@ -132,7 +134,7 @@ class MujocoBridge:
     ) -> SimResult:
         """Runs the simulation in a sandbox."""
         runner_filename = "sim_runner.py"
-        runner_path = self.workspace_dir / runner_filename
+        result_file = "sim_result.json"
 
         # We need to escape the XML string and agent script for the Python runner
         runner_script = f"""
@@ -168,40 +170,30 @@ res_dict = {{
     "replay_data": sim_result.replay_data
 }}
 
-print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
+with open("/workspace/{result_file}", "w") as f:
+    json.dump(res_dict, f)
 """
+        res = run_sandboxed_script(
+            sandbox=self.sandbox,
+            script_content=runner_script,
+            result_file_name=result_file,
+            runner_file_name=runner_filename,
+            mount_src=True,
+            timeout=int(duration + 10),
+        )
 
-        try:
-            runner_path.write_text(runner_script, encoding="utf-8")
-
-            stdout, stderr, returncode = self.sandbox.run_script(
-                runner_filename, mount_src=True, timeout=int(duration + 10)
-            )
-
-            if runner_path.exists():
-                runner_path.unlink()
-
-            if returncode != 0:
-                if returncode == 124:  # Timeout
-                    return SimResult(duration, energy=0.0, success=False, damage=100.0)
-                raise RuntimeError(f"CRASH_DETECTED:{returncode}:{stderr}")
-
-            if "SIM_RESULT:" not in stdout:
-                print(f"Sandbox Simulation Error: {stderr}")
+        if res.get("status") == "error":
+            if res.get("error_type") == "TimeoutError":
                 return SimResult(duration, energy=0.0, success=False, damage=100.0)
+            if "CRASH_DETECTED" in res.get("message", ""):
+                 # Check if we should re-raise
+                 raise RuntimeError(res["message"])
 
-            result_line = [
-                line for line in stdout.split("\n") if "SIM_RESULT:" in line
-            ][0]
-            res_data = json.loads(result_line.split("SIM_RESULT:")[1])
-
-            return SimResult(**res_data)
-
-        except Exception as e:
-            if "CRASH_DETECTED" in str(e):
-                raise
-            print(f"Error initiating sandboxed simulation: {e}")
+            # Print error for legacy compatibility
+            print(f"Sandbox Simulation Error: {res.get('stderr') or res.get('message')}")
             return SimResult(duration, energy=0.0, success=False, damage=100.0)
+
+        return SimResult(**res)
 
     def _run_simulation_internal(
         self,
@@ -237,6 +229,9 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
         success = False
         replay_data = []
 
+        # Cache body names
+        body_names = [mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i) or f"body_{i}" for i in range(model.nbody)]
+
         try:
             # Determine logging interval (e.g., every 0.1s)
             log_interval = 0.1
@@ -252,8 +247,7 @@ print(f"SIM_RESULT:{{json.dumps(res_dict)}}")
                 if data.time >= last_log_time + log_interval:
                     states = {}
                     for i in range(model.nbody):
-                        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
-                        states[name or f"body_{i}"] = {
+                        states[body_names[i]] = {
                             "pos": data.xpos[i].tolist(),
                             "quat": data.xquat[i].tolist(),
                         }
