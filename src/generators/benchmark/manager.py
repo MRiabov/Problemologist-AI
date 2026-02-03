@@ -16,7 +16,8 @@ from src.generators.benchmark.types import ScenarioManifest
 from src.generators.benchmark.validator import validate_mjcf
 
 # Load config
-GEN_CONFIG_PATH = Path(__file__).parent / "generator_config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+GEN_CONFIG_PATH = PROJECT_ROOT / "config" / "generator_config.yaml"
 with GEN_CONFIG_PATH.open("r") as f:
     gen_config = yaml.safe_load(f)
 
