@@ -1,44 +1,50 @@
-import os
 from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file if it exists
-load_dotenv()
-
-
-class Config:
+class AppConfig(BaseSettings):
     """
-    Agent configuration management, pulling from environment variables.
+    Agent configuration management using Pydantic Settings.
     """
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Default model to use
-    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")
+    LLM_MODEL: str = Field(default="gpt-4o")
 
     # OpenAI-compatible API base URL (e.g., OpenRouter)
-    OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+    OPENAI_API_BASE: str = Field(default="https://api.openai.com/v1")
 
     # OpenAI-compatible API key
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_KEY: str = Field(default="")
 
     # Default temperature for generation
-    TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.0"))
+    # Using alias to map LLM_TEMPERATURE environment variable to TEMPERATURE field
+    TEMPERATURE: float = Field(default=0.0, validation_alias="LLM_TEMPERATURE")
 
     # Work directory for scripts and artifacts
-    WORKSPACE_DIR = os.getenv("WORKSPACE_DIR", "./workspaces/main")
-
-    # Skills directory
-    SKILLS_DIR = Path(".agent/skills")
-
-    # Skill creator directory
-    SKILL_CREATOR_DIR = SKILLS_DIR / "skill-creator"
+    WORKSPACE_DIR: Path = Field(default=Path("./workspaces/main"))
 
     # Safety limits
-    MAX_STEPS = int(os.getenv("MAX_STEPS", "100"))
+    MAX_STEPS: int = Field(default=100)
 
-    @classmethod
-    def validate(cls):
+    @property
+    def PROJECT_ROOT(self) -> Path:
+        """Returns the project root directory."""
+        # src/agent/utils/config.py -> src/agent/utils -> src/agent -> src -> root
+        return Path(__file__).resolve().parent.parent.parent.parent
+
+    @property
+    def SKILLS_DIR(self) -> Path:
+        return self.PROJECT_ROOT / ".agent" / "skills"
+
+    @property
+    def SKILL_CREATOR_DIR(self) -> Path:
+        return self.SKILLS_DIR / "skill-creator"
+
+    def validate(self):
         """Validates that necessary API keys are present."""
-        # Note: We don't necessarily need all of them, just the one for the selected model.
-        # LangChain usually errors out if the specific key is missing.
+        # Pydantic handles validation on instantiation.
         pass
+
+# Create a global instance
+Config = AppConfig()

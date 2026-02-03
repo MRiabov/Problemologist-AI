@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=2.4.2",
     "pillow>=12.1.0",
     "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
     "python-dotenv>=1.0.1",
     "pyvista>=0.46.5",
     "pyyaml>=6.0.2",
