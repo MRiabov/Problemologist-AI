@@ -40,9 +40,6 @@ class CADEnv:
         self.episode = None
         self.step_count = 0
 
-        # Simulation
-        self.sim_bridge = mujoco_bridge.MujocoBridge()
-
         self.last_obs = {
             "code": "",
             "last_output": "",
@@ -86,11 +83,37 @@ class CADEnv:
 
         try:
             if tool_name == "submit_design":
-                # Special handling for submission (reward, termination, simulation)
-                reward, tool_output, terminated = self._submit_design(arguments)
-                # We could log reward/terminated to tool_output or just persistence
-                if terminated:
-                    tool_output += f"\n\n[TERMINATED] Reward: {reward}"
+                # Inject environment constraints if not provided
+                if "target_quantity" not in arguments:
+                    arguments["target_quantity"] = self.target_quantity
+                if "max_unit_cost" not in arguments:
+                    arguments["max_unit_cost"] = self.max_unit_cost
+
+                # Dispatch to runtime
+                tool_output = self.runtime.dispatch(tool_name, arguments)
+
+                # Parse output to handle persistence and termination
+                try:
+                    res = json.loads(tool_output)
+                    reward = res.get("reward", 0.0)
+                    terminated = res.get("terminated", False)
+                    status = res.get("status", "unknown")
+                    message = res.get("message", "")
+                    metrics = res.get("metrics", {})
+
+                    if terminated:
+                        tool_output = f"{message}\n\n[TERMINATED] Reward: {reward}"
+                        self.db.update_episode_status(
+                            self.episode.id,
+                            status=status,
+                            result_metrics={**metrics, "reward": reward},
+                        )
+                    else:
+                        tool_output = message
+
+                except json.JSONDecodeError:
+                    # Fallback if runtime didn't return JSON
+                    pass
             else:
                 tool_output = self.runtime.dispatch(tool_name, arguments)
 
@@ -137,74 +160,6 @@ class CADEnv:
         self.last_obs["last_output"] = tool_output
 
         return tool_output
-
-    def _submit_design(self, arguments: dict[str, Any]) -> tuple[float, str, bool]:
-        """Handles submission via ToolRuntime validation and host-side simulation."""
-
-        # 1. Validate and Export STL via Runtime (Securely)
-        res = self.runtime.validate_and_export(
-            design_file="design.py",
-            process="print_3d",  # Default or from args?
-            quantity=self.target_quantity,
-            export_stl=True,
-        )
-
-        if "error" in res and res["error"]:
-            return -10.0, f"Error processing design: {res['error']}", False
-
-        # 2. Budget Check
-        force_submit = arguments.get("force_submit", False)
-        if isinstance(force_submit, str):
-            force_submit = force_submit.lower() == "true"
-
-        unit_cost = res.get("cost_analysis", {}).get("unit_cost", 0.0)
-        if unit_cost > self.max_unit_cost and not force_submit:
-            return (
-                -20.0,
-                f"REJECTED: Unit cost ${unit_cost:.2f} exceeds budget ${self.max_unit_cost:.2f}.",
-                False,
-            )
-
-        # 3. Validation Check
-        if res.get("status") == "fail":
-            v_str = ", ".join(
-                [v.get("description", "Unknown") for v in res.get("violations", [])]
-            )
-            return -10.0, f"Validation Failed: {v_str}", False
-
-        if not res.get("stl_path"):
-            return -10.0, "Submission failed: No STL exported.", False
-
-        # 4. Simulation (Host side)
-        try:
-            stl_path = Path(self.workspace_dir) / res["stl_path"]
-            template_xml = self.sim_bridge.load_template()
-            injected_xml = self.sim_bridge.inject_design(template_xml, stl_path)
-            sim_result = self.sim_bridge.run_simulation(injected_xml)
-
-            reward = (
-                (100.0 - (sim_result.energy * 0.1) - (sim_result.damage * 10.0))
-                if sim_result.success
-                else -50.0
-            )
-            status = "success" if sim_result.success else "failure"
-
-            self.db.update_episode_status(
-                self.episode.id,
-                status=status,
-                result_metrics={
-                    "energy": sim_result.energy,
-                    "damage": sim_result.damage,
-                    "success": sim_result.success,
-                    "reward": reward,
-                },
-            )
-
-            report = f"Submission Result: {status.upper()}. Reward: {reward:.2f}. Energy: {sim_result.energy:.2f}"
-            return reward, report, True
-
-        except Exception as e:
-            return -10.0, f"Simulation Error: {e!s}", False
 
     def render(self):
         return self.last_obs["last_render"]

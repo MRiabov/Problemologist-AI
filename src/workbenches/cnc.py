@@ -112,5 +112,11 @@ class CNCWorkbench(Workbench):
                 "material_cost_per_unit": round(material_cost_per_part, 2),
                 "run_cost_per_unit": round(run_cost_per_part, 2),
                 "is_reused": is_reused,
+                "pricing_explanation": (
+                    f"Cost is driven by material volume and machining time. "
+                    f"Stock size ([{', '.join(f'{d:.1f}' for d in stock_dims)}]) determines material cost. "
+                    f"Removed volume ({removed_volume_cm3:.2f} cm3) determines machining time ({machining_time_min:.2f} min). "
+                    f"Setup cost (${setup_cost:.2f}) is fixed per part design (discounted if reused)."
+                ),
             },
         }

@@ -12,6 +12,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.agent.utils.config import Config
 from src.environment.sandbox import PodmanSandbox
+from src.environment.sandbox_utils import run_sandboxed_script
 from src.generators.benchmark.agent import generator_agent
 from src.generators.benchmark.renderer import render_scenario
 from src.generators.benchmark.types import ScenarioManifest
@@ -33,21 +34,25 @@ def execute_build(
     code: str,
     seed: int,
     scale_factors: tuple[float, float, float] = (1.0, 1.0, 1.0),
-    asset_dir: str = None,
+    variation_id: str = None,
 ) -> str:
     """Executes the build(seed, scale_factors) function from the provided code inside a sandbox."""
+    # Use unique asset directory for this variation
+    variation_id = variation_id or str(uuid.uuid4())[:8]
+    asset_dir = f".agent_storage/temp_assets_{variation_id}"
+    result_file = f"gen_result_{variation_id}.json"
+
     # Prepend hardcoded imports and helpers
     final_code = (
         "from build123d import *\n"
         "from build123d.topology import Shape\n"
         "from typing import Union\n"
         "from src.simulation_engine.builder import SceneCompiler\n\n"
-        "_ASSET_DIR = None\n\n"
+        f"_ASSET_DIR = '{asset_dir}'\n\n"
         "def to_mjcf(env_compound: Union[Compound, Shape, list], agent_compound: Union[Compound, Shape, list] = None, agent_joints: list = None, env_labels: list[str] = None, agent_labels: list[str] = None) -> str:\n"
         "    from build123d import Compound\n"
         "    from build123d.topology import Shape\n"
-        "    # Use fixed absolute path for sandbox consistency\n"
-        "    target_dir = _ASSET_DIR or '/workspace/.agent_storage/temp_assets'\n"
+        "    target_dir = f'/workspace/{{_ASSET_DIR}}'\n"
         "    import os\n"
         "    os.makedirs(target_dir, exist_ok=True)\n"
         "    compiler = SceneCompiler(asset_dir=target_dir)\n"
@@ -68,21 +73,13 @@ def execute_build(
     workspace = Config.GEN_WORKSPACE_DIR
     workspace.mkdir(parents=True, exist_ok=True)
 
-    # Ensure asset_dir exists in workspace if provided, and CLEAR it if it already has files
-    if asset_dir:
-        host_asset_path = workspace / asset_dir
-        if host_asset_path.exists():
-            shutil.rmtree(host_asset_path)
-        host_asset_path.mkdir(parents=True, exist_ok=True)
+    # Ensure unique asset_dir exists in workspace
+    host_asset_path = workspace / asset_dir
+    if host_asset_path.exists():
+        shutil.rmtree(host_asset_path)
+    host_asset_path.mkdir(parents=True, exist_ok=True)
 
     sandbox = PodmanSandbox(str(workspace))
-
-    script_name = "template_build.py"
-    runner_name = "runner_build.py"
-
-    (workspace / script_name).write_text(final_code)
-
-    asset_dir_val = f"'{asset_dir}'" if asset_dir else "None"
 
     runner_script = f"""
 import json
@@ -92,44 +89,50 @@ import os
 sys.path.append("/workspace")
 import template_build
 
-# Inject asset_dir as relative path for SceneCompiler logic
-template_build._ASSET_DIR = {asset_dir_val}
+# Inject asset_dir
+template_build._ASSET_DIR = '{asset_dir}'
 
 seed = {seed}
 scale_factors = {scale_factors}
+
+result = {{"mjcf": None, "error": None}}
 
 try:
     import inspect
     sig = inspect.signature(template_build.build)
     if "scale_factors" in sig.parameters:
-        res = template_build.build(seed, scale_factors=scale_factors)
+        mjcf = template_build.build(seed, scale_factors=scale_factors)
     elif "scale" in sig.parameters:
-        res = template_build.build(seed, scale=scale_factors)
+        mjcf = template_build.build(seed, scale=scale_factors)
     else:
-        res = template_build.build(seed)
-    print(f"BUILD_RESULT:{{res}}")
+        mjcf = template_build.build(seed)
+    result["mjcf"] = mjcf
 except Exception as e:
     import traceback
-    print(f"BUILD_ERROR:{{str(e)}}")
-    print(traceback.format_exc())
+    result["error"] = str(e) + "\n" + traceback.format_exc()
+
+with open("/workspace/{result_file}", "w") as f:
+    json.dump(result, f)
 """
 
     try:
-        (workspace / runner_name).write_text(runner_script)
+        (workspace / "template_build.py").write_text(final_code)
 
-        stdout, stderr, rc = sandbox.run_script(runner_name, mount_src=True)
+        res = run_sandboxed_script(
+            sandbox=sandbox,
+            script_content=runner_script,
+            result_file_name=result_file,
+            runner_file_name=f"runner_{variation_id}.py",
+        )
 
-        if "BUILD_RESULT:" in stdout:
-            # Extract XML
-            return stdout.split("BUILD_RESULT:")[1].strip()
-        error = stdout + stderr
+        if "mjcf" in res and res["mjcf"]:
+            return res["mjcf"], asset_dir
+        
+        error = res.get("error") or res.get("message") or "Unknown error"
         raise ValueError(f"Build execution failed: {error}")
     finally:
-        # Clean up
-        runner_path = workspace / runner_name
-        if runner_path.exists():
-            runner_path.unlink()
-        script_path = workspace / script_name
+        # Clean up template script
+        script_path = workspace / "template_build.py"
         if script_path.exists():
             script_path.unlink()
 
@@ -225,14 +228,13 @@ def generate(
 
             try:
                 # 2. Batch Processing & Randomization
-                # We use a temporary assets dir for validation
-                rel_temp_assets = ".agent_storage/temp_assets"
+                variation_id = f"var_{seed}"
                 logger.debug(f"Executing build for seed {seed}")
-                mjcf_xml = execute_build(
+                mjcf_xml, rel_temp_assets = execute_build(
                     template_code,
                     seed,
                     scale_factors=scale_factors,
-                    asset_dir=rel_temp_assets,
+                    variation_id=variation_id,
                 )
 
                 # 3. Validation
@@ -243,14 +245,12 @@ def generate(
                 if report["is_valid"]:
                     logger.debug(f"Seed {seed} is valid, saving artifacts")
                     # 4. Artifact Export
-                    variation_id = f"var_{seed}"
 
                     # Save MJCF
                     xml_path = scenario_dir / f"scene_{seed}.xml"
                     xml_path.write_text(mjcf_xml)
 
                     # Move temp assets to final assets
-                    temp_assets_path = Config.GEN_WORKSPACE_DIR / rel_temp_assets
                     final_assets_path = scenario_dir / "assets"
                     generated_meshes = []
                     if temp_assets_path.exists():
@@ -260,6 +260,9 @@ def generate(
                                 str(final_assets_path / mesh_file.name),
                             )
                             generated_meshes.append(f"assets/{mesh_file.name}")
+                        
+                        # Cleanup unique temp assets dir
+                        shutil.rmtree(temp_assets_path)
 
                     # Render images
                     image_prefix = str(scenario_dir / "images" / f"preview_{seed}")
