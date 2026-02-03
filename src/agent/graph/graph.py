@@ -6,6 +6,7 @@ from langgraph.prebuilt import ToolNode
 from src.agent.graph.nodes.actor import actor_node
 from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
+from src.agent.graph.nodes.planner_critic import planner_critic_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env import (
@@ -70,6 +71,7 @@ def build_graph(
 
     # 1. Add Nodes
     builder.add_node("planner", planner_node)
+    builder.add_node("planner_critic", planner_critic_node)
 
     # Pass all tools to actor so it can bind them
     actor_with_tools = partial(actor_node, tools=tools)
@@ -119,8 +121,26 @@ def build_graph(
     # Start -> Planner
     builder.add_edge(START, "planner")
 
-    # Planner -> Actor
-    builder.add_edge("planner", "actor")
+    # Planner -> Planner Critic
+    builder.add_edge("planner", "planner_critic")
+
+    def route_planner_critic(state: AgentState) -> Literal["actor", "planner"]:
+        last_message = state["messages"][-1]
+        content = str(last_message.content) if hasattr(last_message, "content") else ""
+
+        if "Plan Approved" in content:
+            return "actor"
+
+        if "Replan" in content:
+             # Check loop limit
+            attempts = state.get("scratchpad", {}).get("planning_attempts", 0)
+            if attempts > 3:
+                return "actor"
+            return "planner"
+
+        return "actor"
+
+    builder.add_conditional_edges("planner_critic", route_planner_critic)
 
     # Actor -> conditional (Tools or End)
     def should_continue(state: AgentState) -> Literal["tools", "__end__"]:
