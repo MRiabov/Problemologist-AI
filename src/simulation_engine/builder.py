@@ -249,7 +249,13 @@ class SceneCompiler:
             file_path.write_bytes(stl_data)
 
         # Add mesh to asset
-        ET.SubElement(self.asset, "mesh", name=mesh_name, file=mesh_filename)
+        ET.SubElement(
+            self.asset, 
+            "mesh", 
+            name=mesh_name, 
+            file=mesh_filename,
+            scale=f"{UNIT_SCALE} {UNIT_SCALE} {UNIT_SCALE}"
+        )
 
         # Add geom to worldbody
         # Note: we use pos="0 0 0" because the mesh is already in global coordinates
@@ -516,6 +522,12 @@ class SceneCompiler:
 
         # Ensure mesh asset exists
         if self.asset.find(f"mesh[@name='{label}']") is None:
-            ET.SubElement(self.asset, "mesh", name=label, file=mesh_filename)
+            ET.SubElement(
+                self.asset, 
+                "mesh", 
+                name=label, 
+                file=mesh_filename,
+                scale=f"{UNIT_SCALE} {UNIT_SCALE} {UNIT_SCALE}"
+            )
 
         ET.SubElement(body_element, "geom", type="mesh", mesh=label, rgba="0 0 1 1")
