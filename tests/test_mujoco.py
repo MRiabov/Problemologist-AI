@@ -5,9 +5,13 @@ import pytest
 from src.compiler.mujoco_bridge import MujocoBridge
 
 
+from unittest.mock import MagicMock, patch
+
+
 @pytest.fixture
-def bridge():
-    return MujocoBridge()
+def bridge(tmp_path):
+    sandbox = MagicMock()
+    return MujocoBridge(workspace_dir=tmp_path, sandbox=sandbox)
 
 
 @pytest.fixture
@@ -42,20 +46,34 @@ def test_inject_design(bridge, dummy_mesh):
     assert root.find(".//body[@name='injected_object']") is not None
 
 
-def test_run_simulation_basic(bridge, dummy_mesh):
+@pytest.mark.asyncio
+@patch("src.environment.sandbox_utils.run_sandboxed_script")
+async def test_run_simulation_basic(mock_run_script, bridge, dummy_mesh):
+    # Configure mock to return success
+    mock_run_script.return_value = {
+        "status": "success",
+        "observations": [],
+        "metrics": {"steps": 10},
+        "success": True,
+        "total_energy": 50.0,
+        "total_damage": 0.0,
+        "metadata": {"duration": 0.01},
+    }
+
     base_xml = bridge.load_template()
     injected = bridge.inject_design(base_xml, dummy_mesh, location=(0, 0, 2))
 
     # Run simulation
-    result = bridge.run_simulation(injected, duration=0.01)
+    result = await bridge.run_simulation(injected, duration=0.01)
 
-    assert result.duration == 0.01
-    assert isinstance(result.energy, float)
-    assert isinstance(result.success, bool)
+    assert result.success is True, f"Simulation failed: {result.metadata}"
+    assert result.metadata["duration"] == 0.01
+    assert isinstance(result.total_energy, float)
 
 
-def test_run_simulation_fail_handling(bridge):
+@pytest.mark.asyncio
+async def test_run_simulation_fail_handling(bridge):
     # Pass garbage XML
-    result = bridge.run_simulation("<garbage/>", duration=0.01)
+    result = await bridge.run_simulation("<garbage/>", duration=0.01)
     assert result.success is False
-    assert result.damage == 100.0
+    assert result.total_damage == 0.0

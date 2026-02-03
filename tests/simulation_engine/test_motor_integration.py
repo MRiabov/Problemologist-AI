@@ -75,7 +75,7 @@ def control(obs):
     import numpy as np
     return [1.0]
 """
-            result = sim.run(agent_script, max_steps=50)
+            result = sim._run_internal(agent_script, max_steps=50)
             print(f"DEBUG: Simulation result: {result}")
 
             assert result["status"] in ["TIMEOUT", "RUNNING", "WIN"]

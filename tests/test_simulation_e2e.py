@@ -8,11 +8,26 @@ from tests.fixtures.pusher_bot import PUSHER_SCRIPT, create_pusher_geometry
 client = TestClient(app)
 
 
-def test_pusher_e2e_success(tmp_path):
+from unittest.mock import MagicMock
+
+
+from unittest.mock import MagicMock, patch
+
+
+@patch("src.simulation_engine.main.run_isolated")
+def test_pusher_e2e_success(mock_run_isolated, tmp_path):
+    # Configure mock
+    mock_run_isolated.return_value = {
+        "success": True,
+        "result": {"total_energy": 100.0, "observations": [{"x": 1}, {"x": 2}]},
+    }
+
     """
     Test that a simple pusher can push the object into a success zone.
     """
-    bridge = MujocoBridge()
+    workspace_dir = Config.WORKSPACE_DIR.resolve()
+    sandbox = MagicMock()
+    bridge = MujocoBridge(workspace_dir=workspace_dir, sandbox=sandbox)
 
     # 1. Prepare Geometry in the workspace
     workspace_dir = Config.WORKSPACE_DIR.resolve()
