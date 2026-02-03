@@ -161,3 +161,23 @@ async def run_skill_script_async(
 async def read_script_async(path: str) -> str:
     """Async wrapper for reading a script."""
     return await asyncio.to_thread(env_tools.read_script, path)
+
+
+async def view_file_async(path: str) -> str:
+    """Async wrapper for viewing a file."""
+    return await asyncio.to_thread(env_tools.view_file, path)
+
+
+async def run_command_async(command: str) -> str:
+    """Async wrapper for running a command."""
+    return await asyncio.to_thread(env_tools.run_command, command)
+
+
+async def start_session_async(session_id: str) -> str:
+    """Async wrapper for starting a session."""
+    return await asyncio.to_thread(env_tools.start_session, session_id)
+
+
+async def stop_session_async() -> str:
+    """Async wrapper for stopping a session."""
+    return await asyncio.to_thread(env_tools.stop_session)
