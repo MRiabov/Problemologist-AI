@@ -32,3 +32,6 @@ class AgentState(TypedDict):
 
     # Runtime configuration updates (e.g. system prompt overrides)
     runtime_config: dict[str, Any]
+
+    # Structured completion signal for routing (avoids magic string matching)
+    task_complete: bool
