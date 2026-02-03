@@ -3,20 +3,8 @@ from typing import Optional
 from src.agent.utils.llm import get_model
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import (
-    write_file,
-    edit_file,
-    view_file,
-    run_command,
-    preview_design,
-    submit_design,
-    search_docs,
-    check_manufacturability,
-    search_parts,
-    preview_part,
-)
 from src.agent.tools.env_adapter import set_current_role
-from src.agent.tools.memory import read_journal
+from src.agent.tools.registry import AGENT_TOOLS
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
@@ -30,21 +18,9 @@ async def actor_node(state: AgentState, tools: Optional[list] = None):
     log_to_env("Executing current step...", agent_role="Actor")
     model = get_model(Config.LLM_MODEL)
 
-    # Bind tools to the model
+    # Use provided tools or fall back to registry
     if tools is None:
-        tools = [
-            write_file,
-            edit_file,
-            view_file,
-            run_command,
-            preview_design,
-            submit_design,
-            search_docs,
-            check_manufacturability,
-            read_journal,
-            search_parts,
-            preview_part,
-        ]
+        tools = AGENT_TOOLS
     model_with_tools = model.bind_tools(tools)
 
     system_prompt_key = "cad_agent.actor.system"
