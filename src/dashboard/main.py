@@ -1,6 +1,3 @@
-import sys
-from pathlib import Path
-
 import streamlit as st
 from dotenv import load_dotenv
 from streamlit_autorefresh import st_autorefresh
@@ -8,10 +5,9 @@ from streamlit_autorefresh import st_autorefresh
 # Load environment variables
 load_dotenv()
 
-# Ensure project root is in sys.path
-root_path = Path(__file__).resolve().parent.parent.parent
-if str(root_path) not in sys.path:
-    sys.path.insert(0, str(root_path))
+# NOTE: This module assumes the package is properly installed via pip install -e .
+# If you see import errors, run: pip install -e . from the project root.
+# Legacy sys.path manipulation has been removed to enforce proper packaging.
 
 from src.dashboard.components.benchmark_gen import render_benchmark_generator
 from src.dashboard.components.chat import render_chat

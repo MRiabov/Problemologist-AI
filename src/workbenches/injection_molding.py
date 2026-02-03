@@ -1,5 +1,8 @@
+import hashlib
 from typing import List, Union
+
 from build123d import Part
+
 from src.workbenches.base import Workbench
 from src.workbenches.analysis_utils import (
     part_to_trimesh,
@@ -26,13 +29,7 @@ class InjectionMoldingWorkbench(Workbench):
     def validate(self, part: Part) -> List[Union[Exception, str]]:
         """
         Validates the part for injection molding.
-        Checks for: Draft Angle, Undercuts, and Wall Thickness.
-        """
-        return self.validate_geometry(part)
-
-    def validate_geometry(self, part: Part) -> List[Union[Exception, str]]:
-        """
-        Analyzes part for:
+        Checks for:
         1. Draft (min_draft_angle_deg)
         2. Undercuts (raycasting in pull direction)
         3. Wall thickness (sampled min/max range)
@@ -74,7 +71,9 @@ class InjectionMoldingWorkbench(Workbench):
 
         return violations
 
-    def calculate_cost(self, part: Part, quantity: int = 1, context: dict = None) -> float:
+    def calculate_cost(
+        self, part: Part, quantity: int = 1, context: dict = None
+    ) -> float:
         """
         Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
         Tooling cost depends on surface area (complexity proxy).
@@ -92,8 +91,9 @@ class InjectionMoldingWorkbench(Workbench):
 
         # Apply reuse discount if part hash is in context
         if context is not None:
-            import hashlib
-            part_hash = hashlib.md5(str(part.center()).encode() + str(part.volume).encode()).hexdigest()
+            part_hash = hashlib.md5(
+                str(part.center()).encode() + str(part.volume).encode()
+            ).hexdigest()
             if part_hash in context:
                 # 90% discount on tooling for identical part reuse (reusing the mold)
                 tooling_cost *= 0.1
@@ -108,7 +108,7 @@ class InjectionMoldingWorkbench(Workbench):
         # Formula: (Volume / injection_rate) * machine_rate
         injection_rate_cm3_s = self.costs_cfg.get("injection_rate_cm3_s", 10.0)
         machine_rate_s = self.costs_cfg.get("machine_hourly_rate", 60.0) / 3600.0
-        
+
         cycle_cost_per_part = (volume_cm3 / injection_rate_cm3_s) * machine_rate_s
 
         unit_cost = material_cost_per_part + cycle_cost_per_part
