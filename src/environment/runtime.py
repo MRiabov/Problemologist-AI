@@ -42,7 +42,10 @@ class ToolRuntime:
         self.active_session_id: str | None = None
 
         # Simulation
-        self.sim_bridge = mujoco_bridge.MujocoBridge()
+        self.sim_bridge = mujoco_bridge.MujocoBridge(
+            workspace_dir=self.workspace_dir,
+            sandbox=self.sandbox,
+        )
 
         # Initialize COTS Part Index
         self.part_index = PartIndex()

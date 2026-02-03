@@ -1,6 +1,7 @@
 import asyncio
 import json
-from typing import Any, Optional
+from typing import Any
+
 from langchain_core.tools import tool
 
 from src.environment.runtime import ToolRuntime
@@ -42,26 +43,13 @@ def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
     return _get_fallback_runtime()
 
 
-def set_active_env(env: Any):
-    """Legacy support - No-op."""
-    pass
-
-
-def get_active_env() -> Any | None:
-    """Legacy support - Returns None."""
-    return None
-
-
-def set_current_role(role: str | None):
-    """Legacy support - No-op."""
-    pass
-
-
 async def _execute_tool(
-    tool_name: str, tool_runtime: Optional[ToolRuntime], **kwargs
+    tool_name: str, tool_runtime: ToolRuntime | None, **kwargs
 ) -> Any:
     """Dispatches tool call to runtime."""
     rt = tool_runtime or get_runtime()
+    # Pass agent_role if we can extract it from the context?
+    # For now, we assume dispatch handles it if needed.
     return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
 
 
@@ -84,7 +72,7 @@ async def start_session_async(session_id: str = "vlm-cad-session") -> str:
 
 @tool
 async def write_file(
-    content: str, path: str, mode: str = "overwrite", tool_runtime: Optional[Any] = None
+    content: str, path: str, mode: str = "overwrite", tool_runtime: Any | None = None
 ) -> str:
     """
     Writes content to a specific file or appends to it.
@@ -101,7 +89,7 @@ async def write_file(
 
 @tool
 async def edit_file(
-    path: str, find: str, replace: str, tool_runtime: Optional[Any] = None
+    path: str, find: str, replace: str, tool_runtime: Any | None = None
 ) -> str:
     """
     Performs string replacement on the specified file.
@@ -118,7 +106,7 @@ async def edit_file(
 
 @tool
 async def preview_design(
-    path: str = "design.py", tool_runtime: Optional[Any] = None
+    path: str = "design.py", tool_runtime: Any | None = None
 ) -> str:
     """
     Runs the current design script, exports a render, and returns the view.
@@ -130,7 +118,7 @@ async def preview_design(
 
 
 @tool
-async def submit_design(control_path: str, tool_runtime: Optional[Any] = None) -> str:
+async def submit_design(control_path: str, tool_runtime: Any | None = None) -> str:
     """
     Runs the current design script, performs full Workbench validation, and returns final grades.
     Args:
@@ -141,7 +129,7 @@ async def submit_design(control_path: str, tool_runtime: Optional[Any] = None) -
 
 
 @tool
-async def search_docs(query: str, tool_runtime: Optional[Any] = None) -> str:
+async def search_docs(query: str, tool_runtime: Any | None = None) -> str:
     """
     RAG retrieval from build123d and problemologist technical documentation.
     Args:
@@ -156,7 +144,7 @@ async def check_manufacturability(
     design_file: str = "design.py",
     process: str = "cnc",
     quantity: int = 1,
-    tool_runtime: Optional[Any] = None,
+    tool_runtime: Any | None = None,
 ) -> dict:
     """
     Provides a detailed DFM (Design for Manufacturing) report and pricing breakdown.
@@ -184,7 +172,7 @@ async def check_manufacturability(
 
 
 @tool
-async def view_file(path: str, tool_runtime: Optional[Any] = None) -> str:
+async def view_file(path: str, tool_runtime: Any | None = None) -> str:
     """
     Reads the content of any file in the workspace or documentation.
     Args:
@@ -195,7 +183,7 @@ async def view_file(path: str, tool_runtime: Optional[Any] = None) -> str:
 
 
 @tool
-async def run_command(command: str, tool_runtime: Optional[Any] = None) -> str:
+async def run_command(command: str, tool_runtime: Any | None = None) -> str:
     """
     Executes a shell command inside the persistent sandbox environment.
     Args:
@@ -207,7 +195,7 @@ async def run_command(command: str, tool_runtime: Optional[Any] = None) -> str:
 
 @tool
 async def lint_script(
-    filename: str = "design.py", tool_runtime: Optional[Any] = None
+    filename: str = "design.py", tool_runtime: Any | None = None
 ) -> str:
     """
     Runs static analysis (Ruff, Pyrefly) on a script.
@@ -225,8 +213,8 @@ async def lint_script(
 async def read_skill(
     skill_name: str,
     filename: str = "SKILL.md",
-    resource_type: Optional[str] = None,
-    tool_runtime: Optional[Any] = None,
+    resource_type: str | None = None,
+    tool_runtime: Any | None = None,
 ) -> str:
     """Reads the content of a specialized skill."""
     return await _execute_tool(
@@ -239,25 +227,25 @@ async def read_skill(
 
 
 @tool
-async def list_skills(tool_runtime: Optional[Any] = None) -> str:
+async def list_skills(tool_runtime: Any | None = None) -> str:
     """Lists all available specialized skills."""
     return await _execute_tool("list_skills", tool_runtime)
 
 
 @tool
-async def list_skill_files(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+async def list_skill_files(skill_name: str, tool_runtime: Any | None = None) -> str:
     """Lists all files within a specialized skill folder."""
     return await _execute_tool("list_skill_files", tool_runtime, skill_name=skill_name)
 
 
 @tool
-async def init_skill(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+async def init_skill(skill_name: str, tool_runtime: Any | None = None) -> str:
     """Initializes a new skill directory."""
     return await _execute_tool("init_skill", tool_runtime, skill_name=skill_name)
 
 
 @tool
-async def package_skill(skill_name: str, tool_runtime: Optional[Any] = None) -> str:
+async def package_skill(skill_name: str, tool_runtime: Any | None = None) -> str:
     """Validates and packages a skill."""
     return await _execute_tool("package_skill", tool_runtime, skill_name=skill_name)
 
@@ -267,8 +255,8 @@ async def update_skill(
     skill_name: str,
     content: str,
     filename: str = "SKILL.md",
-    resource_type: Optional[str] = None,
-    tool_runtime: Optional[Any] = None,
+    resource_type: str | None = None,
+    tool_runtime: Any | None = None,
 ) -> str:
     """Updates or adds information to a specialized skill folder."""
     return await _execute_tool(
@@ -286,7 +274,7 @@ async def run_skill_script(
     skill_name: str,
     script_name: str,
     arguments: str = "",
-    tool_runtime: Optional[Any] = None,
+    tool_runtime: Any | None = None,
 ) -> str:
     """Executes a specialized script located within a skill."""
     return await _execute_tool(
@@ -302,12 +290,12 @@ async def run_skill_script(
 
 
 @tool
-async def search_parts(query: str, tool_runtime: Optional[Any] = None) -> str:
+async def search_parts(query: str, tool_runtime: Any | None = None) -> str:
     """Search for COTS parts by name or ID."""
     return await _execute_tool("search_parts", tool_runtime, query=query)
 
 
 @tool
-async def preview_part(part_id: str, tool_runtime: Optional[Any] = None) -> str:
+async def preview_part(part_id: str, tool_runtime: Any | None = None) -> str:
     """Get visual preview and details for a specific COTS part ID."""
     return await _execute_tool("preview_part", tool_runtime, part_id=part_id)
