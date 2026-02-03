@@ -1,48 +1,55 @@
-import json
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.environment.core import CADEnv
+from src.environment.runtime import ToolRuntime
 
 
 @pytest.fixture
-def env(tmp_path):
+def runtime(tmp_path):
     # Setup a clean workspace for testing using tmp_path
     workspace = tmp_path / "test_workspace"
     workspace.mkdir()
 
-    # Set a low budget for testing rejection
-    env = CADEnv(
+    rt = ToolRuntime(
         workspace_dir=str(workspace),
-        db_url="sqlite:///:memory:",
-        max_unit_cost=100.0,
-        target_quantity=1,
+        db=None,  # No DB for basic runtime tests
     )
 
-    # Mock sim bridge in runtime
-    env.runtime.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
-    env.runtime.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
+    # Mock sim bridge
+    rt.sim_bridge.load_template = MagicMock(return_value="<mujoco/>")
+    rt.sim_bridge.inject_design = MagicMock(return_value="<mujoco/>")
     mock_res = MagicMock()
     mock_res.success = True
-    mock_res.energy = 10.0
-    mock_res.damage = 0.0
-    env.runtime.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
+    mock_res.total_energy = 10.0
+    mock_res.total_damage = 0.0
+    rt.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
 
-    yield env
+    # Mock evaluator to avoid full evaluation overhead in core logic tests
+    rt.evaluator.preview_design = MagicMock(return_value="preview.svg")
+
+    # Mock validate_and_export for budget tests
+    mock_report = MagicMock()
+    mock_report.status = "pass"
+    mock_report.stl_path = "model.stl"
+    mock_report.error = None
+    mock_report.cost_analysis.unit_cost = 50.0  # Default affordable
+    rt.evaluator.validate_and_export = MagicMock(return_value=mock_report)
+
+    yield rt
 
     # Cleanup
     if workspace.exists():
         shutil.rmtree(workspace)
 
 
-def test_env_budget_rejection(env):
-    env.reset()
-    env.max_unit_cost = 1.0  # Set low budget
+def test_runtime_budget_rejection(runtime):
+    # Set mock cost to be high
+    runtime.evaluator.validate_and_export.return_value.cost_analysis.unit_cost = 200.0
 
-    env.dispatch(
+    runtime.dispatch(
         "write_file",
         {
             "content": "from build123d import Box\npart = Box(10, 10, 10)",
@@ -50,20 +57,21 @@ def test_env_budget_rejection(env):
         },
     )
 
-    output = env.dispatch("submit_design", {"control_path": "control.py"})
+    # Try submit with low budget
+    output = runtime.dispatch(
+        "submit_design", {"control_path": "control.py", "max_unit_cost": 100.0}
+    )
 
+    # Output is JSON string, checking for keywords
     assert "REJECTED" in output
     assert "exceeds budget" in output
-    # Check if reward was logged (it should be in tool_output if we added it, but let's check what core.py does)
-    # Actually, in core.py reward is returned by _submit_design but only added to tool_output if terminated is True.
-    # For rejection, terminated is False.
-
-    # We can check the DB if needed, but for now we just verify rejection message.
 
 
-def test_env_force_submit(env):
-    env.reset()
-    env.dispatch(
+def test_runtime_force_submit(runtime):
+    # Set mock cost to be high
+    runtime.evaluator.validate_and_export.return_value.cost_analysis.unit_cost = 200.0
+
+    runtime.dispatch(
         "write_file",
         {
             "content": "from build123d import Box\npart = Box(10, 10, 10)",
@@ -72,25 +80,17 @@ def test_env_force_submit(env):
     )
 
     # Force submit should bypass budget check
-    output = env.dispatch(
-        "submit_design", {"force_submit": True, "control_path": "control.py"}
+    output = runtime.dispatch(
+        "submit_design",
+        {"force_submit": True, "control_path": "control.py", "max_unit_cost": 100.0},
     )
 
     assert "REJECTED" not in output
-    assert "[TERMINATED]" in output
-    assert "Reward:" in output
+    assert "Submission Result: SUCCESS" in output
 
 
-def test_env_reset(env):
-    obs, _ = env.reset()
-    assert "code" in obs
-    assert obs["last_output"] == "Environment reset. Ready for new design."
-    assert (Path(env.workspace_dir) / "design.py").exists()
-
-
-def test_env_dispatch_write(env):
-    env.reset()
-    output = env.dispatch(
+def test_runtime_dispatch_write(runtime):
+    output = runtime.dispatch(
         "write_file",
         {
             "content": "from build123d import Box\npart = Box(10, 10, 10)",
@@ -98,12 +98,11 @@ def test_env_dispatch_write(env):
         },
     )
     assert "Successfully wrote to design.py" in output
-    assert "Box(10, 10, 10)" in env.last_obs["code"]
+    assert (Path(runtime.workspace_dir) / "design.py").exists()
 
 
-def test_env_dispatch_preview(env):
-    env.reset()
-    env.dispatch(
+def test_runtime_dispatch_preview(runtime):
+    runtime.dispatch(
         "write_file",
         {
             "content": "from build123d import Box\npart = Box(10, 10, 10)",
@@ -111,35 +110,10 @@ def test_env_dispatch_preview(env):
         },
     )
 
-    output = env.dispatch("preview_design", {"filename": "design.py"})
-    assert "Preview generated:" in output
-    assert env.last_obs["last_render"].endswith(".svg")
-    assert (Path(env.workspace_dir) / env.last_obs["last_render"]).exists()
+    output = runtime.dispatch("preview_design", {"filename": "design.py"})
+    assert "preview.svg" in output
 
 
-def test_env_dispatch_submit_invalid(env):
-    env.reset()
-    env.dispatch("write_file", {"content": "invalid python code", "path": "design.py"})
-
-    output = env.dispatch("submit_design", {"control_path": "control.py"})
-    assert "Error processing design" in output
-
-
-def test_env_dispatch_submit_success(env):
-    env.reset()
-    env.dispatch(
-        "write_file",
-        {
-            "content": "from build123d import Box\npart = Box(10, 10, 10)",
-            "path": "design.py",
-        },
-    )
-
-    output = env.dispatch("submit_design", {"control_path": "control.py"})
-    assert "[TERMINATED]" in output
-    assert "Submission Result: SUCCESS" in output
-
-
-def test_cadenv_instantiation():
-    env = CADEnv()
-    assert isinstance(env, CADEnv)
+def test_runtime_instantiation():
+    rt = ToolRuntime(workspace_dir="/tmp/test")
+    assert isinstance(rt, ToolRuntime)

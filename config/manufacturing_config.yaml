@@ -10,6 +10,7 @@ cnc:
   constraints:
     min_tool_radius_mm: 3.0
     default_axis: "Z"
+    mrr_mm3_per_min: 1000.0  # Material Removal Rate for standard aluminum milling
 
 injection_molding:
   materials:

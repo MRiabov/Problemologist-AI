@@ -344,7 +344,10 @@ class ToolRuntime:
                 # Actually, dispatch should handle the metadata.
                 result = func(**arguments)
 
-                if hasattr(result, "__dataclass_fields__"):
+                if hasattr(result, "model_dump"):
+                    # Pydantic Model
+                    tool_output = result.model_dump_json()
+                elif hasattr(result, "__dataclass_fields__"):
                     from dataclasses import asdict
 
                     tool_output = json.dumps(asdict(result))
@@ -383,6 +386,26 @@ class ToolRuntime:
                     pass
 
         return tool_output
+
+    def log_message(
+        self,
+        content: str,
+        msg_type: str = "thought",
+        agent_role: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Logs a message to the database (persistence layer)."""
+        if self.db and self.episode:
+            self.step_count += 1
+            self.db.log_step(
+                episode_id=self.episode.id,
+                sequence_index=self.step_count,
+                tool_name="log_message",
+                tool_input=json.dumps({"type": msg_type, "metadata": metadata or {}}),
+                tool_output=content,
+                duration_ms=0,
+                agent_role=agent_role,
+            )
 
     # Handing remaining methods (search_docs, etc.) by delegating to originals or simplified versions
     def search_docs(self, query: str) -> str:

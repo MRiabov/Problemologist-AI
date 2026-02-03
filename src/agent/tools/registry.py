@@ -35,3 +35,7 @@ AGENT_TOOLS = [
     preview_part,
     lint_script,
 ]
+
+# Metadata for Graph Routing
+preview_design.triggers_review = True
+submit_design.triggers_review = True

@@ -45,50 +45,53 @@ class CNCWorkbench(Workbench):
         Returns detailed breakdown.
         """
         material_cfg = self.materials[self.default_material]
+        constraints = self.config.get("constraints", {})
+        mrr = constraints.get("mrr_mm3_per_min", 1000.0)
 
         # 0. Stock / Material Analysis
         bbox = part.bounding_box()
-        # Add slight padding for stock (standard practice, but keeping simple for now)
+        # Add slight padding for stock
         stock_dims = (bbox.size.X, bbox.size.Y, bbox.size.Z)
         stock_volume_cm3 = (stock_dims[0] * stock_dims[1] * stock_dims[2]) / 1000.0
         part_volume_cm3 = part.volume / 1000.0
         removed_volume_cm3 = stock_volume_cm3 - part_volume_cm3
 
-        # 1. Material Cost (based on Stock, usually, but spec says bounding box volume)
+        # 1. Material Cost
         stock_mass_kg = (stock_volume_cm3 * material_cfg["density_g_cm3"]) / 1000.0
         material_cost_per_part = stock_mass_kg * material_cfg["cost_per_kg"]
 
-        # 2. Run Cost
-        # Assume material removal rate (MRR) is 1000 mm3/min for aluminum
-        mrr = 1000.0
-        # Machining time driven effectively by removed volume + some finishing for surface area
-        # Simplified: just volume based like before, but let's use removed_volume if feasible?
-        # The previous implementation used `part.volume / mrr`.
-        # Realistically, it's removed volume. But to stay consistent with previous calibration,
-        # checking spec: "Calculate based on material volume removal rate".
-        # So yes, removed volume is better.
+        # 2. Run Cost (Time = Volume Removed / MRR)
+        # MRR is in mm3/min. removed_volume_cm3 needs conversion to mm3 (x1000)
         machining_time_min = (removed_volume_cm3 * 1000.0) / mrr
-        # Add basic finishing pass estimation (surface area based)?
-        # For simplicity, let's stick to simple MRR model but use removed volume + overhead.
-        # Actually, let's keep it close to previous behavior but use removed volume which is more physically accurate for milling.
-        # Warning: if removed volume is huge (block -> thin shell), cost skyrockets. This is correct.
 
         run_cost_per_part = (machining_time_min / 60.0) * material_cfg[
             "machine_hourly_rate"
         ]
 
         # 3. Setup Cost
-        # Assume 1 hour setup for simple 3-axis job
         setup_cost = material_cfg["machine_hourly_rate"]
 
         # Apply reuse discount if part hash is in context
         is_reused = False
         if context is not None:
-            part_hash = hashlib.md5(
-                str(part.center()).encode() + str(part.volume).encode()
-            ).hexdigest()
+            # Robust geometric hashing (Topology + rounded geometry)
+            # Avoids float instability and ensures distinct shapes are distinct
+            vol_str = f"{part.volume:.4f}"
+            area_str = f"{part.area:.4f}"
+            center = part.center()
+            center_str = f"{center.X:.4f},{center.Y:.4f},{center.Z:.4f}"
+
+            # Topological signature
+            topo_sig = (
+                f"v{len(part.vertices())}|e{len(part.edges())}|f{len(part.faces())}"
+            )
+
+            hash_input = f"{vol_str}|{area_str}|{center_str}|{topo_sig}"
+
+            part_hash = hashlib.md5(hash_input.encode()).hexdigest()
+
             if part_hash in context:
-                # 50% discount on setup for identical part reuse (e.g. same CAM program)
+                # 50% discount on setup for identical part reuse
                 setup_cost *= 0.5
                 is_reused = True
             context[part_hash] = context.get(part_hash, 0) + quantity
@@ -116,7 +119,7 @@ class CNCWorkbench(Workbench):
                 "Cost is driven by material volume and machining time. Stock size "
                 f"([{', '.join(f'{d:.1f}' for d in stock_dims)}]) determines material "
                 f"cost. Removed volume ({removed_volume_cm3:.2f} cm3) determines "
-                f"machining time ({machining_time_min:.2f} min). Setup cost "
+                f"machining time ({machining_time_min:.2f} min @ {mrr} mm3/min). Setup cost "
                 f"(${setup_cost:.2f}) is fixed per part design (discounted if reused)."
             ),
         )
