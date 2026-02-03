@@ -48,6 +48,22 @@ def write_script(content: str, filename: str = "design.py") -> str:
         return f"Error writing to {filename}: {e!s}"
 
 
+def read_script(filename: str = "design.py") -> str:
+    """
+    Reads the content of a script from the workspace.
+    """
+    filename = Path(filename).name
+    path = Path(WORKSPACE_DIR) / filename
+
+    if not path.exists():
+        return f"Error: File {filename} does not exist."
+
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception as e:
+        return f"Error reading {filename}: {e!s}"
+
+
 def edit_script(filename: str, find: str, replace: str) -> str:
     """
     Replaces a unique 'find' string with 'replace' string in the specified file.

@@ -150,6 +150,12 @@ benchmark_generator:
          - `agent_joints`: List of MuJoCo joint definitions.
          - Handles complex nesting and non-uniform scaling automatically.
 
+      **Refinement Strategy**:
+      - **Initial Version**: Use `write_script(content, path="design.py")` to create your first draft.
+      - **Minor Fixes**: If the Critic or Linter reports small errors (e.g., a typo, a missing import, or a single dimension tweak), use `edit_script(find, replace, path="design.py")` to perform a targeted fix. This is faster and less error-prone than rewriting.
+      - **Full Rewrite**: Use `write_script` to overwrite the entire file ONLY if the logic needs a fundamental structural change or if multiple edits would be ambiguous.
+      - **Inspection**: Use `read_script(path="design.py")` if you need to see the current state of your code before deciding how to edit it.
+
       **Rules**:
       1. **PRIORITIZE CSG**: Primarily use Constructive Solid Geometry (CSG) primitives (Box, Cylinder, Sphere, etc.) and boolean operations (Mode.SUBTRACT, etc.) inside `BuildPart()`. CSG is significantly easier to use and less prone to errors than sketches. Use `BuildSketch` only as a fallback for complex 2D profiles.
       2. Apply non-uniform `scale_factors` tuple using the `scale(obj, by=scale_factors)` FUNCTION.
