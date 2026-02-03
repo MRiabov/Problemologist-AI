@@ -21,6 +21,34 @@ Path(WORKSPACE_DIR).mkdir(parents=True, exist_ok=True)
 # Initialize Sandbox
 _SANDBOX = PodmanSandbox(WORKSPACE_DIR)
 
+# Global session tracker
+_ACTIVE_SESSION_ID: Optional[str] = None
+
+
+def start_session(session_id: str = "agent-session") -> str:
+    """
+    Starts a persistent sandbox session.
+    """
+    global _ACTIVE_SESSION_ID
+    if _SANDBOX.start_session(session_id):
+        _ACTIVE_SESSION_ID = session_id
+        return f"Session {session_id} started."
+    return f"Failed to start session {session_id}."
+
+
+def stop_session() -> str:
+    """
+    Stops the current active sandbox session.
+    """
+    global _ACTIVE_SESSION_ID
+    if _ACTIVE_SESSION_ID:
+        if _SANDBOX.stop_session(_ACTIVE_SESSION_ID):
+            sid = _ACTIVE_SESSION_ID
+            _ACTIVE_SESSION_ID = None
+            return f"Session {sid} stopped."
+    return "No active session to stop."
+
+
 # Initialize COTS Part Index (Singleton)
 _PART_INDEX = PartIndex()
 _PART_INDEX.register_provider("bd_warehouse", BDWarehouseProvider())
@@ -52,16 +80,41 @@ def read_script(filename: str = "design.py") -> str:
     """
     Reads the content of a script from the workspace.
     """
-    filename = Path(filename).name
-    path = Path(WORKSPACE_DIR) / filename
+    return view_file(filename)
 
-    if not path.exists():
-        return f"Error: File {filename} does not exist."
+
+def view_file(path: str) -> str:
+    """
+    Reads the content of any file in the workspace or mounted docs.
+    """
+    # If it's a relative path starting with docs/skills, we look in the host skills dir
+    # because the agent might try to read it before a session is started,
+    # OR it's mounted in the container.
+
+    if path.startswith("docs/skills/"):
+        # Map back to host path .agent/skills/...
+        skill_rel = path.replace("docs/skills/", "")
+        host_path = Path(".agent/skills") / skill_rel
+        if host_path.exists():
+            try:
+                return host_path.read_text(encoding="utf-8")
+            except Exception as e:
+                return f"Error reading skill file: {e!s}"
+
+    filename = Path(path).name
+    full_path = Path(WORKSPACE_DIR) / path  # Allow subdirs in workspace if they exist
+
+    if not full_path.exists():
+        # Check if it's just the filename in the workspace (backward compatibility)
+        full_path = Path(WORKSPACE_DIR) / filename
+
+    if not full_path.exists():
+        return f"Error: File {path} does not exist."
 
     try:
-        return path.read_text(encoding="utf-8")
+        return full_path.read_text(encoding="utf-8")
     except Exception as e:
-        return f"Error reading {filename}: {e!s}"
+        return f"Error reading {path}: {e!s}"
 
 
 def edit_script(filename: str, find: str, replace: str) -> str:
@@ -167,7 +220,9 @@ except Exception as e:
         runner_path.write_text(runner_script, encoding="utf-8")
 
         # Run in sandbox
-        stdout, stderr, returncode = _SANDBOX.run_script(runner_filename)
+        stdout, stderr, returncode = _SANDBOX.run_script(
+            runner_filename, session_id=_ACTIVE_SESSION_ID
+        )
 
         # Clean up runner script
         if runner_path.exists():
@@ -221,14 +276,46 @@ def read_skill(
         return f"Error: File '{filename}' not found in skill '{skill_name}'."
 
     try:
+        if _ACTIVE_SESSION_ID:
+            # If session is active, we can just cat the file from the container mount
+            # But reading from host is often faster and always works if mounted.
+            pass
         return target_path.read_text(encoding="utf-8")
     except Exception as e:
         return f"Error reading skill: {e!s}"
 
 
-def run_skill_script(
-    skill_name: str, script_name: str, arguments: str = ""
-) -> str:
+def run_command(command: str, timeout: int = 60) -> str:
+    """
+    Runs a shell command in the persistent sandbox.
+    If no session is active, it runs it in a transient one (slower).
+    """
+    import shlex
+
+    cmd_args = shlex.split(command)
+
+    if _ACTIVE_SESSION_ID:
+        stdout, stderr, returncode = _SANDBOX.exec_command(
+            _ACTIVE_SESSION_ID, cmd_args, timeout=timeout
+        )
+    else:
+        # Fallback to transient run
+        # We need to construct a similar environment
+        stdout, stderr, returncode = _SANDBOX.run_script(
+            "-c", timeout=timeout
+        )  # This won't work well for raw commands
+        # Let's actually enforce session for run_command in the agent prompts
+        return "Error: No active sandbox session. Please start a session before running commands."
+
+    result = stdout
+    if stderr:
+        result += f"\nSTDERR:\n{stderr}"
+    if returncode != 0:
+        result += f"\nReturn Code: {returncode}"
+    return result
+
+
+def run_skill_script(skill_name: str, script_name: str, arguments: str = "") -> str:
     """
     Executes a script from a specialized skill's 'scripts' folder.
     """
@@ -247,13 +334,14 @@ def run_skill_script(
 
         if arguments:
             import shlex
+
             cmd.extend(shlex.split(arguments))
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         output = result.stdout
         if result.stderr:
             output += f"\nSTDERR:\n{result.stderr}"
-        
+
         return output if output else "Script executed successfully (no output)."
     except Exception as e:
         return f"Error executing skill script: {e!s}"
@@ -400,7 +488,9 @@ _WORKBENCHES = {
 
 
 @functools.lru_cache(maxsize=128)
-def _analyze_cached(file_hash: str, default_process: str, default_quantity: int, script_content: str):
+def _analyze_cached(
+    file_hash: str, default_process: str, default_quantity: int, script_content: str
+):
     """Internal helper to cache analysis results based on file content hash."""
     # Execute the script to get the part
     locs = {}
@@ -450,11 +540,11 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
                 all_solids_raw.extend(list(obj.solids()))
             except:
                 pass
-    
+
     # Deduplicate by geometric hash
     all_solids = []
     seen_hashes = set()
-    seen_ids = set() # Fallback for non-solid shapes if any
+    seen_ids = set()  # Fallback for non-solid shapes if any
     for s in all_solids_raw:
         # Create a simple hash based on center and volume
         try:
@@ -489,20 +579,22 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
 
         violations = workbench.validate(solid)
         all_violations.extend(violations)
-        
+
         cost = workbench.calculate_cost(solid, quantity, context=reuse_context)
         total_cost += cost
 
-        part_reports.append({
-            "part_index": i,
-            "process": process,
-            "quantity": quantity,
-            "cost": cost,
-            "violations": violations
-        })
+        part_reports.append(
+            {
+                "part_index": i,
+                "process": process,
+                "quantity": quantity,
+                "cost": cost,
+                "violations": violations,
+            }
+        )
 
     status = "pass" if not all_violations else "fail"
-    
+
     mapped_violations = []
     for v in all_violations:
         mapped_violations.append(
@@ -511,13 +603,15 @@ def _analyze_cached(file_hash: str, default_process: str, default_quantity: int,
 
     report = {
         "status": status,
-        "manufacturability_score": 1.0 if status == "pass" else max(0.0, 1.0 - len(all_violations) * 0.1),
+        "manufacturability_score": 1.0
+        if status == "pass"
+        else max(0.0, 1.0 - len(all_violations) * 0.1),
         "violations": mapped_violations,
         "parts": part_reports,
         "cost_analysis": {
             "total_cost": total_cost,
             "unit_cost": total_cost / default_quantity if default_quantity > 0 else 0.0,
-            "target_quantity": default_quantity
+            "target_quantity": default_quantity,
         },
     }
     return report

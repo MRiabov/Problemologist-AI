@@ -18,6 +18,11 @@ from src.agent.tools.env_adapter import (
     update_skill_async,
     write_script_async,
     check_manufacturability_async,
+    view_file_async,
+    run_command_async,
+    start_session_async,
+    stop_session_async,
+    run_skill_script_async,
 )
 
 
@@ -233,3 +238,38 @@ async def check_manufacturability(
         quantity: Target production quantity (affects cost).
     """
     return await check_manufacturability_async(design_file, process, quantity)
+
+
+@tool
+async def view_file(path: str) -> str:
+    """
+    Reads the content of any file in the workspace or documentation.
+    Use this to inspect scripts, skill files, or configuration.
+
+    Args:
+        path: Relative path to the file (e.g., 'design.py', 'docs/skills/build123d_cad_drafting_skill/SKILL.md').
+    """
+    return await view_file_async(path)
+
+
+@tool
+async def run_command(command: str) -> str:
+    """
+    Executes a shell command inside the persistent sandbox environment.
+    Use this to run your Python scripts (`python design.py`), list files (`ls`), or check syntax.
+    You MUST have an active session for this to be effective.
+
+    Args:
+        command: The shell command to execute.
+    """
+    return await run_command_async(command)
+
+
+async def start_session(session_id: str) -> str:
+    """Starts the sandbox session for the agent."""
+    return await start_session_async(session_id)
+
+
+async def stop_session() -> str:
+    """Stops the sandbox session for the agent."""
+    return await stop_session_async()
