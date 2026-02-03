@@ -1,6 +1,6 @@
 import json
-from pathlib import Path
 from typing import Any
+
 from src.utils.paths import get_assets_dir
 
 # Global cache for descriptions

@@ -1,7 +1,7 @@
-from pathlib import Path
 from typing import Any
 
 import yaml
+
 from src.utils.paths import get_project_root
 
 # Cache for loaded prompts
