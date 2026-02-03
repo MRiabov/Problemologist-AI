@@ -44,12 +44,36 @@ class TestSandbox(unittest.TestCase):
         # Check if we can import our own code from src (since we mounted it)
         script_name = "import_test.py"
         (self.workspace / script_name).write_text(
-            "from src.compiler import geometry; print('Import Success')"
+            "from src.cots.core import Part; print('Import Success')"
         )
 
         stdout, stderr, rc = self.sandbox.run_script(script_name, mount_src=True)
         self.assertEqual(rc, 0, f"Error: {stderr}")
         self.assertIn("Import Success", stdout)
+
+    def test_persistent_session(self):
+        session_id = "test-session-123"
+        try:
+            # Start session
+            success = self.sandbox.start_session(session_id)
+            self.assertTrue(success)
+
+            # Exec command
+            stdout, stderr, rc = self.sandbox.exec_command(
+                session_id, ["echo", "hello-persist"]
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("hello-persist", stdout)
+
+            # Write a file and check persistence
+            (self.workspace / "persist_test.txt").write_text("file-content")
+            stdout, stderr, rc = self.sandbox.exec_command(
+                session_id, ["cat", "persist_test.txt"]
+            )
+            self.assertEqual(rc, 0)
+            self.assertIn("file-content", stdout)
+        finally:
+            self.sandbox.stop_session(session_id)
 
 
 if __name__ == "__main__":
