@@ -2,7 +2,7 @@
 
 **Feature**: 005-benchmark-scenario-generator
 **Goal**: Build an automated pipeline to generate, validate, and export physics benchmark scenarios.
-**Architecture**: Standalone utility package driven by `deepagents` (LangGraph).
+**Architecture**: Standalone utility package driven by `LangGraph`.
 
 ## 1. Technical Context
 
@@ -10,7 +10,7 @@ This feature implements a "Scenario Architect" agent—a specialized automation 
 
 ### Technology Stack
 
-- **Orchestration**: `deepagents` (LangGraph) for the "Plan → Code → Validate" loop.
+- **Orchestration**: `LangGraph` for the "Plan → Code → Validate" loop.
 - **LLM Interface**: Reuse `src/agent/utils/llm.py` (Gemini/OpenAI).
 - **Geometry**: `build123d` for parametric CAD generation.
 - **Physics**: `mujoco` for XML generation and stability checks.

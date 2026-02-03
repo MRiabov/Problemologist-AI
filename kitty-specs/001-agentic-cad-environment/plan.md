@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement the infrastructure for the **Agentic CAD Environment**, a `gymnasium`-compatible interface that allows an autonomous agent to generate `build123d` CAD models, validate them against physics tasks in `mujoco`, and persistently log all interactions.
+Implement the infrastructure for the **Agentic CAD Environment**, a `ToolRuntime`-based interface that allows an autonomous agent to generate `build123d` CAD models, validate them against physics tasks in `mujoco`, and persistently log all interactions.
 
 Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM).
 
@@ -18,7 +18,6 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 
 - `build123d`: Code-based CAD kernel
 - `mujoco`: Physics engine
-- `gymnasium`: Standard RL interface patterns
 - `numpy`: Numerical operations
 **Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
 **Testing**: `pytest` for unit tests of tools and compiler; visual regression tests for rendering.
@@ -54,7 +53,7 @@ kitty-specs/001-agentic-cad-environment/
 ```
 src/
 ├── environment/
-│   ├── core.py           # Main Gymnasium-like Env class
+│   ├── runtime.py        # ToolRuntime (Core Orchestrator)
 │   ├── tools.py          # Tool definitions (RAG, Edit, Preview)
 │   └── persistence.py    # SQLite logger
 ├── workbenches/
