@@ -1,13 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import (
-    list_skills,
-    read_skill,
-    update_skill,
-    init_skill,
-    package_skill,
-)
+from src.agent.tools.env_adapter import write_file
 from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
@@ -27,7 +21,7 @@ async def skill_populator_node(state: AgentState):
     # Check if we actually failed (e.g., step_count > MAX_STEPS or explicit failure)
     # For now, we assume this node is only reached on failure path.
 
-    model = get_model(Config.LLM_MODEL).bind_tools([update_skill])
+    model = get_model(Config.LLM_MODEL).bind_tools([write_file])
 
     # Extract conversation summary or last few messages to understand failure
     messages = state["messages"]
@@ -44,7 +38,7 @@ async def skill_populator_node(state: AgentState):
         f"Execution Summary (last steps):\n{summary_str}\n\n"
         "Your task is to analyze why the agent struggled and update the 'build123d_cad_drafting_skill' "
         "with new insights, common pitfalls to avoid, or better patterns. "
-        "Use the `update_skill` tool to add a new reference file (e.g., 'lessons_learned_cad.md') "
+        "Use the `write_file` tool to add a new reference file (e.g., 'docs/skills/build123d_cad_drafting_skill/lessons_learned_cad.md') "
         "to the skill, describing the issue and the solution or workaround."
     )
 
