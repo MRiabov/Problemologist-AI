@@ -6,19 +6,17 @@ from src.agent.utils.config import Config
 from src.agent.utils.env_log import log_to_env
 from src.agent.utils.prompts import get_prompt
 from src.agent.utils.llm import get_model
-from src.agent.tools.env_adapter import start_session_async
 
 
 async def planner_node(state: AgentState):
     """
     Decides the high-level strategy and updates the plan.
+
+    Note: Session management has been moved to graph initialization.
+    The runtime should ensure a session is active before graph execution.
     """
     set_current_role("Planner")
     log_to_env("Planning high-level strategy...", agent_role="Planner")
-
-    # Start persistent sandbox session if not already active
-    # This ensures follow-up run_command calls will work
-    await start_session_async("vlm-cad-session")
 
     # Check if we need to re-plan based on Critic feedback
     needs_replan = False

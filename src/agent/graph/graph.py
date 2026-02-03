@@ -8,21 +8,8 @@ from src.agent.graph.nodes.critic import critic_node
 from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.skill_populator import skill_populator_node
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import (
-    write_file,
-    edit_file,
-    submit_design,
-    check_manufacturability,
-    view_file,
-    run_command,
-    preview_design,
-    search_docs,
-    search_parts,
-    preview_part,
-    lint_script,
-    get_runtime,
-)
-from src.agent.tools.memory import read_journal
+from src.agent.tools.env_adapter import get_runtime
+from src.agent.tools.registry import AGENT_TOOLS
 from src.agent.utils.config import Config
 
 
@@ -42,21 +29,8 @@ def build_graph(
 
     builder = StateGraph(AgentState)
 
-    # ToolNode implementation
-    tools = [
-        write_file,
-        edit_file,
-        view_file,
-        run_command,
-        preview_design,
-        submit_design,
-        search_docs,
-        check_manufacturability,
-        read_journal,
-        search_parts,
-        preview_part,
-        lint_script,
-    ]
+    # Use the canonical tool registry
+    tools = AGENT_TOOLS.copy()
     if extra_tools:
         tools.extend(extra_tools)
 
@@ -87,6 +61,7 @@ def build_graph(
         # The result is usually {'messages': [ToolMessage, ...]}
 
         updates = result.copy()
+        task_complete = False
 
         # Check if we just ran validation
         last_ai_msg = None
@@ -105,18 +80,21 @@ def build_graph(
                         result["messages"][0].content if result["messages"] else "N/A"
                     )
 
+                    # Check for successful validation
+                    if "Validation Passed!" in tool_output:
+                        task_complete = True
+
                     history.append(
                         {
                             "attempt": len(history) + 1,
                             "code": tc["args"].get("code", ""),
                             "reasoning": state.get("coder_reasoning", ""),
-                            "errors": None
-                            if "Validation Passed!" in tool_output
-                            else tool_output,
+                            "errors": None if task_complete else tool_output,
                         }
                     )
                     updates["full_history"] = history
 
+        updates["task_complete"] = task_complete
         return updates
 
     builder.add_node("tools", tools_node)
@@ -173,7 +151,11 @@ def build_graph(
     def route_critic(
         state: AgentState,
     ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
-        # Check for success indicators in the last message
+        # Check structured completion signal first (preferred)
+        if state.get("task_complete", False):
+            return END
+
+        # Fallback: Check for success indicators in the last message (backward compat)
         last_message = state["messages"][-1]
         if hasattr(last_message, "content"):
             content = str(last_message.content)
