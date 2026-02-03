@@ -1,4 +1,5 @@
 from pathlib import Path
+from functools import lru_cache
 
 # Hardcoded stubs for build123d when real docs are missing
 STUBS = [
@@ -30,6 +31,7 @@ STUBS = [
 ]
 
 
+@lru_cache(maxsize=32)
 def load_docs(directory: str) -> list[dict[str, str]]:
     """
     Simple doc loader that reads .md and .py files.
