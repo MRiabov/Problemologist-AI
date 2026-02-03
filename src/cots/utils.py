@@ -1,7 +1,10 @@
 import json
 from typing import Any
 
+from src.agent.utils.logging import get_logger
 from src.utils.paths import get_assets_dir
+
+logger = get_logger(__name__)
 
 # Global cache for descriptions
 _DESCRIPTIONS: dict[str, Any] | None = None
@@ -20,7 +23,9 @@ def load_descriptions() -> dict[str, Any]:
         with assets_path.open() as f:
             _DESCRIPTIONS = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Warning: Could not load COTS descriptions from {assets_path}: {e}")
+        logger.warning(
+            "Could not load COTS descriptions", path=str(assets_path), error=str(e)
+        )
         _DESCRIPTIONS = {}
 
     return _DESCRIPTIONS

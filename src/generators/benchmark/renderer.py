@@ -3,6 +3,10 @@ from pathlib import Path
 import mujoco
 from PIL import Image
 
+from src.agent.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def render_scenario(
     xml_string: str, output_path_prefix: str, width: int = 640, height: int = 480
@@ -57,7 +61,7 @@ def render_scenario(
         renderer.close()
 
     except Exception as e:
-        print(f"Warning: Rendering failed: {e}")
+        logger.warning("Rendering failed", error=str(e))
         # Return empty list or handle as needed
 
     return image_paths
