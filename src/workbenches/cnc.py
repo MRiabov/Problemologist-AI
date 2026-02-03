@@ -1,8 +1,8 @@
 import hashlib
-from typing import Any
 
 from build123d import Part
 
+from src.compiler.models import CostBreakdown
 from src.workbenches.analysis_utils import check_undercuts, load_config, part_to_trimesh
 from src.workbenches.base import Workbench
 
@@ -38,7 +38,7 @@ class CNCWorkbench(Workbench):
 
     def calculate_cost(
         self, part: Part, quantity: int = 1, context: dict | None = None
-    ) -> dict[str, Any]:
+    ) -> CostBreakdown:
         """
         Calculates CNC cost: Setup + (Material + Run) * Quantity.
         If part is reused (found in context), setup cost is discounted.
@@ -97,26 +97,26 @@ class CNCWorkbench(Workbench):
             setup_cost + (material_cost_per_part + run_cost_per_part) * quantity
         )
 
-        return {
-            "total_cost": total_cost,
-            "unit_cost": total_cost / quantity if quantity > 0 else 0.0,
-            "breakdown": {
-                "process": "cnc_milling",
-                "material_name": self.default_material,
+        return CostBreakdown(
+            process="cnc_milling",
+            total_cost=total_cost,
+            unit_cost=total_cost / quantity if quantity > 0 else 0.0,
+            material_cost_per_unit=round(material_cost_per_part, 2),
+            setup_cost=round(setup_cost, 2),
+            is_reused=is_reused,
+            details={
                 "stock_dims_mm": [round(d, 2) for d in stock_dims],
                 "stock_volume_cm3": round(stock_volume_cm3, 2),
                 "part_volume_cm3": round(part_volume_cm3, 2),
                 "removed_volume_cm3": round(removed_volume_cm3, 2),
                 "machining_time_min": round(machining_time_min, 2),
-                "setup_cost": round(setup_cost, 2),
-                "material_cost_per_unit": round(material_cost_per_part, 2),
                 "run_cost_per_unit": round(run_cost_per_part, 2),
-                "is_reused": is_reused,
-                "pricing_explanation": (
-                    f"Cost is driven by material volume and machining time. "
-                    f"Stock size ([{', '.join(f'{d:.1f}' for d in stock_dims)}]) determines material cost. "
-                    f"Removed volume ({removed_volume_cm3:.2f} cm3) determines machining time ({machining_time_min:.2f} min). "
-                    f"Setup cost (${setup_cost:.2f}) is fixed per part design (discounted if reused)."
-                ),
             },
-        }
+            pricing_explanation=(
+                "Cost is driven by material volume and machining time. Stock size "
+                f"([{', '.join(f'{d:.1f}' for d in stock_dims)}]) determines material "
+                f"cost. Removed volume ({removed_volume_cm3:.2f} cm3) determines "
+                f"machining time ({machining_time_min:.2f} min). Setup cost "
+                f"(${setup_cost:.2f}) is fixed per part design (discounted if reused)."
+            ),
+        )

@@ -1,8 +1,8 @@
 import hashlib
-from typing import Any
 
 from build123d import Part
 
+from src.compiler.models import CostBreakdown
 from src.workbenches.analysis_utils import (
     analyze_wall_thickness,
     check_draft_angle,
@@ -54,10 +54,10 @@ class InjectionMoldingWorkbench(Workbench):
         # For IM, a face is a violation only if it is occluded from BOTH pull directions.
         undercuts_plus = set(check_undercuts(mesh, (0, 0, 1)))
         undercuts_minus = set(check_undercuts(mesh, (0, 0, -1)))
-        
+
         # Intersection of both sets means it's unreachable from either side
         real_undercuts = undercuts_plus.intersection(undercuts_minus)
-        
+
         if real_undercuts:
             violations.append(
                 f"IM Undercut Violation: {len(real_undercuts)} undercut faces detected. "
@@ -80,7 +80,7 @@ class InjectionMoldingWorkbench(Workbench):
 
     def calculate_cost(
         self, part: Part, quantity: int = 1, context: dict | None = None
-    ) -> dict[str, Any]:
+    ) -> CostBreakdown:
         """
         Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
         Tooling cost depends on surface area (complexity proxy).
@@ -138,15 +138,15 @@ class InjectionMoldingWorkbench(Workbench):
         unit_cost = material_cost_per_part + cycle_cost_per_part
         total_cost = tooling_cost + (unit_cost * quantity)
 
-        return {
-            "total_cost": total_cost,
-            "unit_cost": total_cost / quantity if quantity > 0 else 0.0,
-            "breakdown": {
-                "process": "injection_molding",
-                "material_name": self.default_material,
+        return CostBreakdown(
+            process="injection_molding",
+            total_cost=total_cost,
+            unit_cost=total_cost / quantity if quantity > 0 else 0.0,
+            material_cost_per_unit=round(material_cost_per_part, 4),
+            setup_cost=0.0,  # Included in tooling
+            is_reused=is_reused,
+            details={
                 "tooling_cost": round(tooling_cost, 2),
-                "is_reused": is_reused,
-                "material_cost_per_unit": round(material_cost_per_part, 4),
                 "cycle_cost_per_unit": round(cycle_cost_per_part, 4),
                 "part_volume_cm3": round(volume_cm3, 2),
                 "surface_area_cm2": round(surface_area_cm2, 2),
@@ -160,10 +160,10 @@ class InjectionMoldingWorkbench(Workbench):
                     "cooling_time_s": round(cooling_time_s, 2),
                     "total_cycle_time_s": round(cycle_time_s, 2),
                 },
-                "pricing_explanation": (
-                    f"Tooling cost (${tooling_cost:.2f}) is driven by surface area. "
-                    f"Unit cost is driven by material volume and cooling time. "
-                    f"Max thickness ({max_thickness_mm:.2f}mm) dictates cooling time ({cooling_time_s:.2f}s)."
-                ),
             },
-        }
+            pricing_explanation=(
+                f"Tooling cost (${tooling_cost:.2f}) is driven by surface area. Unit "
+                "cost is driven by material volume and cooling time. Max thickness "
+                f"({max_thickness_mm:.2f}mm) dictates cooling time ({cooling_time_s:.2f}s)."
+            ),
+        )
