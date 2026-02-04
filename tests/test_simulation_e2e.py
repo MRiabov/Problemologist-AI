@@ -1,13 +1,19 @@
+import shutil
+
+import pytest
 from fastapi.testclient import TestClient
 
 from src.agent.utils.config import Config
+from src.agent.utils.logging import get_logger
 from src.compiler.mujoco_bridge import MujocoBridge
 from src.simulation_engine.main import app
 from tests.fixtures.pusher_bot import PUSHER_SCRIPT, create_pusher_geometry
 
 client = TestClient(app)
+logger = get_logger(__name__)
 
 
+@pytest.mark.skipif(shutil.which("podman") is None, reason="Podman not installed")
 def test_pusher_e2e_success(tmp_path):
     """
     Test that a simple pusher can push the object into a success zone.
@@ -44,10 +50,12 @@ def test_pusher_e2e_success(tmp_path):
 
     data = response.json()
     if not data["success"]:
-        print(
-            f"DEBUG: Simulation failed with outcome: {data.get('outcome')} and error: {data.get('error')}"
-        )  # FIXME why not proper logging? we have a module for that.
-        print(f"DEBUG: Full Response: {data}")
+        logger.error(
+            "Simulation failed",
+            outcome=data.get("outcome"),
+            error=data.get("error"),
+            response=data,
+        )
     assert data["success"] is True, f"Simulation failed. Full Response: {data}"
     assert data["outcome"] == "success"
     assert data["result"]["total_energy"] > 0
