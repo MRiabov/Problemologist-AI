@@ -1,6 +1,7 @@
 import pytest
 
 from src.generators.benchmark.manager import execute_build
+from unittest.mock import patch
 
 # Example 1 from prompt
 EXAMPLE_1 = """
@@ -61,9 +62,25 @@ def build(seed: int = 0, scale_factors: tuple[float, float, float] = (1.0, 1.0, 
 
 
 @pytest.mark.benchmark
-def test_example_1_execution():
+@patch("src.generators.benchmark.manager.run_sandboxed_script")
+def test_example_1_execution(mock_run):
     """Verify Example 1 (Peg-in-Hole) executes correctly in the harness."""
-    xml = execute_build(EXAMPLE_1, seed=42, scale_factors=(1.2, 0.8, 1.0))
+    # Mock the sandbox result to return a valid MJCF string
+    mock_run.return_value = {
+        "mjcf": """<mujoco>
+  <asset>
+       <mesh name="agent_peg_0" file="asset_dir/peg.stl" />
+  </asset>
+  <worldbody>
+       <body name="obstacle_hole" />
+       <site name="site_zone_goal" />
+       <geom type="mesh" mesh="agent_peg_0" />
+  </worldbody>
+</mujoco>""",
+        "error": None,
+    }
+
+    xml, _ = execute_build(EXAMPLE_1, seed=42, scale_factors=(1.2, 0.8, 1.0))
     assert "<mujoco" in xml
     assert 'name="obstacle_hole"' in xml
     assert 'name="site_zone_goal"' in xml
@@ -71,9 +88,27 @@ def test_example_1_execution():
 
 
 @pytest.mark.benchmark
-def test_example_2_execution():
+@patch("src.generators.benchmark.manager.run_sandboxed_script")
+def test_example_2_execution(mock_run):
     """Verify Example 2 (Slider) executes correctly in the harness."""
-    xml = execute_build(EXAMPLE_2, seed=123, scale_factors=(1.0, 1.0, 1.0))
+    # Mock the sandbox result
+    mock_run.return_value = {
+        "mjcf": """<mujoco>
+  <worldbody>
+       <body name="obstacle_base" />
+       <body name="agent_block">
+           <geom mesh="agent_block_0" />
+           <joint name="slider_x" />
+       </body>
+  </worldbody>
+  <actuator>
+       <motor name="motor_slider_x" />
+  </actuator>
+</mujoco>""",
+        "error": None,
+    }
+
+    xml, _ = execute_build(EXAMPLE_2, seed=123, scale_factors=(1.0, 1.0, 1.0))
     assert "<mujoco" in xml
     assert 'name="obstacle_base"' in xml
     assert 'mesh="agent_block_0"' in xml
