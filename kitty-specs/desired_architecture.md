@@ -53,3 +53,7 @@ The architect will create and persist a TODO list. The engineer must implement. 
 - The engineer, after *proving* the TODO list is impossible, can refuse the plan.
 
 <!-- Standard best practices will be used. No point in making anything weird in this application. -->
+
+## Strict schema
+
+We will run `schemathesis` checks against the OpenAPI. Strictly type all schema to avoid ANY issues.

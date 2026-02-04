@@ -106,6 +106,8 @@ The Engineer Agent is a graph composed of specialized roles:
 
 * **Protocol**: HTTP (via FastAPI/Uvicorn in container).
 * **Schema**: **OpenAPI**. All data exchange must conform to defined Pydantic models served via `fastapi`.
+  * **Strict Typing**: All schemas MUST be strictly typed (enums, constraints) to facilitate automated testing.
+  * **Validation**: `schemathesis` checks are run against the OpenAPI schema to ensure robustness and compliance.
 * **Control**: Host sends HTTP requests to the Container Agent to start jobs, query status, or retrieve results.
 
 #### 4.2.3 Isolation
@@ -138,6 +140,7 @@ AGENT_TOOLS = [ ... ]
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-02-04 | **Strict Schema Enforcement** | Use `schemathesis` and strict Pydantic typing to eliminate edge-case communication errors. |
 | 2026-02-04 | **OpenAPI Communication** | Replace file-based JSON with robust HTTP/FastAPI for host-container bridge. |
 | 2026-02-04 | **Two-Agent Split** | Separate Benchmark Generation from Problem Solving (Engineer) for clearer evaluation. |
 | 2026-02-04 | **Baked-in Env Code** | Remove runtime code injection; prefer mounting/baking for stability and security. |
