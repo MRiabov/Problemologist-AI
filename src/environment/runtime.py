@@ -243,6 +243,7 @@ class ToolRuntime:
                 "reward": -20.0,
                 "message": f"REJECTED: Unit cost ${unit_cost:.2f} exceeds budget ${max_unit_cost:.2f}.",
                 "terminated": False,
+                "validation_report": res,
             }
 
         # 3. Validation Check
@@ -253,6 +254,7 @@ class ToolRuntime:
                 "reward": -10.0,
                 "message": f"Validation Failed: {v_str}",
                 "terminated": False,
+                "validation_report": res,
             }
 
         if not res.stl_path:
@@ -261,6 +263,7 @@ class ToolRuntime:
                 "reward": -10.0,
                 "message": "Submission failed: No STL exported.",
                 "terminated": False,
+                "validation_report": res,
             }
 
         # 4. Save to Database for Observability if persistence is active
@@ -302,6 +305,7 @@ class ToolRuntime:
                     "damage": sim_result.total_damage,
                     "success": sim_result.success,
                 },
+                "validation_report": res,
             }
 
         except Exception as e:
@@ -335,41 +339,66 @@ class ToolRuntime:
 
         return func(**arguments)
 
-    def dispatch(
+    def _serialize_result(self, result: Any) -> str:
+        """Serializes the result to a JSON string, handling Pydantic models recursively."""
+
+        def default(obj):
+            if hasattr(obj, "model_dump"):
+                return obj.model_dump()
+            if hasattr(obj, "__dataclass_fields__"):
+                from dataclasses import asdict
+
+                return asdict(obj)
+            raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+        # Recursive helper for dicts/lists containing Pydantic models
+        def prepare_for_json(obj):
+            if hasattr(obj, "model_dump"):
+                return obj.model_dump()
+            if isinstance(obj, dict):
+                return {k: prepare_for_json(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [prepare_for_json(i) for i in obj]
+            return obj
+
+        if hasattr(result, "model_dump_json"):
+            return result.model_dump_json()
+
+        try:
+            # First try direct dump if it's simple
+            return json.dumps(result, default=default)
+        except TypeError:
+            # Fallback to recursive preparation
+            prepared = prepare_for_json(result)
+            return json.dumps(prepared, default=default)
+
+    def run_tool(
         self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
-    ) -> str:
-        """Dispatches a tool call, handles persistence, and returns a serialized string."""
+    ) -> Any:
+        """Executes a tool, handles persistence, and returns the RAW result."""
         import time
+        import traceback
 
         start_time = time.time()
         tool_output = ""
+        result = None
+        error_occurred = False
 
         try:
             result = self._run_tool(tool_name, arguments)
-
-            if hasattr(result, "model_dump_json"):
-                tool_output = result.model_dump_json()
-            elif hasattr(result, "model_dump"):
-                tool_output = json.dumps(result.model_dump())
-            elif hasattr(result, "__dataclass_fields__"):
-                from dataclasses import asdict
-
-                tool_output = json.dumps(asdict(result))
-            elif isinstance(result, (dict, list)):
-                tool_output = json.dumps(result)
-            else:
-                tool_output = str(result)
+            tool_output = self._serialize_result(result)
         except Exception as e:
-            import traceback
-
+            error_occurred = True
             logger.error(
                 f"Error executing tool {tool_name}: {e!s}\n{traceback.format_exc()}"
             )
             tool_output = f"Error executing tool {tool_name}: {e!s}"
+            # For raw result, we return the error string
+            result = tool_output
 
         duration_ms = int((time.time() - start_time) * 1000)
 
-        # 2. Persistence (Consolidated from CADEnv)
+        # Persistence
         if self.db and self.episode:
             self.step_count += 1
             db_step = self.db.log_step(
@@ -382,19 +411,40 @@ class ToolRuntime:
                 agent_role=agent_role,
             )
 
-            # Special case for artifacts
-            if tool_name == "preview_design" and "Preview generated:" in tool_output:
-                try:
-                    artifact_path = tool_output.split("Preview generated:")[1].strip()
-                    self.db.save_artifact(
-                        step_id=db_step.id,
-                        artifact_type="image",
-                        file_path=artifact_path,
-                    )
-                except IndexError:
-                    pass
+            if not error_occurred:
+                # Artifacts
+                if tool_name == "preview_design" and "Preview generated:" in tool_output:
+                    try:
+                        artifact_path = tool_output.split("Preview generated:")[1].strip()
+                        self.db.save_artifact(
+                            step_id=db_step.id,
+                            artifact_type="image",
+                            file_path=artifact_path,
+                        )
+                    except IndexError:
+                        pass
 
-        return tool_output
+                # Validation Reports
+                if isinstance(result, ValidationReport):
+                    self.db.save_validation_report(db_step.id, result)
+                elif isinstance(result, dict) and "validation_report" in result:
+                    val_rep = result["validation_report"]
+                    if isinstance(val_rep, ValidationReport):
+                        self.db.save_validation_report(db_step.id, val_rep)
+
+        return result
+
+    def dispatch(
+        self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
+    ) -> str:
+        """Dispatches a tool call, handles persistence, and returns a serialized string."""
+        result = self.run_tool(tool_name, arguments, agent_role)
+
+        # If run_tool returned an error string (exception), return it directly
+        if isinstance(result, str) and result.startswith("Error executing tool"):
+            return result
+
+        return self._serialize_result(result)
 
     def log_message(
         self,
