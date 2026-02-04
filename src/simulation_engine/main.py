@@ -34,11 +34,21 @@ async def simulate(request: SimulationRequest):
                 outcome=SimulationOutcome.SUCCESS,
                 result=result_data["result"],
             )
+
+        # Map error types to SimulationOutcome enum
+        error_type = result_data.get("error_type", "Error")
+        if error_type == "TimeoutError":
+            outcome = SimulationOutcome.TIMEOUT
+        elif error_type == "CrashError":
+            outcome = SimulationOutcome.CRASH
+        else:
+            outcome = SimulationOutcome.ERROR
+
         return SimulationResponse(
             success=False,
-            outcome=result_data.get("error_type", "error").lower(),
+            outcome=outcome,
             error=result_data.get("message"),
-            error_type=result_data.get("error_type"),
+            error_type=error_type,
         )
 
     except Exception as e:

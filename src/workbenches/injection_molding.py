@@ -2,7 +2,7 @@ import hashlib
 
 from build123d import Part
 
-from src.compiler.models import CostBreakdown
+from src.workbenches.models import CostBreakdown
 from src.workbenches.analysis_utils import (
     analyze_wall_thickness,
     check_draft_angle,

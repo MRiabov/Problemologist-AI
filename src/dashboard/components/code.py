@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.compiler.models import DashStep
+from src.dashboard.models import DashStep
 
 
 def render_code(step: DashStep):

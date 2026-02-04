@@ -12,8 +12,12 @@ try:
     from src.workbenches.cnc import CNCWorkbench
     from src.workbenches.injection_molding import InjectionMoldingWorkbench
     from src.workbenches.print_3d import Print3DWorkbench
-    from src.compiler import geometry
-    from src.compiler.models import ValidationReport, CostBreakdown, ValidationViolation
+    from src.simulation_engine import geometry_utils as geometry
+    from src.workbenches.models import (
+        ValidationReport,
+        CostBreakdown,
+        ValidationViolation,
+    )
 except ImportError as e:
     print(f"Critical Import Error: {e}")
     # We might need to adjust sys.path if src is not in root

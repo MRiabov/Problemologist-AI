@@ -2,7 +2,7 @@ import hashlib
 
 from build123d import Part
 
-from src.compiler.models import CostBreakdown
+from src.workbenches.models import CostBreakdown
 from src.workbenches.analysis_utils import check_undercuts, load_config, part_to_trimesh
 from src.workbenches.base import Workbench
 
