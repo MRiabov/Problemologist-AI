@@ -270,6 +270,7 @@ from src.agent.tools.env_adapter import set_current_role
 - Remove the unused import line.
 
 **User Review:**
+How is this not tested? I know the CI passes green. Add tests.
 
 ---
 
@@ -304,7 +305,7 @@ with open("{config_filename}", "w") as f:
 - Alternatively, use `run_sandboxed_script` with a pre-written config file approach.
 
 **User Review:**
-
+not only there . @manager.py also has a similar string
 ---
 
 ### 10. Mock Fallback Data in Dashboard Data Layer
@@ -339,6 +340,10 @@ return [
 - In production, return empty results or error states rather than mock data.
 
 **User Review:**
+>
+>- Consider making this opt-in via an environment variable (e.g., `ENABLE_MOCK_DATA=true`).
+
+Confirm.
 
 ---
 
