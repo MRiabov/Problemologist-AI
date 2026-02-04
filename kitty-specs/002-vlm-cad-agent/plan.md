@@ -10,21 +10,26 @@ Implement the **Engineer Agent** using the **LangGraph** framework. This cogniti
 
 **Language/Version**: Python 3.10+
 **Primary Dependencies**:
+
 - `langgraph`: Core orchestration engine.
 - `fastapi`: Host-Container communication (OpenAPI).
 - `podman`: Sandbox enforcement.
 
 **Key Roles**:
+
 - **Architect (Planner)**: Designs the high-level approach and persists a **TODO List**.
 - **Engineer (Actor)**: Implements the CAD solution. Can refuse the plan if proven impossible.
 - **Critic**: Reviews the implementation against constraints.
 
 **Storage**:
+
 - `todo.md`: Task-specific TODO list persisted by the Architect.
 - `.agent/skills/`: Persistent skill-based knowledge system.
 
 **Testing**: `pytest` and `langsmith` for trace evaluation.
 **Target Platform**: Linux (Development), Docker (Deployment).
+**Observability**: Record agent thoughts and tool-calling justifications for training data generation.
+**Execution**: Prioritize development workflows over production deployments (as of Feb 4).
 
 ## Project Structure
 

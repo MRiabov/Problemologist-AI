@@ -71,7 +71,7 @@ We need to maintain a copy of files locally, and only send requests later, such 
 #### Debugging processes
 
 We need to debug processes and that means we need a folder to store the files locally. During dev, we can use a local podmanfile that mounts/links its subfolders to the local `/workspace/[run-id]` dir. However, in production, we will containerize the main app it would store these in a volume.
-And of course, we persist all of the files to the SQLite for observability
+And of course, we persist all of the files to the SQLite for observability.
 
 ## Observability
 
@@ -81,6 +81,7 @@ To track all agent movements and to persist data, we encode the following:
 2. Error messages from script execution, linting,
 3. All agent thoughts.
 4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
+5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using a scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
 
 These will be later used for querying, preproc and model training.
 

@@ -71,6 +71,8 @@ As a developer, I want the system to support pluggable part providers so that I 
 - **FR-007**: The system MUST explicitly exclude "Pipes", "Flanges", and "Gears" from the initial `bd_warehouse` index (as per scope).
 - **FR-008**: The system MUST use an extensible `PartProvider` interface to allow future addition of non-`bd_warehouse` parts.
 - **FR-009**: The system MUST generate Python import code or a `build123d` recipe snippet for the agent to instantiate the selected part.
+- FR-010: The system MUST log all search queries and preview requests, including agent "thoughts" if provided, to the primary database for observability.
+- FR-011: The system MUST fail fast and return clear error messages for invalid inputs or asset generation failures.
 
 ### Key Entities
 

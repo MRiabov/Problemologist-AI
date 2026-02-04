@@ -42,115 +42,93 @@ Additionally, this feature introduces a **Manufacturability Analysis Tool** (`ch
 
 ## 4. Functional Requirements
 
-
-
 ### 4.1. CNC Milling Validation
 
+* **System Integration**: The validation logic must integrate with the existing Workbench system.
 
+* **Geometric Constraints**:
 
-*   **System Integration**: The validation logic must integrate with the existing Workbench system.
+    1. **Tool Accessibility**: The system shall detect internal corners with a radius smaller than the configurable minimum tool radius (default: 3mm).
 
-*   **Geometric Constraints**:
+    2. **3-Axis Visibility**: The system shall verify that all machined surfaces are accessible from a defined set of approach vectors (default: +Z axis only for simple setup).
 
-    1.  **Tool Accessibility**: The system shall detect internal corners with a radius smaller than the configurable minimum tool radius (default: 3mm).
+    3. **Undercut Detection**: The system shall reject geometry that is occluded from the tool path (i.e., material overhangs that a rigid tool cannot reach).
 
-    2.  **3-Axis Visibility**: The system shall verify that all machined surfaces are accessible from a defined set of approach vectors (default: +Z axis only for simple setup).
+* **Cost Model**:
 
-    3.  **Undercut Detection**: The system shall reject geometry that is occluded from the tool path (i.e., material overhangs that a rigid tool cannot reach).
+  * **Setup Cost**: Calculate based on the number of unique orientations required to machine the part.
 
-*   **Cost Model**:
+  * **Run Cost**: Calculate based on material volume removal rate and machine hourly rate.
 
-    *   **Setup Cost**: Calculate based on the number of unique orientations required to machine the part.
-
-    *   **Run Cost**: Calculate based on material volume removal rate and machine hourly rate.
-
-    *   **Material Cost**: Calculate based on bounding box volume (stock size) and material density/price.
-
-
+  * **Material Cost**: Calculate based on bounding box volume (stock size) and material density/price.
 
 ### 4.2. Injection Molding Validation
 
+* **System Integration**: The validation logic must integrate with the existing Workbench system.
 
+* **Geometric Constraints**:
 
-*   **System Integration**: The validation logic must integrate with the existing Workbench system.
+    1. **Draft Angle Analysis**: The system shall verify that all faces parallel to the draw direction (mold pull axis) have a draft angle greater than or equal to the minimum threshold (default: $2^\circ$).
 
-*   **Geometric Constraints**:
+    2. **Undercut Detection**: The system shall ensure the part can be separated from a simple 2-part mold (no trapped geometry preventing ejection).
 
-    1.  **Draft Angle Analysis**: The system shall verify that all faces parallel to the draw direction (mold pull axis) have a draft angle greater than or equal to the minimum threshold (default: $2^\circ$).
+    3. **Wall Thickness Analysis**: The system shall sample the geometry to ensure wall thickness stays within a specified `[min, max]` range and does not vary by more than a set threshold (to prevent defects).
 
-    2.  **Undercut Detection**: The system shall ensure the part can be separated from a simple 2-part mold (no trapped geometry preventing ejection).
+* **Cost Model**:
 
-    3.  **Wall Thickness Analysis**: The system shall sample the geometry to ensure wall thickness stays within a specified `[min, max]` range and does not vary by more than a set threshold (to prevent defects).
+  * **Tooling Cost**: Apply a high fixed cost derived from the part's surface area and geometric complexity.
 
-*   **Cost Model**:
-
-    *   **Tooling Cost**: Apply a high fixed cost derived from the part's surface area and geometric complexity.
-
-    *   **Unit Cost**: Apply a low per-unit cost based on actual part volume and material price.
-
-
+  * **Unit Cost**: Apply a low per-unit cost based on actual part volume and material price.
 
 ### 4.3. Manufacturability Analysis Tool
 
-
-
 The environment shall expose a new tool to the agent.
 
+* **Functionality**: Accepts a design file, a target process (CNC or Injection Molding), and a production quantity.
 
+* **Output**: A structured report containing:
 
-*   **Functionality**: Accepts a design file, a target process (CNC or Injection Molding), and a production quantity.
+  * **Manufacturability Status**: Boolean indicating if the part passes all DFM checks.
 
-*   **Output**: A structured report containing:
+  * **Cost Estimate**: Per-unit and total cost for the specified quantity.
 
-    *   **Manufacturability Status**: Boolean indicating if the part passes all DFM checks.
+* **Violation Report**: A list of specific DFM violations, including the type of violation (e.g., "No Draft", "Undercut"), location, and a descriptive message.
+* **Observability**: All analysis results, including internal "thoughts" or reasoning steps used to determine violations, must be logged to the primary database.
+* **Fail Fast**: The tool should return results immediately upon finding a critical failure that prevents further analysis, rather than attempting to process the entire geometry.
 
-    *   **Cost Estimate**: Per-unit and total cost for the specified quantity.
-
-    *   **Violation Report**: A list of specific DFM violations, including the type of violation (e.g., "No Draft", "Undercut"), location, and a descriptive message.
-
-*   **Visualization** (Optional): A visual overlay highlighting problematic areas (e.g., red faces for missing draft).
-
-
+* **Visualization** (Optional): A visual overlay highlighting problematic areas (e.g., red faces for missing draft).
 
 ## 5. Technical Design
 
-
-
 ### 5.1. Geometric Analysis Implementation
 
+* **Core Library**: `build123d` (wrapping OpenCASCADE).
 
+* **Workbench Classes**: Implement `CNCWorkbench` and `InjectionMoldingWorkbench` inheriting from `src.workbenches.base.Workbench`.
 
-*   **Core Library**: `build123d` (wrapping OpenCASCADE).
+* **Draft Analysis**:
 
-*   **Workbench Classes**: Implement `CNCWorkbench` and `InjectionMoldingWorkbench` inheriting from `src.workbenches.base.Workbench`.
+  * Iterate over topological faces (`part.faces()`).
 
-*   **Draft Analysis**:
+  * Compute normal vector $\vec{n}$ at face center.
 
-    *   Iterate over topological faces (`part.faces()`).
+  * Check angle against Pull Vector $\vec{p}$ (usually $+Z$).
 
-    *   Compute normal vector $\vec{n}$ at face center.
+  * Formula: $|\arccos(\vec{n} \cdot \vec{p}) - 90^\circ| \ge \theta_{min}$.
 
-    *   Check angle against Pull Vector $\vec{p}$ (usually $+Z$).
+* **Undercut/Raycasting**:
 
-    *   Formula: $|\arccos(\vec{n} \cdot \vec{p}) - 90^\circ| \ge \theta_{min}$.
+  * Use raycasting grids (via `trimesh` or OCP `BRepExtrema`) to check for self-occlusion from the tool/pull direction.
 
-*   **Undercut/Raycasting**:
+* **Wall Thickness**:
 
-    *   Use raycasting grids (via `trimesh` or OCP `BRepExtrema`) to check for self-occlusion from the tool/pull direction.
-
-*   **Wall Thickness**:
-
-    *   Raycast internal normals or use Sphere-fitting (Medial Axis Transform) approximation if feasible, otherwise simple cross-section sampling.
-
-
+  * Raycast internal normals or use Sphere-fitting (Medial Axis Transform) approximation if feasible, otherwise simple cross-section sampling.
 
 ### 5.2. Integration
 
+* **Files**: Create `src/workbenches/cnc.py` and `src/workbenches/injection_molding.py`.
 
-
-*   **Files**: Create `src/workbenches/cnc.py` and `src/workbenches/injection_molding.py`.
-
-*   **Tool Wrapper**: Update `src/environment/tools.py` to expose the `check_manufacturability` function, which delegates to the appropriate Workbench class.
+* **Tool Wrapper**: Update `src/environment/tools.py` to expose the `check_manufacturability` function, which delegates to the appropriate Workbench class.
 
 ## 6. Assumptions & Constraints
 
@@ -164,11 +142,15 @@ The environment shall expose a new tool to the agent.
 To drive the agent towards highly efficient designs, the environment supports an economic "Record" system.
 
 ### 7.1. Cost Targets
+
 Tasks can be defined with explicit economic constraints:
+
 * `target_quantity`: The production volume (e.g., 10,000 units).
 * `max_unit_cost`: The maximum allowable per-unit cost.
 
 ### 7.2. The Record System
+
 The system tracks the lowest unit cost achieved for any given benchmark scenario.
+
 * **Objective**: When a record exists, the agent's primary objective (beyond functional success) is to produce a design with a `unit_cost < current_record`.
 * **RL Rollouts**: This mechanism allows for the generation of "Optimization Rollouts," where the agent iteratively refines a design to reduce material volume, simplify machining orientations, or optimize for injection molding wall thickness to beat previous records.

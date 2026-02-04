@@ -138,10 +138,12 @@ The **Benchmark Scenario Generator** is an autonomous agentic pipeline designed 
 
 ## 5. Success Criteria
 
-- **Efficiency**: Can generate and validate 10 candidate scenarios in under 5 minutes on a standard developer machine (e.g., 8-core CPU, 16GB RAM).
+- **Efficiency**: Can generate and validate 10 candidate scenarios in under 5 minutes on a standard developer machine (e.g., 8-core CPU, 16GB RAM) using parallel container execution (at least 4 concurrent containers).
 - **Yield Rate**: At least 50% of generated scripts compile and pass the stability check (Simulation Load + 1s run).
 - **Coverage**: Successfully generates at least one scenario for **Tier 1 (Spatial)** and one for **Tier 2 (Kinematic)** that meets human approval.
 - **Randomization**: A single generated script can produce at least 5 distinct, valid geometric variations (verified by differing mesh hashes/volumes).
+- **Architectural Alignment**: The generator system is IPv6-ready for distributed execution across multiple nodes.
+- **Observability**: Full recording of agent thoughts and internal reviews for training data purposes.
 
 ## 6. Assumptions
 

@@ -1,4 +1,5 @@
 # Implementation Plan: COTS Assembly System
+
 *Path: kitty-specs/006-cots-assembly-system/plan.md*
 
 **Branch**: `006-cots-assembly-system` | **Date**: 2026-02-01 | **Spec**: [spec.md](spec.md)
@@ -17,6 +18,7 @@ Implement a **COTS (Commercial Off-The-Shelf) Assembly System** that allows the 
 **Target Platform**: Linux (Local execution)
 **Project Type**: Python Library Module (`src/cots`)
 **Performance Goals**: Search < 10ms, Preview generation < 3s.
+**Observability**: Record search history and preview generation logs (including thoughts).
 **Constraints**: Must run locally without external API calls (except initial package install).
 
 ## Constitution Check

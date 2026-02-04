@@ -73,9 +73,10 @@ src/
 **Goal**: Can generate _40+_ diverse scenarios in parallel and manage the dataset.
 
 1. **Implement Randomization Wrapper**: A harness that runs the generated `build(seed)` function multiple times with different seeds to verify stability across the parameter range.
-2. **Parallel Execution**: Orchestrate multiple generator instances in parallel (up to 4 concurrent containers) to accelerate dataset population.
-3. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
-4. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
+2. **Parallel Execution**: Orchestrate multiple generator instances in parallel (up to 4 concurrent containers) to accelerate dataset population. Supports future distribution via IPv6.
+3. **Observability Integration**: Record full traces of the generator's internal review and verification steps for later RL training.
+4. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
+5. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
 
 ## 6. Phase 3: Interactive Pipeline Support
 

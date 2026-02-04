@@ -32,7 +32,9 @@ The dashboard provides an interactive interface for the **Benchmark Generator Ag
 
 * **Data Source**: The dashboard must visualize data persisted in the system's primary storage (the "Thought-Process" database).
 * **Real-Time Updates**: In "Live" mode, the dashboard must automatically refresh to show the latest agent actions without requiring manual page reloads.
-* **Data Mapping**: The UI must correctly map and display all relevant step data: Input Prompt, Reasoning/Code, System Output, and resulting Artifacts (Files/Images).
+* **Data Mapping**: The UI must correctly map and display all relevant step data: Input Prompt, **Reasoning/Thoughts**, Code, System Output, **Error Tracebacks**, and resulting Artifacts (Files/Images).
+* **Visual Reconstruction Engine**: The dashboard MUST include a mechanism to re-run recorded CAD scripts with their original parameters to reconstruct visual previews at runtime if they are not stored as static artifacts.
+* **Backup Management (Production)**: Provide a UI button or status indicator for the daily S3 backup process. The dashboard can trigger the backup endpoint if manual intervention is required.
 
 ## 5. Technical Design
 
