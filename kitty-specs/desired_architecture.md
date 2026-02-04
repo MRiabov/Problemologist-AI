@@ -61,3 +61,20 @@ We will run `schemathesis` checks against the OpenAPI. Strictly type all schema 
 ## Containerization and paralel execution
 
 We will run benchmark generation and CAD generation/sim in paralel. The system should scale to approx 4 container on a 4-code CPU, at least. In the future we may well refactor to run on distributed notes, perhaps even IPv6.
+
+### Persisting files
+
+The files are generated locally by the agent. They are then sent to the container to the prod.
+
+We need to maintain a copy of files locally, and only send requests later, such that files complete their transfer.
+
+#### Debugging processes
+
+We need to debug processes and that means we need a folder to store the files locally. During dev, we can use a local podmanfile that mounts/links its subfolders to the local `/workspace/[run-id]` dir. However, in production, we will containerize the main app it would store these in a volume.
+And of course, we persist some of the files to the sqlite.
+
+## Other notes
+
+1. Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
+2. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
+3. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
