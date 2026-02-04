@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +17,7 @@ def export_schema():
     models_path = project_root / "src" / "assets" / "scripts" / "gen_models.py"
 
     # Export Schema
-    with open(schema_path, "w") as f:
+    with schema_path.open("w") as f:
         json.dump(openapi_schema, f, indent=2)
     print(f"Schema exported to {schema_path}")
 
@@ -41,6 +40,7 @@ def export_schema():
                 "--enum-field-as-literal",
                 "one",
                 "--use-schema-description",
+                "--disable-timestamp",
             ],
             check=True,
             capture_output=True,
