@@ -1,255 +1,136 @@
 # Problemologist-AI Architecture
 
-> **Purpose**: This document defines the structural decisions, integration patterns, and non-functional requirements that **all code in this repository must follow**. It supplements the feature specifications in `kitty-specs/`.
+> **Purpose**: This document defines the structural decisions, integration patterns, and non-functional requirements that **all code in this repository must follow**. It unifies the high-level agentic vision with concrete technical constraints.
 
 ---
 
-## 1. System Overview
+## 1. System Overview: The Two Agents
+
+The system is composed of two primary autonomous agent graphs that interact with the domain:
+
+1. **Benchmark Generator Agent**: Creates, validates, and compiles dataset problems (benchmarks) consisting of CAD models and descriptions.
+2. **Engineer Agent**: Solves these problems by designing CAD models under constraints (cost, manufacturability, weight, materials).
 
 ```mermaid
-graph TB
-    subgraph Agent Layer
-        Graph[LangGraph State Machine]
-        Nodes[Planner / Actor / Critic]
+graph LR
+    subgraph Benchmark Generator
+        Gen[Generator] --> Reviewer[Internal Reviewer]
+        Reviewer --> Verify[Verification Pipeline]
+        Verify --> Output[MJCF/XML Benchmark]
     end
-    
-    subgraph Tool Layer
-        Adapter[env_adapter.py<br/>LangChain @tool wrappers]
+
+    subgraph Engineer Agent
+        Planner[Architect] --> impl[Engineer]
+        impl --> Critic[Critic]
+        Critic --> Planner
     end
-    
-    subgraph Runtime Layer
-        Runtime[ToolRuntime<br/>Encapsulates all state]
-        Sandbox[Podman Sandbox<br/>Code execution]
-    end
-    
-    subgraph Domain Layer
-        Workbenches[Manufacturing Workbenches]
-        Simulation[MuJoCo Bridge]
-        RAG[Documentation Search]
-    end
-    
-    Graph --> Nodes
-    Nodes --> Adapter
-    Adapter --> Runtime
-    Runtime --> Sandbox
-    Runtime --> Workbenches
-    Runtime --> Simulation
-    Runtime --> RAG
+
+    Output --> Engineer\ Agent
 ```
 
 ---
 
-## 2. Layer Responsibilities
+## 2. Benchmark Generator Architecture
 
-### 2.1 Agent Layer (`src/agent/graph/`)
+**Goal**: Create randomized, valid CAD benchmarks converted into MJCF (MuJoCo XML) format to ensure data distribution and robustness.
 
-| Component | Responsibility | MUST NOT |
-|-----------|---------------|----------|
-| `graph.py` | Define node topology & routing | Import domain logic directly |
-| `nodes/*.py` | LLM prompting & response parsing | Manage sessions or execute code |
-| `routing.py` | State-based graph transitions | Use magic string matching for control flow |
+### 2.1 Workflow
 
-> [!IMPORTANT]
-> Graph nodes are **stateless orchestrators**. Side effects (session start, file I/O) belong in the Runtime layer.
-> Control flow transitions MUST use structured state flags (e.g., `state["task_complete"]`) rather than parsing LLM content for magic strings like "Task complete".
+1. **Generation**: The agent generates a CAD model based on randomized parameters.
+2. **Internal Review**: A specialized critic node reviews the design for logic and feasibility.
+3. **Verification**: Strict validity checks before acceptance:
+    * **Geometry**: Check for self-intersections and non-manifold geometry.
+    * **Compilation**: Ensure the generated code compiles/executes without error.
+    * **MJCF Validity**: Validate against the official MJCF XML schema.
+    * **Simulation**: Run a few frames of simulation to ensure physical stability.
 
-### 2.2 Tool Layer (`src/agent/tools/`)
+### 2.2 Environment Support
 
-| Component | Responsibility | MUST NOT |
-|-----------|---------------|----------|
-| `env_adapter.py` | LangChain `@tool` decorators, runtime injection | Contain business logic |
-| Skill tools | Memory management wrappers | Access global state directly |
-
-> [!TIP]
-> Tools receive `tool_runtime` as an injected parameter. Never use global `_ACTIVE_ENV`.
-
-### 2.3 Runtime Layer (`src/environment/`)
-
-| Component | Responsibility | MUST NOT |
-|-----------|---------------|----------|
-| `runtime.py` | `ToolRuntime` class—Sole orchestrator of tool execution | Import from `src/agent/` |
-| `evaluator.py` | Shared `Evaluator` for design analysis & costing | Duplicate logic in tools |
-| `sandbox.py` | Podman orchestration | Execute code on host |
-| `persistence.py` | SQLAlchemy episode/step logging | Create inline sessions |
-
-> [!NOTE]
-> `CADEnv` has been deprecated/removed in favor of direct `ToolRuntime` usage to eliminate global state.
-
-### 2.4 Domain Layer
-
-| Component | Location | Responsibility |
-|-----------|----------|---------------|
-| Workbenches | `src/workbenches/` | DFM validation & cost models |
-| Simulation | `src/simulation_engine/`, `src/compiler/` | MuJoCo bridge, MJCF schema validation & mesh generation |
-| RAG | `src/rag/` | Documentation retrieval |
+* **Static & Dynamic Objects**: Support for generating environments with fixed and moving parts.
+* **Motors**: Specification of actuators (currently without complex wiring).
+* **Validity**: Problems must be *provably* creatable in MuJoCo.
 
 ---
 
-## 3. Non-Functional Requirements (NFRs)
+## 3. Engineer Agent Architecture
 
-### 3.1 Security: Sandbox Enforcement
+**Goal**: Solve the provided benchmarks by generating valid manufacturing designs.
 
+### 3.1 Roles
+
+The Engineer Agent is a graph composed of specialized roles:
+
+| Role | Responsibility |
+|------|----------------|
+| **Architect (Planner)** | Break down the problem, design the high-level approach, and persist a **TODO List**. |
+| **Engineer (Actor)** | Implement the CAD solution. Can refusing the plan if proven impossible. |
+| **Critic** | Review the implementation against constraints (cost, weight, manufacturability). |
+
+### 3.2 Capabilities
+
+* **Constraint Handling**: Must strictly adhere to max cost, weight, and manufacturing limits (e.g., CNC milling tooling restrictions).
+* **Preview Tools**: Can run "Preview" commands to check manufacturability/validity *without* incurring a penalty or failing the task.
+* **Skill Learning**:
+  * Agents can create and update **Skills** (persistent reusable tools/functions).
+  * Successful solutions (after resolving failures) update the long-term memory (Skills).
+* **Long-Running Tasks**: Execution can take significant time (10+ minutes) in production; system must handle timeouts gracefully.
+
+---
+
+## 4. Technical Architecture
+
+### 4.1 Layer Responsibilities
+
+| Layer | Components | Responsibility |
+|-------|------------|----------------|
+| **Agent Layer** | `graph.py`, `nodes/` | LangGraph state machines, prompting, decision making. **Stateless**. |
+| **Domain Layer** | `workbenches/`, `simulation/` | DFM validation, cost models, MuJoCo bridge, RAG. Pure logic. |
+| **Runtime Layer** | `ToolRuntime`, `PodmanSandbox` | **Stateful** orchestration, side-effect management, container control. |
+| **Tool Layer** | `env_adapter`, `registry` | Maps Agent actions to Runtime methods. |
+
+### 4.2 Non-Functional Requirements (NFRs)
+
+#### 4.2.1 Security: Sandbox Enforcement
+>
 > [!CAUTION]
-> **All agent-generated code MUST execute inside the Podman sandbox.** This includes design scripts, skill updates, and analysis routines.
+> **All agent-generated code MUST execute inside the Podman sandbox.**
 
-| Operation | Allowed | Forbidden |
-|-----------|---------|-----------|
-| `exec()` / `eval()` on agent code | ❌ Host | ✅ Sandbox only |
-| `subprocess.run` on agent code | ❌ Host | ✅ Sandbox only |
-| File writes to workspace | ✅ Via `ToolRuntime` | ❌ Direct `Path.write_text()` |
-| Network access | ❌ Always disabled | — |
+* **Host**: Orchestration only. No `exec()`, `eval()`, or `subprocess` on agent strings.
+* **Container**: All "unsafe" code (design scripts, skill verification) runs here.
+* **Environment Code**: Supporting code (models, utils) MUST be baked into the container image or mounted read-only. **Do not use runtime string injection.**
 
-**Enforcement**:
+#### 4.2.2 Communication Protocol: OpenAPI
+>
+> [!IMPORTANT]
+> Communication between the Host and the Container Agent is strictly typed.
 
-- The `ToolRuntime` proxies all command/script execution to `Sandbox.run_script()`.
-- Use of `subprocess` or `exec` on the host with agent-provided strings is a critical security violation.
-- Skill updates via `update_skill` must be validated/linted within the sandbox before being synced to the host.
+* **Protocol**: HTTP (via FastAPI/Uvicorn in container).
+* **Schema**: **OpenAPI**. All data exchange must conform to defined Pydantic models served via `fastapi`.
+* **Control**: Host sends HTTP requests to the Container Agent to start jobs, query status, or retrieve results.
 
-### 3.2 Single Source of Truth: Tool Registry
+#### 4.2.3 Isolation
 
-To prevent quadruplication and ensure consistency, all tools available to the agent MUST be defined in **one location**:
+* **Test Isolation**: Every test run uses a unique UUID-based workspace.
+* **Container Isolation**: Each agent instance gets a dedicated container/runtime.
+
+---
+
+## 5. Integration Patterns
+
+### 5.1 Tool Registry
+
+All tools are defined in a central registry to ensure the Engineer and Benchmark agents share the same capabilities where appropriate.
 
 ```python
 # src/agent/tools/registry.py
-from src.agent.tools.env_adapter import (...)
-from src.agent.tools.memory import read_journal
-
 AGENT_TOOLS = [ ... ]
 ```
 
-**Consumers**: `graph.py` and fallback logic in `actor.py` MUST import from `registry.py`. Adding a tool to the system must only require adding it to this registry.
+### 5.2 Persistence & State
 
-### 3.3 No Global Mutable State
-
-| Pattern | Status |
-|---------|--------|
-| `_ACTIVE_ENV` / `_CURRENT_ROLE` | ❌ Forbidden (Legacy—must be removed) |
-| `_RUNTIMES` registry | ✅ Acceptable (keyed by UUID) |
-| Creating fallback singletons | ❌ Forbidden |
-
-**Requirement**: Tools must receive the `ToolRuntime` instance via dependency injection (the `tool_runtime` argument in `@tool` functions). Never rely on module-level globals for environment or session state.
-
-### 3.4 Error Handling
-
-```python
-# ❌ Forbidden
-try:
-    risky_operation()
-except:
-    pass
-
-# ✅ Required
-try:
-    risky_operation()
-except SpecificError as e:
-    logger.warning(f"Operation failed: {e}")
-    return fallback_value
-```
-
-### 3.5 Communication Protocol: Structured JSON
-
-> [!WARNING]
-> **Avoid "Marker Protocols"** (e.g., parsing `stdout` for `SUBMIT_RESULT: { ... }`).
-
-**Requirement**: Communication between the host and sandboxed runner scripts MUST use structured file-based I/O:
-
-1. Runner script writes its results to a pre-defined JSON file (e.g., `result.json`) in the workspace.
-2. `ToolRuntime` reads and parses this file after the script terminates.
-3. Magic strings in `stdout` are strictly for human-readable logging and MUST NOT be used for control logic.
-
-### 3.6 Structured Logging
-
-| Pattern               | Status       |
-|-----------------------|--------------|
-| `print("DEBUG: ...")` | ❌ Forbidden |
-| `logger.debug(...)`   | ✅ Required  |
-
-**Standard**:
-
-- Use `logging.getLogger(__name__)` at the module level.
-- Prefer structured logging (e.g., passing context as dict) to allow machine parsing.
-- Debug statements MUST NOT be left in production code unless using an appropriate low log level.
-
-### 3.7 Workspace Isolation
-
-To enable parallel execution (e.g., `pytest -n auto`) and prevent race conditions:
-
-- **Test Workspaces**: Every test run MUST use a unique, isolated directory (e.g., via `uuid.uuid4()` or `pytest`'s `tmp_path`).
-- **Generator Workspaces**: Benchmark and scenario generation runs MUST use unique subdirectories within the main workspace to prevent cross-contamination.
-- **Teardown**: Automated cleanup of temporary workspaces is required unless explicitly disabled for debugging.
-
----
-
-## 4. Integration Patterns
-
-### 4.1 Runtime Injection Flow
-
-```mermaid
-sequenceDiagram
-    participant Graph as build_graph()
-    participant Node as tools_node()
-    participant Adapter as @tool function
-    participant Runtime as ToolRuntime
-    
-    Graph->>Graph: Create ToolRuntime, register_runtime("default", rt)
-    Graph->>Node: invoke(state)
-    Node->>Node: runtime = get_runtime(state["runtime_id"])
-    Node->>Node: Inject runtime into tool_calls[].args
-    Node->>Adapter: write_file(..., tool_runtime=runtime)
-    Adapter->>Runtime: runtime.write_file(...)
-```
-
-### 4.2 Session Lifecycle
-
-Sessions belong to the **graph runner**, not individual nodes:
-
-```python
-# runner.py (correct)
-async def run_agent(problem: str):
-    runtime = ToolRuntime(workspace_dir="workspace")
-    runtime.start_session("agent-session")
-    try:
-        graph = build_graph()
-        # ... invoke graph
-    finally:
-        runtime.stop_session()
-```
-
-### 4.3 Workbench Integration
-
-Workbenches are instantiated by `ToolRuntime.__init__()`:
-
-```python
-self._workbenches = {
-    "cnc": CNCWorkbench(),
-    "injection_molding": InjectionMoldingWorkbench(),
-    "3d_print": Print3DWorkbench(),
-}
-```
-
-Domain code (workbenches, simulation) MUST NOT import from `src/agent/`.
-
----
-
-## 5. Configuration
-
-All configuration flows through `src/agent/utils/config.py` (Pydantic Settings):
-
-```python
-from src.agent.utils.config import Config
-
-model = Config.LLM_MODEL          # ✅ Correct
-model = os.getenv("LLM_MODEL")    # ❌ Avoid
-```
-
-Path constants:
-
-- `Config.WORKSPACE_DIR` — agent workspace root
-- `Config.SKILLS_DIR` — `.agent/skills/` location
-- `Config.PROMPTS_PATH` — `config/prompts.yaml`
-
-> [!IMPORTANT]
-> **ALL paths MUST be absolute** and derived from `Config` (for legacy) or `src/utils/paths.py` (preferred). Hardcoding paths relative to the current working directory is strictly forbidden.
+* **Postgres/SQLAlchemy**: Used for persisting run logs, episodes, and steps.
+* **LangGraph Checkpointer**: Used for agent state persistence.
+* **No Global State**: `_ACTIVE_ENV` patterns are forbidden. State is passed via `ToolRuntime` instances.
 
 ---
 
@@ -257,16 +138,13 @@ Path constants:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-03 | Remove Gymnasium `gym.Env` inheritance | Not training RL; added complexity without benefit |
-| 2026-02-03 | Consolidate to `ToolRuntime` | Eliminate global state, enable multi-agent |
-| 2026-02-03 | Require sandbox for all exec | Security; prevent host compromise |
-| 2026-02-03 | File-based Simulation Exchange | Robustness; decouple simulation from shell injection |
-| 2026-02-03 | MJCF Schema Linting | Early error detection for generated models |
-
----
+| 2026-02-04 | **OpenAPI Communication** | Replace file-based JSON with robust HTTP/FastAPI for host-container bridge. |
+| 2026-02-04 | **Two-Agent Split** | Separate Benchmark Generation from Problem Solving (Engineer) for clearer evaluation. |
+| 2026-02-04 | **Baked-in Env Code** | Remove runtime code injection; prefer mounting/baking for stability and security. |
+| 2026-02-03 | **Podman Sandbox** | Require containerization for all dynamic code execution. |
 
 ## 7. Future Considerations
 
-1. **Proper RAG**: Replace substring matching with embedding-based retrieval and a vector database.
-2. **Context Window Management**: Implement automated message windowing/summarization to keep token costs down and reasoning quality high.
-3. **Multi-Part Project Support**: Move beyond the single `design.py` assumption to support hierarchical project structures.
+1. **Reflective RL**: Use "Expected Solutions" from the Planner to guide RL optimization.
+2. **Context Management**: Automated context window compression for long-running engineer tasks.
+3. **Advanced Wiring**: Future updates should handle motor wiring and electrical constraints.
