@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class CostBreakdown(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    process: str
+    process: str  # enum?
     total_cost: float
     unit_cost: float
     material_cost_per_unit: float
