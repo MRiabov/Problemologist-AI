@@ -39,6 +39,12 @@ def export_schema():
                 "pydantic_v2.BaseModel",
                 "--enum-field-as-literal",
                 "one",
+                # Capitalize members because OpenAPI enum only stores values (e.g. "success"),
+                # so the generator needs a hint to use uppercase names (e.g. SUCCESS).
+                "--capitalise-enum-members",
+                "--use-specialized-enum",
+                "--target-python-version",
+                "3.12",
                 "--use-schema-description",
                 "--disable-timestamp",
             ],
