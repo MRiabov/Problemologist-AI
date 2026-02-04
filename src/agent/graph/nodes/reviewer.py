@@ -9,11 +9,11 @@ from src.agent.utils.prompts import get_prompt
 logger = get_logger(__name__)
 
 
-async def critic_node(state: AgentState):
+async def reviewer_node(state: AgentState):
     """
     Analyzes the output of the tools (preview/submit) and decides next steps.
     """
-    log = logger.bind(agent_role="Critic")
+    log = logger.bind(agent_role="Reviewer")
     log.info("Analyzing results and providing feedback")
     model = get_model(Config.LLM_MODEL)
 

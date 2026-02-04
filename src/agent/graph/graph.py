@@ -6,10 +6,10 @@ from typing import Literal, Optional
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from src.agent.graph.nodes.actor import actor_node
-from src.agent.graph.nodes.critic import critic_node
+from src.agent.graph.nodes.coder import coder_node
+from src.agent.graph.nodes.reviewer import reviewer_node
 from src.agent.graph.nodes.planner import planner_node
-from src.agent.graph.nodes.skill_populator import skill_populator_node
+from src.agent.graph.nodes.learner import learner_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env_adapter import get_runtime
 from src.agent.tools.registry import AGENT_TOOLS
@@ -20,14 +20,14 @@ from functools import partial
 
 
 def build_graph(
-    extra_tools: Optional[list] = None, validation_tool_name: str = "submit_design"
+    extra_tools: Optional[list] = None, validation_tool_name: str = "verify_solution"
 ):
     """
     Constructs the LangGraph for the VLM CAD Agent.
 
     Args:
         extra_tools: Optional list of additional tools to include.
-        validation_tool_name: The name of the tool that triggers a critic review (default: submit_design).
+        validation_tool_name: The name of the tool that triggers a reviewer review (default: verify_solution).
     """
 
     builder = StateGraph(AgentState)
@@ -40,12 +40,12 @@ def build_graph(
     # 1. Add Nodes
     builder.add_node("planner", planner_node)
 
-    # Pass all tools to actor so it can bind them
-    actor_with_tools = partial(actor_node, tools=tools)
-    builder.add_node("actor", actor_with_tools)
+    # Pass all tools to coder so it can bind them
+    coder_with_tools = partial(coder_node, tools=tools)
+    builder.add_node("coder", coder_with_tools)
 
-    builder.add_node("critic", critic_node)
-    builder.add_node("skill_populator", skill_populator_node)
+    builder.add_node("reviewer", reviewer_node)
+    builder.add_node("learner", learner_node)
 
     # Wrap ToolNode to capture state updates from tool outputs
     standard_tool_node = ToolNode(tools)
@@ -83,7 +83,7 @@ def build_graph(
                         result["messages"][0].content if result["messages"] else "N/A"
                     )
 
-                    # Success detection moved to Critic node (structured YAML)
+                    # Success detection moved to Reviewer node (structured YAML)
                     task_complete = False
 
                     history.append(
@@ -106,10 +106,10 @@ def build_graph(
     # Start -> Planner
     builder.add_edge(START, "planner")
 
-    # Planner -> Actor
-    builder.add_edge("planner", "actor")
+    # Planner -> Coder
+    builder.add_edge("planner", "coder")
 
-    # Actor -> conditional (Tools or End)
+    # Coder -> conditional (Tools or End)
     def should_continue(state: AgentState) -> Literal["tools", "__end__"]:
         messages = state["messages"]
         last_message = messages[-1]
@@ -121,10 +121,10 @@ def build_graph(
         # Otherwise, we execute the tools.
         return "tools"
 
-    builder.add_conditional_edges("actor", should_continue)
+    builder.add_conditional_edges("coder", should_continue)
 
-    # Tools -> conditional (Critic or Actor)
-    def route_tools(state: AgentState) -> Literal["critic", "actor"]:
+    # Tools -> conditional (Reviewer or Coder)
+    def route_tools(state: AgentState) -> Literal["reviewer", "coder"]:
         messages = state["messages"]
         # The last message is the *output* of the tool (ToolMessage)
 
@@ -140,22 +140,22 @@ def build_graph(
 
                     # Check for explicit review trigger
                     if tool and getattr(tool, "triggers_review", False):
-                        return "critic"
+                        return "reviewer"
 
                     # Fallback/Safety: Check if validation tool specifically named in arg
                     if tool_name == validation_tool_name:
-                        return "critic"
+                        return "reviewer"
 
                 break
 
-        return "actor"
+        return "coder"
 
     builder.add_conditional_edges("tools", route_tools)
 
-    # Critic -> conditional (loop back or end)
-    def route_critic(
+    # Reviewer -> conditional (loop back or end)
+    def route_reviewer(
         state: AgentState,
-    ) -> Literal["planner", "actor", "skill_populator", "__end__"]:
+    ) -> Literal["planner", "coder", "learner", "__end__"]:
         last_message = state["messages"][-1]
         if not hasattr(last_message, "content") or not last_message.content:
             return "planner"
@@ -189,11 +189,11 @@ def build_graph(
 
         # Check step count to prevent infinite loops
         if state.get("step_count", 0) > Config.MAX_STEPS:
-            return "skill_populator"
+            return "learner"
 
         return "planner"
 
-    builder.add_conditional_edges("critic", route_critic)
-    builder.add_edge("skill_populator", END)
+    builder.add_conditional_edges("reviewer", route_reviewer)
+    builder.add_edge("learner", END)
 
     return builder

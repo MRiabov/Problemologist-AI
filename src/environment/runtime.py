@@ -8,7 +8,7 @@ from src.compiler import mujoco_bridge
 from src.compiler.models import ValidationReport
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
-from src.environment.evaluator import Evaluator
+from src.environment.design_executor import DesignExecutor
 from src.environment.persistence import DatabaseManager
 from src.environment.sandbox import PodmanSandbox
 from src.rag import search as rag_search
@@ -33,7 +33,7 @@ class ToolRuntime:
         Path(self.workspace_dir).mkdir(parents=True, exist_ok=True)
 
         self.sandbox = PodmanSandbox(self.workspace_dir)
-        self.evaluator = Evaluator(self.sandbox, self.workspace_dir)
+        self.design_executor = DesignExecutor(self.sandbox, self.workspace_dir)
         self.db = db
         self.problem_id = problem_id
 
@@ -139,10 +139,6 @@ class ToolRuntime:
         except Exception as e:
             return f"Error editing {path}: {e!s}"
 
-    def read_script(self, filename: str = "design.py") -> str:
-        """Reads the content of a script from the workspace."""
-        return self.view_file(filename)
-
     def view_file(self, path: str) -> str:
         """Reads content of any file in workspace or mounted docs."""
         if path.startswith("docs/skills/"):
@@ -170,7 +166,7 @@ class ToolRuntime:
 
     def preview_design(self, filename: str = "design.py") -> str:
         """Executes the script and renders result to SVG."""
-        return self.evaluator.preview_design(
+        return self.design_executor.preview_design(
             filename, session_id=self.active_session_id
         )
 
@@ -182,7 +178,7 @@ class ToolRuntime:
         export_stl: bool = False,
     ) -> ValidationReport:
         """Validates design for manufacturability and optionally exports STL."""
-        return self.evaluator.validate_and_export(
+        return self.design_executor.validate_and_export(
             design_file=design_file,
             process=process,
             quantity=quantity,
@@ -190,15 +186,18 @@ class ToolRuntime:
             session_id=self.active_session_id,
         )
 
-    def check_manufacturability(
+    def analyze_design(
         self, design_file: str = "design.py", process: str = "cnc", quantity: int = 1
     ) -> ValidationReport:
-        """Wrapper for validate_and_export (Legacy compatibility)."""
+        """
+        Runs detailed manufacturability and cost analysis without submitting.
+        Renamed from check_manufacturability.
+        """
         return self.validate_and_export(
             design_file, process, quantity, export_stl=False
         )
 
-    def submit_design(
+    def verify_solution(
         self,
         control_path: str,
         design_file: str = "design.py",
@@ -208,8 +207,8 @@ class ToolRuntime:
         force_submit: bool = False,
     ) -> dict[str, Any]:
         """
-        Runs the current design script, performs full Workbench validation,
-        and optionally runs a host-side simulation.
+        Runs the full verification pipeline: DFM checks, budget validation, and simulation.
+        Renamed from submit_design.
         """
         temp_file = Path(design_file).name
         try:
@@ -324,11 +323,11 @@ class ToolRuntime:
             "write_file": self.write_file,
             "edit_file": self.edit_file,
             "preview_design": self.preview_design,
-            "submit_design": self.submit_design,
+            "verify_solution": self.verify_solution,
             "search_docs": self.search_docs,
             "search_parts": self.search_parts,
             "preview_part": self.preview_part,
-            "check_manufacturability": self.check_manufacturability,
+            "analyze_design": self.analyze_design,
             "run_command": self.run_command,
             "lint_script": self.lint_script,
             "start_session": self.start_session,
@@ -340,7 +339,7 @@ class ToolRuntime:
             tool_output = f"Unknown tool: {tool_name}"
         else:
             try:
-                # Add agent_role to arguments if it's submit_design?
+                # Add agent_role to arguments if it's verify_solution?
                 # Actually, dispatch should handle the metadata.
                 result = func(**arguments)
 

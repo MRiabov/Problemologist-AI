@@ -13,9 +13,7 @@ def test_agent_exposure(tmp_path):
 
     # 2. Call manufacturability check via agent interface
     # tool output is a ValidationReport object (not JSON string) in direct runtime calls
-    output = runtime.dispatch(
-        "check_manufacturability", {"process": "cnc", "quantity": 10}
-    )
+    output = runtime.dispatch("analyze_design", {"process": "cnc", "quantity": 10})
 
     # 3. Assert tool output is valid
     if isinstance(output, ValidationReport):

@@ -2,20 +2,18 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
 from src.agent.tools.env_adapter import write_file
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
-from src.agent.utils.env_log import log_to_env
+from src.agent.utils.env_log import log_to_runtime
 from src.agent.utils.llm import get_model
 
 
-async def skill_populator_node(state: AgentState):
+async def learner_node(state: AgentState):
     """
     Populates the skill with insights after a definitive failure or timeout.
     """
-    set_current_role("SkillPopulator")
-    log_to_env(
+    log_to_runtime(
         "Analyzing failure and populating skills with lessons learned...",
-        agent_role="SkillPopulator",
+        agent_role="Learner",
     )
 
     # Check if we actually failed (e.g., step_count > MAX_STEPS or explicit failure)

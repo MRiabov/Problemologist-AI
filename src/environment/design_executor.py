@@ -7,9 +7,9 @@ from src.compiler.models import CostBreakdown, ValidationReport, ValidationViola
 from src.environment.sandbox_utils import run_sandboxed_script
 
 
-class Evaluator:
+class DesignExecutor:
     """
-    Handles evaluation of design scripts within the sandbox environment.
+    Handles execution and validation of design scripts within the sandbox environment.
     Consolidates logic for runner script generation, execution, and result parsing.
     """
 
@@ -22,7 +22,7 @@ class Evaluator:
         # Assume assets/scripts is relative to src/assets/scripts
         # We need to find the project root or use relative path from this file
 
-        # This file is in src/environment/evaluator.py
+        # This file is in src/environment/design_executor.py
         # scripts are in src/assets/scripts/
         base_path = Path(__file__).parent.parent / "assets" / "scripts"
         script_path = base_path / script_name

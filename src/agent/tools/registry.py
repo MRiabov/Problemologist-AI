@@ -6,7 +6,7 @@ to avoid tool list quadruplication.
 """
 
 from src.agent.tools.env_adapter import (
-    check_manufacturability,
+    analyze_design,
     edit_file,
     lint_script,
     preview_design,
@@ -14,7 +14,7 @@ from src.agent.tools.env_adapter import (
     run_command,
     search_docs,
     search_parts,
-    submit_design,
+    verify_solution,
     view_file,
     write_file,
 )
@@ -27,9 +27,9 @@ AGENT_TOOLS = [
     view_file,
     run_command,
     preview_design,
-    submit_design,
+    verify_solution,
     search_docs,
-    check_manufacturability,
+    analyze_design,
     read_journal,
     search_parts,
     preview_part,
@@ -38,4 +38,4 @@ AGENT_TOOLS = [
 
 # Metadata for Graph Routing
 preview_design.triggers_review = True
-submit_design.triggers_review = True
+verify_solution.triggers_review = True

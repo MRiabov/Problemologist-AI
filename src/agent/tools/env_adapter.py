@@ -118,14 +118,16 @@ async def preview_design(
 
 
 @tool
-async def submit_design(control_path: str, tool_runtime: Any | None = None) -> str:
+async def verify_solution(control_path: str, tool_runtime: Any | None = None) -> str:
     """
     Runs the current design script, performs full Workbench validation, and returns final grades.
     Args:
         control_path: Path to the controller script to be used in simulation.
         tool_runtime: Injected runtime (do not provide).
     """
-    return await _execute_tool("submit_design", tool_runtime, control_path=control_path)
+    return await _execute_tool(
+        "verify_solution", tool_runtime, control_path=control_path
+    )
 
 
 @tool
@@ -140,7 +142,7 @@ async def search_docs(query: str, tool_runtime: Any | None = None) -> str:
 
 
 @tool
-async def check_manufacturability(
+async def analyze_design(
     design_file: str = "design.py",
     process: str = "cnc",
     quantity: int = 1,
@@ -157,7 +159,7 @@ async def check_manufacturability(
         tool_runtime: Injected runtime (do not provide).
     """
     output = await _execute_tool(
-        "check_manufacturability",
+        "analyze_design",
         tool_runtime,
         design_file=design_file,
         process=process,
