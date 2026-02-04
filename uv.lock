@@ -2264,7 +2264,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyvista" },
     { name = "pyyaml" },
-    { name = "ruff" },
     { name = "sqlalchemy" },
     { name = "stpyvista" },
     { name = "streamlit" },
@@ -2305,7 +2304,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "pyvista", specifier = ">=0.46.5" },
     { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "ruff", specifier = ">=0.15.0" },
     { name = "sqlalchemy", specifier = ">=2.0.46" },
     { name = "stpyvista", specifier = ">=0.0.8" },
     { name = "streamlit", specifier = ">=1.42.0" },
@@ -2323,7 +2321,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.25.3" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.14.14" },
+    { name = "ruff", specifier = ">=0.15.0" },
     { name = "spec-kitty-cli", specifier = ">=0.13.20" },
 ]
 
