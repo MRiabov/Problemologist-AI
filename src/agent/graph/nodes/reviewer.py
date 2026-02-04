@@ -41,7 +41,8 @@ async def reviewer_node(state: AgentState):
     trimmed_messages = trim_messages(
         messages,
         strategy="last",
-        token_limit=4000,
+        max_tokens=4000,
+        token_counter="approximate",
         include_system=True,
     )
 
