@@ -42,10 +42,9 @@ def main():
     Expected usage: python preview_runner.py <json_config_path>
     """
     if len(sys.argv) < 2:
-        print("Usage: python preview_runner.py <config_file>")
-        sys.exit(1)
-
-    config_path = sys.argv[1]
+        config_path = "/workspace/job_config.json"
+    else:
+        config_path = sys.argv[1]
 
     # Default result structure
     result = {"status": "error", "preview_file": None, "error": None}

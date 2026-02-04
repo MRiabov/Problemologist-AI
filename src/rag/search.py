@@ -35,29 +35,46 @@ STUBS = [
 ]
 
 
-@lru_cache(maxsize=32)
+# State for file-stat based caching
+_DOC_CACHE: dict[str, dict] = {}
+
+
 def load_docs(directory: str) -> list[dict[str, str]]:
     """
-    Simple doc loader that reads .md and .py files.
+    Doc loader that uses file modification times for caching.
     """
-    docs = []
+    global _DOC_CACHE
     dir_path = Path(directory)
     if not dir_path.exists():
-        return docs
+        return []
 
-    for ext in ["*.md", "*.py"]:
-        for filename in dir_path.rglob(ext):
-            try:
-                docs.append(
-                    {
-                        "title": filename.name,
-                        "content": filename.read_text(encoding="utf-8"),
-                        "path": str(filename),
-                    }
-                )
-            except Exception as e:
-                logger.error("Error loading file", filename=filename, error=str(e))
-    return docs
+    updated_docs = []
+    # We maintain a list of all current docs in this directory (recursive)
+    current_files = list(dir_path.rglob("*.md")) + list(dir_path.rglob("*.py"))
+
+    for filename in current_files:
+        try:
+            path_str = str(filename)
+            mtime = filename.stat().st_mtime
+
+            # Check cache
+            if path_str in _DOC_CACHE and _DOC_CACHE[path_str]["mtime"] == mtime:
+                updated_docs.append(_DOC_CACHE[path_str]["doc"])
+            else:
+                # Reload
+                content = filename.read_text(encoding="utf-8")
+                doc = {
+                    "title": filename.name,
+                    "content": content,
+                    "path": path_str,
+                }
+                _DOC_CACHE[path_str] = {"mtime": mtime, "doc": doc}
+                updated_docs.append(doc)
+                logger.info("Indexed document", path=path_str)
+        except Exception as e:
+            logger.error("Error loading file", filename=str(filename), error=str(e))
+
+    return updated_docs
 
 
 def search(query: str, directory: str = "docs") -> str:

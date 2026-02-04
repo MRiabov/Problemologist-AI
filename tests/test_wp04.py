@@ -18,7 +18,15 @@ from src.agent.utils.config import Config
 
 @patch("src.simulation_engine.main.run_isolated")
 def test_simulate_success(mock_run_isolated):
-    mock_run_isolated.return_value = {"success": True, "result": {"duration": 0.1}}
+    mock_run_isolated.return_value = {
+        "success": True,
+        "result": {
+            "success": True,
+            "total_energy": 10.0,
+            "total_damage": 0.0,
+            "observations": [],
+        },
+    }
     # Use MujocoBridge to get a standard template
     sandbox = MagicMock()
     bridge = MujocoBridge(workspace_dir=Config.WORKSPACE_DIR, sandbox=sandbox)
@@ -32,7 +40,7 @@ def test_simulate_success(mock_run_isolated):
     assert data["success"] is True
     assert data["outcome"] == "success"
     assert "result" in data
-    assert "duration" in data["result"]
+    assert "total_energy" in data["result"]
 
 
 @patch("src.simulation_engine.main.run_isolated")
@@ -57,7 +65,7 @@ def test_simulate_timeout(mock_run_isolated):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is False
-    assert data["outcome"] == "timeouterror"
+    assert data["outcome"] == "timeout"
 
 
 @patch("src.simulation_engine.main.run_isolated")
@@ -75,4 +83,5 @@ def test_simulate_crash(mock_run_isolated):
     data = response.json()
     # Based on MujocoBridge implementation, it returns success=False result,
     # but in our wrapper we might catch it.
-    assert data["success"] is True or data["outcome"] == "crasherror"
+    assert data["success"] is False
+    assert data["outcome"] == "crash"

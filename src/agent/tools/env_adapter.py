@@ -45,12 +45,18 @@ def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
 
 async def _execute_tool(
     tool_name: str, tool_runtime: ToolRuntime | None, **kwargs
-) -> Any:
-    """Dispatches tool call to runtime."""
+) -> str:
+    """Dispatches tool call to runtime and returns serialized string."""
     rt = tool_runtime or get_runtime()
-    # Pass agent_role if we can extract it from the context?
-    # For now, we assume dispatch handles it if needed.
     return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
+
+
+async def _execute_tool_structured(
+    tool_name: str, tool_runtime: ToolRuntime | None, **kwargs
+) -> Any:
+    """Dispatches tool call to runtime and returns raw result."""
+    rt = tool_runtime or get_runtime()
+    return await asyncio.to_thread(rt._run_tool, tool_name, kwargs)
 
 
 async def start_session_async(session_id: str = "vlm-cad-session") -> str:
@@ -158,19 +164,13 @@ async def analyze_design(
         quantity: Target production quantity.
         tool_runtime: Injected runtime (do not provide).
     """
-    output = await _execute_tool(
+    return await _execute_tool_structured(
         "analyze_design",
         tool_runtime,
         design_file=design_file,
         process=process,
         quantity=quantity,
     )
-    if isinstance(output, str):
-        try:
-            return json.loads(output)
-        except Exception:
-            return {"error": output}
-    return output
 
 
 @tool

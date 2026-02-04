@@ -12,7 +12,7 @@ from src.agent.graph.nodes.planner import planner_node
 from src.agent.graph.nodes.learner import learner_node
 from src.agent.graph.state import AgentState
 from src.agent.tools.env_adapter import get_runtime
-from src.agent.tools.registry import AGENT_TOOLS
+from src.agent.tools.registry import AGENT_TOOLS, REVIEW_TRIGGER_TOOLS
 from src.agent.utils.config import Config
 
 
@@ -128,18 +128,14 @@ def build_graph(
         messages = state["messages"]
         # The last message is the *output* of the tool (ToolMessage)
 
-        # Build a map of tools for quick lookup
-        tool_map = {t.name: t for t in AGENT_TOOLS}
-
         # Iterate backwards to find the last AIMessage and check its tool calls
         for msg in reversed(messages):
             if hasattr(msg, "tool_calls") and msg.tool_calls:
                 for tc in msg.tool_calls:
                     tool_name = tc["name"]
-                    tool = tool_map.get(tool_name)
 
                     # Check for explicit review trigger
-                    if tool and getattr(tool, "triggers_review", False):
+                    if tool_name in REVIEW_TRIGGER_TOOLS:
                         return "reviewer"
 
                     # Fallback/Safety: Check if validation tool specifically named in arg

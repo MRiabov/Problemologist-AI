@@ -37,5 +37,4 @@ AGENT_TOOLS = [
 ]
 
 # Metadata for Graph Routing
-preview_design.triggers_review = True
-verify_solution.triggers_review = True
+REVIEW_TRIGGER_TOOLS = {"preview_design", "verify_solution"}

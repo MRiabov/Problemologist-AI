@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.environment.config import CONTAINER_WORKSPACE, RUNNER_JOB_CONFIG
 from src.workbenches.models import CostBreakdown, ValidationReport, ValidationViolation
 from src.environment.sandbox_utils import run_sandboxed_script
 
@@ -44,87 +45,32 @@ class DesignExecutor:
         if not script_path.exists():
             return f"Error: File {filename} does not exist."
 
-        runner_filename = "runner_preview.py"
-        config_filename = "preview_config.json"
-
         # 1. Prepare Config
         config = {"filename": filename, "output_path": "preview_result.json"}
+
+        runner_filename = "preview_runner_exec.py"
+        runner_content = self._load_script_asset("preview_runner.py")
 
         # 2. Write Config and Runner to workspace (via sandbox helper or file write)
         # Assuming we can write files via sandbox helper or tool?
         # Actually run_sandboxed_script takes script_content.
         # But we want to run the script file we loaded.
 
-        runner_content = self._load_script_asset("preview_runner.py")
-
-        # We need to write the config file first.
-        # Since run_sandboxed_script only runs ONE file, we might need a wrapper or
-        # use a tool to write the config first.
-        # However, for simplicity/compatibility, we can inject the config creation at the top
-        # of the runner script if we really have to, OR we can depend on the agent writing it?
-        # No, the evaluator should be self-contained.
-
-        # HACK: Prepend the config writing to the runner content?
-        # "with open('config.json', 'w') as f: json.dump(..., f)"
-        # Or just pass arguments via command line?
-        # run_sandboxed_script runs `python <file>`. We can't easily pass args unless supported.
-        # Let's check `run_sandboxed_script` signature/impl. It likely just runs `python script.py`.
-
-        # Alternative: We wrap the runner.
-        # We'll use a tiny bootstrapper string that writes the config and then the real runner logic.
-
-        bootstrap_script = f'''
-import json
-import sys
-
-config = {json.dumps(config)}
-with open("{config_filename}", "w") as f:
-    json.dump(config, f)
-
-# Embed the actual runner code here to ensure it runs
-{runner_content}
-
-# Now we need to make sure the runner's main() is called with the config arg
-if __name__ == "__main__":
-    sys.argv = ["preview_runner.py", "{config_filename}"]
-    main()
-'''
-        # Note: The imported runner script has `if __name__ == "__main__": main()` at the bottom.
-        # We need to be careful not to trigger it twice or with wrong args.
-        # If we paste the content, the `if __name__` block will execute.
-        # Since we control the pasted content, we can strip the last lines or just override sys.argv BEFORE the paste.
-        # Better: The pasted content defines main(). We just call it.
-
-        # Let's simplify: We'll overwrite the `if __name__ == "__main__":` block in the loaded content
-        # or just rely on the fact that if we use `run_sandboxed_script`, it saves the content to `runner_filename`.
-        # And runs `python runner_filename`.
-        # So we can just bake the arg into the script or use a fixed config filename.
-
-        # Let's bake the config into a file using a preamble.
-
-        runner_with_config = (
-            f"""
-import json
-import sys
-
-# Write config
-with open("{config_filename}", "w") as f:
-    f.write({repr(json.dumps(config))})
-
-# Set args so main() picks it up
-sys.argv = ["runner.py", "{config_filename}"]
-
-"""
-            + runner_content
-        )
+        # 2. Write Config to workspace
+        config_path = Path(self.workspace_dir) / RUNNER_JOB_CONFIG
+        config_path.write_text(json.dumps(config), encoding="utf-8")
 
         res = run_sandboxed_script(
             sandbox=self.sandbox,
-            script_content=runner_with_config,
+            script_content=runner_content,
             result_file_name="preview_result.json",
             runner_file_name=runner_filename,
             session_id=session_id,
         )
+
+        # Cleanup config
+        if config_path.exists():
+            config_path.unlink()
 
         # Check for system/sandbox errors
         if res.get("status") == "error" and "error_type" in res:
@@ -165,7 +111,6 @@ sys.argv = ["runner.py", "{config_filename}"]
         runner_filename = (
             f"val_runner_{hashlib.md5(design_file.encode()).hexdigest()[:8]}.py"
         )
-        config_filename = "validation_config.json"
         result_file = "validation_result.json"
 
         # 1. Prepare Config
@@ -177,33 +122,23 @@ sys.argv = ["runner.py", "{config_filename}"]
             "output_path": result_file,
         }
 
-        # 2. Load runner code
         runner_content = self._load_script_asset("validation_runner.py")
 
-        # 3. Inject config writer preamble
-        runner_with_config = (
-            f"""
-import json
-import sys
-
-# Write config
-with open("{config_filename}", "w") as f:
-    f.write({repr(json.dumps(config))})
-
-# Set args
-sys.argv = ["runner.py", "{config_filename}"]
-
-"""
-            + runner_content
-        )
+        # 3. Write Config to workspace
+        config_path = Path(self.workspace_dir) / RUNNER_JOB_CONFIG
+        config_path.write_text(json.dumps(config), encoding="utf-8")
 
         res = run_sandboxed_script(
             sandbox=self.sandbox,
-            script_content=runner_with_config,
+            script_content=runner_content,
             result_file_name=result_file,
             runner_file_name=runner_filename,
             session_id=session_id,
         )
+
+        # Cleanup config
+        if config_path.exists():
+            config_path.unlink()
 
         if res.get("status") == "error" and "error_type" in res:
             return ValidationReport(

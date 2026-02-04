@@ -157,3 +157,24 @@ def analyze_wall_thickness(mesh: trimesh.Trimesh) -> dict:
         "max_mm": float(np.max(valid_distances)),
         "average_mm": float(np.mean(valid_distances)),
     }
+
+
+def compute_part_hash(part: Part) -> str:
+    """
+    Computes a robust geometric hash for a part.
+    Includes volume, area, center, and topological signature (vertex/edge/face counts).
+    Decimal places are rounded to 4 to handle float instability.
+    """
+    import hashlib
+
+    # Geometric properties
+    vol_str = f"{part.volume:.4f}"
+    area_str = f"{part.area:.4f}"
+    center = part.center()
+    center_str = f"{center.X:.4f},{center.Y:.4f},{center.Z:.4f}"
+
+    # Topological signature
+    topo_sig = f"v{len(part.vertices())}|e{len(part.edges())}|f{len(part.faces())}"
+
+    hash_input = f"{vol_str}|{area_str}|{center_str}|{topo_sig}"
+    return hashlib.md5(hash_input.encode()).hexdigest()
