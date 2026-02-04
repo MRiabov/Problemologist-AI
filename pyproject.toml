@@ -58,6 +58,11 @@ ignore = []
 testpaths = ["tests"]
 pythonpath = [".", "src"]
 addopts = "-m 'not integration' -n auto"
+filterwarnings = [
+    "ignore::pyparsing.PyparsingDeprecationWarning:ezdxf.queryparser",
+    "ignore::DeprecationWarning:build123d.objects_curve",
+    "ignore::DeprecationWarning:multiprocessing.popen_fork",
+]
 markers = [
     "integration: marks tests as integration tests (may use real LLM)",
     "benchmark: marks tests related to the benchmark generator",
