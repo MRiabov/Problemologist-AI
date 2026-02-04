@@ -71,7 +71,7 @@ We need to maintain a copy of files locally, and only send requests later, such 
 #### Debugging processes
 
 We need to debug processes and that means we need a folder to store the files locally. During dev, we can use a local podmanfile that mounts/links its subfolders to the local `/workspace/[run-id]` dir. However, in production, we will containerize the main app it would store these in a volume.
-And of course, we persist all of the files to the SQLite for observability.
+And of course, we persist all of the files to the SQLite (with SQLAlchemy and Alembic) for observability.
 
 ## Observability
 
