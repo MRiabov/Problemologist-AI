@@ -70,11 +70,12 @@ src/
 
 ## 5. Phase 2: Batch Processing & Randomization
 
-**Goal**: Can generate _40+_ diverse scenarios and manage the dataset.
+**Goal**: Can generate _40+_ diverse scenarios in parallel and manage the dataset.
 
 1. **Implement Randomization Wrapper**: A harness that runs the generated `build(seed)` function multiple times with different seeds to verify stability across the parameter range.
-2. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
-3. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
+2. **Parallel Execution**: Orchestrate multiple generator instances in parallel (up to 4 concurrent containers) to accelerate dataset population.
+3. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
+4. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
 
 ## 6. Phase 3: Interactive Pipeline Support
 

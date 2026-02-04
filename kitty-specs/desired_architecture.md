@@ -57,3 +57,7 @@ The architect will create and persist a TODO list. The engineer must implement. 
 ## Strict schema
 
 We will run `schemathesis` checks against the OpenAPI. Strictly type all schema to avoid ANY issues.
+
+## Containerization and paralel execution
+
+We will run benchmark generation and CAD generation/sim in paralel. The system should scale to approx 4 container on a 4-code CPU, at least. In the future we may well refactor to run on distributed notes, perhaps even IPv6.
