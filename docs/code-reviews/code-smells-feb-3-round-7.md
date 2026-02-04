@@ -167,6 +167,42 @@ sys.path.append("/workspace")
 
 **User Review:**
 
+---
+
+### 6. Fragile CLI-Based Container Communication
+
+**Problem:** The current container communication relies on parsing raw stdout/stderr from `podman exec`. This is brittle and error-prone compared to structural communication.
+
+**Evidence:**
+
+- [sandbox.py:L131](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/environment/sandbox.py#L131)
+- [env_adapter.py:L168-172](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/agent/tools/env_adapter.py#L168-172)
+
+```python
+# src/agent/tools/env_adapter.py
+if isinstance(output, str):
+    try:
+        return json.loads(output)
+    except Exception:
+        return {"error": output}
+```
+
+**The Smell:**
+
+- **Unstructured Data**: We rely on the called script *only* printing JSON to stdout. Any other print (deprecation warnings, logs) breaks the JSON parsing.
+- **No Typed Contracts**: Input/output schemas are implicit dicts, not Pydantic models.
+- **High Latency**: Spawning a new `podman exec` process for every tool call is slow compared to a persistent connection.
+
+**Planned Resolution:**
+
+- **Implement HTTP Service**: Spin up a FastAPI service inside the container listening on a port.
+- **Use `httpx`**: Communicate with the container service using `httpx` and Pydantic models for request/response bodies.
+- **Strong Typing**: Define shared Pydantic models for all tool inputs/outputs.
+
+**User Review:**
+
+---
+
 ### EXTRA:  Naming drift after refactors
 
 I have identified several classes and functions that appear to be misnamed or logically inconsistent following the recent refactors:
@@ -184,7 +220,7 @@ I have identified several classes and functions that appear to be misnamed or lo
 
 ## 🟡 Minor Issues & Smells
 
-### 6. RAG Search Uses Hardcoded `lru_cache` Without Size Limit Strategy
+### 7. RAG Search Uses Hardcoded `lru_cache` Without Size Limit Strategy
 
 **Problem:** The `load_docs` function caches directory contents with `@lru_cache(maxsize=32)`. There's no invalidation strategy for when new docs are added.
 
@@ -211,7 +247,7 @@ def load_docs(directory: str) -> list[dict[str, str]]:
 
 ---
 
-### 7. Unused Import in Planner Node
+### 8. Unused Import in Planner Node
 
 **Problem:** `planner.py` imports `set_current_role` (which doesn't exist) but never calls it. This is both a dead import AND the function doesn't exist.
 
@@ -237,7 +273,7 @@ from src.agent.tools.env_adapter import set_current_role
 
 ---
 
-### 8. Evaluator Still Uses String Concatenation for Config Injection
+### 9. Evaluator Still Uses String Concatenation for Config Injection
 
 **Problem:** While the main runner scripts were moved to assets (addressing Round 6 feedback), the `Evaluator` still builds a preamble by concatenating strings to inject config file writing.
 
@@ -271,7 +307,7 @@ with open("{config_filename}", "w") as f:
 
 ---
 
-### 9. Mock Fallback Data in Dashboard Data Layer
+### 10. Mock Fallback Data in Dashboard Data Layer
 
 **Problem:** The `get_all_episodes` and `get_episode_by_id` functions fall back to hardcoded mock data when database queries fail or return empty. This can mask real issues.
 
@@ -306,7 +342,7 @@ return [
 
 ---
 
-### 10. `AgentState` TypedDict Has No Default Values
+### 11. `AgentState` TypedDict Has No Default Values
 
 **Problem:** `AgentState` is a `TypedDict` that requires all fields to be present. Some node results don't provide all fields, which could cause KeyError or incomplete state.
 
@@ -347,8 +383,9 @@ class AgentState(TypedDict):
 | 3. Duplicate `trim_messages` | 🟠 Moderate | Low |
 | 4. Global DAL instance | 🟠 Moderate | Medium |
 | 5. Hardcoded container paths | 🟠 Moderate | Medium |
-| 6. RAG cache stale | 🟡 Minor | Low |
-| 7. Unused planner import | 🟡 Minor | Trivial |
-| 8. Evaluator string concat | 🟡 Minor | Medium |
-| 9. Mock fallback in dashboard | 🟡 Minor | Low |
-| 10. AgentState required fields | 🟡 Minor | Medium |
+| 6. Fragile container communication | 🟠 Moderate | Medium |
+| 7. RAG cache stale | 🟡 Minor | Low |
+| 8. Unused planner import | 🟡 Minor | Trivial |
+| 9. Evaluator string concat | 🟡 Minor | Medium |
+| 10. Mock fallback in dashboard | 🟡 Minor | Low |
+| 11. AgentState required fields | 🟡 Minor | Medium |
