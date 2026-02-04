@@ -136,7 +136,7 @@ def get_all_episodes() -> List[EpisodeSummary]:
             f"Failed to retrieve episodes from DB, using mock data. Error: {e}"
         )
 
-    # Mock fallback
+    # Mock fallback #remove??
     return [
         EpisodeSummary(
             id="ep_001",
@@ -176,7 +176,7 @@ def get_episode_by_id(episode_id: str) -> DashEpisode:
     except Exception as e:
         logger.warning(f"Failed to retrieve episode {episode_id} from DB. Error: {e}")
 
-    # Mock Data Fallback
+    # Mock Data Fallback # what is this doing here?
     if episode_id == "ep_001":
         steps = [
             DashStep(

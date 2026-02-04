@@ -81,7 +81,7 @@ def execute_build(
 
     sandbox = PodmanSandbox(str(workspace))
 
-    runner_script = f"""
+    runner_script = f""" 
 import json
 import sys
 import os
@@ -127,7 +127,7 @@ with open("/workspace/{result_file}", "w") as f:
 
         if "mjcf" in res and res["mjcf"]:
             return res["mjcf"], asset_dir
-        
+
         error = res.get("error") or res.get("message") or "Unknown error"
         raise ValueError(f"Build execution failed: {error}")
     finally:
@@ -260,7 +260,7 @@ def generate(
                                 str(final_assets_path / mesh_file.name),
                             )
                             generated_meshes.append(f"assets/{mesh_file.name}")
-                        
+
                         # Cleanup unique temp assets dir
                         shutil.rmtree(temp_assets_path)
 
