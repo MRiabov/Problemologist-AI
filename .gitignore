@@ -42,3 +42,4 @@ kitty-specs/**/tasks/*.md
 /tests/output/
 /test_datasets/
 /scripts/throwaway/
+.hypothesis/
