@@ -1,6 +1,9 @@
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from src.compiler.models import SimResult
 
 
 class SimulationRequest(BaseModel):
@@ -21,19 +24,33 @@ class SimulationRequest(BaseModel):
     )
 
 
+class SimulationOutcome(StrEnum):
+    SUCCESS = "success"
+    TIMEOUT = "timeout"
+    CRASH = "crash"
+    ERROR = "error"
+
+
+class SimulationErrorType(StrEnum):
+    TIMEOUT_ERROR = "TimeoutError"
+    CRASH_ERROR = "CrashError"
+    RUNTIME_ERROR = "RuntimeError"
+    UNKNOWN_ERROR = "UnknownError"
+
+
 class SimulationResponse(BaseModel):
     """
     Output schema for the simulation service.
     """
 
     success: bool
-    outcome: str = Field(
+    outcome: SimulationOutcome = Field(
         ..., description="Status string: success, timeout, crash, or error."
     )
-    result: dict[str, Any] | None = Field(
+    result: SimResult | None = Field(
         None, description="Detailed metrics if successful."
     )
     error: str | None = Field(None, description="Error message if failed.")
-    error_type: str | None = Field(
+    error_type: SimulationErrorType | None = Field(
         None, description="The type of error: TimeoutError, CrashError, etc."
     )

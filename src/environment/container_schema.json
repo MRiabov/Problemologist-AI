@@ -155,8 +155,7 @@
       "JobRequest": {
         "properties": {
           "type": {
-            "type": "string",
-            "title": "Type",
+            "$ref": "#/components/schemas/JobType",
             "description": "Type of job: 'command' or 'script'"
           },
           "command": {
@@ -184,17 +183,10 @@
             "description": "Script to run (if type=script)"
           },
           "args": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
             "title": "Args",
             "description": "Arguments for script"
           },
@@ -211,14 +203,7 @@
             "description": "Working directory"
           },
           "timeout": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
             "title": "Timeout",
             "description": "Timeout in seconds",
             "default": 30
@@ -243,27 +228,13 @@
             "description": "Current status"
           },
           "stdout": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Stdout",
             "description": "Standard output so far",
             "default": ""
           },
           "stderr": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Stderr",
             "description": "Standard error so far",
             "default": ""
@@ -312,6 +283,22 @@
         ],
         "title": "JobStatus"
       },
+      "JobType": {
+        "type": "string",
+        "enum": [
+          "command",
+          "script"
+        ],
+        "title": "JobType"
+      },
+      "ToolExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "success",
+          "error"
+        ],
+        "title": "ToolExecutionStatus"
+      },
       "ToolName": {
         "type": "string",
         "enum": [
@@ -338,15 +325,8 @@
             "description": "Name of the tool to execute"
           },
           "arguments": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Arguments",
             "description": "Arguments for the tool"
           }
@@ -378,15 +358,7 @@
             "description": "Error message if execution failed"
           },
           "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status",
+            "$ref": "#/components/schemas/ToolExecutionStatus",
             "description": "Status of the execution: success/error",
             "default": "success"
           }

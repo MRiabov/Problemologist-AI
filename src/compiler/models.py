@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,15 +18,25 @@ class CostBreakdown(BaseModel):
     pricing_explanation: str = ""
 
 
+class ValidationSeverity(StrEnum):
+    ERROR = "error"
+    WARNING = "warning"
+
+
 class ValidationViolation(BaseModel):
     description: str
-    severity: str = "error"  # error, warning
+    severity: ValidationSeverity = ValidationSeverity.ERROR
+
+
+class ValidationStatus(StrEnum):
+    PASSED = "pass"
+    FAILED = "fail"
 
 
 class ValidationReport(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    status: str  # "pass", "fail"
+    status: ValidationStatus
     manufacturability_score: float
     violations: list[ValidationViolation]
     cost_analysis: CostBreakdown

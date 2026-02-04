@@ -1,6 +1,10 @@
 from fastapi import FastAPI, HTTPException
 
-from src.simulation_engine.api import SimulationRequest, SimulationResponse
+from src.simulation_engine.api import (
+    SimulationOutcome,
+    SimulationRequest,
+    SimulationResponse,
+)
 from src.simulation_engine.runner import run_isolated
 
 app = FastAPI(title="Problemologist Simulation Service")
@@ -26,7 +30,9 @@ async def simulate(request: SimulationRequest):
 
         if result_data["success"]:
             return SimulationResponse(
-                success=True, outcome="success", result=result_data["result"]
+                success=True,
+                outcome=SimulationOutcome.SUCCESS,
+                result=result_data["result"],
             )
         return SimulationResponse(
             success=False,

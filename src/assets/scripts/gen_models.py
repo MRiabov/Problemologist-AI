@@ -3,55 +3,44 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class JobRequest(BaseModel):
-    """
-    Unified request for async jobs.
-    """
-
-    type: str = Field(
-        ..., description="Type of job: 'command' or 'script'", title='Type'
-    )
-    command: str | None = Field(
-        None, description='Command to run (if type=command)', title='Command'
-    )
-    script_name: str | None = Field(
-        None, description='Script to run (if type=script)', title='Script Name'
-    )
-    args: list[str] | None = Field(
-        None, description='Arguments for script', title='Args'
-    )
-    workdir: str | None = Field(None, description='Working directory', title='Workdir')
-    timeout: int | None = Field(30, description='Timeout in seconds', title='Timeout')
+class JobStatus(StrEnum):
+    QUEUED = 'queued'
+    RUNNING = 'running'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
 
 
-class JobStatus(Enum):
-    queued = 'queued'
-    running = 'running'
-    completed = 'completed'
-    failed = 'failed'
-    cancelled = 'cancelled'
+class JobType(StrEnum):
+    COMMAND = 'command'
+    SCRIPT = 'script'
 
 
-class ToolName(Enum):
-    write_file = 'write_file'
-    edit_file = 'edit_file'
-    preview_design = 'preview_design'
-    verify_solution = 'verify_solution'
-    search_docs = 'search_docs'
-    search_parts = 'search_parts'
-    preview_part = 'preview_part'
-    analyze_design = 'analyze_design'
-    run_command = 'run_command'
-    lint_script = 'lint_script'
-    start_session = 'start_session'
-    stop_session = 'stop_session'
-    view_file = 'view_file'
+class ToolExecutionStatus(StrEnum):
+    SUCCESS = 'success'
+    ERROR = 'error'
+
+
+class ToolName(StrEnum):
+    WRITE_FILE = 'write_file'
+    EDIT_FILE = 'edit_file'
+    PREVIEW_DESIGN = 'preview_design'
+    VERIFY_SOLUTION = 'verify_solution'
+    SEARCH_DOCS = 'search_docs'
+    SEARCH_PARTS = 'search_parts'
+    PREVIEW_PART = 'preview_part'
+    ANALYZE_DESIGN = 'analyze_design'
+    RUN_COMMAND = 'run_command'
+    LINT_SCRIPT = 'lint_script'
+    START_SESSION = 'start_session'
+    STOP_SESSION = 'stop_session'
+    VIEW_FILE = 'view_file'
 
 
 class ToolRequest(BaseModel):
@@ -74,8 +63,8 @@ class ToolResponse(BaseModel):
     error: str | None = Field(
         None, description='Error message if execution failed', title='Error'
     )
-    status: str | None = Field(
-        'success', description='Status of the execution: success/error', title='Status'
+    status: ToolExecutionStatus | None = Field(
+        'success', description='Status of the execution: success/error'
     )
 
 
@@ -87,6 +76,25 @@ class ValidationError(BaseModel):
 
 class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title='Detail')
+
+
+class JobRequest(BaseModel):
+    """
+    Unified request for async jobs.
+    """
+
+    type: JobType = Field(..., description="Type of job: 'command' or 'script'")
+    command: str | None = Field(
+        None, description='Command to run (if type=command)', title='Command'
+    )
+    script_name: str | None = Field(
+        None, description='Script to run (if type=script)', title='Script Name'
+    )
+    args: list[str] | None = Field(
+        None, description='Arguments for script', title='Args'
+    )
+    workdir: str | None = Field(None, description='Working directory', title='Workdir')
+    timeout: int | None = Field(30, description='Timeout in seconds', title='Timeout')
 
 
 class JobResponse(BaseModel):

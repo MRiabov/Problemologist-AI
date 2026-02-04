@@ -6,7 +6,6 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 
@@ -19,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("container_agent")
 
 try:
-    from .gen_models import (
+    from .models import (
         JobRequest,
         JobResponse,
         JobStatus,
@@ -27,7 +26,7 @@ try:
         ToolResponse,
     )
 except ImportError:
-    from gen_models import (
+    from models import (
         JobRequest,
         JobResponse,
         JobStatus,
@@ -43,7 +42,7 @@ class Job:
     def __init__(self, job_id: str, request: JobRequest):
         self.job_id = job_id
         self.request = request
-        self.status = JobStatus.queued
+        self.status = JobStatus.QUEUED
         self.stdout = ""
         self.stderr = ""
         self.return_code: int | None = None
@@ -60,7 +59,7 @@ class Job:
 
 class JobManager:
     def __init__(self):
-        self.jobs: Dict[str, Job] = {}
+        self.jobs: dict[str, Job] = {}
         self.executor = ThreadPoolExecutor(max_workers=5)
         self._lock = threading.Lock()
 
@@ -73,7 +72,7 @@ class JobManager:
         self.executor.submit(self._run_job, job)
         return job_id
 
-    def get_job(self, job_id: str) -> Optional[Job]:
+    def get_job(self, job_id: str) -> Job | None:
         with self._lock:
             return self.jobs.get(job_id)
 
@@ -85,17 +84,16 @@ class JobManager:
         # TODO: Implement Popen kill logic.
         job = self.get_job(job_id)
         if job:
-            job.update(status=JobStatus.cancelled)
+            job.update(status=JobStatus.CANCELLED)
 
     def _run_job(self, job: Job):
-        job.update(status=JobStatus.running, start_time=time.time())
+        job.update(status=JobStatus.RUNNING, start_time=time.time())
 
         try:
             req = job.request
             workdir = Path(req.workdir) if req.workdir else Path("/workspace")
             workdir.mkdir(parents=True, exist_ok=True)
 
-            cmd = []
             if req.type == "command":
                 if not req.command:
                     raise ValueError("Command is empty")
@@ -128,7 +126,7 @@ class JobManager:
             )
 
             job.update(
-                status=JobStatus.completed,
+                status=JobStatus.COMPLETED,
                 stdout=result.stdout,
                 stderr=result.stderr,
                 return_code=result.returncode,
@@ -136,13 +134,13 @@ class JobManager:
 
         except subprocess.TimeoutExpired:
             job.update(
-                status=JobStatus.failed,
+                status=JobStatus.FAILED,
                 error=f"Job timed out after {job.request.timeout}s",
                 return_code=124,
             )
         except Exception as e:
             logger.error(f"Job {job.job_id} failed: {e}")
-            job.update(status=JobStatus.failed, error=str(e), return_code=1)
+            job.update(status=JobStatus.FAILED, error=str(e), return_code=1)
 
 
 # --- API ---
@@ -160,7 +158,7 @@ def health_check():
 def submit_job(request: JobRequest):
     job_id = job_manager.create_job(request)
     # Return initial status
-    return JobResponse(job_id=job_id, status=JobStatus.queued, stdout="", stderr="")
+    return JobResponse(job_id=job_id, status=JobStatus.QUEUED, stdout="", stderr="")
 
 
 @app.get("/jobs/{job_id}", response_model=JobResponse)
