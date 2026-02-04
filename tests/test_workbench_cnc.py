@@ -1,5 +1,6 @@
 import pytest
 from build123d import Box, Compound
+from src.workbenches.models import CostBreakdown
 from src.workbenches.cnc import CNCWorkbench
 
 
@@ -56,3 +57,9 @@ def test_cnc_cost():
     assert details["stock_dims_mm"] == [10.0, 10.0, 10.0]
     assert details["stock_volume_cm3"] == 1.0
     assert details["removed_volume_cm3"] == 0.0
+
+    # Verify finishing pass
+    assert "finishing_time_min" in details
+    assert details["finishing_time_min"] > 0
+    assert "surface_area_cm2" in details
+    assert details["surface_area_cm2"] > 0

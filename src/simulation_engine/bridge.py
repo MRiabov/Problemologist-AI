@@ -15,8 +15,8 @@ logger = get_logger(__name__)
 class MujocoBridge:
     def __init__(
         self,
-        workspace_dir: str | Path,
-        sandbox: Any,
+        workspace_dir: str | Path | None = None,
+        sandbox: Any = None,
     ):
         """
         Initialize MujocoBridge.
@@ -26,7 +26,9 @@ class MujocoBridge:
             sandbox: PodmanSandbox instance for running simulations.
         """
         self.sandbox = sandbox
-        self.workspace_dir = Path(workspace_dir)
+        self.workspace_dir = (
+            Path(workspace_dir) if workspace_dir else Path("/workspace")
+        )
         # Assumes this file is in src/simulation_engine/
         # and templates are in src/simulation_engine/templates/
         self.template_dir = Path(__file__).resolve().parent / "templates"
@@ -98,7 +100,7 @@ class MujocoBridge:
 
         return ET.tostring(root, encoding="unicode")
 
-    async def run_simulation(
+    def run_simulation(
         self,
         xml_string: str,
         duration: float = 10.0,

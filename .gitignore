@@ -43,3 +43,8 @@ kitty-specs/**/tasks/*.md
 /test_datasets/
 /scripts/throwaway/
 .hypothesis/
+
+# Node
+node_modules/
+dist/
+npm-debug.log

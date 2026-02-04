@@ -1,10 +1,25 @@
 import asyncio
 import json
 from typing import Any
+from contextvars import ContextVar
 
 from langchain_core.tools import tool
 
 from src.environment.runtime import ToolRuntime
+
+# Context Management
+_CURRENT_ROLE = ContextVar("current_role", default="System")
+
+
+def set_current_role(role: str):
+    """Sets the current agent role in context."""
+    _CURRENT_ROLE.set(role)
+
+
+def get_current_role() -> str:
+    """Gets the current agent role from context."""
+    return _CURRENT_ROLE.get()
+
 
 # Runtimes management
 _DEFAULT_RUNTIME_ID: str = "default"
@@ -41,6 +56,11 @@ def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
         return _RUNTIMES[_DEFAULT_RUNTIME_ID]
 
     return _get_fallback_runtime()
+
+
+def get_active_env(runtime_id: str | None = None) -> ToolRuntime:
+    """Legacy alias for get_runtime."""
+    return get_runtime(runtime_id)
 
 
 async def _execute_tool(
