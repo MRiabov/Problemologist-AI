@@ -69,7 +69,7 @@ We use LangChain and LangGraph for the agentic infrastructure.
 
 ### Filesystem
 
-Both of the agents edit directly in the filesystem. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools.
+Both of the agents "live" directly in the filesystem they have been assigned. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
 
 ### Agent artifacts
 
@@ -117,11 +117,41 @@ The "Engineer" agent does not need a "benchmark creation skill". It could be nec
 
 #### Explicit skill nudge
 
-The agents are explicitly nudged towards *updating* and using the skill. Quite likely, implement a separate "learner" skill that runs after success, probably async of the agent.
+The agents are explicitly nudged towards *updating* and using the skill. Quite likely, implement a separate "learner" agent node that runs after success, probably async of the agent.
 
 #### Worker skills are persisted and are separate from the repository-level skills
 
 Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
+
+### Tools
+
+(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above). The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) it's environment *only via script calls*.
+
+#### Linting
+
+The agents will receive the linting from the tools. The linting is done on the worker nodes for safety and performance. The agent will have `ruff` and/or `pyright` (I don't think pyrefly is necessary here; standard, non-based pyright) on the device.
+
+### Execution process
+
+The agents (both the engineer and benchmark generator) will create a set of files to solve a given problem. If a benchmark requires 10 different objects, they could create multiple files to solve them, or reuse an existing one.
+
+### Feedback to the agent
+
+It was proven that agents work better with markdown (in general) than JSON (probably due to familiarity with petabytes of text); thus, pass all textual, structured (e.g. text and JSON) feedback in the `markdown` format.
+
+#### Feedback from the simulation
+
+The simulation returns the data from *video*. There will be a simple text summary prepended to the video, e.g. "the agent failed to hit the objective"
+
+The agent (the engineer, critic or another "summarizer") will write the video summary to the Journal.
+
+##### Compressing the video
+
+Future work will need to address the issue of the video being too expensive. Instead, a "T*" agent could be implemented - a small model that picks the most important shortcuts from the video and feeds it to the agent. This will significantly reduce the pollution of the engineer's agent's attention.
+
+#### Feedback from cost and manufacturability constraints
+
+The agent will receive feedback from cost and manufacturability constraints (basically, workbenches) in markdown.
 
 ## Distributed execution
 
@@ -129,6 +159,7 @@ There is a controller node which runs the LLM and tool calls, and there worker n
 
 1. Executes the simulation
 2. Executes the python scripts.
+
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
 
 <!-- ## Containerization and paralel execution
@@ -167,6 +198,16 @@ We need to debug processes and that means we need a folder to store the files lo
 And of course, we persist all of the files to the SQLite (with SQLAlchemy and Alembic) for observability. -->
 <!-- Forget it. -->
 
+### Agent and Worker boundary
+
+#### Separation
+
+The Agent (managed by LangGraph) never "knows" about distributed workers. It only calls an async Python function (a tool). It is the job of the tool to dispatch a job and handle the retry. In this case, retries and persistence are handled by Temporal. LangGraph handles the retries in case the LLM call fails.
+
+#### Temporal
+
+Temporal is used to orchestrate the workers. It is not used to run or retry the agent.
+
 ## Observability
 
 To track all agent movements and to persist data, we encode the following:
@@ -192,13 +233,73 @@ We will run `schemathesis` checks against the OpenAPI. Strictly type all schema 
 
 ### Schema autogeneration
 
-We autogenerate python schemas, keeping in sync to the workers.
+We autogenerate python schemas, keeping in sync to the workers. We keep schemas defined in the main app, the worker inherits (for now). We have git hooks that implement the model.
 
 ## "Workbenches" - manufacturability verification
 
 The agents will have *Workbenches* - a set of tools they can use to:
 
 1. Verify their manufacturability.
+2. Calculate costs of their parts (and verify against the user-inputted goals)
+
+## CAD and and design validation
+
+As said, "agents will live inside of a filesystem". The agents will generate and execute design validations of files in the filesystem.
+
+### Set of tools and utils
+
+I propose the following set of tools (their usage is below):
+
+- `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
+- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation.
+<!-- dev note: assert against submitting a BuildPart builders, or other types. -->
+<!-- should it contain it's environment model or only the generated model?  -->
+- `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user
+<!-- Same: what's in the compound? -->
+
+*Note:* terminology: I use "component" is a shorthand for part OR assembly.
+
+### Assigning a part to workbenches
+
+The agent must assign a part manufacturing method to the part. If not, the parts can not be priced or sent for manufacturing.
+I suppose we could use
+
+The verification is done by a method.
+
+So suppose the agent's code is as follows:
+
+```py
+from build123d import *
+from utils import ManufacturingMethod, submit # mock
+from src.workbenches import validate_and_price
+from 
+
+with BuildPart() as part_builder:
+    Box(10,10,10)
+
+part_builder.part.label="custom_label".
+part_builder.part.metadata = {
+  "manufacturing_method": ManufacturingMethod.CNC 
+  "material-id": "aluminum-6061"
+}
+
+#below is an overview of all tools
+validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit price at XYZ pcs is ...)
+#
+# submit_design_for_review(part_builder.part)
+
+
+
+
+```
+
+### Technical details
+
+Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here.)
+
+### Supported workbenches
+
+3D printing, CNC and injection molding are supported.
 
 ## Other notes
 
