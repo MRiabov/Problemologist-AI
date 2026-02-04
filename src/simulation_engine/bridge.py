@@ -15,8 +15,8 @@ logger = get_logger(__name__)
 class MujocoBridge:
     def __init__(
         self,
-        workspace_dir: str | Path,
-        sandbox: Any,
+        workspace_dir: str | Path = "/workspace",
+        sandbox: Any = None,
     ):
         """
         Initialize MujocoBridge.
