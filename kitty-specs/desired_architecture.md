@@ -58,6 +58,10 @@ The architect will create and persist a TODO list. The engineer must implement. 
 
 We will run `schemathesis` checks against the OpenAPI. Strictly type all schema to avoid ANY issues.
 
+### Schema autogeneration
+
+We autogenerate python schemas, keeping in sync to the workers.
+
 ## Containerization and paralel execution
 
 We will run benchmark generation and CAD generation/sim in paralel. The system should scale to approx 4 container on a 4-code CPU, at least. In the future we may well refactor to run on distributed notes, perhaps even IPv6.
@@ -98,6 +102,7 @@ One way to do it is by sending a `cron` job daily. Thus, implement an endpoint w
 2. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
 3. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
 
-### Production workflow
+<!-- ### Production workflow
 
-Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows.
+Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows. -->
+<!-- Production workflow became a priority -->
