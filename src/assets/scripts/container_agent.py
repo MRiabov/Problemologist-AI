@@ -18,13 +18,22 @@ sys.path.append("/app")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("container_agent")
 
-from .gen_models import (
-    JobRequest,
-    JobResponse,
-    JobStatus,
-    ToolRequest,
-    ToolResponse,
-)
+try:
+    from .gen_models import (
+        JobRequest,
+        JobResponse,
+        JobStatus,
+        ToolRequest,
+        ToolResponse,
+    )
+except ImportError:
+    from gen_models import (
+        JobRequest,
+        JobResponse,
+        JobStatus,
+        ToolRequest,
+        ToolResponse,
+    )
 
 
 # --- Job Manager ---

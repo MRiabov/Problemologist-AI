@@ -27,6 +27,8 @@ def export_schema():
     try:
         subprocess.run(
             [
+                "uv",
+                "run",
                 "datamodel-codegen",
                 "--input",
                 str(schema_path),

@@ -195,6 +195,9 @@ class PodmanSandbox:
                 logs = subprocess.run(
                     ["podman", "logs", session_id], capture_output=True, text=True
                 )
+                print(
+                    f"DEBUG: Agent failed to start. Logs:\n{logs.stdout}\n{logs.stderr}"
+                )
                 logger.error(f"Container Logs:\n{logs.stdout}{logs.stderr}")
             except Exception:
                 logger.error("Could not retrieve container logs.")
