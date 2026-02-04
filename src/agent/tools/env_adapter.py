@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import json
 from typing import Any
 
@@ -10,6 +11,14 @@ from src.environment.runtime import ToolRuntime
 _DEFAULT_RUNTIME_ID: str = "default"
 _RUNTIMES: dict[str, ToolRuntime] = {}
 _FALLBACK_RUNTIME: ToolRuntime | None = None
+
+# Context Management
+_current_role = contextvars.ContextVar("agent_role", default=None)
+
+
+def set_current_role(role: str):
+    """Sets the agent role for the current context."""
+    _current_role.set(role)
 
 
 def _get_fallback_runtime() -> ToolRuntime:
@@ -43,14 +52,20 @@ def get_runtime(runtime_id: str | None = None) -> ToolRuntime:
     return _get_fallback_runtime()
 
 
+def get_active_env() -> ToolRuntime:
+    """Alias for get_runtime() to support legacy env_log calls."""
+    return get_runtime()
+
+
 async def _execute_tool(
     tool_name: str, tool_runtime: ToolRuntime | None, **kwargs
 ) -> Any:
     """Dispatches tool call to runtime."""
     rt = tool_runtime or get_runtime()
-    # Pass agent_role if we can extract it from the context?
-    # For now, we assume dispatch handles it if needed.
-    return await asyncio.to_thread(rt.dispatch, tool_name, kwargs)
+    agent_role = _current_role.get()
+    return await asyncio.to_thread(
+        rt.dispatch, tool_name, kwargs, agent_role=agent_role
+    )
 
 
 async def start_session_async(session_id: str = "vlm-cad-session") -> str:
@@ -118,14 +133,35 @@ async def preview_design(
 
 
 @tool
-async def submit_design(control_path: str, tool_runtime: Any | None = None) -> str:
+async def submit_design(
+    control_path: str,
+    design_file: str = "design.py",
+    process: str = "print_3d",
+    target_quantity: int = 1,
+    max_unit_cost: float = float("inf"),
+    tool_runtime: Any | None = None,
+) -> str:
     """
-    Runs the current design script, performs full Workbench validation, and returns final grades.
+    Runs the current design script, performs full Workbench validation,
+    and returns final grades.
+
     Args:
         control_path: Path to the controller script to be used in simulation.
+        design_file: Name of the design file (default: design.py).
+        process: Manufacturing process (default: print_3d).
+        target_quantity: Target quantity (default: 1).
+        max_unit_cost: Maximum allowed unit cost (default: inf).
         tool_runtime: Injected runtime (do not provide).
     """
-    return await _execute_tool("submit_design", tool_runtime, control_path=control_path)
+    return await _execute_tool(
+        "submit_design",
+        tool_runtime,
+        control_path=control_path,
+        design_file=design_file,
+        process=process,
+        target_quantity=target_quantity,
+        max_unit_cost=max_unit_cost,
+    )
 
 
 @tool

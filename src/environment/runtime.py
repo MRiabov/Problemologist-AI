@@ -236,10 +236,14 @@ class ToolRuntime:
         # 2. Budget Check
         unit_cost = res.cost_analysis.unit_cost
         if unit_cost > max_unit_cost and not force_submit:
+            msg = (
+                f"REJECTED: Unit cost ${unit_cost:.2f} "
+                f"exceeds budget ${max_unit_cost:.2f}."
+            )
             return {
                 "status": "fail",
                 "reward": -20.0,
-                "message": f"REJECTED: Unit cost ${unit_cost:.2f} exceeds budget ${max_unit_cost:.2f}.",
+                "message": msg,
                 "terminated": False,
             }
 
@@ -290,10 +294,14 @@ class ToolRuntime:
             )
             status = "success" if sim_result.success else "failure"
 
+            msg = (
+                f"Submission Result: {status.upper()}. "
+                f"Energy: {sim_result.total_energy:.2f}"
+            )
             return {
                 "status": status,
                 "reward": reward,
-                "message": f"Submission Result: {status.upper()}. Energy: {sim_result.total_energy:.2f}",
+                "message": msg,
                 "terminated": True,
                 "metrics": {
                     "energy": sim_result.total_energy,
@@ -309,6 +317,25 @@ class ToolRuntime:
                 "message": f"Simulation Error: {e!s}",
                 "terminated": False,
             }
+
+    def log_message(
+        self,
+        content: str,
+        step_type: str = "thought",
+        agent_role: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ):
+        """Logs a non-tool message (thought, handoff, etc.) to the database."""
+        if self.db and self.episode:
+            self.step_count += 1
+            self.db.log_step(
+                episode_id=self.episode.id,
+                sequence_index=self.step_count,
+                step_type=step_type,
+                agent_role=agent_role,
+                content=content,
+                metadata_json=metadata,
+            )
 
     def dispatch(
         self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
@@ -384,7 +411,8 @@ class ToolRuntime:
 
         return tool_output
 
-    # Handing remaining methods (search_docs, etc.) by delegating to originals or simplified versions
+    # Handing remaining methods (search_docs, etc.) by delegating
+    # to originals or simplified versions
     def search_docs(self, query: str) -> str:
         return rag_search.search(query)
 
