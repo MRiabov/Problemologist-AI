@@ -23,10 +23,16 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 **Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
 **Testing**: `pytest` for unit tests; `schemathesis` for OpenAPI contract validation.
 **Target Platform**: Linux (Development), Podman (Deployment/Sandbox).
-**Security**: 
+**Performance Goals**:
+- `preview_design`: < 2 seconds for moderate complexity parts.
+- `submit_design`: < 10 seconds for geometry compilation + simulation.
+- **Parallelism**: Support for at least 4 concurrent execution containers on a 4-core CPU.
+**Constraints**:
+- **Asynchronous Execution**: The environment MUST support non-blocking execution of long-running tasks.
+- **Security**:
 - **Strict Sandbox**: All agent-generated code executes inside a Podman container.
 - **OpenAPI**: Communication between Host and Container is strictly typed via FastAPI.
-- **Baked-in Env Code**: Supporting libraries and environment code are baked into the container image or mounted read-only.
+- **Baked-in Env Code**: Supporting libraries and environment code are baked into the container image.
 
 ## Constitution Check
 

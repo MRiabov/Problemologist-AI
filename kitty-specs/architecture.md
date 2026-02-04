@@ -110,10 +110,12 @@ The Engineer Agent is a graph composed of specialized roles:
   * **Validation**: `schemathesis` checks are run against the OpenAPI schema to ensure robustness and compliance.
 * **Control**: Host sends HTTP requests to the Container Agent to start jobs, query status, or retrieve results.
 
-#### 4.2.3 Isolation
+#### 4.2.3 Isolation & Parallelism
 
 * **Test Isolation**: Every test run uses a unique UUID-based workspace.
 * **Container Isolation**: Each agent instance gets a dedicated container/runtime.
+* **Parallel Execution**: Benchmark generation and CAD simulation MUST run in parallel.
+* **Scaling**: The system MUST scale to at least 4 concurrent containers on a 4-core CPU, with an architecture that allows for future distribution across nodes (IPv6 ready).
 
 ---
 
