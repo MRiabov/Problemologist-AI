@@ -19,7 +19,21 @@ def test_pusher_e2e_success(mock_run_isolated, tmp_path):
     # Configure mock
     mock_run_isolated.return_value = {
         "success": True,
-        "result": {"total_energy": 100.0, "observations": [{"x": 1}, {"x": 2}]},
+        "result": {
+            "success": True,
+            "total_energy": 100.0,
+            "total_damage": 0.0,
+            "observations": [
+                {
+                    "step": 0,
+                    "time": 0.0,
+                    "state_vector": [0.0],
+                    "energy_consumed": 0.0,
+                    "damage_detected": 0.0,
+                }
+            ],
+            "metadata": {},
+        },
     }
 
     """

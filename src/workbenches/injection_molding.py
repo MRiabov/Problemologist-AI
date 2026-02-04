@@ -1,5 +1,3 @@
-import hashlib
-
 from build123d import Part
 
 from src.workbenches.models import CostBreakdown
@@ -8,6 +6,7 @@ from src.workbenches.analysis_utils import (
     check_draft_angle,
     check_undercuts,
     check_wall_thickness,
+    compute_part_hash,
     load_config,
     part_to_trimesh,
 )
@@ -104,9 +103,7 @@ class InjectionMoldingWorkbench(Workbench):
         # Apply reuse discount if part hash is in context
         is_reused = False
         if context is not None:
-            part_hash = hashlib.md5(
-                str(part.center()).encode() + str(part.volume).encode()
-            ).hexdigest()
+            part_hash = compute_part_hash(part)
             if part_hash in context:
                 # 90% discount on tooling for identical part reuse (reusing the mold)
                 tooling_cost *= 0.1

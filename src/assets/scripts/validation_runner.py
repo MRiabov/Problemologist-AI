@@ -67,10 +67,9 @@ def parse_label(label: str, default_q: int, default_p: str) -> dict:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python validation_runner.py <config_file>")
-        sys.exit(1)
-
-    config_path = sys.argv[1]
+        config_path = "/workspace/job_config.json"
+    else:
+        config_path = sys.argv[1]
     output_path = "validation_result.json"
 
     # Initialize basic result structure in case of crash

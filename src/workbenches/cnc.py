@@ -1,9 +1,12 @@
-import hashlib
-
 from build123d import Part
 
 from src.workbenches.models import CostBreakdown
-from src.workbenches.analysis_utils import check_undercuts, load_config, part_to_trimesh
+from src.workbenches.analysis_utils import (
+    check_undercuts,
+    compute_part_hash,
+    load_config,
+    part_to_trimesh,
+)
 from src.workbenches.base import Workbench
 
 
@@ -74,21 +77,7 @@ class CNCWorkbench(Workbench):
         # Apply reuse discount if part hash is in context
         is_reused = False
         if context is not None:
-            # Robust geometric hashing (Topology + rounded geometry)
-            # Avoids float instability and ensures distinct shapes are distinct
-            vol_str = f"{part.volume:.4f}"
-            area_str = f"{part.area:.4f}"
-            center = part.center()
-            center_str = f"{center.X:.4f},{center.Y:.4f},{center.Z:.4f}"
-
-            # Topological signature
-            topo_sig = (
-                f"v{len(part.vertices())}|e{len(part.edges())}|f{len(part.faces())}"
-            )
-
-            hash_input = f"{vol_str}|{area_str}|{center_str}|{topo_sig}"
-
-            part_hash = hashlib.md5(hash_input.encode()).hexdigest()
+            part_hash = compute_part_hash(part)
 
             if part_hash in context:
                 # 50% discount on setup for identical part reuse

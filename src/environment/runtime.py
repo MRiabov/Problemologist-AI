@@ -312,16 +312,8 @@ class ToolRuntime:
                 "terminated": False,
             }
 
-    def dispatch(
-        self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
-    ) -> str:
-        """Dispatches a tool call, handles persistence, and returns the output."""
-        import time
-
-        start_time = time.time()
-        tool_output = ""
-
-        # 1. Routing and Execution
+    def _run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Internal helper to find and execute a tool function."""
         tool_map = {
             "write_file": self.write_file,
             "edit_file": self.edit_file,
@@ -339,31 +331,41 @@ class ToolRuntime:
 
         func = tool_map.get(tool_name)
         if not func:
-            tool_output = f"Unknown tool: {tool_name}"
-        else:
-            try:
-                # Add agent_role to arguments if it's verify_solution?
-                # Actually, dispatch should handle the metadata.
-                result = func(**arguments)
+            raise ValueError(f"Unknown tool: {tool_name}")
 
-                if hasattr(result, "model_dump"):
-                    # Pydantic Model
-                    tool_output = result.model_dump_json()
-                elif hasattr(result, "__dataclass_fields__"):
-                    from dataclasses import asdict
+        return func(**arguments)
 
-                    tool_output = json.dumps(asdict(result))
-                elif isinstance(result, (dict, list)):
-                    tool_output = json.dumps(result)
-                else:
-                    tool_output = str(result)
-            except Exception as e:
-                import traceback
+    def dispatch(
+        self, tool_name: str, arguments: dict[str, Any], agent_role: str | None = None
+    ) -> str:
+        """Dispatches a tool call, handles persistence, and returns a serialized string."""
+        import time
 
-                logger.error(
-                    f"Error executing tool {tool_name}: {e!s}\n{traceback.format_exc()}"
-                )
-                tool_output = f"Error executing tool {tool_name}: {e!s}"
+        start_time = time.time()
+        tool_output = ""
+
+        try:
+            result = self._run_tool(tool_name, arguments)
+
+            if hasattr(result, "model_dump_json"):
+                tool_output = result.model_dump_json()
+            elif hasattr(result, "model_dump"):
+                tool_output = json.dumps(result.model_dump())
+            elif hasattr(result, "__dataclass_fields__"):
+                from dataclasses import asdict
+
+                tool_output = json.dumps(asdict(result))
+            elif isinstance(result, (dict, list)):
+                tool_output = json.dumps(result)
+            else:
+                tool_output = str(result)
+        except Exception as e:
+            import traceback
+
+            logger.error(
+                f"Error executing tool {tool_name}: {e!s}\n{traceback.format_exc()}"
+            )
+            tool_output = f"Error executing tool {tool_name}: {e!s}"
 
         duration_ms = int((time.time() - start_time) * 1000)
 

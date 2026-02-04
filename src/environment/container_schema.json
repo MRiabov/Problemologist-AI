@@ -46,6 +46,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request - Invalid JSON or parameters"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -85,6 +88,9 @@
               }
             }
           },
+          "404": {
+            "description": "Job not found"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -122,6 +128,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request - Invalid JSON or parameters"
           },
           "422": {
             "description": "Validation Error",

@@ -103,118 +103,71 @@ class DashboardDataLayer:
             raise
 
 
-# Global instance (lazily initialized if needed, but here eager for simplicity)
-_dal = DashboardDataLayer()
+# Internal global instance for lazy initialization
+_dal: Optional[DashboardDataLayer] = None
+
+
+def get_dal() -> DashboardDataLayer:
+    """Returns the global DashboardDataLayer instance, initializing it if needed."""
+    global _dal
+    if _dal is None:
+        _dal = DashboardDataLayer()
+    return _dal
 
 
 def insert_step(episode_id: str, type: str, content: str):
     """Inserts a manual step into the database."""
     try:
-        return _dal.insert_step(episode_id, type, content)
+        return get_dal().insert_step(episode_id, type, content)
     except Exception as e:
         logger.error(f"Failed to insert step: {e}")
         return None
 
 
 def get_all_episodes() -> List[EpisodeSummary]:
-    """Returns a list of available episodes from database, falling back to mock if empty."""
+    """Returns a list of available episodes from database."""
     try:
-        episodes = _dal.get_all_episodes()
-        if episodes:
-            return [
-                EpisodeSummary(
-                    id=str(ep.id),
-                    timestamp=ep.start_time,
-                    name=f"Problem: {ep.problem_id[:8]}..."
-                    if ep.problem_id
-                    else "Untitled Episode",
-                )
-                for ep in episodes
-            ]
+        episodes = get_dal().get_all_episodes()
+        return [
+            EpisodeSummary(
+                id=str(ep.id),
+                timestamp=ep.start_time,
+                name=f"Problem: {ep.problem_id[:8]}..."
+                if ep.problem_id
+                else "Untitled Episode",
+            )
+            for ep in episodes
+        ]
     except Exception as e:
-        logger.warning(
-            f"Failed to retrieve episodes from DB, using mock data. Error: {e}"
-        )
-
-    # Mock fallback #remove??
-    return [
-        EpisodeSummary(
-            id="ep_001",
-            timestamp=datetime(2026, 2, 1, 10, 0, 0),
-            name="Designing a Cube (Mock)",
-        ),
-        EpisodeSummary(
-            id="ep_002",
-            timestamp=datetime(2026, 2, 1, 11, 30, 0),
-            name="Complex Linkage Attempt (Mock)",
-        ),
-    ]
+        logger.error(f"Failed to retrieve episodes from DB: {e}")
+        return []
 
 
 def get_episode_by_id(episode_id: str) -> DashEpisode:
-    """Returns full episode details including steps from database or mock."""
+    """Returns full episode details including steps from database."""
     try:
-        ep = _dal.get_episode_by_id(episode_id)
-        if ep:
-            steps = [
-                DashStep(
-                    index=i,
-                    type=step.type,
-                    agent_role=step.agent_role,
-                    content=step.content,
-                    tool_name=step.tool_name,
-                    tool_input=step.tool_input,
-                    tool_output=step.tool_output,
-                    metadata=step.metadata_json or {},
-                    artifacts=[a.file_path for a in step.artifacts],
-                )
-                for i, step in enumerate(ep.steps)
-            ]
-            return DashEpisode(
-                id=str(ep.id), name=f"Problem: {ep.problem_id}", steps=steps
-            )
-    except Exception as e:
-        logger.warning(f"Failed to retrieve episode {episode_id} from DB. Error: {e}")
+        ep = get_dal().get_episode_by_id(episode_id)
+        if not ep:
+            return DashEpisode(id=episode_id, name="Episode Not Found", steps=[])
 
-    # Mock Data Fallback # what is this doing here?
-    if episode_id == "ep_001":
         steps = [
             DashStep(
-                index=0,
-                type="user",
-                agent_role=None,
-                content="Create a 10mm cube.",
-                tool_name=None,
-                tool_input=None,
-                tool_output=None,
-                metadata={},
-                artifacts=[],
-            ),
-            DashStep(
-                index=1,
-                type="thought",
-                agent_role="Planner",
-                content="I need to design a 10mm cube using build123d.",
-                tool_name=None,
-                tool_input=None,
-                tool_output=None,
-                metadata={},
-                artifacts=[],
-            ),
-            DashStep(
-                index=2,
-                type="tool",
-                agent_role="Draftsman",
-                content="Writing the script...",
-                tool_name="write_file",
-                tool_input="design.py",
-                tool_output="Successfully wrote design.py",
-                metadata={"path": "design.py"},
-                artifacts=["design.stl"],
-            ),
+                index=i,
+                type=step.type,
+                agent_role=step.agent_role,
+                content=step.content,
+                tool_name=step.tool_name,
+                tool_input=step.tool_input,
+                tool_output=step.tool_output,
+                metadata=step.metadata_json or {},
+                artifacts=[a.file_path for a in step.artifacts],
+            )
+            for i, step in enumerate(ep.steps)
         ]
-        return DashEpisode(id="ep_001", name="Designing a Cube (Mock)", steps=steps)
-    return DashEpisode(id=episode_id, name="Unknown", steps=[])
+        return DashEpisode(id=str(ep.id), name=f"Problem: {ep.problem_id}", steps=steps)
+    except Exception as e:
+        logger.error(f"Failed to retrieve episode {episode_id} from DB: {e}")
+        return DashEpisode(id=episode_id, name="Error Loading Episode", steps=[])
 
 
 def get_step_artifacts(episode_id: str, step_index: int) -> List[str]:

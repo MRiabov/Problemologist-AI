@@ -1,4 +1,5 @@
 from typing import Annotated, Any, TypedDict
+from typing_extensions import NotRequired
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
@@ -13,25 +14,25 @@ class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
     # The current high-level implementation plan
-    plan: str
+    plan: NotRequired[str]
 
     # Tracking the number of steps taken to prevent infinite loops
-    step_count: int
+    step_count: NotRequired[int]
 
     # The reasoning from the coder/actor
-    coder_reasoning: str
+    coder_reasoning: NotRequired[str]
 
     # History of attempts (code and errors)
-    full_history: list[dict[str, Any]]
+    full_history: NotRequired[list[dict[str, Any]]]
 
     # Storage for intermediate data, node-specific state, or temporary variables
-    scratchpad: dict[str, Any]
+    scratchpad: NotRequired[dict[str, Any]]
 
     # Identifier for the associated ToolRuntime (for stateless tools)
-    runtime_id: str
+    runtime_id: NotRequired[str]
 
     # Runtime configuration updates (e.g. system prompt overrides)
-    runtime_config: dict[str, Any]
+    runtime_config: NotRequired[dict[str, Any]]
 
     # Structured completion signal for routing (avoids magic string matching)
-    task_complete: bool
+    task_complete: NotRequired[bool]

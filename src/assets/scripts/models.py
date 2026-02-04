@@ -42,7 +42,7 @@ class JobRequest(BaseModel):
     script_name: str | None = Field(None, description="Script to run (if type=script)")
     args: list[str] = Field(default_factory=list, description="Arguments for script")
     workdir: str | None = Field(None, description="Working directory")
-    timeout: int = Field(30, description="Timeout in seconds")
+    timeout: int = Field(30, strict=True, description="Timeout in seconds")
 
 
 class JobResponse(BaseModel):

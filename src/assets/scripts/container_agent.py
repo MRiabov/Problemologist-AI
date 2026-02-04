@@ -154,14 +154,26 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.post("/jobs", response_model=JobResponse)
+@app.post(
+    "/jobs",
+    response_model=JobResponse,
+    responses={
+        400: {"description": "Bad Request - Invalid JSON or parameters"},
+    },
+)
 def submit_job(request: JobRequest):
     job_id = job_manager.create_job(request)
     # Return initial status
     return JobResponse(job_id=job_id, status=JobStatus.QUEUED, stdout="", stderr="")
 
 
-@app.get("/jobs/{job_id}", response_model=JobResponse)
+@app.get(
+    "/jobs/{job_id}",
+    response_model=JobResponse,
+    responses={
+        404: {"description": "Job not found"},
+    },
+)
 def get_job_status(job_id: str):
     job = job_manager.get_job(job_id)
     if not job:
@@ -177,7 +189,13 @@ def get_job_status(job_id: str):
     )
 
 
-@app.post("/exec", response_model=ToolResponse)
+@app.post(
+    "/exec",
+    response_model=ToolResponse,
+    responses={
+        400: {"description": "Bad Request - Invalid JSON or parameters"},
+    },
+)
 def execute_tool(request: ToolRequest):
     return ToolResponse(
         output=f"Tool {request.tool_name} not implemented in agent yet."
