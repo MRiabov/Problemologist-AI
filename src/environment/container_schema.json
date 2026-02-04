@@ -239,11 +239,7 @@
             "description": "Unique job identifier"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JobStatus"
-              }
-            ],
+            "$ref": "#/components/schemas/JobStatus",
             "description": "Current status"
           },
           "stdout": {
@@ -338,16 +334,13 @@
       "ToolRequest": {
         "properties": {
           "tool_name": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ToolName"
-              }
-            ],
+            "$ref": "#/components/schemas/ToolName",
             "description": "Name of the tool to execute"
           },
           "arguments": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {

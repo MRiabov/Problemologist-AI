@@ -25,7 +25,7 @@ graph LR
         Critic --> Planner
     end
 
-    Output --> Engineer\ Agent
+    Output --> Planner
 ```
 
 ---
@@ -148,3 +148,73 @@ AGENT_TOOLS = [ ... ]
 1. **Reflective RL**: Use "Expected Solutions" from the Planner to guide RL optimization.
 2. **Context Management**: Automated context window compression for long-running engineer tasks.
 3. **Advanced Wiring**: Future updates should handle motor wiring and electrical constraints.
+
+---
+
+## 8. End-to-End Workflows
+
+### 8.1 Benchmark Generator Flow
+
+Illustrates how a benchmark is requested via Dashboard (UI) or Headless (CLI), generated, verified, and saved.
+
+```mermaid
+graph TD
+    subgraph Triggers
+        UI["Dashboard Interface"] -->|Config JSON| Init
+        CLI["Headless Script"] -->|Config JSON| Init
+    end
+
+    Init[Job Initialization] -->|Launch Container| Generator
+    
+    subgraph Benchmark Generator Agent
+        Generator[Generator Node] -->|Draft CAD| Reviewer
+        Reviewer[Internal Reviewer] -->|Feedback| Generator
+        Reviewer -->|Approved| Verify
+        
+        subgraph Verification
+            Verify[Verification Pipeline] -->|Check| Geom[Geometry Check]
+            Verify -->|Check| Sim[Simulation Check]
+            Verify -->|Check| Schema[MJCF Schema]
+        end
+    end
+    
+    Geom -- Fail --> Generator
+    Sim -- Fail --> Generator
+    Schema -- Fail --> Generator
+    
+    Verify -->|Success| Output[Save Benchmark (MJCF/XML)]
+    Output --> DB[(Database)]
+```
+
+### 8.2 Engineer (Solver) Flow
+
+Illustrates how the Engineer agent picks up a benchmark (via Dashboard or CLI), plans, solves, and persists the solution/skill.
+
+```mermaid
+graph TD
+    subgraph Triggers
+        UI["Dashboard Interface"] -->|Select Benchmark| Init
+        CLI["Headless Script"] -->|Batch Input| Init
+    end
+
+    Init[Job Initialization] -->|Load Benchmark| Planner
+
+    subgraph Engineer Agent
+        Planner[Architect] -->|Create Plan| Todo[TODO List]
+        Todo --> Engineer
+        
+        Engineer[Engineer Node] -->|Write CAD| Sandbox[Podman Sandbox]
+        Sandbox -->|Result| Critic
+        
+        Critic[Critic Node] -->|Reject| Engineer
+        Critic -->|Approve| Verify[Verification]
+        
+        Verify -- Fail --> Engineer
+        Verify -- Pass --> Done
+        
+        Engineer -->|Refuse Task| Fail[Task Failed]
+    end
+
+    Done -->|Persist Design| DB[(Database)]
+    Done -->|Update Skill| Skills[(Skill Library)]
+```

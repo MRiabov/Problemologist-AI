@@ -681,7 +681,7 @@ wheels = [
 
 [[package]]
 name = "deepagents"
-version = "0.3.9"
+version = "0.3.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain" },
@@ -690,9 +690,9 @@ dependencies = [
     { name = "langchain-google-genai" },
     { name = "wcmatch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/88/ea165f1cfcdb4cdc83cd7c6ac004fc9d199648f74c523404decf3fa99cbc/deepagents-0.3.9.tar.gz", hash = "sha256:186ed813268bb8d13ca2fbd45863d3e8b926118818326ba680b5b45c5f3661bf", size = 74944, upload-time = "2026-01-28T20:02:47.786Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/00/6155400863a3a1c212649007f2d3538339d8e5354a5e26a959cfdd239cad/deepagents-0.3.10.tar.gz", hash = "sha256:62f195f2210e30179c9eef0ddda8d211c6daadffd439f4d7e2186a8517251acf", size = 74206, upload-time = "2026-02-03T20:23:25.833Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/09/8f732d04000d3c6ed1379a35b9daa1eeb227263b624604976904451adb86/deepagents-0.3.9-py3-none-any.whl", hash = "sha256:dc1af5882918c0a20f090e4d7ea0cf8322df026189f6fe5efddd943730b63f81", size = 80173, upload-time = "2026-01-28T20:02:46.8Z" },
+    { url = "https://files.pythonhosted.org/packages/79/a4/622887eb61401b163dfb60248591edf978fb4e86e3884301d6b8b2fcfbf0/deepagents-0.3.10-py3-none-any.whl", hash = "sha256:13f257a033d194cc4d5c75553997fda863b83d082a80ee01bb5ed791f14100d5", size = 84849, upload-time = "2026-02-03T20:23:24.846Z" },
 ]
 
 [[package]]
@@ -2411,7 +2411,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.3" },
     { name = "bd-warehouse" },
     { name = "build123d", specifier = ">=0.10.0" },
-    { name = "deepagents", specifier = ">=0.3.9" },
+    { name = "deepagents", specifier = ">=0.3.10" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "langchain-core", specifier = ">=0.3.35" },
@@ -2445,7 +2445,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.15.0" },
-    { name = "spec-kitty-cli", specifier = ">=0.13.20" },
+    { name = "spec-kitty-cli", specifier = ">=0.13.23" },
 ]
 
 [[package]]
@@ -3425,7 +3425,7 @@ wheels = [
 
 [[package]]
 name = "spec-kitty-cli"
-version = "0.13.21"
+version = "0.13.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", extra = ["socks"] },
@@ -3438,12 +3438,14 @@ dependencies = [
     { name = "readchar" },
     { name = "rich" },
     { name = "ruamel-yaml" },
+    { name = "toml" },
     { name = "truststore" },
     { name = "typer" },
+    { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/99/4031034a41c9bb887519e456728c074d4e9d7170d38492bda3b158670adf/spec_kitty_cli-0.13.21.tar.gz", hash = "sha256:ed56daa521fd1226491f1659b4c7e0d4379fca5087055ce4eaa63a5b7e29705b", size = 2122243, upload-time = "2026-02-02T09:09:33.123Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/c4/cd04a159202bc5ccadc8e56bf0a63f64cfad99ece1650ccff5e02ad39188/spec_kitty_cli-0.13.23.tar.gz", hash = "sha256:83a79714be58848c1ae8131ed95879462eb6e2621d97bb6c9de10f735c5cd4c4", size = 2131218, upload-time = "2026-02-04T08:03:34.148Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/57/38/360615c5b31fa98a2aff301d4ed22f1149a802f5fb8aec5d9703a0604e2d/spec_kitty_cli-0.13.21-py3-none-any.whl", hash = "sha256:11d329730d28803c8b7efb49115f6950e02c67ba0b9c2122b70d0c15819e3ff1", size = 2237441, upload-time = "2026-02-02T09:09:31.435Z" },
+    { url = "https://files.pythonhosted.org/packages/66/53/81dcfc3c2ba021dbc4fee93b5b1e44d13d4d4c8150e81c48fc03ce410444/spec_kitty_cli-0.13.23-py3-none-any.whl", hash = "sha256:93c82d674654b1a439024fa4049976a4d12a8f9652a82a5f34481c6324f71722", size = 2247719, upload-time = "2026-02-04T08:03:32.07Z" },
 ]
 
 [[package]]
