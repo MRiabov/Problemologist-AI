@@ -3,7 +3,7 @@ from typing import Union
 
 from build123d import Part
 
-from src.compiler.models import CostBreakdown
+from src.workbenches.models import CostBreakdown
 
 
 class Workbench(ABC):

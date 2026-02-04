@@ -23,7 +23,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
-from src.compiler.models import CostBreakdown, ValidationReport
+from src.workbenches.models import CostBreakdown, ValidationReport
 
 
 class Base(DeclarativeBase):

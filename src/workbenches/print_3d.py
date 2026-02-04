@@ -2,7 +2,7 @@ import hashlib
 
 from build123d import Part
 
-from src.compiler.models import CostBreakdown
+from src.workbenches.models import CostBreakdown
 
 from .base import Workbench
 

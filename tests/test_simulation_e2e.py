@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.agent.utils.config import Config
-from src.compiler.mujoco_bridge import MujocoBridge
+from src.simulation_engine.bridge import MujocoBridge
 from src.simulation_engine.main import app
 from tests.fixtures.pusher_bot import PUSHER_SCRIPT, create_pusher_geometry
 

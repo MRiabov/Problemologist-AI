@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from src.compiler.mujoco_bridge import MujocoBridge
+from src.simulation_engine.bridge import MujocoBridge
 
 
 from unittest.mock import MagicMock, patch

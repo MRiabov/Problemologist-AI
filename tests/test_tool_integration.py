@@ -1,4 +1,4 @@
-from src.compiler.models import ValidationReport
+from src.workbenches.models import ValidationReport
 from src.environment.runtime import ToolRuntime
 
 

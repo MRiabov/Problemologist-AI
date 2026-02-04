@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 # Import models from the environment persistence layer and shared compiler models
-from src.compiler.models import DashEpisode, DashStep, EpisodeSummary
+from src.dashboard.models import DashEpisode, DashStep, EpisodeSummary
 from src.environment.persistence import Artifact, DatabaseManager, Episode, Step
 
 from .utils import get_project_root

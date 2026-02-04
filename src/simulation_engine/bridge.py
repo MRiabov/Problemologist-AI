@@ -6,8 +6,8 @@ import mujoco
 import numpy as np
 
 from src.agent.utils.logging import get_logger
-from src.compiler.mjcf_lint import validate_mjcf
-from src.compiler.models import Observation, SimResult
+from src.simulation_engine.mjcf_utils import validate_mjcf
+from src.simulation_engine.models import Observation, SimResult
 
 logger = get_logger(__name__)
 
@@ -27,8 +27,8 @@ class MujocoBridge:
         """
         self.sandbox = sandbox
         self.workspace_dir = Path(workspace_dir)
-        # Assumes this file is in src/compiler/
-        # and templates are in src/compiler/templates/
+        # Assumes this file is in src/simulation_engine/
+        # and templates are in src/simulation_engine/templates/
         self.template_dir = Path(__file__).resolve().parent / "templates"
 
     def load_template(self, template_name: str = "standard.xml") -> str:
@@ -142,7 +142,7 @@ class MujocoBridge:
 import json
 import os
 import sys
-from src.compiler.mujoco_bridge import MujocoBridge
+from src.simulation_engine.bridge import MujocoBridge
 
 # Add workspace to path
 sys.path.append("/workspace")

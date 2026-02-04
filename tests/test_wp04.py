@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.compiler.mujoco_bridge import MujocoBridge
+from src.simulation_engine.bridge import MujocoBridge
 from src.simulation_engine.main import app
 
 client = TestClient(app)

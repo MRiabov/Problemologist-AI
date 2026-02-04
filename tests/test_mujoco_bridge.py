@@ -4,7 +4,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from src.compiler.mujoco_bridge import MujocoBridge, SimResult
+from src.simulation_engine.bridge import MujocoBridge
+from src.simulation_engine.models import SimResult
 
 
 @pytest.fixture

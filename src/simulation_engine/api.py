@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.compiler.models import SimResult
+from src.simulation_engine.models import SimResult
 
 
 class SimulationRequest(BaseModel):

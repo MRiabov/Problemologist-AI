@@ -4,7 +4,7 @@ from dataclasses import asdict
 from typing import Any
 
 from src.agent.utils.config import Config
-from src.compiler.mujoco_bridge import MujocoBridge
+from src.simulation_engine.bridge import MujocoBridge
 from src.environment.sandbox import PodmanSandbox
 
 

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.compiler.models import CostBreakdown, ValidationReport, ValidationViolation
+from src.workbenches.models import CostBreakdown, ValidationReport, ValidationViolation
 from src.environment.sandbox_utils import run_sandboxed_script
 
 
@@ -220,15 +220,20 @@ sys.argv = ["runner.py", "{config_filename}"]
             )
 
         # Reconstruct models from JSON response
-        # Note: ValidationReport expects objects, but pydantic can validate from dict if configured.
-        # But we are constructing it manually here to be safe and explicit.
+        from src.workbenches.models import ValidationStatus
+
+        status_raw = res.get("status", "fail")
+        if status_raw in ["pass", "success", "ok"]:
+            status = ValidationStatus.PASSED
+        else:
+            status = ValidationStatus.FAILED
 
         cost_info = res.get("cost_analysis", {})
         cost_breakdown = CostBreakdown(
             process=process,
             total_cost=cost_info.get("total_cost", 0.0),
             unit_cost=cost_info.get("unit_cost", 0.0),
-            material_cost_per_unit=0.0,  # This is lost in aggregation unless we check details
+            material_cost_per_unit=0.0,
             setup_cost=0.0,
             details={"parts": res.get("parts", [])},
         )
@@ -239,7 +244,7 @@ sys.argv = ["runner.py", "{config_filename}"]
         ]
 
         return ValidationReport(
-            status=res.get("status", "fail"),
+            status=status,
             manufacturability_score=res.get("manufacturability_score", 0.0),
             violations=violations,
             cost_analysis=cost_breakdown,

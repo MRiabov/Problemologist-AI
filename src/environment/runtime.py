@@ -1,11 +1,14 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from src.agent.utils.config import Config
 from src.agent.utils.linter import format_linter_report, run_linter
-from src.compiler import mujoco_bridge
-from src.compiler.models import ValidationReport
+from src.simulation_engine import bridge as mujoco_bridge
+from src.workbenches.models import ValidationReport
 from src.cots.core import PartIndex
 from src.cots.providers.bd_warehouse import BDWarehouseProvider
 from src.environment.design_executor import DesignExecutor
@@ -355,6 +358,11 @@ class ToolRuntime:
                 else:
                     tool_output = str(result)
             except Exception as e:
+                import traceback
+
+                logger.error(
+                    f"Error executing tool {tool_name}: {e!s}\n{traceback.format_exc()}"
+                )
                 tool_output = f"Error executing tool {tool_name}: {e!s}"
 
         duration_ms = int((time.time() - start_time) * 1000)
