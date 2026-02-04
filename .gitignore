@@ -39,8 +39,10 @@ kitty-specs/**/tasks/*.md
 .png
 
 /workspaces/
+/workspace/
 /tests/output/
 /test_datasets/
+/test_assets/
 /scripts/throwaway/
 .hypothesis/
 
@@ -48,3 +50,7 @@ kitty-specs/**/tasks/*.md
 node_modules/
 dist/
 npm-debug.log
+
+config/
+contracts/
+steps.id/

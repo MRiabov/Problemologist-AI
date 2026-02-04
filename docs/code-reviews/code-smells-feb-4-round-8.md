@@ -48,6 +48,7 @@ def __init__(
   - Factor out `_run_simulation_internal` into a standalone function that doesn't require a full `MujocoBridge` instance.
 
 **User Review:**
+Okay. Just move ALL "injected" strings out to `/assets/`, and remove the "injection" logic completely.
 
 ---
 
@@ -74,6 +75,10 @@ workspace = Workspace(root_dir="workspace")
 - Refactor `read_journal` to accept a `tool_runtime` parameter (like other tools) and use `tool_runtime.workspace_dir` instead.
 
 **User Review:**
+We have a requirement to have multiple workers working in paralel - see @file:docs/desired_architecture.md. I don't get it - how can a single "workspace" folder, without temp subdirs handle multiple paralel workers?
+Propose a resolution.
+
+Same comments as in issue 3.
 
 ---
 
@@ -103,6 +108,11 @@ workspace = Workspace(root_dir="workspace")
 - For sandbox scripts (like `preview_runner.py`), these scripts run *inside* the container, so the path is fixed. However, consider injecting it via config for consistency.
 
 **User Review:**
+
+Okay, but do we not need random temp subfolders? How would a single /workspace/ folder hold multiple paralel workers? We have UUID requirements for these folders, so where are they?
+
+As a matter of fact, the /workspace/ pattern is exclusively for a little simpler debug. In prod it would be running in own containers, and it won't be mounted to the local path.
+In fact, it sounds like a good idea to make a `Podman.local.sandbox` and `Podman.prod.sandbox` - split the two; where the other would not be mounted and would send the files back and forth with some other method.
 
 ---
 
@@ -141,6 +151,8 @@ sim_result = self.sim_bridge.run_simulation(injected_xml)  # Not awaited!
   - Make `run_simulation` synchronous (since it already wraps `run_sandboxed_script` synchronously inside).
 
 **User Review:**
+How is this not tested? Add tests too.
+Also, it could be already edited away - I fixed 20 or so test failures.
 
 ---
 
@@ -171,6 +183,7 @@ def log_to_runtime(  # Function renamed ✓
 - Rename internal variable `env` → `runtime`.
 
 **User Review:**
+Confirm rename.
 
 ---
 
@@ -202,6 +215,7 @@ def execute_tool(request: ToolRequest):
 - If kept for future use, add a clear docstring explaining it's not yet implemented.
 
 **User Review:**
+Why do we need it at all? Why would tool execution be in the endpoint? it's called by the agent... I don't think we need it.
 
 ---
 
@@ -231,7 +245,7 @@ _FALLBACK_RUNTIME: ToolRuntime | None = None
 - Make the fallback more explicit or remove it entirely (require explicit registration).
 
 **User Review:**
-
+Am I sick of this! enough with such fallbacks. This is an ETL pipeline, no fallbacks here except explicitly allowed
 ---
 
 ## 🟡 Minor Issues & Smells
@@ -258,6 +272,7 @@ _FALLBACK_RUNTIME: ToolRuntime | None = None
 - Update the prompt to use the correct path (`".agent/skills/build123d_cad_drafting_skill/..."`) or make it configurable.
 
 **User Review:**
+I think this is a misunderstanding. skills in the agent and skills should be different. I've added a line in the end of @file:desired_architecture.md about it, read it.
 
 ---
 
@@ -288,6 +303,7 @@ tool_map = {
 - Add `"view_file": self.view_file` to the `tool_map` in `_run_tool`.
 
 **User Review:**
+Crazy. this is top priority! Fix it!
 
 ---
 
@@ -349,6 +365,8 @@ system_prompt_key = "cad_agent.actor.system"  # Still says 'actor'!
 
 **User Review:**
 
+Grep around the codebase for "actor" and "critic" and replace them accordingly. They are mostly deprecated.
+
 ---
 
 ### 12. `generate_image` Tool Not Available to Agent
@@ -369,6 +387,10 @@ system_prompt_key = "cad_agent.actor.system"  # Still says 'actor'!
 - Consider adding a `render_preview` or similar tool to allow agents to request visual previews.
 
 **User Review:**
+...
+OMG.
+We did have a "preview" or similar tools, but I refactored it away for some reason. Yes, we definitely need a preview tool, for both reviewer and coder at least.
+Let's add a "visualize_part" script/tool that the agent can call. I suppose. What I'm hesitant is - should we make it as another tool or a python script that the agent can simply call? e.g. `uv run ...`.
 
 ---
 
