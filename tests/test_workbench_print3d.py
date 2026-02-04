@@ -1,7 +1,7 @@
 import pytest
 from build123d import Box, Compound
 
-from workbenches.print_3d import Print3DWorkbench
+from src.workbenches.print_3d import Print3DWorkbench
 
 
 def test_print3d_validate_success():
@@ -23,5 +23,5 @@ def test_print3d_validate_multiple_solids():
 def test_print3d_cost():
     workbench = Print3DWorkbench(material_cost=0.1)
     box = Box(10, 10, 10)  # Volume = 1000
-    cost = workbench.calculate_cost(box)
-    assert pytest.approx(cost) == 100.0
+    result = workbench.calculate_cost(box)
+    assert pytest.approx(result.total_cost) == 100.0

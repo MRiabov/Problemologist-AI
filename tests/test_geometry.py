@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from build123d import Box
 
-from src.compiler.geometry import export_mesh, generate_colliders
+from src.simulation_engine.geometry_utils import export_mesh, generate_colliders
 
 
 def test_export_mesh(tmp_path):

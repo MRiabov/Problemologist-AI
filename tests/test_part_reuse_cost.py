@@ -16,11 +16,11 @@ def test_cnc_reuse_discount():
     # 1. First part cost
     context = {}
     res1 = workbench.calculate_cost(part, quantity=1, context=context)
-    cost1 = res1["total_cost"]
+    cost1 = res1.total_cost
 
     # 2. Identical part cost (same center/volume)
     res2 = workbench.calculate_cost(part, quantity=1, context=context)
-    cost2 = res2["total_cost"]
+    cost2 = res2.total_cost
 
     print(f"CNC: Cost 1: {cost1:.2f}, Cost 2: {cost2:.2f}")
     # Setup cost is material_cfg["machine_hourly_rate"] which is 80.0 in config for alu
@@ -39,11 +39,11 @@ def test_im_reuse_discount():
     # 1. First part cost
     context = {}
     res1 = workbench.calculate_cost(part, quantity=100, context=context)
-    cost1 = res1["total_cost"]
+    cost1 = res1.total_cost
 
     # 2. Identical part cost
     res2 = workbench.calculate_cost(part, quantity=100, context=context)
-    cost2 = res2["total_cost"]
+    cost2 = res2.total_cost
 
     print(f"IM: Cost 1: {cost1:.2f}, Cost 2: {cost2:.2f}")
     # IM Tooling cost is ~2000. Reusing it gives 90% discount (saves 1800)
