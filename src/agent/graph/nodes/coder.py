@@ -54,6 +54,7 @@ async def coder_node(state: AgentState, tools: Optional[list] = None):
         messages,
         strategy="last",
         max_tokens=4000,
+        token_counter="approximate",
         include_system=True,
         allow_partial=False,
     )

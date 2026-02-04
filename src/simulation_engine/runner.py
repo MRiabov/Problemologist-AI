@@ -1,6 +1,5 @@
 import multiprocessing
 import traceback
-from dataclasses import asdict
 from typing import Any
 
 from src.agent.utils.config import Config
@@ -25,10 +24,12 @@ def _run_sim_wrapper(
         sandbox = PodmanSandbox(str(workspace_dir))
 
         bridge = MujocoBridge(workspace_dir=workspace_dir, sandbox=sandbox)
-        result = bridge.run_simulation(
+        # Use _run_simulation_internal (synchronous) instead of async run_simulation
+        result = bridge._run_simulation_internal(
             xml_string, duration=duration, agent_script=agent_script, goal_pos=goal_pos
         )
-        queue.put({"success": True, "result": asdict(result)})
+        # SimResult is a Pydantic model, use model_dump() not asdict()
+        queue.put({"success": True, "result": result.model_dump()})
     except Exception as e:
         error_type = "RuntimeError"
         message = str(e)
