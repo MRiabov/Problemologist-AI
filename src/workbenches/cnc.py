@@ -18,6 +18,7 @@ class CNCWorkbench(Workbench):
     def __init__(self):
         self.config = load_config()["cnc"]
         self.materials = self.config["materials"]
+        self.parameters = self.config.get("parameters", {})
         # Default to aluminum_6061 for now
         self.default_material = "aluminum_6061"
 
@@ -63,9 +64,23 @@ class CNCWorkbench(Workbench):
         stock_mass_kg = (stock_volume_cm3 * material_cfg["density_g_cm3"]) / 1000.0
         material_cost_per_part = stock_mass_kg * material_cfg["cost_per_kg"]
 
-        # 2. Run Cost (Time = Volume Removed / MRR)
-        # MRR is in mm3/min. removed_volume_cm3 needs conversion to mm3 (x1000)
-        machining_time_min = (removed_volume_cm3 * 1000.0) / mrr
+        # 2. Run Cost
+        # Machining time driven effectively by removed volume + some finishing for surface area
+        roughing_time_min = (removed_volume_cm3 * 1000.0) / mrr
+
+        # Finishing pass estimation
+        finishing_feed_rate = self.parameters.get("finishing_feed_rate_mm_min", 500.0)
+        finishing_stepover = self.parameters.get("finishing_stepover_mm", 0.5)
+
+        # part.area is in mm^2
+        surface_area_mm2 = part.area
+        # Estimated time = Area / (Feed * Stepover)
+        # Note: Feed * Stepover gives area coverage rate in mm^2/min
+        finishing_time_min = surface_area_mm2 / (
+            finishing_feed_rate * finishing_stepover
+        )
+
+        machining_time_min = roughing_time_min + finishing_time_min
 
         run_cost_per_part = (machining_time_min / 60.0) * material_cfg[
             "machine_hourly_rate"
@@ -100,15 +115,17 @@ class CNCWorkbench(Workbench):
                 "stock_dims_mm": [round(d, 2) for d in stock_dims],
                 "stock_volume_cm3": round(stock_volume_cm3, 2),
                 "part_volume_cm3": round(part_volume_cm3, 2),
+                "surface_area_cm2": round(surface_area_mm2 / 100.0, 2),
                 "removed_volume_cm3": round(removed_volume_cm3, 2),
                 "machining_time_min": round(machining_time_min, 2),
+                "finishing_time_min": round(finishing_time_min, 2),
                 "run_cost_per_unit": round(run_cost_per_part, 2),
             },
             pricing_explanation=(
                 "Cost is driven by material volume and machining time. Stock size "
                 f"([{', '.join(f'{d:.1f}' for d in stock_dims)}]) determines material "
-                f"cost. Removed volume ({removed_volume_cm3:.2f} cm3) determines "
-                f"machining time ({machining_time_min:.2f} min @ {mrr} mm3/min). Setup cost "
+                f"cost. Removed volume ({removed_volume_cm3:.2f} cm3) and surface area ({surface_area_mm2/100:.2f} cm2) determines "
+                f"machining time ({machining_time_min:.2f} min). Setup cost "
                 f"(${setup_cost:.2f}) is fixed per part design (discounted if reused)."
             ),
         )
