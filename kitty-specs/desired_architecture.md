@@ -69,7 +69,62 @@ We use LangChain and LangGraph for the agentic infrastructure.
 
 ### Filesystem
 
-Both of the agents "live" directly in the filesystem they have been assigned. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
+Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
+
+Clarification: The file writes don't persist locally except into the observability database. They are forwarded (copied) directly into the container.
+
+#### Utils
+
+The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly read-only in the filesystem, and are "baked-in" to the container. The agent can't enable write constraints on them.
+
+#### Starting folder structure for various agents
+
+We define the file structure as follows, individual agents adapt to individual needs:
+
+```text
+.
+├── skills/                     # [Read-Only] Learned skills and documentation
+├── utils/                      # [Read-Only] Fixed utilities and shared code
+│   └── ...
+├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
+├── todo.md                     # [Read-Write] Execution plan
+├── plan.md                     # A plan
+└── script.py                   # [Read-Write] Main execution script (from template)
+
+<!-- The agent can create more than one .py file. -->
+```
+
+##### Benchmark generator (CAD agent)
+
+1. Skills (read-only)
+2. A template for creating benchmark generator files (read-write)
+3. A TODO list (read-write, validated (validated how?))
+4. A plan from the planner (read-only)
+5. A journal (read-write)
+
+Utils (read-only):
+
+1. Refuse plan (a script that sends a request to the endpoint) (shouldn't happen, realistically.)
+2. Utils necessary for functioning (as described in other parts of the document)
+
+##### Engineer
+
+1. Skills (read-only)
+2. A template for an engineer files solutions (read-write)
+3. A TODO list from the planner (read-write)
+4. A plan from the planner (read-only)
+5. A Journal (read-write)
+
+Utils (read-only):
+
+1. Refuse plan (a script that sends a request to the endpoint)
+2. Utils necessary for functioning (as described in other parts of the document)
+
+##### Planner (with different templates for engineer planner and benchmark planner)
+
+1. Planning skills
+2. A markdown plan template (auto-validated, refuses pass if doesn't match template.)
+3. A TODO list from the planner
 
 ### Agent artifacts
 
@@ -93,9 +148,19 @@ The Journal is the agent's **Episodic Memory**. It is a structured log (a constr
 
 (note: we should not optimize the journal architecture for the non-functional requirements.)
 
+##### Journal lookup for learner agents
+
+The skill learner agent should be able to dig and scrutinize into why something has happened without overflowing their context. The entries in Journal should contain the "start and finish" on the token timeline.
+
+The agents will delimit their reasoning with markdown headings, which would allow easier disclosure on top of the "start and finish".
+
 #### TODOs
 
 The Planner will build a list of TODOs for the agent to do. The critic will verify against the plan and the list of TODOs.
+
+### Token compression
+
+As the agent will near it's token generation limits, they will compress their old memory by a summarizing agent.
 
 ### Skills
 
@@ -115,9 +180,18 @@ The agents will have an access to build123d documentation throught the skill (as
 
 The "Engineer" agent does not need a "benchmark creation skill". It could be necessary the other way around. Nevertheless, agents access to skills should be configurable by default. If an agent has created a new skill, let it stay just to that agent.
 
-#### Explicit skill nudge
+#### Explicit skill agent
 
-The agents are explicitly nudged towards *updating* and using the skill. Quite likely, implement a separate "learner" agent node that runs after success, probably async of the agent.
+The agents can not be trusted with updating the skill well, and they may be out of context. Quite likely, implement a separate "learner" agent node that runs after success, probably async of the agent.
+
+It will work over smaller chunks of uncompressed info (how exactly? Maybe progressive disclosure? I think implement a progressive disclosure from a journal)
+
+The skill agent will read a `skill-creator/` skill as from Anthropic.
+
+##### Skill agent is run async
+
+The skill agent is run asyncronous to the execution, modifying the skill folder and pushing it to the containers.
+The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
 #### Worker skills are persisted and are separate from the repository-level skills
 
@@ -280,6 +354,10 @@ The agents will have *Workbenches* - a set of tools they can use to:
 
 As said, "agents will live inside of a filesystem". The agents will generate and execute design validations of files in the filesystem.
 
+### Benchmark generator and engineer handover
+
+The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing).
+
 ### Set of tools and utils
 
 I propose the following set of tools (their usage is below):
@@ -317,23 +395,28 @@ part_builder.part.metadata = {
   "material-id": "aluminum-6061"
 }
 
-#below is an overview of all tools
 validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit price at XYZ pcs is ...)
-#
-# submit_design_for_review(part_builder.part)
-
-
-
-
 ```
 
 ### Technical details
 
 Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here.)
 
+The workbench validation (as well as other util infrastructure are read-only in the container.
+
 ### Supported workbenches
 
 3D printing, CNC and injection molding are supported.
+
+<!-- In the future, it's very interesting to support topology optimization, but that's a separte project. -->
+
+### Off-the-shelf parts (COTS)
+
+It is self-understanding that engineers will use off-the-shelf parts - motors, fasteners, gears, etc. The catalog is well-defined in spec 007, but the model should have an access to a CLI tool or a set of python scripts to find something in a codebase. Again, we use CodeAct.
+
+I suggest using a subagent for this. Give a prompt of what's necessary and let the subagent execute a series of read-only SQL prompts over a catalog DB. The agent will return a series of catalogs to use.
+
+Both planner agent and engineer can only prompt the searching agent for searching.
 
 ## Other notes
 
