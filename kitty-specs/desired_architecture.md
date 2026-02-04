@@ -71,10 +71,32 @@ We need to maintain a copy of files locally, and only send requests later, such 
 #### Debugging processes
 
 We need to debug processes and that means we need a folder to store the files locally. During dev, we can use a local podmanfile that mounts/links its subfolders to the local `/workspace/[run-id]` dir. However, in production, we will containerize the main app it would store these in a volume.
-And of course, we persist some of the files to the sqlite.
+And of course, we persist all of the files to the SQLite for observability
+
+## Observability
+
+To track all agent movements and to persist data, we encode the following:
+
+1. The agent pass/fail reasons
+2. Error messages from script execution, linting,
+3. All agent thoughts.
+4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
+
+These will be later used for querying, preproc and model training.
+
+### Backups
+
+In prod we will backup the schema daily in s3.
+Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up.
+
+One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
 
 ## Other notes
 
 1. Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
 2. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
 3. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
+
+### Production workflow
+
+Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows.
