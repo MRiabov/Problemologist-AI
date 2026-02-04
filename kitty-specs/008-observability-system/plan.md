@@ -1,108 +1,137 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Observability System (Spec 008)
 
+*Path: kitty-specs/008-observability-system/plan.md*
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `008-observability-system` | **Date**: 2026-02-04 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/008-observability-system/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+This feature implements a robust **Observability System** to capture, stream, and persist all agent activities (thoughts, tool calls, errors). It introduces a centralized **Observability SDK** used by the Controller and Worker nodes to log events to a **SQLite database** (WAL enabled). It also provides an endpoint to trigger **compressed S3 backups**.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Python 3.10+
+**Primary Dependencies**:
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+- `sqlmodel` / `sqlalchemy`: ORM and Database interaction
+- `alembic`: Database migrations
+- `boto3`: S3 interactions for backup
+- `fastapi` / `pydantic`: API and Schema validation
+- `asyncio`: Internal event queue management
+
+**Storage**: SQLite (`observability.db`) with WAL mode enabled for concurrency.
+**Testing**: `pytest` for unit/integration tests; Manual verification for S3 backups.
+**Constraints**:
+
+- Single "Controller" node manages the DB writes and event stream.
+- strictly-typed events (no `dict` dumping).
+- minimal latency contribution to agent execution.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: Passed.*
 
-[Gates determined based on constitution file]
+- **Strict Typing**: Enforced via Pydantic/SQLModel.
+- **Fail Fast**: Validation errors raise exceptions immediately.
+- **Observability**: This *is* the observability feature itself.
 
 ## Project Structure
 
-### Documentation (this feature)
+### Documentation
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/008-observability-system/
+├── plan.md              # This file
+├── data-model.md        # Database and Event Schemas
+├── contracts/           # OpenAPI specs (backup endpoint)
+└── tasks.md             # Implementation tasks
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+└── observability/
+    ├── __init__.py      # Exports
+    ├── models.py        # SQLModel entities (Run, Step, Artifact)
+    ├── provider.py      # Main SDK (ObservabilityProvider)
+    ├── backend/
+    │   ├── sqlite.py    # DB Persistence logic
+    │   └── s3.py        # Backup logic
+    ├── api/
+    │   ├── routes.py    # FastAPI routes (backup, stream)
+    │   └── deps.py      # Dependencies
+    └── events.py        # Internal Pub/Sub (asyncio)
 
 tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+    └── observability/   # New test suite
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Created a top-level `observability` package to serve as a platform-level dependency for `agent`, `environment`, and `api` layers.
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
-
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| `SQLModel` + `Alembic` | Need robust schema migrations and strict typing for long-term project health. | Raw SQLite or JSON files lack strict schemas and migration safety, leading to data corruption risk over time. |
+| In-process Queue | Decouple logging from execution loop to avoid blocking operations. | Blocking writes would slow down the agent interactions noticeably. |
+
+## Proposed Changes
+
+### [NEW] Observability Core
+
+#### [NEW] `src/observability/models.py`
+
+- Define `ObsRun`, `ObsStep`, `ObsArtifact` using SQLModel.
+- Define Pydantic models for Event payloads.
+
+#### [NEW] `src/observability/backend/sqlite.py`
+
+- Implement `SQLiteBackend` with `create_run`, `log_step`.
+- Ensure WAL mode PRAGMA is execution.
+
+#### [NEW] `src/observability/backend/s3.py`
+
+- Implement `S3Backup` class with `create_backup(upload: bool = True)`.
+- Use `shutil.make_archive` for compression.
+
+#### [NEW] `src/observability/provider.py`
+
+- Implement `ObservabilityProvider` singleton/context manager.
+- Method `log(step_type, data)` that pushes to queue.
+- Background worker consumes queue -> DB.
+
+### [NEW] API & Integration
+
+#### [NEW] `src/observability/api/routes.py`
+
+- `POST /observability/backup`: Triggers backup.
+
+#### [MODIFY] `src/agent/graph/graph.py`
+
+- Inject `ObservabilityProvider` into the graph state or ensuring it's accessible.
+- Update nodes to call `provider.log(...)`.
+
+## Verification Plan
+
+### Automated Tests
+
+- **Unit Tests**:
+  - `pytest tests/observability/test_models.py`: Verify Pydantic validation.
+  - `pytest tests/observability/test_provider.py`: Verify queue consumption and event emission.
+- **Integration Tests**:
+  - `pytest tests/observability/test_persistence.py`: Run a mock agent flow, ensure data is in SQLite.
+- **Backup Verification**:
+  - Mock S3 in tests to verify `boto3.upload_file` is called with a `.tar.gz`.
+
+### Manual Verification
+
+1. **End-to-End Agent Run**:
+   - Run a benchmark generation job.
+   - Inspect `observability.db` using a SQLite viewer to confirm rows exist.
+2. **Dashboard Stream (Simulated)**:
+   - Connect a dummy websocket/listener (if applicable) and assert events arrive.
+3. **Backup Trigger**:
+   - Call `curl -X POST http://localhost:8000/observability/backup`.
+   - Verify log message "Backup successful: s3://...".
