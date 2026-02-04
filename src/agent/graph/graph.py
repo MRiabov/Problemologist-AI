@@ -127,22 +127,25 @@ def build_graph(
     def route_tools(state: AgentState) -> Literal["critic", "actor"]:
         messages = state["messages"]
         # The last message is the *output* of the tool (ToolMessage)
-        # But we need to know *which* tool was called.
-        # The message before that (AIMessage) has the tool_calls.
 
-        # In a standard graph update, 'messages' list might be appended.
-        # So [-1] is ToolMessage.
-        # We can check the tool_name in the ToolMessage if available, or look at the preceding AIMessage.
+        # Build a map of tools for quick lookup
+        tool_map = {t.name: t for t in AGENT_TOOLS}
 
-        # A robust way is to look at the last AIMessage's tool calls.
-        # But here we are *after* the tools node, so the last message is a ToolMessage (or list of them).
-
-        # Let's iterate backwards to find the last AIMessage and check its tool calls
+        # Iterate backwards to find the last AIMessage and check its tool calls
         for msg in reversed(messages):
             if hasattr(msg, "tool_calls") and msg.tool_calls:
-                tool_names = [tc["name"] for tc in msg.tool_calls]
-                if "preview_design" in tool_names or validation_tool_name in tool_names:
-                    return "critic"
+                for tc in msg.tool_calls:
+                    tool_name = tc["name"]
+                    tool = tool_map.get(tool_name)
+
+                    # Check for explicit review trigger
+                    if tool and getattr(tool, "triggers_review", False):
+                        return "critic"
+
+                    # Fallback/Safety: Check if validation tool specifically named in arg
+                    if tool_name == validation_tool_name:
+                        return "critic"
+
                 break
 
         return "actor"
