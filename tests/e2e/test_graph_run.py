@@ -34,8 +34,8 @@ async def test_graph_simple_run():
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.actor.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.critic.get_model", return_value=mock_llm),
+        patch("src.agent.graph.nodes.coder.get_model", return_value=mock_llm),
+        patch("src.agent.graph.nodes.reviewer.get_model", return_value=mock_llm),
     ):
         app = build_graph().compile()
         inputs = {
@@ -99,8 +99,8 @@ async def test_graph_with_tool_call():
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.actor.get_model", return_value=mock_llm),
-        patch("src.agent.graph.nodes.critic.get_model", return_value=mock_llm),
+        patch("src.agent.graph.nodes.coder.get_model", return_value=mock_llm),
+        patch("src.agent.graph.nodes.reviewer.get_model", return_value=mock_llm),
         patch(
             "src.agent.tools.env_adapter._execute_tool",
             new_callable=AsyncMock,
@@ -121,9 +121,9 @@ async def test_graph_with_tool_call():
                 nodes_visited.append(node_name)
 
         assert "planner" in nodes_visited
-        assert "actor" in nodes_visited
+        assert "coder" in nodes_visited
         assert "tools" in nodes_visited
-        assert "critic" in nodes_visited
+        assert "reviewer" in nodes_visited
 
 
 if __name__ == "__main__":
