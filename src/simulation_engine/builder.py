@@ -362,19 +362,7 @@ class SceneCompiler:
                 label = labels[i] if labels and i < len(labels) else f"agent_part_{i}"
                 self._add_agent_meshes_to_body(parts[i], agent_root, label)
 
-        # Add a placeholder for automatic actuators if not already handled
-        # This allows mixed manual/auto but we mostly care about pure auto for now
-        self._inject_auto_actuators(agent_root, actuator_root)
-
-    def _inject_auto_actuators(self, agent_root: ET.Element, actuator_root: ET.Element):
-        """Scan for stator/rotor pairs and inject joints and actuators."""
-        # Find all geoms under worldbody specifically for the agent
-        # (Though they are already in agent_root)
-
-        # We need to find geoms with "stator" and "rotor" in their names or labels.
-        # However, the geoms were added with names based on 'label'.
-        # Let's look at how geoms are named in _add_agent_meshes_to_body.
-        pass  # We will instead do it during mesh processing
+        # Automatic actuators are handled during mesh processing in _add_agent_meshes_to_body
 
     def _add_agent_meshes_to_body(
         self, compound: Compound, body_element: ET.Element, prefix: str

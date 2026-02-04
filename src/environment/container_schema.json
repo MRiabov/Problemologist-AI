@@ -103,47 +103,6 @@
           }
         }
       }
-    },
-    "/exec": {
-      "post": {
-        "summary": "Execute Tool",
-        "operationId": "execute_tool_exec_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ToolRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request - Invalid JSON or parameters"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -299,85 +258,6 @@
           "script"
         ],
         "title": "JobType"
-      },
-      "ToolExecutionStatus": {
-        "type": "string",
-        "enum": [
-          "success",
-          "error"
-        ],
-        "title": "ToolExecutionStatus"
-      },
-      "ToolName": {
-        "type": "string",
-        "enum": [
-          "write_file",
-          "edit_file",
-          "preview_design",
-          "verify_solution",
-          "search_docs",
-          "search_parts",
-          "preview_part",
-          "analyze_design",
-          "run_command",
-          "lint_script",
-          "start_session",
-          "stop_session",
-          "view_file"
-        ],
-        "title": "ToolName"
-      },
-      "ToolRequest": {
-        "properties": {
-          "tool_name": {
-            "$ref": "#/components/schemas/ToolName",
-            "description": "Name of the tool to execute"
-          },
-          "arguments": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Arguments",
-            "description": "Arguments for the tool"
-          }
-        },
-        "type": "object",
-        "required": [
-          "tool_name"
-        ],
-        "title": "ToolRequest",
-        "description": "Request payload for executing a tool."
-      },
-      "ToolResponse": {
-        "properties": {
-          "output": {
-            "type": "string",
-            "title": "Output",
-            "description": "String output from the tool"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error",
-            "description": "Error message if execution failed"
-          },
-          "status": {
-            "$ref": "#/components/schemas/ToolExecutionStatus",
-            "description": "Status of the execution: success/error",
-            "default": "success"
-          }
-        },
-        "type": "object",
-        "required": [
-          "output"
-        ],
-        "title": "ToolResponse",
-        "description": "Response payload from a tool execution."
       },
       "ValidationError": {
         "properties": {

@@ -1,8 +1,8 @@
 import pytest
 import trimesh
-from build123d import Box
+from build123d import Box, Compound
 
-from simulation_engine.builder import MeshProcessor
+from simulation_engine.builder import MeshProcessor, SceneCompiler
 
 
 def test_box_export_and_load():
@@ -48,3 +48,41 @@ def test_convex_hull_complex_shape():
 def test_load_mesh_from_empty_data():
     with pytest.raises(Exception):  # trimesh or io might raise different errors
         MeshProcessor.load_mesh(b"")
+
+
+def test_scene_compiler_basic_compile(tmp_path):
+    """
+    Test that SceneCompiler can compile a simple environment and agent.
+    """
+    # Create simple geometry
+    env_box = Box(100, 100, 1)
+    agent_box = Box(10, 10, 10)
+
+    env_compound = Compound(env_box)
+    agent_compound = Compound(agent_box)
+
+    # Initialize SceneCompiler with a temp asset directory
+    asset_dir = tmp_path / "assets"
+    compiler = SceneCompiler(asset_dir=str(asset_dir))
+
+    # Compile
+    mjcf_xml = compiler.compile(
+        env_compound=env_compound,
+        agent_compound=agent_compound,
+        env_labels=["floor_base"],
+        agent_labels=["agent_body"]
+    )
+
+    # Basic assertions
+    assert isinstance(mjcf_xml, str)
+    assert "<mujoco" in mjcf_xml
+    assert "<worldbody>" in mjcf_xml
+    assert 'name="agent"' in mjcf_xml
+    assert 'name="floor_base"' in mjcf_xml
+
+    # Verify assets were written
+    assert asset_dir.exists()
+    assert (asset_dir / "floor_base.stl").exists()
+    # Agent mesh processing might append index if multiple solids, or even if one.
+    # Current implementation appends _0
+    assert (asset_dir / "agent_body_0.stl").exists()
