@@ -1,7 +1,6 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.logging import get_logger
 from src.agent.utils.prompts import get_prompt

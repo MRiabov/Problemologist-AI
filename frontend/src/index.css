@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #101a23;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #223849;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #304d63;
+  }
+  body {
+      @apply bg-background-dark text-white font-display;
+  }
+}
+
+.syntax-keyword { color: #ff7b72; }
+.syntax-func { color: #d2a8ff; }
+.syntax-string { color: #a5d6ff; }
+.syntax-comment { color: #8b949e; }
+.syntax-class { color: #f0883e; }
