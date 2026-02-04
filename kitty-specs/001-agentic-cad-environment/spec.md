@@ -20,6 +20,7 @@ Unlike traditional Reinforcement Learning (RL) environments that rely on discret
 
 As the project evolved, the following specifications expanded on the foundations laid here:
 
+- **[Spec 002](../002-agentic-cad-environment/spec.md)**: The agent that controls the environment..
 - **[Spec 003](../003-mujoco-simulation-engine/spec.md)**: Detailed implementation of the MuJoCo simulation engine and physics bridge.
 - **[Spec 004](../004-advanced-manufacturing-workbenches/spec.md)**: Advanced CNC and Injection Molding workbenches with DFM (Design for Manufacturing) checks.
 - **[Spec 006](../006-cots-assembly-system/spec.md)**: COTS (Commercial Off-The-Shelf) part indexing and assembly tools.
