@@ -175,7 +175,7 @@ To simplify app logic and avoid writing retry and other logic, we will deploy a 
 
 ### Hyperscaler of choice
 
-We are deploying to Railway. (In production, we may deploy workers to inexpensive, *batch* IPv6 nodes - SaladCloud, or use a on-prem infra that somebody will give to me..)
+We are deploying to Railway. (In production, we may deploy workers to inexpensive, *batch* IPv6 nodes - SaladCloud, or use a on-prem infra that somebody will give to me...)
 
 ### Persisting files
 
@@ -207,6 +207,40 @@ The Agent (managed by LangGraph) never "knows" about distributed workers. It onl
 #### Temporal
 
 Temporal is used to orchestrate the workers. It is not used to run or retry the agent.
+
+## Simulation and "Defintions of Done"
+
+While this platform has notable downsides for future use, we pick MuJoCo, because it's battle-tested, and requires almost no compile time.
+
+<!-- Downsides of MuJoCo?
+
+- we won't support deformation (finite element analysis)
+- we won't support fluids
+
+But for an MVP this is fine. -->
+<!-- The corollary of not being able to run FEM is that the model can produce physically inadequate parts and still succeed. But I can't do much about it yet. -->
+
+### Definition of "success" in the simulation
+
+We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones.
+
+<!-- another use-case could be: given a severe constraint in positioning, design a system which would support a given load. However, the issue is that it's not  -->
+
+#### Moving an object from one screen to another
+
+We define the objective from four components:
+
+1. "a build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone), "a goal zone" - the area to which the object needs to move to, a "forbid" zone - an area which the agent may not go into.
+The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
+
+#### Randomization
+
+<!-- LLM-generated from my other spec. -->
+The benchmarks are randomized to enable a wider data distribution with less generation effort.
+
+- The benchmark volume size can vary 2x in all sides, and will be rescaled to random values, e.g. 1.68\*0.8\*1.3; the benchmark generator agent can narrow the scaling down if somehing is expected to break; however it is undesirable as we want to keep randomization higher.
+  - The environment - ojectives (goals, forbids, build zones) are rescaled respectively.
+- Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
 
 ## Observability
 
