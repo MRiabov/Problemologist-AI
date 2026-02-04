@@ -34,6 +34,11 @@ STUBS = [
     },
 ]
 
+# Pre-compute lowercased fields for STUBS
+for stub in STUBS:
+    stub["title_lower"] = stub["title"].lower()
+    stub["content_lower"] = stub["content"].lower()
+
 
 # State for file-stat based caching
 _DOC_CACHE: dict[str, dict] = {}
@@ -67,6 +72,8 @@ def load_docs(directory: str) -> list[dict[str, str]]:
                     "title": filename.name,
                     "content": content,
                     "path": path_str,
+                    "title_lower": filename.name.lower(),
+                    "content_lower": content.lower(),
                 }
                 _DOC_CACHE[path_str] = {"mtime": mtime, "doc": doc}
                 updated_docs.append(doc)
@@ -98,8 +105,9 @@ def search(query: str, directory: str = "docs") -> str:
     matches = []
     for doc in all_docs:
         # Check title and content
-        title_hits = doc["title"].lower().count(query)
-        content_hits = doc["content"].lower().count(query)
+        # Optimization: Use pre-computed lowercased fields to avoid O(N) ops in loop
+        title_hits = doc["title_lower"].count(query)
+        content_hits = doc["content_lower"].count(query)
 
         if title_hits > 0 or content_hits > 0:
             # Simple scoring
@@ -119,7 +127,8 @@ def search(query: str, directory: str = "docs") -> str:
     for doc in top_matches:
         # Try to find the match context
         content = doc["content"]
-        idx = content.lower().find(query)
+        # Use pre-computed lower field
+        idx = doc["content_lower"].find(query)
         start = max(0, idx - 200)
         end = min(len(content), idx + 800)
 
