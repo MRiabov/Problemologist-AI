@@ -1,38 +1,27 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Engineer Agent
 
-*Path: [templates/plan-template.md](templates/plan-template.md)*
-
-**Branch**: `002-vlm-cad-agent` | **Date**: 2026-02-03 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `/kitty-specs/002-vlm-cad-agent/spec.md`
-
-**Note**: This plan has been updated to reflect the **Tool Consolidation** (WP05) and the implementation of the **Skill Populator** node.
+**Branch**: `002-engineer-agent` | **Date**: 2026-02-04 | **Spec**: [spec.md](spec.md)
 
 ## Summary
 
-Implement the **VLM CAD Agent** using the **LangGraph** framework. This cognitive engine autonomously solves geometric problems by interacting with the `001-agentic-cad-environment` via `ToolRuntime`. The agent uses a graph-based "Think, Plan, Act" workflow, leveraging file-system memory (Journal and Skills) for long-horizon tasks.
+Implement the **Engineer Agent** using the **LangGraph** framework. This cognitive engine autonomously solves geometric problems by interacting with the `001-agentic-cad-environment` via `ToolRuntime` inside a Podman sandbox. The agent uses a graph-based "Architect → Engineer → Critic" workflow.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+
 **Primary Dependencies**:
+- `langgraph`: Core orchestration engine.
+- `fastapi`: Host-Container communication (OpenAPI).
+- `podman`: Sandbox enforcement.
 
-- `langgraph`: Core orchestration engine (Graph, State, Nodes).
-- `langchain-core` / `langchain-openai`: LLM Interface & Tool Abstractions.
-- `pydantic`: State and Tool validation.
-- `rich`: Terminal UI.
+**Key Roles**:
+- **Architect (Planner)**: Designs the high-level approach and persists a **TODO List**.
+- **Engineer (Actor)**: Implements the CAD solution. Can refuse the plan if proven impossible.
+- **Critic**: Reviews the implementation against constraints.
 
 **Storage**:
-
-- `journal.md`: Markdown-based long-term memory (read/append via `write_file`).
+- `todo.md`: Task-specific TODO list persisted by the Architect.
 - `.agent/skills/`: Persistent skill-based knowledge system.
-- `checkpoints.sqlite`: LangGraph state persistence (short-term session memory).
-
-**Key Refined Tools**:
-
-- `write_file`: Consolidated tool for writing scripts and journaling (with auto-timestamping).
-- `edit_file`: Consolidated tool for targeted string replacement.
-- `preview_design`: Core visual feedback loop for VLM reasoning.
-- `skill_tools`: Suite of tools for persistent knowledge management (`read_skill`, `update_skill`, etc.).
 
 **Testing**: `pytest` and `langsmith` for trace evaluation.
 **Target Platform**: Linux (Development), Docker (Deployment).

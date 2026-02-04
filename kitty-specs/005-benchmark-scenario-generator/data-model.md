@@ -1,35 +1,23 @@
 # Data Model: Benchmark Scenario Generator
 
-## 1. Entities
+## 1. Entities (Database)
 
-### ScenarioManifest
+### Scenario Record
 
-A JSON metadata file accompanying each generated benchmark.
+Benchmarks are persisted in the central database using the following schema:
 
-```json
-{
-  "id": "tier2_lever_001",
-  "tier": "kinematic",
-  "description": "Class 1 lever with variable fulcrum",
-  "script_path": "scripts/tier2_lever_001.py",
-  "target_quantity": 1000,
-  "max_unit_cost": 5.50,
-  "cost_record": 4.25,
-  "assets": {
-    "mjcf": "assets/tier2_lever_001.xml",
-    "meshes": ["assets/base.stl", "assets/arm.stl"]
-  },
-  "randomization": {
-    "seed_range": [0, 9999],
-    "parameters": ["fulcrum_pos", "load_mass"],
-    "scale": [1.0, 1.0, 1.0]
-  },
-  "validation": {
-    "passed": true,
-    "max_velocity": 0.05
-  }
-}
-```
+| Field | Description |
+|-------|-------------|
+| `id` | Unique scenario identifier |
+| `tier` | kinematic, spatial, etc. |
+| `description` | Natural language goal |
+| `script_content` | The generated Python code |
+| `target_quantity` | Production volume for cost calc |
+| `max_unit_cost` | Budget constraint |
+| `cost_record` | Lowest unit cost achieved so far |
+| `mjcf_path` | Path to generated MuJoCo XML |
+| `seed_range` | Randomization bounds |
+| `validation_status`| Pass/Fail from Verification Pipeline |
 
 ### GenerationRequest
 

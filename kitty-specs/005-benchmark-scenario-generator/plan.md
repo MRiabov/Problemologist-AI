@@ -18,9 +18,18 @@ This feature implements a "Scenario Architect" agent—a specialized automation 
 
 ### Key Components
 
-1. **Generator Agent**: A LangGraph state machine with nodes for `Prompting`, `Coding`, and `Reviewing`.
-2. **Validator**: A headless script that loads generated XMLs into MuJoCo to check for instant explosions (instability).
-3. **Randomizer**: Logic injected into generated scripts to vary parameters (±40% bounds) via a seed.
+1. **Generator Agent**: A LangGraph state machine with the following roles:
+   - **Generator**: Authored the CAD model code with randomized parameters.
+   - **Internal Reviewer**: Reviews the design for feasibility and logic.
+   - **Verification Pipeline**: Executes strict validation checks.
+
+2. **Strict Validation Pipeline**:
+    - **Geometry**: Check for manifold geometry and self-intersections.
+    - **Compilation**: Ensure code executes without errors.
+    - **MJCF Validity**: Validate against official schema.
+    - **Simulation**: Run physics stability check (1s simulation).
+
+3. **Randomizer**: Logic injected into generated scripts to vary parameters via a seed.
 
 ## 2. Constitution Check
 

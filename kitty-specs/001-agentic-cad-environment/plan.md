@@ -19,15 +19,14 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 - `build123d`: Code-based CAD kernel
 - `mujoco`: Physics engine
 - `numpy`: Numerical operations
+- `fastapi` / `uvicorn`: Host-Container communication (OpenAPI)
 **Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
-**Testing**: `pytest` for unit tests of tools and compiler; visual regression tests for rendering.
-**Target Platform**: Linux (Development), Docker (Deployment).
-**Performance Goals**:
-- `preview_design`: < 2 seconds for moderate complexity parts.
-- `submit_design`: < 10 seconds for geometry compilation + simulation.
-**Constraints**:
-- Single-threaded execution.
-- Security relies on containerization (out of scope for valid code, but Env sandbox should ideally limit imports).
+**Testing**: `pytest` for unit tests; `schemathesis` for OpenAPI contract validation.
+**Target Platform**: Linux (Development), Podman (Deployment/Sandbox).
+**Security**: 
+- **Strict Sandbox**: All agent-generated code executes inside a Podman container.
+- **OpenAPI**: Communication between Host and Container is strictly typed via FastAPI.
+- **Baked-in Env Code**: Supporting libraries and environment code are baked into the container image or mounted read-only.
 
 ## Constitution Check
 

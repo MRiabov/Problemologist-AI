@@ -11,10 +11,10 @@ The **MuJoCo Simulation Engine** has been upgraded to a **Safe Execution Environ
 
 It operates as a **Sandbox Manager** that:
 
-1. Accepts a **Simulation Bundle** (Environment + Agent Design + Control Script).
-2. Compiles this into a valid MuJoCo `scene.xml` (MJCF) with convex collision meshes.
-3. Executes the simulation (or arbitrary python code) inside a **Podman Container** with strict resource and network limits.
-4. Returns a **Simulation Report** (Success/Fail metrics) and execution logs.
+1. Orchestrates a **Podman Container** running a **FastAPI server**.
+2. Communicates with the container via an **OpenAPI** interface (HTTP/JSON).
+3. Compiles geometry into MJCF and executes simulations inside the sandbox.
+4. Returns strictly typed **Simulation Reports**.
 
 ## Technical Context
 
@@ -22,15 +22,12 @@ It operates as a **Sandbox Manager** that:
 **Primary Dependencies**:
 
 - `mujoco`: Physics Engine (runs inside container)
-- `build123d`: Geometry processing and export
-- `trimesh`: Mesh convex decomposition (vhacd)
-- `podman`: External CLI tool for container management
-- **Docker/Podman Image**: Custom `problemologist-sandbox` image containing pre-installed dependencies.
+- `fastapi` / `uvicorn`: Internal container API
+- `build123d`: Geometry processing
+- `podman`: Sandbox management
+- `schemathesis`: API contract testing
 
-**Storage**: **Ephemeral**. Artifacts (STL/MJCF/Videos) are written to a temporary workspace volume mounted to the container.
-**Testing**: `pytest` with simple physics scenarios (block dropping, joint rotation).
-**Target Platform**: Linux (requires Podman installed and configured for rootless mode).
-**Security**: **Container Isolation**. Code is executed in a transient Podman container with `network=none` to prevent side-effects and ensuring a clean environment for every run.
+**Testing**: `pytest` for unit tests; `schemathesis` for OpenAPI schema validation.
 
 ## Constitution Check
 

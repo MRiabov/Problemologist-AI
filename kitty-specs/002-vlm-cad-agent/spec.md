@@ -1,79 +1,41 @@
-# Feature Specification: VLM CAD Agent
+# Feature Specification: Engineer Agent
 
-**Feature**: 002-vlm-cad-agent
+**Feature**: 002-engineer-agent
 **Status**: Draft
 **Mission**: software-dev
 
 ## 1. Overview
 
-The **VLM CAD Agent** is the autonomous cognitive engine designed to operate within the **Agentic CAD Environment** (Spec 001). It is a specialized Vision-Language Model (VLM) system built using the **DeepAgents** framework (based on LangGraph). It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
+The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment**. It is a specialized graph-based system built using LangGraph. It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
 
-Unlike generic coding assistants, this agent leverages the "Deep Agent" architecture to perform long-horizon planning, sub-task delegation, and persistent **Skill-based Memory Management**. It validates its own work using visual feedback (renders) and simulation results.
-
-## 2. Goals & Success Criteria
-
-### 2.1. Primary Goals
-
-1. **Autonomous Resolution**: The agent must be able to solve geometric problems from start to finish without human intervention, handling its own errors and edge cases.
-2. **Multimodal Reasoning**: Effectively use the `preview_design` tool to visually inspect geometry and correct spatial errors that are not visible in the code text.
-3. **Structured Cognition**: Enforce a separation between **Planning** (understanding the problem) and **Execution** (writing code).
-4. **Standard Agent Interface**: The agent operates like a human developer, using standard tools (`view_file`, `edit_file`, `run_command`) effectively in a persistent environment, rather than relying on narrow, custom API calls.
-5. **Economic Optimization**: Respect `max_unit_cost` and `target_quantity` constraints.
-6. **Skill-Based Learning**: Implement a "Skill Population" system where the agent records specialized knowledge into `docs/skills/` to reuse proven strategies strategies.
-
-### 2.2. Success Criteria
-
-* **Solver Rate**: The agent successfully solves >50% of the "Easy" benchmark problems defined in Spec 001 on the first try.
-* **Budget Adherence**: The agent meets or beats the `max_unit_cost` in >70% of successful completions.
-* **Self-Healing**: The agent can recover from at least one syntax error and one geometric violation per session without crashing.
-* **Economic Adaptability**: The agent demonstrates switching from CNC to Injection Molding when production volume increases (e.g., from 1 to 10,000 units).
-* **Visual Utility**: In >30% of iterations, the agent explicitly modifies code after requesting a `preview_design`, indicating active use of visual feedback.
-* **Skill Growth**: The `.agent/skills/` directory contains >5 new reference files or scripts after 10 sessions of problem-solving.
-
-## 3. User Stories
-
-### 3.1. As an Operator/Researcher
-
-* **As a Researcher**, I want to configure the agent to use different backend models (Gemini Pro, GPT-4o) so I can benchmark their spatial reasoning capabilities.
-* **As an Operator**, I want to see a real-time structured log of the agent's "Thought," "Tool Call," and "Observation" so I can debug its reasoning process.
-* **As an Operator**, I want the agent to automatically save its successful strategies to specialized **Skill folders** so it gets smarter over time.
-
-### 3.2. As the Agent (Internal Monologue)
-
-* **As the Agent**, I want to look up `build123d` documentation before writing complex features to ensure I use the correct API signature.
-* **As the Agent**, I want to render a low-res preview of my part to check if the holes are aligned before submitting the final expensive physics simulation.
-* **As the Agent**, I want to read the `build123d_cad_drafting_skill` to recall proven patterns for "Press Fit Tolerances" before designing a connector.
+The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**.
 
 ## 4. Functional Requirements
 
-### 4.1. Cognitive Architecture (DeepAgents Graph)
+### 4.1. Cognitive Architecture (Engineer Agent Graph)
 
 The agent shall be implemented as a **LangGraph** state machine with the following nodes:
 
-1. **Planner Node**:
-    * **Role**: Analyzes the request and existing Skills.
-    * **Action**: Discovers relevant skills using `list_skills` and reads them via `read_skill`. Generates a structured plan.
-    * **Transition**: -> `Actor`.
+1. **Architect (Planner) Node**:
+    * **Role**: Analyzes the request, existing Skills, and decomposes the problem.
+    * **Action**: Creates and persists a **TODO List**.
+    * **Transition**: -> `Engineer`.
 
-2. **Actor Node** (The Builder):
-    * **Role**: Executes the current step of the plan.
-    * **Action**: Calls environment tools (`write_file`, `preview_design`) and skill tools (`read_skill`) to maintain high coding standards.
-    * **Transition**: -> `Critic` (if submission or preview) OR -> `Actor` (if continuing).
+2. **Engineer (Actor) Node**:
+    * **Role**: Executes the current step of the plan/TODO list.
+    * **Action**: Writes CAD code, calls environment tools.
+    * **Capability**: Can **refuse** the plan if the Architect's requirements are proven impossible.
+    * **Transition**: -> `Critic` (on preview/submission) OR -> `Engineer` (on progress).
 
-3. **Critic Node** (The Validator):
-    * **Role**: Visual, Logic, and Economic validation.
-    * **Trigger**: After `submit_design` or `preview_design`.
-    * **Action**:
-        * Checks simulator feedback or vision output.
-        * **Cost Guard**: Compares current unit cost against budget.
-        * **Consensus**: Evaluates `force_submit` justifications. If valid, signals `HARD_LIMIT_REACHED` to Planner.
+3. **Critic Node**:
+    * **Role**: Validates the implementation against constraints (cost, weight, manufacturability).
+    * **Action**: Reviews visual previews and simulation feedback.
     * **Transition**:
-        * **Success/Terminal**: -> `Skill Populator` -> `End`.
-        * **Failure/Iteration**: -> `Planner` (Re-planning) -> `Actor`.
+        * **Success**: -> `Skill Populator` -> `End`.
+        * **Failure**: -> `Architect` (Re-planning).
 
 4. **Skill Populator Node**:
-    * **Role**: Persistent procedural memory management.
-    * **Action**: Uses `update_skill` to capture new insights, recurring patterns, or bug fixes discovered during the session into the appropriate skill folder.
+    * **Role**: Captures successful solutions and patterns into `.agent/skills/`. NOTE: the agent skills and skills in this repository are different.
 
 ### 4.2. Tool Interface
 
