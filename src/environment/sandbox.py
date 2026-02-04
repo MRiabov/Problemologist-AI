@@ -8,9 +8,9 @@ from typing import Optional
 import httpx
 
 from src.environment.models import (
-    CommandRequest,
-    CommandResponse,
-    ScriptRequest,
+    JobRequest,
+    JobResponse,
+    JobStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,56 @@ class PodmanSandbox:
                 pass
             time.sleep(0.5)
         return False
+
+    def _submit_and_poll(
+        self, port: int, req: JobRequest, timeout: int = 30
+    ) -> tuple[str, str, int]:
+        try:
+            # Submit
+            # We use a short timeout for the submission itself
+            resp = httpx.post(
+                f"http://localhost:{port}/jobs", json=req.model_dump(), timeout=10
+            )
+            if resp.status_code != 200:
+                logger.error(f"Job submission failed: {resp.text}")
+                return "", f"Agent Error: {resp.status_code} {resp.text}", 1
+
+            job_info = JobResponse(**resp.json())
+            job_id = job_info.job_id
+
+            # Poll
+            start_time = time.time()
+            # We allow a bit more than the requested timeout for the polling loop to handle overhead
+            while time.time() - start_time < timeout + 5:
+                try:
+                    p_resp = httpx.get(
+                        f"http://localhost:{port}/jobs/{job_id}", timeout=5
+                    )
+                    if p_resp.status_code == 200:
+                        j_resp = JobResponse(**p_resp.json())
+                        if j_resp.status in [
+                            JobStatus.completed,
+                            JobStatus.failed,
+                            JobStatus.cancelled,
+                        ]:
+                            return (
+                                j_resp.stdout,
+                                j_resp.stderr,
+                                j_resp.return_code
+                                if j_resp.return_code is not None
+                                else 1,
+                            )
+                except Exception as e:
+                    logger.warning(f"Polling error for job {job_id}: {e}")
+
+                time.sleep(0.5)
+
+            # Timeout
+            return "", f"Error: Command timed out (agent job {job_id}).", 124
+
+        except Exception as e:
+            logger.error(f"Communication Error: {e}")
+            return "", f"Communication Error: {e}", 1
 
     def start_session(
         self,
@@ -194,28 +244,14 @@ class PodmanSandbox:
         if not port:
             return "", f"Error: Session {session_id} is not active.", 1
 
-        # Reconstruct command string from args
-        # cmd_args is list like ["ls", "-la"] or ["python", "script.py"]
-        # We join them safely? Or pass as list?
-        # CommandRequest expects a string "command".
         import shlex
 
         command_str = shlex.join(cmd_args)
 
-        req = CommandRequest(command=command_str, workdir=workdir, timeout=timeout)
-        try:
-            url = f"http://localhost:{port}/run_command"
-            resp = httpx.post(url, json=req.model_dump(), timeout=timeout + 5)
-            if resp.status_code != 200:
-                return "", f"Agent Error: {resp.status_code} {resp.text}", 1
-
-            data = CommandResponse(**resp.json())
-            return data.stdout, data.stderr, data.return_code
-
-        except httpx.TimeoutException:
-            return "", "Error: Command timed out (agent).", 124
-        except Exception as e:
-            return "", f"Communication Error: {e}", 1
+        req = JobRequest(
+            type="command", command=command_str, workdir=workdir, timeout=timeout
+        )
+        return self._submit_and_poll(port, req, timeout=timeout)
 
     def run_script(
         self,
@@ -234,17 +270,8 @@ class PodmanSandbox:
         """
         if session_id and session_id in self._active_sessions:
             port = self._active_sessions[session_id]
-            req = ScriptRequest(script_name=script_name, timeout=timeout)
-            try:
-                url = f"http://localhost:{port}/run_script"
-                resp = httpx.post(url, json=req.model_dump(), timeout=timeout + 5)
-                if resp.status_code != 200:
-                    return "", f"Agent Error: {resp.status_code} {resp.text}", 1
-
-                data = CommandResponse(**resp.json())
-                return data.stdout, data.stderr, data.return_code
-            except Exception as e:
-                return "", f"Communication Error: {e}", 1
+            req = JobRequest(type="script", script_name=script_name, timeout=timeout)
+            return self._submit_and_poll(port, req, timeout=timeout)
 
         # Fallback to transient mode (unchanged logic)
         container_workspace = "/workspace"
@@ -252,7 +279,8 @@ class PodmanSandbox:
             "podman",
             "run",
             "--rm",
-            # "--network", network, # Keep network restriction for transient?
+            "--network",
+            network,
             "--memory",
             memory_limit,
             "--cpu-quota",
