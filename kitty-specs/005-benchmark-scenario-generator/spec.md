@@ -6,16 +6,13 @@
 
 ## 1. Introduction
 
-The **Benchmark Scenario Generator** is an automated pipeline designed to rapidly populate the `Problemologist` benchmark suite. Instead of manually authoring 40+ unique physics puzzles (a process that previously took days), this system leverages an LLM to procedurally generate parametric Python scripts. These scripts define the "Levels" the agent must solve—ranging from simple spatial tasks (Peg-in-Hole) to complex kinematic assemblies (Cranks/Levers).
-
-The system ensures that every generated scenario is robust, randomized, and physically valid before it reaches the human-in-the-loop for final approval.
+The **Benchmark Scenario Generator** is an autonomous agentic pipeline designed to populate the `Problemologist` benchmark suite. It leverages a specialized agent graph to generate, review, and verify CAD-based physics puzzles.
 
 ### 1.1 Goals
 
-- **Acceleration**: Reduce the time to create a valid benchmark scenario from hours to minutes.
-- **Diversity**: Generate high variance in problem geometry, goal positions, and obstacle placement ("forbid zones") to prevent overfitting.
-- **Validity**: Ensure all generated scenarios are geometrically consistent (watertight meshes) and simulation-ready (loadable MJCF).
-- **Automation**: Provide a "Generate → Compile → Validate" loop that only requires human intervention at the final review stage.
+- **Agentic Generation**: Use a "Generator -> Reviewer -> Verify" loop to ensure high-quality benchmarks.
+- **Strict Validity**: Every scenario MUST pass geometry manifoldness, MJCF schema validation, and physical stability checks.
+- **Randomization**: Ensure wide data distribution via parametric CAD scripts.
 
 ### 1.2 Out of Scope
 

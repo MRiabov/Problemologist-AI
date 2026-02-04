@@ -8,7 +8,14 @@
 
 The **MuJoCo Simulation Engine** has evolved into a comprehensive **Safe Execution Environment**. While it remains the physics validation backend for the Agentic CAD Environment, its role has expanded to provide a secure, containerized sandbox for executing untrusted agent code—including Python logic, data processing, and control algorithms—alongside physics simulations.
 
-This system bridges the gap between **Static CAD** (geometry) and **Dynamic Function** (physics/logic). It automatically converts `build123d` models into MuJoCo MJCF format, injects agent-defined control logic, and executes everything within isolated **Podman containers**. This ensures that agent-generated code runs safely without risking the host system, while still enabling complex interactions and robust feedback.
+### 1.1 Secure Communication: OpenAPI
+
+- **Host-Container Bridge**: Communication between the Host and the Container is strictly typed and governed by an **OpenAPI** schema.
+- **FastAPI**: The container runs a FastAPI server that exposes endpoints for:
+    - Executing CAD designs.
+    - Running physics simulations.
+    - Querying system status.
+- **Strict Typing**: All requests and responses are validated against Pydantic models to eliminate communication errors.
 
 ## 2. Goals & Success Criteria
 
@@ -72,26 +79,21 @@ The system shall implement a pipeline to construct the `scene.xml`:
 
 ### 4.3. Execution & Simulation Loop
 
-The engine runs processes via **Podman**:
+The engine runs processes via **Podman** using an OpenAPI bridge:
 
-1. **Container Prep**:
-    * Mount workspace volume.
-    * Mount `src` (optional) for library access.
-    * Set strict `network="none"`, `memory="1g"`, `cpu_quota`.
-2. **Execution**:
-    * Launch `python script.py` inside the container.
-    * For Simulations: The script initializes the MuJoCo loop.
-3. **Simulation Loop** (inside container):
-    * **Reset**: Load model, set seed.
-    * **Step Loop** ($t=0$ to $t=T$):
-        * **Sensors**: Read joint positions, object position, collision contacts.
-        * **Control**: Execute `Agent.control(sensors)`.
-        * **Actuate**: Apply returned torque/position signals to motors.
-        * **Step**: `mj_step()`.
-        * **Monitor**: Check for "Terminal Conditions".
-4. **Result Extraction**:
-    * Container exits.
-    * Host captures `stdout`, `stderr`, and artifacts written to the workspace.
+1. **Container Initialization**:
+    * Launch the `problemologist-sandbox` container.
+    * Start the internal **FastAPI server**.
+    * Wait for the OpenAPI endpoint to become healthy.
+2. **Task Dispatch**:
+    * Host sends an HTTP POST request to `/execute` or `/simulate` with the **Simulation Bundle**.
+    * Request payload is validated against the OpenAPI schema.
+3. **Internal Execution**:
+    * The container's internal runner executes the CAD code or MuJoCo loop.
+    * Real-time logs and intermediate metrics are buffered.
+4. **Result Retrieval**:
+    * The container returns a structured JSON response (Simulation Report).
+    * Host parses the response and persists it to the database.
 
 ### 4.4. Output & Artifacts
 

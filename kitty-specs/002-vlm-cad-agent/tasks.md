@@ -36,9 +36,9 @@
 **File**: [tasks/WP03-graph-architecture.md](tasks/WP03-graph-architecture.md)
 
 - [x] **T009**: Implement Graph Builder & Conditionals
-- [x] **T010**: Implement Planner Node (Reasoning)
-- [x] **T011**: Implement Actor Node (Tool Calling)
-- [x] **T012**: Implement Critic Node (Validation & Reflection)
+- [x] **T010**: Implement Architect (Planner) Node
+- [x] **T011**: Implement Engineer (Actor) Node
+- [x] **T012**: Implement Critic Node
 - [x] **T013**: Implement Skill Populator Node (Autonomous Learning)
 
 ### WP04: Runner & Integration

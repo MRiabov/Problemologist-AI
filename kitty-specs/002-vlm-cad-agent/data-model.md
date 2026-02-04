@@ -1,40 +1,16 @@
-# Data Model: VLM CAD Agent
+# Data Model: Engineer Agent
 
-## 1. Traceability & Logs
+## 1. Traceability & Logs (Database)
 
-### 1.1. Agent Trace (`agent_trace.jsonl`)
+All interactions, reasoning, and tool calls are persisted to the **Postgres/SQLAlchemy** database (or SQLite in local development) as defined in the system architecture.
 
-Every step in the ReAct loop is logged as a JSON object.
+### 1.1. Run Persistence
 
-```json
-{
-  "trace_id": "uuid-v4",
-  "session_id": "session-timestamp",
-  "timestamp": "ISO-8601",
-  "step_index": 0,
-  "phase": "Plan|Code|Review",
-  "input": {
-    "role": "user|system|assistant",
-    "content": "..."
-  },
-  "thought": "I need to check the dimensions...",
-  "tool_calls": [
-    {
-      "tool": "preview_design",
-      "args": {}
-    }
-  ],
-  "observation": {
-    "output": "Image generated...",
-    "image_path": "traces/img_01.png"
-  },
-  "cost": {
-    "tokens_in": 100,
-    "tokens_out": 50,
-    "model": "gpt-4o"
-  }
-}
-```
+| Entity | Fields |
+|--------|--------|
+| **Episode** | `id`, `prompt`, `start_time`, `result_status`, `total_cost` |
+| **Step** | `id`, `episode_id`, `phase` (Architect/Engineer/Critic), `thought`, `tool_call`, `observation`, `timestamp` |
+| **Artifact** | `id`, `step_id`, `path_to_mesh`, `path_to_render`, `code_snapshot` |
 
 ## 2. Long-Term Memory
 

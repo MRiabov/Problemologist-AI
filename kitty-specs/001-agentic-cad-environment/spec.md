@@ -8,17 +8,15 @@
 
 The **Agentic CAD Environment** is a specialized software development environment designed to enable a Large Language Model (LLM) to function as an autonomous mechanical engineer.
 
-Unlike traditional Reinforcement Learning (RL) environments that rely on discrete, low-level actions (e.g., "move cursor", "place box"), this environment implements a **Code-as-Policy** paradigm. The agent interacts with the world by writing, editing, and executing high-level Python scripts using the `build123d` parametric CAD library.
+Unlike traditional Reinforcement Learning (RL) environments that rely on discrete, low-level actions, this environment implements a **Code-as-Policy** paradigm. The agent interacts with the world by writing, editing, and executing high-level Python scripts using the `build123d` parametric CAD library.
 
-The environment provides the agent with a suite of tools to:
+### 1.1 Security and Communication
 
-1. **Learn**: Access library documentation via RAG.
-2. **Iterate**: Edit code and request visual previews (renders).
-3. **Validate**: Submit designs for rigorous geometric and physical testing against specific **Problem Scenarios** (e.g., "Move block A to location B").
+- **Podman Sandbox**: All agent-generated code MUST execute inside an isolated Podman container to prevent host system damage.
+- **OpenAPI Protocol**: The Host (Orchestrator) communicates with the Container (Agent Runtime) strictly via HTTP/FastAPI using a typed OpenAPI schema.
+- **Baked-in Environment**: Supporting libraries and models are baked into the container image or mounted read-only to prevent runtime code injection.
 
-Crucially, the environment acts as a **Data Engine**, logging every interaction, code version, and validation result into a structured SQLite database using an ORM (SQLAlchemy) into a dataset for future model fine-tuning.
-
-### 1.1 Superseded/Extended By
+### 1.2 Superseded/Extended By
 As the project evolved, the following specifications expanded on the foundations laid here:
 * **[Spec 003](../003-mujoco-simulation-engine/spec.md)**: Detailed implementation of the MuJoCo simulation engine and physics bridge.
 * **[Spec 004](../004-advanced-manufacturing-workbenches/spec.md)**: Advanced CNC and Injection Molding workbenches with DFM (Design for Manufacturing) checks.
@@ -120,9 +118,10 @@ The system shall support pluggable "Workbenches" that define specific constraint
 * **Language**: Python 3.10+
 * **CAD Kernel**: `build123d` (wrapping OpenCASCADE).
 * **Physics**: `mujoco` (Python bindings).
-* **Rendering**: `vtk` or `pyglet` (via `build123d`'s export capability).
-* **Database**: `sqlite3`.
-* **LLM Interface**: Open-ended; the environment exposes an API compatible with standard Tool-Use loops (e.g., PydanticAI, LangChain, or raw OpenAI API).
+* **API Framework**: `FastAPI` (serving the OpenAPI schema).
+* **Communication**: HTTP (strictly typed via Pydantic/OpenAPI).
+* **Database**: `sqlite3` via SQLAlchemy.
+* **Sandbox**: Podman.
 
 ### 5.2. Directory Structure
 
