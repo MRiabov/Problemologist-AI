@@ -10,6 +10,9 @@ cnc:
   constraints:
     min_tool_radius_mm: 3.0
     default_axis: "Z"
+  parameters:
+    finishing_feed_rate_mm_min: 500.0
+    finishing_stepover_mm: 0.5
 
 injection_molding:
   materials:
