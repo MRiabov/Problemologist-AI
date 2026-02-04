@@ -12,56 +12,58 @@ async def test_benchmark_agent_validation_loop():
     """
     # 1. Planner Mocks
     planner_mock = MagicMock()
-    planner_mock.ainvoke = AsyncMock(side_effect=[
-        AIMessage(content="Plan: Create a box."),
-        AIMessage(content="Plan already exists and is valid. Proceeding to execution.")
-    ])
+    planner_mock.ainvoke = AsyncMock(
+        side_effect=[
+            AIMessage(content="Plan: Create a box."),
+            AIMessage(
+                content="Plan already exists and is valid. Proceeding to execution."
+            ),
+        ]
+    )
 
-    # 2. Actor Mocks
-    actor_mock = MagicMock()
-    actor_mock.bind_tools.return_value = actor_mock
-    actor_mock.ainvoke = AsyncMock(side_effect=[
-        AIMessage(
-            content="Attempt 1",
-            tool_calls=[
-                {
-                    "name": "validate_benchmark_model",
-                    "args": {"code": "invalid"},
-                    "id": "call_1",
-                    "type": "tool_call",
-                }
-            ],
-        ),
-        AIMessage(
-            content="Attempt 2",
-            tool_calls=[
-                {
-                    "name": "validate_benchmark_model",
-                    "args": {"code": "valid"},
-                    "id": "call_2",
-                    "type": "tool_call",
-                }
-            ],
-        )
-    ])
+    # 2. Coder (Actor) Mocks
+    coder_mock = MagicMock()
+    coder_mock.bind_tools = MagicMock(return_value=coder_mock)
+    coder_mock.ainvoke = AsyncMock(
+        side_effect=[
+            AIMessage(
+                content="Attempt 1",
+                tool_calls=[
+                    {
+                        "name": "validate_benchmark_model",
+                        "args": {"code": "invalid"},
+                        "id": "call_1",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            AIMessage(
+                content="Attempt 2",
+                tool_calls=[
+                    {
+                        "name": "validate_benchmark_model",
+                        "args": {"code": "valid"},
+                        "id": "call_2",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+        ]
+    )
 
-    # 3. Critic Mocks
-    critic_mock = MagicMock()
-    critic_mock.ainvoke = AsyncMock(side_effect=[
-        AIMessage(content="Validation Failed. Please fix the code."),
-        AIMessage(content="Validation Passed! Task complete.")
-    ])
-
-    def get_mock_model(node_type):
-        if "planner" in node_type: return planner_mock
-        if "actor" in node_type: return actor_mock
-        if "critic" in node_type: return critic_mock
-        return MagicMock()
+    # 3. Reviewer (Critic) Mocks
+    reviewer_mock = MagicMock()
+    reviewer_mock.ainvoke = AsyncMock(
+        side_effect=[
+            AIMessage(content="Validation Failed. Please fix the code."),
+            AIMessage(content="Validation Passed! Task complete."),
+        ]
+    )
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=planner_mock),
-        patch("src.agent.graph.nodes.actor.get_model", return_value=actor_mock),
-        patch("src.agent.graph.nodes.critic.get_model", return_value=critic_mock),
+        patch("src.agent.graph.nodes.coder.get_model", return_value=coder_mock),
+        patch("src.agent.graph.nodes.reviewer.get_model", return_value=reviewer_mock),
     ):
         with (
             patch(
@@ -104,27 +106,31 @@ async def test_benchmark_agent_success():
     planner_mock = MagicMock()
     planner_mock.ainvoke = AsyncMock(return_value=AIMessage(content="Plan"))
 
-    actor_mock = MagicMock()
-    actor_mock.bind_tools.return_value = actor_mock
-    actor_mock.ainvoke = AsyncMock(return_value=AIMessage(
-        content="Code",
-        tool_calls=[
-            {
-                "name": "validate_benchmark_model",
-                "args": {"code": "c"},
-                "id": "t1",
-                "type": "tool_call",
-            }
-        ],
-    ))
+    coder_mock = MagicMock()
+    coder_mock.bind_tools = MagicMock(return_value=coder_mock)
+    coder_mock.ainvoke = AsyncMock(
+        return_value=AIMessage(
+            content="Code",
+            tool_calls=[
+                {
+                    "name": "validate_benchmark_model",
+                    "args": {"code": "c"},
+                    "id": "t1",
+                    "type": "tool_call",
+                }
+            ],
+        )
+    )
 
-    critic_mock = MagicMock()
-    critic_mock.ainvoke = AsyncMock(return_value=AIMessage(content="Validation Passed! Task complete."))
+    reviewer_mock = MagicMock()
+    reviewer_mock.ainvoke = AsyncMock(
+        return_value=AIMessage(content="Validation Passed! Task complete.")
+    )
 
     with (
         patch("src.agent.graph.nodes.planner.get_model", return_value=planner_mock),
-        patch("src.agent.graph.nodes.actor.get_model", return_value=actor_mock),
-        patch("src.agent.graph.nodes.critic.get_model", return_value=critic_mock),
+        patch("src.agent.graph.nodes.coder.get_model", return_value=coder_mock),
+        patch("src.agent.graph.nodes.reviewer.get_model", return_value=reviewer_mock),
     ):
         with (
             patch(
@@ -136,7 +142,12 @@ async def test_benchmark_agent_success():
             ),
         ):
             result = await generator_agent.ainvoke(
-                {"messages": [HumanMessage(content="X")], "plan": "", "step_count": 0, "runtime_config": DEFAULT_RUNTIME_CONFIG}
+                {
+                    "messages": [HumanMessage(content="X")],
+                    "plan": "",
+                    "step_count": 0,
+                    "runtime_config": DEFAULT_RUNTIME_CONFIG,
+                }
             )
             tool_msgs = [m for m in result["messages"] if isinstance(m, ToolMessage)]
             assert len(tool_msgs) == 1

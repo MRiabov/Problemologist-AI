@@ -49,4 +49,4 @@ def test_simulate_crash():
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is False
-    assert data["outcome"] == "crasherror"
+    assert data["outcome"] == "crash"

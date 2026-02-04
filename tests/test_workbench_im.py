@@ -26,14 +26,10 @@ def test_im_validate():
     box_valid = Box(2, 2, 2, rotation=(5, 5, 5))
     violations_c = workbench.validate(box_valid)
     assert len(violations_c) == 0
-    # Verify cost breakdown contains wall thickness stats
+    # Verify cost result contains wall thickness stats
     res = workbench.calculate_cost(box, quantity=1)
-    assert "wall_thickness_stats" in res["breakdown"]
-    assert res["breakdown"]["wall_thickness_stats"]["max_mm"] >= 9.9
-    # Verify cost breakdown contains wall thickness stats
-    res = workbench.calculate_cost(box, quantity=1)
-    assert "wall_thickness_stats" in res["breakdown"]
-    assert res["breakdown"]["wall_thickness_stats"]["max_mm"] >= 9.9
+    assert "wall_thickness_stats" in res.details
+    assert res.details["wall_thickness_stats"]["max_mm"] >= 9.9
 
 
 def test_im_cost():
@@ -43,12 +39,14 @@ def test_im_cost():
     res_1 = workbench.calculate_cost(box, quantity=1)
     res_10000 = workbench.calculate_cost(box, quantity=10000)
 
-    assert isinstance(res_1, dict)
-    assert "total_cost" in res_1
-    assert "breakdown" in res_1
+    from src.workbenches.models import CostBreakdown
 
-    cost_1 = res_1["total_cost"]
-    cost_10000 = res_10000["total_cost"]
+    assert isinstance(res_1, CostBreakdown)
+    assert res_1.total_cost is not None
+    assert res_1.details is not None
+
+    cost_1 = res_1.total_cost
+    cost_10000 = res_10000.total_cost
 
     # Unit cost at q=1 is massive (mostly tooling)
     unit_cost_1 = cost_1 / 1.0
@@ -59,10 +57,10 @@ def test_im_cost():
     assert unit_cost_10k < 10.0
     assert unit_cost_10k < unit_cost_1
 
-    # Verify breakdown fields
-    breakdown = res_1["breakdown"]
-    assert "wall_thickness_stats" in breakdown
-    stats = breakdown["wall_thickness_stats"]
+    # Verify details fields (renamed from breakdown)
+    details = res_1.details
+    assert "wall_thickness_stats" in details
+    stats = details["wall_thickness_stats"]
     assert stats["min_mm"] > 0
     assert stats["max_mm"] > 0
     assert stats["average_mm"] > 0
