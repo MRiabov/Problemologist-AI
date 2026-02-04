@@ -3,7 +3,7 @@ from typing import Any
 from src.agent.tools.env_adapter import get_runtime
 
 
-def log_to_env(
+def log_to_runtime(
     content: str,
     msg_type: str = "thought",
     agent_role: str | None = None,

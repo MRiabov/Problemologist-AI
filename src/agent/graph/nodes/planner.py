@@ -1,13 +1,13 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.graph.state import AgentState
-from src.agent.tools.env_adapter import set_current_role
 from src.agent.utils.config import Config
 from src.agent.utils.logging import get_logger
 from src.agent.utils.prompts import get_prompt
 from src.agent.utils.llm import get_model
 
 logger = get_logger(__name__)
+
 
 async def planner_node(state: AgentState):
     """
@@ -22,17 +22,20 @@ async def planner_node(state: AgentState):
     # Look for explicit re-plan signals or budget/cost issues in the conversation
     for msg in reversed(state["messages"]):
         if hasattr(msg, "content") and any(
-            x.lower() in msg.content.lower() for x in ["[REPLAN]", "REPLAN_REQUIRED", "HARD_LIMIT", "budget exceeded"]
+            x.lower() in msg.content.lower()
+            for x in ["[REPLAN]", "REPLAN_REQUIRED", "HARD_LIMIT", "budget exceeded"]
         ):
             needs_replan = True
             last_critic_msg = msg.content
             break
         # Also check for general budget/cost mentions in Critic messages
-        if getattr(msg, "name", "") == "Critic" or (hasattr(msg, "type") and msg.type == "ai" and "Critic" in str(msg)):
-             if any(x in msg.content for x in ["budget", "cost"]):
-                 needs_replan = True
-                 last_critic_msg = msg.content
-                 break
+        if getattr(msg, "name", "") == "Critic" or (
+            hasattr(msg, "type") and msg.type == "ai" and "Critic" in str(msg)
+        ):
+            if any(x in msg.content for x in ["budget", "cost"]):
+                needs_replan = True
+                last_critic_msg = msg.content
+                break
 
     # If a plan already exists and no re-plan is triggered, proceed.
     if state.get("plan") and not needs_replan:
@@ -57,7 +60,7 @@ async def planner_node(state: AgentState):
             hasattr(msg, "type") and msg.type == "human"
         ):
             human_messages.append(msg.content)
-    
+
     full_request = "\n---\n".join(human_messages)
 
     system_prompt_key = "cad_agent.planner.system"
@@ -74,7 +77,9 @@ async def planner_node(state: AgentState):
 
     planning_context = f"Original/Updated Request:\n{full_request}"
     if last_critic_msg:
-        planning_context += f"\n\nCritic Feedback triggering Re-plan:\n{last_critic_msg}"
+        planning_context += (
+            f"\n\nCritic Feedback triggering Re-plan:\n{last_critic_msg}"
+        )
 
     messages = [
         SystemMessage(content=system_prompt),

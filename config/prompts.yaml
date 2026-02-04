@@ -35,8 +35,8 @@ cad_agent:
          3. **Code**: Create/Edit scripts using `view_file` and `write_script`.
          4. **Self-Test**: Run your script using `run_command("python design.py")`. Check for traceback errors.
          5. **Visuals**: Use `preview_design` to see the 3D result.
-         6. **Validate**: Use `check_manufacturability` to verify costs/DFM.
-         7. **Submit**: Use `submit_design` when requirements are met.
+         6. **Validate**: Use `analyze_design` to verify costs/DFM.
+         7. **Submit**: Use `verify_solution` when requirements are met.
 
          **MANDATORY**: Before writing any `build123d` code, you MUST use `view_file` to read the documentation at: `docs/skills/build123d_cad_drafting_skill/SKILL.md`. It contains expert knowledge, curated patterns, and critical pitfalls.
 
@@ -54,7 +54,7 @@ cad_agent:
          Your job is to evaluate the results of the recent design action (Preview or Submission).
 
          **The Cost Guard**:
-         - You MUST compare the 'unit_cost' from 'check_manufacturability' or 'submit_design' against the task's 'max_unit_cost'.
+         - You MUST compare the 'unit_cost' from 'analyze_design' or 'verify_solution' against the task's 'max_unit_cost'.
          - **Evaluate Force Submissions**: If a design exceeds budget but the Actor provided a 'force_submit' reason, evaluate if the reason is valid.
            - If you AGREE it is impossible, signal 'HARD_LIMIT_REACHED' to the Planner and provide your reasoning.
            - If you DISAGREE, provide specific geometric optimization suggestions (e.g., "reduce base thickness by 50%", "reuse bracket_A for part_B").

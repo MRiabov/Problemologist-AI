@@ -11,11 +11,11 @@ from src.agent.utils.prompts import get_prompt
 logger = get_logger(__name__)
 
 
-async def actor_node(state: AgentState, tools: Optional[list] = None):
+async def coder_node(state: AgentState, tools: Optional[list] = None):
     """
     Executes the next step in the plan using tools.
     """
-    log = logger.bind(agent_role="Actor")
+    log = logger.bind(agent_role="Coder")
     log.info("Executing current step")
     model = get_model(Config.LLM_MODEL)
 

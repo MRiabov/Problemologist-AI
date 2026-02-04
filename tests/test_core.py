@@ -28,7 +28,7 @@ def runtime(tmp_path):
     rt.sim_bridge.run_simulation = MagicMock(return_value=mock_res)
 
     # Mock evaluator to avoid full evaluation overhead in core logic tests
-    rt.evaluator.preview_design = MagicMock(return_value="preview.svg")
+    rt.design_executor.preview_design = MagicMock(return_value="preview.svg")
 
     # Mock validate_and_export for budget tests
     mock_report = MagicMock()
@@ -36,7 +36,7 @@ def runtime(tmp_path):
     mock_report.stl_path = "model.stl"
     mock_report.error = None
     mock_report.cost_analysis.unit_cost = 50.0  # Default affordable
-    rt.evaluator.validate_and_export = MagicMock(return_value=mock_report)
+    rt.design_executor.validate_and_export = MagicMock(return_value=mock_report)
 
     yield rt
 
@@ -47,7 +47,9 @@ def runtime(tmp_path):
 
 def test_runtime_budget_rejection(runtime):
     # Set mock cost to be high
-    runtime.evaluator.validate_and_export.return_value.cost_analysis.unit_cost = 200.0
+    runtime.design_executor.validate_and_export.return_value.cost_analysis.unit_cost = (
+        200.0
+    )
 
     runtime.dispatch(
         "write_file",
@@ -59,7 +61,7 @@ def test_runtime_budget_rejection(runtime):
 
     # Try submit with low budget
     output = runtime.dispatch(
-        "submit_design", {"control_path": "control.py", "max_unit_cost": 100.0}
+        "verify_solution", {"control_path": "control.py", "max_unit_cost": 100.0}
     )
 
     # Output is JSON string, checking for keywords
@@ -69,7 +71,9 @@ def test_runtime_budget_rejection(runtime):
 
 def test_runtime_force_submit(runtime):
     # Set mock cost to be high
-    runtime.evaluator.validate_and_export.return_value.cost_analysis.unit_cost = 200.0
+    runtime.design_executor.validate_and_export.return_value.cost_analysis.unit_cost = (
+        200.0
+    )
 
     runtime.dispatch(
         "write_file",
@@ -81,7 +85,7 @@ def test_runtime_force_submit(runtime):
 
     # Force submit should bypass budget check
     output = runtime.dispatch(
-        "submit_design",
+        "verify_solution",
         {"force_submit": True, "control_path": "control.py", "max_unit_cost": 100.0},
     )
 
