@@ -1,4 +1,5 @@
 # Implementation Plan: Advanced Manufacturing Workbenches
+
 *Path: templates/plan-template.md*
 
 **Branch**: `004-advanced-manufacturing-workbenches` | **Date**: 2026-02-01 | **Spec**: [kitty-specs/004-advanced-manufacturing-workbenches/spec.md](spec.md)
@@ -11,7 +12,8 @@ This feature implements two advanced manufacturing workbenches: **CNC Milling** 
 ## Technical Context
 
 **Language/Version**: Python 3.12
-**Primary Dependencies**: 
+**Primary Dependencies**:
+
 - `build123d` (Geometry generation/manipulation)
 - `trimesh` (Geometric analysis: raycasting, draft angles)
 - `numpy` (Vector math)
@@ -21,7 +23,8 @@ This feature implements two advanced manufacturing workbenches: **CNC Milling** 
 **Target Platform**: Linux (Development/Execution)
 **Project Type**: Single project (Library/Agent Environment)
 **Performance Goals**: DFM checks < 5s per part.
-**Constraints**: 
+**Observability**: Record detailed analysis traces and thoughts for DFM violations.
+**Constraints**:
 - Must handle standard mesh formats (STL/OBJ) or internal `build123d` representations converted to mesh.
 - Cost parameters must be hot-swappable via config.
 **Scale/Scope**: ~3 new modules, integration into existing tool system.

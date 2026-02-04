@@ -8,7 +8,7 @@
 
 The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment**. It is a specialized graph-based system built using LangGraph. It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
 
-The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**.
+The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**. The agent is designed for high-latency, high-quality reasoning, with acceptable runtimes of **10+ minutes** in production scenarios.
 
 ## 4. Functional Requirements
 
@@ -35,7 +35,8 @@ The agent shall be implemented as a **LangGraph** state machine with the followi
         * **Failure**: -> `Architect` (Re-planning).
 
 4. **Skill Populator Node**:
-    * **Role**: Captures successful solutions and patterns into `.agent/skills/`. NOTE: the agent skills and skills in this repository are different.
+    * **Role**: Captures successful solutions and patterns.
+    * **Storage**: Learned skills are persisted in the agent's database/workspace. Static/Reference skills for the system are kept in `.agent/skills/` at the repository root.
 
 ### 4.2. Tool Interface
 
@@ -100,5 +101,5 @@ src/agent/
 
 ## 6. Assumptions & Constraints
 
-* **State Persistence**: Uses LangGraph `MemorySaver` (in-memory or SQLite) for session state, and File System for cross-session "Deep Memory".
-* **Single Orchestrator**: One top-level graph coordinating the process.
+* **Observability**: The agent MUST externalize its "Thoughts" and "Reasons" for every tool call and state transition. This data is recorded for future RL training and debugging.
+* **Fail Fast**: Nodes should avoid creating infinitely deep retry loops or complex fallbacks. If a plan is proven impossible or a constraint is fundamentally violated, the agent should terminate early or return to the Architect with a clear failure reason.

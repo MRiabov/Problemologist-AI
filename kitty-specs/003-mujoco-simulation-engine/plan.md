@@ -12,10 +12,10 @@ The **MuJoCo Simulation Engine** has been upgraded to a **Safe Execution Environ
 It operates as a **Parallel Sandbox Manager** that:
 
 1. Orchestrates multiple **Podman Containers** running **FastAPI servers** in parallel.
-2. Scales to at least 4 concurrent containers per 4-core CPU.
-3. Communicates with containers via an **OpenAPI** interface (HTTP/JSON).
+2. Scales to at least 4 concurrent containers per 4-core CPU, with support for future IPv6-based distributed orchestration.
+3. Communicates with containers via a strictly-typed **OpenAPI** interface (HTTP/JSON).
 4. Compiles geometry into MJCF and executes simulations inside the sandboxes.
-4. Returns strictly typed **Simulation Reports**.
+5. Returns strictly typed **Simulation Reports** and records full execution traces (thoughts, errors) for observability.
 
 ## Technical Context
 

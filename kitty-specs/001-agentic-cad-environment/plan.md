@@ -26,7 +26,9 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 **Performance Goals**:
 - `preview_design`: < 2 seconds for moderate complexity parts.
 - `submit_design`: < 10 seconds for geometry compilation + simulation.
-- **Parallelism**: Support for at least 4 concurrent execution containers on a 4-core CPU.
+- **Parallelism**: Support for at least 4 concurrent execution containers on a 4-core CPU, architected for future distributed node support (IPv6 ready).
+- **Observability**: Record agent thoughts, tracebacks, and tool-calling structure for RL/training.
+- **Backups (Production)**: Daily compressed (zstd) SQLite backups to S3 via a dedicated cron endpoint.
 **Constraints**:
 - **Asynchronous Execution**: The environment MUST support non-blocking execution of long-running tasks.
 - **Security**:

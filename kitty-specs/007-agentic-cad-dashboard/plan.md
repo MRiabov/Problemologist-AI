@@ -57,6 +57,8 @@ src/
     │   ├── chat.py      # Reasoning and logs viewer
     │   ├── code.py      # Syntax-highlighted code viewer
     │   ├── viewer_3d.py # interactive PyVista viewport
+    │   ├── admin.py     # Backup trigger and system health
+    │   ├── rebuilder.py # Visual reconstruction engine
     │   └── benchmark_gen.py # Interactive generator pipeline
     └── utils.py         # Path resolution and formatting
 ```
