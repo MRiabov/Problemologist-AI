@@ -54,14 +54,15 @@ The architect will create and persist a TODO list. The engineer must implement. 
 
 #### Verification
 
-The Engineer agent will verify it's work by:
+The Engineer agent will verify its work by:
 
 1. Checking the manufacturability of its solution, on
   a. Individual part scale (this part can be machined)
   b. Assembly scale - this assembly has no interference of parts and has valid part constraints.
-2. Checking the cost of it's solution; against the part count and unit cost as specified by the user.
-3. Simulating - did the model achieve the goal as per the benchmark?
-4. The critic will assess whether the simulation is stable or not - will it be allowed to work in a real scenario? Is it flaky?
+2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
+3. Checking the weight of its solution.
+4. Simulating - did the model achieve the goal as per the benchmark?
+5. The critic will assess whether the simulation is stable or not - will it be allowed to work in a real scenario? Is it flaky?
 
 ### Agentic framework
 
@@ -71,7 +72,7 @@ We use LangChain and LangGraph for the agentic infrastructure.
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
 
-Clarification: The file writes don't persist locally except into the observability database. They are forwarded (copied) directly into the container.
+Clarification: The file writes don't persist locally except into the observability database. They are forwarded (copied) directly into the container mounted storage.
 
 #### Utils
 
@@ -160,7 +161,7 @@ The Planner will build a list of TODOs for the agent to do. The critic will veri
 
 ### Token compression
 
-As the agent will near it's token generation limits, they will compress their old memory by a summarizing agent.
+As the agent will near its token generation limits, they will compress their old memory by a summarizing agent.
 
 ### Skills
 
@@ -193,13 +194,66 @@ The skill agent will read a `skill-creator/` skill as from Anthropic.
 The skill agent is run asyncronous to the execution, modifying the skill folder and pushing it to the containers.
 The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
+##### Skill agent has a journal too
+
+Skill agent has a journal of:
+
+1. Issues faced and what they resolved to (or weren't resolved)
+2. Commonly faced problems (happened more than twice) and solutions to them
+
+If the patterns emerge in the journal; or the solution is obvious enough, the learner writes it into the skill.
+
+###### Structure of the journal
+
+1. Observed struggles (tool calls failed over 4 times)
+2. Found solutions to struggles (happened once)
+    - The skill builder agent may make mistakes, so, observe the patterns at least twice.
+3. Skills to add in the end (happened twice).
+
+Importantly! the agent **must** write an ID of observation and link it to a journal entry. This way, they can:
+
+- Link the found "breakthrough" to an exact problem
+- Read the actual reasoning and outcomes from journals instead of putting it to memory.
+
+When writing the skill in the end, they will write a skill from the actual reasoning of the agent, and not be confused.
+
+<!-- Perhaps, make a python script that would add them as entries and make the journal read-only except for the modification of the script? e.g. spec-kitty does this with YAML frontmatter. -->
+
+###### Using a sidecar agent for Journalling
+
+It was proven to be more cost-effective to use a "sidecar" agent that runs in paralel to the primary model. We will use an inexpensive model, such as DeepSeek 3.2 or small models.
+
+<!-- Note: it was found that YAML/Markdown are the most effective for storing model outputs structured information output. YAML, later converted to markdown programmatically is likely preferable? -->
+
+###### When to write in a journal?
+
+As above - when the agent has spent >4 tool calls in a single conversation trying to figure out an issue or syntaxis, or
+This also applies to refactors. If the agent has taken an approach, spent 5 tool calls doing a roundtrip and decided against it in the end, note the architectural issue.
+In both cases, if the agent found the solution
+
+The agent will go through all notes in the session and read through ones that are relevant. They will then link the found and solved issues.
+<!-- Note: maybe add a "hypothesis" - an agent would be perform better if we X? -->
+
+###### Example
+
+1. Observation: Mulitple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it(struggle) .
+2. The learner agent records the issue (async)
+3. The main model finally finds that `Compound` syntaxis requires `Compound(children=[Part|Compound, ...])` syntaxis (with `children` upfront)
+4. The learner agent records the found solution and the skill.
+
 #### Worker skills are persisted and are separate from the repository-level skills
 
 Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
 
 ### Tools
 
-(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above). The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) it's environment *only via script calls*.
+(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above). The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
+
+### `deepagents` framework
+
+LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for running long-term agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
+
+<!-- However, it's an opinionated framework and should be researched -->
 
 #### Linting
 
@@ -236,16 +290,11 @@ There is a controller node which runs the LLM and tool calls, and there worker n
 
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
 
-<!-- ## Containerization and paralel execution
-
-We will run benchmark generation and CAD generation/sim in paralel. The system should scale to approx 4 container on a 4-code CPU, at least.-->
-<!-- this became implicit as we introduce the container architecture. -->
-
 In the future we may well refactor to run on distributed notes, perhaps even IPv6.
 
 ### Persistent state and durable execution
 
-To simplify app logic and avoid writing retry and other logic, we will deploy a small `temporal` instance running on a separate small machine next to the main app.
+To simplify app logic and avoid writing retry and other "safety" logic, we will deploy a small `temporal` instance running on a separate small machine next to the main app.
 
 ### Hyperscaler of choice
 
@@ -253,9 +302,13 @@ We are deploying to Railway. (In production, we may deploy workers to inexpensiv
 
 ### Persisting files
 
-The files are generated locally by the agent. They are then sent to the container to the prod.
+The files written directly to the container. We don't store it locally. We store a copy into the DB for the observability issue.
 
-We need to maintain a copy of files locally, and only send requests later, such that files complete their transfer.
+<!-- gap: do we store file diffs or full files into the db? or both? -->
+
+The "main app" essentially serves as a business logic and observability layer, but the actual execution - from linting to simulation - happens in the worker container.
+
+<!-- LangChain DeepAgents can handle saving -->
 
 ### Database
 
@@ -265,12 +318,6 @@ We do persistence via SQLAlchemy and Alembic migrations to avoid issues with han
 <!-- Solved via Temporal.  -->
 
 All important updates must be persisted into the DB (for observability, as below.)
-
-<!-- #### Debugging processes
-
-We need to debug processes and that means we need a folder to store the files locally. During dev, we can use a local podmanfile that mounts/links its subfolders to the local `/workspace/[run-id]` dir. However, in production, we will containerize the main app it would store these in a volume.
-And of course, we persist all of the files to the SQLite (with SQLAlchemy and Alembic) for observability. -->
-<!-- Forget it. -->
 
 ### Agent and Worker boundary
 
@@ -315,6 +362,7 @@ The benchmarks are randomized to enable a wider data distribution with less gene
 - The benchmark volume size can vary 2x in all sides, and will be rescaled to random values, e.g. 1.68\*0.8\*1.3; the benchmark generator agent can narrow the scaling down if somehing is expected to break; however it is undesirable as we want to keep randomization higher.
   - The environment - ojectives (goals, forbids, build zones) are rescaled respectively.
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
+- The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
 
 ## Observability
 
@@ -365,9 +413,10 @@ I propose the following set of tools (their usage is below):
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
 - `simulate(Compound) -> SimulationResult` - Submits a model for a simulation.
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
-<!-- should it contain it's environment model or only the generated model?  -->
-- `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user
+<!-- should it contain its environment model or only the generated model?  -->
+- `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 <!-- Same: what's in the compound? -->
+- `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 *Note:* terminology: I use "component" is a shorthand for part OR assembly.
 
@@ -400,9 +449,9 @@ validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit
 
 ### Technical details
 
-Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here.)
+Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here; however manufacturability is determined by deterministic algorithms.)
 
-The workbench validation (as well as other util infrastructure are read-only in the container.
+The workbench validation (as well as other util infrastructure are read-only in the container)
 
 ### Supported workbenches
 
@@ -427,3 +476,19 @@ Both planner agent and engineer can only prompt the searching agent for searchin
 
 Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows. -->
 <!-- Production workflow became a priority -->
+
+Complexity tracking worksheet (what is more complex but necessary)
+
+```yaml
+Updating skills via requests:
+  what: 
+  We will send HTTP requests to update the skills when necessary
+  reason: >
+  We will send HTTP requests to update the skills when 
+
+deepagents framework: 
+  what:
+  We will use a deepagents framework.
+  reason:
+  deepagents provides abstractions over filesystem, memory, TODO lists and Subagents. (so-called Middleware.)
+  
