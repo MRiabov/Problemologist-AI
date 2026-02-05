@@ -14,7 +14,8 @@ We are to create a benchmark and a training dataset for evaluating LLM models on
 6. Skills acquired during execution of the model (SKILL.md files and their assets - references and scripts)
 7. Journals and "scannable" summaries of the execution.
 8. An open-source framework for benchmarking, optimization of visual-language models to solve dynamic mechanical engineering problems
-9. An open-source framework to solve mechanical engineering problems.
+9. **An open-source framework to solve mechanical engineering problems.**
+10. (additionally) A large library of build123d code.
 
 ## Agents
 
@@ -88,11 +89,29 @@ We use LangChain and LangGraph for the agentic infrastructure.
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
 
-Clarification: The file writes don't persist locally except into the observability database. They are forwarded (copied) directly into the container mounted storage.
+#### File updates
 
-#### Utils
+The file writes don't persist in the Controller except into the observability database. Their edits are sent directly into the container mounted (ephemeral) storage.
 
-The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly read-only in the filesystem, and are "baked-in" to the container. The agent can't enable write constraints on them.
+To update the files, or execute other functions: the controller parses the tool call locally; then sends the request over to the worker to execute whatever is related to the tool - read file, write file, or edit file (perhaps, `deepagents` handles the network part too? I think it does, via the Filesystem...).
+
+The network latency is perfectly acceptable as LLM reasoning latency far outweights the ping time.
+
+#### Utils files
+
+The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` FilesystemMiddleware (which can force certain files to be unwritable by the in agents) the filesystem.
+
+#### Skills files
+
+Unlike utils files which are static (or the container restart is acceptable), skills files will be updated by a sidecar learner agent rather frequently (possibly after every 10-20 conversations?).
+
+The container will download the latest skills from the server before every run (justified? else how do we handle the updates? The file size there is minimal.)
+
+Maybe use a dedicated public git repo? I think it's sound. However this is complexity, and probaly isn't that sound. But it'll enable human readability, which is a bonus.
+
+*Note: the skills are to be versioned either way.*
+
+*Note on observability: for observability and reproducibility, the skills usage is to be tracked in the database.*
 
 #### Starting folder structure for various agents
 
@@ -103,6 +122,9 @@ We define the file structure as follows, individual agents adapt to individual n
 ├── skills/                     # [Read-Only] Learned skills and documentation
 ├── utils/                      # [Read-Only] Fixed utilities and shared code
 │   └── ...
+├── renders/                      # [Read-Only/tool-generated] (Renders of images and  from the enviornment) 
+│   ├── images/                 # Images from 24 angles (8 images clockwise on 3 levels).
+│   └── videos/                 # Video of the simulation. (latest simulation video.) 
 ├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
 ├── todo.md                     # [Read-Write] Execution plan
 ├── plan.md                     # A plan
@@ -110,7 +132,7 @@ We define the file structure as follows, individual agents adapt to individual n
 
 <!-- The agent can create more than one .py file. -->
 ```
-
+<!-- Important note: some of these are always fetched from the s3 and are only "fake" for the agent. The "fake" is done by FilesystemMiddleware. -->
 ##### Benchmark generator (CAD agent)
 
 1. Skills (read-only)
@@ -261,25 +283,32 @@ The agent will go through all notes in the session and read through ones that ar
 
 Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
 
+### Skill versioning
+
+Because the application's performance is quite dependant on SKILL.md files which detail how to use `build123d` and other issues, however those are frequently updated by a "learner" agent, the skill git hashes need to be versioned and persisted to the observability database.
+
 ### Tools
 
 (Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above). The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
 
 ### `deepagents` framework
 
-LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for running long-term agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
-
-<!-- However, it's an opinionated framework and should be researched -->
+LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for creating long-running, complex agents, for example coding agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
 
 - We use `FilesystemMiddleware` to support `ls`, `write`, `read` tools (not sure if `edit` exists, likely does)
 - We use `TodoListMiddleware` which provides a `todo_list` to support TODO lists.
--
+
+<!-- Note to LLMs! `deepagents` was introduced in late 2025 and you don't know much about it, but it is a framework for managing agents.
+
+Overview: https://docs.langchain.com/oss/python/deepagents/overview.md
+
+ -->
 
 #### Linting
 
-The agents will receive the linting from the tools. The linting is done on the worker nodes for safety and performance. The agent will have `ruff` and/or `pyright` (I don't think pyrefly is necessary here; standard, non-based pyright) on the device.
+The agents will receive the linting from the tools. The linting is done on the worker nodes for safety and performance. The agent will have `ruff` and/or `pyright` on the device (I don't think pyrefly is necessary here; standard, non-based pyright will suffice).
 
-The linting will happen at runtime.
+The linting will happen at any `write` command; can be triggered by `run_command` command using `ruff`/`pyright`..
 
 ### Execution process
 
@@ -332,11 +361,11 @@ We decided to run in Podman containers because they are leaner than Docker and s
 
 ### Persisting files
 
-The files written directly to the container. We don't store it locally. We store a copy into the DB for the observability issue.
+The files are written directly to the worker container. We don't store it on controller. However, we upload final results (assets) to the s3.
 
 <!-- gap: do we store file diffs or full files into the db? or both? -->
 
-The "main app" essentially serves as a business logic and observability layer, but the actual execution - from linting to simulation - happens in the worker container.
+The "main app" essentially serves as a business logic layer that also forwards requests to observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 
 <!-- LangChain DeepAgents can handle saving -->
 
@@ -368,7 +397,9 @@ The Agent (managed by LangGraph) never "knows" about distributed workers. It onl
 
 Temporal is used to orchestrate the workers. It is not used to run or retry the agent.
 
-Temporal needs a database and we will use the Postgre database used by temporal, except under the different `DATABASE` partition.
+Temporal needs a database and we will use the Postgres database used by temporal, except under the different `DATABASE` partition.
+
+Because tasks like simulation (with involve both simulation and uploading to the database) could be long-running we are using webhooks and callbacks to report their completion.
 
 ## Simulation and "Defintions of Done"
 
@@ -432,8 +463,7 @@ These will be later used for querying, preproc and model training.
 
 ### Langfuse
 
-<!-- Decision that overwrites others. I don't think we should use SQLite for this other than some persistent controller state. -->
-we use LangFuse for LLM observability. We will use a Railway template / deploy a separate container to the langfuse. This will require a Postgres DB.
+We use LangFuse for LLM observability. We will use a Railway template / deploy a separate container to the langfuse. This will require a Postgres DB.
 
 ### Backups
 
@@ -463,11 +493,11 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 ### Benchmark generator and engineer handover
 
-The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing).
+The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 ### Set of tools and utils
 
-I propose the following set of tools (their usage is below):
+I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
 - `simulate(Compound) -> SimulationResult` - Submits a model for a simulation.
@@ -478,6 +508,41 @@ I propose the following set of tools (their usage is below):
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 *Note:* terminology: I use "component" is a shorthand for part OR assembly.
+
+#### Exact tools logic
+
+I will define exact tool (function) logic to avoid confusion.
+
+##### `validate_and_price(component: Part|Compound)`
+
+Run the workbench interface to validate the part for manufacturability; if passes - also run the pricing, if not, return a validation error with fix suggestions. Detects both assemblies and individual parts.
+
+1. Check cache for if we need to reverify the solution, early exit if not.
+2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position.
+3. Validate for the manufacturability as per the Workbench interface
+4. Validate for being in bounds
+5. Determine cost
+6. Validate for cost,
+7. Validate for weight.
+
+##### simulate(Compound)
+
+Simulate the compound. Must have the environment at the exact point where we it was defined in the task. Must have price and manufacturability checked
+So:
+
+1. Validate the solution assembly as in `validate_and_price(...)`
+   - if valid, pass, if not valid, fail.
+2. Git commit all files.
+3. Start simulation, locally.
+4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a "submit for review.
+    - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
+
+     the simulation will produce video. The issue is, it's expensive to
+5. If doesn't, retry the simulation.
+
+##### submit_for_review(compound: Compound)
+
+The CAD engineer agent will ask a reviewer agent to review.
 
 ### Assigning a part to workbenches
 
@@ -536,21 +601,103 @@ Both controller and worker will have their own container files.
 
 ### Database(s)
 
-We have multiple databases in the project: Postgre for Temporal and for Langfuse (because Langfuse requires a Postgre database) - they are running on a single machine but have different DATABASE partitions.
+We have multiple databases in the project: Postgres for Temporal and for Langfuse (because Langfuse requires a Postgres database) - they are running on a single machine but have different DATABASE partitions.
 
-For ease of deployment, I decided to use Postgre for the controller app too.
+For ease of deployment, I decided to use Postgres for the controller app too.
 
 As the goal of the project is to store solutions and intermediary outputs, the Assets of the projects - the final code outputs - will be sent to S3 (railway) buckets.
 
 <!-- My preference is actually using SQLite, but nobody cares.-->
 
-Any non-file persistence done by worker node locally for which it does not need to report to the controller (for whichever internal processes, e.g. scripts; I doubt this will ever be necessary) is done on a local SQLite database.
+Any non-file persistence done by worker node ephemerally for which it does not need to report to the controller (for whichever internal processes, e.g. scripts; I doubt this will ever be necessary) is done on a local SQLite database.
 
 We use SQLAlchemy and alembic for management of controller and worker databases.
+
+We assume that worker databases are ephemeral.
+
+#### Assets
+
+Instead of duplicating traces (which are probably verbose and take space), I will link results to traces to each other.
+
+The assets will be stored on S3 as discussed above. The Postgres database will track them.
+
+### Logging
+
+Structlog.
+<!-- Looks nicer. -->
+
+### Testing
+
+Mandatory testing of happy and expected fail paths. Integration tests in docker-compose to not fail in production.
+
+Github CI/CD too.
 
 ### Networking
 
 We primarily use the internal networking for Railway for inter-node communication.
+
+### On container termination
+
+What do we do if the container terminates mid-execution? We have a Temporal workflow for that. For every operation expected to run for more than 30 seconds, store that to Temporal.
+
+Do nothing with it because it's cheaper to resume the extraction than to write the code. (compute is cheap but engineering time is expensive.)
+
+And because we only store repository locally and don't persist files anywhere, we have to retry the entire episode starting from planning.
+Store in the database that the episode "Terminated due to container preemption" and retry via temporal (right? or wrong?)
+The temporal
+
+<!-- But what do we do with *resuming* the work? should we bother? -->
+
+### Strict API requirement
+
+The APIs are to be strict. OpenAPI schemas will be autogenerated on git commit hooks of controller and `schemathesis` will fuzz API endpoints. We have two schemas - one between worker and controller, another between the frontend and the controller.
+
+### Frontend and debugging infrastructure
+
+I will need some frontend. I suggest designing a custom UI. This is relatively easy now because we can handle off to Google Stitch (Google's AI website designer; however it only designs websites, it doesn't integrate them). Plus it's convenient to use in backend. The website will be deployed on Vercel for simplicity (or a railway bucket maybe? it doesn't really matter.)
+A detailed specification of what needs to be in frontend to create a good UI will be required.
+
+This means that we will have a user-facing API.
+
+<!-- I used streamlit in the past and it works but is limiting due to inability to stream data, as far as I've seen it.-->
+
+#### Debugging requirements
+
+As the agents are long-running (and cost money!) it is desirable to be able to:
+
+1. Submit requests one-by-one (as opposed to working in batch over a dataset of prompts)
+2. View their reasoning prompts
+3. Interrupt them before they finish.
+
+#### Frontend architecture
+
+Vite, React. Autogenerated types on git hooks.
+
+## Inputs to the system
+
+### Benchmark generator
+
+The inputs to the system are a set of prompts of what the user wants generated. A brief note about what kind of problem is presented (e.g. the simplest is - "Put a ball to the funnel and assert that it will fall to the bottom".)
+
+The Planner will generate a longer plan with rough dimensions and will guide the creation of the agent.
+
+The CAD drafting agent will implement, the reviewer will send back reviews or accept the benchmarks. The reviewer will also review all randomness in the script.
+
+Upon accepting, the environment and its randomized versions will be saved to Assets.
+
+Notably, the environment will also prerender a set of pictures (e.g. 24 pictures - each from different side) so that the engineering agent does not have to request their generation.
+
+We may also make a script to generate a number of short input prompts via a LLM.
+
+## Engineering agent(s)
+
+The engineering agent(s) get benchmarks as inputs and a standard prompt.
+
+## Outputs of the system and postprocessing
+
+The goal of the application (as stated in the very beginning of the document) is to create dataset. There will also be some postprocessing of the database. There will likely be prompt tuning (Generic Pareto - self-reflective way to optimize prompts via a eval dataset.) All the code for optimization will be in a separate folder.
+
+<!-- This will be specified and executed on later - after the system is running. -->
 
 ## Other notes
 
@@ -564,18 +711,38 @@ We primarily use the internal networking for Railway for inter-node communicatio
 Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows. -->
 <!-- Production workflow became a priority -->
 
-Complexity tracking worksheet (what is more complex but necessary)
+## Complexity tracking worksheet (what is more complex but necessary)
 
 ```yaml
 Updating skills via requests:
   what: 
-  We will send HTTP requests to update the skills when necessary
+  We will send HTTP requests to update the skills when necessary. The skills will be updated on the next agent execution.
   reason: >
-  We will send HTTP requests to update the skills when 
+  We need to update t 
 
 deepagents framework: 
+  what: >
+    We will use a deepagents framework.
+  reason: >
+    deepagents provides abstractions over filesystem, memory, TODO lists and Subagents. (so-called Middleware.)
+
+tool calls are just python imports: 
   what:
-  We will use a deepagents framework.
-  reason:
-  deepagents provides abstractions over filesystem, memory, TODO lists and Subagents. (so-called Middleware.)
+    To make things workable on our side but also easy for the agent, tool calls are always just python functions that are imported into the final call.
+  reason: >
+    I don't see how agents can reliably run a `simulate.py` script in a function. E.g., the agent would run a command like `python3 simulate.py --source_file solution.py` The issue with this is that - how would we get the exact build123d "result" assembly from it? I don't know. Not without some subprocesses. And with subprocesses, how would we get the part by label? I don't know.
+
+    Why not create a separate tool? because the agents are proven to work better with calling scripts through code and not through tool calls - tool calls confuse them. (reference CodeAct framework for it, if you wish.)
+  additional issues: 
+    the real issue is that literally all the submitted scripts would have a `submit()` or similar commands in the end. It's not really a blocked, but it kind of is a code smell. On the brighter side, it will lead to deterministic execution where LLMs can't break business logic - they, for example, could, if the LLM would override an abstract class and would write it's logic in the base class. 
+    Not exactly a blocker, but just complexity. 
+
+  git logic and uploading git results to s3: 
+    what:
+      We want to track code evolution. Hence, we will use `git add . && git commit` during every successful `simulate` call. Presumably, the commit names are static.
+    Upon the episode end, we will push the compressed git archive to the s3.
+      The repo will always start with "initial commit" message before the agent even starts there (perhaps, it's cloned or similar.)
+    reason: 
+      We want to track code evolution.
+    
 ```
