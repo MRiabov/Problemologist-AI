@@ -1,77 +1,67 @@
 # Implementation Plan: Engineer Agent
 
-**Branch**: `002-engineer-agent` | **Date**: 2026-02-04 | **Spec**: [spec.md](spec.md)
+*Path: templates/plan-template.md*
+
+**Branch**: `002-engineer-agent` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/002-vlm-cad-agent/spec.md`
 
 ## Summary
 
-Implement the **Engineer Agent** using the **LangGraph** framework. This cognitive engine autonomously solves geometric problems by interacting with the `001-agentic-cad-environment` via `ToolRuntime` inside a Podman sandbox. The agent uses a graph-based "Architect → Engineer → Critic" workflow.
+Implement the **Engineer Agent** using **LangGraph** within the **`deepagents`** framework. The agent orchestrates the creation of CAD solutions by interacting with the distributed **Agentic CAD Environment** (Spec 001). It features a distinct **Architect-Engineer-Critic** loop, persistent file-based memory (Journal/TODOs), and an asynchronous **Sidecar Learner** for skill acquisition.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+
-**Primary Dependencies**:
+**Frameworks**:
 
-- `langgraph`: Core orchestration engine.
-- `fastapi`: Host-Container communication (OpenAPI).
-- `podman`: Sandbox enforcement.
-
-**Key Roles**:
-
-- **Architect (Planner)**: Designs the high-level approach and persists a **TODO List**.
-- **Engineer (Actor)**: Implements the CAD solution. Can refuse the plan if proven impossible.
-- **Critic**: Reviews the implementation against constraints.
-
+- `langgraph`: State machine orchestration.
+- `deepagents`: Agent framework integration.
+- `langchain-google-genai` / `langchain-anthropic`: LLM providers.
+**Dependencies**:
+- `001-agentic-cad-environment`: The execution runtime API.
 **Storage**:
+- **Postgres**: LangGraph checkpoints (State).
+- **S3 (via Worker)**: Filesystem persistence (Journal, Code).
 
-- `todo.md`: Task-specific TODO list persisted by the Architect.
-- `.agent/skills/`: Persistent skill-based knowledge system.
+## Constitution Check
 
-**Testing**: `pytest` and `langsmith` for trace evaluation.
-**Target Platform**: Linux (Development), Docker (Deployment).
-**Observability**: Record agent thoughts and tool-calling justifications for training data generation.
-**Execution**: Prioritize development workflows over production deployments (as of Feb 4).
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+[No conflicts. Aligned with Agentic Framework.]
 
 ## Project Structure
 
-### Documentation (this feature)
+### Documentation
 
 ```text
 kitty-specs/002-vlm-cad-agent/
 ├── plan.md              # This file
-├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output
-├── contracts/           # Phase 1 output (Prompt Schemas)
-└── tasks.md             # Phase 2 output
+├── research.md          # Phase 0
+├── data-model.md        # State Schema
+├── contracts/           # Prompt Templates
+└── tasks.md             # Tasks
 ```
 
-### Source Code (repository root)
+### Source Code
 
 ```text
-src/
-├── agent/
-│   ├── graph/
-│   │   ├── graph.py        # Graph Builder (Nodes + Edges)
-│   │   ├── state.py        # Agent State Definition
-│   │   └── nodes/          # Step implementations
-│   │       ├── planner.py
-│   │       ├── actor.py
-│   │       ├── critic.py
-│   │       └── skill_populator.py
-│   ├── tools/
-│   │   ├── env.py          # LangChain Tool Wrappers
-│   │   ├── env_adapter.py  # Async Sandbox Adapters
-│   │   └── memory.py       # Journal reading tools
-│   └── runner.py           # Entry point
-└── environment/
-    └── tools.py            # Core environmental implementations
+src/agent/
+├── graph/
+│   ├── graph.py        # Nodes & Edges
+│   ├── state.py        # State Definition
+│   └── nodes/
+│       ├── architect.py
+│       ├── engineer.py
+│       ├── critic.py
+│       └── sidecar.py  # Skill Learner
+├── run.py              # Entrypoint
+└── prompts/            # Jinja2 Templates
 ```
-
-**Structure Decision**: Clean separation of `src/agent` (cognitive) from `src/environment` (execution). Tools are defined in `src/environment` and wrapped in `src/agent/tools/env.py` for LangChain compatibility.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-| --- | --- | --- |
-| LangGraph | Replaces custom `while` loop | Provides robust state persistence, time-travel debugging, and formalized "Planning" steps. |
-| File-based Memory | Simple, human-readable long-term memory | Vector DB is overkill; file-based approach enables direct agent manipulation via `write_file`. |
-| Skill Populator | Automated learning loop | Manual documentation updates are prone to being skipped. |
+|-----------|------------|-------------------------------------|
+| Graph Architecture | Complex flows (Planning -> Execution -> Critique). | Linear chains cannot handle the "Refusal" and "Retry" loops required for robust engineering. |
+| Sidecar Learner | Skills need to evolve without polluting the active context. | In-context learning forgets; Synchronous updates distract the main agent. |
+| File-Based Memory | Agent-readable persistence (Journal). | Vector stores are opaque; Agents understand Markdown files best. |

@@ -1,101 +1,60 @@
-# Implementation Plan - Benchmark Scenario Generator
+# Implementation Plan: Benchmark Scenario Generator
 
-**Feature**: 005-benchmark-scenario-generator
-**Goal**: Build an automated pipeline to generate, validate, and export physics benchmark scenarios.
-**Architecture**: Standalone utility package driven by `LangGraph`.
+*Path: kitty-specs/005-benchmark-scenario-generator/plan.md*
 
-## 1. Technical Context
+**Branch**: `005-benchmark-scenario-generator` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/005-benchmark-scenario-generator/spec.md`
 
-This feature implements a "Scenario Architect" agent—a specialized automation that uses an LLM to author Python code. Unlike the main VLM CAD Agent (which _solves_ problems), this agent _creates_ problems.
+## Summary
 
-### Technology Stack
+Implement the **Benchmark Scenario Generator** as a `deepagents` based tool. It consists of a "Generator Agent" that writes randomized `build123d` scripts, validates them using the Worker's `simulate` validated-execution pipeline, and packages them into the `dataset/` structure.
 
-- **Orchestration**: `LangGraph` for the "Plan → Code → Validate" loop.
-- **LLM Interface**: Reuse `src/agent/utils/llm.py` (Gemini/OpenAI).
-- **Geometry**: `build123d` for parametric CAD generation.
-- **Physics**: `mujoco` for XML generation and stability checks.
-- **File System**: Output to `datasets/benchmarks/`.
+## Technical Context
 
-### Key Components
+**Language/Version**: Python 3.10+
+**Frameworks**:
 
-1. **Generator Agent**: A LangGraph state machine with the following roles:
-   - **Generator**: Authored the CAD model code with randomized parameters.
-   - **Internal Reviewer**: Reviews the design for feasibility and logic.
-   - **Verification Pipeline**: Executes strict validation checks.
+- `deepagents`: Agent orchestration.
+- `build123d`: CAD.
+- `mujoco`: Stability checks.
+**Infrastructure**:
+- **Worker Node**: Runs the generation and validation scripts.
+- **S3**: Stores the generated dataset media.
 
-2. **Strict Validation Pipeline**:
-    - **Geometry**: Check for manifold geometry and self-intersections.
-    - **Compilation**: Ensure code executes without errors.
-    - **MJCF Validity**: Validate against official schema.
-    - **Simulation**: Run physics stability check (1s simulation).
+## Constitution Check
 
-3. **Randomizer**: Logic injected into generated scripts to vary parameters via a seed.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-## 2. Constitution Check
+[No conflicts. Aligned with Dataset creation goals.]
 
-- **No-Go**: No runtime dependency on the generator for the end-user agent. This is a build-time tool.
-- **Conventions**: Python scripts must follow project linting rules. Generated assets (STL/XML) must be deterministic for a given seed.
+## Project Structure
 
-## 3. High-Level Design
-
-### 3.1 Data Model (`data-model.md`)
-
-- **ScenarioManifest**: Metadata for a benchmark (name, tier, parameters, seed).
-- **GenerationRequest**: Input prompt + config (e.g., "10 levers, tier 2").
-- **ValidationReport**: Result of the stability check (pass/fail, max velocity).
-
-### 3.2 Directory Structure
+### Documentation
 
 ```
+kitty-specs/005-benchmark-scenario-generator/
+├── plan.md              # This file
+├── research.md          # Research
+├── data-model.md        # Dataset Schema
+└── tasks.md             # Tasks
+```
+
+### Source Code
+
+```text
 src/
-  generators/
-    benchmark/
-      __init__.py
-      agent.py       # LangGraph definition
-      prompts.py     # System prompts for scenario authoring
-      validator.py   # Headless MuJoCo check
-      manager.py     # CLI entry point
+├── generators/
+│   ├── benchmark/       # Generator Agent Logic
+│   │   ├── graph.py     # Planner -> Coder -> Reviewer
+│   │   └── templates/   # Script Templates
+├── worker/
+│   └── utils/
+│       └── validation.py # Stability Check Logic
 ```
 
-## 4. Phase 1: Core Generator Logic
+## Complexity Tracking
 
-**Goal**: Can generate a _single_ valid scenario from a text prompt.
-
-1. **Scaffold Generator Package**: Create `src/generators/benchmark/` structure.
-2. **Implement Validator**: Write `validator.py` to load an MJCF string and step the sim.
-3. **Implement Generator Agent**:
-   - **Planner Node**: Breaks down "Tier 1 Peg-in-Hole" into geometric requirements.
-   - **Coder Node**: writes a `build123d` script with a `build(seed)` function.
-   - **Critique Node**: Uses the `Validator` output to feedback errors to the Coder.
-
-## 5. Phase 2: Batch Processing & Randomization
-
-**Goal**: Can generate _40+_ diverse scenarios in parallel and manage the dataset.
-
-1. **Implement Randomization Wrapper**: A harness that runs the generated `build(seed)` function multiple times with different seeds to verify stability across the parameter range.
-2. **Parallel Execution**: Orchestrate multiple generator instances in parallel (up to 4 concurrent containers) to accelerate dataset population. Supports future distribution via IPv6.
-3. **Observability Integration**: Record full traces of the generator's internal review and verification steps for later RL training.
-4. **CLI Tool**: Implement `python -m src.generators.benchmark.manager generate --tier 1 --count 10`.
-5. **Asset Export**: Ensure the pipeline correctly organizes STLs and XMLs into `datasets/benchmarks/`.
-
-## 6. Phase 3: Interactive Pipeline Support
-
-**Goal**: Support human-in-the-loop co-creation via the Dashboard.
-
-1. **Enhance Planner Node**: Update system prompts to include Learning Objectives and Self-Verification strategies.
-2. **Expose Interactive Hooks**: Modify `agent.py` or create wrapper utilities to allow external (UI) injection of plan edits and code overrides.
-3. **Rendering Integration**: Implement `src/generators/benchmark/renderer.py` to produce visual previews for each generation attempt to support UI-based review.
-
-## 7. Phase 4: Advanced Randomization (Rescaling)
-
-**Goal**: Increase dataset diversity by applying non-uniform scaling to environments.
-
-1. **Update Build Signature**: Modify the generator's execution harness to pass a `scale` vector to the `build()` function.
-2. **Planner Limits**: Update the Planner agent to suggest directional scaling limits.
-3. **Manager Implementation**: Generate random scale vectors in `manager.py` based on agent limits (default 0.5-2.0).
-
-## 8. Success Criteria Verification
-
-- **Efficiency**: Run `manager generate --count 10` and measure runtime (Target: < 5 mins).
-- **Yield**: Count valid vs. invalid outputs in the `staging` folder.
-- **Quality**: Manual review of the generated "Tier 2" lever mechanisms.
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| Agentic Generation | Diversity. | Hand-coding 1000s of benchmarks is impossible. Static templates lack variation. |
+| Stability Check | Quality Assurance. | Proceeding with unstable physics simulations wastes Engineer Agent compute time and confuses the learning process. |
