@@ -1,5 +1,21 @@
 # Desired architecture (human written)
 
+## Objective of the system
+
+We are to create a benchmark and a training dataset for evaluating LLM models on creating and solving dynamics problems.
+
+### Outputs and end goals
+
+1. Benchmarks and problems to solve
+2. Reasoning traces trying to create benchmarks,
+3. Reasoning traces trying to solve the problems with manufacturable and verified solutions
+4. Solutions to the problems, with end goals of CAD models and manufacturable, verified solutions,
+5. Notable optimization to the problems (found but not applied, by mistake or to save compute),
+6. Skills acquired during execution of the model (SKILL.md files and their assets - references and scripts)
+7. Journals and "scannable" summaries of the execution.
+8. An open-source framework for benchmarking, optimization of visual-language models to solve dynamic mechanical engineering problems
+9. An open-source framework to solve mechanical engineering problems.
+
 ## Agents
 
 We have two agents (or agent graphs) - the benchmark generator and the engineer solving these issues.
@@ -255,9 +271,15 @@ LangChain and LangGraph developers have introduced an abstraction over LangChain
 
 <!-- However, it's an opinionated framework and should be researched -->
 
+- We use `FilesystemMiddleware` to support `ls`, `write`, `read` tools (not sure if `edit` exists, likely does)
+- We use `TodoListMiddleware` which provides a `todo_list` to support TODO lists.
+-
+
 #### Linting
 
 The agents will receive the linting from the tools. The linting is done on the worker nodes for safety and performance. The agent will have `ruff` and/or `pyright` (I don't think pyrefly is necessary here; standard, non-based pyright) on the device.
+
+The linting will happen at runtime.
 
 ### Execution process
 
@@ -300,6 +322,14 @@ To simplify app logic and avoid writing retry and other "safety" logic, we will 
 
 We are deploying to Railway. (In production, we may deploy workers to inexpensive, *batch* IPv6 nodes - SaladCloud, or use a on-prem infra that somebody will give to me...)
 
+#### Deployment specifics
+
+Railway supports docker-compose import and we will start with the docker-compose. This is the easiest choise and I have familiarity with it (k8s too bloated for this purpose)
+
+#### Podman containers
+
+We decided to run in Podman containers because they are leaner than Docker and serve all same purposes.
+
 ### Persisting files
 
 The files written directly to the container. We don't store it locally. We store a copy into the DB for the observability issue.
@@ -309,6 +339,15 @@ The files written directly to the container. We don't store it locally. We store
 The "main app" essentially serves as a business logic and observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 
 <!-- LangChain DeepAgents can handle saving -->
+
+#### Videos
+
+Videos are the largest artifact that we will need to generate and store.
+To ensure consistency, we will upload them to Railway buckets.
+This is OK as we already work on Railway and internal networking both fast, easy to set up and inexpensive.
+Storing videos on buckets is also cheaper than in volumes.
+
+I suppose the videos will be automatically deleted after a short period, e.g. a day to avoid storage costs. (why not store them in ephemeral storage then?...)
 
 ### Database
 
@@ -329,6 +368,8 @@ The Agent (managed by LangGraph) never "knows" about distributed workers. It onl
 
 Temporal is used to orchestrate the workers. It is not used to run or retry the agent.
 
+Temporal needs a database and we will use the Postgre database used by temporal, except under the different `DATABASE` partition.
+
 ## Simulation and "Defintions of Done"
 
 While this platform has notable downsides for future use, we pick MuJoCo, because it's battle-tested, and requires almost no compile time.
@@ -341,18 +382,24 @@ While this platform has notable downsides for future use, we pick MuJoCo, becaus
 But for an MVP this is fine. -->
 <!-- The corollary of not being able to run FEM is that the model can produce physically inadequate parts and still succeed. But I can't do much about it yet. -->
 
-### Definition of "success" in the simulation
+### Definition of "success" and failure in the simulation
 
-We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones.
+We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones and staying in simulation bounds.
 
 <!-- another use-case could be: given a severe constraint in positioning, design a system which would support a given load. However, the issue is that it's not  -->
 
 #### Moving an object from one screen to another
 
-We define the objective from four components:
+We define the "simulation objective" from four components:
 
-1. "a build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone), "a goal zone" - the area to which the object needs to move to, a "forbid" zone - an area which the agent may not go into.
+1. A "build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone),
+2. A "goal zone" - the area to which the goal object needs to move to,
+3. The moved object - the object which is spawned to be moved into the goal
+4. A "forbid" zone - an area none of the simulation objects agent may not go into.
+
 The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
+
+Additionally, the simulation is constrained by the bounds of the simulation, i.e. the space which the simulation can not leave.
 
 #### Randomization
 
@@ -363,6 +410,13 @@ The benchmarks are randomized to enable a wider data distribution with less gene
   - The environment - ojectives (goals, forbids, build zones) are rescaled respectively.
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
 - The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
+
+#### Failure
+
+Failure is achieved via either of:
+
+1. timeout of the simulation
+2. Any of components going out of bounds of the workspace.OR goign out of bounds OR instability in simulation
 
 ## Observability
 
@@ -376,10 +430,15 @@ To track all agent movements and to persist data, we encode the following:
 
 These will be later used for querying, preproc and model training.
 
+### Langfuse
+
+<!-- Decision that overwrites others. I don't think we should use SQLite for this other than some persistent controller state. -->
+we use LangFuse for LLM observability. We will use a Railway template / deploy a separate container to the langfuse. This will require a Postgres DB.
+
 ### Backups
 
 In prod we will backup the schema daily in s3.
-Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up.
+<!-- Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up. -->
 
 One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
 
@@ -447,7 +506,7 @@ part_builder.part.metadata = {
 validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit price at XYZ pcs is ...)
 ```
 
-### Technical details
+### Workbench technical details
 
 Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here; however manufacturability is determined by deterministic algorithms.)
 
@@ -467,10 +526,38 @@ I suggest using a subagent for this. Give a prompt of what's necessary and let t
 
 Both planner agent and engineer can only prompt the searching agent for searching.
 
+## Code and responsibility separation
+
+We are building open-source, and we trust our compute nodes, so no complex "zero-trust" architecture is necessary.
+
+All the code that runs in the controller/main app will be in the controller node directory, and all the worker node will be packaged into the controller node.
+
+Both controller and worker will have their own container files.
+
+### Database(s)
+
+We have multiple databases in the project: Postgre for Temporal and for Langfuse (because Langfuse requires a Postgre database) - they are running on a single machine but have different DATABASE partitions.
+
+For ease of deployment, I decided to use Postgre for the controller app too.
+
+As the goal of the project is to store solutions and intermediary outputs, the Assets of the projects - the final code outputs - will be sent to S3 (railway) buckets.
+
+<!-- My preference is actually using SQLite, but nobody cares.-->
+
+Any non-file persistence done by worker node locally for which it does not need to report to the controller (for whichever internal processes, e.g. scripts; I doubt this will ever be necessary) is done on a local SQLite database.
+
+We use SQLAlchemy and alembic for management of controller and worker databases.
+
+### Networking
+
+We primarily use the internal networking for Railway for inter-node communication.
+
 ## Other notes
 
 1. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
 2. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
+3. Because the application is open-source and asks for reproducibility, use open-source frameworks
+4. Because the application is for a scientific use-case (and should be presented in such a light), detailed statistics should be gathered.
 
 <!-- ### Production workflow
 
@@ -491,4 +578,4 @@ deepagents framework:
   We will use a deepagents framework.
   reason:
   deepagents provides abstractions over filesystem, memory, TODO lists and Subagents. (so-called Middleware.)
-  
+```
