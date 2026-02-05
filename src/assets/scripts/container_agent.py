@@ -47,7 +47,7 @@ class Job:
         self.stderr = ""
         self.return_code: int | None = None
         self.error: str | None = None
-        self.process: subprocess.CompletedProcess | None = None
+        self.process: subprocess.Popen | None = None
         self.start_time: float | None = None
         self._lock = threading.Lock()
 
@@ -77,16 +77,23 @@ class JobManager:
             return self.jobs.get(job_id)
 
     def cancel_job(self, job_id: str):
-        # Cancellation is tricky with subprocess.run.
-        # We can only mark it as cancelled effectively if it hasn't started,
-        # or if we implemented Popen logic.
-        # For now, we will just mark status.
-        # TODO: Implement Popen kill logic.
         job = self.get_job(job_id)
-        if job:
-            job.update(status=JobStatus.CANCELLED)
+        if not job:
+            return
+
+        with job._lock:
+            if job.status == JobStatus.QUEUED:
+                job.status = JobStatus.CANCELLED
+            elif job.status == JobStatus.RUNNING:
+                job.status = JobStatus.CANCELLED
+                if job.process:
+                    job.process.terminate()
 
     def _run_job(self, job: Job):
+        # Check if cancelled before starting
+        if job.status == JobStatus.CANCELLED:
+            return
+
         job.update(status=JobStatus.RUNNING, start_time=time.time())
 
         try:
@@ -115,29 +122,53 @@ class JobManager:
 
             logger.info(f"Starting job {job.job_id}: {cmd_args}")
 
-            # run is blocking, but we are in a thread
-            result = subprocess.run(
+            # Use Popen instead of run
+            process = subprocess.Popen(
                 cmd_args,
                 shell=shell,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 cwd=workdir,
-                timeout=req.timeout,
             )
 
-            job.update(
-                status=JobStatus.COMPLETED,
-                stdout=result.stdout,
-                stderr=result.stderr,
-                return_code=result.returncode,
-            )
+            job.update(process=process)
 
-        except subprocess.TimeoutExpired:
-            job.update(
-                status=JobStatus.FAILED,
-                error=f"Job timed out after {job.request.timeout}s",
-                return_code=124,
-            )
+            # Check if cancelled during startup (race condition)
+            with job._lock:
+                if job.status == JobStatus.CANCELLED:
+                    process.kill()
+                    return
+
+            try:
+                stdout, stderr = process.communicate(timeout=req.timeout)
+                return_code = process.returncode
+
+                # Check if it was cancelled during execution
+                if job.status == JobStatus.CANCELLED:
+                    # Ensure it's killed if it wasn't
+                    if process.poll() is None:
+                         process.kill()
+                    return
+
+                job.update(
+                    status=JobStatus.COMPLETED,
+                    stdout=stdout,
+                    stderr=stderr,
+                    return_code=return_code,
+                )
+
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                job.update(
+                    status=JobStatus.FAILED,
+                    stdout=stdout,
+                    stderr=stderr,
+                    error=f"Job timed out after {job.request.timeout}s",
+                    return_code=124,
+                )
+
         except Exception as e:
             logger.error(f"Job {job.job_id} failed: {e}")
             job.update(status=JobStatus.FAILED, error=str(e), return_code=1)

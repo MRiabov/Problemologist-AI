@@ -85,12 +85,23 @@ class ToolRuntime:
 
     def write_file(self, content: str, path: str, mode: str = "overwrite") -> str:
         """Writes content to a file in the workspace or appends to it."""
-        full_path = Path(self.workspace_dir) / path
+        if path.startswith("docs/skills/"):
+            skill_rel = path.removeprefix("docs/skills/")
+            full_path = Config.SKILLS_DIR / skill_rel
+            # Ensure we are writing inside SKILLS_DIR
+            if not str(full_path.resolve()).startswith(
+                str(Config.SKILLS_DIR.resolve())
+            ):
+                return (
+                    f"Error: Path {path} attempts to write outside skills directory."
+                )
+        else:
+            full_path = Path(self.workspace_dir) / path
 
-        if not str(full_path.resolve()).startswith(
-            str(Path(self.workspace_dir).resolve())
-        ):
-            return f"Error: Path {path} is outside the workspace."
+            if not str(full_path.resolve()).startswith(
+                str(Path(self.workspace_dir).resolve())
+            ):
+                return f"Error: Path {path} is outside the workspace."
 
         try:
             if mode == "append":
@@ -117,7 +128,18 @@ class ToolRuntime:
 
     def edit_file(self, path: str, find: str, replace: str) -> str:
         """Replaces a unique 'find' string with 'replace' in the specified file."""
-        full_path = Path(self.workspace_dir) / path
+        if path.startswith("docs/skills/"):
+            skill_rel = path.removeprefix("docs/skills/")
+            full_path = Config.SKILLS_DIR / skill_rel
+            # Ensure we are writing inside SKILLS_DIR
+            if not str(full_path.resolve()).startswith(
+                str(Config.SKILLS_DIR.resolve())
+            ):
+                return (
+                    f"Error: Path {path} attempts to write outside skills directory."
+                )
+        else:
+            full_path = Path(self.workspace_dir) / path
 
         if not full_path.exists():
             return f"Error: File {path} does not exist."
