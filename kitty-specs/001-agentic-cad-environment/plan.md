@@ -2,45 +2,35 @@
 
 *Path: templates/plan-template.md*
 
-**Branch**: `001-agentic-cad-environment` | **Date**: 2026-01-31 | **Spec**: [spec.md](spec.md)
+**Branch**: `001-agentic-cad-environment` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/kitty-specs/001-agentic-cad-environment/spec.md`
 
 ## Summary
 
-Implement the infrastructure for the **Agentic CAD Environment**, a `ToolRuntime`-based interface that allows an autonomous agent to generate `build123d` CAD models, validate them against physics tasks in `mujoco`, and persistently log all interactions.
-
-Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM).
+Implement the **Agentic CAD Environment** using the **`deepagents`** framework. This involves setting up the **Controller Node** (LangGraph orchestration) and the **Worker Node** (Podman execution sandbox), connected via a strict OpenAPI contract. The environment abstracts the Worker's filesystem (backed by MinIO/S3) and provides the "Utils" library for agents to perform CAD/Sim actions via Python calls.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+
-**Primary Dependencies**:
+**Frameworks**:
 
-- `build123d`: Code-based CAD kernel
-- `mujoco`: Physics engine
-- `numpy`: Numerical operations
-- `fastapi` / `uvicorn`: Host-Container communication (OpenAPI)
-**Storage**: SQLAlchemy/SQLModel (`history.db`) for robust logging of episodes, steps, and artifacts via ORM.
-**Testing**: `pytest` for unit tests; `schemathesis` for OpenAPI contract validation.
-**Target Platform**: Linux (Development), Podman (Deployment/Sandbox).
-**Performance Goals**:
-- `preview_design`: < 2 seconds for moderate complexity parts.
-- `submit_design`: < 10 seconds for geometry compilation + simulation.
-- **Parallelism**: Support for at least 4 concurrent execution containers on a 4-core CPU, architected for future distributed node support (IPv6 ready).
-- **Observability**: Record agent thoughts, tracebacks, and tool-calling structure for RL/training.
-- **Backups (Production)**: Daily compressed (zstd) SQLite backups to S3 via a dedicated cron endpoint.
-**Constraints**:
-- **Asynchronous Execution**: The environment MUST support non-blocking execution of long-running tasks.
-- **Security**:
-- **Strict Sandbox**: All agent-generated code executes inside a Podman container.
-- **OpenAPI**: Communication between Host and Container is strictly typed via FastAPI.
-- **Baked-in Env Code**: Supporting libraries and environment code are baked into the container image.
+- `deepagents`: Middleware for Filesystem, Process management.
+- `fastapi`: API for Worker node.
+- `temporal`: Workflow orchestration for robust long-running tasks.
+- `s3fs` / `minio`: Filesystem backend.
+**Dependencies**:
+- `build123d`: CAD kernel (Worker).
+- `mujoco`: Physics (Worker).
+- `langfuse`: Observability (Controller).
+**Infrastructure**:
+- **Controller**: Railway Service (Postgres DB).
+- **Worker**: Podman Container (MinIO S3).
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[No conflicts identified. This is a core feature implementation.]
+[No conflicts. Aligned with Distributed Architecture.]
 
 ## Project Structure
 
@@ -50,32 +40,31 @@ Crucially, this plan covers the **Environment** (World) only, not the Agent (LLM
 kitty-specs/001-agentic-cad-environment/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output (SQLite Schema)
-├── contracts/           # Phase 1 output (Env Interface, Tool Definitions)
-└── tasks.md             # Phase 2 output
+├── data-model.md        # Database Schemas
+├── contracts/           # OpenAPI Spec (Controller <-> Worker)
+└── tasks.md             # Tasks
 ```
 
-### Source Code (repository root)
+### Source Code
 
 ```
 src/
-├── environment/
-│   ├── runtime.py        # ToolRuntime (Core Orchestrator)
-│   ├── tools.py          # Tool definitions (RAG, Edit, Preview)
-│   └── persistence.py    # SQLite logger
-├── workbenches/
-│   ├── base.py           # Workbench ABC
-│   └── print_3d.py       # MVP Workbench (Watertight + Cost)
-├── compiler/
-│   └── sim_client.py     # HTTP Client for Spec 003 Simulation Engine
-└── rag/
-    └── search.py         # Simple Grep-based documentation search
+├── controller/           # Main Application (Railway)
+│   ├── api/              # Frontend API
+│   ├── graph/            # LangGraph Agents
+│   └── persistence.py    # Postgres/S3 Logic
+├── worker/               # Worker Container (Podman)
+│   ├── app.py            # FastAPI Entrypoint
+│   ├── filesystem/       # S3 FUSE/Virtual FS
+│   ├── runtime/          # Python Execution Wrapper
+│   └── utils/            # The "Utils" library agents import (simulate, validate)
+└── deepagents/           # Shared Framework Integrations
 ```
-
-**Structure Decision**: Single Python project structure in `src/`.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Custom Geometry Compiler | Need to automate CAD -> Physics collision mesh generation | standard export doesn't handle convex decomposition for stable physics |
+| Distributed Architecture | Safety & Scalability. Agents execute arbitrary code. | Running code on the Controller is a massive security risk and blocks the event loop. |
+| Temporal | Durability. Simulations take time and containers die. | Simple async/await fails if the container restarts or times out. |
+| S3 Filesystem | Persistence across worker restarts & Observability. | Local ephemeral storage loses reasoning traces and code history on crash. |

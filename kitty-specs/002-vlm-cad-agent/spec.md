@@ -6,100 +6,101 @@
 
 ## 1. Overview
 
-The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment**. It is a specialized graph-based system built using LangGraph. It acts as a mechanical engineer, taking a natural language problem description and iteratively producing valid, functional `build123d` CAD scripts.
+The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment** (Spec 001). It is a specialized graph-based system built using **LangGraph** on top of the **`deepagents`** framework.
 
-The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**. The agent is designed for high-latency, high-quality reasoning, with acceptable runtimes of **10+ minutes** in production scenarios.
+The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**. It is designed for high-latency, high-quality reasoning, creating valid `build123d` scripts that are executed in the distributed Worker environment.
+
+## 2. Goals & Success Criteria
+
+### 2.1. Primary Goals
+
+1. **Solve Mechanical Problems**: Autonomously generate CAD models that satisfy geometric and physics constraints.
+2. **Long-Running Durability**: Support execution times of 10+ minutes, utilizing `deepagents` state persistence to handle interruptions.
+3. **Skill Acquisition**: Learn from failures via a Sidecar Learner agent that updates the Read-Only skill library.
+4. **Distributed Execution**: Generate code on the Controller, but execute it strictly on the Worker node via the 001 API.
+
+### 2.2. Success Criteria
+
+- **Success Rate**: Solves >50% of "Easy" benchmarks (moving object to goal).
+- **Skill Usage**: Successfully retrieves and applies relevant skills (e.g., "how to make a gear") from the filesystem.
+- **Cost/Manufacturability**: Designs pass the Critic's checks (Spec 004 Workbenches) before final submission.
+
+## 3. User Stories
+
+- **As an Agent**, I want to break down complex tasks into a TODO list so I don't lose track.
+- **As an Agent**, I want to consult my "Journal" (Episodic Memory) to see what I tried before.
+- **As an Agent**, I want to verify my design cheaply (validation/pricing) before running expensive simulations.
 
 ## 4. Functional Requirements
 
-### 4.1. Cognitive Architecture (Engineer Agent Graph)
+### 4.1. Cognitive Architecture (The Graph)
 
-The agent shall be implemented as a **LangGraph** state machine with the following nodes:
+The agent is a StateGraph with the following nodes:
 
-1. **Architect (Planner) Node**:
-    * **Role**: Analyzes the request, existing Skills, and decomposes the problem.
-    * **Action**: Creates and persists a **TODO List**.
-    * **Transition**: -> `Engineer`.
+1. **Architect (Planner)**:
+    - **Input**: User Request + Benchmarks.
+    - **Action**: Decompiles requirements, checks Skills, writes `plan.md` and initial `todo.md`.
+    - **Output**: State update.
 
-2. **Engineer (Actor) Node**:
-    * **Role**: Executes the current step of the plan/TODO list.
-    * **Action**: Writes CAD code, calls environment tools.
-    * **Capability**: Can **refuse** the plan if the Architect's requirements are proven impossible.
-    * **Transition**: -> `Critic` (on preview/submission) OR -> `Engineer` (on progress).
+2. **Engineer (Actor)**:
+    - **Input**: Current TODO item.
+    - **Action**: Writes Python code (`script.py`) using `view_file` (Skills) and `write_file`. Calls `run_command` to execute.
+    - **Loop**: Iterates until the code runs and locally validates.
 
-3. **Critic Node**:
-    * **Role**: Validates the implementation against constraints (cost, weight, manufacturability).
-    * **Action**: Reviews visual previews and simulation feedback.
-    * **Transition**:
-        * **Success**: -> `Skill Populator` -> `End`.
-        * **Failure**: -> `Architect` (Re-planning).
+3. **Critic**:
+    - **Input**: Simulation Result (from `simulate` util) + Workbench Report.
+    - **Action**: Decides if the solution is robust and cost-effective.
+    - **Output**:
+        - **Approve**: Submits for Final Review.
+        - **Reject**: Updates `journal.md` with failure reason, loops back to Architect or Engineer.
 
-4. **Skill Populator Node**:
-    * **Role**: Captures successful solutions and patterns.
-    * **Storage**: Learned skills are persisted in the agent's database/workspace. Static/Reference skills for the system are kept in `.agent/skills/` at the repository root.
+4. **Sidecar Learner (Async)**:
+    - **Trigger**: End of Episode (Success or Failure).
+    - **Action**: Analyzes `journal.md` and execution traces.
+    - **Output**: Updates `skills/` (via a separate administrative process/PR, as skills are Read-Only for the runner).
 
 ### 4.2. Tool Interface
 
-The agent interacts with the environment via **LangChain Tools**.
+The agent sees a simplified "OS-like" interface provided by the Controller (Spec 001).
 
-#### 4.2.1. Environment Tools (CAD & DFM)
+**Core Tools**:
 
-* `search_docs(query: str)`: RAG retrieval from documentation.
-* `view_file(path: str)`: Reads the content of any file (scripts, documentation, skills).
-* `write_file(content: str, path: str, mode: str)`: Creates, overwrites, or appends to files. Handles `journal.md` specially.
-* `edit_file(path: str, find: str, replace: str)`: Targeted text replacement in files.
-* `run_command(command: str)`: Executes shell commands (e.g., `python design.py`) in the sandbox.
-* `preview_design(path: str)` -> Visual rendering (SVG) and spatial check.
-* `submit_design(control_path: str)` -> Full physics simulation and grading.
-* `check_manufacturability(design_file, process, quantity)` -> DFM analysis and cost estimation.
-* `search_parts(query: str)`: Search for COTS components.
-* `preview_part(part_id: str)`: Detailed metadata and recipe for a COTS part.
+- `ls`, `view_file`, `write_file`, `edit_file`, `wait`.
 
-#### 4.2.2. Skill Management Tools (Persistent Memory)
+**Utils (Python Library)**:
+The agent interacts with the domain *through code it writes*, leveraging the pre-installed `utils` library on the Worker:
 
-* `list_skills()`: Lists available specialized knowledge categories.
-* `read_skill(skill_name, filename)`: Reads instructions (`SKILL.md`) or references.
-* `update_skill(skill_name, content, filename)`: Records new insights or patterns.
-* `init_skill(skill_name)`: Initializes a new skill category.
-* `package_skill(skill_name)`: Validates and distributes a skill.
-* `list_skill_files(skill_name)`: Lists files within a skill folder.
-* `run_skill_script(skill_name, script_name, arguments)`: Runs a deterministic helper from a skill.
+- `from utils import validate_and_price`
+- `from utils import simulate`
+- `from utils import submit_for_review`
 
-### 4.3. LLM Integration
+### 4.3. Memory Systems
 
-* **Framework**: `langchain-core` / `langchain-anthropic` / `langchain-google-genai`.
-* **Context Management**: Progressive disclosure of skills (Metadata -> SKILL.md -> References) to optimize token usage.
-* **Image Handling**: Native multimodal support via LangChain.
+1. **Short-term (Working Memory)**: LangGraph State (Messages, Scratchpad).
+2. **Episodic (Journal)**: `journal.md` (Read-Write). The agent logs intent, result, reflection, and next steps.
+3. **Procedural (Skills)**: `skills/*.md` (Read-Only). How-to guides for `build123d`, `mujoco`, etc.
+4. **Planned (TODOs)**: `todo.md` (Read-Write).
 
 ## 5. Technical Design
 
 ### 5.1. Tech Stack
 
-* **Language**: Python 3.10+
-* **Framework**: `langgraph` / `langchain`.
-* **Skills System**: File-system based storage under `.agent/skills/`.
-* **Models**: Gemini 2.0 Pro (preferred), Claude 3.5 Sonnet.
+- **Orchestrator**: LangGraph (Python).
+- **Framework**: `deepagents`.
+- **LLM**: Gemini 2.0 Pro / Claude 3.5 Sonnet.
+- **State Store**: Postgres (via LangGraph checkpointing).
 
 ### 5.2. Component Structure
 
 ```text
 src/agent/
-├── graph/
-│   ├── graph.py            # Definition of Nodes and Edges
-│   ├── state.py            # TypedDict State definition
-│   └── nodes/
-│       ├── planner.py
-│       ├── actor.py
-│       ├── critic.py
-│       └── skill_populator.py
-├── tools/
-│   ├── env.py              # Environment & Skill tools
-│   └── env_adapter.py      # Async wrappers and env mapping
-├── runner.py               # CLI entry point to run the Graph.
-└── utils/                  # Prompt management and LLM helpers
+├── graph.py            # LangGraph definition
+├── nodes/              # Architect, Engineer, Critic
+├── state.py            # AgentState (TypedDict)
+└── prompt_manager.py   # System prompts & template rendering
 ```
 
 ## 6. Assumptions & Constraints
 
-* **Observability**: The agent MUST externalize its "Thoughts" and "Reasons" for every tool call and state transition. This data is recorded for future RL training and debugging.
-* **Fail Fast**: Nodes should avoid creating infinitely deep retry loops or complex fallbacks. If a plan is proven impossible or a constraint is fundamentally violated, the agent should terminate early or return to the Architect with a clear failure reason.
+- **Code Execution**: The agent NEVER executes code on the Controller. It MUST use `write_file` + `run_command` which routes to the Worker.
+- **Skill Updates**: The agent cannot self-modify skills during a run. Improvements are captured in Journal and processed asynchronously.

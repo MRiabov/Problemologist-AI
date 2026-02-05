@@ -1,73 +1,62 @@
-# Implementation Plan: Agentic CAD Dashboard & 3D Debugger
+# Implementation Plan: Agentic CAD Dashboard
 
 *Path: kitty-specs/007-agentic-cad-dashboard/plan.md*
 
-**Branch**: `main` | **Date**: 2026-02-01 | **Spec**: [spec.md](spec.md)
+**Branch**: `007-agentic-cad-dashboard` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/kitty-specs/007-agentic-cad-dashboard/spec.md`
 
 ## Summary
 
-The **Agentic CAD Dashboard** is a Streamlit-based visual interface designed for real-time monitoring and historical review of the AI agent's 3D design process. It integrates interactive 3D rendering using `stpyvista` to allow developers to inspect generated models (STLs) alongside the agent's reasoning and code.
+Implement the **Agentic CAD Dashboard** as a standalone **React/Vite** application. This replaces the previous Streamlit proposal. The dashboard consumes the Controller's OpenAPI to provide type-safe interfaces for monitoring runs, viewing 3D assets, and managing benchmarks.
 
 ## Technical Context
 
-**Language/Version**: Python 3.12  
-**Primary Dependencies**: `streamlit`, `stpyvista`, `pyvista`, `sqlalchemy`, `trimesh`  
-**Storage**: SQLite (`history.db`) with WAL mode for concurrent read-only access.  
-**Testing**: `pytest` for data layer and utility functions.  
-**Target Platform**: Linux Desktop / Local Development  
-**Project Type**: Single project (Dashboard module within existing source tree)  
-**Performance Goals**:
+**Language/Version**: TypeScript 5+
+**Frameworks**:
 
-- Render STL files < 2 seconds.
-- Real-time updates < 1 second after DB commit.
-**Constraints**:
-- Read-only database connection to avoid interference with the agent.
-- Access to local `artifacts/` directory for mesh retrieval.
+- `React`: UI Library.
+- `Vite`: Build tool.
+- `TanStack Query`: Data fetching.
+- `react-three-fiber`: 3D Rendering.
+**Dependencies**:
+- `openapi-typescript`: Type generation.
+**Infrastructure**:
+- Deployed to Vercel/Railway.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[SKIPPED: Constitution file not present in repository.]
+[No conflicts. Aligned with Premium UI goals.]
 
 ## Project Structure
 
-### Documentation (this feature)
+### Documentation
 
 ```
 kitty-specs/007-agentic-cad-dashboard/
-├── spec.md              # Feature specification
 ├── plan.md              # This file
-├── research.md          # Technical research and discoveries
-├── data-model.md        # UI state and data fetching contracts
-├── quickstart.md        # Setup and execution guide
-├── contracts/           # API/Data schema definitions
-└── tasks.md             # Implementation tasks (generated later)
+├── research.md          # Research
+├── data-model.md        # API Contract
+└── tasks.md             # Tasks
 ```
 
-### Source Code (repository root)
+### Source Code
 
+```text
+src/frontend/
+├── src/
+│   ├── components/      # UI Atoms/Molecules
+│   ├── features/        # Business Logic (RunDetail, BenchmarkWizard)
+│   ├── api/             # Generated Client
+│   └── App.tsx
+├── package.json
+└── vite.config.ts
 ```
-src/
-└── dashboard/           # Dashboard module
-    ├── main.py          # Entry point (Streamlit app)
-    ├── data.py          # Data layer (SQLAlchemy integration)
-    ├── components/      # UI components
-    │   ├── chat.py      # Reasoning and logs viewer
-    │   ├── code.py      # Syntax-highlighted code viewer
-    │   ├── viewer_3d.py # interactive PyVista viewport
-    │   ├── admin.py     # Backup trigger and system health
-    │   ├── rebuilder.py # Visual reconstruction engine
-    │   └── benchmark_gen.py # Interactive generator pipeline
-    └── utils.py         # Path resolution and formatting
-```
-
-**Structure Decision**: A dedicated `dashboard` directory inside `src/`. This follows the existing project organization while keeping the UI code isolated from the agent logic.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| stpyvista | Specialized 3D visualization | `st.code` or static images are insufficient for debugging complex geometry. |
-| SQLite WAL | Concurrent access | Standard mode would cause database locks when the agent and dashboard access `history.db` simultaneously. |
+| React/Vite | Interactivity & Polish. | Streamlit is great for prototypes but fails to deliver "Premium" custom layouts and rich 3D interactions. |
+| Auto-generated Types | Reliability. | Manual/Any types lead to frontend bugs when backend schema changes. |
