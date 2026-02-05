@@ -47,7 +47,7 @@ class Job:
         self.stderr = ""
         self.return_code: int | None = None
         self.error: str | None = None
-        self.process: subprocess.CompletedProcess | None = None
+        self.process: subprocess.Popen | None = None
         self.start_time: float | None = None
         self._lock = threading.Lock()
 
@@ -77,13 +77,14 @@ class JobManager:
             return self.jobs.get(job_id)
 
     def cancel_job(self, job_id: str):
-        # Cancellation is tricky with subprocess.run.
-        # We can only mark it as cancelled effectively if it hasn't started,
-        # or if we implemented Popen logic.
-        # For now, we will just mark status.
-        # TODO: Implement Popen kill logic.
         job = self.get_job(job_id)
         if job:
+            with job._lock:
+                if job.process and job.process.poll() is None:
+                    try:
+                        job.process.terminate()
+                    except Exception as e:
+                        logger.error(f"Failed to terminate job {job_id}: {e}")
             job.update(status=JobStatus.CANCELLED)
 
     def _run_job(self, job: Job):
@@ -115,29 +116,41 @@ class JobManager:
 
             logger.info(f"Starting job {job.job_id}: {cmd_args}")
 
-            # run is blocking, but we are in a thread
-            result = subprocess.run(
+            # Use Popen instead of run to allow cancellation
+            process = subprocess.Popen(
                 cmd_args,
                 shell=shell,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 cwd=workdir,
-                timeout=req.timeout,
             )
 
-            job.update(
-                status=JobStatus.COMPLETED,
-                stdout=result.stdout,
-                stderr=result.stderr,
-                return_code=result.returncode,
-            )
+            job.update(process=process)
 
-        except subprocess.TimeoutExpired:
-            job.update(
-                status=JobStatus.FAILED,
-                error=f"Job timed out after {job.request.timeout}s",
-                return_code=124,
-            )
+            try:
+                stdout, stderr = process.communicate(timeout=req.timeout)
+
+                # Check if it was cancelled during execution
+                if job.status == JobStatus.CANCELLED:
+                    return
+
+                job.update(
+                    status=JobStatus.COMPLETED,
+                    stdout=stdout,
+                    stderr=stderr,
+                    return_code=process.returncode,
+                )
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                job.update(
+                    status=JobStatus.FAILED,
+                    error=f"Job timed out after {job.request.timeout}s",
+                    return_code=124,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
         except Exception as e:
             logger.error(f"Job {job.job_id} failed: {e}")
             job.update(status=JobStatus.FAILED, error=str(e), return_code=1)
