@@ -233,6 +233,7 @@ class ToolRuntime:
                 "reward": -10.0,
                 "message": f"Error processing design: {res.error}",
                 "terminated": False,
+                "validation_report": res.model_dump(),
             }
 
         # 2. Budget Check
@@ -243,6 +244,7 @@ class ToolRuntime:
                 "reward": -20.0,
                 "message": f"REJECTED: Unit cost ${unit_cost:.2f} exceeds budget ${max_unit_cost:.2f}.",
                 "terminated": False,
+                "validation_report": res.model_dump(),
             }
 
         # 3. Validation Check
@@ -253,6 +255,7 @@ class ToolRuntime:
                 "reward": -10.0,
                 "message": f"Validation Failed: {v_str}",
                 "terminated": False,
+                "validation_report": res.model_dump(),
             }
 
         if not res.stl_path:
@@ -261,6 +264,7 @@ class ToolRuntime:
                 "reward": -10.0,
                 "message": "Submission failed: No STL exported.",
                 "terminated": False,
+                "validation_report": res.model_dump(),
             }
 
         # 4. Save to Database for Observability if persistence is active
@@ -302,6 +306,7 @@ class ToolRuntime:
                     "damage": sim_result.total_damage,
                     "success": sim_result.success,
                 },
+                "validation_report": res.model_dump(),
             }
 
         except Exception as e:
@@ -393,6 +398,23 @@ class ToolRuntime:
                     )
                 except IndexError:
                     pass
+
+            # Persist ValidationReport if present
+            try:
+                report_to_save = None
+                if isinstance(result, ValidationReport):
+                    report_to_save = result
+                elif isinstance(result, dict) and "validation_report" in result:
+                    vr_data = result["validation_report"]
+                    if isinstance(vr_data, dict):
+                        report_to_save = ValidationReport.model_validate(vr_data)
+                    elif isinstance(vr_data, ValidationReport):
+                        report_to_save = vr_data
+
+                if report_to_save:
+                    self.db.save_validation_report(step_id=db_step.id, report=report_to_save)
+            except Exception as e:
+                logger.error(f"Failed to save validation report: {e}")
 
         return tool_output
 
