@@ -32,8 +32,9 @@ The benchmarks are consisting of CAD models which are converted into XML.
 - The execution runs in isolated containers to prevent accidental harmful code execution in the main system.
 - The benchmarks are verified for being creatable in MuJoCo. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
   - Validity means no intersections and other problems; It also means that the code will compile in the first place.
-  -
   - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
+- MJCF is created programmatically, not by a LLM.
+<!-- I will need to experiment, but I don't think the LLM should be able to edit it.->
 
 #### Benchmarks
 
@@ -99,13 +100,13 @@ The network latency is perfectly acceptable as LLM reasoning latency far outweig
 
 #### Utils files
 
-The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` FilesystemMiddleware (which can force certain files to be unwritable by the in agents) the filesystem.
+The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` `FilesystemMiddleware` (which can force certain files to be unwritable by the in agents) the filesystem.
 
 #### Skills files
 
 Unlike utils files which are static (or the container restart is acceptable), skills files will be updated by a sidecar learner agent rather frequently (possibly after every 10-20 conversations?).
 
-The container will download the latest skills from the server before every run (justified? else how do we handle the updates? The file size there is minimal.)
+The container will download the pull skills from a skill git repo before every run (justified? else how do we handle the updates? The file size there is minimal.)
 
 Maybe use a dedicated public git repo? I think it's sound. However this is complexity, and probaly isn't that sound. But it'll enable human readability, which is a bonus.
 
@@ -229,7 +230,7 @@ The skill agent will read a `skill-creator/` skill as from Anthropic.
 
 ##### Skill agent is run async
 
-The skill agent is run asyncronous to the execution, modifying the skill folder and pushing it to the containers.
+The skill agent is run asyncronous to the execution, modifying the skill folder and pushing it to a git repo. It's filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
 The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
 ##### Skill agent has a journal too
@@ -287,15 +288,11 @@ Skills in the `.agent/skills/` in the repo root are different from the agent ski
 
 Because the application's performance is quite dependant on SKILL.md files which detail how to use `build123d` and other issues, however those are frequently updated by a "learner" agent, the skill git hashes need to be versioned and persisted to the observability database.
 
-### Tools
-
-(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above). The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
-
 ### `deepagents` framework
 
 LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for creating long-running, complex agents, for example coding agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
 
-- We use `FilesystemMiddleware` to support `ls`, `write`, `read` tools (not sure if `edit` exists, likely does)
+- We use `FilesystemMiddleware` to support `ls`, `write`, `read` tools (not sure if `edit` exists, likely does). Notably, we use MinIO S3-compatible storage in workers because S3-compatible storage is what `deepagents` Filesystem Backend supports (`S3Backend`)
 - We use `TodoListMiddleware` which provides a `todo_list` to support TODO lists.
 
 <!-- Note to LLMs! `deepagents` was introduced in late 2025 and you don't know much about it, but it is a framework for managing agents.
@@ -361,13 +358,21 @@ We decided to run in Podman containers because they are leaner than Docker and s
 
 ### Persisting files
 
-The files are written directly to the worker container. We don't store it on controller. However, we upload final results (assets) to the s3.
+The files are written directly to the worker container. We don't store it on controller. However, we upload final results (assets) to the Railway bucket S3.
+
+The worker's filesystem is implemented as a MinIO S3 application to communicate over HTTP.
+
+<!-- Note: we have two S3-compatabile storage systems then - Railway and MinIO workers -->
 
 <!-- gap: do we store file diffs or full files into the db? or both? -->
 
 The "main app" essentially serves as a business logic layer that also forwards requests to observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 
-<!-- LangChain DeepAgents can handle saving -->
+#### Workers' filesystem
+
+`deepagents` `FilesystemMiddleware` supports a s3-compatible backend. This is handy, and we will expose the workers' filesystem as s3.
+
+Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
 #### Videos
 
@@ -378,6 +383,9 @@ Storing videos on buckets is also cheaper than in volumes.
 
 I suppose the videos will be automatically deleted after a short period, e.g. a day to avoid storage costs. (why not store them in ephemeral storage then?...)
 
+Videos are rendered on-demand and only if the model requests it (I'll need to double-check if is preferable or not)
+Why: models don't strictly always need to view videos; they might want to view only coordinates in the end (videos can be rendered by a variable in `simulate(component, render=True)`) this is in part to make video.
+
 ### Database
 
 We do persistence via SQLAlchemy and Alembic migrations to avoid issues with hand-written SQL.
@@ -386,6 +394,8 @@ We do persistence via SQLAlchemy and Alembic migrations to avoid issues with han
 <!-- Solved via Temporal.  -->
 
 All important updates must be persisted into the DB (for observability, as below.)
+
+####
 
 ### Agent and Worker boundary
 
@@ -441,6 +451,7 @@ The benchmarks are randomized to enable a wider data distribution with less gene
   - The environment - ojectives (goals, forbids, build zones) are rescaled respectively.
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
 - The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
+- The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
 
 #### Failure
 
@@ -495,19 +506,43 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
-### Set of tools and utils
+Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
+
+### Tools
+
+#### "Agent-native" tools (callable by LangChain)
+
+(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `ls`, `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above), and `wait` for waiting for the agent . The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
+
+The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as desribed below)
+
+#### The "tools" as Python functions - Utils
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
 
+##### Engineer tools
+
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
-- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation.
+- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Should run multiple simulations with slightly perturbed object spawn position; to make sure the engineer agents generate robust solutions.
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
 <!-- should it contain its environment model or only the generated model?  -->
 - `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 <!-- Same: what's in the compound? -->
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
-*Note:* terminology: I use "component" is a shorthand for part OR assembly.
+##### Benchmark generator (CAD editor) tools
+
+- `validate(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
+- Input object with environment
+- Goal objective with forbid objective
+- Input objective with goal or forbid objectives.
+
+Validated under all environment randomizations.
+
+- `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
+- `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
+- `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
+<!-- Note 2: `deepagent` framework supports subagents this is what we'll use here.-->
 
 #### Exact tools logic
 
@@ -525,7 +560,7 @@ Run the workbench interface to validate the part for manufacturability; if passe
 6. Validate for cost,
 7. Validate for weight.
 
-##### simulate(Compound)
+##### `simulate(Compound)`
 
 Simulate the compound. Must have the environment at the exact point where we it was defined in the task. Must have price and manufacturability checked
 So:
@@ -536,13 +571,16 @@ So:
 3. Start simulation, locally.
 4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a "submit for review.
     - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
-
-     the simulation will produce video. The issue is, it's expensive to
+    the simulation will produce video. The issue is, it's expensive to
 5. If doesn't, retry the simulation.
 
 ##### submit_for_review(compound: Compound)
 
-The CAD engineer agent will ask a reviewer agent to review.
+The CAD engineer agent run `simulate(),` will ask a reviewer agent to review. If already the environment was already/recently simulated, the cache will hit and will skip directly to the review.
+
+#### Dealing with latency
+
+All Python tools require all files to be uploaded. While this is a very rare edge case that an agent would run code tool before the file was edited, we should ensure that this doesn't happen.
 
 ### Assigning a part to workbenches
 
@@ -652,6 +690,15 @@ The temporal
 
 The APIs are to be strict. OpenAPI schemas will be autogenerated on git commit hooks of controller and `schemathesis` will fuzz API endpoints. We have two schemas - one between worker and controller, another between the frontend and the controller.
 
+### Batch support as a first-class citizen
+
+Both batch generation (batch solution, or batch simulation) support and frontend (as below) are first-class citizens.
+Batch generation will be ran from a script or a container, offloading to multiple workers.
+
+#### Async execution
+
+For both frontend and for backend, the workers will run async, with a paralel execution requirement.
+
 ### Frontend and debugging infrastructure
 
 I will need some frontend. I suggest designing a custom UI. This is relatively easy now because we can handle off to Google Stitch (Google's AI website designer; however it only designs websites, it doesn't integrate them). Plus it's convenient to use in backend. The website will be deployed on Vercel for simplicity (or a railway bucket maybe? it doesn't really matter.)
@@ -668,6 +715,11 @@ As the agents are long-running (and cost money!) it is desirable to be able to:
 1. Submit requests one-by-one (as opposed to working in batch over a dataset of prompts)
 2. View their reasoning prompts
 3. Interrupt them before they finish.
+4. (dev only) using an environmental variable on all all nodes(dev_mode=True), fetch logs from either controller or worker (and maybe view in UI) (this may be easier as we use `structlog`)
+
+##### Interrupting the worker and progress bars
+
+If we want to stop the generation in the controller, it will also halt the job(s) in the workers.
 
 #### Frontend architecture
 
