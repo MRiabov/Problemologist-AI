@@ -343,6 +343,8 @@ Additionally, the engineering agent will be supplied with renders for preview au
 1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
+The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
+
 ## Distributed execution
 
 There is a controller node which runs the LLM and tool calls, and there worker node which:
@@ -380,11 +382,12 @@ The "main app" essentially serves as a business logic layer that also forwards r
 
 #### Workers' filesystem
 
-`deepagents` `FilesystemMiddleware` supports a s3-compatible backend. This is handy, and we will expose the workers' filesystem as s3.
+`deepagents` `FilesystemMiddleware` supports a "sandbox" filesystem backend. This is handy, and we will expose the workers' filesystem as sandbox - something that can easily be removed..
 
 Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
-The filesystem will be reset (and pull skills) (how?) on every run from a github repo.
+The filesystem will be reset (and pull skills) (how? presumably just by deleting and cloning a copy - perhaps from local) on every run from a github repo.
+For videos and large files, we will also use a `CompositeBackend`. It will route the `/render/` folder to the s3; we will need internal plumbing to make this happen (presumably, any python function that will render, will upload to s3).
 
 #### Videos
 
@@ -759,9 +762,13 @@ Notably, the environment will also prerender a set of pictures (e.g. 24 pictures
 
 We may also make a script to generate a number of short input prompts via a LLM.
 
-## Engineering agent(s)
+### Engineering agent(s)
 
 The engineering agent(s) get benchmarks as inputs and a standard prompt.
+
+## Security
+
+Minimal security is at least desired. Secure all endpoints with an API key env var that needs to pass in headers. "Admin" endpoints - e.g. reset a database (if ever necessary) will use the
 
 ## Outputs of the system and postprocessing
 
@@ -772,8 +779,8 @@ The goal of the application (as stated in the very beginning of the document) is
 ## Other notes
 
 1. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
-2. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
-3. Because the application is open-source and asks for reproducibility, use open-source frameworks
+2. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it with me and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
+3. Because the application is open-source and asks for reproducibility, use open-source frameworks.
 4. Because the application is for a scientific use-case (and should be presented in such a light), detailed statistics should be gathered.
 
 <!-- ### Production workflow
@@ -784,11 +791,11 @@ Norably, the production workflow is not an important part *right now* (February 
 ## Complexity tracking worksheet (what is more complex but necessary)
 
 ```yaml
-Updating skills via requests:
+Updating skills via git:
   what: 
-  We will send HTTP requests to update the skills when necessary. The skills will be updated on the next agent execution.
+  We will pull from git to update the skills before every session (e.g. benchmark generation start to finish). The skills will be updated on the next agent execution.
   reason: >
-  We need to update t 
+  We need to update to 
 
 deepagents framework: 
   what: >
