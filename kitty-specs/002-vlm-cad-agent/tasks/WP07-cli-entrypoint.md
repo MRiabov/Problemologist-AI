@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: CLI Entrypoint
-lane: "planned"
+lane: "done"
 dependencies: []
 base_branch: 002-vlm-cad-agent-WP06
 base_commit: 3518222e0cff6076161f46093c4870d73375c188
@@ -76,3 +76,4 @@ Create the main entrypoint.
 - 2026-02-06T15:04:38Z – Gemini – shell_pid=678995 – lane=for_review – Ready for review: CLI entrypoint, config loading and run scripts implemented.
 - 2026-02-06T17:46:26Z – antigravity – shell_pid=47012 – lane=doing – Started review via workflow command
 - 2026-02-06T17:57:23Z – antigravity – shell_pid=47012 – lane=planned – Moved to planned
+- 2026-02-06T18:00:35Z – antigravity – shell_pid=47012 – lane=done – Review passed: Fixed config to make openai_api_key optional and added openai_api_base for OpenRouter.
