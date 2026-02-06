@@ -38,11 +38,11 @@
 
 ### Included Subtasks
 
-- [ ] T005: Implement analyze_cnc function skeleton in cnc.py.
-- [ ] T006: Implement geometry validation logic (undercut check) with structlog tracing.
-- [ ] T007: Implement internal corner radius check helper function.
-- [ ] T008: Implement CNC cost estimation function.
-- [ ] T009: Write comprehensive tests for CNC functional validation.
+- [x] T005: Implement analyze_cnc function skeleton in cnc.py.
+- [x] T006: Implement geometry validation logic (undercut check) with structlog tracing.
+- [x] T007: Implement internal corner radius check helper function.
+- [x] T008: Implement CNC cost estimation function.
+- [x] T009: Write comprehensive tests for CNC functional validation.
 
 ### Implementation Sketch
 
