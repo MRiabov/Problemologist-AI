@@ -1,13 +1,13 @@
 ---
 work_package_id: WP01
 title: Foundation & Data Models
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 941e92e5cf286016e109cc9b0398e53712ad706f
 created_at: '2026-02-06T14:04:54.068309+00:00'
 subtasks: [T001, T002, T003, T004]
-shell_pid: "625191"
+shell_pid: "644692"
 agent: "gemini-cli"
 ---
 
@@ -87,3 +87,4 @@ We are implementing the "Advanced Manufacturing Workbenches" feature (Spec 004).
 
 - 2026-02-06T14:04:54Z – gemini-cli – shell_pid=625191 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T14:14:46Z – gemini-cli – shell_pid=625191 – lane=for_review – Ready for review: Foundation & Data Models implemented and tested.
+- 2026-02-06T14:28:23Z – gemini-cli – shell_pid=644692 – lane=doing – Started review via workflow command
