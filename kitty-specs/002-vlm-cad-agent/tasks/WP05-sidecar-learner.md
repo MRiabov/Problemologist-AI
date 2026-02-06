@@ -18,10 +18,10 @@ The agent may fail repeatedly or discover a new trick. The Sidecar Learner analy
 
 ### T020: Implement `src/agent/nodes/sidecar.py`
 
-Create the Sidecar node.
+Create the Sidecar node as an asynchronous background worker.
 
 - **File**: `src/agent/nodes/sidecar.py`
-- **Type**: Can be a standard node that runs after "End" or a separate process. For simplicity in LangGraph, implementing as a final node in the graph is easiest for V1.
+- **Type**: A non-blocking process triggered at the end of an episode (Success or Failure). It should not delay the final response to the user.
 - **Logic**:
   - Read `journal.md`.
   - Read `state["messages"]`.

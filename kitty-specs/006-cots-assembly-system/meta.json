@@ -1,0 +1,10 @@
+{
+    "feature_number": "006",
+    "slug": "006-cots-assembly-system",
+    "friendly_name": "COTS Assembly System",
+    "mission": "software-dev",
+    "source_description": "Library and logic for integrating Commercial-Off-The-Shelf components into agentic CAD workflows, focusing on inventory-aware design, as per @[kitty-specs/desired_architecture.md].",
+    "created_at": "2026-02-06T08:30:00Z",
+    "target_branch": "main",
+    "vcs": "git"
+}

@@ -10,41 +10,29 @@ subtasks: ["T001", "T002", "T003", "T004"]
 
 ## Goal
 
-Set up the core data structures, configuration system, and abstract base classes for the workbench system.
+Set up the core Pydantic data structures, configuration system, and functional interfaces for the workbench system.
 
 ## Context
 
-We are implementing the "Advanced Manufacturing Workbenches" feature (Spec 004). This WP lays the groundwork by defining the data models (Pydantic), the configuration loader (YAML), and the base class for all workbenches.
+We are implementing the "Advanced Manufacturing Workbenches" feature (Spec 004). This WP lays the groundwork by defining the data models (Pydantic), the configuration loader (YAML), and the functional interface common to all workbenches.
 
 ## Subtasks
 
-### T001: Implement Core Data Models
+### T001: Implement Core Pydantic Models
 
 **Objective**: Create the Pydantic models for workbench results and materials.
 **Files**: `src/workbenches/models.py`
 **Instructions**:
 
 1. Create `src/workbenches/models.py`.
-2. Determine necessary imports (pydantic `BaseModel`, `Field`, enum `Enum`).
-3. Define `ManufacturingMethod` Enum:
-   - `CNC = "cnc"`
-   - `THREE_DP = "3dp"`
-   - `INJECTION_MOLDING = "im"`
-4. Define `WorkbenchResult` (BaseModel) with fields:
+2. Define `ManufacturingMethod` Enum: `CNC`, `THREE_DP`, `INJECTION_MOLDING`.
+3. Define `WorkbenchResult` (BaseModel):
    - `is_manufacturable`: bool
-   - `score`: float (0.0 to 1.0)
    - `unit_cost`: float
-   - `setup_cost`: float
-   - `total_cost`: float
-   - `weight_g`: float
-   - `material`: str
-   - `method`: ManufacturingMethod
-   - `violations`: List[str] (default factory list)
-5. Define `MaterialDefinition` (BaseModel) with fields:
-   - `name`: str
-   - `density`: float (g/cm3)
-   - `cost_per_kg`: float
-   - `compatible_methods`: List[ManufacturingMethod]
+   - `violations`: List[str]
+   - `metadata`: Dict[str, Any]
+4. Define `DFMReport` (BaseModel) which wraps `WorkbenchResult` with overall status.
+5. Define `MaterialDefinition` (BaseModel) with density, cost, and compatibility.
 
 ### T002: Create Manufacturing Config
 
@@ -53,56 +41,39 @@ We are implementing the "Advanced Manufacturing Workbenches" feature (Spec 004).
 **Instructions**:
 
 1. Create `src/workbenches/manufacturing_config.yaml`.
-2. Add a `materials` list. Example entries:
-   - Aluminum 6061 (density 2.7, cost ~5.0, CNC)
-   - ABS (density 1.04, cost ~2.0, IM/3DP)
-3. Add `cnc` config section:
-   - `hourly_rate`: 50.0
-   - `setup_fee`: 100.0
-4. Add `im` config section:
-   - `base_mold_cost`: 5000.0
-   - `cycle_time_seconds`: 30
-   - `hourly_rate`: 40.0
+2. Populate with materials (Aluminum 6061, ABS) and workbench-specific parameters (hourly rates, setup fees).
 
 ### T003: Implement Configuration Loader
 
-**Objective**: Load the YAML config into Pydantic models.
+**Objective**: Load the YAML config into Pydantic models with `structlog`.
 **Files**: `src/workbenches/config.py`
 **Instructions**:
 
 1. Create `src/workbenches/config.py`.
-2. Define Pydantic models mirroring the YAML structure:
-   - `CNCConfig`
-   - `IMConfig`
-   - `ManufacturingConfig` (containing materials list, cnc, im)
-3. Implement `load_config(path: str = "src/workbenches/manufacturing_config.yaml") -> ManufacturingConfig`.
-   - Use `yaml.safe_load`.
-   - Validate with Pydantic.
-   - Cache the result (lru_cache or singleton).
+2. Use `structlog` to log configuration loading events.
+3. Implement `load_config()` returning a validated Pydantic `ManufacturingConfig` object.
 
-### T004: Create Abstract Workbench Base Class
+### T004: Define Functional Interfaces
 
-**Objective**: Define the interface for all workbenches.
+**Objective**: Define standard types/protocols for analysis functions.
 **Files**: `src/workbenches/base.py`
 **Instructions**:
 
 1. Create `src/workbenches/base.py`.
-2. Import `ABC`, `abstractmethod` from `abc`.
-3. Import `Part`, `Compound` from `build123d`.
-4. Import `WorkbenchResult` from `.models`.
-5. Define `Workbench` class (inherits `ABC`).
-6. Define abstract method `analyze(self, part: Part | Compound, quantity: int = 1) -> WorkbenchResult`.
+2. Define a `Callable` type or `Protocol` for workbench analysis functions.
+3. Example: `AnalyzeFunction = Callable[[Part | Compound, ManufacturingConfig], WorkbenchResult]`.
 
 ## Verification
 
 - Create `tests/workbenches/test_config.py`.
-- Test `load_config()` ensures it reads the YAML correctly.
-- Test that `WorkbenchResult` validates core fields.
+- Test `load_config()` ensures it reads and validates the YAML.
+- Verify `structlog` output during testing.
 - Run `pytest tests/workbenches/test_config.py`.
 
 ## Definition of Done
 
-- All 4 files created.
-- Config loads successfully.
-- Models are strict.
-- Tests pass.
+- Pydantic models implemented in `models.py`.
+- Config loads and validates successfully.
+- Functional interfaces defined.
+- `structlog` integrated.
+- Foundation tests pass.

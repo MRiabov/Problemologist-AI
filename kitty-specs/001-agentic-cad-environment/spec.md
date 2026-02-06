@@ -17,8 +17,8 @@ This environment is built on top of the **`deepagents`** framework, utilizing a 
   - **Controller Node**: Runs the LLM, parses tool calls, and orchestrates the workflow. Deployed on Railway.
   - **Worker Node**: A sandboxed container (Podman) where code is executed, simulation runs. The environment is reset from Git on every session.
 - **Filesystem**: Agents operate on a `FilesystemMiddleware` using a **Hybrid Architecture**:
-  - **Local Sandbox Backend**: Primary workspace for code edits, logs, and execution state. Ephemeral and fast.
-  - **Selective S3 Routing**: Specific paths (like `/renders/` for large media) are transparently routed to S3-compatible storage (MinIO/Railway) via a `CompositeBackend`.
+  - **Sandbox Filesystem Backend**: Primary workspace for code edits, logs, and execution state. Deployed as a safe, disposable environment in workers.
+- **Selective S3 Routing**: Specific paths (like `/renders/` for large media) are transparently routed to S3-compatible storage (MinIO/Railway) via a `CompositeBackend`.
 - **Tools Paradigm**: Agents use a minimal set of "OS-level" tools (`ls`, `view_file`, `write_file`) and high-level "Utils" (Python functions imported in the script) for domain-specific actions.
 
 ## 2. Goals & Success Criteria
@@ -55,6 +55,7 @@ The Worker container initializes with the following structure:
 ├── skills/                     # [Read-Only] Learned skills (markdown/code)
 ├── utils/                      # [Read-Only] Fixed Python utilities (simulation, validation)
 ├── renders/                    # [S3-Backed/Write] Large media (videos, images)
+├── reviews/                    # [Read-Only] Reviews from the Reviewer agent
 ├── journal.md                  # [Local/Write] Episodic memory
 ├── todo.md                     # [Local/Write] Planner's TODO list
 ├── plan.md                     # [Local/Read] High-level plan
@@ -64,7 +65,7 @@ The Worker container initializes with the following structure:
 **Filesystem Middleware**:
 
 - Provides a unified POSIX-like interface to the Agent.
-- Uses `LocalFilesystemBackend` for high-frequency operations (edits, journals).
+- Uses `SandboxFilesystemBackend` for high-frequency operations and safe isolation.
 - Uses `CompositeBackend` to route `/renders/` to S3 buckets.
 - Enforces Read-Only paths (`skills/`, `utils/`).
 

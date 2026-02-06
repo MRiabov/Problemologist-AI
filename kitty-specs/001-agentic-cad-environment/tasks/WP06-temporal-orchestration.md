@@ -50,8 +50,9 @@ File: `src/controller/workflows/simulation.py`
 
 File: `src/controller/workflows/execution.py`
 
-- The coding agent runs scripts that can last minutes. Wrap the entire execution in a Temporal Workflow.
-- If the Controller restarts, it resumes waiting for the Worker's `ExecuteResponse`.
+- The worker node runs scripts that can last minutes. Wrap the **Worker-side execution** call in a Temporal Workflow to ensure durability.
+- **Scope**: This wraps the communication and wait time for the Worker's `ExecuteResponse`, providing reliability if the Controller restarts during a long script execution.
+- Note: This does NOT orchestrate agent-level reasoning, only individual script executions on workers.
 
 ### T031: Update `utils.simulate()` Trigger
 

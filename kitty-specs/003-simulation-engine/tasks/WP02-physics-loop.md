@@ -3,7 +3,7 @@ work_package_id: WP02
 title: Physics Simulation Loop
 lane: planned
 dependencies: []
-subtasks: [T007, T008, T009, T010, T011, T012]
+subtasks: [T007, T008, T009, T010, T011, T012, T013]
 ---
 
 # WP02: Physics Simulation Loop
@@ -57,17 +57,21 @@ The loop must verify "Zones" defined in WP01.
    - **Selection**: Use **contact-based** if possible (requires phantom geom in WP01), or strict **AABB containment** logic (check if target position is within zone bounds).
    - Implement simpler AABB check: Get zone bounds from startup (geom size), check if target pos is within logic.
 
-### T011: Implement MetricCollector
-
-**File**: `src/worker/simulation/metrics.py` or inside `loop.py`
-
+1. Define a Pydantic model `SimulationMetrics`.
 1. Track:
    - `total_time`: `data.time`.
    - `total_energy`: sum of `ctrl * velocity` or similar rough proxy.
    - `max_velocity`: peak speed of target.
-2. Accumulate these per step.
+1. Accumulate these per step and return as a Pydantic model.
 
-### T012: Add Tests
+### T012: Add Validation Hook
+
+**File**: `src/worker/simulation/loop.py` or entry point
+
+1. Ensure that before the simulation starts, `src.workbenches.validate_and_price` is called.
+2. If validation fails, the simulation should raise an exception or return a FAILURE result immediately without stepping.
+
+### T013: Add Tests
 
 **File**: `tests/worker/simulation/test_loop.py`
 

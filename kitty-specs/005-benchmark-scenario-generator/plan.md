@@ -17,8 +17,11 @@ Implement the **Benchmark Scenario Generator** as a `deepagents` based tool. It 
 - `deepagents`: Agent orchestration.
 - `build123d`: CAD.
 - `mujoco`: Stability checks.
+- `LangChain` / `LangGraph`: Underlying agentic infrastructure.
 **Infrastructure**:
-- **Worker Node**: Runs the generation and validation scripts in a local sandbox.
+- **Temporal**: Orchestrates the distributed worker nodes for long-running generation/validation jobs.
+- **Langfuse**: Provides full observability into LLM traces, prompts, and tool calls.
+- **Worker Node**: Runs the generation and validation scripts in a `SandboxFilesystemBackend`.
 - **S3**: Stores the generated dataset media via the `/renders/` routed path.
 
 ## Constitution Check
@@ -36,7 +39,8 @@ kitty-specs/005-benchmark-scenario-generator/
 ├── plan.md              # This file
 ├── research.md          # Research
 ├── data-model.md        # Dataset Schema
-└── tasks.md             # Tasks
+├── tasks.md             # Tasks
+└── tasks/               # Individual Task Prompt Files
 ```
 
 ### Source Code
@@ -44,12 +48,19 @@ kitty-specs/005-benchmark-scenario-generator/
 ```text
 src/
 ├── generators/
-│   ├── benchmark/       # Generator Agent Logic
-│   │   ├── graph.py     # Planner -> Coder -> Reviewer
+│   ├── benchmark/       # Generator Agent Logic (Controller)
+│   │   ├── graph.py     # Planner -> Coder -> Reviewer Graph
+│   │   ├── state.py     # LangGraph State
+│   │   ├── models.py    # Pydantic Models
 │   │   └── templates/   # Script Templates
 ├── worker/
-│   └── utils/
-│       └── validation.py # Stability Check Logic
+│   ├── utils/
+│   │   ├── validation.py # simulate() / validate() implementation
+│   │   └── filesystem.py # Standard agent filesystem setup
+│   └── agent_files/      # Template for agent filesystem
+│       ├── journal.md
+│       ├── todo.md
+│       └── script.py
 ```
 
 ## Complexity Tracking

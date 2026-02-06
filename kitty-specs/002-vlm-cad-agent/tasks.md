@@ -33,7 +33,7 @@
 
 - [ ] T010: Implement `src/agent/nodes/engineer.py` with LangGraph ReAct implementation.
 - [ ] T011: Configure `deepagents` Tools (`ls_tool`, `read_tool`, `write_tool`) using Spec 001 Middleware.
-- [ ] T012: Configure `exec_tool` for worker integration.
+- [ ] T012: Configure `exec_tool` for worker integration via **Temporal Client**.
 - [ ] T013: Implement execution loop with `TodoListMiddleware`.
 - [ ] T014: Test Engineer node against a running Worker (WP01 WP03).
 
@@ -55,10 +55,10 @@
 **Priority**: Medium
 **Dependencies**: WP01
 
-- [ ] T020: Implement `src/agent/nodes/sidecar.py`
-- [ ] T021: Parse Journal for patterns
-- [ ] T022: Implement Skill extraction logic
-- [ ] T023: Test Sidecar
+- [ ] T020: Implement `src/agent/nodes/sidecar.py` as a background process.
+- [ ] T021: Parse Journal for patterns.
+- [ ] T022: Implement Skill extraction logic and persistent suggestion storage.
+- [ ] T023: Test Sidecar async triggering.
 
 ### WP06: Graph Orchestration
 

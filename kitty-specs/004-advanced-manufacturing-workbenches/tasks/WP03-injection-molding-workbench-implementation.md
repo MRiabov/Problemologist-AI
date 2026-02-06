@@ -10,82 +10,63 @@ subtasks: ["T010", "T011", "T012", "T013", "T014"]
 
 ## Goal
 
-Implement the Injection Molding validation logic (draft angles, wall thickness) and cost estimation.
+Implement the Injection Molding functional validation logic (draft angles, wall thickness) and cost estimation.
 
 ## Context
 
-Implement `InjectionMoldingWorkbench` to check for IM feasibility (drafts, wall thickness) and estimate mold/part costs.
+Implement the `analyze_im` function which checks if a part is moldable and estimates its cost using functional helpers and `structlog`.
 
 ## Subtasks
 
-### T010: Implement Workbench Class Skeleton
+### T010: Implement IM Analysis Skeleton
 
-**Objective**: Create the IM workbench class.
+**Objective**: Create the functional module structure.
 **Files**: `src/workbenches/injection_molding.py`
 **Instructions**:
 
 1. Create `src/workbenches/injection_molding.py`.
-2. Import `Workbench`, `WorkbenchResult` from base/models.
-3. Define `InjectionMoldingWorkbench(Workbench)`.
-4. Implement `analyze` method stub.
+2. Define `analyze_im(part: Part | Compound, config: IMConfig) -> WorkbenchResult`.
+3. Use `structlog` to log the start of the analysis.
 
 ### T011: Implement Draft Angle Validation
 
-**Objective**: Ensure vertical faces have sufficient draft.
+**Objective**: Functional check for draft angles.
 **Files**: `src/workbenches/injection_molding.py`
 **Instructions**:
 
-1. In `analyze`:
-2. Convert to mesh (trimesh).
-3. Implement `_check_draft_angles(mesh, min_angle=2.0)`:
-   - Identify faces that are roughly vertical (relative to Pull Direction, usually Z).
-   - Calculate angle between face normal and Pull Vector.
-   - If angle < min_angle (and not 0/90 perfectly?): Violation.
-   - Note: 90 deg = vertical. Need > 2 deg draft, so angle should be > 92 or < 88?
-   - Logic: `abs(dot(normal, pull_vector))` should not be close to 0 (which would be perpendicular to pull). Wait.
-   - Normal of a vertical face is perpendicular to Z. Dot product is 0.
-   - We want normal to slightly point up (or down).
-   - Logic: `acos(abs(normal.z))` converted to degrees.
-   - If `90 - angle < 2.0`: Violation.
+1. Implement `_check_draft_angles(mesh: trimesh.Trimesh, pull_vector: Tuple[float, float, float]) -> List[str]`.
+2. Use `structlog` to trace normal analysis.
+3. Integrate into `analyze_im`.
 
 ### T012: Implement Wall Thickness Verification
 
-**Objective**: Check for thin/thick walls.
+**Objective**: Functional check for wall thickness consistency.
 **Files**: `src/workbenches/injection_molding.py`
 **Instructions**:
 
-1. Implement `_check_wall_thickness(mesh)`:
-   - Robust method: Ray casting from random surface points inward along normal.
-   - If ray hits "backside" face: measure distance.
-   - If distance < min_thickness OR distance > max_thickness (variance): Warning/Violation.
-   - Implement simple sampling (e.g., 100 points).
+1. Implement `_check_wall_thickness(mesh: trimesh.Trimesh) -> List[str]`.
+2. Use `structlog` to log raycast sampling progress.
+3. Integrate into `analyze_im`.
 
 ### T013: Implement IM Cost Estimation
 
-**Objective**: Calculate mold and part cost.
+**Objective**: Functional cost calculation.
 **Files**: `src/workbenches/injection_molding.py`
 **Instructions**:
 
-1. Implement `_calculate_cost(part, quantity)`:
-   - Mold Base Cost (Fixed): Expensive (e.g., $5000).
-   - Material Cost: Volume *Density* Cost/kg.
-   - Processing Cost: Cycle time * Hourly rate.
-   - Total = Mold Cost + (Material + Processing) * Quantity.
-   - Unit Cost = Total / Quantity.
-2. Return details in `WorkbenchResult`.
+1. Implement `_calculate_im_cost(part, material_config, im_config) -> float`.
+2. Log mold base vs cycle time costs with `structlog`.
+3. Return details in `WorkbenchResult`.
 
-### T014: Write Comprehensive Tests
+### T014: Write IM Functional Tests
 
-**Objective**: Verify IM logic.
+**Objective**: Verify logic with unit tests.
 **Files**: `tests/workbenches/test_im.py`
 **Instructions**:
 
 1. Create `tests/workbenches/test_im.py`.
-2. Test Case 1: Cube (Valid? No, vertical walls need draft).
-3. Test Case 2: Pyramid/Trapezoid (Valid draft).
-4. Test Case 3: Thin wall plate (Valid).
-5. Test Case 4: Thick block (Potential sink mark warning -> maybe strict violation for now).
-6. Verify cost amortization (Unit cost drops with quantity).
+2. Test `analyze_im` with various geometries.
+3. Verify `structlog` entries for DFM violations.
 
 ## Verification
 
@@ -93,7 +74,8 @@ Implement `InjectionMoldingWorkbench` to check for IM feasibility (drafts, wall 
 
 ## Definition of Done
 
-- `InjectionMoldingWorkbench` implemented.
-- Draft angles checked.
-- Cost model implemented.
+- `analyze_im` function implemented.
+- Draft angle and wall thickness checks functional.
+- `structlog` integrated throughout.
+- Cost estimated and Pydantic-validated.
 - Tests pass.

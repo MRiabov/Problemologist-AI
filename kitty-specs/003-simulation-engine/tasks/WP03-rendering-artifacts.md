@@ -3,7 +3,7 @@ work_package_id: WP03
 title: Rendering & Artifact Storage
 lane: planned
 dependencies: []
-subtasks: [T013, T014, T015, T016, T017, T018]
+subtasks: [T014, T015, T016, T017, T018, T019]
 ---
 
 ## WP03: Rendering & Artifact Storage
@@ -19,7 +19,7 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
 
 ## Implementation Guide
 
-### T013: Implement Renderer
+### T014: Implement Renderer
 
 **File**: `src/worker/simulation/renderer.py`
 
@@ -33,7 +33,7 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
    - Implement logic to orbit the camera (8 horizontal angles x 3 vertical levels).
    - Return a list of 24 images.
 
-### T014: Implement Frame Capture Logic
+### T015: Implement Conditional Frame Capture Logic
 
 **File**: `src/worker/simulation/loop.py`
 
@@ -41,13 +41,14 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
 2. Add `fps_render = 30`.
 3. Calculate `render_interval = 1 / fps_render`.
 4. Inside `step()` loop:
+   - **Only if `render=True` in call**:
    - Check if `current_time - last_render_time >= render_interval`.
    - If yes, `frame = renderer.render_frame()`.
    - Store frame in a list `self.frames`.
    - **Caution**: Storing raw frames in memory (RAM) can result in OOM if simulation is long.
-   - **Better**: Write frames immediately to a pipe (see T015).
+   - **Better**: Write frames immediately to a pipe (see T016).
 
-### T015: Implement Artifact Bundling
+### T016: Implement Artifact Bundling
 
 **File**: `src/worker/simulation/renderer.py`
 
@@ -56,7 +57,7 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
 3. Method `save_artifacts(self, output_dir: Path)`:
    - Ensure video and preview bundle are written to `/renders/`.
 
-### T016: Implement S3 Upload
+### T017: Implement S3 Upload
 
 **File**: `src/worker/utils/storage.py` (or existing storage util)
 
@@ -66,19 +67,19 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
    - Return pre-signed URL (valid for e.g. 7 days) OR public URL if bucket is public.
    - Use public URL preference for this project if configured.
 
-### T017: Integrate Rendering into SimulationLoop
+### T018: Integrate Rendering into SimulationLoop
 
 **File**: `src/worker/simulation/loop.py`
 
 1. Pass `storage_client` to `SimulationLoop.run()`.
-2. During run, write frames to FFmpeg.
+2. During run, write frames to FFmpeg (only if `render=True`).
 3. On completion (Success/Fail):
-   - Finalize video.
-   - Upload `video.mp4` -> S3.
-   - Upload `scene.xml` -> S3 (useful for replay).
-   - Return `video_url` in the result object.
+   - Finalize video (if rendering).
+   - Upload `video.mp4` -> S3 (if rendering).
+   - Upload `scene.xml` -> S3 (always useful for replay).
+   - Return `video_url` (or None) in the result object.
 
-### T018: Add Tests
+### T019: Add Tests
 
 1. **Mock S3**: Use `moto` or a simple mock class that prints "Uploaded X" and returns a dummy URL.
 2. **Video Test**:

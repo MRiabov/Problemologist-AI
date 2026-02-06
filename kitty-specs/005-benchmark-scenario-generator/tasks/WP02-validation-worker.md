@@ -8,68 +8,59 @@ subtasks: ["T005", "T006", "T007", "T008"]
 
 # WP02: Validation & Worker Utilities
 
-**Goal**: Implement the physics simulation and validation logic that runs on the Worker node.
+**Goal**: Implement the physics and design validation logic that runs on the worker container.
 
 ## Subtasks
 
-### T005: Implement Stability Simulation
+### T005: Implement `simulate()`
 
-**Purpose**: Run a headless MuJoCo simulation to verify the generated model does not explode or contain invalid geometry.
-
-**Instructions**:
-
-1. Create `src/worker/utils/validation.py`.
-2. Implement `simulate_stability(mjcf_content: str, duration: float = 2.0) -> ValidationResult`:
-   - Load MJCF string into `mujoco.MjModel`.
-   - Create `mujoco.MjData`.
-   - Step simulation for `duration`.
-   - **Checks**:
-     - Check for `nan` (divergence) in `qpos` or `qvel`.
-     - Check for excessive energy (explosion).
-     - Check for unwanted collisions (if "forbid" zones are defined - interpret from MJCF or args).
-   - Return structured `ValidationResult` (success: bool, error_message: str, logs: List[str]).
-
-### T006: Headless Rendering Utility
-
-**Purpose**: Generate 24 multi-view images for the Reviewer.
+**Purpose**: Provide a physics-backed stability check.
 
 **Instructions**:
 
-1. Add `render_views(mjcf_content: str, output_dir: str)` to `src/worker/utils/rendering.py`.
-2. Implementation:
-   - Initialize MuJoCo with an offscreen GL context (e.g., `mujoco.GLContext`).
-   - Setup camera:
-     - 45 degree elevation.
-     - 8 azimuth angles (0, 45, 90, ...).
-     - 3 zoom levels or 3 different elevations if preferred (Spec says "8 pictures on 3 levels" -> 24 images).
-   - Render frames and save as PNGs in `output_dir`.
-   - Bundle into a ZIP file if needed, or return list of paths.
+1. Implement `simulate(component: Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
+2. Logic:
+   - Convert `Compound` to MJCF.
+   - Run MuJoCo for a few frames.
+   - Assert no NaNs/explosions.
+   - Generate standard 24-view renders in `/renders/`.
+   - Return stability status and render paths.
 
-### T007: Unit Tests for Validation
+### T006: Implement `validate()`
 
-**Purpose**: Ensure validation catches bad models.
+**Purpose**: Verify geometric validity and randomization robustness.
 
 **Instructions**:
 
-1. Create `tests/worker/test_validation.py`.
-2. Create:
-   - A valid MJCF (simple box sitting on plane).
-   - An invalid MJCF (two boxes overlapping heavily -> explosion).
-3. Test `simulate_stability` against both. Ensure it returns True for valid and False for invalid.
-4. Test `render_views` generates files (mock GL context if testing environment lacks GPU/display, or skip if strictly dependent on EGL/GLX).
+1. Implement `validate(component: Compound) -> bool` in `src/worker/utils/validation.py`.
+2. Logic:
+   - Check for part intersections.
+   - Verify boundary constraints (AABB).
+   - Test validity across a few random seeds.
 
-### T008: Expose Validation Tools
+### T007: Implement `submit_for_review()`
 
-**Purpose**: Make these accessible as Tools for the Agent.
+**Purpose**: Standardized handover from Coder to Reviewer.
 
 **Instructions**:
 
-1. In `src/worker/tools.py` (or equivalent registry), register:
-   - `validate_mjcf` (wraps `simulate_stability`)
-   - `render_mjcf` (wraps `render_views`)
+1. Implement `submit_for_review(component: Compound)` in `src/worker/utils/handover.py`.
+2. Logic:
+   - Persist temporary assets to the `/renders/` folder.
+   - Trigger a LangGraph event or update shared state for the Reviewer node.
+
+### T008: Expose Tools to Agent
+
+**Purpose**: Register utilities as tools callable by LLM.
+
+**Instructions**:
+
+1. In `src/worker/utils/filesystem.py`, configure `FilesystemMiddleware` with `SandboxFilesystemBackend`.
+2. Register `simulate`, `validate`, and `submit_for_review` as available tools in the `deepagents` environment.
 
 ## Verification
 
-- [ ] `simulate_stability` correctly identifies unstable simulations.
-- [ ] `render_views` produces 24 images in the specified directory.
-- [ ] Tests pass in the local environment (or docker container).
+- [ ] `simulate()` correctly identifies unstable simulations.
+- [ ] `validate()` catches overlapping parts or out-of-bounds geometry.
+- [ ] `submit_for_review()` correctly triggers the next stage in the graph.
+- [ ] Agent can successfully call these tools in a test sandbox.

@@ -10,34 +10,20 @@ subtasks: ["T015", "T016"]
 
 ## Goal
 
-Expose the workbench functionality to the Agent via a unified, simple API.
+Expose the workbench functionality to the Agent via a unified functional facade and Pydantic report.
 
 ## Context
 
-Agents in the Worker container need a simple way to validate their designs. We provide a single function `validate_and_price`.
+Implement the `validate_and_price` function in `src/worker/utils/dfm.py` which acts as the entry point for agents. It dispatches to specific workbench functions.
 
 ## Subtasks
 
-### T015: Implement Facade Function
+### T015: Implement Functional Facade
 
-**Objective**: Dispatch logic for validation.
+**Objective**: Create the entry point function.
 **Files**: `src/worker/utils/dfm.py`
 **Instructions**:
 
-1. Create `src/worker/utils/dfm.py`.
-2. Import `CNCWorkbench`, `InjectionMoldingWorkbench`.
-3. Import `ManufacturingMethod`.
-4. Implement `validate_and_price(part: Part | Compound, quantity: int = 1) -> dict`:
-   - Check `part.metadata["manufacturing_method"]`.
-   - Instantiate correct Workbench (`cnc` or `im`).
-   - Call `analyze(part, quantity)`.
-   - Return `.model_dump()` of the result (Agent prefers dict/json usually, or strict object? Rule says Pydantic is preferred for exchange, but usually tool outputs specifically might need serialization. Let's return the Pydantic model directly if possible, or dict if it's the terminal output).
-   - **Correction**: Return `WorkbenchResult` (Pydantic model) as per "Use Pydantic Models" rule.
-
-### T016: Create Integration Verification
-
-**Objective**: Ensure the facade works end-to-end.
-**Files**: `tests/workbenches/test_facade.py`
 **Instructions**:
 
 1. Create `tests/workbenches/test_facade.py`.

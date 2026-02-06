@@ -43,6 +43,7 @@ def validate_and_price(part: Part | Compound, quantity: int = 1) -> DFMReport:
     """
     Validates the part against inferred or specified manufacturing metadata.
     Returns validation status, violations, and cost or raises an error.
+    Uses Pydantic for validation and structlog for observability.
     """
 ```
 
@@ -51,11 +52,12 @@ def validate_and_price(part: Part | Compound, quantity: int = 1) -> DFMReport:
 - `part`: `build123d` object. Must have `part.metadata["manufacturing_method"]` set (e.g., "CNC", "IM").
 - `quantity`: Production volume for cost amortisation.
 
-**Output**:
+**Output (DFMReport Pydantic Model)**:
 
 - `valid`: bool
 - `unit_cost`: float
 - `violations`: List[str] (e.g., "Undercut detected at (x,y,z)")
+- `metadata`: Dict (for additional workbench-specific data)
 
 ### 4.2. CNC Workbench
 
@@ -78,9 +80,11 @@ def validate_and_price(part: Part | Compound, quantity: int = 1) -> DFMReport:
 ### 5.1. Tech Stack
 
 - **Kernel**: `build123d` / `trimesh` (for raycasting/draft analysis).
+- **Format**: All data exchange via **Pydantic Models**.
+- **Observability**: **structlog** for structured logging of validation steps and errors.
 - **Language**: Python 3.10+.
 - **Config**: YAML-based cost parameters (material cost, machine time, setup).
 
 ### 5.2. Integration
 
-This logic resides in `src/worker/utils/workbenches/` and is bundled into the Worker container. The `validate_and_price` function acts as the unified facade. The workbench assets and configuration are strictly read-only for the worker.
+This logic resides in `src/worker/utils/workbenches/` and is bundled into the Worker container. The `validate_and_price` function acts as the unified functional facade. The workbench assets and configuration are strictly read-only for the worker.

@@ -58,6 +58,12 @@ Logic:
 - Mark the current state as "Ready".
 - Maybe write a `REVIEW_REQUEST.md` file.
 
+### T037: Implement 24-view preredering
+
+- Implement logic to generate 24 renders (8 angles x 3 levels) for environment assets.
+- Save results to the `/renders/` folder (routed to S3).
+- Ensure this is triggered during benchmark finalization for handover.
+
 ### T026: PYTHONPATH Integration
 
 - Ensure `src.worker.utils` is importable as `utils` inside the `runtime` execution.

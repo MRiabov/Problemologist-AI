@@ -4,7 +4,7 @@
     "friendly_name": "Agentic CAD Environment",
     "mission": "software-dev",
     "source_description": "Agentic CAD Environment, as per @[kitty-specs/desired_architecture.md]. Implement the execution runtime and infrastructure (Controller/Worker) for CAD engineering agents using deepagents, build123d, and mujoco.",
-    "created_at": "2026-02-06T09:45:00Z",
+    "created_at": "2026-02-06T08:30:00Z",
     "target_branch": "main",
     "vcs": "git"
 }

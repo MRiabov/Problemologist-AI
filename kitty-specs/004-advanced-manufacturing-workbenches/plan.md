@@ -14,30 +14,29 @@ Implement a deterministic manufacturing validation and cost estimation system ("
 
 ### Core Logic (`src/workbenches/`)
 
-#### [NEW] [base.py](file:///src/workbenches/base.py)
+#### [MODIFY] [base.py](file:///src/workbenches/base.py)
 
-- Abstract base class for workbenches.
-- Defines `analyze(part) -> WorkbenchResult`.
+- Protocol or shared Pydantic models for workbench results.
+- Defines standard interface for `analyze` functions.
 
 #### [NEW] [cnc.py](file:///src/workbenches/cnc.py)
 
-- Implements CNC constraints:
-  - Tool accessibility (raycasting).
-  - Internal corner radii check.
-- Cost model: Material removal rate + setup time.
+- Functional implementation of CNC constraints:
+  - `analyze_cnc(part: Part | Compound, config: CNCConfig) -> WorkbenchResult`.
+  - Helper functions for tool accessibility and corner radii.
+- Integrated `structlog` for geometry analysis tracing.
 
 #### [NEW] [injection_molding.py](file:///src/workbenches/injection_molding.py)
 
-- Implements IM constraints:
-  - Draft angle check.
-  - Wall thickness verification.
-  - Undercut detection.
-- Cost model: Mold base cost + cycle time.
+- Functional implementation of IM constraints:
+  - `analyze_im(part: Part | Compound, config: IMConfig) -> WorkbenchResult`.
+  - Helper functions for draft angles and wall thickness.
+- Integrated `structlog` for molding analysis tracing.
 
-#### [NEW] [config.py](file:///src/workbenches/config.py)
+#### [MODIFY] [config.py](file:///src/workbenches/config.py)
 
 - Loads `manufacturing_config.yaml`.
-- Pydantic models for configuration.
+- Strictly uses **Pydantic** models for configuration.
 
 #### [NEW] [manufacturing_config.yaml](file:///src/workbenches/manufacturing_config.yaml)
 
@@ -45,25 +44,26 @@ Implement a deterministic manufacturing validation and cost estimation system ("
 
 ### Agent Utility (`src/worker/utils/`)
 
-#### [NEW] [dfm.py](file:///src/worker/utils/dfm.py)
+#### [MODIFY] [dfm.py](file:///src/worker/utils/dfm.py)
 
 - Implements `validate_and_price(part, quantity)`.
-- Facade that dispatches to appropriate workbench based on metadata.
+- Functional facade that dispatches to `analyze_cnc` or `analyze_im`.
+- Uses `structlog` to log the dispatch and result.
 
 ### Data Models
 
-#### [NEW] [models.py](file:///src/workbenches/models.py)
+#### [MODIFY] [models.py](file:///src/workbenches/models.py)
 
-- `WorkbenchResult`, `ManufacturingMethod`, `MaterialDefinition`.
+- Strict **Pydantic** models: `DFMReport`, `WorkbenchResult`, `ManufacturingMethod`, `MaterialDefinition`.
 
 ## Verification Plan
 
 ### Automated Tests
 
-- `pytest tests/workbenches/test_cnc.py`: Verify constraints on known valid/invalid geometries (e.g., box with undercut).
-- `pytest tests/workbenches/test_im.py`: Verify draft angle checks.
-- `pytest tests/workbenches/test_costing.py`: Verify cost calculations against manually calculated examples.
+- `pytest tests/workbenches/test_cnc.py`: Verify functions on known valid/invalid geometries.
+- `pytest tests/workbenches/test_im.py`: Verify draft angle check functions.
+- `pytest tests/workbenches/test_costing.py`: Verify cost calculation functions.
 
 ### Manual Verification
 
-- Run a `quickstart.py` script that creates a part and calls `validate_and_price`, ensuring the report is printed correctly.
+- Run a `quickstart.py` script that creates a part and calls `validate_and_price`, ensuring the `structlog` output and Pydantic-validated report are correct.
