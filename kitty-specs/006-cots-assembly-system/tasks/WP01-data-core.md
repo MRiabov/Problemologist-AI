@@ -8,6 +8,7 @@ base_commit: 6dbd512d6e4c2c388a3adf72b4a6d0d7982bc1d2
 created_at: '2026-02-06T14:28:01.365935+00:00'
 subtasks: [T001, T002, T003, T004]
 shell_pid: "644319"
+agent: "Gemini"
 ---
 
 # WP01: Data Core & Foundation
@@ -81,3 +82,7 @@ shell_pid: "644319"
 ## Implementation Command
 
 `spec-kitty implement WP01`
+
+## Activity Log
+
+- 2026-02-06T14:28:01Z – Gemini – shell_pid=644319 – lane=doing – Assigned agent via workflow command
