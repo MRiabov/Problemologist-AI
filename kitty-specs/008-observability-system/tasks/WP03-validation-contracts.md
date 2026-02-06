@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP03"
 title: "Validation & Contracts"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T008", "T009", "T010"]
+agent: "Antigravity"
+shell_pid: "567566"
 ---
 
 # Work Package: Validation & Contracts
@@ -83,3 +85,7 @@ To prevent "silent failures" and data corruption, we require strict schema valid
 
 - Ensure Pydantic V2 is used if available.
 - Check that `schemathesis` is configured to ignore "expected" 4xx errors if they are part of the contract.
+
+## Activity Log
+
+- 2026-02-06T11:55:38Z – Antigravity – shell_pid=567566 – lane=doing – Started review via workflow command
