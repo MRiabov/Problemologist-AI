@@ -8,6 +8,7 @@ base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
 created_at: '2026-02-06T11:26:22.006465+00:00'
 subtasks: [T012, T013, T014, T015, T016]
 shell_pid: "550696"
+agent: "gemini-cli"
 ---
 
 # WP03: Worker API & Client
@@ -82,3 +83,7 @@ File: `src/worker/api/routes.py`
 2. Access `/docs` -> OpenAPI UI.
 3. Test `ExecuteRequest` via docs: `print("test")`. Expect structured response.
 4. Verify `WorkerClient` can connect to local worker.
+
+## Activity Log
+
+- 2026-02-06T11:26:22Z – gemini-cli – shell_pid=550696 – lane=doing – Assigned agent via workflow command
