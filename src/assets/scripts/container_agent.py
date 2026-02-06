@@ -47,7 +47,7 @@ class Job:
         self.stderr = ""
         self.return_code: int | None = None
         self.error: str | None = None
-        self.process: subprocess.CompletedProcess | None = None
+        self.process: subprocess.Popen | None = None
         self.start_time: float | None = None
         self._lock = threading.Lock()
 
@@ -77,17 +77,24 @@ class JobManager:
             return self.jobs.get(job_id)
 
     def cancel_job(self, job_id: str):
-        # Cancellation is tricky with subprocess.run.
-        # We can only mark it as cancelled effectively if it hasn't started,
-        # or if we implemented Popen logic.
-        # For now, we will just mark status.
-        # TODO: Implement Popen kill logic.
         job = self.get_job(job_id)
         if job:
-            job.update(status=JobStatus.CANCELLED)
+            with job._lock:
+                if job.status in [JobStatus.QUEUED, JobStatus.RUNNING]:
+                    if job.process:
+                        try:
+                            job.process.terminate()
+                        except Exception as e:
+                            logger.warning(f"Failed to terminate job {job_id}: {e}")
+                    job.status = JobStatus.CANCELLED
 
     def _run_job(self, job: Job):
-        job.update(status=JobStatus.RUNNING, start_time=time.time())
+        # Check if cancelled while in queue
+        with job._lock:
+            if job.status == JobStatus.CANCELLED:
+                return
+            job.status = JobStatus.RUNNING
+            job.start_time = time.time()
 
         try:
             req = job.request
@@ -115,24 +122,51 @@ class JobManager:
 
             logger.info(f"Starting job {job.job_id}: {cmd_args}")
 
-            # run is blocking, but we are in a thread
-            result = subprocess.run(
+            # Check for cancellation again (in case it was cancelled during setup)
+            if job.status == JobStatus.CANCELLED:
+                return
+
+            process = subprocess.Popen(
                 cmd_args,
                 shell=shell,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 cwd=workdir,
-                timeout=req.timeout,
             )
+
+            job.update(process=process)
+
+            # Check for race condition where cancel came in during Popen creation
+            if job.status == JobStatus.CANCELLED:
+                process.terminate()
+                process.wait()
+                return
+
+            stdout, stderr = process.communicate(timeout=req.timeout)
+
+            # Check if cancelled during execution
+            with job._lock:
+                if job.status == JobStatus.CANCELLED:
+                    job.stdout = stdout
+                    job.stderr = stderr
+                    job.return_code = process.returncode
+                    return
 
             job.update(
                 status=JobStatus.COMPLETED,
-                stdout=result.stdout,
-                stderr=result.stderr,
-                return_code=result.returncode,
+                stdout=stdout,
+                stderr=stderr,
+                return_code=process.returncode,
             )
 
         except subprocess.TimeoutExpired:
+            if job.process:
+                job.process.kill()
+                # Try to capture whatever output was produced
+                stdout, stderr = job.process.communicate()
+                job.update(stdout=stdout, stderr=stderr)
+
             job.update(
                 status=JobStatus.FAILED,
                 error=f"Job timed out after {job.request.timeout}s",
