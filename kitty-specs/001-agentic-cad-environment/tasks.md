@@ -54,12 +54,12 @@
 **Priority**: High (Phase 1)
 **Tests**: `schemathesis` runs against Worker API. Controller can call Worker `ls` via client.
 
-- [ ] T012: Setup FastAPI setup in `src/worker/app.py`.
-- [ ] T013: Define Pydantic models for Tool Inputs/Outputs (`WriteFileRequest`, `ExecuteResponse`, etc.).
-- [ ] T014: Implement endpoints: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`.
-- [ ] T015: Implement endpoint: `/runtime/execute`.
-- [ ] T016: Implement endpoint: `/runtime/reset` (triggers Git reset of sandbox).
-- [ ] T036: Implement `schemathesis` fuzzing tests for OpenAPI compliance verification.
+- [x] T012: Setup FastAPI setup in `src/worker/app.py`.
+- [x] T013: Define Pydantic models for Tool Inputs/Outputs (`WriteFileRequest`, `ExecuteResponse`, etc.).
+- [x] T014: Implement endpoints: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`.
+- [x] T015: Implement endpoint: `/runtime/execute`.
+- [x] T016: Implement endpoint: `/runtime/reset` (triggers Git reset of sandbox).
+- [x] T036: Implement `schemathesis` fuzzing tests for OpenAPI compliance verification.
 
 **Implementation**:
 
