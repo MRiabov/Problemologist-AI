@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Engineer Node
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01, Spec 001 WP04]
 base_branch: 002-vlm-cad-agent-WP02
 base_commit: c1e31ad9b1f20f12d0472b097b13834971910509
@@ -82,3 +82,4 @@ Verify execution flow.
 - 2026-02-06T14:24:55Z – Gemini – shell_pid=641430 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T14:36:57Z – Gemini – shell_pid=641430 – lane=for_review – Ready for review: Engineer node implemented with execution loop and worker integration.
 - 2026-02-06T14:57:55Z – gemini-cli – shell_pid=673307 – lane=doing – Started review via workflow command
+- 2026-02-06T15:05:29Z – gemini-cli – shell_pid=673307 – lane=for_review – Ready for review: Engineer node implemented.
