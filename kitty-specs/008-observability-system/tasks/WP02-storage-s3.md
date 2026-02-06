@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP02"
 title: "Storage System (S3)"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T004", "T005", "T006", "T007"]
+agent: "Gemini"
+shell_pid: "506352"
 ---
 
 # Work Package: Storage System (S3)
@@ -98,3 +100,7 @@ Agents produce heavy artifacts like videos and large log files that should not b
 
 - Check for hardcoded region or endpoint defaults that might break on Railway.
 - Verify that `moto` is a dev-dependency only.
+
+## Activity Log
+
+- 2026-02-06T09:10:02Z – Gemini – shell_pid=506352 – lane=doing – Started implementation via workflow command
