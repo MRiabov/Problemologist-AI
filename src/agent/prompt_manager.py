@@ -64,6 +64,30 @@ Output your response in this format:
 DECISION: <APPROVE or REJECT>
 FEEDBACK: <your detailed feedback here>
 """,
+                "sidecar": """You are the Sidecar Learner. 
+Analyze the execution journal for the task: {{ task }}
+
+Journal:
+{{ journal }}
+
+Instructions:
+1. Identify any repeated struggles or successful breakthroughs.
+2. If a reusable pattern or "trick" is found, draft a new skill.
+3. If no significant new knowledge is found, say "No new skills identified."
+
+If suggesting a skill, output in this format:
+SKILL: <Short Title>
+CONTENT:
+# <Title>
+## Problem
+<Describe the problem encountered>
+## Solution
+<Describe the solution or best practice>
+## Example
+```python
+<Example code>
+```
+""",
             })
         )
 
