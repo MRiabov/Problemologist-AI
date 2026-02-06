@@ -38,11 +38,11 @@
 
 ### Included Subtasks
 
-- [ ] **T005**: Implement `analyze_cnc` function skeleton in `cnc.py`.
-- [ ] **T006**: Implement geometry validation logic (undercut check) with `structlog` tracing.
-- [ ] **T007**: Implement internal corner radius check helper function.
-- [ ] **T008**: Implement CNC cost estimation function.
-- [ ] **T009**: Write comprehensive tests for CNC functional validation.
+- [ ] T005: Implement analyze_cnc function skeleton in cnc.py.
+- [ ] T006: Implement geometry validation logic (undercut check) with structlog tracing.
+- [ ] T007: Implement internal corner radius check helper function.
+- [ ] T008: Implement CNC cost estimation function.
+- [ ] T009: Write comprehensive tests for CNC functional validation.
 
 ### Implementation Sketch
 
@@ -69,11 +69,11 @@
 
 ### Included Subtasks
 
-- [ ] **T010**: Implement `analyze_im` function skeleton in `injection_molding.py`.
-- [ ] **T011**: Implement draft angle validation logic with `structlog` tracing.
-- [ ] **T012**: Implement wall thickness verification function.
-- [ ] **T013**: Implement IM cost estimation function.
-- [ ] **T014**: Write comprehensive tests for IM functional validation.
+- [ ] T010: Implement analyze_im function skeleton in injection_molding.py.
+- [ ] T011: Implement draft angle validation logic with structlog tracing.
+- [ ] T012: Implement wall thickness verification function.
+- [ ] T013: Implement IM cost estimation function.
+- [ ] T014: Write comprehensive tests for IM functional validation.
 
 ### Implementation Sketch
 
@@ -100,8 +100,8 @@
 
 ### Included Subtasks
 
-- [ ] **T015**: Implement `validate_and_price` functional facade with `structlog`.
-- [ ] **T016**: Create integration verification script/test ensuring Pydantic compliance.
+- [ ] T015: Implement validate_and_price functional facade with structlog.
+- [ ] T016: Create integration verification script/test ensuring Pydantic compliance.
 
 ### Implementation Sketch
 
