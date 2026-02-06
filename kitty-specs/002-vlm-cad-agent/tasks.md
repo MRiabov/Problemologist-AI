@@ -27,15 +27,15 @@
 
 ### WP03: Engineer Node
 
-**Goal**: Implement the Execution (Engineer) node.
+**Goal**: Implement the Execution (Engineer) node using Spec 001 tools.
 **Priority**: High
-**Dependencies**: WP01
+**Dependencies**: WP01, Spec 001 WP04
 
-- [ ] T010: Implement `src/agent/nodes/engineer.py`
-- [ ] T011: Implement `view_file`, `write_file` tools wrapper
-- [ ] T012: Implement `run_command` tool wrapper (Worker integration)
-- [ ] T013: Implement execution loop
-- [ ] T014: Test Engineer node
+- [ ] T010: Implement `src/agent/nodes/engineer.py` with LangGraph ReAct implementation.
+- [ ] T011: Configure `deepagents` Tools (`ls_tool`, `read_tool`, `write_tool`) using Spec 001 Middleware.
+- [ ] T012: Configure `exec_tool` for worker integration.
+- [ ] T013: Implement execution loop with `TodoListMiddleware`.
+- [ ] T014: Test Engineer node against a running Worker (WP01 WP03).
 
 ### WP04: Critic Node & Simulation
 

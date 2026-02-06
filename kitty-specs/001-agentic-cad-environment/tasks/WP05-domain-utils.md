@@ -6,7 +6,7 @@ dependencies: ["WP02"]
 subtasks: ["T022", "T023", "T024", "T025", "T026"]
 ---
 
-# WP05: Domain Utils (Worker Side)
+## WP05: Domain Utils (Worker Side)
 
 **Goal**: Implement the "OS-level" utilities that agents will import and usage.
 
@@ -42,13 +42,13 @@ Logic (Stub):
 File: `src/worker/utils/simulation.py`
 Signature: `simulate(component: Compound) -> SimulationResult`
 
-Logic (Stub):
+Logic:
 
-1. **Git Commit**: Call `git add . && git commit -m "Auto-commit"` (requires `git` installed in T003). *Add git to dependencies if missing.*
-2. **Compile**: Convert `component` to MJCF (xml string).
-3. **Execute**: Save XML to file. Write a "dummy" video file.
-4. **Upload**: Use `boto3` (available in worker) to upload video/xml to S3 `assets/`.
-5. **Return**: Markdown summary (e.g. "Simulation Passed. Video: s3://...").
+1. **Git Commit**: Call `git add . && git commit -m "Snapshot before simulation"`.
+2. **Trigger Workflow**: Call Controller API `POST /simulation/run` (which starts a Temporal `SimulationWorkflow`).
+3. **Wait/Poll**: Wait for the result from the Controller.
+4. **Result**: The result includes S3 URLs for video and summary markdown.
+5. **Return**: Markdown summary (e.g. "Simulation Passed. Video: https://...").
 
 ### T025: Implement `submit_for_review`
 

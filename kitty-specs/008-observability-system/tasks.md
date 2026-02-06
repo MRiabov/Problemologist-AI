@@ -18,6 +18,7 @@
 - [x] T001: Implement `LangFuseCallbackHandler` and initialization logic in `src/observability/tracing.py`. <!-- id: T001 -->
 - [x] T002: Implement `PostgresSaver` customization for LangGraph in `src/observability/persistence.py`. <!-- id: T002 -->
 - [x] T003: Write unit tests for tracing and persistence configuration. <!-- id: T003 -->
+- [ ] T003b: Implement `JournalManager` utility for structured episodic memory logging.
 
 **Implementation Notes**:
 

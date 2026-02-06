@@ -2,7 +2,7 @@
 work_package_id: WP03
 title: Engineer Node
 lane: planned
-dependencies: []
+dependencies: [WP01, "Spec 001 WP04"]
 subtasks: [T010, T011, T012, T013, T014]
 ---
 
@@ -27,22 +27,21 @@ Create the Engineer node function.
   - Generate Python code using LLM.
   - Interact with tools.
 
-### T011: Implement `view_file`, `write_file` tools
+### T011: Configure `deepagents` tools
 
-Wrappers for file operations.
-
-- **Implementation**:
-  - `view_file(path)`: Reads local file.
-  - `write_file(path, content)`: Writes local file (which is synced to Worker/Sandbox).
-
-### T012: Implement `run_command` tool wrapper
-
-Execute code on the Worker.
+Use the `RemoteFilesystem` middleware and tools defined in Spec 001 WP04.
 
 - **Implementation**:
-  - This MUST integrate with `001-agentic-cad-environment` API (or `deepagents` sandbox backend if configured).
-  - For this task, assume we use `run_command("python script.py")`.
-  - Ensure the command execution captures stdout/stderr.
+  - `ls_tool`, `read_tool`, `write_tool`: Proxy to Worker via `RemoteFilesystem`.
+
+### T012: Configure `exec_tool`
+
+Execute code on the Worker via Spec 001 `runtime/execute` API.
+
+- **Implementation**:
+  - `exec_tool`: Wraps the Worker client's `execute` method.
+  - Ensure the execution captures stdout/stderr.
+  - For long-running scripts (>30s), ensure the tool handles the Temporal workflow polling (as defined in Spec 001 WP06).
 
 ### T013: Implement execution loop
 
