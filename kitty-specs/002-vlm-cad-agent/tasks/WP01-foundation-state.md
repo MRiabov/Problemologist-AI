@@ -1,9 +1,11 @@
 ---
 work_package_id: WP01
 title: Foundation & State
-lane: planned
+lane: "doing"
 dependencies: []
 subtasks: [T001, T002, T003, T004]
+agent: "Gemini-CLI"
+shell_pid: "479850"
 ---
 
 ## Objective
@@ -66,3 +68,7 @@ Verify the state initialization.
 
 - All files created.
 - `uv run pytest tests/agent` passes.
+
+## Activity Log
+
+- 2026-02-06T08:05:25Z – Gemini-CLI – shell_pid=479850 – lane=doing – Started implementation via workflow command
