@@ -19,10 +19,10 @@
 
 **Goal**: Implement the physics validation logic that runs on the worker.
 
-- [ ] **T005**: Implement `simulate(Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
-- [ ] **T006**: Implement `validate(Compound) -> bool` for geometric/randomization verification.
-- [ ] **T007**: Implement `submit_for_review(Compound)` to handover results to Reviewer.
-- [ ] **T008**: Expose these tools to the Agent environment via `deepagents` tools.
+- [ ] T005: Implement `simulate(Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
+- [ ] T006: Implement `validate(Compound) -> bool` for geometric/randomization verification.
+- [ ] T007: Implement `submit_for_review(Compound)` to handover results to Reviewer.
+- [ ] T008: Expose these tools to the Agent environment via `deepagents` tools.
 
 ~300 lines
 
@@ -30,10 +30,10 @@
 
 **Goal**: Implement the core agent that writes the `build123d` scripts.
 
-- [ ] **T009**: Create Coder prompt template with `build(seed, scale)` requirements.
-- [ ] **T010**: Implement Coder node in `graph.py` with access to validation tools.
-- [ ] **T011**: Implement feedback loop: Parse `ValidationResult` and re-prompt Coder on failure.
-- [ ] **T012**: Verify Coder can generate a simple valid script.
+- [ ] T009: Create Coder prompt template with `build(seed, scale)` requirements.
+- [ ] T010: Implement Coder node in `graph.py` with access to validation tools.
+- [ ] T011: Implement feedback loop: Parse `ValidationResult` and re-prompt Coder on failure.
+- [ ] T012: Verify Coder can generate a simple valid script.
 
 ~350 lines
 
@@ -41,10 +41,10 @@
 
 **Goal**: Implement the guiding Planner and the quality-assuring Reviewer.
 
-- [ ] **T013**: Implement Planner node (Theme -> Randomization Strategy).
-- [ ] **T014**: Implement Reviewer node (Image analysis -> Approve/Reject).
-- [ ] **T015**: Connect nodes in `graph.py` (Planner -> Coder -> Reviewer).
-- [ ] **T016**: Define graph entry point.
+- [ ] T013: Implement Planner node (Theme -> Randomization Strategy).
+- [ ] T014: Implement Reviewer node (Image analysis -> Approve/Reject).
+- [ ] T015: Connect nodes in `graph.py` (Planner -> Coder -> Reviewer).
+- [ ] T016: Define graph entry point.
 
 ~350 lines
 
@@ -52,9 +52,9 @@
 
 **Goal**: Persist results and provide a CLI for running the generator.
 
-- [ ] **T017**: Implement `save_asset` logic (Save images to `/renders/` for S3 routing, DB insert for metadata).
-- [ ] **T018**: Implement `save_session_state` checkpointing.
-- [ ] **T019**: Create CLI entry point/script to trigger generation sessions.
-- [ ] **T020**: End-to-End integration test.
+- [ ] T017: Implement `save_asset` logic (Save images to `/renders/` for S3 routing, DB insert for metadata).
+- [ ] T018: Implement `save_session_state` checkpointing.
+- [ ] T019: Create CLI entry point/script to trigger generation sessions.
+- [ ] T020: End-to-End integration test.
 
 ~300 lines
