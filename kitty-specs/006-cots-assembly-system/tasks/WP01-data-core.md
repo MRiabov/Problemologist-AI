@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Data Core & Foundation
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 6dbd512d6e4c2c388a3adf72b4a6d0d7982bc1d2
@@ -86,3 +86,4 @@ agent: "Gemini"
 ## Activity Log
 
 - 2026-02-06T14:28:01Z – Gemini – shell_pid=644319 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T14:30:57Z – Gemini – shell_pid=644319 – lane=for_review – Ready for review: Implemented Data Core & Foundation with Pydantic and SQLAlchemy models.
