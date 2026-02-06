@@ -32,11 +32,11 @@
 **Priority**: Critical (Phase 1)
 **Tests**: Unit tests for Local FS and Composite routing. Integration test running a simple Python script.
 
-- [ ] T007: Implement `SandboxFilesystemBackend` for high-frequency operations and safe isolation.
-- [ ] T008: Implement `CompositeBackend` to route `/renders/` to MinIO/S3 and enforce read-only access for `skills/` and `utils/` paths.
-- [ ] T009: Implement `runtime` module to execute arbitrary Python code in a subprocess.
-- [ ] T010: Ensure the local filesystem is reset from Git on every session (start workflow).
-- [ ] T011: Verify `build123d` and `mujoco` imports work in the runtime environment.
+- [x] T007: Implement `SandboxFilesystemBackend` for high-frequency operations and safe isolation.
+- [x] T008: Implement `CompositeBackend` to route `/renders/` to MinIO/S3 and enforce read-only access for `skills/` and `utils/` paths.
+- [x] T009: Implement `runtime` module to execute arbitrary Python code in a subprocess.
+- [x] T010: Ensure the local filesystem is reset from Git on every session (start workflow).
+- [x] T011: Verify `build123d` and `mujoco` imports work in the runtime environment.
 
 **Implementation**:
 
