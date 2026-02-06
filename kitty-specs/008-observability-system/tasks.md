@@ -19,6 +19,7 @@
 - [x] T002: Implement `PostgresSaver` customization for LangGraph in `src/observability/persistence.py`. <!-- id: T002 -->
 - [x] T003: Write unit tests for tracing and persistence configuration. <!-- id: T003 -->
 - [ ] T003b: Implement `JournalManager` utility for structured episodic memory logging.
+- [ ] T003c: Configure `structlog` for structured JSON logging. <!-- id: T003c -->
 
 **Implementation Notes**:
 
@@ -38,7 +39,7 @@
 - [x] T004: Create `S3Client` wrapper in `src/observability/storage.py` using `boto3`. <!-- id: T004 -->
 - [ ] T005: Implement `upload_file`, `download_file`, `list_files` methods. <!-- id: T005 -->
 - [ ] T006: Implement `get_presigned_url` method for secure access. <!-- id: T006 -->
-- [ ] T007: Write unit tests for S3 wrapper using `moto` or mocks. <!-- id: T007 -->
+- [x] T007: Write unit tests for S3 wrapper using `moto` or mocks. <!-- id: T007 -->
 
 **Implementation Notes**:
 
@@ -54,9 +55,9 @@
 
 **Enforce strict data contracts and validation using Pydantic and Schemathesis.**
 
-- [ ] T008: Define Pydantic models for `TraceEvent`, `AssetRecord` in `src/models/observability.py`. <!-- id: T008 -->
-- [ ] T009: Verify and align `data-model.md` with implemented models. <!-- id: T009 -->
-- [ ] T010: Set up `schemathesis` in `tests/contracts/test_observability.py` to fuzz endpoints. <!-- id: T010 -->
+- [x] T008: Define Pydantic models for `TraceEvent`, `AssetRecord` in `src/models/observability.py`. <!-- id: T008 -->
+- [x] T009: Verify and align `data-model.md` with implemented models. <!-- id: T009 -->
+- [x] T010: Set up `schemathesis` in `tests/contracts/test_observability.py` to fuzz endpoints. <!-- id: T010 -->
 
 **Implementation Notes**:
 
@@ -72,9 +73,10 @@
 
 **Implement automated backup mechanisms for Database and S3 artifacts.**
 
-- [ ] T011: Implement `src/ops/backup.py` with `backup_postgres()` and `backup_s3_files()` functions. <!-- id: T011 -->
-- [ ] T012: Create `POST /ops/backup` endpoint in controller API to trigger the backup logic. <!-- id: T012 -->
+- [x] T011: Implement `src/ops/backup.py` with `backup_postgres()` and `backup_s3_files()` functions. <!-- id: T011 -->
+- [ ] T012: Create `POST /ops/backup` endpoint in controller API to trigger the backup workflow. <!-- id: T012 -->
 - [ ] T013: Write integration test for backup workflow (checking artifacts created). <!-- id: T013 -->
+- [ ] T014: Implement `BackupWorkflow` in `src/ops/workflows.py` using Temporal. <!-- id: T014 -->
 
 **Implementation Notes**:
 
