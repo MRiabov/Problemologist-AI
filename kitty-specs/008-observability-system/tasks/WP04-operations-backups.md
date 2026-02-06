@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Operations - Backups
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: e882badb84c74b92752066e1b950c963a91b26b1
@@ -113,3 +113,4 @@ We need a daily backup of our state. Since we are using Railway/Podman, we will 
 ## Activity Log
 
 - 2026-02-06T13:42:55Z – Gemini – shell_pid=606368 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T13:49:44Z – Gemini – shell_pid=606368 – lane=for_review – Implemented automated backups for Postgres and S3. Included Temporal workflow for orchestration and a secure FastAPI endpoint to trigger it. Integration tests pass.
