@@ -8,6 +8,7 @@ base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
 created_at: '2026-02-06T13:56:36.548228+00:00'
 subtasks: [T022, T023, T024, T025, T026]
 shell_pid: "618047"
+agent: "Gemini"
 ---
 
 ## WP05: Domain Utils (Worker Side)
@@ -86,3 +87,7 @@ Logic:
 
 2. Run it via `runtime/execute` API.
 3. Expect success output.
+
+## Activity Log
+
+- 2026-02-06T13:56:36Z – Gemini – shell_pid=618047 – lane=doing – Assigned agent via workflow command
