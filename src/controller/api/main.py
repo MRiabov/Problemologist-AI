@@ -5,6 +5,11 @@ from pydantic import BaseModel, Field
 from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from src.shared.logging import configure_logging, get_logger
+
+# Configure logging
+configure_logging("controller")
+logger = get_logger(__name__)
 
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
 
