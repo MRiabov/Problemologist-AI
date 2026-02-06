@@ -1,9 +1,13 @@
 ---
 work_package_id: WP04
 title: Critic Node & Simulation
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: 002-vlm-cad-agent-WP03
+base_commit: 7fce1f3fe1eae6376a18110b7bb6b38e83240a06
+created_at: '2026-02-06T14:37:16.312987+00:00'
 subtasks: [T015, T016, T017, T018, T019]
+shell_pid: "654855"
 ---
 
 ## Objective
