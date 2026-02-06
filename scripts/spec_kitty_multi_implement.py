@@ -4,10 +4,18 @@ import json
 import re
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+RETRYABLE_ERRORS = [
+    "model provider overload",
+    "Rate limit reached",
+    "quota exceeded",
+    "Internal error occurred",
+]
 
 
 @dataclass
@@ -96,14 +104,69 @@ def is_stale(wp: WorkPackage) -> bool:
     return (now - wp.last_updated) > timedelta(minutes=15)
 
 
+def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
+    attempt = 0
+    cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+
+    while attempt < max_retries:
+        print(f"  [{spec_key}] Attempt {attempt + 1}: Executing {cmd_str}")
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+
+        output = []
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                print(f"  [{spec_key}] {line.strip()}")
+                output.append(line)
+
+        returncode = process.poll()
+        full_output = "".join(output)
+
+        if returncode == 0:
+            print(f"  [{spec_key}] ✅ Success!")
+            return
+
+        # Check for retryable errors
+        should_retry = any(
+            err.lower() in full_output.lower() for err in RETRYABLE_ERRORS
+        )
+
+        if should_retry:
+            attempt += 1
+            if attempt < max_retries:
+                print(
+                    f"  [{spec_key}] ⚠️  Retryable error. Waiting 5s... "
+                    f"(Attempt {attempt}/{max_retries})"
+                )
+                time.sleep(5)
+                continue
+            print(f"  [{spec_key}] ❌ Max retries reached. Failing.")
+        else:
+            print(
+                f"  [{spec_key}] ❌ Failed with non-retryable error "
+                f"(exit code {returncode})."
+            )
+            return
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Run implementation for the first available work package in each spec in parallel."
+        description="Run implementation for the first available WP in parallel."
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print commands that would be executed without running them.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=5,
+        help="Max retries for overloaded model provider (default: 5).",
     )
     args = parser.parse_args()
 
@@ -114,7 +177,6 @@ def main():
 
     print("🔍 Scanning specs for available work packages...")
 
-    # Collect WPs by spec
     spec_wps: dict[str, list[WorkPackage]] = {}
 
     for spec_dir in sorted(base_path.iterdir()):
@@ -127,10 +189,7 @@ def main():
         spec_slug = spec_parts[1] if len(spec_parts) > 1 else spec_name
 
         tasks_dir = spec_dir / "tasks"
-        if not tasks_dir.exists():
-            continue
-
-        if is_spec_accepted(spec_dir):
+        if not tasks_dir.exists() or is_spec_accepted(spec_dir):
             continue
 
         current_spec_key = f"{spec_number}-{spec_slug}"
@@ -151,30 +210,12 @@ def main():
 
         candidate = None
 
-        # Priority:
-        # 1. 'doing' but stale
-        # 2. 'planned'
-        # (Ignore 'done', 'for_review', and active 'doing')
-
-        # First check for any stale 'doing' items (restart them?)
-        # Actually logic says "first work package that is planned or stale"
-        # Let's look for the *first* one in the list order that meets criteria
-
         for wp in wps:
-            if wp.lane == "planned":
+            if wp.lane == "planned" or (wp.lane == "doing" and is_stale(wp)):
                 candidate = wp
                 break
-            elif wp.lane == "doing" and is_stale(wp):
-                candidate = wp
-                break
-            # If we hit an active 'doing' task that isn't stale, maybe we should skip this spec?
-            # The prompt says: "fetch the first work package that is planned or stale"
-            # It implies we want to start working on something if nothing active is happening or if it's stuck.
-            # If there is a non-stale doing task, we probably shouldn't start another one in parallel for the same spec?
-            # But the user said "any first available work package... in parallel [across specs]".
-            # Let's assume if there is an active (non-stale) doing task, we do NOT start a new one for this spec.
-            elif wp.lane == "doing" and not is_stale(wp):
-                print(f"  Skipping {spec_key}: Active task {wp.id} is in progress.")
+            if wp.lane == "doing" and not is_stale(wp):
+                print(f"  Skipping {spec_key}: Active task {wp.id} in progress.")
                 candidate = None
                 break
 
@@ -194,40 +235,28 @@ def main():
 
     print(f"\n🚀 Launching {len(commands_to_run)} agents in parallel...")
 
-    processes = []
+    threads = []
 
     for spec_key, cmd in commands_to_run:
-        cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
-        print(f"  [{spec_key}] Executing: {cmd_str}")
+        if args.dry_run:
+            cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+            print(f"  [{spec_key}] [Dry Run] Would execute: {cmd_str}")
+        else:
+            t = threading.Thread(
+                target=run_with_retry, args=(spec_key, cmd, args.max_retries)
+            )
+            threads.append(t)
+            t.start()
 
-        if not args.dry_run:
-            # We use Popen to run non-blocking
-            # We might want to use start_new_session=True or similar if we want them to survive parent death?
-            # But usually we want to see output.
-            # Spawning 8 shells might be messy in one terminal.
-            # The user asked: "spawning 8 processes/shells".
-            # Let's just spawn them as background processes.
-            p = subprocess.Popen(cmd)
-            processes.append((spec_key, p))
-
-    if args.dry_run:
-        print("\n[Dry Run] No processes started.")
-    else:
-        print(
-            f"\nStarted {len(processes)} processes. Press Ctrl+C to stop waiting (processes will continue running)."
-        )
+    if not args.dry_run:
+        print(f"\nStarted {len(threads)} agents. Waiting for completion...")
         try:
-            # Wait for all? Or just exit?
-            # User might want to keep the script running to see output?
-            # Usually 'spawning shells' implies they run independently.
-            # But standard Popen shares stdout/stderr.
-            for spec_key, p in processes:
-                p.wait()
+            for t in threads:
+                t.join()
         except KeyboardInterrupt:
-            print("\nInterrupted. Sending SIGTERM to child processes...")
-            for spec_key, p in processes:
-                p.terminate()
-            print("Done.")
+            print(
+                "\nInterrupted. Threads will continue until current command finishes."
+            )
 
 
 if __name__ == "__main__":
