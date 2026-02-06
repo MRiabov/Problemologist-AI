@@ -48,7 +48,8 @@ class RemoteFilesystemMiddleware:
             return result
         else:
             # Fallback to direct client call if Temporal is not available
-            return await self.client.execute_python(code, timeout=timeout)
+            result = await self.client.execute_python(code, timeout=timeout)
+            return result.model_dump()
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:

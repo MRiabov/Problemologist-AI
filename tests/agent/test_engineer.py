@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, AsyncMock
 from langchain_core.messages import AIMessage
+from src.worker.api.schema import ExecuteResponse
 from src.agent.nodes.engineer import EngineerNode
 from src.agent.state import AgentState
 
@@ -21,7 +22,7 @@ def mock_worker():
         instance.read_file = AsyncMock(return_value="file content")
         instance.list_files = AsyncMock(return_value=[{"name": "file.txt"}])
         instance.execute_python = AsyncMock(
-            return_value={"stdout": "hello", "stderr": "", "exit_code": 0}
+            return_value=ExecuteResponse(stdout="hello", stderr="", exit_code=0)
         )
         yield instance
 
@@ -86,8 +87,8 @@ async def test_engineer_node_retry_logic(mock_llm, mock_worker):
 
     # Worker fails first, then succeeds
     mock_worker.execute_python.side_effect = [
-        {"stdout": "", "stderr": "SyntaxError", "exit_code": 1},
-        {"stdout": "fixed", "stderr": "", "exit_code": 0},
+        ExecuteResponse(stdout="", stderr="SyntaxError", exit_code=1),
+        ExecuteResponse(stdout="fixed", stderr="", exit_code=0),
     ]
 
     node = EngineerNode()

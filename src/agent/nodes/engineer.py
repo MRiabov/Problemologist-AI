@@ -5,6 +5,7 @@ from typing import Any
 from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from temporalio.client import Client
 
 from src.controller.clients.worker import WorkerClient
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -23,12 +24,15 @@ class EngineerNode:
         self,
         worker_url: str = "http://worker:8001",
         session_id: str = "default-session",
+        temporal_client: Client | None = None,
     ):
         self.pm = PromptManager()
         # Bind tools to the LLM
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
-        self.fs = RemoteFilesystemMiddleware(self.worker_client)
+        self.fs = RemoteFilesystemMiddleware(
+            self.worker_client, temporal_client=temporal_client
+        )
 
         # Define tools using the fs middleware
         @tool
@@ -185,5 +189,13 @@ class EngineerNode:
 # Factory function for LangGraph
 async def engineer_node(state: AgentState) -> dict[str, Any]:
     # In a real app, these would come from config/env
-    node = EngineerNode()
+    temporal_client = None
+    try:
+        temporal_client = await Client.connect("localhost:7233")
+    except Exception as e:
+        logger.warning(
+            f"Could not connect to Temporal: {e}. Falling back to sync execution."
+        )
+
+    node = EngineerNode(temporal_client=temporal_client)
     return await node(state)
