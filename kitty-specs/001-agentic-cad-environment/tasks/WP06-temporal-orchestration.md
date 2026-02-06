@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP06"
-title: "Temporal Orchestration"
-lane: "planned"
-dependencies: ["WP05", "WP04"]
-subtasks: ["T027", "T028", "T029", "T030", "T031"]
+work_package_id: WP06
+title: Temporal Orchestration
+lane: "doing"
+dependencies: [WP05, WP04]
+base_branch: 001-agentic-cad-environment-WP06-merge-base
+base_commit: 0b79d9c623e937f5967adc5b445192b489a677b5
+created_at: '2026-02-06T14:29:57.869827+00:00'
+subtasks: [T027, T028, T029, T030, T031]
+shell_pid: "646690"
 ---
 
 ## WP06: Temporal Orchestration
