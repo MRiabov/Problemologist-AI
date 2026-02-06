@@ -12,10 +12,10 @@
 **Dependencies**: None
 **Estimated Size**: ~250 lines
 
-- [ ] T001: Create project structure `src/cots/` and `src/cots/database/`
-- [ ] T002: Define `COTSItem` and `SearchQuery` Pydantic models in `src/cots/models.py`
-- [ ] T003: Define SQLAlchemy ORM models in `src/cots/database/models.py` matching `COTSItem`
-- [ ] T004: Create database initialization script `src/cots/database/init.py`
+- [x] T001: Create project structure `src/cots/` and `src/cots/database/`
+- [x] T002: Define `COTSItem` and `SearchQuery` Pydantic models in `src/cots/models.py`
+- [x] T003: Define SQLAlchemy ORM models in `src/cots/database/models.py` matching `COTSItem`
+- [x] T004: Create database initialization script `src/cots/database/init.py`
 
 ### WP02: Indexer Implementation
 
