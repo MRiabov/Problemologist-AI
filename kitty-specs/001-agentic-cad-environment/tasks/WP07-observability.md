@@ -8,6 +8,7 @@ base_commit: 371c916b02b74710a197bd76731c7afc0b293061
 created_at: '2026-02-06T14:59:01.526671+00:00'
 subtasks: [T032, T033, T034, T035]
 shell_pid: "674358"
+agent: "gemini-cli"
 ---
 
 # WP07: Observability & Persistence
@@ -59,3 +60,7 @@ File: `src/controller/observability/langfuse.py`
 2. Check logs: should be JSON strings.
 3. Check `alembic upgrade head` works.
 4. Run Agent. Check LangFuse dashboard.
+
+## Activity Log
+
+- 2026-02-06T14:59:01Z – gemini-cli – shell_pid=674358 – lane=doing – Assigned agent via workflow command
