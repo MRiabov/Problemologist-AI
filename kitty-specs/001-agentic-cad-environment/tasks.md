@@ -32,8 +32,8 @@
 **Priority**: Critical (Phase 1)
 **Tests**: Unit tests for Local FS and Composite routing. Integration test running a simple Python script.
 
-- [ ] T007: Implement `LocalFilesystemBackend` for high-frequency operations.
-- [ ] T008: Implement `CompositeBackend` to route `/renders/` to MinIO/S3 and everything else to local.
+- [ ] T007: Implement `SandboxFilesystemBackend` for high-frequency operations and safe isolation.
+- [ ] T008: Implement `CompositeBackend` to route `/renders/` to MinIO/S3 and enforce read-only access for `skills/` and `utils/` paths.
 - [ ] T009: Implement `runtime` module to execute arbitrary Python code in a subprocess.
 - [ ] T010: Ensure the local filesystem is reset from Git on every session (start workflow).
 - [ ] T011: Verify `build123d` and `mujoco` imports work in the runtime environment.
@@ -59,6 +59,7 @@
 - [ ] T014: Implement endpoints: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`.
 - [ ] T015: Implement endpoint: `/runtime/execute`.
 - [ ] T016: Implement endpoint: `/runtime/reset` (triggers Git reset of sandbox).
+- [ ] T036: Implement `schemathesis` fuzzing tests for OpenAPI compliance verification.
 
 **Implementation**:
 
@@ -77,7 +78,7 @@
 
 - [ ] T017: Setup Controller application (FastAPI + LangGraph skeleton).
 - [ ] T018: internalize generated Worker functionality.
-- [ ] T019: Implement `RemoteFilesystem` middleware in Controller that calls Worker Client.
+- [ ] T019: Implement `RemoteFilesystem` middleware in Controller that calls Worker Client and respects read-only path constraints.
 - [ ] T020: Define LangChain Tools (`ls`, `write_file`, `execute`) wrapping the middleware.
 - [ ] T021: Setup basic Agent graph (skeleton) to verify tool availability.
 
@@ -100,6 +101,7 @@
 - [ ] T023: Implement `validate_and_price(component)` (Workbench integration).
 - [ ] T024: Implement `simulate(component)` (Trigger Temporal Workflow in Controller, wait for S3 assets/summary).
 - [ ] T025: Implement `submit_for_review(component)` (Reviewer agent integration).
+- [ ] T037: Implement 24-view preredering logic for environment assets to support agent handover requirements.
 - [ ] T026: Ensure these utils are importable by the `runtime` execution (PYTHONPATH).
 
 **Implementation**:
@@ -120,7 +122,7 @@
 - [ ] T027: Add Temporal service to `docker-compose`.
 - [ ] T028: Implement Temporal Worker in Controller.
 - [ ] T029: Define `SimulationWorkflow` (Orchestrate Worker -> Run Sim -> Upload -> DB Update).
-- [ ] T030: Implement `ScriptExecutionWorkflow` in Controller to wrap long-running agent scripts.
+- [ ] T030: Implement `ScriptExecutionWorkflow` in Controller to wrap long-running Worker executions (triggered by agent scripts) for durability.
 - [ ] T031: Update `utils.simulate()` to call Controller API to start/poll `SimulationWorkflow`.
 
 **Implementation**:
@@ -140,7 +142,7 @@
 
 - [ ] T032: Configure `structlog` for JSON logging on both nodes.
 - [ ] T033: Setup Postgres DB with SQLAlchemy and Alembic.
-- [ ] T034: Define schema for `Episodes`, `Traces`, `Assets`.
+- [ ] T034: Define schema for `Episodes`, `Traces`, `Assets` (including skill git hashes for reproducibility).
 - [ ] T035: Integrate `langfuse` in Controller Agent.
 
 **Implementation**:

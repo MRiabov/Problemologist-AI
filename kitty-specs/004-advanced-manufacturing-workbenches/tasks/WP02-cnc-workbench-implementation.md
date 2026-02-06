@@ -10,79 +10,63 @@ subtasks: ["T005", "T006", "T007", "T008", "T009"]
 
 ## Goal
 
-Implement the CNC-specific validation logic (raycasting, corner radii) and cost estimation.
+Implement the CNC-specific functional validation logic (undercuts, corner radii) and cost estimation.
 
 ## Context
 
-Implement `CNCWorkbench` which checks if a part is millable (3-axis) and estimates its cost.
+Implement the `analyze_cnc` function which checks if a part is millable (3-axis) and estimates its cost using functional helpers and `structlog`.
 
 ## Subtasks
 
-### T005: Implement CNCWorkbench Class Skeleton
+### T005: Implement CNC Analysis Skeleton
 
-**Objective**: Create the class structure.
+**Objective**: Create the functional module structure.
 **Files**: `src/workbenches/cnc.py`
 **Instructions**:
 
 1. Create `src/workbenches/cnc.py`.
-2. Import `Workbench`, `WorkbenchResult` from base/models.
-3. Define `CNCWorkbench(Workbench)`.
-4. Implement `analyze` method stub.
+2. Define `analyze_cnc(part: Part | Compound, config: CNCConfig) -> WorkbenchResult`.
+3. Use `structlog` to log the start of the analysis.
 
-### T006: Implement Geometry Validation (Visibility)
+### T006: Implement Undercut Validation
 
-**Objective**: Check for undercuts using raycasting.
+**Objective**: Check for undercuts using raycasting and functional helpers.
 **Files**: `src/workbenches/cnc.py`
 **Instructions**:
 
-1. In `analyze`:
-2. Convert `build123d` part to `trimesh` mesh.
-3. Implement `_check_visibility(mesh)`:
-   - For 3-axis (Z-axis), check if all upward-facing surfaces are visible from above.
-   - Alternatively/Simply: Check if any face normal points downwards (Z < 0) AND is occluded?
-   - Strategy: "Heightmap" check or simple undercut check.
-   - Simplest robust check: Project mesh to XY plane. Check if multiple Z values exist for same XY = undercut.
-   - Log violations if undercuts found.
+1. Implement `_check_undercuts(mesh: trimesh.Trimesh) -> List[str]`.
+2. Use `structlog` to trace raycasting progress and log any found undercuts.
+3. Integrate into `analyze_cnc`.
 
 ### T007: Implement Internal Corner Radius Check
 
-**Objective**: Ensure no sharp internal corners.
+**Objective**: Functional check for sharp internal corners.
 **Files**: `src/workbenches/cnc.py`
 **Instructions**:
 
-1. Implement `_check_internal_radii(part)`:
-   - Iterate over edges.
-   - Identify concave edges (internal).
-   - Check if radius < tool_radius (default 3mm or from config).
-   - `build123d` topology analysis required.
-   - If sharp internal corner found, add violation.
+1. Implement `_check_internal_radii(part: Part | Compound, tool_radius: float) -> List[str]`.
+2. Use `structlog` to log edge analysis.
+3. Integrate into `analyze_cnc`.
 
 ### T008: Implement CNC Cost Estimation
 
-**Objective**: Calculate cost based on volume and time.
+**Objective**: Functional cost calculation.
 **Files**: `src/workbenches/cnc.py`
 **Instructions**:
 
-1. Implement `_calculate_cost(part, material_cost_per_kg)`:
-   - Calculate bounding box volume (Material block size).
-   - Material Cost = Block Volume *Density* Cost/kg.
-   - Machining Time = Removed Volume / MRR (Material Removal Rate) + Setup Time.
-   - Machining Cost = Time * Hourly Rate.
-   - Total Cost = Material + Machining.
-2. Return details in `WorkbenchResult`.
+1. Implement `_calculate_cnc_cost(part, material_config, cnc_config) -> float`.
+2. Log cost breakdown (material vs machining) with `structlog`.
+3. Return details in `WorkbenchResult`.
 
-### T009: Write Comprehensive Tests
+### T009: Write CNC Functional Tests
 
-**Objective**: Verify logic.
+**Objective**: Verify logic with unit tests.
 **Files**: `tests/workbenches/test_cnc.py`
 **Instructions**:
 
 1. Create `tests/workbenches/test_cnc.py`.
-2. Test Case 1: Simple Box (Valid).
-3. Test Case 2: Box with hole (Valid).
-4. Test Case 3: "T" shape from side (Undercut - Invalid).
-5. Test Case 4: Box with sharp internal pocket (Invalid radius).
-6. Verify cost calculations are non-zero and logical.
+2. Test `analyze_cnc` with various geometries.
+3. Verify `structlog` entries for failures.
 
 ## Verification
 
@@ -90,8 +74,8 @@ Implement `CNCWorkbench` which checks if a part is millable (3-axis) and estimat
 
 ## Definition of Done
 
-- `CNCWorkbench` implemented.
-- Undercuts detected.
-- Sharp internal corners detected.
-- Cost calculated.
+- `analyze_cnc` function implemented.
+- Undercuts and corner radii checks functional.
+- `structlog` integrated throughout.
+- Cost estimated and Pydantic-validated.
 - Tests pass.

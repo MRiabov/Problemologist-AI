@@ -1,10 +1,10 @@
 {
     "feature_number": "008",
     "slug": "008-observability-system",
-    "friendly_name": "Unified Agentic Observability & Event Stream",
+    "friendly_name": "Observability System",
     "mission": "software-dev",
-    "source_description": "Observability, as per @[kitty-specs/desired_architecture.md]. Implement high-fidelity persistence, event-driven architecture for real-time streaming, and production-ready compressed S3 backups. Focus on strictly-typed schemas and a platform-level SDK to address the distributed nature of observability across the agentic codebase.",
-    "created_at": "2026-02-04T12:55:00Z",
+    "source_description": "Unified event-driven architecture for real-time streaming, high-fidelity persistence, and compressed S3 backups across the agentic codebase, as per @[kitty-specs/desired_architecture.md].",
+    "created_at": "2026-02-06T08:30:00Z",
     "target_branch": "main",
     "vcs": "git"
 }

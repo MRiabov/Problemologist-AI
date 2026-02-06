@@ -3,7 +3,7 @@ work_package_id: WP04
 title: API & Temporal Integration
 lane: planned
 dependencies: []
-subtasks: [T019, T020, T021, T022, T023, T024]
+subtasks: [T020, T021, T022, T023, T024, T025]
 ---
 
 # WP04: API & Temporal Integration
@@ -19,20 +19,21 @@ The simulation itself should be "fire and forget" from the physics loop perspect
 
 ## Implementation Guide
 
-### T019: Create Temporal Activities Module
+### T020: Create Temporal Activities Module
 
 **File**: `src/worker/simulation/temporal/activities.py`
 
 1. Define `@activity.defn`.
 2. Wrapper for `simulate` logic.
 
-### T020: Implement run_simulation_activity
+### T021: Implement run_simulation_activity
 
 **File**: `src/worker/simulation/temporal/activities.py`
 
 1. Function `run_simulation(payload: SimulationRequest) -> SimulationResult`.
 2. Logic:
-   - Prepare execution environment (sandbox or temp dir).
+   - Prepare execution environment (using **deepagents** `SandboxFilesystemBackend`).
+   - Call `validate_and_price(component)` as the first step. Fail if invalid.
    - Write `build123d` code/files to disk.
    - Call `SimulationLoop` (via utils).
    - Clean up temp files.
@@ -40,15 +41,15 @@ The simulation itself should be "fire and forget" from the physics loop perspect
 3. **Heartbeating**: Since simulation is CPU heavy, we should heartbeat every few seconds inside the simulation loop if possible.
    - Pass a "heartbeat callback" to `SimulationLoop` from the activity.
 
-### T021: Implement Public API Utils
+### T022: Implement Public API Utils
 
 **File**: `src/worker/utils/simulation.py`
 
 1. Defines the simplified entry point for other modules in the Worker (e.g. if we want to run without Temporal for debugging).
-2. `def simulate_local(component: Compound, options: SimOptions) -> SimulationResult`.
-   - Orchestrates WP01 (Builder) -> WP02 (Loop) -> WP03 (Render).
+2. `def simulate(component: Compound, render: bool = False) -> SimulationResult`.
+   - Orchestrates Validation -> WP01 (Builder) -> WP02 (Loop) -> WP03 (Render, if requested).
 
-### T022: Implement Data Models
+### T023: Implement Data Models
 
 **File**: `src/common/models/simulation.py` (or similar shared path)
 
@@ -56,23 +57,23 @@ The simulation itself should be "fire and forget" from the physics loop perspect
    - `outcome: Literal["SUCCESS", "FAIL"]`
    - `reason: str`
    - `video_url: Optional[str]`
-   - `metrics: dict`
+   - `metrics: SimulationMetrics` (Pydantic model from WP02)
    - `artifact_urls: dict` (e.g. `{"mjcf": "..."}`)
 
-### T023: Integrate with Worker Startup
+### T024: Integrate with Worker Startup
 
 **File**: `src/worker/main.py` (or wherever temporal worker starts)
 
 1. Register `run_simulation` activity with the Temporal Worker.
-2. Ensure MJCF compiler dependencies are loaded/ready.
+2. Ensure MJCF compiler dependencies and `SandboxFilesystemBackend` are loaded/ready.
 
-### T024: Integration Tests
+### T025: Integration Tests
 
 **File**: `tests/worker/simulation/test_integration.py`
 
-1. Test `simulate_local` fully:
+1. Test `simulate` fully:
    - Input: Simple Box compound.
-   - Action: Run generic sim.
+   - Action: Run generic sim with `render=True`.
    - Assert: Returns `SimulationResult` with `outcome` and `video_url`.
 2. Test Temporal Activity (Mocked):
    - Use `temporalio.testing.ActivityEnvironment`.

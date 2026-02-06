@@ -3,7 +3,7 @@ work_package_id: WP05
 title: End-to-End Verification
 lane: planned
 dependencies: []
-subtasks: [T025, T026, T027, T028, T029]
+subtasks: [T026, T027, T028, T029, T030]
 ---
 
 # WP05: End-to-End Verification
@@ -19,7 +19,7 @@ We will use a "Pusher Bot" scenario: A simple robot arm (or sliding block) pushi
 
 ## Implementation Guide
 
-### T025: Create "Pusher Bot" Reference Model
+### T026: Create "Pusher Bot" Reference Model
 
 **File**: `tests/worker/simulation/cases/pusher_bot.py`
 
@@ -31,27 +31,27 @@ We will use a "Pusher Bot" scenario: A simple robot arm (or sliding block) pushi
    - **Goal Zone**: A specialized object named `zone_goal_box`.
 3. Script: define a function `get_pusher_bot() -> Compound`.
 
-### T026: Implement E2E Test Suite
+### T027: Implement E2E Test Suite
 
 **File**: `tests/e2e/test_simulation_engine.py`
 
 1. Setup generic E2E test structure.
 2. If running inside Docker/CI, ensure MuJoCo and FFmpeg are available.
 
-### T027: Verify "Success" Scenario
+### T028: Verify "Success" Scenario
 
 **Goal**: The Pusher successfully pushes the box into the goal.
 
 1. Test case: `test_pusher_success()`
    - Load `get_pusher_bot()`.
-   - Call `simulate_local()` with a control function that moves the pusher forward.
+   - Call `simulate(component, render=True)` with a control function that moves the pusher forward.
    - Assert:
      - `outcome == "SUCCESS"`
      - `video_url` is not None.
-     - `metrics["total_time"] > 0`.
+     - `metrics.total_time > 0`.
    - Verify artifacts: Check if the video file is valid (mocked S3 or local check).
 
-### T028: Verify "Fail" Scenario
+### T029: Verify "Fail" Scenario
 
 **Goal**: The Pusher hits a forbidden zone or fails to reach the goal.
 
@@ -60,7 +60,7 @@ We will use a "Pusher Bot" scenario: A simple robot arm (or sliding block) pushi
    - Variant B: Add a `zone_forbid_wall` in the path -> Outcome `FAIL` (forbidden zone collision).
 2. Assert correct `reason` is returned (e.g. "Collision with zone_forbid_wall").
 
-### T029: Manual Walkthrough & Documentation
+### T030: Manual Walkthrough & Documentation
 
 **File**: `kitty-specs/003-simulation-engine/quickstart.md` (Update)
 

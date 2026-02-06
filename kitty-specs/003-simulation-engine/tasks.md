@@ -35,8 +35,9 @@
 - [ ] T008: Implement physics stepping loop (500Hz) and control interface. <!-- id: 7 -->
 - [ ] T009: Implement collision detection for `zone_forbid_*`. <!-- id: 8 -->
 - [ ] T010: Implement goal detection for `zone_goal_*`. <!-- id: 9 -->
-- [ ] T011: Implement `MetricCollector` for energy, time, and damage tracking. <!-- id: 10 -->
-- [ ] T012: Add tests for physics steps and collision triggers. <!-- id: 11 -->
+- [ ] T011: Implement `MetricCollector` for energy, time, and damage tracking (using Pydantic models). <!-- id: 10 -->
+- [ ] T012: Add validation hook: ensure `validate_and_price` is called before simulation starts. <!-- id: 11 -->
+- [ ] T013: Add tests for physics steps and collision triggers. <!-- id: 29 -->
 
 **Implementation Logic**:
 
@@ -54,12 +55,12 @@
 **Priority**: Medium
 **Dependencies**: WP02
 
-- [ ] T013: Implement `Renderer` in `src/worker/simulation/renderer.py` using MuJoCo's GLContext.
-- [ ] T014: Implement frame capture for video and 24-view image bundle (8 angles x 3 levels).
-- [ ] T015: Implement `ffmpeg` encoding for MP4 and tiling/zipping for image bundle.
-- [ ] T016: Implement S3 routing logic via `CompositeBackend` for the `/renders/` directory.
-- [ ] T017: Update `SimulationLoop` to integrate rendering and ensure files are saved to `/renders/`.
-- [ ] T018: Add tests for video generation and 24-view bundle verification.
+- [ ] T014: Implement `VideoRenderer` in `src/worker/simulation/renderer.py` using MuJoCo's GLContext. <!-- id: 12 -->
+- [ ] T015: Implement conditional frame capture at 30fps during simulation loop (only if `render=True`). <!-- id: 13 -->
+- [ ] T016: Implement `ffmpeg` encoding pipeline to produce MP4 files. <!-- id: 14 -->
+- [ ] T017: Implement S3 routing logic via `CompositeBackend` for the `/renders/` directory. <!-- id: 15 -->
+- [ ] T018: Update `SimulationLoop` to integrate rendering and ensure files are saved to `/renders/`. <!-- id: 16 -->
+- [ ] T019: Add tests for video generation and verification of S3 availability via the routed path. <!-- id: 17 -->
 
 **Implementation Logic**:
 
@@ -75,12 +76,12 @@
 **Priority**: Medium
 **Dependencies**: WP03
 
-- [ ] T019: Create `src/worker/simulation/temporal/` activities. <!-- id: 18 -->
-- [ ] T020: Implement `run_simulation_activity` which wraps the full pipeline. <!-- id: 19 -->
-- [ ] T021: Implement `src/worker/utils/simulation.py` with `simulate()` entrypoint. <!-- id: 20 -->
-- [ ] T022: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
-- [ ] T023: Integrate with Temporal Worker startup. <!-- id: 22 -->
-- [ ] T024: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
+- [ ] T020: Create `src/worker/simulation/temporal/` activities. <!-- id: 18 -->
+- [ ] T021: Implement `run_simulation_activity` which wraps the full pipeline (Validation -> MJCF -> Sim). <!-- id: 19 -->
+- [ ] T022: Implement `src/worker/utils/simulation.py` with `simulate(component, render=False)` entrypoint. <!-- id: 20 -->
+- [ ] T023: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
+- [ ] T024: Integrate with Temporal Worker startup and `SandboxFilesystemBackend`. <!-- id: 22 -->
+- [ ] T025: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
 
 **Implementation Logic**:
 
@@ -96,11 +97,11 @@
 **Priority**: Low
 **Dependencies**: WP04
 
-- [ ] T025: Create a reference "Pusher Bot" `build123d` model and test script. <!-- id: 24 -->
-- [ ] T026: Create an E2E test suite in `tests/e2e/test_simulation.py`. <!-- id: 25 -->
-- [ ] T027: Verify "Success" scenario (bot pushes box to goal). <!-- id: 26 -->
-- [ ] T028: Verify "Fail" scenario (bot hits forbidden zone). <!-- id: 27 -->
-- [ ] T029: detailed manual walkthrough verification. <!-- id: 28 -->
+- [ ] T026: Create a reference "Pusher Bot" `build123d` model and test script. <!-- id: 24 -->
+- [ ] T027: Create an E2E test suite in `tests/e2e/test_simulation.py`. <!-- id: 25 -->
+- [ ] T028: Verify "Success" scenario (bot pushes box to goal). <!-- id: 26 -->
+- [ ] T029: Verify "Fail" scenario (bot hits forbidden zone). <!-- id: 27 -->
+- [ ] T030: detailed manual walkthrough verification. <!-- id: 28 -->
 
 **Implementation Logic**:
 

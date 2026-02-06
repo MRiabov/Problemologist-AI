@@ -4,20 +4,18 @@
 **Status**: Draft
 **Mission**: software-dev
 
-## 1. Overview
+The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment** (Spec 001). It is a specialized graph-based system built using **LangGraph** on top of the **`deepagents`** framework, with durable execution orchestrated by **Temporal**.
 
-The **Engineer Agent** is the autonomous cognitive engine designed to solve benchmarks in the **Agentic CAD Environment** (Spec 001). It is a specialized graph-based system built using **LangGraph** on top of the **`deepagents`** framework.
-
-The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**. It is designed for high-latency, high-quality reasoning, creating valid `build123d` scripts that are executed in the distributed Worker environment.
+The agent follows an **Architect → Engineer → Critic** workflow, leveraging a persistent **TODO list** and **Skill-based Memory**. It is designed for high-latency, high-quality reasoning, creating valid `build123d` scripts that are executed in the distributed Worker environment. Long-running tasks (simulation, validation) are dispatched as **Temporal Workflows** to ensure resilience.
 
 ## 2. Goals & Success Criteria
 
 ### 2.1. Primary Goals
 
 1. **Solve Mechanical Problems**: Autonomously generate CAD models that satisfy geometric and physics constraints.
-2. **Long-Running Durability**: Support execution times of 10+ minutes, utilizing `deepagents` state persistence to handle interruptions.
-3. **Skill Acquisition**: Learn from failures via a Sidecar Learner agent that updates the Read-Only skill library.
-4. **Distributed Execution**: Generate code on the Controller, but execute it strictly on the Worker node via the 001 API.
+2. **Long-Running Durability**: Support execution times of 10+ minutes, utilizing `deepagents` state persistence and **Temporal** to handle interruptions and preemption.
+3. **Skill Acquisition**: Learn from failures via an **Asynchronous Sidecar Learner** process that updates the Read-Only skill library post-episode.
+4. **Distributed Execution**: Generate code on the Controller, but execute it strictly on the Worker node via the 001 API, orchestrated by Temporal.
 
 ### 2.2. Success Criteria
 
@@ -56,8 +54,8 @@ The agent is a StateGraph with the following nodes:
 
 4. **Sidecar Learner (Async)**:
     - **Trigger**: End of Episode (Success or Failure).
-    - **Action**: Analyzes `journal.md` and execution traces.
-    - **Output**: Updates `skills/` (via a separate administrative process/PR, as skills are Read-Only for the runner).
+    - **Action**: Background process analyzes `journal.md` and execution traces.
+    - **Output**: Updates `skills/` (via a separate administrative process/PR, as skills are Read-Only for the runner). This is a non-blocking background task.
 
 ### 4.2. Tool Interface
 
@@ -77,9 +75,9 @@ The agent interacts with the domain *through code it writes*, leveraging the pre
 ### 4.3. Memory Systems
 
 1. **Short-term (Working Memory)**: LangGraph State (Messages, Scratchpad).
-2. **Episodic (Journal)**: `journal.md` (Read-Write). The agent logs intent, result, reflection, and next steps. Stored in the **local, ephemeral sandbox**.
+2. **Episodic (Journal)**: `journal.md` (Read-Write). The agent logs intent, result, reflection, and next steps. Stored in the **`SandboxFilesystemBackend`**.
 3. **Procedural (Skills)**: `skills/*.md` (Read-Only). How-to guides for `build123d`, `mujoco`, etc. Pulled from Git before execution.
-4. **Planned (TODOs)**: `todo.md` (Read-Write). Stored in the **local, ephemeral sandbox**.
+4. **Planned (TODOs)**: `todo.md` (Read-Write). Stored in the **`SandboxFilesystemBackend`**.
 
 ## 5. Technical Design
 

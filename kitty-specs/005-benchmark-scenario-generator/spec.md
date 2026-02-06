@@ -28,18 +28,42 @@ The **Benchmark Scenario Generator** is an autonomous agentic pipeline that crea
 
 The pipeline is an Agent Graph (Planner -> Coder -> Reviewer) executed via `deepagents`.
 
-1. **Planner**: Interprets the user's "Theme" (e.g., "Lever problems") and defines the randomization strategy.
-2. **Coder**: Writes a Python script in the **local worker sandbox**.
+#### 3.1.1. Agent Environment & Filesystem
+
+The agent operates within a dedicated worker container using `FilesystemMiddleware` with a `SandboxFilesystemBackend`. The storage is ephemeral and reset at the start of each session.
+
+**Filesystem Structure**:
+
+```text
+.
+├── skills/                     # [Read-Only] CAD/Engineering skills
+├── utils/                      # [Read-Only] Standard library/helper utils
+├── renders/                    # [Read-Only/tool-generated] Media outputs (routed to S3)
+├── journal.md                  # [Read-Write] Episodic memory
+├── todo.md                     # [Read-Write] Planner's task list
+├── plan.md                     # [Read-Only] High-level strategy
+└── script.py                   # [Read-Write] Benchmarking script being generated
+```
+
+#### 3.1.2. Agent Roles
+
+1. **Planner**: Interprets the user's "Theme" (e.g., "Lever problems") and defines the randomization strategy in `plan.md` and `todo.md`.
+2. **Coder**: Writes the `script.py` in the **local worker sandbox**.
     - Script must define a `build(seed, scale)` function.
-    - Script imports `utils.simulate`.
-3. **Validation**:
-    - The script calls `simulate()` to verify stability.
-    - If unstable, the Coder iterates.
-4. **Reviewer**:
+3. **Reviewer**:
     - Inspects the 24-angle render produced by the simulation.
     - Approves or Requests Changes.
 
-### 3.2. Output Assets
+### 3.2. Standard Utilities (Python Utils)
+
+The agent has access to specific functions imported from `utils`:
+
+- `validate(Compound) -> bool`: Validates geometry (no intersections, in bounds) across randomizations.
+- `simulate(Compound) -> SimulationResult`: Runs a physics simulation locally and returns stability results + renders.
+- `submit_for_review(Compound)`: Submits the final benchmark to the Reviewer/Dataset pipeline.
+- `get_docs_for(type)`: Documentation subagent tool.
+
+### 3.3. Output Assets
 
 A "Benchmark" consists of:
 

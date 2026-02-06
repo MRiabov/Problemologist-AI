@@ -11,7 +11,7 @@
 - [ ] **T001**: Implement Pydantic models `BenchmarkAsset` and `GenerationSession` in `src/generators/benchmark/models.py`.
 - [ ] **T002**: Create database schema/migrations for these models.
 - [ ] **T003**: Define `BenchmarkGeneratorState` for the `deepagents` graph.
-- [ ] **T004**: Scaffold directory structure `src/generators/benchmark`.
+- [ ] **T004**: Scaffold directory structure and standard agent template files (`journal.md`, `todo.md`, etc.).
 
 ~250 lines
 
@@ -19,10 +19,10 @@
 
 **Goal**: Implement the physics validation logic that runs on the worker.
 
-- [ ] **T005**: Implement `simulate_stability(mjcf_content) -> ValidationResult` in `src/worker/utils/validation.py`.
-- [ ] **T006**: Implement headless rendering utility to produce 24-view preview bundle.
-- [ ] **T007**: Unit test validation logic with dummy valid/invalid MJCFs.
-- [ ] **T008**: Expose validation tools to the Agent environment.
+- [ ] **T005**: Implement `simulate(Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
+- [ ] **T006**: Implement `validate(Compound) -> bool` for geometric/randomization verification.
+- [ ] **T007**: Implement `submit_for_review(Compound)` to handover results to Reviewer.
+- [ ] **T008**: Expose these tools to the Agent environment via `deepagents` tools.
 
 ~300 lines
 

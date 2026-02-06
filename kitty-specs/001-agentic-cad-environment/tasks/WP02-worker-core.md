@@ -34,7 +34,7 @@ File: `src/worker/filesystem/db.py` (or similar)
 
 File: `src/worker/filesystem/backend.py`
 
-- Implement a class wrapping the S3 operations.
+- Implement a class wrapping the S3 operations using `deepagents`'s `SandboxFilesystemBackend` pattern.
 - Methods: `ls`, `read`, `write`, `edit`.
 - **Constraint**: Must handle "virtual" paths.
   - `/` in agent view maps to `s3://bucket/session_id/` in reality.
@@ -54,12 +54,12 @@ File: `src/worker/runtime/executor.py`
 File: `src/worker/filesystem/router.py`
 
 - Implement restrictions:
-  - `utils/` and `skills/` are **Read-Only**.
+  - `utils/`, `skills/`, and `reviews/` are **Read-Only**.
   - Block attempts to write to them.
-- Populate `utils/` from a local source (git repo or container integration) if they are "read-only" but need to exist. *Actually, Spec says they are read-only.*
+- Populate `utils/` and `skills/` from local source.
 - **Strategy**:
   - `files/` (workspace) -> S3 (Read/Write).
-  - `utils/` -> Local container disk (Read Only).
+  - `utils/`, `skills/`, `reviews/` -> Local container disk (Read Only).
   - Overlay them into a unified view for `ls`.
 
 ### T011: Verify Dependencies

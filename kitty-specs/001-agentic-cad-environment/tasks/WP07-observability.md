@@ -39,6 +39,7 @@ File: `src/controller/persistence/models.py`
 - `Episode`: Tracks a full agent run.
 - `Trace`: Stores raw LangChain traces (or link to LangFuse).
 - `Asset`: S3 paths to videos/files generated.
+- **Reproducibility**: Include fields for **skill git hashes** and template versions in the `Episode` or metadata schemas.
 
 ### T035: Integrate LangFuse
 

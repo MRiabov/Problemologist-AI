@@ -66,6 +66,12 @@ File: `src/worker/api/routes.py`
   - Uses `httpx` (async).
   - Handles URL configuration (Worker URL).
 
+### T036: Implement schemathesis fuzzing
+
+- Setup `schemathesis` to run against Worker API.
+- Verify OpenAPI compliance and robustness of input handling.
+- Integrate into CI/CD or local test suite.
+
 ## Verification
 
 1. Start Worker: `uvicorn src.worker.app:app`.

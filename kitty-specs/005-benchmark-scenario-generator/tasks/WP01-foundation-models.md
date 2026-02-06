@@ -57,9 +57,9 @@ subtasks: ["T001", "T002", "T003", "T004"]
    - `plan`: Optional[Dict] (The randomization strategy)
    - `messages`: List[BaseMessage] (Chat history)
 
-### T004: Scaffold Directory
+### T004: Scaffold Directory & Templates
 
-**Purpose**: Create the necessary folder structure.
+**Purpose**: Create the necessary folder structure and initial agent files.
 
 **Instructions**:
 
@@ -67,7 +67,11 @@ subtasks: ["T001", "T002", "T003", "T004"]
    - `src/generators/benchmark/`
    - `src/generators/benchmark/templates/`
    - `src/generators/benchmark/utils/`
-   - `src/worker/utils/` (for T005)
+   - `src/worker/agent_files/`
+2. Create baseline Markdown templates in `src/worker/agent_files/`:
+   - `journal.md`: Minimal structured header.
+   - `todo.md`: Placeholder for Planner's output.
+   - `script.py`: Template with `build(seed, scale)` boilerplate.
 
 ## Verification
 

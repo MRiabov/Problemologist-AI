@@ -39,9 +39,9 @@ Use the `RemoteFilesystem` middleware and tools defined in Spec 001 WP04.
 Execute code on the Worker via Spec 001 `runtime/execute` API.
 
 - **Implementation**:
-  - `exec_tool`: Wraps the Worker client's `execute` method.
+  - `exec_tool`: Wraps the Worker client's `execute` method via a **Temporal Client**.
   - Ensure the execution captures stdout/stderr.
-  - For long-running scripts (>30s), ensure the tool handles the Temporal workflow polling (as defined in Spec 001 WP06).
+  - For long-running scripts (>30s), dispatch a **Temporal Workflow** and poll for completion (as defined in Spec 001 WP06). This ensures durable execution across preemption.
 
 ### T013: Implement execution loop
 

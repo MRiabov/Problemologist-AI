@@ -34,6 +34,7 @@ File: `src/controller/middleware/remote_fs.py`
 
 - Inherit from `deepagents.middleware.FilesystemMiddleware` (or implement protocol).
 - **Core Logic**: Instead of local IO, call `WorkerClient`.
+- **Constraint**: Must respect and enforce read-only path constraints (`skills/`, `utils/`, `reviews/`).
 - Methods:
   - `list_files` -> `client.ls`
   - `read_file` -> `client.read`

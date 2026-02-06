@@ -1,6 +1,6 @@
 # Implementation Plan: Engineer Agent
 
-*Path: templates/plan-template.md*
+## Path: templates/plan-template.md
 
 **Branch**: `002-engineer-agent` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/kitty-specs/002-vlm-cad-agent/spec.md`
@@ -16,13 +16,14 @@ Implement the **Engineer Agent** using **LangGraph** within the **`deepagents`**
 
 - `langgraph`: State machine orchestration.
 - `deepagents`: Agent framework integration.
+- `temporalio`: Distributed workflow orchestration for tools.
 - `langchain-google-genai` / `langchain-anthropic`: LLM providers.
 **Dependencies**:
 - `001-agentic-cad-environment`: The execution runtime API.
 **Storage**:
-- **Postgres**: LangGraph checkpoints (State/Reasoning Traces).
-- **Local Sandbox**: Ephemeral memory files (Journal, TODO, Script).
-- **Global S3**: Persistence of final renders, CAD assets, and media produced by tools.
+- **Postgres**: LangGraph checkpoints (State/Reasoning Traces) & Temporal persistence.
+- **`SandboxFilesystemBackend`**: Ephemeral memory files (Journal, TODO, Script).
+- **Global S3 (`CompositeBackend`)**: Persistence of final renders, CAD assets, and media produced by tools.
 
 ## Constitution Check
 
@@ -61,8 +62,7 @@ src/agent/
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
 | Graph Architecture | Complex flows (Planning -> Execution -> Critique). | Linear chains cannot handle the "Refusal" and "Retry" loops required for robust engineering. |
 | Sidecar Learner | Skills need to evolve without polluting the active context. | In-context learning forgets; Synchronous updates distract the main agent. |
+| Temporal Orchestration | Tool calls (simulation) are long-running and prone to preemption. | Simple async/await is not durable across container restarts. |
 | File-Based Memory | Agent-readable persistence (Journal). | Vector stores are opaque; Agents understand Markdown files best. |
