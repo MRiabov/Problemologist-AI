@@ -40,16 +40,20 @@ class CriticNode:
 
         # T018: Decision logic
         # Expecting format:
-        # DECISION: APPROVE | REJECT
+        # DECISION: APPROVE | REJECT_PLAN | REJECT_CODE
         # FEEDBACK: <feedback>
         
-        decision = "REJECT"
+        decision = "REJECT_CODE"
         feedback = "Failed to parse critic decision."
         
         if "DECISION: APPROVE" in content:
             decision = "APPROVE"
+        elif "DECISION: REJECT_PLAN" in content:
+            decision = "REJECT_PLAN"
+        elif "DECISION: REJECT_CODE" in content:
+            decision = "REJECT_CODE"
         elif "DECISION: REJECT" in content:
-            decision = "REJECT"
+            decision = "REJECT_CODE" # Default reject
             
         if "FEEDBACK:" in content:
             feedback = content.split("FEEDBACK:")[1].strip()
@@ -58,8 +62,14 @@ class CriticNode:
 
         journal_entry = f"\nCritic Decision: {decision}\nFeedback: {feedback}"
 
+        status_map = {
+            "APPROVE": "approved",
+            "REJECT_PLAN": "plan_rejected",
+            "REJECT_CODE": "code_rejected"
+        }
+
         return {
-            "status": "approved" if decision == "APPROVE" else "rejected",
+            "status": status_map.get(decision, "code_rejected"),
             "feedback": feedback,
             "journal": state.journal + journal_entry
         }
