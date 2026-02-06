@@ -31,11 +31,11 @@
 **Priority**: High
 **Dependencies**: WP01, Spec 001 WP04
 
-- [ ] T010: Implement `src/agent/nodes/engineer.py` with LangGraph ReAct implementation.
-- [ ] T011: Configure `deepagents` Tools (`ls_tool`, `read_tool`, `write_tool`) using Spec 001 Middleware.
-- [ ] T012: Configure `exec_tool` for worker integration via **Temporal Client**.
-- [ ] T013: Implement execution loop with `TodoListMiddleware`.
-- [ ] T014: Test Engineer node against a running Worker (WP01 WP03).
+- [x] T010: Implement `src/agent/nodes/engineer.py` with LangGraph ReAct implementation.
+- [x] T011: Configure `deepagents` Tools (`ls_tool`, `read_tool`, `write_tool`) using Spec 001 Middleware.
+- [x] T012: Configure `exec_tool` for worker integration via **Temporal Client**.
+- [x] T013: Implement execution loop with `TodoListMiddleware`.
+- [x] T014: Test Engineer node against a running Worker (WP01 WP03).
 
 ### WP04: Critic Node & Simulation
 
