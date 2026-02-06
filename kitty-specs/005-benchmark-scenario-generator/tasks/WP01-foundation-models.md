@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Foundation & Data Models
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 08d44c45aaa09786e450e9a322e7f98d2b2f3498
@@ -87,3 +87,4 @@ agent: "Gemini"
 ## Activity Log
 
 - 2026-02-06T14:32:20Z – Gemini – shell_pid=649118 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T15:30:54Z – Gemini – shell_pid=649118 – lane=for_review – Ready for review: Implemented core data models (Pydantic and SQLAlchemy), database migrations, LangGraph state, and agent file templates.
