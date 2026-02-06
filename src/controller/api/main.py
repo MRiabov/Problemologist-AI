@@ -7,6 +7,7 @@ from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
+from src.controller.api.routes import episodes, skills
 from src.shared.enums import ResponseStatus
 from src.shared.logging import configure_logging, get_logger
 
@@ -18,6 +19,9 @@ TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
 
 app = FastAPI(title="Problemologist Controller")
+
+app.include_router(episodes.router)
+app.include_router(skills.router)
 
 # Temporal client
 temporal_client_instance: Client = None
