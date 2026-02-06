@@ -74,9 +74,9 @@
 **Implement automated backup mechanisms for Database and S3 artifacts.**
 
 - [x] T011: Implement `src/ops/backup.py` with `backup_postgres()` and `backup_s3_files()` functions. <!-- id: T011 -->
-- [ ] T012: Create `POST /ops/backup` endpoint in controller API to trigger the backup workflow. <!-- id: T012 -->
-- [ ] T013: Write integration test for backup workflow (checking artifacts created). <!-- id: T013 -->
-- [ ] T014: Implement `BackupWorkflow` in `src/ops/workflows.py` using Temporal. <!-- id: T014 -->
+- [x] T012: Create `POST /ops/backup` endpoint in controller API to trigger the backup workflow. <!-- id: T012 -->
+- [x] T013: Write integration test for backup workflow (checking artifacts created). <!-- id: T013 -->
+- [x] T014: Implement `BackupWorkflow` in `src/ops/workflows.py` using Temporal. <!-- id: T014 -->
 
 **Implementation Notes**:
 
