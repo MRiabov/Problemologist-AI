@@ -235,6 +235,54 @@ class SandboxFilesystemBackend:
         logger.info("filesystem_edit_complete", virtual_path=path)
         return True
 
+    def batch_edit(
+        self,
+        path: str,
+        edits: list[tuple[str, str]],
+    ) -> tuple[int, tuple[str, str] | None]:
+        """Edit file by applying multiple replacements sequentially.
+
+        Args:
+            path: Virtual file path.
+            edits: List of (old_content, new_content) tuples.
+
+        Returns:
+            Tuple of (number of successful edits, failed edit tuple if any).
+            If failed edit is None, all edits were successful.
+
+        Raises:
+            FileNotFoundError: If file does not exist.
+        """
+        logger.debug("filesystem_batch_edit", virtual_path=path, edit_count=len(edits))
+
+        current = self.read(path).decode("utf-8")
+
+        success_count = 0
+        failed_edit = None
+
+        for old, new in edits:
+            if old not in current:
+                logger.warning(
+                    "filesystem_batch_edit_not_found",
+                    virtual_path=path,
+                    missing_content=old[:50],
+                )
+                failed_edit = (old, new)
+                break
+
+            current = current.replace(old, new, 1)
+            success_count += 1
+
+        if success_count > 0:
+            self.write(path, current.encode("utf-8"))
+            logger.info(
+                "filesystem_batch_edit_complete",
+                virtual_path=path,
+                success_count=success_count,
+            )
+
+        return success_count, failed_edit
+
     def exists(self, path: str) -> bool:
         """Check if a path exists.
 

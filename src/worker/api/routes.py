@@ -80,14 +80,15 @@ async def edit_file(
         if not fs_router.exists(request.path):
             raise HTTPException(status_code=404, detail="File not found")
 
-        # Apply each edit operation
-        for edit in request.edits:
-            success = fs_router.edit(request.path, edit.old_string, edit.new_string)
-            if not success:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Content not found for replacement: {edit.old_string[:50]}..."
-                )
+        # Apply edits in batch
+        edits = [(edit.old_string, edit.new_string) for edit in request.edits]
+        _, failed_edit = fs_router.batch_edit(request.path, edits)
+
+        if failed_edit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Content not found for replacement: {failed_edit[0][:50]}...",
+            )
         
         return {"status": "success"}
     except WritePermissionError as e:
