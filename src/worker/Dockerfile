@@ -28,8 +28,7 @@ COPY --chown=agent:agent pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy source code
-COPY --chown=agent:agent src/worker ./src/worker
-COPY --chown=agent:agent src/deepagents ./src/deepagents
+COPY --chown=agent:agent src ./src
 
 # Set Python path
 ENV PYTHONPATH=/app
