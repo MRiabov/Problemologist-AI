@@ -420,6 +420,20 @@ wheels = [
 ]
 
 [[package]]
+name = "boto3"
+version = "1.42.42"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "jmespath" },
+    { name = "s3transfer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c8/ac/9ef2cc431e00ecbf1ac197938ddea120e75b516b4c57028a1fd517d3e882/boto3-1.42.42.tar.gz", hash = "sha256:8c2537156f5ccd72bbbfe4fc27a8a80bf3e4f80523f306417f3fb6023d13edda", size = 112831, upload-time = "2026-02-04T20:28:45.494Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/0a/3966f239e1d9da93cb755dc0213835ce4e9ed93645192878d0a055ecdc31/boto3-1.42.42-py3-none-any.whl", hash = "sha256:8c78169ef47dc29863ebb11ba99134b1b418d3dfdd836419830f22552f8afe43", size = 140599, upload-time = "2026-02-04T20:28:43.056Z" },
+]
+
+[[package]]
 name = "botocore"
 version = "1.42.42"
 source = { registry = "https://pypi.org/simple" }
@@ -3036,6 +3050,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "bd-warehouse" },
+    { name = "boto3" },
     { name = "build123d" },
     { name = "deepagents" },
     { name = "fastapi" },
@@ -3084,6 +3099,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.3" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bd-warehouse" },
+    { name = "boto3", specifier = ">=1.36.0" },
     { name = "build123d", specifier = ">=0.10.0" },
     { name = "deepagents", specifier = ">=0.3.10" },
     { name = "fastapi", specifier = ">=0.128.0" },
@@ -3107,7 +3123,7 @@ requires-dist = [
     { name = "streamlit", specifier = ">=1.42.0" },
     { name = "streamlit-autorefresh", specifier = ">=1.0.1" },
     { name = "structlog", specifier = ">=25.5.0" },
-    { name = "temporalio", specifier = ">=1.6.0" },
+    { name = "temporalio", specifier = ">=1.11.0" },
     { name = "trimesh", extras = ["easy"], specifier = ">=4.11.1" },
     { name = "typer", specifier = ">=0.15.1" },
     { name = "uvicorn", specifier = ">=0.40.0" },
@@ -4087,6 +4103,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fa/be/392c8c5e0da9bfa139e41084690dd49a5e3e931099f78f52d3f6070105c6/s3fs-2026.2.0.tar.gz", hash = "sha256:91cb2a9f76e35643b76eeac3f47a6165172bb3def671f76b9111c8dd5779a2ac", size = 84152, upload-time = "2026-02-05T21:57:57.968Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/e1/64c264db50b68de8a438b60ceeb921b2f22da3ebb7ad6255150225d0beac/s3fs-2026.2.0-py3-none-any.whl", hash = "sha256:65198835b86b1d5771112b0085d1da52a6ede36508b1aaa6cae2aedc765dfe10", size = 31328, upload-time = "2026-02-05T21:57:56.532Z" },
+]
+
+[[package]]
+name = "s3transfer"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/04/74127fc843314818edfa81b5540e26dd537353b123a4edc563109d8f17dd/s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920", size = 153827, upload-time = "2025-12-01T02:30:59.114Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/51/727abb13f44c1fcf6d145979e1535a35794db0f6e450a0cb46aa24732fe2/s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe", size = 86830, upload-time = "2025-12-01T02:30:57.729Z" },
 ]
 
 [[package]]

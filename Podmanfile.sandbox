@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     libgl1 \
     libosmesa6 \
     libglfw3 \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
