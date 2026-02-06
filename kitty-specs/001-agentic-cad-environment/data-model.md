@@ -9,10 +9,23 @@ We use `pydantic.BaseModel` (v2) for all data exchange between Controller, Worke
 High-level tracking for an agentic session.
 
 ```python
+class AgentType(StrEnum):
+    ENGINEER = "engineer"
+    BENCHMARK_GENERATOR = "benchmark_generator"
+    PLANNER = "planner"
+    REVIEWER = "reviewer"
+
+class EpisodeStatus(StrEnum):
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    PREEMPTED = "preempted"
+
 class EpisodeMetadata(BaseModel):
     episode_id: UUID
-    agent_type: Literal["engineer", "benchmark_generator", "planner", "reviewer"]
-    status: Literal["running", "paused", "completed", "failed", "preempted"]
+    agent_type: AgentType
+    status: EpisodeStatus
     start_time: datetime
     end_time: Optional[datetime] = None
     config_snapshot: Dict[str, Any]  # YAML config used for this run
