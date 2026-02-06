@@ -1,16 +1,16 @@
 ---
 work_package_id: WP01
 title: Foundation & State
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks: [T001, T002, T003, T004]
-agent: "Gemini-CLI"
-shell_pid: "479850"
+agent: "Gemini"
+shell_pid: "623438"
 ---
 
 ## Objective
 
-establish the foundational structure for the Engineer Agent (Spec 002). This includes the project scaffolding, state definitions using `TypedDict`, and the initial graph skeleton.
+establish the foundational structure for the Engineer Agent (Spec 002). This includes the project scaffolding, state definitions using Pydantic `BaseModel`, and the initial graph skeleton.
 
 ## Context
 
@@ -24,7 +24,7 @@ Create the `AgentState` definition.
 
 - **File**: `src/agent/state.py`
 - **Requirements**:
-  - Inherit from `TypedDict`.
+  - Inherit from `pydantic.BaseModel`.
   - Keys:
     - `messages`: List[BaseMessage] (standard LangGraph).
     - `task`: str (User input).
@@ -73,3 +73,4 @@ Verify the state initialization.
 
 - 2026-02-06T08:05:25Z – Gemini-CLI – shell_pid=479850 – lane=doing – Started implementation via workflow command
 - 2026-02-06T08:14:39Z – Gemini-CLI – shell_pid=479850 – lane=for_review – Ready for review: Foundation state and graph skeleton implemented with tests.
+- 2026-02-06T14:03:37Z – Gemini – shell_pid=623438 – lane=doing – Started implementation via workflow command
