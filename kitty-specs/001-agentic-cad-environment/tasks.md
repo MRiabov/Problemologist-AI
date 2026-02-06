@@ -55,7 +55,7 @@
 **Tests**: `schemathesis` runs against Worker API. Controller can call Worker `ls` via client.
 
 - [x] T012: Setup FastAPI setup in `src/worker/app.py`.
-- [x] T013: Define Pydantic models for Tool Inputs/Outputs (`WriteFileRequest`, `ExecuteResponse`, etc.).
+- [x] T013: Define Strict Pydantic models (StrictStr, StrictInt, Enums) for Tool Inputs/Outputs (`WriteFileRequest`, `ExecuteResponse`, etc.).
 - [x] T014: Implement endpoints: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`.
 - [x] T015: Implement endpoint: `/runtime/execute`.
 - [x] T016: Implement endpoint: `/runtime/reset` (triggers Git reset of sandbox).
@@ -142,7 +142,7 @@
 
 - [x] T032: Configure `structlog` for JSON logging on both nodes.
 - [x] T033: Setup Postgres DB with SQLAlchemy and Alembic.
-- [x] T034: Define schema for `Episodes`, `Traces`, `Assets` (including skill git hashes for reproducibility).
+- [x] T034: Define schema using Enums for categorical fields for `Episodes`, `Traces`, `Assets` (including skill git hashes for reproducibility).
 - [x] T035: Integrate `langfuse` in Controller Agent.
 
 **Implementation**:

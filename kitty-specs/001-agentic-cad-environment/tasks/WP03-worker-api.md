@@ -32,18 +32,18 @@ File: `src/worker/app.py`
 - Add Middleware (CORS, trusted hosts if needed).
 - Define root endpoint (Health check).
 
-### T013: Define Pydantic Models
+### T013: Define Strict Pydantic Models
 
 File: `src/worker/api/schema.py`
 
 Models:
 
-- `ListFilesRequest(path: str)`
-- `ReadFileRequest(path: str)`
-- `WriteFileRequest(path: str, content: str)`
-- `EditFileRequest(path: str, edits: list[EditOp])`
-- `ExecuteRequest(command: str, timeout: int)`
-- `ExecuteResponse(stdout: str, stderr: str, exit_code: int)`
+- `ListFilesRequest(path: StrictStr)`
+- `ReadFileRequest(path: StrictStr)`
+- `WriteFileRequest(path: StrictStr, content: StrictStr)`
+- `EditFileRequest(path: StrictStr, edits: list[EditOp])`
+- `ExecuteRequest(command: StrictStr, timeout: StrictInt)`
+- `ExecuteResponse(stdout: StrictStr, stderr: StrictStr, exit_code: StrictInt)`
 
 ### T014: Implement FS Endpoints
 
