@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: CLI Entrypoint
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: 002-vlm-cad-agent-WP06
 base_commit: 3518222e0cff6076161f46093c4870d73375c188
@@ -71,3 +71,4 @@ Create the main entrypoint.
 ## Activity Log
 
 - 2026-02-06T15:02:55Z – Gemini – shell_pid=678995 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T15:04:38Z – Gemini – shell_pid=678995 – lane=for_review – Ready for review: CLI entrypoint, config loading and run scripts implemented.
