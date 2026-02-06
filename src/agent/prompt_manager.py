@@ -26,7 +26,23 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
-                "engineer": "You are the Engineer. Implement the current step: {{ current_step }}",
+                "engineer": """You are the Engineer. 
+Implement the following step: {{ current_step }}
+
+Execution Plan context:
+{{ plan }}
+
+{% if error %}
+Your previous attempt failed with this error:
+{{ error }}
+Please fix the code and try again.
+{% endif %}
+
+Instructions:
+1. Write a standalone Python script to accomplish the step.
+2. Use only available tools and libraries.
+3. Output ONLY the Python code inside a markdown code block.
+""",
             })
         )
 
