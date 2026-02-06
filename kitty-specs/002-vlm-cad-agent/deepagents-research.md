@@ -24,7 +24,7 @@ We are using `deepagents` to its **fullest extent**, leveraging its middleware a
 
 * **FilesystemMiddleware**: We use this to manage the agent's interaction with files.
   * **S3 Backend**: The filesystem is backed by an S3-compatible layer (exposing the worker's environment), allowing persistent and distributed access to files.
-  * **Daytona Integration**: We implement the `SandboxBackendProtocol` to interface with logic running inside **Daytona** sandboxes. This gives the agent direct control over a sandboxed environment for safe code execution.
+  * **Docker Integration**: We implement the `SandboxBackendProtocol` to interface with logic running inside **Docker** sandboxes. This gives the agent direct control over a sandboxed environment for safe code execution.
 * **TodoListMiddleware**: Provides a structured `todo_list` capability, essential for the "Architect -> Engineer" workflow where tasks are strictly tracked.
 
 ### 2.2. Distributed Execution (Controller/Worker)
@@ -32,13 +32,13 @@ We are using `deepagents` to its **fullest extent**, leveraging its middleware a
 The architecture splits the "Brain" from the "Body":
 
 * **Controller (Brain)**: Runs the `deepagents` graph, managing state, planning, and tool dispatch.
-* **Worker (Body)**: Runs a **Daytona** sandbox where the actual code execution, linting, and simulation happen.
+* **Worker (Body)**: Runs a **Docker** sandbox where the actual code execution, linting, and simulation happen.
 * **Temporal Integration**: Long-running tools (like `simulate`) are orchestrated via Temporal. The `deepagents` tool implementation delegates to a Temporal workflow, ensuring durable execution and retries without blocking the agent's prompt loop.
 
 ### 2.3. Planning & Reflection Loop
 
 * **Planner Node**: Generates high-level plans using the `TodoListMiddleware`.
-* **Executor Node**: Executes steps in the Daytona sandbox using `FilesystemMiddleware`.
+* **Executor Node**: Executes steps in the Docker sandbox using `FilesystemMiddleware`.
 * **Learner/Reflector**: A sidecar process (or sub-agent) that monitors execution, updates `journal.md`, and persists learned patterns to `SKILL.md` files.
 
 ### 2.4. Sub-Agents
@@ -76,11 +76,11 @@ Skills are not just static text but a directory structure (`SKILL.md` + assets).
     ```
 
 * **Progressive Disclosure**: The agent first reads the frontmatter. Only if the skill is relevant does it read the full content/assets. This saves context tokens.
-* **Loading**: Skills are loaded via the `skills=["./workspace/skills"]` parameter in `create_deep_agent`. For the Worker (Daytona), these are synced to the sandbox filesystem.
+* **Loading**: Skills are loaded via the `skills=["./workspace/skills"]` parameter in `create_deep_agent`. For the Worker (Docker), these are synced to the sandbox filesystem.
 
 ### 2.7. Async Execution
 
-Since the Controller communicates with the Worker (Daytona) over the network (HTTP/S3), we **must** use the asynchronous API provided by `deepagents`.
+Since the Controller communicates with the Worker (Docker) over the network (HTTP/S3), we **must** use the asynchronous API provided by `deepagents`.
 
 * **Methods**: Use `aread`, `awrite`, `aedit`, `aexecute` instead of their synchronous counterparts.
 * **Rationale**: This prevents blocking the Controller's event loop during file I/O and command execution, which is critical for a responsive, high-throughput agent system.
@@ -91,18 +91,18 @@ Since the Controller communicates with the Worker (Daytona) over the network (HT
 ### 3.1. Tech Stack
 
 * **Framework**: `deepagents`, `langgraph`, `langchain-core`.
-* **Runtime**: `Daytona` (programmatic sandbox control).
+* **Runtime**: `Docker` (programmatic sandbox control).
 * **Orchestration**: `Temporal` (for durability of long tools).
 * **Observability**: `LangFuse` (via `deepagents` callbacks/integration).
 
 ### 3.2. Architecture
 
 * **State**: Managed by LangGraph, persisted in Postgres.
-* **Files**: Persisted in Daytona Container (ephemeral) + S3 (Assets/Snapshots).
-* **Communication**: Controller talks to Worker via Daytona SDK / HTTP (S3 protocol).
+* **Files**: Persisted in Docker Container (ephemeral) + S3 (Assets/Snapshots).
+* **Communication**: Controller talks to Worker via Docker SDK / HTTP (S3 protocol).
 
 ## 4. Resources
 
 * **Official Docs**: `deepagents` documentation.
-* **Daytona SDK**: Usage of programmatic sandbox control.
+* **Docker SDK**: Usage of programmatic sandbox control.
 * **LangGraph**: Core state machine.
