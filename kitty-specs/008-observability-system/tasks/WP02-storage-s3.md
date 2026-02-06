@@ -47,7 +47,7 @@ Agents produce heavy artifacts like videos and large log files that should not b
 2. Add `download_file(object_key: str, local_path: str)`.
 3. Add `list_files(prefix: str) -> list[str]`.
 4. Include error handling for `botocore.exceptions.ClientError`.
-5. (Optional) Add async versions (`aupload_file`) if `aioboto3` is available/desired, otherwise run in executor. *Stick to sync `boto3` run in threadpool for now if async not strictly required by stack, or use `aioboto3` if consistent with `deepagents` style.*
+5. **Requirement**: Implement async versions (`aupload_file`, `adownload_file`) using `asyncio.to_thread` (wrapping the sync boto3 calls) to ensure the main event loop is not blocked during I/O operations. Do NOT use `aioboto3` unless already present in the stack; `to_thread` is sufficient/preferred for now.
 
 **Implementation Note**:
 

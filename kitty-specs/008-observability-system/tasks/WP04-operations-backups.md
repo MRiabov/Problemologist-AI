@@ -3,7 +3,7 @@ work_package_id: WP04
 title: Operations - Backups
 lane: planned
 dependencies: []
-subtasks: [T011, T012, T013]
+subtasks: [T011, T014, T012, T013]
 ---
 
 # Work Package: Operations - Backups
@@ -38,16 +38,33 @@ We need a daily backup of our state. Since we are using Railway/Podman, we will 
 
 ---
 
-### Subtask T012: Create `POST /ops/backup` endpoint
+### Subtask T014: Implement Temporal Backup Workflow
 
-**Purpose**: Trigger the backup via HTTP (Cron).
+**Purpose**: Wrap backup logic in a durable workflow to handle timeouts and retries.
 
 **Steps**:
 
-1. Add rout `POST /ops/backup` to the controller API.
-2. Protect it with a secret header (e.g., `X-Admin-Key` vs `ADMIN_SECRET` env var).
-3. In the handler, call `backup_postgres` and `backup_s3_files` (ideally using `BackgroundTasks` to avoid timeout, or delegating to Temporal if available).
-4. Return 202 Accepted.
+1. Create `src/ops/workflows.py`.
+2. Define `BackupWorkflow` class with `@workflow.defn`.
+3. Define `run_backup` activity with `@activity.defn` (wrapping functions from T011).
+4. Configure retry policies (e.g., retry on S3 network errors).
+
+**Files**:
+
+- `src/ops/workflows.py` (New)
+
+---
+
+### Subtask T012: Create `POST /ops/backup` endpoint
+
+**Purpose**: Trigger the backup workflow via HTTP.
+
+**Steps**:
+
+1. Add route `POST /ops/backup` to the controller API.
+2. Protect it with a secret header.
+3. In the handler, use `temporal_client.start_workflow(BackupWorkflow, ...)` or `execute_workflow`.
+4. Return 202 Accepted with the Workflow ID.
 
 **Files**:
 
@@ -78,7 +95,8 @@ We need a daily backup of our state. Since we are using Railway/Podman, we will 
 ## Definition of Done
 
 - [ ] Backup logic implemented for both DB and Files.
-- [ ] Secure API endpoint exists.
+- [ ] Temporal Workflow defined for backups.
+- [ ] Secure API endpoint triggers the workflow.
 - [ ] Integration tests verify the flow.
 - [ ] `Dockerfile` (or `apt-get` steps) updated to include `postgresql-client` (for `pg_dump`) if not already present.
 

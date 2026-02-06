@@ -3,7 +3,7 @@ work_package_id: "WP01"
 title: "Foundation - Tracing & Persistence"
 lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003"]
+subtasks: ["T001", "T002", "T003", "T003c"]
 agent: "gemini-cli"
 shell_pid: "483300"
 ---
@@ -64,6 +64,29 @@ The observability system is critical for debugging, monitoring, and future train
 
 ---
 
+### Subtask T003c: Configure `structlog`
+
+**Purpose**: Ensure all logs are emitted as structured JSON for easy parsing by observability tools.
+
+**Steps**:
+
+1. Create `src/observability/logging.py`.
+2. Configure `structlog` processors:
+    - `TimeStamper(fmt="iso")`
+    - `JSONRenderer()`
+    - Add correlation IDs (trace_id) if available in context.
+3. Replace standard `logging` handlers with structlog configuration.
+
+**Files**:
+
+- `src/observability/logging.py` (New)
+
+**Validation**:
+
+- Run a script that logs a message and verify output is valid JSON.
+
+---
+
 ### Subtask T003: Write unit tests for tracing and persistence configuration
 
 **Purpose**: Verify the foundation code works in isolation.
@@ -90,6 +113,7 @@ The observability system is critical for debugging, monitoring, and future train
 ## Definition of Done
 
 - [ ] `src/observability/tracing.py` exists and correctly initializes LangFuse.
+- [ ] `src/observability/logging.py` configures Structlog.
 - [ ] `src/observability/persistence.py` exists and provides a Postgres checkpointer.
 - [ ] Unit tests pass for both components.
 - [ ] No hardcoded credentials (all from env).
