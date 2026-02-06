@@ -119,7 +119,7 @@ Domain-specific actions are performed by writing Python code that imports and ca
 - **Framework**: `deepagents` (extending LangChain/LangGraph).
 - **Orchestration**: `Temporal` (for long-running worker tasks).
 - **Runtime**: Python 3.10+, Podman (for Worker sandboxing).
-- **Schema**: OpenAPI strictly defined between Controller and Worker.
+- **Schema**: OpenAPI strictly defined (Strict types, Enums) between Controller and Worker.
 - **CAD/Sim**: `build123d`, `mujoco`.
 
 ### 5.2. Component Interaction

@@ -9,6 +9,12 @@ We use `pydantic.BaseModel` (v2) for all data exchange between Controller, Worke
 High-level tracking for an agentic session.
 
 ```python
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from uuid import UUID
+from enum import StrEnum
+from pydantic import BaseModel, StrictStr, StrictInt, StrictBool, HttpUrl
+
 class AgentType(StrEnum):
     ENGINEER = "engineer"
     BENCHMARK_GENERATOR = "benchmark_generator"
@@ -28,8 +34,7 @@ class EpisodeMetadata(BaseModel):
     status: EpisodeStatus
     start_time: datetime
     end_time: Optional[datetime] = None
-    config_snapshot: Dict[str, Any]  # YAML config used for this run
-```
+    config_snapshot: Dict[StrictStr, Any]  # YAML config used for this run
 
 ### 2. SandboxCommand
 
@@ -37,10 +42,10 @@ Payload for executing a command on the worker.
 
 ```python
 class SandboxCommand(BaseModel):
-    command: str
-    timeout_seconds: int = 300
-    env_vars: Dict[str, str] = {}
-    workdir: str = "."
+    command: StrictStr
+    timeout_seconds: StrictInt = 300
+    env_vars: Dict[StrictStr, StrictStr] = {}
+    workdir: StrictStr = "."
 ```
 
 ### 3. SimulationResult (Feedback Model)
@@ -49,11 +54,11 @@ Data returned from the simulation engine to the agent.
 
 ```python
 class SimulationResult(BaseModel):
-    success: bool
-    summary: str  # Markdown summary for the agent
+    success: StrictBool
+    summary: StrictStr  # Markdown summary for the agent
     video_url: Optional[HttpUrl] = None
-    telemetry: Dict[str, List[float]]  # Coordinates, energy, etc.
-    error_log: Optional[str] = None
+    telemetry: Dict[StrictStr, List[float]]  # Coordinates, energy, etc.
+    error_log: Optional[StrictStr] = None
 ```
 
 ### 4. TraceStep
@@ -65,10 +70,10 @@ class TraceStep(BaseModel):
     step_id: UUID
     episode_id: UUID
     timestamp: datetime
-    input: Dict[str, Any]  # Tool inputs or Prompt
-    output: str  # Tool output or LLM Response
-    internal_thought: Optional[str] = None
-    journal_link: Optional[str] = None
+    input: Dict[StrictStr, Any]  # Tool inputs or Prompt
+    output: StrictStr  # Tool output or LLM Response
+    internal_thought: Optional[StrictStr] = None
+    journal_link: Optional[StrictStr] = None
 ```
 
 ## Persistence Strategy
