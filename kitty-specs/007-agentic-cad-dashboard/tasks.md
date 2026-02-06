@@ -7,11 +7,11 @@
 
 ### WP01: Dashboard Skeleton & Infrastructure
 
-- [ ] T001: Initialize Vite React Project with TypeScript in `src/frontend`
-- [ ] T002: Setup TailwindCSS and Shadcn/UI (Button, Card, Input, Sheet, Sidebar)
-- [ ] T003: Configure React Router (Routes: Home, Run Detail, Wizard)
-- [ ] T004: Setup Layout Components (Sidebar, Header, AppShell)
-- [ ] T005: Configure ESLint, Prettier, and path aliases
+- [x] T001: Initialize Vite React Project with TypeScript in `src/frontend`
+- [x] T002: Setup TailwindCSS and Shadcn/UI (Button, Card, Input, Sheet, Sidebar)
+- [x] T003: Configure React Router (Routes: Home, Run Detail, Wizard)
+- [x] T004: Setup Layout Components (Sidebar, Header, AppShell)
+- [x] T005: Configure ESLint, Prettier, and path aliases
 
 **Summary**: Set up the foundational React technology stack and project structure.
 **Dependencies**: None
