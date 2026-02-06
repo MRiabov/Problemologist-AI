@@ -1,0 +1,88 @@
+---
+work_package_id: WP02
+title: Physics Simulation Loop
+lane: planned
+dependencies: []
+subtasks: [T007, T008, T009, T010, T011, T012]
+---
+
+# WP02: Physics Simulation Loop
+
+## Objective
+
+Implement the engine that loads the MJCF XML and steps through time, detecting critical events (success/fail) and collecting metrics.
+
+## Context
+
+Standard MuJoCo loops run at fixed timesteps (usually 2ms / 500Hz). We need to wrap this in a python class that can be inspected between steps.
+The loop must verify "Zones" defined in WP01.
+
+## Implementation Guide
+
+### T007: Implement SimulationLoop Class
+
+**File**: `src/worker/simulation/loop.py`
+
+1. Class `SimulationLoop`.
+2. `__init__(self, xml_path: str)`:
+   - Load `self.model = mujoco.MjModel.from_xml_path(xml_path)`
+   - Create `self.data = mujoco.MjData(self.model)`
+
+### T008: Implement Physics Stepping
+
+**File**: `src/worker/simulation/loop.py`
+
+1. Method `step(self, control_inputs: dict) -> bool`.
+2. Apply controls (force/torque/position) to actuators found in `self.data.ctrl`.
+3. Call `mujoco.mj_step(self.model, self.data)`.
+4. Run for a max duration (e.g. 10 seconds simulation time).
+
+### T009: Implement Forbidden Zone Detection
+
+**Goal**: Fail if any physical object touches a forbidden zone.
+
+1. In `step()`:
+   - Iterate loops over `self.data.contact` (array of contact pairs).
+   - Check `geom1` and `geom2` IDs.
+   - Use `mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, id)` to get names.
+   - If name starts with `zone_forbid`: Trigger FAIL.
+
+### T010: Implement Goal Zone Detection
+
+**Goal**: Succeed if Target Object (e.g., named `target_box`) is is inside `zone_goal`.
+
+1. Identifying inside is tricky with simple Sites.
+   - **Method A**: Check center of mass distance. `data.site_xpos['zone_goal']` vs `data.body_xpos['target']`. If dist < threshold -> SUCCESS.
+   - **Method B** (Robust): Define `zone_goal` as a phantom Geom (sensor). Check for contact between `target` and `zone_goal`.
+   - **Selection**: Use **contact-based** if possible (requires phantom geom in WP01), or strict **AABB containment** logic (check if target position is within zone bounds).
+   - Implement simpler AABB check: Get zone bounds from startup (geom size), check if target pos is within logic.
+
+### T011: Implement MetricCollector
+
+**File**: `src/worker/simulation/metrics.py` or inside `loop.py`
+
+1. Track:
+   - `total_time`: `data.time`.
+   - `total_energy`: sum of `ctrl * velocity` or similar rough proxy.
+   - `max_velocity`: peak speed of target.
+2. Accumulate these per step.
+
+### T012: Add Tests
+
+**File**: `tests/worker/simulation/test_loop.py`
+
+1. Create a dummy MJCF with a falling ball and a floor.
+2. Run `SimulationLoop` for 100 steps.
+3. Assert Z-height decreases (simulation is running).
+4. Assert collision with floor happens eventually.
+5. Setup a "Zone" test: Place ball inside a zone, assert detection triggers.
+
+## Validation
+
+- [ ] Tests pass.
+- [ ] Physics behaves deterministically (same seed/start = same result).
+
+## Risks
+
+- **High Speed Tunneling**: Fast objects skipping through thin zones.
+  - *Mitigation*: Increase simulation freq (set timestep=0.002 or smaller).
