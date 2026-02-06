@@ -97,12 +97,12 @@
 **Priority**: Medium (Phase 2)
 **Tests**: Unit tests for `utils` package.
 
-- [ ] T022: Create `src/worker/utils/` package.
-- [ ] T023: Implement `validate_and_price(component)` (Workbench integration).
-- [ ] T024: Implement `simulate(component)` (Trigger Temporal Workflow in Controller, wait for S3 assets/summary).
-- [ ] T025: Implement `submit_for_review(component)` (Reviewer agent integration).
-- [ ] T037: Implement 24-view preredering logic for environment assets to support agent handover requirements.
-- [ ] T026: Ensure these utils are importable by the `runtime` execution (PYTHONPATH).
+- [x] T022: Create `src/worker/utils/` package.
+- [x] T023: Implement `validate_and_price(component)` (Workbench integration).
+- [x] T024: Implement `simulate(component)` (Trigger Temporal Workflow in Controller, wait for S3 assets/summary).
+- [x] T025: Implement `submit_for_review(component)` (Reviewer agent integration).
+- [x] T037: Implement 24-view preredering logic for environment assets to support agent handover requirements.
+- [x] T026: Ensure these utils are importable by the `runtime` execution (PYTHONPATH).
 
 **Implementation**:
 
