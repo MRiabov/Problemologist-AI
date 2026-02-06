@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import random
 import re
 import subprocess
 import sys
@@ -15,7 +16,11 @@ RETRYABLE_ERRORS = [
     "Rate limit reached",
     "quota exceeded",
     "Internal error occurred",
+    "exhausted your capacity",
 ]
+
+RED = "\033[91m"
+RESET = "\033[0m"
 
 
 @dataclass
@@ -104,10 +109,6 @@ def is_stale(wp: WorkPackage) -> bool:
     return (now - wp.last_updated) > timedelta(minutes=15)
 
 
-RED = "\033[91m"
-RESET = "\033[0m"
-
-
 def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
     attempt = 0
     cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
@@ -124,6 +125,7 @@ def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
             if not line and process.poll() is not None:
                 break
             if line:
+                # Still print to console so user can see progress
                 print(f"  [{spec_key}] {line.strip()}")
                 output.append(line)
 
@@ -142,24 +144,25 @@ def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
         if should_retry:
             attempt += 1
             if attempt < max_retries:
+                # Minimum 15s wait as requested to be safe on API side
+                wait_time = 15
                 print(
-                    f"  [{spec_key}] ⚠️  Retryable error. Waiting 5s... "
-                    f"(Attempt {attempt}/{max_retries})"
+                    f"  [{spec_key}] ⚠️  Retryable error detected. Waiting {wait_time}s to retry... (Attempt {attempt}/{max_retries})"
                 )
-                time.sleep(5)
+                time.sleep(wait_time)
                 continue
-            print(f"{RED}  [{spec_key}] ❌ Fatal: Max retries reached.{RESET}")
+            else:
+                print(f"{RED}  [{spec_key}] ❌ Fatal: Max retries reached.{RESET}")
         else:
             print(
-                f"{RED}  [{spec_key}] ❌ Fatal: Failed with non-retryable error "
-                f"(exit code {returncode}).{RESET}"
+                f"{RED}  [{spec_key}] ❌ Fatal: Failed with non-retryable error (exit code {returncode}).{RESET}"
             )
             return
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run implementation for the first available WP in parallel."
+        description="Run implementation for the first available work package in each spec in parallel."
     )
     parser.add_argument(
         "--dry-run",
@@ -170,7 +173,19 @@ def main():
         "--max-retries",
         type=int,
         default=5,
-        help="Max retries for overloaded model provider (default: 5).",
+        help="Maximum number of retries for overloaded model provider (default: 5).",
+    )
+    parser.add_argument(
+        "--min-stagger",
+        type=int,
+        default=15,
+        help="Minimum staggering delay in seconds (default: 15).",
+    )
+    parser.add_argument(
+        "--max-stagger",
+        type=int,
+        default=45,
+        help="Maximum staggering delay in seconds (default: 45).",
     )
     args = parser.parse_args()
 
@@ -181,6 +196,7 @@ def main():
 
     print("🔍 Scanning specs for available work packages...")
 
+    # Collect WPs by spec
     spec_wps: dict[str, list[WorkPackage]] = {}
 
     for spec_dir in sorted(base_path.iterdir()):
@@ -219,7 +235,7 @@ def main():
                 candidate = wp
                 break
             if wp.lane == "doing" and not is_stale(wp):
-                print(f"  Skipping {spec_key}: Active task {wp.id} in progress.")
+                print(f"  Skipping {spec_key}: Active task {wp.id} is in progress.")
                 candidate = None
                 break
 
@@ -237,23 +253,29 @@ def main():
         print("\nNo work packages found to implement.")
         return
 
-    print(f"\n🚀 Launching {len(commands_to_run)} agents in parallel...")
+    print(f"\n🚀 Launching {len(commands_to_run)} agents with staggered start...")
 
     threads = []
 
-    for spec_key, cmd in commands_to_run:
+    for i, (spec_key, cmd) in enumerate(commands_to_run):
         if args.dry_run:
             cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
             print(f"  [{spec_key}] [Dry Run] Would execute: {cmd_str}")
-        else:
-            t = threading.Thread(
-                target=run_with_retry, args=(spec_key, cmd, args.max_retries)
-            )
-            threads.append(t)
-            t.start()
+            continue
+
+        if i > 0:
+            delay = random.randint(args.min_stagger, args.max_stagger)
+            print(f"\n⏳ Waiting {delay}s before starting next agent...")
+            time.sleep(delay)
+
+        t = threading.Thread(
+            target=run_with_retry, args=(spec_key, cmd, args.max_retries)
+        )
+        threads.append(t)
+        t.start()
 
     if not args.dry_run:
-        print(f"\nStarted {len(threads)} agents. Waiting for completion...")
+        print(f"\nAll {len(threads)} agents active. Waiting for completion...")
         try:
             for t in threads:
                 t.join()
