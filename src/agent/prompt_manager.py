@@ -58,10 +58,10 @@ Manufacturability Report:
 Instructions:
 1. Check if the simulation passed.
 2. Check if the part is manufacturable and within budget.
-3. Decide whether to APPROVE or REJECT the solution.
+3. Decide whether to APPROVE, REJECT_PLAN (if the whole strategy is wrong), or REJECT_CODE (if it's just a small bug).
 
 Output your response in this format:
-DECISION: <APPROVE or REJECT>
+DECISION: <APPROVE, REJECT_PLAN or REJECT_CODE>
 FEEDBACK: <your detailed feedback here>
 """,
                 "sidecar": """You are the Sidecar Learner. 

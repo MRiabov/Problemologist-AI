@@ -1,4 +1,6 @@
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+
 from .state import AgentState
 from .nodes.architect import architect_node
 from .nodes.engineer import engineer_node
@@ -9,9 +11,13 @@ def should_continue(state: AgentState) -> str:
     """Route after critic based on approval status."""
     if state.status == "approved":
         return "sidecar"
-    # If rejected and we haven't looped too many times, go back to engineer
+    
+    # If rejected and we haven't looped too many times
     if state.iteration < 5:
+        if state.status == "plan_rejected":
+            return "architect"
         return "engineer"
+    
     return "sidecar"
 
 # Initialize the StateGraph with our AgentState
@@ -34,10 +40,14 @@ builder.add_conditional_edges(
     should_continue,
     {
         "engineer": "engineer",
+        "architect": "architect",
         "sidecar": "sidecar"
     }
 )
 
 builder.add_edge("sidecar", END)
 
-graph = builder.compile()
+# T026: Implement Checkpointing
+memory = MemorySaver()
+
+graph = builder.compile(checkpointer=memory)
