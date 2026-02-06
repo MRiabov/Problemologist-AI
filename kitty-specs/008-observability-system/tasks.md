@@ -15,9 +15,9 @@
 
 **Setup the core observability infrastructure: LangFuse for tracing and Postgres for LangGraph persistence.**
 
-- [ ] T001: Implement `LangFuseCallbackHandler` and initialization logic in `src/observability/tracing.py`. <!-- id: T001 -->
-- [ ] T002: Implement `PostgresSaver` customization for LangGraph in `src/observability/persistence.py`. <!-- id: T002 -->
-- [ ] T003: Write unit tests for tracing and persistence configuration. <!-- id: T003 -->
+- [x] T001: Implement `LangFuseCallbackHandler` and initialization logic in `src/observability/tracing.py`. <!-- id: T001 -->
+- [x] T002: Implement `PostgresSaver` customization for LangGraph in `src/observability/persistence.py`. <!-- id: T002 -->
+- [x] T003: Write unit tests for tracing and persistence configuration. <!-- id: T003 -->
 
 **Implementation Notes**:
 
@@ -34,7 +34,7 @@
 
 **Implement the S3 interface for handling artifact storage (videos, large files).**
 
-- [ ] T004: Create `S3Client` wrapper in `src/observability/storage.py` using `boto3`. <!-- id: T004 -->
+- [x] T004: Create `S3Client` wrapper in `src/observability/storage.py` using `boto3`. <!-- id: T004 -->
 - [ ] T005: Implement `upload_file`, `download_file`, `list_files` methods. <!-- id: T005 -->
 - [ ] T006: Implement `get_presigned_url` method for secure access. <!-- id: T006 -->
 - [ ] T007: Write unit tests for S3 wrapper using `moto` or mocks. <!-- id: T007 -->
