@@ -8,6 +8,7 @@ base_commit: 0b79d9c623e937f5967adc5b445192b489a677b5
 created_at: '2026-02-06T14:29:57.869827+00:00'
 subtasks: [T027, T028, T029, T030, T031]
 shell_pid: "646690"
+agent: "gemini-cli"
 ---
 
 ## WP06: Temporal Orchestration
@@ -70,3 +71,7 @@ File: `src/controller/workflows/execution.py`
 3. Kill Controller.
 4. Restart Controller.
 5. Verify script completion is eventually recorded.
+
+## Activity Log
+
+- 2026-02-06T14:29:58Z – gemini-cli – shell_pid=646690 – lane=doing – Assigned agent via workflow command
