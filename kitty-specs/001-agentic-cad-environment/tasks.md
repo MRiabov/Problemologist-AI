@@ -119,11 +119,11 @@
 **Priority**: Medium (Phase 2)
 **Tests**: Run a "long" task and restart Worker; verify task completes.
 
-- [ ] T027: Add Temporal service to `docker-compose`.
-- [ ] T028: Implement Temporal Worker in Controller.
-- [ ] T029: Define `SimulationWorkflow` (Orchestrate Worker -> Run Sim -> Upload -> DB Update).
-- [ ] T030: Implement `ScriptExecutionWorkflow` in Controller to wrap long-running Worker executions (triggered by agent scripts) for durability.
-- [ ] T031: Update `utils.simulate()` to call Controller API to start/poll `SimulationWorkflow`.
+- [x] T027: Add Temporal service to `docker-compose`.
+- [x] T028: Implement Temporal Worker in Controller.
+- [x] T029: Define `SimulationWorkflow` (Orchestrate Worker -> Run Sim -> Upload -> DB Update).
+- [x] T030: Implement `ScriptExecutionWorkflow` in Controller to wrap long-running Worker executions (triggered by agent scripts) for durability.
+- [x] T031: Update `utils.simulate()` to call Controller API to start/poll `SimulationWorkflow`.
 
 **Implementation**:
 
