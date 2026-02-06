@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP03"
-title: "Worker API & Client"
-lane: "planned"
-dependencies: ["WP02"]
-subtasks: ["T012", "T013", "T014", "T015", "T016"]
+work_package_id: WP03
+title: Worker API & Client
+lane: "doing"
+dependencies: [WP02]
+base_branch: 001-agentic-cad-environment-WP02
+base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
+created_at: '2026-02-06T11:26:22.006465+00:00'
+subtasks: [T012, T013, T014, T015, T016]
+shell_pid: "550696"
 ---
 
 # WP03: Worker API & Client
