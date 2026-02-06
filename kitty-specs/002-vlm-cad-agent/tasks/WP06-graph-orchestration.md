@@ -1,13 +1,13 @@
 ---
 work_package_id: WP06
 title: Graph Orchestration
-lane: "done"
+lane: "doing"
 dependencies: []
 base_branch: 002-vlm-cad-agent-WP05
 base_commit: 71b0688ff1eab316e8ffebdda302044a2c68f2ee
 created_at: '2026-02-06T14:42:04.319118+00:00'
 subtasks: [T024, T025, T026, T027]
-shell_pid: "47212"
+shell_pid: "49153"
 agent: "antigravity"
 reviewed_by: "MRiabov"
 review_status: "approved"
@@ -76,3 +76,4 @@ Enable `deepagents` persistence.
 - 2026-02-06T17:46:40Z – antigravity – shell_pid=47212 – lane=doing – Started review via workflow command
 - 2026-02-06T17:48:47Z – antigravity – shell_pid=47212 – lane=done – Review passed: Implementation verified, tests passing, rebase successful.
 - 2026-02-06T17:49:40Z – antigravity – shell_pid=47212 – lane=done – Review passed: Rebased and tests passed.
+- 2026-02-06T17:49:55Z – antigravity – shell_pid=49153 – lane=doing – Started review via workflow command
