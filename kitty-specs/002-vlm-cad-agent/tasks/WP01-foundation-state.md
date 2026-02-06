@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Foundation & State
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: [T001, T002, T003, T004]
 agent: "Gemini"
@@ -74,3 +74,4 @@ Verify the state initialization.
 - 2026-02-06T08:05:25Z – Gemini-CLI – shell_pid=479850 – lane=doing – Started implementation via workflow command
 - 2026-02-06T08:14:39Z – Gemini-CLI – shell_pid=479850 – lane=for_review – Ready for review: Foundation state and graph skeleton implemented with tests.
 - 2026-02-06T14:03:37Z – Gemini – shell_pid=623438 – lane=doing – Started implementation via workflow command
+- 2026-02-06T14:15:53Z – Gemini – shell_pid=623438 – lane=for_review – Ready for review: Foundation state and graph skeleton implemented with tests.
