@@ -1,14 +1,14 @@
 ---
 work_package_id: WP03
 title: Injection Molding Workbench Implementation
-lane: "for_review"
+lane: "doing"
 dependencies: [WP01]
 base_branch: 004-advanced-manufacturing-workbenches-WP02
 base_commit: 11908c76e29b8964dd73e20485f87c80a221329f
 created_at: '2026-02-06T21:08:41.118506+00:00'
 subtasks: [T010, T011, T012, T013, T014]
-shell_pid: "119564"
-agent: "Gemini"
+shell_pid: "126207"
+agent: "Gemini-CLI"
 ---
 
 # WP03: Injection Molding Workbench Implementation
@@ -89,3 +89,4 @@ Implement the `analyze_im` function which checks if a part is moldable and estim
 
 - 2026-02-06T21:08:41Z – Gemini – shell_pid=119564 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T21:13:19Z – Gemini – shell_pid=119564 – lane=for_review – Ready for review: Implemented Injection Molding workbench with functional analysis (analyze_im), draft angle and wall thickness validation, and cost estimation. Added unit tests verifying logic and structlog integration.
+- 2026-02-06T21:15:29Z – Gemini-CLI – shell_pid=126207 – lane=doing – Started review via workflow command
