@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP04"
-title: "Agent Integration & Facade"
-lane: "planned"
-dependencies: ["WP02", "WP03"]
-subtasks: ["T015", "T016"]
+work_package_id: WP04
+title: Agent Integration & Facade
+lane: "doing"
+dependencies: [WP02, WP03]
+base_branch: 004-advanced-manufacturing-workbenches-WP03
+base_commit: 872ab04f9f4c239be6d4356d2898ae23339c05bf
+created_at: '2026-02-06T21:17:18.899183+00:00'
+subtasks: [T015, T016]
+shell_pid: "128035"
 ---
 
 # WP04: Agent Integration & Facade
