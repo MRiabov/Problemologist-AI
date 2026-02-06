@@ -1,0 +1,43 @@
+defaults:
+  currency: "USD"
+
+cnc:
+  materials:
+    aluminum_6061:
+      name: "Aluminum 6061"
+      density_g_cm3: 2.7
+      cost_per_kg: 6.0
+      machine_hourly_rate: 80.0
+  constraints:
+    mrr_mm3_per_min: 1000.0
+  parameters:
+    finishing_feed_rate_mm_min: 500.0
+    finishing_stepover_mm: 0.5
+  costs:
+    setup_fee: 100.0
+
+injection_molding:
+  materials:
+    abs:
+      name: "ABS"
+      density_g_cm3: 1.04
+      cost_per_kg: 2.5
+      machine_hourly_rate: 60.0
+  constraints:
+    min_draft_angle_deg: 2.0
+    min_wall_thickness_mm: 1.0
+    max_wall_thickness_mm: 4.0
+  costs:
+    base_mold_cost: 5000.0
+    mold_cost_per_surface_area_cm2: 0.5
+    injection_rate_cm3_s: 10.0
+
+three_dp:
+  materials:
+    abs:
+      name: "ABS (3DP)"
+      density_g_cm3: 1.04
+      cost_per_kg: 20.0
+      machine_hourly_rate: 20.0
+  costs:
+    setup_fee: 10.0
