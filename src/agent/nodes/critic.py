@@ -15,7 +15,11 @@ class CriticNode:
     Critic node: Evaluates the Engineer's output based on simulation and workbench reports.
     """
 
-    def __init__(self, worker_url: str = "http://worker:8001", session_id: str = "default-session"):
+    def __init__(
+        self,
+        worker_url: str = "http://worker:8001",
+        session_id: str = "default-session",
+    ):
         self.pm = PromptManager()
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
@@ -31,10 +35,12 @@ class CriticNode:
             "critic",
             task=state.task,
             journal=state.journal,
-            sim_report=json.dumps(sim_report, indent=2) if sim_report else "No simulation report found.",
-            mfg_report=mfg_report or "No manufacturability report found."
+            sim_report=json.dumps(sim_report, indent=2)
+            if sim_report
+            else "No simulation report found.",
+            mfg_report=mfg_report or "No manufacturability report found.",
         )
-        
+
         response = await self.llm.ainvoke([HumanMessage(content=prompt)])
         content = str(response.content)
 
@@ -42,10 +48,10 @@ class CriticNode:
         # Expecting format:
         # DECISION: APPROVE | REJECT_PLAN | REJECT_CODE
         # FEEDBACK: <feedback>
-        
+
         decision = "REJECT_CODE"
         feedback = "Failed to parse critic decision."
-        
+
         if "DECISION: APPROVE" in content:
             decision = "APPROVE"
         elif "DECISION: REJECT_PLAN" in content:
@@ -53,8 +59,8 @@ class CriticNode:
         elif "DECISION: REJECT_CODE" in content:
             decision = "REJECT_CODE"
         elif "DECISION: REJECT" in content:
-            decision = "REJECT_CODE" # Default reject
-            
+            decision = "REJECT_CODE"  # Default reject
+
         if "FEEDBACK:" in content:
             feedback = content.split("FEEDBACK:")[1].strip()
         else:
@@ -65,13 +71,13 @@ class CriticNode:
         status_map = {
             "APPROVE": "approved",
             "REJECT_PLAN": "plan_rejected",
-            "REJECT_CODE": "code_rejected"
+            "REJECT_CODE": "code_rejected",
         }
 
         return {
             "status": status_map.get(decision, "code_rejected"),
             "feedback": feedback,
-            "journal": state.journal + journal_entry
+            "journal": state.journal + journal_entry,
         }
 
     async def _read_artifact(self, path: str) -> Optional[str]:
@@ -89,7 +95,13 @@ class CriticNode:
                 return None
         return None
 
+
+from ..config import settings
+
+
 # Factory function for LangGraph
 async def critic_node(state: AgentState) -> Dict[str, Any]:
-    node = CriticNode()
+    node = CriticNode(
+        worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
+    )
     return await node(state)
