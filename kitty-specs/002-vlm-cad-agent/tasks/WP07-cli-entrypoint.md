@@ -1,9 +1,13 @@
 ---
 work_package_id: WP07
 title: CLI Entrypoint
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: 002-vlm-cad-agent-WP06
+base_commit: 3518222e0cff6076161f46093c4870d73375c188
+created_at: '2026-02-06T15:02:55.074432+00:00'
 subtasks: [T028, T029, T030, T031]
+shell_pid: "678995"
 ---
 
 ## Objective
