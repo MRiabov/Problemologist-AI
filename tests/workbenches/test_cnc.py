@@ -15,6 +15,9 @@ def test_cnc_machinable_part(config):
         with BuildSketch(p.faces().sort_by(Axis.Z)[-1]) as s:
             Rectangle(10, 10)
         extrude(amount=-5, mode=Mode.SUBTRACT)
+        # Fillet the vertical edges of the pocket to make it machinable
+        # Filleting all vertical edges is safe for this test.
+        fillet(p.edges().filter_by(Axis.Z), radius=2)
     
     result = analyze_cnc(p.part, config)
     assert result.is_manufacturable is True
@@ -59,6 +62,22 @@ def test_cnc_undercut_part(config):
     result = analyze_cnc(p2.part, config)
     assert result.is_manufacturable is False
     assert len(result.violations) > 0
+
+def test_cnc_sharp_internal_corner(config):
+    # A block with a sharp square pocket (not machinable with round tool)
+    with BuildPart() as p:
+        Box(20, 20, 10)
+        with BuildSketch(p.faces().sort_by(Axis.Z)[-1]) as s:
+            Rectangle(10, 10)
+        extrude(amount=-5, mode=Mode.SUBTRACT)
+    
+    # Current implementation is a placeholder, so this might pass (no violations)
+    # until we implement the actual check.
+    result = analyze_cnc(p.part, config)
+    # We WANT this to be False once implemented
+    # For now, let's see what it does.
+    # Actually, let's assert it fails so we can confirm implementation works.
+    assert any("internal vertical corner" in v.lower() for v in result.violations)
 
 def test_cnc_cost_calculation(config):
     with BuildPart() as p:
