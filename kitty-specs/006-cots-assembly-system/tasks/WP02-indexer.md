@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP02"
-title: "Indexer Implementation"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T005", "T006", "T007", "T008", "T009"]
+work_package_id: WP02
+title: Indexer Implementation
+lane: "doing"
+dependencies: [WP01]
+base_branch: 006-cots-assembly-system-WP01
+base_commit: 22f6e149ae2d21566c7afdae80a281f72989dcbf
+created_at: '2026-02-06T15:07:15.564745+00:00'
+subtasks: [T005, T006, T007, T008, T009]
+shell_pid: "684091"
 ---
 
 # WP02: Indexer Implementation
