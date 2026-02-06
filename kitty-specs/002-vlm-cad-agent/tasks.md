@@ -55,10 +55,10 @@
 **Priority**: Medium
 **Dependencies**: WP01
 
-- [ ] T020: Implement `src/agent/nodes/sidecar.py` as a background process.
-- [ ] T021: Parse Journal for patterns.
-- [ ] T022: Implement Skill extraction logic and persistent suggestion storage.
-- [ ] T023: Test Sidecar async triggering.
+- [x] T020: Implement `src/agent/nodes/sidecar.py` as a background process.
+- [x] T021: Parse Journal for patterns.
+- [x] T022: Implement Skill extraction logic and persistent suggestion storage.
+- [x] T023: Test Sidecar async triggering.
 
 ### WP06: Graph Orchestration
 
