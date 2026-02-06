@@ -1,13 +1,13 @@
 ---
 work_package_id: WP04
 title: Controller & DeepAgents Integration
-lane: "for_review"
+lane: "doing"
 dependencies: [WP03]
 base_branch: 001-agentic-cad-environment-WP03
 base_commit: f674a15ba42a8a71761ab2d7ca73b4515d1b082b
 created_at: '2026-02-06T11:50:04.690481+00:00'
 subtasks: [T017, T018, T019, T020, T021]
-shell_pid: "563842"
+shell_pid: "581078"
 agent: "Antigravity"
 ---
 
@@ -78,3 +78,4 @@ File: `src/controller/graph/agent.py`
 
 - 2026-02-06T11:50:04Z – Gemini – shell_pid=563842 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T12:27:51Z – Antigravity – shell_pid=563842 – lane=for_review – Integrated RemoteFilesystemMiddleware and LangGraph agent. Verified with tests.
+- 2026-02-06T12:28:45Z – Antigravity – shell_pid=581078 – lane=doing – Started review via workflow command
