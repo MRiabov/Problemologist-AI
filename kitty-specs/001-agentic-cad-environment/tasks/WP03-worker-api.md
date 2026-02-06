@@ -1,14 +1,14 @@
 ---
 work_package_id: WP03
 title: Worker API & Client
-lane: "done"
+lane: "doing"
 dependencies: [WP02]
 base_branch: 001-agentic-cad-environment-WP02
 base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
 created_at: '2026-02-06T11:26:22.006465+00:00'
 subtasks: [T012, T013, T014, T015, T016]
-shell_pid: "556670"
-agent: "gemini"
+shell_pid: "579931"
+agent: "Antigravity"
 reviewed_by: "MRiabov"
 review_status: "approved"
 ---
@@ -92,3 +92,4 @@ File: `src/worker/api/routes.py`
 - 2026-02-06T11:32:50Z – gemini-cli – shell_pid=550696 – lane=for_review – Ready for review: Worker API implemented with FastAPI, including Pydantic schemas, FS and Runtime endpoints, async WorkerClient, and schemathesis fuzzing tests.
 - 2026-02-06T11:34:09Z – gemini – shell_pid=556670 – lane=doing – Started review via workflow command
 - 2026-02-06T12:14:34Z – gemini – shell_pid=556670 – lane=done – Review passed: Implemented FastAPI app with Structlog, Pydantic schemas, and FS/Runtime endpoints. WorkerClient generated. Unit tests and Schemathesis fuzzing (7 endpoints) passed.
+- 2026-02-06T12:26:55Z – Antigravity – shell_pid=579931 – lane=doing – Started review via workflow command
