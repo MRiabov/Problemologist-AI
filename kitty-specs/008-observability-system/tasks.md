@@ -19,7 +19,7 @@
 - [x] T002: Implement `PostgresSaver` customization for LangGraph in `src/observability/persistence.py`. <!-- id: T002 -->
 - [x] T003: Write unit tests for tracing and persistence configuration. <!-- id: T003 -->
 - [ ] T003b: Implement `JournalManager` utility for structured episodic memory logging.
-- [ ] T003c: Configure `structlog` for structured JSON logging. <!-- id: T003c -->
+- [x] T003c: Configure `structlog` for structured JSON logging. <!-- id: T003c -->
 
 **Implementation Notes**:
 
