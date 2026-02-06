@@ -104,6 +104,10 @@ def is_stale(wp: WorkPackage) -> bool:
     return (now - wp.last_updated) > timedelta(minutes=15)
 
 
+RED = "\033[91m"
+RESET = "\033[0m"
+
+
 def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
     attempt = 0
     cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
@@ -144,11 +148,11 @@ def run_with_retry(spec_key: str, cmd: list[str], max_retries: int = 5):
                 )
                 time.sleep(5)
                 continue
-            print(f"  [{spec_key}] ❌ Max retries reached. Failing.")
+            print(f"{RED}  [{spec_key}] ❌ Fatal: Max retries reached.{RESET}")
         else:
             print(
-                f"  [{spec_key}] ❌ Failed with non-retryable error "
-                f"(exit code {returncode})."
+                f"{RED}  [{spec_key}] ❌ Fatal: Failed with non-retryable error "
+                f"(exit code {returncode}).{RESET}"
             )
             return
 
