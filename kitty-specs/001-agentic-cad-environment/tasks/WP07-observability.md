@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: Observability & Persistence
-lane: "doing"
+lane: "for_review"
 dependencies: [WP04]
 base_branch: 001-agentic-cad-environment-WP04
 base_commit: 371c916b02b74710a197bd76731c7afc0b293061
@@ -66,3 +66,4 @@ File: `src/controller/observability/langfuse.py`
 - 2026-02-06T14:59:01Z – gemini-cli – shell_pid=674358 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T15:04:18Z – gemini-cli – shell_pid=674358 – lane=for_review – Ready for review: Implemented structured logging, SQLAlchemy persistence with episodes/traces/assets, and LangFuse integration. Added unit tests for observability and persistence.
 - 2026-02-06T15:08:22Z – gemini-cli – shell_pid=685546 – lane=doing – Started implementation via workflow command
+- 2026-02-06T15:15:16Z – gemini-cli – shell_pid=685546 – lane=for_review – Ready for review: Implemented structured logging, SQLAlchemy persistence with episodes/traces/assets, and LangFuse integration. Added unit tests for observability and persistence. Updated data model spec with Enums.
