@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Worker API & Client
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: 001-agentic-cad-environment-WP02
 base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
@@ -87,3 +87,4 @@ File: `src/worker/api/routes.py`
 ## Activity Log
 
 - 2026-02-06T11:26:22Z – gemini-cli – shell_pid=550696 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T11:32:50Z – gemini-cli – shell_pid=550696 – lane=for_review – Ready for review: Worker API implemented with FastAPI, including Pydantic schemas, FS and Runtime endpoints, async WorkerClient, and schemathesis fuzzing tests.
