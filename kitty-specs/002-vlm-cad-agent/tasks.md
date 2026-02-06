@@ -77,7 +77,7 @@
 **Priority**: Low
 **Dependencies**: WP06
 
-- [ ] T028: Implement `src/agent/run.py`
-- [ ] T029: Implement configuration loading
-- [ ] T030: Add Docker/Podman run scripts
-- [ ] T031: Final End-to-End smoke test
+- [x] T028: Implement `src/agent/run.py`
+- [x] T029: Implement configuration loading
+- [x] T030: Add Docker/Podman run scripts
+- [x] T031: Final End-to-End smoke test
