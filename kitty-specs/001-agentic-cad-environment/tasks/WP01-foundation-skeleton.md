@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Skeleton"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005", "T006"]
 agent: "gemini"
@@ -106,3 +106,4 @@ Create `ruff.toml` and `pyrightconfig.json` at root.
 ## Activity Log
 
 - 2026-02-06T08:05:15Z – gemini – shell_pid=479700 – lane=doing – Started implementation via workflow command
+- 2026-02-06T08:29:33Z – gemini – shell_pid=479700 – lane=for_review – Ready for review: Foundation & Skeleton implemented with Docker and CI/CD config
