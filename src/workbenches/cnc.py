@@ -21,21 +21,65 @@ def check_internal_corner_radii(part: Union[Part, Compound], min_radius: float =
     """
     Checks for internal corners that have a radius smaller than the minimum tool radius.
     In 3-axis CNC, sharp internal vertical corners are impossible to machine.
-    
-    Note: This is a simplified implementation for the prototype.
     """
     violations = []
-    # Placeholder: In a real implementation, we would iterate over edges,
-    # identify concave edges, and check if they are filleted with radius >= min_radius.
-    # For now, we'll log that this check is active.
     logger.debug("checking_internal_corner_radii", min_radius=min_radius)
     
-    # Logic to be implemented:
-    # 1. Identify all edges parallel to the Z axis (vertical edges).
-    # 2. For each vertical edge, check if it is "concave" (internal corner).
-    # 3. If concave, check if it's a circular arc and its radius.
+    # Identify all edges
+    all_edges = part.edges()
     
-    return violations
+    for edge in all_edges:
+        # 1. Identify vertical edges (parallel to Z axis)
+        try:
+            # Get tangent at midpoint
+            tangent = edge.tangent_at(edge.param_at(0.5))
+            # Check if it's vertical (|Z| close to 1.0)
+            if abs(abs(tangent.Z) - 1.0) > 1e-3:
+                continue
+        except:
+            continue
+
+        # 2. Check for sharp corners (LINE) or small fillets (CIRCLE)
+        geom_str = str(edge.geom_type)
+        is_sharp = "LINE" in geom_str
+        is_small_fillet = "CIRCLE" in geom_str and edge.radius < min_radius
+        
+        if is_sharp or is_small_fillet:
+            # Find adjacent faces to determine if it's an internal (concave) corner
+            adj_faces = []
+            for f in part.faces():
+                if any(e.is_same(edge) for e in f.edges()):
+                    adj_faces.append(f)
+            
+            if len(adj_faces) == 2:
+                f1, f2 = adj_faces[0], adj_faces[1]
+                p = edge.center()
+                
+                try:
+                    # Check for tangency - if faces are tangent, it's not a sharp corner
+                    n1 = f1.normal_at(p)
+                    n2 = f2.normal_at(p)
+                    if n1.dot(n2) > 0.99: # Nearly tangent
+                        continue
+                        
+                    # Get points on each face by moving slightly from the edge toward the face center
+                    p1 = p + (f1.center() - p).normalized() * 0.1
+                    p2 = p + (f2.center() - p).normalized() * 0.1
+                    
+                    mid = (p1 + p2) * 0.5
+                    
+                    # If the midpoint is OUTSIDE the solid, it's a concave (internal) corner.
+                    if not part.is_inside(mid):
+                        if is_sharp:
+                            violations.append(f"Sharp internal vertical corner detected at {p}")
+                        else:
+                            violations.append(
+                                f"Internal corner radius too small at {p}: {edge.radius:.2f}mm < {min_radius}mm"
+                            )
+                except:
+                    continue
+    
+    return list(set(violations))
 
 def calculate_cnc_cost(
     part: Union[Part, Compound], 
