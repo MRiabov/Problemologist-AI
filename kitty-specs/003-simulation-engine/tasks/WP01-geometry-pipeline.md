@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Geometry Pipeline & Scene Builder"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005", "T006"]
+agent: "gemini-agent"
+shell_pid: "481649"
 ---
 
 # WP01: Geometry Pipeline & Scene Builder
@@ -96,3 +98,7 @@ Key challenge: MuJoCo handles concave objects poorly compared to convex hulls. W
 
 - **Complex Geometry**: Deeply concave parts will act like "shrink-wrapped" bubbles if using simple convex hull.
   - *Mitigation*: Warn user/agent to split complex parts or use primitives.
+
+## Activity Log
+
+- 2026-02-06T08:06:52Z – gemini-agent – shell_pid=481649 – lane=doing – Started implementation via workflow command
