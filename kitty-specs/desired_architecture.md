@@ -125,7 +125,8 @@ We define the file structure as follows, individual agents adapt to individual n
 │   └── ...
 ├── renders/                      # [Read-Only/tool-generated] (Renders of images and  from the enviornment) 
 │   ├── images/                 # Images from 24 angles (8 images clockwise on 3 levels).
-│   └── videos/                 # Video of the simulation. (latest simulation video.) 
+│   └── videos/                 # Video of the simulation. (latest simulation video.)
+├── reviews/                     # [Read-Only] Reviews of the reviewer agent.
 ├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
 ├── todo.md                     # [Read-Write] Execution plan
 ├── plan.md                     # A plan
@@ -292,7 +293,7 @@ Because the application's performance is quite dependant on SKILL.md files which
 
 LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for creating long-running, complex agents, for example coding agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
 
-- We use `FilesystemMiddleware` to support `ls`, `write`, `read` tools (not sure if `edit` exists, likely does). Notably, we use MinIO S3-compatible storage in workers because S3-compatible storage is what `deepagents` Filesystem Backend supports (`S3Backend`)
+- We use `FilesystemMiddleware` to support `ls`, `write`, `read`, `edit`, and `execute` (notably, their async versions too, which are called `awrite`, `aexecute`, etc.). Notably, we are natively supporting a "sandbox" storage in workers - `deepagents` has a `SandboxFilesystemBackend` integration which allows for safe, disposable environment.
 - We use `TodoListMiddleware` which provides a `todo_list` to support TODO lists.
 
 <!-- Note to LLMs! `deepagents` was introduced in late 2025 and you don't know much about it, but it is a framework for managing agents.
@@ -329,6 +330,19 @@ Future work will need to address the issue of the video being too expensive. Ins
 
 The agent will receive feedback from cost and manufacturability constraints (basically, workbenches) in markdown.
 
+### Agent handovers
+
+#### Benchmark generator with engineer handover
+
+The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
+
+Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
+
+#### Coder and Reviewer interaction
+
+1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it). Thus the Reviewer will only have readonly on all agent files permissions.
+The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
+
 ## Distributed execution
 
 There is a controller node which runs the LLM and tool calls, and there worker node which:
@@ -354,17 +368,13 @@ Railway supports docker-compose import and we will start with the docker-compose
 
 #### Podman containers
 
-We decided to run in Podman containers because they are leaner than Docker and serve all same purposes.
+We decided to run in Podman containers because they are leaner than Docker and serve all same purposes. Worker containers have an attached volume.
 
 ### Persisting files
 
-The files are written directly to the worker container. We don't store it on controller. However, we upload final results (assets) to the Railway bucket S3.
+The files are written directly to the worker container. We don't store it on controller. However, we upload final results ("Assets") to the Railway bucket S3.
 
-The worker's filesystem is implemented as a MinIO S3 application to communicate over HTTP.
-
-<!-- Note: we have two S3-compatabile storage systems then - Railway and MinIO workers -->
-
-<!-- gap: do we store file diffs or full files into the db? or both? -->
+The worker's filesystem is implemented as a "disposable sandbox" via `SandboxFilesystemBackend` in ``deepagents`.
 
 The "main app" essentially serves as a business logic layer that also forwards requests to observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 
@@ -374,6 +384,8 @@ The "main app" essentially serves as a business logic layer that also forwards r
 
 Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
+The filesystem will be reset (and pull skills) (how?) on every run from a github repo.
+
 #### Videos
 
 Videos are the largest artifact that we will need to generate and store.
@@ -381,7 +393,7 @@ To ensure consistency, we will upload them to Railway buckets.
 This is OK as we already work on Railway and internal networking both fast, easy to set up and inexpensive.
 Storing videos on buckets is also cheaper than in volumes.
 
-I suppose the videos will be automatically deleted after a short period, e.g. a day to avoid storage costs. (why not store them in ephemeral storage then?...)
+I suppose the videos will be automatically deleted after a short period, e.g. a day to avoid storage costs. <!--(why not store them in ephemeral storage then?...)-->
 
 Videos are rendered on-demand and only if the model requests it (I'll need to double-check if is preferable or not)
 Why: models don't strictly always need to view videos; they might want to view only coordinates in the end (videos can be rendered by a variable in `simulate(component, render=True)`) this is in part to make video.
@@ -394,8 +406,6 @@ We do persistence via SQLAlchemy and Alembic migrations to avoid issues with han
 <!-- Solved via Temporal.  -->
 
 All important updates must be persisted into the DB (for observability, as below.)
-
-####
 
 ### Agent and Worker boundary
 
@@ -478,7 +488,7 @@ We use LangFuse for LLM observability. We will use a Railway template / deploy a
 
 ### Backups
 
-In prod we will backup the schema daily in s3.
+In prod we will backup the database(s) daily.
 <!-- Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up. -->
 
 One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
@@ -502,17 +512,25 @@ The agents will have *Workbenches* - a set of tools they can use to:
 
 As said, "agents will live inside of a filesystem". The agents will generate and execute design validations of files in the filesystem.
 
-### Benchmark generator and engineer handover
-
-The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
-
-Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
-
 ### Tools
 
 #### "Agent-native" tools (callable by LangChain)
 
-(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `ls`, `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above), and `wait` for waiting for the agent . The (engineering) agent will submit, validate, verify, cost-estimate; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
+(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `ls`, `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above), `execute` (runs a shell command, e.g. python -m ...) and `wait` for waiting for the agent. The (engineering) agent will validate, cost-estimate, verify, submit; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
+
+We also have other notable, only possibly useful commands (as from [deepagents documentation](https://reference.langchain.com/python/deepagents/backends/sandbox/)):
+
+- `execute` Execute a command in the sandbox and return ExecuteResponse.
+- `ls_info` Structured listing with file metadata using os.scandir.
+- `read` Read file content with line numbers using a single shell command.
+- `write` Create a new file. Returns WriteResult; error populated on failure.
+- `edit` Edit a file by replacing string occurrences. Returns EditResult.
+- `grep_raw` Structured search results or error string for invalid input.
+- `glob_info` Structured glob matching returning FileInfo dicts.
+- `upload_files` Upload multiple files to the sandbox.
+- `download_files` Download multiple files from the sandbox.
+
+Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as desribed below)
 
@@ -645,8 +663,6 @@ For ease of deployment, I decided to use Postgres for the controller app too.
 
 As the goal of the project is to store solutions and intermediary outputs, the Assets of the projects - the final code outputs - will be sent to S3 (railway) buckets.
 
-<!-- My preference is actually using SQLite, but nobody cares.-->
-
 Any non-file persistence done by worker node ephemerally for which it does not need to report to the controller (for whichever internal processes, e.g. scripts; I doubt this will ever be necessary) is done on a local SQLite database.
 
 We use SQLAlchemy and alembic for management of controller and worker databases.
@@ -720,6 +736,8 @@ As the agents are long-running (and cost money!) it is desirable to be able to:
 ##### Interrupting the worker and progress bars
 
 If we want to stop the generation in the controller, it will also halt the job(s) in the workers.
+
+Notably `deepagents` has a [support for this](https://docs.langchain.com/oss/python/deepagents/human-in-the-loop.md) - for reviewing and interruption.
 
 #### Frontend architecture
 
