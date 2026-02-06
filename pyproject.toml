@@ -60,7 +60,7 @@ testpaths = ["tests"]
 pythonpath = [".", "src"]
 addopts = "-m 'not integration' -n auto"
 filterwarnings = [
-    "ignore::pyparsing.PyparsingDeprecationWarning:ezdxf.queryparser",
+    "ignore::DeprecationWarning:ezdxf.queryparser",
     "ignore::DeprecationWarning:build123d.objects_curve",
     "ignore::DeprecationWarning:multiprocessing.popen_fork",
 ]
