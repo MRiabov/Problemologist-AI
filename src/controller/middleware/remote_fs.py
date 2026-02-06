@@ -1,12 +1,15 @@
-from typing import Any
+from typing import Any, Optional
+from temporalio.client import Client
 from src.controller.clients.worker import WorkerClient
+from src.controller.workflows.execution import ScriptExecutionWorkflow
 
 
 class RemoteFilesystemMiddleware:
-    """Middleware that proxies filesystem operations to a remote Worker."""
+    """Middleware that proxies filesystem operations to a remote Worker, with durable execution via Temporal."""
 
-    def __init__(self, client: WorkerClient):
+    def __init__(self, client: WorkerClient, temporal_client: Optional[Client] = None):
         self.client = client
+        self.temporal_client = temporal_client
         self.read_only_paths = ["skills/", "utils/", "reviews/"]
 
     def _is_read_only(self, path: str) -> bool:
@@ -29,10 +32,23 @@ class RemoteFilesystemMiddleware:
         return await self.client.write_file(path, content)
 
     async def run_command(self, code: str, timeout: int = 30) -> dict[str, Any]:
-        """Execute a command (Python code) via the Worker client."""
-        # For now, we assume 'run_command' means executing Python code
-        # as per Worker API.
-        return await self.client.execute_python(code, timeout=timeout)
+        """Execute a command (Python code) via the Worker client, wrapped in Temporal for durability."""
+        if self.temporal_client:
+            # Wrap in Temporal workflow for durability
+            result = await self.temporal_client.execute_workflow(
+                ScriptExecutionWorkflow.run,
+                {
+                    "code": code,
+                    "session_id": self.client.session_id,
+                    "timeout": timeout,
+                },
+                id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+            return result
+        else:
+            # Fallback to direct client call if Temporal is not available
+            return await self.client.execute_python(code, timeout=timeout)
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:

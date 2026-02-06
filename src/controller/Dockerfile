@@ -13,8 +13,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy source code
-COPY src/controller ./src/controller
-COPY src/deepagents ./src/deepagents
+COPY src ./src
 
 # Set Python path
 ENV PYTHONPATH=/app
