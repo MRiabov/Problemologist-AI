@@ -1,12 +1,14 @@
-from typing import List, TypedDict
 from langchain_core.messages import BaseMessage
+from pydantic import BaseModel, Field
 
-class AgentState(TypedDict):
+
+class AgentState(BaseModel):
     """The state of the agent passed between nodes in the graph."""
-    messages: List[BaseMessage]
-    task: str
-    plan: str
-    todo: str
-    current_step: str
-    journal: str
-    iteration: int
+
+    messages: list[BaseMessage] = Field(default_factory=list)
+    task: str = ""
+    plan: str = ""
+    todo: str = ""
+    current_step: str = ""
+    journal: str = ""
+    iteration: int = 0
