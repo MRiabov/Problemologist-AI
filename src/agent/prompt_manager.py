@@ -1,13 +1,15 @@
 import jinja2
 from typing import Any
 
+
 class PromptManager:
     """Manager for Jinja2 templates for the agent."""
-    
+
     def __init__(self):
         self.env = jinja2.Environment(
-            loader=jinja2.DictLoader({
-                "architect": """You are the Architect. 
+            loader=jinja2.DictLoader(
+                {
+                    "architect": """You are the Architect. 
 Your goal is to plan the following task: {{ task }}
 
 Available skills:
@@ -26,7 +28,7 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
-                "engineer": """You are the Engineer. 
+                    "engineer": """You are the Engineer. 
 Implement the following step: {{ current_step }}
 
 Execution Plan context:
@@ -39,11 +41,12 @@ Please fix the code and try again.
 {% endif %}
 
 Instructions:
-1. Write a standalone Python script to accomplish the step.
-2. Use only available tools and libraries.
-3. Output ONLY the Python code inside a markdown code block.
+1. You may use available tools `list_files` and `read_file` to inspect the environment if needed.
+2. Provide the final solution as a standalone Python script.
+3. Output the Python code inside a markdown code block (```python ... ```).
 """,
-            })
+                }
+            )
         )
 
     def render(self, template_name: str, **kwargs: Any) -> str:
