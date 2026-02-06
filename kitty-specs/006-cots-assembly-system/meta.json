@@ -1,10 +1,24 @@
 {
-    "feature_number": "006",
-    "slug": "006-cots-assembly-system",
-    "friendly_name": "COTS Assembly System",
-    "mission": "software-dev",
-    "source_description": "Library and logic for integrating Commercial-Off-The-Shelf components into agentic CAD workflows, focusing on inventory-aware design, as per @[kitty-specs/desired_architecture.md].",
-    "created_at": "2026-02-06T08:30:00Z",
-    "target_branch": "main",
-    "vcs": "git"
+  "accept_commit": null,
+  "acceptance_history": [
+    {
+      "accepted_at": "2026-02-06T20:52:55Z",
+      "accepted_by": "maksym",
+      "accepted_from_commit": "54401a461fda901094b2f1b67778f5fd3af89604",
+      "branch": "main",
+      "mode": "pr"
+    }
+  ],
+  "acceptance_mode": "pr",
+  "accepted_at": "2026-02-06T20:52:55Z",
+  "accepted_by": "maksym",
+  "accepted_from_commit": "54401a461fda901094b2f1b67778f5fd3af89604",
+  "created_at": "2026-02-06T08:30:00Z",
+  "feature_number": "006",
+  "friendly_name": "COTS Assembly System",
+  "mission": "software-dev",
+  "slug": "006-cots-assembly-system",
+  "source_description": "Library and logic for integrating Commercial-Off-The-Shelf components into agentic CAD workflows, focusing on inventory-aware design, as per @[kitty-specs/desired_architecture.md].",
+  "target_branch": "main",
+  "vcs": "git"
 }
