@@ -1,9 +1,13 @@
 ---
 work_package_id: WP04
 title: Operations - Backups
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: e882badb84c74b92752066e1b950c963a91b26b1
+created_at: '2026-02-06T13:42:55.092638+00:00'
 subtasks: [T011, T014, T012, T013]
+shell_pid: "606368"
 ---
 
 # Work Package: Operations - Backups
