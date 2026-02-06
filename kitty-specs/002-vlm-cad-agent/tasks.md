@@ -43,11 +43,11 @@
 **Priority**: Medium
 **Dependencies**: WP01
 
-- [ ] T015: Implement `src/agent/nodes/critic.py`
-- [ ] T016: Implement logic to parse Simulation outcomes
-- [ ] T017: Implement logic to parse Workbench outcomes
-- [ ] T018: Implement decision logic (Approve/Reject)
-- [ ] T019: Test Critic node
+- [x] T015: Implement `src/agent/nodes/critic.py`
+- [x] T016: Implement logic to parse Simulation outcomes
+- [x] T017: Implement logic to parse Workbench outcomes
+- [x] T018: Implement decision logic (Approve/Reject)
+- [x] T019: Test Critic node
 
 ### WP05: Sidecar Learner
 
