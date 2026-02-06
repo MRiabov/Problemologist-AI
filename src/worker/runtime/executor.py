@@ -61,6 +61,19 @@ def run_python_code(
         timeout=config.timeout_seconds,
     )
 
+    # Set up PYTHONPATH to include src/worker for utils import
+    actual_env = env.copy() if env else {}
+    current_pythonpath = actual_env.get("PYTHONPATH", "")
+    
+    # Get absolute path to src/worker
+    project_root = Path(__file__).parent.parent.parent.parent
+    worker_path = str(project_root / "src" / "worker")
+    
+    if current_pythonpath:
+        actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
+    else:
+        actual_env["PYTHONPATH"] = worker_path
+
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -80,7 +93,7 @@ def run_python_code(
             capture_output=True,
             text=True,
             timeout=config.timeout_seconds,
-            env=env,
+            env=actual_env,
             cwd=config.working_directory,
         )
 
@@ -145,6 +158,19 @@ async def run_python_code_async(
         timeout=config.timeout_seconds,
     )
 
+    # Set up PYTHONPATH to include src/worker for utils import
+    actual_env = env.copy() if env else {}
+    current_pythonpath = actual_env.get("PYTHONPATH", "")
+    
+    # Get absolute path to src/worker
+    project_root = Path(__file__).parent.parent.parent.parent
+    worker_path = str(project_root / "src" / "worker")
+    
+    if current_pythonpath:
+        actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
+    else:
+        actual_env["PYTHONPATH"] = worker_path
+
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -161,7 +187,7 @@ async def run_python_code_async(
             script_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=env,
+            env=actual_env,
             cwd=config.working_directory,
         )
 
