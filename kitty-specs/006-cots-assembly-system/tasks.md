@@ -37,6 +37,6 @@
 **Dependencies**: WP02 (Populated Database)
 **Estimated Size**: ~200 lines
 
-- [ ] T010: Implement `search_parts` function in `src/cots/runtime.py` with SQL filtering
-- [ ] T011: Create the "Search COTS" tool definition (LangChain/DeepAgents compatible)
-- [ ] T012: Create integration test: Index a dummy part and search for it
+- [x] T010: Implement `search_parts` function in `src/cots/runtime.py` with SQL filtering
+- [x] T011: Create the "Search COTS" tool definition (LangChain/DeepAgents compatible)
+- [x] T012: Create integration test: Index a dummy part and search for it
