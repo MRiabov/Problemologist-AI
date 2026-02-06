@@ -8,6 +8,7 @@ base_commit: f674a15ba42a8a71761ab2d7ca73b4515d1b082b
 created_at: '2026-02-06T11:50:04.690481+00:00'
 subtasks: [T017, T018, T019, T020, T021]
 shell_pid: "563842"
+agent: "Gemini"
 ---
 
 # WP04: Controller & DeepAgents Integration
@@ -72,3 +73,7 @@ File: `src/controller/graph/agent.py`
 4. Verify file exists on Worker (minio).
 5. Ask it to "run `test.py`".
 6. Verify output "hello" returned to agent.
+
+## Activity Log
+
+- 2026-02-06T11:50:04Z – Gemini – shell_pid=563842 – lane=doing – Assigned agent via workflow command
