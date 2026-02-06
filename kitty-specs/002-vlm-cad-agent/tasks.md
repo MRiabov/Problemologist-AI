@@ -8,10 +8,10 @@
 **Priority**: High
 **Dependencies**: None
 
-- [ ] T001: Implement `src/agent/state.py` with `AgentState` definition [P]
-- [ ] T002: Implement `src/agent/graph.py` skeleton [P]
-- [ ] T003: Implement `src/agent/prompt_manager.py` [P]
-- [ ] T004: Create `tests/agent/test_state.py`
+- [x] T001: Implement `src/agent/state.py` with `AgentState` definition [P]
+- [x] T002: Implement `src/agent/graph.py` skeleton [P]
+- [x] T003: Implement `src/agent/prompt_manager.py` [P]
+- [x] T004: Create `tests/agent/test_state.py`
 
 ### WP02: Architect Node
 
