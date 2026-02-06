@@ -135,3 +135,18 @@ top_face = bp.faces().sort_by(Axis.Z)[-1]
 # Select all edges except the ones on the bottom plane
 side_edges = bp.edges().filter_by(Axis.Z)
 ```
+
+### Builder Object Properties Trap
+
+* **The Trap**: Attempting to access geometric properties like `.center`, `.volume`, or `.edges()` directly on the builder object (e.g., `with BuildPart() as bp: bp.center`) raises an `AttributeError`.
+* **The Fix**: Access the underlying geometry via the appropriate property of the builder:
+    * `bp.part` for `BuildPart`
+    * `bs.sketch` for `BuildSketch`
+    * `bl.line` for `BuildLine`
+* **Example**:
+    ```python
+    with BuildPart() as bp:
+        Box(10, 10, 10)
+        print(bp.part.center()) # Correct
+        # print(bp.center())    # Raises AttributeError
+    ```
