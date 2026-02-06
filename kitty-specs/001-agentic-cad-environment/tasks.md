@@ -76,11 +76,11 @@
 **Priority**: High (Phase 2)
 **Tests**: Controller unit tests mocking the Worker Client.
 
-- [ ] T017: Setup Controller application (FastAPI + LangGraph skeleton).
-- [ ] T018: internalize generated Worker functionality.
-- [ ] T019: Implement `RemoteFilesystem` middleware in Controller that calls Worker Client and respects read-only path constraints.
-- [ ] T020: Define LangChain Tools (`ls`, `write_file`, `execute`) wrapping the middleware.
-- [ ] T021: Setup basic Agent graph (skeleton) to verify tool availability.
+- [x] T017: Setup Controller application (FastAPI + LangGraph skeleton).
+- [x] T018: internalize generated Worker functionality.
+- [x] T019: Implement `RemoteFilesystem` middleware in Controller that calls Worker Client and respects read-only path constraints.
+- [x] T020: Define LangChain Tools (`ls`, `write_file`, `execute`) wrapping the middleware.
+- [x] T021: Setup basic Agent graph (skeleton) to verify tool availability.
 
 **Implementation**:
 
