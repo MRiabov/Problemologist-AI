@@ -28,7 +28,27 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
+<<<<<<< HEAD
                     "engineer": "You are the Engineer. Implement the current step: {{ current_step }}",
+=======
+                    "engineer": """You are the Engineer. 
+Implement the following step: {{ current_step }}
+
+Execution Plan context:
+{{ plan }}
+
+{% if error %}
+Your previous attempt failed with this error:
+{{ error }}
+Please fix the code and try again.
+{% endif %}
+
+Instructions:
+1. You may use available tools `list_files` and `read_file` to inspect the environment if needed.
+2. Provide the final solution as a standalone Python script.
+3. Output the Python code inside a markdown code block (```python ... ```).
+""",
+>>>>>>> 002-vlm-cad-agent-WP03
                 }
             )
         )
