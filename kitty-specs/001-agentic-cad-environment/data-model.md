@@ -2,53 +2,72 @@
 
 ## Core Entities (Pydantic Models)
 
-We use `pydantic.BaseModel` for all data exchange between the Controller and Worker nodes.
+We use `pydantic.BaseModel` (v2) for all data exchange between Controller, Worker, and Frontend.
 
-### 1. EpisodeState
+### 1. EpisodeMetadata
 
-Tracks the high-level state of an agentic session.
+High-level tracking for an agentic session.
 
 ```python
-class EpisodeState(BaseModel):
+class EpisodeMetadata(BaseModel):
     episode_id: UUID
-    status: Literal["planning", "executing", "verifying", "success", "failed"]
-    problem_id: str
+    agent_type: Literal["engineer", "benchmark_generator", "planner", "reviewer"]
+    status: Literal["running", "paused", "completed", "failed", "preempted"]
     start_time: datetime
-    last_updated: datetime
-    metrics: Dict[str, float] = {}
+    end_time: Optional[datetime] = None
+    config_snapshot: Dict[str, Any]  # YAML config used for this run
 ```
 
-### 2. SandboxFile
+### 2. SandboxCommand
 
-Represents a file within the ephemeral worker sandbox.
+Payload for executing a command on the worker.
 
 ```python
-class SandboxFile(BaseModel):
-    path: str  # Relative to sandbox root
-    content: str
-    is_readonly: bool = False
-    content_hash: str
+class SandboxCommand(BaseModel):
+    command: str
+    timeout_seconds: int = 300
+    env_vars: Dict[str, str] = {}
+    workdir: str = "."
 ```
 
-### 3. StepTrace
+### 3. SimulationResult (Feedback Model)
 
-A single reasoning or tool-calling step, persisted for observability.
+Data returned from the simulation engine to the agent.
 
 ```python
-class StepTrace(BaseModel):
+class SimulationResult(BaseModel):
+    success: bool
+    summary: str  # Markdown summary for the agent
+    video_url: Optional[HttpUrl] = None
+    telemetry: Dict[str, List[float]]  # Coordinates, energy, etc.
+    error_log: Optional[str] = None
+```
+
+### 4. TraceStep
+
+A single tool call or reasoning block for observability.
+
+```python
+class TraceStep(BaseModel):
     step_id: UUID
     episode_id: UUID
-    sequence_index: int
-    tool_name: str
-    tool_input: Dict[str, Any]
-    tool_output: str
-    duration_ms: int
-    journal_entry: Optional[str]
+    timestamp: datetime
+    input: Dict[str, Any]  # Tool inputs or Prompt
+    output: str  # Tool output or LLM Response
+    internal_thought: Optional[str] = None
+    journal_link: Optional[str] = None
 ```
 
 ## Persistence Strategy
 
-1. **Relational Data**: Stored in a central **Postgres** database (via SQLAlchemy) on the Controller node.
-2. **Artifacts (Renders, Meshes, Videos)**: Uploaded to **S3 (MinIO/Railway Buckets)**. The DB stores the S3 URL.
-3. **Orchestration State**: Managed by **Temporal** in a dedicated Postgres partition.
-4. **Episodic Memory**: Stored in the `journal.md` within the worker's filesystem, synced back to the observability DB on completion.
+1. **Postgres (Relational)**:
+    - `episodes`, `traces`, `tasks`: Main business logic and state.
+    - `temporal`: Orchestration state (in a separate DB partition).
+2. **S3 (Artifacts)**:
+    - `/assets/videos/`: Simulation recordings.
+    - `/assets/renders/`: Multi-view images.
+    - `/assets/snapshots/`: Git bundle of worker filesystem at decision points.
+3. **Local Worker Cache (SQLite)**:
+    - Ephemeral caching of `validate_and_price` results to speed up retries.
+4. **Episodic Memory (Filesystem)**:
+    - `journal.md`, `todo.md`: Core working files synced to S3 on completion.

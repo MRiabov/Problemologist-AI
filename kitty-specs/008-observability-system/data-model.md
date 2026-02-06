@@ -100,22 +100,16 @@ class ErrorData(BaseModel):
 
 ## 3. Database Schema (SQLAlchemy/SQLModel)
 
-* **Engine**: SQLite (WAL Enabled)
-* **Migrations**: Alembic
-* **Naming Convention**: `obs_runs`, `obs_steps`, `obs_artifacts`
+* **Engine**: Postgres (Shared instance with different partitions for Temporal/App).
+* **Migrations**: Alembic.
+* **Naming Convention**: `obs_runs`, `obs_steps`, `obs_artifacts`.
 
 ```python
-# Pseudo-code for SQLModel definition
+# SQLModel definition for central persistence
 class ObsRun(SQLModel, table=True):
     __tablename__ = "obs_runs"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    # ... fields ...
-    steps: List["ObsStep"] = Relationship(back_populates="run")
-
-class ObsStep(SQLModel, table=True):
-    __tablename__ = "obs_steps"
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    run_id: UUID = Field(foreign_key="obs_runs.id")
-    content: Dict = Field(sa_column=Column(JSON))
-    # ... fields ...
+    agent_id: str
+    status: RunStatus
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 ```
