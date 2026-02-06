@@ -2,10 +2,16 @@ from langgraph.graph import StateGraph, START, END
 from .state import AgentState
 from .nodes.architect import architect_node
 from .nodes.engineer import engineer_node
+from .nodes.critic import critic_node
 
-# Placeholder for Critic
-def critic_node(state: AgentState) -> AgentState:
-    return state
+def should_continue(state: AgentState) -> str:
+    """Route after critic based on approval status."""
+    if state.status == "approved":
+        return END
+    # If rejected and we haven't looped too many times, go back to engineer
+    if state.iteration < 5:
+        return "engineer"
+    return END
 
 # Initialize the StateGraph with our AgentState
 builder = StateGraph(AgentState)
@@ -19,6 +25,15 @@ builder.add_node("critic", critic_node)
 builder.add_edge(START, "architect")
 builder.add_edge("architect", "engineer")
 builder.add_edge("engineer", "critic")
-builder.add_edge("critic", END)
+
+# Conditional routing from critic
+builder.add_conditional_edges(
+    "critic",
+    should_continue,
+    {
+        "engineer": "engineer",
+        END: END
+    }
+)
 
 graph = builder.compile()

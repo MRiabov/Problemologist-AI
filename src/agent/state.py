@@ -12,3 +12,5 @@ class AgentState(BaseModel):
     current_step: str = ""
     journal: str = ""
     iteration: int = 0
+    status: str = ""
+    feedback: str = ""
