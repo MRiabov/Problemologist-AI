@@ -1,9 +1,13 @@
 ---
 work_package_id: WP05
 title: Sidecar Learner
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: 002-vlm-cad-agent-WP04
+base_commit: e24a3cc4acf4d23b851337bdd57e3014cb8246b0
+created_at: '2026-02-06T14:40:04.508545+00:00'
 subtasks: [T020, T021, T022, T023]
+shell_pid: "658159"
 ---
 
 ## Objective
