@@ -1,15 +1,36 @@
 import jinja2
 from typing import Any
 
+
 class PromptManager:
     """Manager for Jinja2 templates for the agent."""
-    
+
     def __init__(self):
         self.env = jinja2.Environment(
-            loader=jinja2.DictLoader({
-                "architect": "You are the Architect. Plan the task: {{ task }}",
-                "engineer": "You are the Engineer. Implement the current step: {{ current_step }}",
-            })
+            loader=jinja2.DictLoader(
+                {
+                    "architect": """You are the Architect. 
+Your goal is to plan the following task: {{ task }}
+
+Available skills:
+{{ skills }}
+
+Instructions:
+1. Analyze the task and available skills.
+2. Create a high-level execution plan.
+3. Create a detailed TODO list of specific implementation steps.
+
+Output your response in two sections:
+# PLAN
+<your plan here>
+
+# TODO
+- [ ] <step 1>
+- [ ] <step 2>
+""",
+                    "engineer": "You are the Engineer. Implement the current step: {{ current_step }}",
+                }
+            )
         )
 
     def render(self, template_name: str, **kwargs: Any) -> str:
