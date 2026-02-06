@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Skeleton"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005", "T006"]
+agent: "gemini"
+shell_pid: "479700"
 ---
 
 # WP01: Foundation & Skeleton
@@ -100,3 +102,7 @@ Create `ruff.toml` and `pyrightconfig.json` at root.
 1. `docker-compose build` should succeed for both images.
 2. `docker-compose up -d` should start services.
 3. `uv run ruff check .` should clean (or empty).
+
+## Activity Log
+
+- 2026-02-06T08:05:15Z – gemini – shell_pid=479700 – lane=doing – Started implementation via workflow command
