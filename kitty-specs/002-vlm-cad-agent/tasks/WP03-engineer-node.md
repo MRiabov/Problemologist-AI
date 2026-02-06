@@ -1,9 +1,13 @@
 ---
 work_package_id: WP03
 title: Engineer Node
-lane: planned
-dependencies: [WP01, "Spec 001 WP04"]
+lane: "doing"
+dependencies: [WP01, Spec 001 WP04]
+base_branch: 002-vlm-cad-agent-WP02
+base_commit: c1e31ad9b1f20f12d0472b097b13834971910509
+created_at: '2026-02-06T14:24:54.820068+00:00'
 subtasks: [T010, T011, T012, T013, T014]
+shell_pid: "641430"
 ---
 
 ## Objective
