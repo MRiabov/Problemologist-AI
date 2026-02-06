@@ -1,54 +1,22 @@
 # Data Model: Engineer Agent
 
-## 1. Traceability & Logs (Database)
+## Core Entities (Pydantic Models)
 
-All interactions, reasoning, and tool calls are persisted to the **Postgres/SQLAlchemy** database (or SQLite in local development) as defined in the system architecture.
+We use Pydantic models for structured state management within the `deepagents` graph.
 
-### 1.1. Run Persistence
+### 1. AgentState (Pydantic)
 
-| Entity | Fields |
-|--------|--------|
-| **Episode** | `id`, `prompt`, `start_time`, `result_status`, `total_cost` |
-| **Step** | `id`, `episode_id`, `phase` (Architect/Engineer/Critic), `thought`, `tool_call`, `observation`, `timestamp` |
-| **Artifact** | `id`, `step_id`, `path_to_mesh`, `path_to_render`, `code_snapshot` |
-
-## 2. Long-Term Memory
-
-### 2.1. Journal (`journal.md`)
-
-A flat Markdown file for storing learned lessons.
-
-```markdown
-# Journal
-
-## [Topic: Syntax] build123d Loft
-* **Date**: 2023-10-27
-* **Lesson**: The `loft` operation requires profiles to be aligned. Use `align=True`.
-* **Context**: Failed to loft between circle and square.
-
-## [Topic: Geometry] Press Fits
-* **Date**: 2023-10-28
-* **Lesson**: For PLA printing, add 0.2mm tolerance to holes.
+```python
+class AgentState(BaseModel):
+    plan: List[PlanItem]
+    current_task_id: Optional[str]
+    journal: List[JournalEntry]
+    inventory: List[PartInfo]
+    total_cost: float = 0.0
+    iteration_count: int = 0
 ```
 
-## 3. State Management
-
-### 3.1. Session Context
-
-In-memory object tracking the current run.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `goal` | str | The user's original prompt |
-| `max_unit_cost` | float | Target budget for the assembly |
-| `target_quantity` | int | Intended production volume |
-| `plan` | List[PlanItem] | Steps to solve the problem |
-| `history` | List[Message] | Chat history (sliding window) |
-| `scratchpad` | Dictionary | Current variables/observations |
-| `attempts` | int | Number of `submit_design` calls |
-| `force_submit_flag`| bool | Whether Actor has signaled cost limit reached |
-
-### 3.2. Plan Item
+### 2. PlanItem
 
 ```python
 class PlanItem(BaseModel):
@@ -56,4 +24,21 @@ class PlanItem(BaseModel):
     description: str
     status: Literal["pending", "in_progress", "done", "failed"]
     dependencies: List[str]
+    assigned_to: Literal["architect", "engineer", "critic"]
 ```
+
+### 3. JournalEntry
+
+```python
+class JournalEntry(BaseModel):
+    topic: str
+    lesson: str
+    context: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+```
+
+## Persistence
+
+1. **Step Traces**: Persisted to the global `StepTrace` model in the observability DB.
+2. **Episodic Data**: The `journal.md` and `todo.md` are persisted in the worker sandbox and archived to S3.
+3. **Checkpoints**: LangGraph state is checkpointed in **Postgres** for Human-in-the-Loop (HITL) support.

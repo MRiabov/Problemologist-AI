@@ -1,62 +1,54 @@
 # Data Model: Agentic CAD Environment
 
-## Database Schema (SQLAlchemy ORM)
+## Core Entities (Pydantic Models)
 
-The persistence layer uses SQLAlchemy to manage a local SQLite database `history.db`. Alembic is used for migrations.
+We use `pydantic.BaseModel` for all data exchange between the Controller and Worker nodes.
 
-### 1. Episodes
+### 1. EpisodeState
 
-Represents a single attempt by an agent to solve a problem.
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | TEXT (UUID) | Primary Key. |
-| `start_time` | DATETIME | ISO8601 Timestamp. |
-| `problem_id` | TEXT | Identifier of the problem scenario (e.g., "move_block_v1"). |
-| `status` | TEXT | 'running', 'completed', 'failed', 'error'. |
-| `result_metrics` | JSON | Final scores (success, energy, damage, cost). |
-
-### 2. Steps
-
-Represents a single action taken by the agent within an episode.
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | TEXT (UUID) | Primary Key. |
-| `episode_id` | TEXT | Foreign Key to Episodes. |
-| `sequence_index` | INTEGER | Order of execution (0, 1, 2...). |
-| `tool_name` | TEXT | 'write_script', 'preview', 'submit', etc. |
-| `tool_input` | TEXT | The full arguments passed to the tool. |
-| `tool_output` | TEXT | The text response (stdout, error, or return value). |
-| `duration_ms` | INTEGER | Execution time in milliseconds. |
-
-### 3. Artifacts
-
-Binary or large text files generated during a step.
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | TEXT (UUID) | Primary Key. |
-| `step_id` | TEXT | Foreign Key to Steps. |
-| `artifact_type` | TEXT | 'script', 'render', 'mesh', 'log'. |
-| `file_path` | TEXT | Relative path to the file on disk (storage is hybrid DB/FILESYSTEM). |
-| `content_hash` | TEXT | SHA256 of content. |
-
-> **Note**: While the spec mentioned storing code snapshots in DB, for large renders/meshes, we stick to storing paths in DB and files on disk to keep DB lean, or strict text for scripts.
-
-## Object Model (Python)
+Tracks the high-level state of an agentic session.
 
 ```python
-@dataclass
-class ProblemScenario:
-    id: str
-    description: str
-    template_path: str  # Path to MJCF xml template
-    goals: Dict[str, Any]
-
-@dataclass
-class ValidationResult:
-    success: bool
-    metrics: Dict[str, float]
-    violation: Optional[str]
+class EpisodeState(BaseModel):
+    episode_id: UUID
+    status: Literal["planning", "executing", "verifying", "success", "failed"]
+    problem_id: str
+    start_time: datetime
+    last_updated: datetime
+    metrics: Dict[str, float] = {}
 ```
+
+### 2. SandboxFile
+
+Represents a file within the ephemeral worker sandbox.
+
+```python
+class SandboxFile(BaseModel):
+    path: str  # Relative to sandbox root
+    content: str
+    is_readonly: bool = False
+    content_hash: str
+```
+
+### 3. StepTrace
+
+A single reasoning or tool-calling step, persisted for observability.
+
+```python
+class StepTrace(BaseModel):
+    step_id: UUID
+    episode_id: UUID
+    sequence_index: int
+    tool_name: str
+    tool_input: Dict[str, Any]
+    tool_output: str
+    duration_ms: int
+    journal_entry: Optional[str]
+```
+
+## Persistence Strategy
+
+1. **Relational Data**: Stored in a central **Postgres** database (via SQLAlchemy) on the Controller node.
+2. **Artifacts (Renders, Meshes, Videos)**: Uploaded to **S3 (MinIO/Railway Buckets)**. The DB stores the S3 URL.
+3. **Orchestration State**: Managed by **Temporal** in a dedicated Postgres partition.
+4. **Episodic Memory**: Stored in the `journal.md` within the worker's filesystem, synced back to the observability DB on completion.

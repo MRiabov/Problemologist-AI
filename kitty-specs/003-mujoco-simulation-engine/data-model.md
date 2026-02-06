@@ -1,66 +1,45 @@
 # Data Model: MuJoCo Simulation Engine
 
-Since the service is stateless/ephemeral, this models the **API DTOs** (Data Transfer Objects) and internal objects, rather than a persistent schema.
+## Core Models (Pydantic)
 
-## 1. API Objects
+We use `pydantic.BaseModel` for API communication and internal orchestration via Temporal.
 
-### 1.1. Simulation Request (`POST /simulate`)
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `UUID` | Unique request ID (for correlation). |
-| `env_geometry_step` | `Base64<STEP>` | The static environment (walls, floors, zones) in STEP format. Must preserve Solid names (e.g. `zone_goal`). |
-| `agent_geometry_step` | `Base64<STEP>` | The agent's mechanism in STEP format. |
-| `control_script` | `String` | Python code defining `def control_policy(obs): ...`. |
-| `config` | `TaskConfig` | Simulation parameters. |
-
-#### TaskConfig
-
-| Field | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `duration` | `Float` | `10.0` | Max simulation time (seconds). |
-| `timestep` | `Float` | `0.002` | Physics step size (seconds). |
-| `seed` | `Int` | `42` | Random seed for physics noise. |
-| `return_trace` | `Bool` | `False` | If true, return MJCF/Trace capability. |
-
-### 1.2. Simulation Response
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `request_id` | `UUID` | Echo ID. |
-| `status` | `Enum` | `SUCCESS`, `FAIL_COLLISION`, `FAIL_TIMEOUT`, `SYSTEM_ERROR`. |
-| `metrics` | `SimulationMetrics` | Performance data. |
-| `error` | `String?` | Error message if system failure or code crash. |
-
-#### SimulationMetrics
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `completion_time` | `Float` | Time simulation ended (sim-time). |
-| `energy_joules` | `Float` | Total work done by actuators. |
-| `goal_distance_min`| `Float` | Closest distance to goal achieved. |
-
-## 2. Internal Domains
-
-### 2.1. Simulation Bundle (Worker Input)
-
-Sent to the worker process.
+### 1. SimulationRequest
 
 ```python
-@dataclass
-class SimulationBundle:
-    scene_mjcf_path: Path  # Compiled XML file
-    control_script_path: Path # Isolated script file
-    config: TaskConfig
+class SimulationRequest(BaseModel):
+    request_id: UUID = Field(default_factory=uuid4)
+    env_geometry_url: str  # S3 URL to environment geometry
+    agent_geometry_url: str # S3 URL to agent's code/model
+    config: SimulationConfig
 ```
 
-### 2.2. Zone Definition
+### 2. SimulationConfig
 
-Parsed from `env_geometry_step`.
+```python
+class SimulationConfig(BaseModel):
+    duration: float = 10.0
+    timestep: float = 0.002
+    seed: int = 42
+    render_video: bool = False
+    perturb_position: bool = True # For robustness testing
+```
 
-| Zone Type | Naming Convention | Behavior |
-| :--- | :--- | :--- |
-| **GOAL** | `zone_goal_*` | Defines success volume. |
-| **FORBID** | `zone_forbid_*` | Defines rapid failure volume. |
-| **SPAWN** | `zone_start_agent` | Where to place Agent root. |
-| **OBJECT** | `zone_start_object`| Where to place Target object. |
+### 3. SimulationResult
+
+```python
+class SimulationResult(BaseModel):
+    request_id: UUID
+    status: Literal["success", "collision", "out_of_bounds", "timeout", "instability", "error"]
+    metrics: Dict[str, float]
+    video_url: Optional[str] = None # S3 URL if rendered
+    summary: str # Text summary for agent feedback
+```
+
+## Internal Orchestration
+
+The engine is stateless. Worker nodes pull assets from S3 based on the URLs in the `SimulationRequest`.
+
+1. **Geometry Parsing**: The worker parses the environment from S3 to identify goals and forbidden zones based on naming conventions (`zone_goal_*`, `zone_forbid_*`).
+2. **Execution**: Code is executed inside a **Podman/Docker** sandbox.
+3. **Traceability**: All simulation results are reported back to the Controller and persisted in the observability DB.

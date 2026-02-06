@@ -1,26 +1,31 @@
 # Dashboard Quickstart
 
-## Installation
+## 1. Development Mode
 
-Ensure you have the development dependencies installed:
+The dashboard requires both the backend (FastAPI) and frontend (Vite) to be running.
 
-```bash
-uv sync --group dev
-```
-
-## Running the Dashboard
-
-Launch the Streamlit app from the repository root:
+### Backend
 
 ```bash
-uv run streamlit run src/dashboard/main.py
+uv run python -m src.dashboard.backend.main
 ```
 
-The dashboard will be available at `http://localhost:8501`.
+### Frontend
 
-## Features
+```bash
+cd src/dashboard/frontend
+npm install
+npm run dev
+```
 
-- **Episode Browser**: Select past runs from the sidebar.
-- **3D Debugger**: Interactive PyVista viewer for STL artifacts.
-- **Step-by-Step Replay**: Use the slider to step through the agent's actions.
-- **Live Mode**: Watch active agent runs update in real-time.
+The app will be available at `http://localhost:5173`.
+
+## 2. Production Deployment
+
+The dashboard is automatically deployed to **Vercel** (frontend) and **Railway** (backend) as part of the CI/CD pipeline.
+
+## 3. Features
+
+- **Live Reasoning Stream**: Observe the agent's thoughts and tool calls in real-time.
+- **3D Interactive Viewport**: Inspect meshes and violations.
+- **Artifact Timeline**: Step through the history of an episode.
