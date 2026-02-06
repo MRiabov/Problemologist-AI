@@ -1,44 +1,35 @@
 # Data Model: Benchmark Scenario Generator
 
-## Core Models (Pydantic)
+## Core Entities (Pydantic Models)
 
-### 1. BenchmarkScenario
+### 1. BenchmarkAsset
+
+Metadata for a validated, ready-to-solve benchmark.
 
 ```python
-class BenchmarkScenario(BaseModel):
-    id: UUID
-    tier: Literal["kinematic", "spatial", "dynamics"]
-    description: str
-    template_url: str  # S3 URL to build123d script
-    mjcf_url: str      # S3 URL to validated MJCF
-    preview_urls: List[str] # S3 URLs to renders
-    max_unit_cost: float
-    target_quantity: int
-    validation_status: Literal["passed", "failed"]
+class BenchmarkAsset(BaseModel):
+    benchmark_id: UUID
+    mjcf_url: HttpUrl
+    build123d_url: HttpUrl  # Original source code
+    preview_bundle_url: HttpUrl # ZIP of 24 multi-view images
+    random_variants: List[UUID]  # Links to specific seeded variations
+    difficulty_score: float
 ```
 
-### 2. GenerationRequest
+### 2. GenerationSession
+
+State of a benchmark generation graph run.
 
 ```python
-class GenerationRequest(BaseModel):
+class GenerationSession(BaseModel):
+    session_id: UUID
     prompt: str
-    tier: str
-    variation_count: int = 1
-    seed_override: Optional[int] = None
+    status: Literal["planning", "executing", "validating", "accepted", "rejected"]
+    validation_logs: List[str]
 ```
 
-### 3. ScenarioValidationReport
+## Persistence strategy
 
-```python
-class ScenarioValidationReport(BaseModel):
-    is_stable: bool
-    telemetry: Dict[str, Any]
-    error_summary: Optional[str]
-    sim_time_s: float
-```
-
-## Persistence Strategy
-
-1. **Metadata**: Stored in the central **Postgres** DB on the Controller.
-2. **Files (code, xml, images)**: Stored as permanent assets in **S3**.
-3. **Logs**: Reasoning traces are persisted via the global `StepTrace` schema.
+1. **Relational**: Session state and Benchmark metadata are stored in Postgres.
+2. **Assets (S3)**: All MJCF, meshes, and images are stored as permanent objects in S3 Railway buckets.
+3. **Traceability**: LLM reasoning for benchmark design is persisted via LangGraph checkpoints.

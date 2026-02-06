@@ -2,44 +2,55 @@
 
 ## Core Models (Pydantic)
 
-We use `pydantic.BaseModel` for API communication and internal orchestration via Temporal.
+### 1. PhysicsObjective (AABB)
 
-### 1. SimulationRequest
+Definition of zones within the simulation environment.
 
 ```python
-class SimulationRequest(BaseModel):
-    request_id: UUID = Field(default_factory=uuid4)
-    env_geometry_url: str  # S3 URL to environment geometry
-    agent_geometry_url: str # S3 URL to agent's code/model
-    config: SimulationConfig
+class PhysicsObjective(BaseModel):
+    name: str
+    objective_type: Literal["build", "goal", "forbid", "bounds"]
+    min_point: Tuple[float, float, float]
+    max_point: Tuple[float, float, float]
 ```
 
-### 2. SimulationConfig
+### 2. SimulationTask
+
+The payload for a single simulation execution (orchestrated via Temporal).
 
 ```python
-class SimulationConfig(BaseModel):
+class SimulationTask(BaseModel):
+    task_id: UUID
+    mjcf_content: str
     duration: float = 10.0
-    timestep: float = 0.002
-    seed: int = 42
+    jitter_config: Optional[Dict[str, float]] = None
     render_video: bool = False
-    perturb_position: bool = True # For robustness testing
+    callback_url: HttpUrl
 ```
 
-### 3. SimulationResult
+### 3. SimulationTelemetry
+
+Temporal data returned from the simulation.
 
 ```python
-class SimulationResult(BaseModel):
-    request_id: UUID
-    status: Literal["success", "collision", "out_of_bounds", "timeout", "instability", "error"]
-    metrics: Dict[str, float]
-    video_url: Optional[str] = None # S3 URL if rendered
-    summary: str # Text summary for agent feedback
+class SimulationTelemetry(BaseModel):
+    timestamps: List[float]
+    object_positions: Dict[str, List[Tuple[float, float, float]]]
+    motor_power: List[float]
+    contact_forces: List[float]
 ```
 
-## Internal Orchestration
+## Artifact Storage (S3 / Railway)
 
-The engine is stateless. Worker nodes pull assets from S3 based on the URLs in the `SimulationRequest`.
+Artifacts are stored with the following structure to ensure consistency across worker nodes.
 
-1. **Geometry Parsing**: The worker parses the environment from S3 to identify goals and forbidden zones based on naming conventions (`zone_goal_*`, `zone_forbid_*`).
-2. **Execution**: Code is executed inside a **Podman/Docker** sandbox.
-3. **Traceability**: All simulation results are reported back to the Controller and persisted in the observability DB.
+- **`rendering/video/<task_id>.mp4`**: The simulation recording.
+- **`rendering/frames/<task_id>/<angle>.png`**: 24 multi-view renders.
+- **`physics/mjcf/<task_id>.xml`**: The generated MJCF file.
+- **`physics/meshes/<hash>.stl`**: Cached mesh files for reuse.
+
+## Success Definition
+
+1. **Safety**: No `forbid` zone contact && No `out_of_bounds` excursion.
+2. **Achievement**: Goal object's center of mass stays within `goal` zone for >1.0s.
+3. **Stability**: No simulation "explosions" (NaN velocities).

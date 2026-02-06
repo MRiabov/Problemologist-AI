@@ -1,89 +1,47 @@
 # Research: Advanced Manufacturing Workbenches
 
-## 1. Geometric Analysis with Trimesh
+## Deterministic Manufacturability Checks
 
-To perform DFM checks efficiently, we will convert `build123d` solid models into `trimesh` mesh objects.
+To ensure the agents produce realistic hardware, we implement a set of deterministic "Workbenches" that judge geometry based on physical constraints.
 
-### 1.1 Conversion Strategy
+### 1. 3D Printing (FDM/SLS)
 
-`build123d` does not directly output `trimesh` objects, but it can export STL to a buffer.
+- **Constraint**: Minimum wall thickness and overhang angles.
+- **Algorithm**: Ray-casting to find thin sections and calculating face normals relative to the build plate.
+- **Cost**: Based on volume + material prep time.
 
-```python
-import trimesh
-from build123d import Part, export_stl
-import io
+### 2. CNC Milling (3-axis)
 
-def part_to_trimesh(part: Part) -> trimesh.Trimesh:
-    with io.BytesIO() as f:
-        export_stl(part, f)
-        f.seek(0)
-        mesh = trimesh.load(f, file_type='stl')
-    return mesh
-```
+- **Constraint**: Tool accessibility and internal radii.
+- **Algorithm**: Visibility check (ray-cast from the spindle axis) to detect undercuts. Verification that all internal corners satisfy `min_tool_radius`.
+- **Cost**: Material block cost + machine hourly rate based on volume removed and tool changes.
 
-### 1.2 Draft Angle Analysis (Injection Molding)
+### 3. Injection Molding
 
-* **Goal**: Ensure faces parallel to pull direction have sufficient slope.
-* **Method**:
-    1. Get face normals: `mesh.face_normals`
-    2. Define Pull Vector: `P = [0, 0, 1]`
-    3. Compute angle: $\theta = \arccos(\vec{n} \cdot \vec{P})$
-    4. **Check**:
-        * Faces with $\theta \approx 90^\circ$ (within tolerance) are vertical walls requiring draft.
-        * Fail if $|90^\circ - \theta| < \text{min\_draft}$.
+- **Constraint**: Draft angles and uniform wall thickness.
+- **Algorithm**: Normal-angle check against the pull direction. Fail if draft is below `min_draft_angle`.
+- **Cost**: High initial mold cost (calculated by surface area and complexity) divided by target quantity.
 
-### 1.3 Undercut Detection (CNC & IM)
+## Cost Modeling Strategy
 
-* **Goal**: Detect geometry occluded from the tool/mold.
-* **Method (Raycasting)**:
-    1. Target: Center points of all faces (`mesh.triangles_center`).
-    2. Source: Target points + (Pull Vector * epsilon).
-    3. Direction: Pull Vector (for IM) or Tool Vector (for CNC).
-    4. Cast rays: `mesh.ray.intersects_any(origins, vectors)`
-    5. **Logic**: If a ray hitting a face center intersects *other* geometry on its way out, that face is undercut (trapped).
+**Decision**: Use a centralized `manufacturing_config.yaml`.
+**Rationale**:
 
-## 2. Configuration Schema (`manufacturing_config.yaml`)
+- Provides a "ground truth" for materials, electricity costs, and labor rates.
+- Allows the benchmark generator to simulate different economic conditions (e.g., "high-cost aluminum scenario").
 
-We will use a central YAML file to control costs and constraints.
+## Feedback Loop: The DFM Report
 
-```yaml
-defaults:
-  currency: "USD"
+**Decision**: Feedback via Markdown reports.
+**Rationale**:
 
-cnc:
-  materials:
-    aluminum_6061:
-      density_g_cm3: 2.7
-      cost_per_kg: 5.50
-      machine_hourly_rate: 80.00
-  constraints:
-    min_tool_radius_mm: 3.0
-    default_axis: "Z"
+- When a `validate_and_price()` call fails, the agent receives a Markdown report detailing the exact violation (e.g., "Undercut detected at [X,Y,Z]").
+- Score is calculated from 0.0 to 1.0; agents can be prompted to optimize for a specific score.
 
-injection_molding:
-  materials:
-    abs:
-      density_g_cm3: 1.04
-      cost_per_kg: 2.50
-  constraints:
-    min_draft_angle_deg: 2.0
-    min_wall_thickness_mm: 1.0
-    max_wall_thickness_mm: 4.0
-  costs:
-    base_mold_cost: 5000.00
-    mold_cost_per_surface_area_cm2: 0.50
-```
+## Distributed Logic
 
-## 3. Distributed Execution & Caching
+**Decision**: Benchmarks run on the **Worker** for speed.
+**Rationale**:
 
-Workbenches are implemented as utility libraries available on the **Worker** nodes.
-
-* **Execution**: The agent invokes `validate_and_price(component)` from the `utils` folder. This script internally calls the workbench's geometric analysis engine.
-* **Caching**:
-  * **Level 1 (Worker-local)**: Results are cached in the worker's memory during a single episode.
-  * **Level 2 (Global)**: Final reports for validated parts are persisted in the **Observability DB** (Postgres) on the Controller, keyed by the mesh's `content_hash`. This prevents redundant expensive analysis across different episodes or benchmarks.
-
-## 4. Dependencies
-
-* **Worker Runtime**: `trimesh[easy]`, `pyyaml`, `scipy`, `numpy`.
-* **Controller**: `pydantic` for schema validation.
+- Complex ray-casting (`trimesh`) over high-res meshes is compute-intensive.
+- Keeping it on the worker avoids shipping large STL files over the network.

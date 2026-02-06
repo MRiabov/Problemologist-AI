@@ -1,31 +1,56 @@
-# Quickstart: VLM CAD Agent
+# Quickstart: VLM CAD Agent (Engineer)
 
-## Running the Agent (Development Only)
+## Running an Engineering Episode
 
-For development, you can run the agent locally against a remote worker.
-
-```bash
-# 1. Export variables
-export WORKER_URL="http://your-worker:8080"
-export LITELLM_MODEL="openai/gpt-4o"
-
-# 2. Run the runner script
-python -m src.agent.runner --goal "Design a generic ball joint for MuJoCo"
-```
-
-## Production Interaction
-
-In production, the agent is managed by the **Controller** and triggered via the dashboard or API.
+Engineering episodes are typically triggered through the Dashboard or the Controller API.
 
 ```bash
-# Example API call to start an agent episode
-curl -X POST http://controller/api/episodes \
+# Trigger an episode via the Controller API
+curl -X POST http://controller:8000/api/episodes \
      -H "Content-Type: application/json" \
-     -d '{"goal": "Create a compliant 1-DOF flexure", "spec_id": "002"}'
+     -d '{
+       "agent_type": "engineer",
+       "goal": "Design a support bracket for a 5kg load that fits in a 10cm cube.",
+       "constraints": {"max_cost": 50.0, "max_weight": 0.5}
+     }'
 ```
 
-## Monitoring
+## Inspecting Agent Progress
 
-- Follow traces in **LangFuse**.
-- Check **Temporal** dashboard for simulation workflow status.
-- Files generated (vidoes, meshes) are uploaded to **S3 (Railway Bucket)**.
+During execution, the agent's internal state is reflected in the worker's filesystem.
+
+1. **Journal**: View the high-level reasoning.
+
+   ```bash
+   # From the controller/dashboard
+   deepagents cat journal.md --episode-id <ID>
+   ```
+
+2. **TODOs**: Check the current status of tasks.
+
+   ```bash
+   deepagents cat todo.md --episode-id <ID>
+   ```
+
+## Local Development (Simulated Worker)
+
+To run the agent graph locally without a full distributed setup:
+
+```python
+from src.agent.engineer_graph import create_engineer_graph
+from deepagents.backends import LocalFilesystemBackend
+
+# Initialize with local sandbox for rapid testing
+graph = create_engineer_graph(
+    filesystem=LocalFilesystemBackend(root_dir="./sandbox"),
+    llm_provider="openai/gpt-4o"
+)
+
+# Run a thread
+graph.invoke({"goal": "Create a 10mm bolt."})
+```
+
+## Observability
+
+- **LangFuse**: Monitor the "think" steps and tool call latencies.
+- **Journal Snapshots**: View the evolving `journal.md` narrative in the Dashboard.
