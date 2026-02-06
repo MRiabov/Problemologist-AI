@@ -7,6 +7,7 @@ from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
+from src.shared.enums import ResponseStatus
 from src.shared.logging import configure_logging, get_logger
 
 # Configure logging
@@ -21,6 +22,7 @@ app = FastAPI(title="Problemologist Controller")
 # Temporal client
 temporal_client_instance: Client = None
 
+
 @app.on_event("startup")
 async def startup_event():
     global temporal_client_instance
@@ -29,9 +31,11 @@ async def startup_event():
     except Exception as e:
         logger.error("failed_to_connect_to_temporal", error=str(e))
 
+
 class AgentRunRequest(BaseModel):
     task: str = Field(..., description="The task for the agent to perform.")
     session_id: str = Field(..., description="Session ID for the worker.")
+
 
 class SimulationRequest(BaseModel):
     session_id: str = Field(..., description="Session ID for the worker.")
@@ -44,36 +48,44 @@ def get_worker_client(session_id: str) -> WorkerClient:
 
 @app.get("/")
 async def read_root():
-    return {"status": "ok", "service": "controller"}
+    return {"status": ResponseStatus.OK, "service": "controller"}
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {"status": ResponseStatus.HEALTHY}
 
 
 @app.post("/simulation/run")
 async def run_simulation(request: SimulationRequest):
     if not temporal_client_instance:
-        return {"status": "error", "message": "Temporal client not connected"}
-    
+        return {
+            "status": ResponseStatus.ERROR,
+            "message": "Temporal client not connected",
+        }
+
     handle = await temporal_client_instance.start_workflow(
         SimulationWorkflow.run,
         request.compound_json,
         id=f"sim-{request.session_id}-{os.urandom(4).hex()}",
         task_queue="simulation-task-queue",
     )
-    return {"status": "accepted", "workflow_id": handle.id}
+    return {"status": ResponseStatus.ACCEPTED, "workflow_id": handle.id}
 
 
 @app.post("/agent/run")
 async def run_agent(request: AgentRunRequest):
     client = get_worker_client(request.session_id)
     # Pass temporal_client to middleware for durable execution
-    fs_middleware = RemoteFilesystemMiddleware(client, temporal_client=temporal_client_instance)
+    fs_middleware = RemoteFilesystemMiddleware(
+        client, temporal_client=temporal_client_instance
+    )
     agent = create_agent_graph(fs_middleware)
 
     # Run the agent
     result = await agent.ainvoke({"messages": [("user", request.task)]})
 
-    return {"status": "completed", "output": result["messages"][-1].content}
+    return {
+        "status": ResponseStatus.COMPLETED,
+        "output": result["messages"][-1].content,
+    }
