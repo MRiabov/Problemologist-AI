@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("preview_bundle_url", sa.String(), nullable=False),
         sa.Column("random_variants", sa.JSON(), nullable=True),
         sa.Column("difficulty_score", sa.Float(), nullable=True),
-        sa.Column("metadata_json", sa.JSON(), nullable=True),
+        sa.Column("metadata", sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint("benchmark_id"),
     )
     op.create_index(

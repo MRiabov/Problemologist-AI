@@ -1,17 +1,9 @@
-import enum
-
 from sqlalchemy import JSON, UUID, Column, Enum, Float, String
 from sqlalchemy.orm import declarative_base
 
+from .models import SessionStatus
+
 Base = declarative_base()
-
-
-class SessionStatus(enum.StrEnum):
-    planning = "planning"
-    executing = "executing"
-    validating = "validating"
-    accepted = "accepted"
-    rejected = "rejected"
 
 
 class BenchmarkAssetModel(Base):
@@ -23,7 +15,7 @@ class BenchmarkAssetModel(Base):
     preview_bundle_url = Column(String, nullable=False)
     random_variants = Column(JSON, default=list)  # List of UUIDs
     difficulty_score = Column(Float, default=0.0)
-    metadata_json = Column(JSON, default=dict)
+    metadata = Column(JSON, default=dict)
 
 
 class GenerationSessionModel(Base):
