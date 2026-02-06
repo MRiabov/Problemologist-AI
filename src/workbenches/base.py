@@ -1,10 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Callable, Protocol, Union, List, Any, Optional, Dict
+from build123d import Part, Compound
+from src.workbenches.models import WorkbenchResult, ManufacturingConfig, CostBreakdown
 
-from build123d import Part
+# Functional interface for workbench analysis
+AnalyzeFunction = Callable[[Union[Part, Compound], ManufacturingConfig], WorkbenchResult]
 
-from src.workbenches.models import CostBreakdown
-
+class WorkbenchAnalyzer(Protocol):
+    """
+    Protocol for functional workbench analysis.
+    """
+    def __call__(self, part: Union[Part, Compound], config: ManufacturingConfig) -> WorkbenchResult:
+        ...
 
 class Workbench(ABC):
     """
@@ -14,7 +21,7 @@ class Workbench(ABC):
     """
 
     @abstractmethod
-    def validate(self, part: Part) -> list[Exception | str]:
+    def validate(self, part: Part) -> List[Union[Exception, str]]:
         """
         Validates the part against the workbench constraints.
 
@@ -26,7 +33,7 @@ class Workbench(ABC):
         """
         pass
 
-    def validate_geometry(self, part: Part) -> list[Exception | str]:
+    def validate_geometry(self, part: Part) -> List[Union[Exception, str]]:
         """
         Alias for validate, as per spec requirements.
         """
@@ -34,7 +41,7 @@ class Workbench(ABC):
 
     @abstractmethod
     def calculate_cost(
-        self, part: Part, quantity: int = 1, context: dict | None = None
+        self, part: Part, quantity: int = 1, context: Optional[Dict[str, Any]] = None
     ) -> CostBreakdown:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
@@ -46,6 +53,6 @@ class Workbench(ABC):
                      Keyed by part hash, value could be number of times seen.
 
         Returns:
-            The calculated cost as a CostBreakdown dataclass.
+            The calculated cost as a CostBreakdown model.
         """
         pass
