@@ -1,11 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Geometry Pipeline & Scene Builder"
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005", "T006"]
-agent: "gemini-agent"
-shell_pid: "481649"
+agent: "Gemini"
+shell_pid: "716159"
 ---
 
 # WP01: Geometry Pipeline & Scene Builder
@@ -103,3 +103,4 @@ Key challenge: MuJoCo handles concave objects poorly compared to convex hulls. W
 
 - 2026-02-06T08:06:52Z – gemini-agent – shell_pid=481649 – lane=doing – Started implementation via workflow command
 - 2026-02-06T14:13:08Z – gemini-agent – shell_pid=481649 – lane=for_review – Ready for review: Implemented geometry pipeline and scene builder with VHACD support and zone logic improvements.
+- 2026-02-06T15:39:28Z – Gemini – shell_pid=716159 – lane=doing – Started review via workflow command
