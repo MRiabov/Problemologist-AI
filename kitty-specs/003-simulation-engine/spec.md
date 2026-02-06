@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-The **MuJoCo Simulation Engine** is the physics validation backend for the **Agentic CAD Environment**. It operates within the **Worker Node** and is invoked via the `simulate` utility function available to agents.
+The **MuJoCo Simulation Engine** is the physics validation backend for the **Agentic CAD Environment**. It operates within the **Worker Node** (managed as a disposable sandbox via `SandboxFilesystemBackend` in `deepagents`) and is invoked via the `simulate` utility function available to agents.
 
 Its primary responsibility is to take a CAD assembly, simulate it in a physics environment ensuring correct "Definition of Done" (DoD), and produce high-fidelity artifacts (videos, logs). Large media is stored in **S3** via the worker's **CompositeBackend** routing.
 
@@ -15,9 +15,9 @@ Its primary responsibility is to take a CAD assembly, simulate it in a physics e
 ### 2.1. Primary Goals
 
 1. **Physics Verification**: Verify if a CAD design achieves the task objective (e.g., "move object A to zone B").
-2. **High-Fidelity Artifacts**: Render and compress simulation videos (`.mp4`) for human review and agent feedback.
+2. **High-Fidelity Artifacts**: Render and compress simulation videos (`.mp4`) on-demand for human review and agent feedback.
 3. **Long-Running Execution**: Integrate with **Temporal** to handle simulations that exceed immediate HTTP timeout thresholds.
-4. **Automated Pipeline**: `CAD -> MJCF -> Simulation -> Video -> S3`.
+4. **Automated Pipeline**: `CAD -> validate_and_price -> MJCF -> Simulation -> Video (Optional) -> S3`.
 
 ### 2.2. Success Criteria
 
@@ -27,7 +27,7 @@ Its primary responsibility is to take a CAD assembly, simulate it in a physics e
 
 ## 3. User Stories
 
-- **As an Agent**, I want to call `simulate(my_model)` and get back a Pass/Fail result with a reason.
+- **As an Agent**, I want to call `simulate(my_model, render=True)` and get back a Pass/Fail result with a reason and an optional video link.
 - **As a User**, I want to see a video of the simulation to understand what the agent built.
 - **As an Agent**, I want my simulation to include "Sensors" (Goal Zones, Forbidden Zones) that automatically trigger success/failure.
 
@@ -35,24 +35,25 @@ Its primary responsibility is to take a CAD assembly, simulate it in a physics e
 
 ### 4.1. The `simulate` Pipeline
 
-The `simulate(component)` python function triggers the following steps on the Worker:
+The `simulate(component, render=False)` python function triggers the following steps on the Worker:
 
-1. **Snapshot**: `git commit` current workspace state.
-2. **Scene Builder**:
+1. **Validation**: Call `validate_and_price(component)` to ensure manufacturability and cost compliance. Fail early if validation fails.
+2. **Snapshot**: `git commit -am "Pre-simulation snapshot"` current workspace state.
+3. **Scene Builder**:
     - Parse `component` (Agent's design).
     - Parse `environment` (Benchmark constraints).
     - Identify "Zones" (Goal, Forbid, Start) by name convention (`zone_goal_*`, `zone_forbid_*`).
-3. **Compilation**:
+4. **Compilation**:
     - Generate Meshes (STL).
     - Compute Convex Hulls (`vhacd` / internal).
     - Generate MJCF XML (`scene.xml`).
-4. **Simulation Loop**:
+5. **Simulation Loop**:
     - Step physics (500Hz).
     - Check triggers (Goal Entry, Forbid Collision).
-    - Render frames (30fps).
-5. **Post-Processing**:
-    - Encode frames to MP4 (`ffmpeg`).
-    - Save MP4 and MJCF to `/renders/` (automatically routed to S3).
+    - Optional: Render frames (30fps) if `render=True`.
+6. **Post-Processing**:
+    - If `render=True`: Encode frames to MP4 (`ffmpeg`).
+    - Save MP4 (if any) and MJCF to `/renders/` (automatically routed to S3).
     - Generate Simulation Report (Markdown).
 
 ### 4.2. Temporal Integration

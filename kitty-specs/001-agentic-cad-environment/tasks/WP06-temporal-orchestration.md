@@ -6,7 +6,7 @@ dependencies: ["WP05", "WP04"]
 subtasks: ["T027", "T028", "T029", "T030", "T031"]
 ---
 
-# WP06: Temporal Orchestration
+## WP06: Temporal Orchestration
 
 **Goal**: Move long-running tasks (Simulation) to Temporal workflows.
 
@@ -43,36 +43,20 @@ File: `src/controller/workflows/simulation.py`
 
 **Workflow**: `SimulationWorkflow`
 
-- Logic: Executes the Activity.
-- Retry Policy: Retry on network errors, potentially on container crash.
+- Logic: Calls Worker to compile MJCF -> Runs Simulation -> Renders Video -> Uploads to S3 -> Updates Postgres Trace.
+- Retry Policy: Standard Temporal retry for transient failures.
 
-### T030: Update Utils Trigger
+### T030: Implement `ScriptExecutionWorkflow`
 
-The Agent tools (WP04) need to trigger this workflow.
-Update `exec_tool` or create a specific `simulate_tool`?
-Ideally, the *Agent* calls `utils.simulate()` in python. That python script runs in the *Worker*.
-The *Worker* executes the script synchronously.
-**Problem**: If the script takes 10 mins, the HTTP request times out.
-**Solution**: The `simulate` util (WP05) should probably *not* run the sim locally if it's huge, OR (`deepagents` style) the `runtime/execute` endpoint returns a Job ID or streams logs.
-**Revised Plan**:
-For MVP/Spec 001, we might keep it synchronous (up to 5 mins) or rely on Temporal *wrapping* the agent step.
-**Spec says**: "For every operation expected to run for more than 30 seconds, store that to Temporal."
-**Implementation**:
-The `Controller` should wrap the `WorkerClient.execute` call in a Temporal Activity if it detects a "Simulation" intent? No, that's magic.
-Better: The `simulate(component)` util in Python code communicates back to Controller to "schedule a simulation"?
-**Simpler approach**: The `simulate` util runs the simulation *in the worker* (it's powerful). The *Controller* wraps the entire `run_script` tool call in a Temporal Activity.
-So when Agent calls "Execute Script", Controller starts a Workflow.
-**Task**: Implement `ScriptExecutionWorkflow` in Controller.
+File: `src/controller/workflows/execution.py`
 
-### T031: Integration
+- The coding agent runs scripts that can last minutes. Wrap the entire execution in a Temporal Workflow.
+- If the Controller restarts, it resumes waiting for the Worker's `ExecuteResponse`.
 
-- Update Controller Tool `exec_tool` to `start_workflow` instead of direct execution.
-- Or simply ensure `WorkerClient` has a long timeout and Controller is robust.
-*Decision*: Let's stick to the Spec's implication.
-Task: "Update `simulate` util to trigger Temporal".
-Actually, the spec says "Temporal is used to orchestrate the workers... It is not used to run or retry the agent."
-So the Controller (API) should start a workflow when a request comes in?
-Let's define T030 as: "Create `ScriptExecutionWorkflow` that calls Worker API, so if Controller dies, we can resume waiting for Worker."
+### T031: Update `utils.simulate()` Trigger
+
+- Ensure `utils.simulate()` in the Worker communicates with the Controller to start/join a `SimulationWorkflow`.
+- The Controller exposes an internal endpoint for this.
 
 ## Verification
 

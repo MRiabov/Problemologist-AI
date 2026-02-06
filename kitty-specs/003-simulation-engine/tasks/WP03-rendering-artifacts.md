@@ -6,7 +6,7 @@ dependencies: []
 subtasks: [T013, T014, T015, T016, T017, T018]
 ---
 
-# WP03: Rendering & Artifact Storage
+## WP03: Rendering & Artifact Storage
 
 ## Objective
 
@@ -19,17 +19,19 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
 
 ## Implementation Guide
 
-### T013: Implement VideoRenderer
+### T013: Implement Renderer
 
 **File**: `src/worker/simulation/renderer.py`
 
-1. Class `VideoRenderer`.
+1. Class `Renderer`.
 2. `__init__(self, model, data, width=640, height=480)`:
    - Initialize `mujoco.Renderer(model, height, width)`.
-3. `render_frame(self) -> numpy.ndarray`:
-   - Call `self.renderer.update_scene(data)`.
+3. `render_frame(self, camera=None) -> numpy.ndarray`:
+   - Call `self.renderer.update_scene(data, camera=camera)`.
    - Return `self.renderer.render()`.
-   - **Performance Note**: Rendering every physics step (500Hz) is wasteful. We should render at 30Hz or 60Hz.
+4. `render_24_views(self) -> list[numpy.ndarray]`:
+   - Implement logic to orbit the camera (8 horizontal angles x 3 vertical levels).
+   - Return a list of 24 images.
 
 ### T014: Implement Frame Capture Logic
 
@@ -45,17 +47,14 @@ Artifacts must be immediately uploaded to S3 to provide a permanent URL.
    - **Caution**: Storing raw frames in memory (RAM) can result in OOM if simulation is long.
    - **Better**: Write frames immediately to a pipe (see T015).
 
-### T015: Implement FFmpeg Encoding Pipeline
+### T015: Implement Artifact Bundling
 
 **File**: `src/worker/simulation/renderer.py`
 
-1. Use `ffmpeg-python` or `subprocess`.
-2. Method `initialize_encoder(self, output_path)`:
-   - Open a subprocess to `ffmpeg -f rawvideo -pix_fmt rgb24 -s 640x480 -r 30 -i - ... output.mp4`.
-3. Method `add_frame(self, frame)`:
-   - Write bytes to `process.stdin.write(frame.tobytes())`.
-4. Method `close(self)`:
-   - Close stdin, wait for process to finish.
+1. **Video**: Use `ffmpeg-python` to encode frames to `output.mp4`.
+2. **24-View Bundle**: Save 24 images to a temporary folder, then create a zip or tarball `preview_bundle.zip`.
+3. Method `save_artifacts(self, output_dir: Path)`:
+   - Ensure video and preview bundle are written to `/renders/`.
 
 ### T016: Implement S3 Upload
 

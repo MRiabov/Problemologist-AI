@@ -6,7 +6,7 @@ dependencies: ["WP02"]
 subtasks: ["T010", "T011", "T012"]
 ---
 
-# WP03: Search Runtime
+## WP03: Search Runtime
 
 **Goal**: Expose the catalog to agents via a search tool.
 
@@ -24,16 +24,15 @@ subtasks: ["T010", "T011", "T012"]
   - Use simple LIKE matching for name/category if full-text search isn't available in SQLite (or use FTS5 if supported).
   - Limit results.
 
-### T011: Create Tool Definition
+### T011: Implement Search Subagent
 
-**Purpose**: LangChain/DeepAgents tool interface.
-**File**: `src/cots/tool.py`
-**Steps**:
+**Purpose**: Provide a reasoning layer for part discovery.
+**File**: `src/cots/agent.py`
 
-- Define a tool class/function `find_cots_part`.
-- Input: `query` (string), `constraints` (json/dict optional).
-- Docstring: "Finds off-the-shelf parts like bolts, motors. Input: description of part..."
-- Return: JSON string validation of `List[COTSItem]`.
+- Define a `SearchAgent` (using LangGraph/LangChain).
+- Tools: `search_parts` (SQL search).
+- Prompt: "You are a part lookup assistant. Given a description, find the best-fit part. You can run multiple SQL queries."
+- Expose the agent's entrypoint as a tool for the main Engineer agent.
 
 ### T012: Integration Test
 

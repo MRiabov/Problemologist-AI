@@ -97,9 +97,9 @@
 **Tests**: Unit tests for `utils` package.
 
 - [ ] T022: Create `src/worker/utils/` package.
-- [ ] T023: Implement `validate_and_price(component)` stub (mock workbench).
-- [ ] T024: Implement `simulate(component)` stub (mock simulation loop: git commit -> upload -> pass).
-- [ ] T025: Implement `submit_for_review(component)` stub.
+- [ ] T023: Implement `validate_and_price(component)` (Workbench integration).
+- [ ] T024: Implement `simulate(component)` (Trigger Temporal Workflow in Controller, wait for S3 assets/summary).
+- [ ] T025: Implement `submit_for_review(component)` (Reviewer agent integration).
 - [ ] T026: Ensure these utils are importable by the `runtime` execution (PYTHONPATH).
 
 **Implementation**:
@@ -118,10 +118,10 @@
 **Tests**: Run a "long" task and restart Worker; verify task completes.
 
 - [ ] T027: Add Temporal service to `docker-compose`.
-- [ ] T028: Implement Temporal Worker in `src/controller` (or separate service?). A: Controller initiates.
-- [ ] T029: Define `SimulationWorkflow` and `SimulationActivity`.
-- [ ] T030: Update `simulate` util (or API) to trigger Temporal workflow instead of sync execution.
-- [ ] T031: Implement callback/webhook logic to notify Agent when simulation is done (if async) or wait (if sync). Note: Spec says Temporal handles it.
+- [ ] T028: Implement Temporal Worker in Controller.
+- [ ] T029: Define `SimulationWorkflow` (Orchestrate Worker -> Run Sim -> Upload -> DB Update).
+- [ ] T030: Implement `ScriptExecutionWorkflow` in Controller to wrap long-running agent scripts.
+- [ ] T031: Update `utils.simulate()` to call Controller API to start/poll `SimulationWorkflow`.
 
 **Implementation**:
 

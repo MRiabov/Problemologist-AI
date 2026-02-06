@@ -54,12 +54,12 @@
 **Priority**: Medium
 **Dependencies**: WP02
 
-- [ ] T013: Implement `VideoRenderer` in `src/worker/simulation/renderer.py` using MuJoCo's GLContext. <!-- id: 12 -->
-- [ ] T014: Implement frame capture at 30fps during simulation loop. <!-- id: 13 -->
-- [ ] T015: Implement `ffmpeg` encoding pipeline to produce MP4 files. <!-- id: 14 -->
-- [ ] T016: Implement S3 routing logic via `CompositeBackend` for the `/renders/` directory. <!-- id: 15 -->
-- [ ] T017: update `SimulationLoop` to integrate rendering and ensure files are saved to `/renders/`. <!-- id: 16 -->
-- [ ] T018: Add tests for video generation and verification of S3 availability via the routed path. <!-- id: 17 -->
+- [ ] T013: Implement `Renderer` in `src/worker/simulation/renderer.py` using MuJoCo's GLContext.
+- [ ] T014: Implement frame capture for video and 24-view image bundle (8 angles x 3 levels).
+- [ ] T015: Implement `ffmpeg` encoding for MP4 and tiling/zipping for image bundle.
+- [ ] T016: Implement S3 routing logic via `CompositeBackend` for the `/renders/` directory.
+- [ ] T017: Update `SimulationLoop` to integrate rendering and ensure files are saved to `/renders/`.
+- [ ] T018: Add tests for video generation and 24-view bundle verification.
 
 **Implementation Logic**:
 

@@ -38,6 +38,12 @@ It distinguishes between **Controller Observability** (LLM Traces, Agent State) 
 - **Artifacts**: All light and heavy artifacts (Meshes, Videos, Code) are stored in **S3**.
 - **Persistence**: Any worker-side persistence is ephemeral; the source of truth is the central Controller database.
 
+### 1.3 Episodic Memory (Journal)
+
+- **Journal**: Each episode has a `journal.md` (Episodic Memory) persisted in the episode storage.
+- **Format**: Constrained Markdown with headings for reasoning steps and tool calls.
+- **Temporal Alignment**: Entries must be linked to the "token timeline" or Step IDs for reconstruction.
+
 ## 4. Technical Design
 
 ### 4.1. Tech Stack
