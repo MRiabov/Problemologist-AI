@@ -9,12 +9,12 @@
 **Priority**: Critical
 **Prerequisites**: None
 
-- [ ] T001: Initialize `src/worker/simulation` package and install dependencies (`mujoco`, `build123d`, `trimesh`, `scipy`). <!-- id: 0 -->
-- [ ] T002: Implement `MeshProcessor` in `builder.py` to convert `build123d` objects to STL. <!-- id: 1 -->
-- [ ] T003: Implement Convex Decomposition strategy (V-HACD or convex hull) to ensure stable physics. <!-- id: 2 -->
-- [ ] T004: Implement `SceneCompiler` in `builder.py` to generate MJCF XML from processed meshes. <!-- id: 3 -->
-- [ ] T005: Implement "Zone Logic" to identify `zone_*` objects and map them to MuJoCo sensors/sites. <!-- id: 4 -->
-- [ ] T006: Add unit tests for geometry conversion and XML generation. <!-- id: 5 -->
+- [x] T001: Initialize `src/worker/simulation` package and install dependencies (`mujoco`, `build123d`, `trimesh`, `scipy`). <!-- id: 0 -->
+- [x] T002: Implement `MeshProcessor` in `builder.py` to convert `build123d` objects to STL. <!-- id: 1 -->
+- [x] T003: Implement Convex Decomposition strategy (V-HACD or convex hull) to ensure stable physics. <!-- id: 2 -->
+- [x] T004: Implement `SceneCompiler` in `builder.py` to generate MJCF XML from processed meshes. <!-- id: 3 -->
+- [x] T005: Implement "Zone Logic" to identify `zone_*` objects and map them to MuJoCo sensors/sites. <!-- id: 4 -->
+- [x] T006: Add unit tests for geometry conversion and XML generation. <!-- id: 5 -->
 
 **Implementation Logic**:
 
