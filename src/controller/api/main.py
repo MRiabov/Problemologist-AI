@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -8,6 +7,11 @@ from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
+from src.shared.logging import configure_logging, get_logger
+
+# Configure logging
+configure_logging("controller")
+logger = get_logger(__name__)
 
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
@@ -23,7 +27,7 @@ async def startup_event():
     try:
         temporal_client_instance = await Client.connect(TEMPORAL_URL)
     except Exception as e:
-        print(f"Failed to connect to Temporal: {e}")
+        logger.error("failed_to_connect_to_temporal", error=str(e))
 
 class AgentRunRequest(BaseModel):
     task: str = Field(..., description="The task for the agent to perform.")
@@ -73,12 +77,3 @@ async def run_agent(request: AgentRunRequest):
     result = await agent.ainvoke({"messages": [("user", request.task)]})
 
     return {"status": "completed", "output": result["messages"][-1].content}
-=======
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
->>>>>>> 001-agentic-cad-environment-WP03

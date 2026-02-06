@@ -1,11 +1,8 @@
 import httpx
 from typing import List, Optional, Dict, Any, Union
-<<<<<<< HEAD
 from src.worker.api.schema import ExecuteResponse
 from src.worker.filesystem.backend import FileInfo
 
-=======
->>>>>>> 001-agentic-cad-environment-WP03
 
 class WorkerClient:
     """Async client for interacting with the Problemologist Worker API."""
@@ -21,39 +18,24 @@ class WorkerClient:
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
 
-<<<<<<< HEAD
     async def list_files(self, path: str = "/") -> List[FileInfo]:
-=======
-    async def list_files(self, path: str = "/") -> List[Dict[str, Any]]:
->>>>>>> 001-agentic-cad-environment-WP03
         """List contents of a directory.
 
         Args:
             path: Virtual directory path.
 
         Returns:
-<<<<<<< HEAD
             List of FileInfo objects.
-=======
-            List of FileInfo dictionaries.
->>>>>>> 001-agentic-cad-environment-WP03
         """
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/ls",
                 json={"path": path},
                 headers=self.headers,
-<<<<<<< HEAD
                 timeout=10.0,
             )
             response.raise_for_status()
             return [FileInfo.model_validate(item) for item in response.json()]
-=======
-                timeout=10.0
-            )
-            response.raise_for_status()
-            return response.json()
->>>>>>> 001-agentic-cad-environment-WP03
 
     async def read_file(self, path: str) -> str:
         """Read file contents.
@@ -69,11 +51,7 @@ class WorkerClient:
                 f"{self.base_url}/fs/read",
                 json={"path": path},
                 headers=self.headers,
-<<<<<<< HEAD
                 timeout=10.0,
-=======
-                timeout=10.0
->>>>>>> 001-agentic-cad-environment-WP03
             )
             response.raise_for_status()
             return response.json()["content"]
@@ -93,11 +71,7 @@ class WorkerClient:
                 f"{self.base_url}/fs/write",
                 json={"path": path, "content": content},
                 headers=self.headers,
-<<<<<<< HEAD
                 timeout=10.0,
-=======
-                timeout=10.0
->>>>>>> 001-agentic-cad-environment-WP03
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
@@ -117,20 +91,12 @@ class WorkerClient:
                 f"{self.base_url}/fs/edit",
                 json={"path": path, "edits": edits},
                 headers=self.headers,
-<<<<<<< HEAD
                 timeout=10.0,
-=======
-                timeout=10.0
->>>>>>> 001-agentic-cad-environment-WP03
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
 
-<<<<<<< HEAD
     async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
-=======
-    async def execute_python(self, code: str, timeout: int = 30) -> Dict[str, Any]:
->>>>>>> 001-agentic-cad-environment-WP03
         """Execute Python code in the sandboxed runtime.
 
         Args:
@@ -138,34 +104,20 @@ class WorkerClient:
             timeout: Execution timeout in seconds.
 
         Returns:
-<<<<<<< HEAD
             ExecuteResponse model with stdout, stderr, exit_code, and timed_out.
         """
         async with httpx.AsyncClient() as client:
             # We add some buffer to the HTTP timeout to allow the runtime
-=======
-            Dictionary with stdout, stderr, exit_code, and timed_out.
-        """
-        async with httpx.AsyncClient() as client:
-            # We add some buffer to the HTTP timeout to allow the runtime 
->>>>>>> 001-agentic-cad-environment-WP03
             # to finish and return the result even if it timed out internally.
             http_timeout = float(timeout) + 5.0
             response = await client.post(
                 f"{self.base_url}/runtime/execute",
                 json={"code": code, "timeout": timeout},
                 headers=self.headers,
-<<<<<<< HEAD
                 timeout=http_timeout,
             )
             response.raise_for_status()
             return ExecuteResponse.model_validate(response.json())
-=======
-                timeout=http_timeout
-            )
-            response.raise_for_status()
-            return response.json()
->>>>>>> 001-agentic-cad-environment-WP03
 
     async def get_health(self) -> Dict[str, str]:
         """Check the health of the worker service."""
