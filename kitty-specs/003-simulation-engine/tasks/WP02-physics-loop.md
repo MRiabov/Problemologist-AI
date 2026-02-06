@@ -8,6 +8,7 @@ base_commit: a507a4f4fd2aa747191815080ecb718df03878e2
 created_at: '2026-02-06T20:15:49.611838+00:00'
 subtasks: [T007, T008, T009, T010, T011, T012, T013]
 shell_pid: "7341"
+agent: "gemini"
 ---
 
 # WP02: Physics Simulation Loop
@@ -94,3 +95,7 @@ The loop must verify "Zones" defined in WP01.
 
 - **High Speed Tunneling**: Fast objects skipping through thin zones.
   - *Mitigation*: Increase simulation freq (set timestep=0.002 or smaller).
+
+## Activity Log
+
+- 2026-02-06T20:15:49Z – gemini – shell_pid=7341 – lane=doing – Assigned agent via workflow command
