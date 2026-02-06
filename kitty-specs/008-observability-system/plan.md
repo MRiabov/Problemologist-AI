@@ -17,6 +17,8 @@ Implement the **Observability System** by integrating **LangFuse** for tracing, 
 - `langfuse`: Tracing.
 - `langgraph`: Persistence.
 - `boto3`: S3.
+- `structlog`: JSON Logging.
+- `temporalio`: Durable Execution (Backups).
 - `schemathesis`: API Testing.
 **Infrastructure**:
 - **Controller**: Railway (Postgres, S3-compatible).
@@ -45,8 +47,11 @@ kitty-specs/008-observability-system/
 src/
 ├── observability/
 │   ├── tracing.py       # LangFuse Setup
+│   ├── logging.py       # Structlog Configuration
 │   ├── persistence.py   # Postgres Checkpointer
 │   └── storage.py       # S3 Client Wrappers
+└── ops/
+    └── workflows.py     # Temporal Workflows (Backups)
 └── tests/
     └── contracts/       # Schemathesis tests
 ```
