@@ -51,7 +51,7 @@ FEEDBACK: Simulation failed.""")
     
     result = await node(state)
     
-    assert result["status"] == "rejected"
+    assert result["status"] == "code_rejected"
     assert "Simulation failed" in result["feedback"]
     assert "Critic Decision: REJECT" in result["journal"]
 
