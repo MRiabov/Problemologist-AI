@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Dashboard Skeleton & Infrastructure"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
+agent: "gemini-cli"
+shell_pid: "477755"
 ---
 
 ## Context
@@ -109,3 +111,7 @@ Initialize the frontend project with the correct stack and directory structure, 
 - [ ] Browser shows the App Shell with Sidebar and correct routing placeholders.
 - [ ] Shadcn components render correctly with styles.
 - [ ] User can navigate between Home and Wizard placeholders.
+
+## Activity Log
+
+- 2026-02-06T07:59:48Z – gemini-cli – shell_pid=477755 – lane=doing – Started implementation via workflow command
