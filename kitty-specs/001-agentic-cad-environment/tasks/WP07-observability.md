@@ -1,13 +1,13 @@
 ---
 work_package_id: WP07
 title: Observability & Persistence
-lane: "for_review"
+lane: "doing"
 dependencies: [WP04]
 base_branch: 001-agentic-cad-environment-WP04
 base_commit: 371c916b02b74710a197bd76731c7afc0b293061
 created_at: '2026-02-06T14:59:01.526671+00:00'
 subtasks: [T032, T033, T034, T035]
-shell_pid: "685546"
+shell_pid: "692403"
 agent: "gemini-cli"
 ---
 
@@ -37,12 +37,12 @@ File: `src/controller/persistence/db.py`
 - Configure Alembic for migrations.
 - Env: `POSTGRES_URL`.
 
-### T034: Define Schema
+### T034: Define Schema (Enums)
 
 File: `src/controller/persistence/models.py`
 
-- `Episode`: Tracks a full agent run.
-- `Trace`: Stores raw LangChain traces (or link to LangFuse).
+- `Episode`: Tracks a full agent run (Use `EpisodeStatus` Enum).
+- `Trace`: Stores raw LangChain traces.
 - `Asset`: S3 paths to videos/files generated.
 - **Reproducibility**: Include fields for **skill git hashes** and template versions in the `Episode` or metadata schemas.
 
@@ -67,3 +67,4 @@ File: `src/controller/observability/langfuse.py`
 - 2026-02-06T15:04:18Z – gemini-cli – shell_pid=674358 – lane=for_review – Ready for review: Implemented structured logging, SQLAlchemy persistence with episodes/traces/assets, and LangFuse integration. Added unit tests for observability and persistence.
 - 2026-02-06T15:08:22Z – gemini-cli – shell_pid=685546 – lane=doing – Started implementation via workflow command
 - 2026-02-06T15:15:16Z – gemini-cli – shell_pid=685546 – lane=for_review – Ready for review: Implemented structured logging, SQLAlchemy persistence with episodes/traces/assets, and LangFuse integration. Added unit tests for observability and persistence. Updated data model spec with Enums.
+- 2026-02-06T15:17:21Z – gemini-cli – shell_pid=692403 – lane=doing – Started review via workflow command
