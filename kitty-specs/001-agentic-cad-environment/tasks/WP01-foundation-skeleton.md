@@ -1,11 +1,13 @@
 ---
 work_package_id: "WP01"
 title: "Foundation & Skeleton"
-lane: "doing"
+lane: "done"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005", "T006"]
 agent: "Antigravity"
 shell_pid: "506896"
+reviewed_by: "MRiabov"
+review_status: "approved"
 ---
 
 # WP01: Foundation & Skeleton
@@ -108,3 +110,4 @@ Create `ruff.toml` and `pyrightconfig.json` at root.
 - 2026-02-06T08:05:15Z – gemini – shell_pid=479700 – lane=doing – Started implementation via workflow command
 - 2026-02-06T08:29:33Z – gemini – shell_pid=479700 – lane=for_review – Ready for review: Foundation & Skeleton implemented with Docker and CI/CD config
 - 2026-02-06T09:10:45Z – Antigravity – shell_pid=506896 – lane=doing – Started review via workflow command
+- 2026-02-06T09:36:14Z – Antigravity – shell_pid=506896 – lane=done – Review passed: Foundation skeleton, Dockerfiles (py3.12), compose file, and lint configs verified.
