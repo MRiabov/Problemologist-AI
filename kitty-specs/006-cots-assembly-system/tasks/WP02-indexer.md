@@ -8,6 +8,7 @@ base_commit: 22f6e149ae2d21566c7afdae80a281f72989dcbf
 created_at: '2026-02-06T15:07:15.564745+00:00'
 subtasks: [T005, T006, T007, T008, T009]
 shell_pid: "684091"
+agent: "Gemini-CLI"
 ---
 
 # WP02: Indexer Implementation
@@ -81,3 +82,7 @@ shell_pid: "684091"
 ## Implementation Command
 
 `spec-kitty implement WP02 --base WP01`
+
+## Activity Log
+
+- 2026-02-06T15:07:15Z – Gemini-CLI – shell_pid=684091 – lane=doing – Assigned agent via workflow command
