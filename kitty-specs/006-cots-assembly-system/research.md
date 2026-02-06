@@ -1,46 +1,38 @@
 # Research: COTS Assembly System
 
-**Feature**: 006-cots-assembly-system
-**Created**: 2026-02-01
+## Catalog Lookup Strategy
 
-## 1. Technical Decisions
+The Engineering Agent requires access to Off-The-Shelf (COTS) parts (motors, fasteners, gears) without cluttering its primary context with thousands of part definitions.
 
-### 1.1. Part Description Storage
+### 1. The Searching Subagent
 
-* **Decision**: JSON-based descriptions (`cots_descriptions.json`) stored on S3 and loaded by the **Catalog Sub-Agent**.
-* **Rationale**:
-  * **Performance**: Sub-agent executes specialized SQL/Grep queries off-loop.
-  * **Scalability**: S3 storage allows all workers to access the same catalog without bundling large assets.
+**Decision**: Use a dedicated **Catalog Subagent**.
+**Rationale**:
 
-### 1.2. Part Import Instructions
+- The main Agent (Engineer/Planner) only prompts the searching subagent with requirements (e.g., "M6 bolt", "NEMA 17 motor").
+- The subagent executes read-only SQL queries or structured Grep over a catalog database.
+- Reduces primary agent token usage and improves reliability of part selection.
 
-* **Decision**: Recipes are Python snippets injected into the worker sandbox via tools.
-* **Rationale**: Direct instantiation via `bd_warehouse` in the worker environment.
+### 2. Catalog Persistence
 
-### 1.3. Search Pattern
+**Decision**: S3-hosted JSON/SQLite catalog.
+**Rationale**:
 
-* **Decision**: Use a **Sub-Agent** for catalog interaction.
-* **Rationale**: As per the `desired_architecture.md`, the planner or engineer can prompt a searching sub-agent. This encapsulates the database complexity and provides a natural language interface for part selection.
+- Standardized `bd_warehouse` parts are indexed into a high-performance JSON/SQLite file.
+- The subagent uses this index to return a set of matching part IDs and metadata.
 
-## 2. Dependencies
+### 3. Integration via CodeAct
 
-* **Worker Runtime**: `bd_warehouse`.
-* **Controller**: `pydantic`.
+**Decision**: Python-native instantiation.
+**Rationale**:
 
-## 3. Integration Patterns
+- Once a part is selected, the subagent returns a Python "recipe" (e.g., `HexNut('M6')`).
+- The Engineer Agent imports these parts directly into its `script.py`, maintaining the "Code-as-Policy" paradigm.
 
-### 3.1. `PartProvider` Interface
+### 4. Manufacturability of Assemblies
 
-```python
-class PartProvider(ABC):
-    @abstractmethod
-    def search(self, query: str) -> List[PartSummary]: ...
-    
-    @abstractmethod
-    def get_part(self, part_id: str) -> Part: ...
-```
+**Decision**: Non-interfering constraint checks.
+**Rationale**:
 
-### 3.2. `BDWarehouseProvider`
-
-* Will use `bd_warehouse` class methods (e.g., `HexNut.sizes()`) to iterate available parts and populate the index.
-* Will map `part_id` (e.g., `bd_warehouse:fastener:HexNut:M6-1`) to the specific instantiation call.
+- COTS parts are treated as rigid, read-only compounds.
+- The `validate_and_price` tool ensures COTS parts do not interfere with custom CAD geometry and that constraints (e.g., bolt clearance) are respected.

@@ -1,44 +1,32 @@
 # Data Model: Dashboard Views
 
-## UI State Entities (Pydantic)
+## UI Entities (Pydantic Models)
 
-### 1. DashboardSession
+### 1. DashboardUpdate (Live Stream)
 
-```python
-class DashboardSession(BaseModel):
-    mode: Literal["live", "history"]
-    selected_episode_id: Optional[UUID]
-    current_step_index: int = 0
-```
-
-### 2. EpisodeSummary
+The payload for real-time UI updates via WebSockets.
 
 ```python
-class EpisodeSummary(BaseModel):
-    id: UUID
-    problem_id: str
-    start_time: datetime
-    status: str
-    total_steps: int
-    summary_text: Optional[str]
+class DashboardUpdate(BaseModel):
+    update_type: Literal["log", "trace", "asset", "status_change"]
+    content: Any  # Polymorphic based on type
+    timestamp: datetime
 ```
 
-### 3. StepDetail
+### 2. InterruptionRequest
+
+Payload for human intervention.
 
 ```python
-class StepDetail(BaseModel):
-    sequence_index: int
-    tool_name: str
-    thought: str
-    code_snippet: Optional[str]
-    output_log: str
-    asset_urls: List[str]  # S3 URLs for renders/meshes
+class InterruptionRequest(BaseModel):
+    episode_id: UUID
+    command: Literal["stop", "pause", "resume", "rewrite_plan"]
+    message: Optional[str] = None
 ```
 
-## Data Fetching Contracts
+## API Contracts
 
-Internal API endpoints provided by the FastAPI backend on the Controller:
-
-1. **`GET /api/episodes`**: List all recorded episodes.
-2. **`GET /api/episodes/{id}`**: Get full detail for a specific episode.
-3. **`GET /api/episodes/{id}/live`**: SSE or WebSocket for real-time trace updates.
+1. **`GET /api/episodes`**: Paginated list of all engineering/benchmark sessions.
+2. **`GET /api/episodes/{id}/assets`**: URLs for videos, meshes, and rendered images.
+3. **`POST /api/episodes/{id}/interrupt`**: Endpoint for HITL control.
+4. **`GET /api/episodes/{id}/ws`**: WebSocket endpoint for live monitoring.

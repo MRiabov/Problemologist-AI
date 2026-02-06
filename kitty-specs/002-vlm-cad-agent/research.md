@@ -1,28 +1,51 @@
-# Phase 0 Research: VLM CAD Agent
+# Phase 0# Research: VLM CAD Agent (Engineer)
 
-## 1. Resolved Unknowns
+## Agent Role & Personas
 
-### 1.1. Architecture Coupling
+The "Engineer" is an agent graph (LangGraph) consisting of three primary roles to ensure high-quality, manufacturable solutions.
 
-* **Question**: Should the Agent be tightly coupled (module import) or loosely coupled (process/container) to the Environment?
-* **Decision**: **Distributed Orchestration** via **`deepagents`**.
-* **Rationale**: The Controller (Agent) communicates with Worker nodes over the network via HTTP/S3. This provides maximum security and scalability.
+### 1. The Architect (Planner)
 
-### 1.2. VLM Integration
+- **Responsibility**: Designs the high-level solution and decomposes it into a sequence of actionable tasks.
+- **Output**: Writes to `todo.md` and `plan.md`.
+- **Constraint**: Must use standard engineering principles and follow the user's cost/weight constraints.
 
-* **Decision**: Use `litellm` within the `deepagents` framework.
-* **Rationale**: Standardized access to GPT-4o, Gemini, and DeepSeek, critical for benchmarking.
+### 2. The Engineer (Implementer)
 
-## 2. Technical Decisions
+- **Responsibility**: Translates the plan into `build123d` Python code.
+- **Tools**: Standard OS tools (`ls`, `write`) and domain utilities (`simulate`, `validate_and_price`).
+- **Autonomy**: After proving a plan is impossible, the Engineer can refuse the plan, forcing an Architect re-plan.
 
-* **Loop**: **`deepagents` Graph (LangGraph)**.
-* **Middleware**:
-  * `FilesystemMiddleware`: For distributed file access.
-  * `TodoListMiddleware`: For structured task management.
-* **Learner Sidecar**: A dedicated sub-agent processes `journal.md` to update `SKILL.md` files.
+### 3. The Critic (Reviewer)
 
-> [!NOTE]
-> For more details on the framework implementation, see [deepagents-research.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/kitty-specs/002-vlm-cad-agent/deepagents-research.md).
+- **Responsibility**: Reviews the code and simulation results (video, telemetry).
+- **Criterion**: Assesses stability, manufacturability, and goal achievement.
+- **Power**: Can reject the solution and send it back to the Engineer with feedback.
 
-* **Memory**: Flat file `journal.md`.
-  * *Reason*: Simplicity and portability. Vector DB adds unnecessary complexity for <1000 journal entries.
+## Operational Paradigms
+
+### Episodic Memory: The Journal
+
+**Decision**: Use a structured `journal.md` for episodic memory.
+**Rationale**:
+
+- Stores **Intent -> Result -> Reflection -> Next Step**.
+- Delimited by Markdown headings to allow "progressive disclosure" for learner agents and human debugging.
+- Prevents context overflow by serving as the source for "token compression" (summarization).
+
+### Continuous Improvement: Skills
+
+**Decision**: Sidecar **Learner Agent**.
+**Rationale**:
+
+- Runs asynchronously after successful episodes.
+- Scrutinizes the `journal.md` to identify struggles and breakthroughs.
+- Updates repository-level `SKILL.md` files (Git versioned).
+
+### Agent-Native Feedback
+
+**Decision**: Feedback in Markdown.
+**Rationale**:
+
+- Agents perform significantly better with Markdown than JSON.
+- Simulation results, cost reports, and linting errors are formatted as readable Markdown reports.

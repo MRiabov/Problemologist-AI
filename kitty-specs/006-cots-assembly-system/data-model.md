@@ -1,31 +1,35 @@
 # Data Model: COTS Assembly System
 
-## Core Models (Pydantic)
+## Core Entities (Pydantic Models)
 
-### 1. COTSPartSummary
+### 1. COTSItem
+
+The structured definition of a catalog part.
 
 ```python
-class COTSPartSummary(BaseModel):
-    id: str
+class COTSItem(BaseModel):
+    part_id: str
     name: str
-    category: str
-    provider: str = "bd_warehouse"
+    category: Literal["fastener", "motor", "gear", "bearing", "electronic"]
+    unit_cost: float
+    weight_g: float
+    import_recipe: str  # build123d code snippet
+    metadata: Dict[str, Any]
 ```
 
-### 2. COTSPartDetail
+### 2. SearchQuery
+
+Payload for the Catalog Subagent.
 
 ```python
-class COTSPartDetail(BaseModel):
-    id: str
-    name: str
-    image_url: str  # S3 URL
-    description: str
-    recipe: str      # Python instantiation code
-    properties: Dict[str, Any] # mass, dimensions, etc.
+class SearchQuery(BaseModel):
+    query: str
+    constraints: Optional[Dict[str, Any]] = None  # e.g., {"max_weight": 100}
+    limit: int = 5
 ```
 
 ## Persistence
 
-1. **Catalog**: Stored as a versioned JSON/SQLite file on **S3**.
-2. **Search Index**: Maintained by the **Catalog Sub-Agent** in memory or via a lightweight vector store if the catalog grows.
-3. **Observation DB**: Selected part IDs are recorded in the global trace for reproducibility.
+1. **Global Catalog**: Stored on S3 as a read-only SQLite/JSON index.
+2. **Episode Trace**: Every COTS part used is recorded in the `PartsList` of the `EpisodeMetadata` in the Observability DB.
+3. **Cache**: Common search results are cached on the Controller to reduce subagent runs.
