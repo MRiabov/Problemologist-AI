@@ -100,8 +100,8 @@
 
 ### Included Subtasks
 
-- [ ] T015: Implement validate_and_price functional facade with structlog.
-- [ ] T016: Create integration verification script/test ensuring Pydantic compliance.
+- [x] T015: Implement validate_and_price functional facade with structlog.
+- [x] T016: Create integration verification script/test ensuring Pydantic compliance.
 
 ### Implementation Sketch
 
