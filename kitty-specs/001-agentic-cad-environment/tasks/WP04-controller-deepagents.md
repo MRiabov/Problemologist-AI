@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP04"
-title: "Controller & DeepAgents Integration"
-lane: "planned"
-dependencies: ["WP03"]
-subtasks: ["T017", "T018", "T019", "T020", "T021"]
+work_package_id: WP04
+title: Controller & DeepAgents Integration
+lane: "doing"
+dependencies: [WP03]
+base_branch: 001-agentic-cad-environment-WP03
+base_commit: f674a15ba42a8a71761ab2d7ca73b4515d1b082b
+created_at: '2026-02-06T11:50:04.690481+00:00'
+subtasks: [T017, T018, T019, T020, T021]
+shell_pid: "563842"
 ---
 
 # WP04: Controller & DeepAgents Integration
