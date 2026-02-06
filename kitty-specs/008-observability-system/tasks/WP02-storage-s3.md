@@ -1,11 +1,13 @@
 ---
 work_package_id: "WP02"
 title: "Storage System (S3)"
-lane: "doing"
+lane: "planned"
 dependencies: []
 subtasks: ["T004", "T005", "T006", "T007"]
 agent: "antigravity"
 shell_pid: "73727"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # Work Package: Storage System (S3)
@@ -101,8 +103,34 @@ Agents produce heavy artifacts like videos and large log files that should not b
 - Check for hardcoded region or endpoint defaults that might break on Railway.
 - Verify that `moto` is a dev-dependency only.
 
+## Review Feedback
+
+**Reviewed by**: MRiabov
+**Status**: ❌ Changes Requested
+**Date**: 2026-02-06
+
+**Issue 1: Missing Dependencies**
+The implementation relies on `boto3` and `moto` (for tests), but neither is added to `pyproject.toml`. This causes import errors during execution and testing.
+
+**Issue 2: Missing Async Support**
+The specification required async versions of file operations (`aupload_file`, `adownload_file`) using `asyncio.to_thread`. These are completely missing from `S3Client`.
+
+**Issue 3: Interface Mismatch (Local Paths)**
+Subtask T005 explicitly asked for `upload_file(local_path: str, ...)` and `download_file(..., local_path: str)`. The current implementation uses file-like objects (`BinaryIO`), which forces callers to handle file opening/closing, contrary to the requested simplicity.
+
+**Issue 4: Automatic MIME Type Detection**
+Subtask T005 required using the `mimetypes` module for automatic MIME type detection during upload. The implementation currently relies on an optional `content_type` argument or defaults to nothing.
+
+**Issue 5: Incorrect Test Location**
+Tests were implemented in `tests/unit/test_storage.py` instead of the specified `tests/observability/test_storage.py`.
+
+**Issue 6: Presigned URL Logic**
+The presigned URL generation should check for common failures and log appropriately, but the current implementation is very minimal.
+
+
 ## Activity Log
 
 - 2026-02-06T09:10:02Z – Gemini – shell_pid=506352 – lane=doing – Started implementation via workflow command
 - 2026-02-06T20:27:31Z – Antigravity – shell_pid=506352 – lane=for_review – S3Client implemented and verified with unit tests. Resolved merge conflicts and rebased on main.
 - 2026-02-06T20:30:11Z – antigravity – shell_pid=73727 – lane=doing – Started review via workflow command
+- 2026-02-06T20:56:37Z – antigravity – shell_pid=73727 – lane=planned – Moved to planned
