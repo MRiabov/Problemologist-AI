@@ -54,10 +54,10 @@ It distinguishes between **Controller Observability** (LLM Traces, Agent State) 
 3. **State**: Checkpointer writes to Postgres `checkpoints`.
 4. **Tool Call**:
     - Agent calls `write_file`.
-    - Worker writes to MinIO.
-    - Worker logs access.
+    - Worker writes to local sandbox.
+    - Worker optional: uploads specifically designated assets to S3.
 5. **Simulation**:
-    - Worker generates `sim.mp4`.
-    - Worker uploads to Global S3.
+    - Worker generates `sim.mp4` in `/renders/`.
+    - `CompositeBackend` transparently routes write to S3.
     - Worker returns `{"video_url": "..."}`.
     - Controller saves URL in Step Output.

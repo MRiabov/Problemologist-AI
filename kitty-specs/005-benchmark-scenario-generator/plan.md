@@ -18,8 +18,8 @@ Implement the **Benchmark Scenario Generator** as a `deepagents` based tool. It 
 - `build123d`: CAD.
 - `mujoco`: Stability checks.
 **Infrastructure**:
-- **Worker Node**: Runs the generation and validation scripts.
-- **S3**: Stores the generated dataset media.
+- **Worker Node**: Runs the generation and validation scripts in a local sandbox.
+- **S3**: Stores the generated dataset media via the `/renders/` routed path.
 
 ## Constitution Check
 

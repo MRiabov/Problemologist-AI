@@ -83,4 +83,4 @@ def validate_and_price(part: Part | Compound, quantity: int = 1) -> DFMReport:
 
 ### 5.2. Integration
 
-This logic resides in `src/worker/utils/workbenches/` and is bundled into the Worker container. The `validate_and_price` function acts as the unified facade.
+This logic resides in `src/worker/utils/workbenches/` and is bundled into the Worker container. The `validate_and_price` function acts as the unified facade. The workbench assets and configuration are strictly read-only for the worker.

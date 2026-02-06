@@ -19,8 +19,8 @@ Implement the **Observability System** by integrating **LangFuse** for tracing, 
 - `boto3`: S3.
 - `schemathesis`: API Testing.
 **Infrastructure**:
-- **Controller**: Railway (Postgres, S3).
-- **Worker**: Podman (MinIO).
+- **Controller**: Railway (Postgres, S3-compatible).
+- **Worker**: Podman (Local Sandbox + S3-compatible for `/renders/`).
 
 ## Constitution Check
 

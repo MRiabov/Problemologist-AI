@@ -7,7 +7,7 @@ Path: `kitty-specs/003-simulation-engine/plan.md`
 
 ## Summary
 
-Implement the **MuJoCo Simulation Engine** as a core `utils` library within the **Worker Node**. This features a complete pipeline to convert `build123d` CAD models into MJCF, execute physics simulations with collision/zone logic, render videos, and persist results to S3. Long-running simulations are managed via **Temporal**.
+Implement the **MuJoCo Simulation Engine** as a core `utils` library within the **Worker Node**. This features a complete pipeline to convert `build123d` CAD models into MJCF, execute physics simulations with collision/zone logic, render videos, and persist results to **S3 (via CompositeBackend)**. Long-running simulations are strictly managed via **Temporal**.
 
 ## Technical Context
 

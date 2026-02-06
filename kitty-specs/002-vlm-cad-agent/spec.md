@@ -77,9 +77,9 @@ The agent interacts with the domain *through code it writes*, leveraging the pre
 ### 4.3. Memory Systems
 
 1. **Short-term (Working Memory)**: LangGraph State (Messages, Scratchpad).
-2. **Episodic (Journal)**: `journal.md` (Read-Write). The agent logs intent, result, reflection, and next steps.
-3. **Procedural (Skills)**: `skills/*.md` (Read-Only). How-to guides for `build123d`, `mujoco`, etc.
-4. **Planned (TODOs)**: `todo.md` (Read-Write).
+2. **Episodic (Journal)**: `journal.md` (Read-Write). The agent logs intent, result, reflection, and next steps. Stored in the **local, ephemeral sandbox**.
+3. **Procedural (Skills)**: `skills/*.md` (Read-Only). How-to guides for `build123d`, `mujoco`, etc. Pulled from Git before execution.
+4. **Planned (TODOs)**: `todo.md` (Read-Write). Stored in the **local, ephemeral sandbox**.
 
 ## 5. Technical Design
 

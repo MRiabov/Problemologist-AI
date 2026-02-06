@@ -8,7 +8,7 @@
 
 The **MuJoCo Simulation Engine** is the physics validation backend for the **Agentic CAD Environment**. It operates within the **Worker Node** and is invoked via the `simulate` utility function available to agents.
 
-Its primary responsibility is to take a CAD assembly, simulate it in a physics environment ensuring correct "Definition of Done" (DoD), and produce high-fidelity artifacts (videos, logs) that are stored in S3.
+Its primary responsibility is to take a CAD assembly, simulate it in a physics environment ensuring correct "Definition of Done" (DoD), and produce high-fidelity artifacts (videos, logs). Large media is stored in **S3** via the worker's **CompositeBackend** routing.
 
 ## 2. Goals & Success Criteria
 
@@ -52,7 +52,7 @@ The `simulate(component)` python function triggers the following steps on the Wo
     - Render frames (30fps).
 5. **Post-Processing**:
     - Encode frames to MP4 (`ffmpeg`).
-    - Upload MP4 and MJCF to S3.
+    - Save MP4 and MJCF to `/renders/` (automatically routed to S3).
     - Generate Simulation Report (Markdown).
 
 ### 4.2. Temporal Integration
@@ -62,7 +62,7 @@ For simulations predicted to run > 30s:
 1. Worker returns a "Pending" status or registers a Temporal Activity.
 2. Temporal orchestrates the execution, monitoring for timeouts.
 3. Upon completion, Temporal updates the Task status in the Database.
-*Note: For MVP, direct async execution on the Worker with longer timeouts may suffice, but Temporal is the target.*
+*Note: Temporal is mandatory for all simulations expected to run > 30s to ensure durability against worker preemption.*
 
 ### 4.3. Zone Definitions
 

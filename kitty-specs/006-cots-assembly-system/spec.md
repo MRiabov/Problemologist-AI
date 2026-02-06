@@ -50,7 +50,7 @@ The Planner or Engineer agent delegates to the Search Subagent.
 
 ### 4.3. Assets
 
-- **Preview Images**: Pre-rendered thumbnails for Human interaction (Dashboard).
+- **Preview Images**: Pre-rendered thumbnails stored in **S3-compatible storage** for Human interaction (Dashboard).
 - **Metadata**: Extracted from `bd_warehouse` at build time.
 
 ## 5. Technical Design

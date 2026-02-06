@@ -28,24 +28,25 @@
 
 ## Work Package 2: Worker Core (FS & Runtime)
 
-**Goal**: Implement the sandboxed S3-backed filesystem and secure Python runtime execution in the Worker.
+**Goal**: Implement the sandboxed Hybrid filesystem (Local Sandbox + S3 Routing) and secure Python runtime execution.
 **Priority**: Critical (Phase 1)
-**Tests**: Unit tests for S3 file operations. Integration test running a simple Python script via internal API.
+**Tests**: Unit tests for Local FS and Composite routing. Integration test running a simple Python script.
 
-- [ ] T007: Implement S3 connection and `FilesystemMiddleware` equivalent/adapter.
-- [ ] T008: Implement `SandboxFilesystemBackend` using `s3fs` / MinIO.
+- [ ] T007: Implement `LocalFilesystemBackend` for high-frequency operations.
+- [ ] T008: Implement `CompositeBackend` to route `/renders/` to MinIO/S3 and everything else to local.
 - [ ] T009: Implement `runtime` module to execute arbitrary Python code in a subprocess.
-- [ ] T010: Add `FileSystem` abstraction to restrict paths (Read-Only `utils/`, `skills/`).
+- [ ] T010: Ensure the local filesystem is reset from Git on every session (start workflow).
 - [ ] T011: Verify `build123d` and `mujoco` imports work in the runtime environment.
 
 **Implementation**:
 
-1. S3 setup (boto3/s3fs).
-2. FS implementation.
-3. `subprocess` wrapper for code execution.
+1. Local FS setup.
+2. Composite backend logic.
+3. Subprocess wrapper.
+4. Git reset hook.
 
 **Dependencies**: WP01
-**Risks**: Performance of S3 FUSE/handling.
+**Risks**: Performance of Composite routing; ensuring Git reset doesn't wipe required persistence.
 
 ## Work Package 3: Worker API & Client
 
@@ -57,7 +58,7 @@
 - [ ] T013: Define Pydantic models for Tool Inputs/Outputs (`WriteFileRequest`, `ExecuteResponse`, etc.).
 - [ ] T014: Implement endpoints: `/fs/ls`, `/fs/read`, `/fs/write`, `/fs/edit`.
 - [ ] T015: Implement endpoint: `/runtime/execute`.
-- [ ] T016: Generate OpenAPI `json` and generate Python Client for Controller.
+- [ ] T016: Implement endpoint: `/runtime/reset` (triggers Git reset of sandbox).
 
 **Implementation**:
 
