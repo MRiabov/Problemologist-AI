@@ -1,0 +1,12 @@
+{
+  "wp_id": "WP05",
+  "feature_slug": "002-vlm-cad-agent",
+  "worktree_path": ".worktrees/002-vlm-cad-agent-WP05",
+  "branch_name": "002-vlm-cad-agent-WP05",
+  "base_branch": "002-vlm-cad-agent-WP04",
+  "base_commit": "e24a3cc4acf4d23b851337bdd57e3014cb8246b0",
+  "dependencies": [],
+  "created_at": "2026-02-06T14:40:04.508545+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}
