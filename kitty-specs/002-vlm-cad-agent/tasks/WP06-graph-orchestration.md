@@ -8,6 +8,7 @@ base_commit: 71b0688ff1eab316e8ffebdda302044a2c68f2ee
 created_at: '2026-02-06T14:42:04.319118+00:00'
 subtasks: [T024, T025, T026, T027]
 shell_pid: "659900"
+agent: "Gemini"
 ---
 
 ## Objective
@@ -65,3 +66,7 @@ Enable `deepagents` persistence.
 
 - Graph compiles and runs start-to-finish.
 - Routing logic correctly handles branching.
+
+## Activity Log
+
+- 2026-02-06T14:42:04Z – Gemini – shell_pid=659900 – lane=doing – Assigned agent via workflow command
