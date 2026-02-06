@@ -8,10 +8,10 @@
 
 **Goal**: Set up the data structures and foundational state management.
 
-- [ ] **T001**: Implement Pydantic models `BenchmarkAsset` and `GenerationSession` in `src/generators/benchmark/models.py`.
-- [ ] **T002**: Create database schema/migrations for these models.
-- [ ] **T003**: Define `BenchmarkGeneratorState` for the `deepagents` graph.
-- [ ] **T004**: Scaffold directory structure and standard agent template files (`journal.md`, `todo.md`, etc.).
+- [x] T001: Implement Pydantic models `BenchmarkAsset` and `GenerationSession` in `src/generators/benchmark/models.py`.
+- [x] T002: Create database schema/migrations for these models.
+- [x] T003: Define `BenchmarkGeneratorState` for the `deepagents` graph.
+- [x] T004: Scaffold directory structure and standard agent template files (`journal.md`, `todo.md`, etc.).
 
 ~250 lines
 
