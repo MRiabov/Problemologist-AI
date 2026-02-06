@@ -8,6 +8,7 @@ base_commit: e24a3cc4acf4d23b851337bdd57e3014cb8246b0
 created_at: '2026-02-06T14:40:04.508545+00:00'
 subtasks: [T020, T021, T022, T023]
 shell_pid: "658159"
+agent: "Gemini"
 ---
 
 ## Objective
@@ -54,3 +55,7 @@ Create the Sidecar node as an asynchronous background worker.
 ## Definition of Done
 
 - Sidecar extracts insights from journals.
+
+## Activity Log
+
+- 2026-02-06T14:40:04Z – Gemini – shell_pid=658159 – lane=doing – Assigned agent via workflow command
