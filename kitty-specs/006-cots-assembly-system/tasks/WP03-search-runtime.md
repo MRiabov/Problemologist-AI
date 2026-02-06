@@ -8,6 +8,7 @@ base_commit: 0b50c8a77effff8e39c1ec8dd4b9f02d6dd6e89d
 created_at: '2026-02-06T17:24:57.268035+00:00'
 subtasks: [T010, T011, T012]
 shell_pid: "37710"
+agent: "antigravity"
 ---
 
 ## WP03: Search Runtime
@@ -57,3 +58,7 @@ shell_pid: "37710"
 ## Implementation Command
 
 `spec-kitty implement WP03 --base WP02`
+
+## Activity Log
+
+- 2026-02-06T17:24:57Z – antigravity – shell_pid=37710 – lane=doing – Assigned agent via workflow command
