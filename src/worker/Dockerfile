@@ -28,7 +28,12 @@ COPY --chown=agent:agent pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy source code
+<<<<<<< HEAD
 COPY --chown=agent:agent src ./src
+=======
+COPY --chown=agent:agent src/worker ./src/worker
+COPY --chown=agent:agent src/deepagents ./src/deepagents
+>>>>>>> 001-agentic-cad-environment-WP03
 
 # Set Python path
 ENV PYTHONPATH=/app

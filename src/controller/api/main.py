@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -72,3 +73,12 @@ async def run_agent(request: AgentRunRequest):
     result = await agent.ainvoke({"messages": [("user", request.task)]})
 
     return {"status": "completed", "output": result["messages"][-1].content}
+=======
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
+>>>>>>> 001-agentic-cad-environment-WP03
