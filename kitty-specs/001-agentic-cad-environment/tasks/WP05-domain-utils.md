@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP05"
-title: "Domain Utils (Worker Side)"
-lane: "planned"
-dependencies: ["WP02"]
-subtasks: ["T022", "T023", "T024", "T025", "T026"]
+work_package_id: WP05
+title: Domain Utils (Worker Side)
+lane: "doing"
+dependencies: [WP02]
+base_branch: 001-agentic-cad-environment-WP02
+base_commit: 332b881de4d065a33983144d2dfd87c173d38df6
+created_at: '2026-02-06T13:56:36.548228+00:00'
+subtasks: [T022, T023, T024, T025, T026]
+shell_pid: "618047"
 ---
 
 ## WP05: Domain Utils (Worker Side)
