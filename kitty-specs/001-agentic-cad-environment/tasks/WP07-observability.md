@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP07"
-title: "Observability & Persistence"
-lane: "planned"
-dependencies: ["WP04"]
-subtasks: ["T032", "T033", "T034", "T035"]
+work_package_id: WP07
+title: Observability & Persistence
+lane: "doing"
+dependencies: [WP04]
+base_branch: 001-agentic-cad-environment-WP04
+base_commit: 371c916b02b74710a197bd76731c7afc0b293061
+created_at: '2026-02-06T14:59:01.526671+00:00'
+subtasks: [T032, T033, T034, T035]
+shell_pid: "674358"
 ---
 
 # WP07: Observability & Persistence
