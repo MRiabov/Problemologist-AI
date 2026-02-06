@@ -1,9 +1,13 @@
 ---
 work_package_id: WP02
 title: Physics Simulation Loop
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: a507a4f4fd2aa747191815080ecb718df03878e2
+created_at: '2026-02-06T20:15:49.611838+00:00'
 subtasks: [T007, T008, T009, T010, T011, T012, T013]
+shell_pid: "7341"
 ---
 
 # WP02: Physics Simulation Loop
