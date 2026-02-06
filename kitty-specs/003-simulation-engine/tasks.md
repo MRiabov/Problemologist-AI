@@ -1,87 +1,111 @@
-# Work Packages: MuJoCo Simulation Engine
+# Work Packages: 003-simulation-engine
 
 **Feature**: 003-simulation-engine
 **Status**: Planned
 
-## WP01: Project Structure & Mesh Pipeline
+## WP01: Geometry Pipeline & Scene Builder
 
-**Goal**: Initialize the module and implement the geometry-to-physics asset pipeline.
-**Priority**: Critical (Foundation)
+**Goal**: Implement the pipeline to convert CAD models (`build123d`) into physics-ready MJCF XML assets, including convex decomposition and zone detection.
+**Priority**: Critical
 **Prerequisites**: None
 
-- [x] T001: Initialize `src/simulation_engine` package and install dependencies (mujoco, build123d, trimesh).
-- [x] T002: Implement `MeshProcessor` to convert `build123d` objects to temporary STL/GLB files.
-- [x] T003: Implement Convex Decomposition logic (using `trimesh.convex.convex_hull` or `vhacd`).
-- [x] T004: Write unit tests for mesh conversion and hull generation.
+- [ ] T001: Initialize `src/worker/simulation` package and install dependencies (`mujoco`, `build123d`, `trimesh`, `scipy`). <!-- id: 0 -->
+- [ ] T002: Implement `MeshProcessor` in `builder.py` to convert `build123d` objects to STL. <!-- id: 1 -->
+- [ ] T003: Implement Convex Decomposition strategy (V-HACD or convex hull) to ensure stable physics. <!-- id: 2 -->
+- [ ] T004: Implement `SceneCompiler` in `builder.py` to generate MJCF XML from processed meshes. <!-- id: 3 -->
+- [ ] T005: Implement "Zone Logic" to identify `zone_*` objects and map them to MuJoCo sensors/sites. <!-- id: 4 -->
+- [ ] T006: Add unit tests for geometry conversion and XML generation. <!-- id: 5 -->
 
 **Implementation Logic**:
 
-1. Setup proper package structure.
-2. Create `builder.py` with mesh utilities.
-3. Use `trimesh` to load generated STLs and compute convex hulls (crucial for stable physics).
-4. Save processed meshes to a temporary assets directory.
+1. Setup package structure.
+2. Build conversion utilities for `build123d` -> `trimesh` -> `mujoco`.
+3. Detect zones by naming convention (`zone_goal`, `zone_forbid`) and inject into MJCF as sites.
+4. Validate generated XML with `mujoco` library.
 
-## WP02: Scene Compiler (MJCF Generator)
+**Estimated Prompt Size**: ~400 lines
 
-**Goal**: Convert the Processed Geometry into a full MuJoCo XML definition.
+## WP02: Physics Simulation Loop
+
+**Goal**: Implement the core physics execution loop, tracking collisions, zone entries, and collecting metrics.
 **Priority**: High
-Depends on WP01
+**Dependencies**: WP01
 
-- [x] T005: Implement `SceneCompiler` class to generate MJCF XML structure.
-- [x] T006: Implement "Zone Logic" - map `zone_*` named objects to MuJoCo sites/sensors.
-- [x] T007: Implement "Actuator Injection" - parse agent joints and add `<motor>` tags.
-- [x] T008: Verify generated XML is valid by loading it with `mujoco.MjModel.from_xml_string`.
-
-**Implementation Logic**:
-
-1. Iterate over the CAD compound.
-2. If name starts with `zone_`, create a sensor/site.
-3. If name is `obstacle_`, create a static geom.
-4. If part of Agent, create dynamic body with joints.
-5. Produce final `scene.xml`.
-
-## WP03: Simulation Runtime Core
-
-**Goal**: Execute the physics loop with agent control and metric tracking.
-**Priority**: High
-Depends on WP02
-
-- [x] T009: Implement `SimulationLoop` class in `simulation.py`.
-- [x] T010: Implement `AgentInterface` to call user-provided control functions.
-- [x] T011: Implement `MetricCollector` to track energy, time, and collisions.
-- [x] T012: Implement "Termination Conditions" (Goal reached, Forbidden zone, Timeout).
+- [ ] T007: Implement `SimulationLoop` class in `src/worker/simulation/loop.py`. <!-- id: 6 -->
+- [ ] T008: Implement physics stepping loop (500Hz) and control interface. <!-- id: 7 -->
+- [ ] T009: Implement collision detection for `zone_forbid_*`. <!-- id: 8 -->
+- [ ] T010: Implement goal detection for `zone_goal_*`. <!-- id: 9 -->
+- [ ] T011: Implement `MetricCollector` for energy, time, and damage tracking. <!-- id: 10 -->
+- [ ] T012: Add tests for physics steps and collision triggers. <!-- id: 11 -->
 
 **Implementation Logic**:
 
-1. Load the MJCF model.
-2. Run standard `while not done:` loop.
-3. At each step, read sensors -> call agent -> apply control -> `mj_step`.
-4. Check collisions using `d.contact` and geom IDs.
-5. Capture metrics accumulator.
+1. Load MJCF from WP01.
+2. Run `mj_step` in a loop.
+3. Check `d.contact` for collisions with forbidden zones.
+4. Check position of target object relative to goal zone sites.
+5. Return simulation outcome (SUCCESS/FAIL).
 
-## WP04: Process Isolation & API Service
+**Estimated Prompt Size**: ~350 lines
 
-**Goal**: Wrap the simulation in a safe sandbox and expose it via HTTP.
+## WP03: Rendering & Artifact Storage
+
+**Goal**: Implement video rendering of the simulation and upload artifacts (video, MJCF) to S3/MinIO.
 **Priority**: Medium
-Depends on WP03
+**Dependencies**: WP02
 
-- [x] T013: Implement `ProcessRunner` in `runner.py` to run `SimulationLoop` in a separate process.
-- [x] T014: Implement timeout and exception safety in `ProcessRunner`.
-- [x] T015: Create `main.py` with FastAPI app and `POST /simulate` endpoint.
-- [x] T016: Define API request/response models (Pydantic).
+- [ ] T013: Implement `VideoRenderer` in `src/worker/simulation/renderer.py` using MuJoCo's GLContext. <!-- id: 12 -->
+- [ ] T014: Implement frame capture at 30fps during simulation loop. <!-- id: 13 -->
+- [ ] T015: Implement `ffmpeg` encoding pipeline to produce MP4 files. <!-- id: 14 -->
+- [ ] T016: Implement S3 upload logic using `minio` client. <!-- id: 15 -->
+- [ ] T017: update `SimulationLoop` to integrate rendering and return video URL. <!-- id: 16 -->
+- [ ] T018: Add tests for video generation and mock S3 upload. <!-- id: 17 -->
 
 **Implementation Logic**:
 
-1. Use `multiprocessing.Process` (or `concurrent.futures.ProcessPoolExecutor`) to run the sim.
-2. Pass data via Queue or Pipe.
-3. FastAPI handles usage validation and async awaiting of the result.
+1. Use `mujoco.Renderer` for offscreen rendering.
+2. Pipe frames to `ffmpeg-python` process.
+3. Upload outputs to MinIO bucket.
 
-## WP05: End-to-End Validation & Reporting
+**Estimated Prompt Size**: ~350 lines
 
-**Goal**: Verify the entire system with realistic test cases.
+## WP04: API & Temporal Integration
+
+**Goal**: Expose the simulation capability via a public API and wrap it in Temporal activities for long-running reliability.
+**Priority**: Medium
+**Dependencies**: WP03
+
+- [ ] T019: Create `src/worker/simulation/temporal/` activities. <!-- id: 18 -->
+- [ ] T020: Implement `run_simulation_activity` which wraps the full pipeline. <!-- id: 19 -->
+- [ ] T021: Implement `src/worker/utils/simulation.py` with `simulate()` entrypoint. <!-- id: 20 -->
+- [ ] T022: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
+- [ ] T023: Integrate with Temporal Worker startup. <!-- id: 22 -->
+- [ ] T024: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
+
+**Implementation Logic**:
+
+1. Define the Temporal Activity.
+2. The public `simulate()` function triggers the activity (or executes locally for MVP).
+3. Ensure proper error handling and result formatting.
+
+**Estimated Prompt Size**: ~400 lines
+
+## WP05: End-to-End Verification
+
+**Goal**: Validate the entire system with realistic "Pusher Bot" scenario.
 **Priority**: Low
-Depends on WP04
+**Dependencies**: WP04
 
-- [x] T017: Create a reference "Pusher Bot" `build123d` model + control script.
-- [x] T018: Write E2E test: Submit Pusher Bot -> Waiting for Success Report.
-- [x] T019: Implement optionally returning replay artifacts (video/MJCF).
+- [ ] T025: Create a reference "Pusher Bot" `build123d` model and test script. <!-- id: 24 -->
+- [ ] T026: Create an E2E test suite in `tests/e2e/test_simulation.py`. <!-- id: 25 -->
+- [ ] T027: Verify "Success" scenario (bot pushes box to goal). <!-- id: 26 -->
+- [ ] T028: Verify "Fail" scenario (bot hits forbidden zone). <!-- id: 27 -->
+- [ ] T029: detailed manual walkthrough verification. <!-- id: 28 -->
+
+**Implementation Logic**:
+
+1. Run full system tests against the `simulate()` API.
+2. Verify S3 artifacts are actually playable.
+3. Verify metrics are accurate.
+
+**Estimated Prompt Size**: ~300 lines
