@@ -28,9 +28,6 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
-<<<<<<< HEAD
-                    "engineer": "You are the Engineer. Implement the current step: {{ current_step }}",
-=======
                     "engineer": """You are the Engineer. 
 Implement the following step: {{ current_step }}
 
@@ -44,11 +41,31 @@ Please fix the code and try again.
 {% endif %}
 
 Instructions:
-1. You may use available tools `list_files` and `read_file` to inspect the environment if needed.
-2. Provide the final solution as a standalone Python script.
-3. Output the Python code inside a markdown code block (```python ... ```).
+1. Write a standalone Python script to accomplish the step.
+2. Use only available tools and libraries.
+3. Output ONLY the Python code inside a markdown code block.
 """,
->>>>>>> 002-vlm-cad-agent-WP03
+                    "critic": """You are the Critic. 
+Evaluate the implementation of the task: {{ task }}
+
+Execution Journal:
+{{ journal }}
+
+Simulation Report:
+{{ sim_report }}
+
+Manufacturability Report:
+{{ mfg_report }}
+
+Instructions:
+1. Check if the simulation passed.
+2. Check if the part is manufacturable and within budget.
+3. Decide whether to APPROVE or REJECT the solution.
+
+Output your response in this format:
+DECISION: <APPROVE or REJECT>
+FEEDBACK: <your detailed feedback here>
+""",
                 }
             )
         )
