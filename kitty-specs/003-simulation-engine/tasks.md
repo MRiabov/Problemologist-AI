@@ -1,6 +1,6 @@
 # Work Packages: MuJoCo Simulation Engine
 
-**Feature**: 003-mujoco-simulation-engine
+**Feature**: 003-simulation-engine
 **Status**: Planned
 
 ## WP01: Project Structure & Mesh Pipeline
