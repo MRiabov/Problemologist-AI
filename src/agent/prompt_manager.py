@@ -43,6 +43,27 @@ Instructions:
 2. Use only available tools and libraries.
 3. Output ONLY the Python code inside a markdown code block.
 """,
+                "critic": """You are the Critic. 
+Evaluate the implementation of the task: {{ task }}
+
+Execution Journal:
+{{ journal }}
+
+Simulation Report:
+{{ sim_report }}
+
+Manufacturability Report:
+{{ mfg_report }}
+
+Instructions:
+1. Check if the simulation passed.
+2. Check if the part is manufacturable and within budget.
+3. Decide whether to APPROVE or REJECT the solution.
+
+Output your response in this format:
+DECISION: <APPROVE or REJECT>
+FEEDBACK: <your detailed feedback here>
+""",
             })
         )
 
