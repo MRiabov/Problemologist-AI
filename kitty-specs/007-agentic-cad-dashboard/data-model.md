@@ -1,42 +1,44 @@
 # Data Model: Dashboard Views
 
-The dashboard interacts with the persistence layer but defines its own view-models for the UI transition.
+## UI State Entities (Pydantic)
 
-## UI State Entities
+### 1. DashboardSession
 
-### DashboardSession
+```python
+class DashboardSession(BaseModel):
+    mode: Literal["live", "history"]
+    selected_episode_id: Optional[UUID]
+    current_step_index: int = 0
+```
 
-- `mode`: Literal["Live", "History"]
-- `selected_episode_id`: UUID | None
-- `current_step_index`: int
+### 2. EpisodeSummary
 
-### EpisodeView
+```python
+class EpisodeSummary(BaseModel):
+    id: UUID
+    problem_id: str
+    start_time: datetime
+    status: str
+    total_steps: int
+    summary_text: Optional[str]
+```
 
-- `id`: UUID
-- `problem_id`: str
-- `timestamp`: datetime
-- `status`: str
-- `total_steps`: int
+### 3. StepDetail
 
-### StepDetailView
-
-- `index`: int
-- `tool_name`: str
-- `reasoning`: str (Extracted from tool_input or output)
-- `code`: str (Extracted from tool_input or output)
-- `output_log`: str
-- `mesh_path`: str | None
+```python
+class StepDetail(BaseModel):
+    sequence_index: int
+    tool_name: str
+    thought: str
+    code_snippet: Optional[str]
+    output_log: str
+    asset_urls: List[str]  # S3 URLs for renders/meshes
+```
 
 ## Data Fetching Contracts
 
-### `get_episodes()`
+Internal API endpoints provided by the FastAPI backend on the Controller:
 
-Returns a list of `EpisodeView` summaries for the sidebar.
-
-### `get_episode_detail(episode_id: UUID)`
-
-Returns the full sequence of steps and associated artifacts.
-
-### `get_latest_update(episode_id: UUID, last_step_index: int)`
-
-Checks for new steps for the "Live" monitoring mode.
+1. **`GET /api/episodes`**: List all recorded episodes.
+2. **`GET /api/episodes/{id}`**: Get full detail for a specific episode.
+3. **`GET /api/episodes/{id}/live`**: SSE or WebSocket for real-time trace updates.

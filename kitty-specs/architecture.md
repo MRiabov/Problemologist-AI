@@ -4,9 +4,11 @@
 
 ---
 
-## 1. System Overview: The Two Agents
+## 1. System Overview: The Agentic Framework
 
-The system is composed of two primary autonomous agent graphs that interact with the domain:
+The system creates a benchmark and a training dataset for evaluation of LLM models on dynamics problems. It uses **DeepAgents** (an abstraction over LangChain/LangGraph) to orchestrate complex, long-running agents.
+
+The core consists of two primary autonomous agent graphs:
 
 1. **Benchmark Generator Agent**: Creates, validates, and compiles dataset problems (benchmarks) consisting of CAD models and descriptions.
 2. **Engineer Agent**: Solves these problems by designing CAD models under constraints (cost, manufacturability, weight, materials).
@@ -14,240 +16,164 @@ The system is composed of two primary autonomous agent graphs that interact with
 ### 1.1 Core Philosophy
 
 * **Fail Fast**: Early termination is preferred over complex fallback logic. The system should prioritize the "happy path" and fail quickly if requirements are not met.
-* **Lean Code**: Avoid "innovative" or overly complex code that increases maintenance burden. Use battle-tested best practices.
-* **No Redundant Fallbacks**: Avoid deep nesting of fallback mechanisms which lead to outdated codebases and subtle bugs. Rule: use assertions over fallbacks. If something fails, we rather update it.
-
-```mermaid
-graph LR
-    subgraph Benchmark Generator
-        Gen[Generator] --> Reviewer[Internal Reviewer]
-        Reviewer --> Verify[Verification Pipeline]
-        Verify --> Output[MJCF/XML Benchmark]
-    end
-
-    subgraph Engineer Agent
-        Planner[Architect] --> impl[Engineer]
-        impl --> Critic[Critic]
-        Critic --> Planner
-    end
-
-    Output --> Planner
-```
+* **Lean Code**: Avoid "innovative" or overly complex code. Use battle-tested best practices.
+* **No Redundant Fallbacks**: Use assertions over fallbacks. If something fails, update the logic rather than nesting retries.
+* **Human-Readable Intermediates**: Feedback and reasoning are stored in Markdown to be friendly to both humans and LLMs.
 
 ---
 
-## 2. Benchmark Generator Architecture
+## 2. DeepAgents Framework & Middleware
 
-**Goal**: Create randomized, valid CAD benchmarks converted into MJCF (MuJoCo XML) format to ensure data distribution and robustness.
+We leverage the **DeepAgents** framework for managing long-running, complex agents.
 
-### 2.1 Workflow
+### 2.1 Middleware Components
 
-1. **Generation**: The agent generates a CAD model based on randomized parameters.
-2. **Internal Review**: A specialized critic node reviews the design for logic and feasibility.
-3. **Verification**: Strict validity checks before acceptance:
-    * **Geometry**: Check for self-intersections and non-manifold geometry.
-    * **Compilation**: Ensure the generated code compiles/executes without error.
-    * **MJCF Validity**: Validate against the official MJCF XML schema.
-    * **Simulation**: Run a few frames of simulation to ensure physical stability.
+* **FilesystemMiddleware**: Agents operate directly within the filesystem of their assigned container.
+  * Supports `ls`, `read`, `write`, `edit` (and async variants `aread`, `awrite`, etc.).
+  * **SandboxFilesystemBackend**: Worker nodes use a disposable sandbox environment for safe execution.
+* **TodoListMiddleware**: Provides native management for high-level plans and TODO lists.
 
-### 2.2 Environment Support
+### 2.2 Distributed Execution
 
-* **Static & Dynamic Objects**: Support for generating environments with fixed and moving parts.
-* **Motors**: Specification of actuators (currently without complex wiring).
-* **Validity**: Problems must be *provably* creatable in MuJoCo.
-
----
-
-## 3. Engineer Agent Architecture
-
-**Goal**: Solve the provided benchmarks by generating valid manufacturing designs.
-
-### 3.1 Roles
-
-The Engineer Agent is a graph composed of specialized roles:
-
-| Role | Responsibility |
-|------|----------------|
-| **Architect (Planner)** | Break down the problem, design the high-level approach, and persist a **TODO List**. |
-| **Engineer (Actor)** | Implement the CAD solution according to the TODO list. Can **refuse the plan** if proven impossible. |
-| **Critic** | Review the implementation against constraints (cost, weight, manufacturability). |
-
-### 3.2 Capabilities
-
-* **Constraint Handling**: Must strictly adhere to max cost, weight, and manufacturing limits (e.g., CNC milling tooling restrictions).
-* **Preview Tools**: Can run "Preview" commands to check manufacturability/validity *without* incurring a penalty or failing the task.
-* **Skill Learning**:
-  * Agents can create and update **Skills** (persistent reusable tools/functions).
-  * Successful solutions (after resolving failures) update the long-term memory (Skills).
-  * **Storage**: Representative skills for the system are kept in `.agent/skills/` (repo root), while learned agent skills are persisted in the database/workspace.
-* **Long-Running Tasks**: Execution can take significant time (10+ minutes) in production; system must handle timeouts gracefully.
+* **Controller Node**: Runs the LLM logic, tool parsing, and state management.
+* **Worker Node**: Executes the "body" of the work:
+  * Simulation (MuJoCo).
+  * Python script execution (CAD generation).
+  * Linting and validation.
+  * **Isolation**: Uses **Podman** containers with attached volumes.
+* **Orchestration**: **Temporal** is used to orchestrate workers and handle long-running tasks/retries (e.g., simulations > 30s).
 
 ---
 
-## 4. Technical Architecture
+## 3. Agent Architecture Details
 
-### 4.1 Layer Responsibilities
+### 3.1 Benchmark Generator Agent
 
-| Layer | Components | Responsibility |
-|-------|------------|----------------|
-| **Agent Layer** | `graph.py`, `nodes/` | LangGraph state machines, prompting, decision making. **Stateless**. |
-| **Domain Layer** | `workbenches/`, `simulation/` | DFM validation, cost models, MuJoCo bridge, RAG. Pure logic. |
-| **Runtime Layer** | `ToolRuntime`, `PodmanSandbox` | **Stateful** orchestration, side-effect management, container control. |
-| **Tool Layer** | `env_adapter`, `registry` | Maps Agent actions to Runtime methods. |
+**Goal**: Create randomized, valid CAD benchmarks converted into MJCF (MuJoCo XML).
 
-### 4.2 Non-Functional Requirements (NFRs)
+* **Workflow**:
+    1. **Drafting**: Generates CAD models with randomized parameters (size, position, etc.).
+    2. **Internal Review**: specialized critic node reviews logic.
+    3. **Verification**:
+        * **Geometry**: No self-intersections.
+        * **Compilation**: Code must run cleanly.
+        * **MJCF Validity**: Validates against XML schema.
+        * **Stability**: Runs a few simulation frames to ensure no immediate explosion.
+* **Artifacts**:
+  * Generates **24-view renders** (clockwise, 3 levels) for the Engineer to "see".
 
-#### 4.2.1 Security: Sandbox Enforcement
+### 3.2 Engineer Agent
 
-> [!CAUTION]
-> **All agent-generated code MUST execute inside the Podman sandbox.**
+**Goal**: Solve benchmarks by generating manufacturable CAD designs.
 
-* **Host**: Orchestration only. No `exec()`, `eval()`, or `subprocess` on agent strings.
-* **Container**: All "unsafe" code (design scripts, skill verification) runs here.
-* **Environment Code**: Supporting code (models, utils) MUST be baked into the container image or mounted read-only. **Do not use runtime string injection.**
-
-#### 4.2.2 Communication Protocol: OpenAPI
-
-> [!IMPORTANT]
-> Communication between the Host and the Container Agent is strictly typed.
-
-* **Protocol**: HTTP (via FastAPI/Uvicorn in container).
-* **Schema**: **OpenAPI**. All data exchange must conform to defined Pydantic models served via `fastapi`.
-  * **Strict Typing**: All schemas MUST be strictly typed (enums, constraints) to facilitate automated testing.
-  * **Validation**: `schemathesis` checks are run against the OpenAPI schema to ensure robustness and compliance.
-* **Control**: Host sends HTTP requests to the Container Agent to start jobs, query status, or retrieve results.
-
-#### 4.2.3 Isolation & Parallelism
-
-* **Test Isolation**: Every test run uses a unique UUID-based workspace.
-* **Container Isolation**: Each agent instance gets a dedicated container/runtime.
-* **Parallel Execution**: Benchmark generation and CAD simulation MUST run in parallel.
-* **Scaling**: The system MUST scale to at least 4 concurrent containers on a 4-core CPU, with an architecture that allows for future distribution across nodes (IPv6 ready).
-
-#### 4.2.4 Observability & Data Collection
-
-* **Full Traceability**: Record 100% of agent inputs and outputs, including:
-  * **Thoughts**: Internal reasoning and planning.
-  * **Pass/Fail Reasons**: Granular details on why a step succeeded or failed.
-  * **Error Logs**: Full tracebacks and linting errors from script execution.
-  * **Conversation Structure**: The entire tool-calling and message history.
-  * **Image renders**
-* **Utility**: This data is stored in the master SQLite database for later use in querying, preprocessing, and model training (RL/Fine-tuning).
-
-#### 4.2.5 Data Persistence & Backups (Production)
-
-* **Local Storage**: Files generated by the agent are stored locally and synced to the container workspace as needed.
-* **Backups**: Daily backups of the SQLite database to S3.
-  * **Compression**: All backups must be highly compressed (e.g., zstd/xz) before upload.
-  * **Cron Endpoint**: The system implements an endpoint that triggers the backup process, intended to be called by a daily cron job.
+* **Roles**:
+  * **Architect (Planner)**: Creates high-level `plan.md` and `todo.md`.
+  * **Engineer (Actor)**: Implements the solution in `script.py`. Can preview tools.
+  * **Critic**: Verifies against constraints (Cost, Weight, Manufacturability).
+* **Constraints**:
+  * **Manufacturability**: Verified via "Workbenches" (CNC, Injection Molding, 3D Printing).
+  * **Cost**: must be within target unit cost.
+* **Feedback**:
+  * Received in **Markdown** format.
+  * Simulation feedback includes coordinates and simple text summaries (e.g., "failed to hit objective").
 
 ---
 
-## 5. Integration Patterns
+## 4. Skills, Learning & Memory
 
-### 5.1 Tool Registry
+The system employs a continuous learning loop.
 
-All tools are defined in a central registry to ensure the Engineer and Benchmark agents share the same capabilities where appropriate.
+### 4.1 Artifacts & Memory
 
-```python
-# src/agent/tools/registry.py
-AGENT_TOOLS = [ ... ]
-```
+* **Journal (`journal.md`)**: Episodic memory. A structured log where agents record intent, result, reflection, and next steps. used for context across retries and debugging.
+* **TODOs (`todo.md`)**: Operational plan managed by the Planner.
+* **Plan (`plan.md`)**: High-level strategic plan.
 
-### 5.2 Persistence & State
+### 4.2 Making Agents Smarter: The Learner Sidecar
 
-* **SQLite/SQLAlchemy**: Used for persisting run logs, episodes, and steps.
-* **LangGraph Checkpointer**: Used for agent state persistence.
-* **No Global State**: `_ACTIVE_ENV` patterns are forbidden. State is passed via `ToolRuntime` instances.
+* **Sidecar Agent**: An async "Learner" agent (using smaller models like DeepSeek) runs parallel to execution.
+* **Process**:
+    1. Scans Journals for repeated struggles (>4 failed tool calls) or patterns.
+    2. Updates **Skills** in `skills/` folder (Git-versioned).
+    3. Pushes updates to a skills repository.
+* **Skill Access**: Agents pull skills from a Git repo at the start of every run. Skills are **read-only** for the executing agent.
 
 ---
 
-## 6. Decision Log
+## 5. Simulation & Verification Environment
+
+We use **MuJoCo** for physics simulation due to speed and stability.
+
+### 5.1 Simulation Objectives
+
+defined by Axis-Aligned Bounding Boxes (AABB):
+
+1. **Build Zone**: Where the agent can create parts.
+2. **Goal Zone**: Where the target object must end up.
+3. **Forbid Zone**: Areas to avoid.
+
+### 5.2 Randomization
+
+Benchmarks are randomized to ensure robustness:
+
+* **Volume scaling**: 2x variance.
+* **Position jitter**: Up to 40% of size.
+* The Engineer must solve for the randomized environment, not a static one.
+
+---
+
+## 6. Technical Architecture & Constraints
+
+### 6.1 Tooling & API
+
+Tools are Python functions imported into the agent's script environment:
+
+* `validate_and_price(component) -> float | dict`: Checks manufacturability and calculates cost.
+* `simulate(Compound) -> SimulationResult`: Submits model for simulation (runs locally in worker, commits files).
+* `submit_for_review(Compound)`: Submits final assembly for review.
+* `get_docs_for(type)`: Invokes documentation subagent (RAG over local docs).
+
+### 6.2 Infrastructure (Deployment)
+
+* **Platform**: **Railway**.
+* **Databases**:
+  * **Postgres**: For Temporal, LangFuse, and App Data (partitioned).
+  * **S3**: For Assets (Videos, MJCF, final CAD models).
+* **Observability**:
+  * **LangFuse**: For LLM traces.
+  * **Structlog**: For structured application logging.
+  * **Backups**: Daily cron backup of DB to S3.
+
+### 6.3 Frontend
+
+* **Stack**: Vite + React.
+* **Types**: Autogenerated from Backend OpenAPI schemas.
+* **Capabilities**:
+  * Support for **Batch Generation**.
+  * Debug views (inspect agent reasoning, interrupt execution).
+
+### 6.4 Non-Functional Requirements (NFRs)
+
+#### Security
+
+* **Sandbox**: All agent code runs in isolated Podman containers.
+* **Strict API**: OpenAPI schemas enforced by `schemathesis`.
+* **Read-Only Utils**: Core utilities are mounted read-only to prevent agents from breaking the harness.
+
+#### Latency & Networking
+
+* **Internal Network**: Usage of Railway internal networking for speed.
+* **File Sync**: Files are written independently to worker storage; explicitly uploaded to S3 only when needed (Assets).
+
+---
+
+## 7. Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-04 | **Fail Fast Principle** | Prioritize "happy path" and early termination over complex fallback logic to maintain code hygiene. |
-| 2026-02-04 | **Strict Observability** | Record all agent thoughts and error details for future model training and debugging. |
-| 2026-02-04 | **Daily Backups** | Implement S3 backup strategy for production durability. |
-| 2026-02-04 | **Strict Schema Enforcement** | Use `schemathesis` and strict Pydantic typing to eliminate edge-case communication errors. |
-| 2026-02-04 | **OpenAPI Communication** | Replace file-based JSON with robust HTTP/FastAPI for host-container bridge. |
-| 2026-02-04 | **Two-Agent Split** | Separate Benchmark Generation from Problem Solving (Engineer) for clearer evaluation. |
-| 2026-02-04 | **Baked-in Env Code** | Remove runtime code injection; prefer mounting/baking for stability and security. |
-| 2026-02-03 | **Podman Sandbox** | Require containerization for all dynamic code execution. |
-
-## 7. Future Considerations
-
-1. **Reflective RL**: Use "Expected Solutions" from the Planner to guide RL optimization based on recorded agent thoughts.
-2. **Context Management**: Automated context window compression for long-running engineer tasks.
-3. **Advanced Wiring**: Future updates should handle motor wiring and electrical constraints.
-4. **Distributed Nodes**: Scaling the runtime beyond a single host (IPv6/Distributed Podman).
-
----
-
-## 8. End-to-End Workflows
-
-### 8.1 Benchmark Generator Flow
-
-Illustrates how a benchmark is requested via Dashboard (UI) or Headless (CLI), generated, verified, and saved.
-
-```mermaid
-graph TD
-    subgraph Triggers
-        UI["Dashboard Interface"] -->|Config JSON| Init
-        CLI["Headless Script"] -->|Config JSON| Init
-    end
-
-    Init[Job Initialization] -->|Launch Container| Generator
-    
-    subgraph Benchmark Generator Agent
-        Generator[Generator Node] -->|Draft CAD| Reviewer
-        Reviewer[Internal Reviewer] -->|Feedback| Generator
-        Reviewer -->|Approved| Verify
-        
-        subgraph Verification
-            Verify[Verification Pipeline] -->|Check| Geom[Geometry Check]
-            Verify -->|Check| Sim[Simulation Check]
-            Verify -->|Check| Schema[MJCF Schema]
-        end
-    end
-    
-    Geom -- Fail --> Generator
-    Sim -- Fail --> Generator
-    Schema -- Fail --> Generator
-    
-    Verify -->|Success| Output[Save Benchmark (MJCF/XML)]
-    Output --> DB[(Database)]
-```
-
-### 8.2 Engineer (Solver) Flow
-
-Illustrates how the Engineer agent picks up a benchmark (via Dashboard or CLI), plans, solves, and persists the solution/skill.
-
-```mermaid
-graph TD
-    subgraph Triggers
-        UI["Dashboard Interface"] -->|Select Benchmark| Init
-        CLI["Headless Script"] -->|Batch Input| Init
-    end
-
-    Init[Job Initialization] -->|Load Benchmark| Planner
-
-    subgraph Engineer Agent
-        Planner[Architect] -->|Create Plan| Todo[TODO List]
-        Todo --> Engineer
-        
-        Engineer[Engineer Node] -->|Write CAD| Sandbox[Podman Sandbox]
-        Sandbox -->|Result| Critic
-        
-        Critic[Critic Node] -->|Reject| Engineer
-        Critic -->|Approve| Verify[Verification]
-        
-        Verify -- Fail --> Engineer
-        Verify -- Pass --> Done
-        
-        Engineer -->|Refuse Task| Fail[Task Failed]
-    end
-
-    Done -->|Persist Design| DB[(Database)]
-    Done -->|Update Skill| Skills[(Skill Library)]
-```
+| 2026-02-06 | **DeepAgents Framework** | Adopted `deepagents` for unified agent/middleware management. |
+| 2026-02-06 | **Sidecar Learner** | Use a separate async agent for skill extraction to avoid context overflow and ensure cleaner updates. |
+| 2026-02-06 | **Journaling** | Introduce `journal.md` as structured episodic memory for debugging and learning. |
+| 2026-02-04 | **Fail Fast Principle** | Prioritize "happy path" and early termination over complex fallback logic. |
+| 2026-02-04 | **Strict Observability** | Record all thoughts, errors, and renders for training. |
+| 2026-02-04 | **Podman Sandbox** | Requirement for containerized execution of untrusted agent code. |

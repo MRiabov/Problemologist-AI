@@ -1,46 +1,45 @@
 # Data Model: Advanced Manufacturing Workbenches
 
-## Entities
+## Core Models (Pydantic)
 
-### 1. Manufacturing Report
-The primary output of the `check_manufacturability` tool.
+These models define the structured feedback returned to the engineering agent.
 
-| Field | Type | Description |
-|---|---|---|
-| `status` | string | "pass" or "fail" |
-| `process` | string | "cnc_milling" or "injection_molding" |
-| `manufacturability_score` | float | 0.0 to 1.0 (1.0 = perfect) |
-| `violations` | List[Violation] | List of specific DFM issues detected. |
-| `cost_analysis` | CostAnalysis | Detailed breakdown of estimated costs. |
-| `visualization_data` | VisualizationData | (Optional) Data for UI overlay. |
+### 1. ManufacturingReport
 
-### 2. Violation
-Represents a specific geometric feature that fails DFM checks.
+```python
+class ManufacturingReport(BaseModel):
+    status: Literal["pass", "fail"]
+    process: Literal["cnc_milling", "injection_molding", "3d_printing"]
+    score: float = Field(ge=0.0, le=1.0)
+    violations: List[DFMViolation]
+    cost: CostBreakdown
+    metadata: Dict[str, Any] = {}
+```
 
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | e.g., "undercut", "draft_angle", "thin_wall" |
-| `description` | string | Human-readable explanation. |
-| `severity` | string | "critical" (impossible) or "warning" (expensive) |
-| `affected_faces` | List[int] | Indices of mesh faces causing the violation. |
-| `location` | [x, y, z] | Approximate centroid of the violation. |
+### 2. DFMViolation
 
-### 3. Cost Analysis
-Breakdown of the manufacturing cost.
+```python
+class DFMViolation(BaseModel):
+    type: str  # e.g., "undercut", "draft_angle", "thin_wall"
+    description: str
+    severity: Literal["critical", "warning"]
+    affected_face_indices: List[int]
+    centroid: Tuple[float, float, float]
+```
 
-| Field | Type | Description |
-|---|---|---|
-| `quantity` | int | Production volume requested. |
-| `unit_cost` | float | Cost per single part. |
-| `total_cost` | float | `unit_cost * quantity + tooling_cost` |
-| `setup_cost` | float | Fixed NRE (Non-Recurring Engineering) or tooling cost. |
-| `material_cost` | float | Cost of raw material per part. |
-| `processing_cost` | float | Machine time cost per part. |
+### 3. CostBreakdown
 
-### 4. Visualization Data
-Lightweight data for rendering feedback.
+```python
+class CostBreakdown(BaseModel):
+    quantity: int
+    unit_price: float
+    setup_cost: float
+    material_cost: float
+    processing_cost: float
+    total_price: float
+```
 
-| Field | Type | Description |
-|---|---|---|
-| `highlight_faces` | List[int] | Face indices to colorize (e.g., red). |
-| `vectors` | List[Vector] | Optional debug vectors (e.g., surface normals). |
+## Storage
+
+1. **Reports**: Serialized to JSON and stored in the `StepTrace` tool output in Postgres.
+2. **Visualizations**: Mesh annotations (highlighted faces) are rendered to static images by the worker and uploaded to S3.

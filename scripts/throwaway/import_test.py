@@ -1,1 +1,0 @@
-from src.cots.core import Part; print('Import Success')

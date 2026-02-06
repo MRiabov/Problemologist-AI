@@ -1,45 +1,45 @@
 # Quickstart: Agentic CAD Environment
 
-## Installation
+## Initialization
 
-```bash
-# From project root
-pip install -r requirements.txt
-```
-
-## Usage
+The environment is managed via `deepagents` on the Controller, which delegates execution to Worker nodes.
 
 ```python
-from src.environment.core import CADEnvironment
+from deepagents.core import AgentNode
+from deepagents.middlewares import FilesystemMiddleware, TodoListMiddleware
+from src.environment.worker import WorkerClient
 
-# 1. Initialize
-env = CADEnvironment(db_path="history.db")
-obs = env.reset(problem_id="move_block_001")
+# 1. Setup Worker Client (connecting to distributed worker)
+worker = WorkerClient(url="http://worker-service:8080")
 
-print(f"Task: {obs.task_description}")
+# 2. Initialize Agent with Middlewares
+agent = AgentNode(
+    name="cad_engineer",
+    middlewares=[
+        FilesystemMiddleware(backend=worker.filesystem),
+        TodoListMiddleware()
+    ]
+)
 
-# 2. Agent Loop
-# (Agent logic would go here)
-
-# Example: Write a script
-action = {
-    "tool_name": "write_script",
-    "content": "from build123d import *; b = Box(10,10,10)"
-}
-obs, reward, done, info = env.step(**action)
-
-print(f"Output: {obs.console_output}")
-
-# 3. Submit
-action = {"tool_name": "submit_design"}
-obs, reward, done, info = env.step(**action)
-
-if done:
-    print(f"Final Metrics: {info['metrics']}")
+# 3. Running an Episode (via Temporal)
+# Episodes are usually triggered via the Controller's API
 ```
 
-## Running Tests
+## Worker-Side Execution (Internal)
+
+The worker manages the `build123d` and `mujoco` context.
+
+```python
+# The agent writes to 'script.py' in the sandbox
+# The environment then executes it on the worker:
+result = worker.execute("python script.py")
+
+print(f"Simulation Outcome: {result.stdout}")
+```
+
+## Running Verification
 
 ```bash
-pytest tests/environment
+# Run the test suite against the distributed setup
+pytest tests/integration/test_worker_controller.py
 ```

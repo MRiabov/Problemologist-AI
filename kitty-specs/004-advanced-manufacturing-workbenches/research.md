@@ -5,7 +5,9 @@
 To perform DFM checks efficiently, we will convert `build123d` solid models into `trimesh` mesh objects.
 
 ### 1.1 Conversion Strategy
+
 `build123d` does not directly output `trimesh` objects, but it can export STL to a buffer.
+
 ```python
 import trimesh
 from build123d import Part, export_stl
@@ -20,23 +22,25 @@ def part_to_trimesh(part: Part) -> trimesh.Trimesh:
 ```
 
 ### 1.2 Draft Angle Analysis (Injection Molding)
-*   **Goal**: Ensure faces parallel to pull direction have sufficient slope.
-*   **Method**:
-    1.  Get face normals: `mesh.face_normals`
-    2.  Define Pull Vector: `P = [0, 0, 1]`
-    3.  Compute angle: $\theta = \arccos(\vec{n} \cdot \vec{P})$
-    4.  **Check**:
-        *   Faces with $\theta \approx 90^\circ$ (within tolerance) are vertical walls requiring draft.
-        *   Fail if $|90^\circ - \theta| < \text{min\_draft}$.
+
+* **Goal**: Ensure faces parallel to pull direction have sufficient slope.
+* **Method**:
+    1. Get face normals: `mesh.face_normals`
+    2. Define Pull Vector: `P = [0, 0, 1]`
+    3. Compute angle: $\theta = \arccos(\vec{n} \cdot \vec{P})$
+    4. **Check**:
+        * Faces with $\theta \approx 90^\circ$ (within tolerance) are vertical walls requiring draft.
+        * Fail if $|90^\circ - \theta| < \text{min\_draft}$.
 
 ### 1.3 Undercut Detection (CNC & IM)
-*   **Goal**: Detect geometry occluded from the tool/mold.
-*   **Method (Raycasting)**:
-    1.  Target: Center points of all faces (`mesh.triangles_center`).
-    2.  Source: Target points + (Pull Vector * epsilon).
-    3.  Direction: Pull Vector (for IM) or Tool Vector (for CNC).
-    4.  Cast rays: `mesh.ray.intersects_any(origins, vectors)`
-    5.  **Logic**: If a ray hitting a face center intersects *other* geometry on its way out, that face is undercut (trapped).
+
+* **Goal**: Detect geometry occluded from the tool/mold.
+* **Method (Raycasting)**:
+    1. Target: Center points of all faces (`mesh.triangles_center`).
+    2. Source: Target points + (Pull Vector * epsilon).
+    3. Direction: Pull Vector (for IM) or Tool Vector (for CNC).
+    4. Cast rays: `mesh.ray.intersects_any(origins, vectors)`
+    5. **Logic**: If a ray hitting a face center intersects *other* geometry on its way out, that face is undercut (trapped).
 
 ## 2. Configuration Schema (`manufacturing_config.yaml`)
 
@@ -70,17 +74,16 @@ injection_molding:
     mold_cost_per_surface_area_cm2: 0.50
 ```
 
-## 3. Caching Strategy
+## 3. Distributed Execution & Caching
 
-DFM checks are expensive. We will cache results.
+Workbenches are implemented as utility libraries available on the **Worker** nodes.
 
-*   **Key**: `hash(geometry) + hash(process_params)`
-*   **Implementation**:
-    *   `trimesh` provides a fast CRC/hash of the mesh data: `mesh.identifier` (MD5 of geometry).
-    *   We will use a simple in-memory `functools.lru_cache` wrapper around the analysis functions, passing the mesh identifier string instead of the full object.
+* **Execution**: The agent invokes `validate_and_price(component)` from the `utils` folder. This script internally calls the workbench's geometric analysis engine.
+* **Caching**:
+  * **Level 1 (Worker-local)**: Results are cached in the worker's memory during a single episode.
+  * **Level 2 (Global)**: Final reports for validated parts are persisted in the **Observability DB** (Postgres) on the Controller, keyed by the mesh's `content_hash`. This prevents redundant expensive analysis across different episodes or benchmarks.
 
 ## 4. Dependencies
-*   **Runtime**: `trimesh[easy]` (includes `scipy`/`numpy` helpers), `pyyaml`.
-*   **Dev**: `pytest`.
 
-```
+* **Worker Runtime**: `trimesh[easy]`, `pyyaml`, `scipy`, `numpy`.
+* **Controller**: `pydantic` for schema validation.

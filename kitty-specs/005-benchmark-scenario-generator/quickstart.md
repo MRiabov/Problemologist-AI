@@ -6,40 +6,51 @@ The Benchmark Scenario Generator is an automated pipeline designed to bridge the
 
 The system operates as a self-correcting loop, ensuring that every generated scenario is physically viable before it reaches the final output.
 
-1.  **Planning**: A specialized agent decomposes your functional request (e.g., "a sliding drawer") into a concrete geometric and kinematic plan.
-2.  **Implementation**: The coder agent generates a `build123d` Python script. This script must implement a `build(seed: int) -> str` function that returns the model's MJCF XML.
-3.  **Validation**: A headless MuJoCo instance runs the model for 1,000 steps. If the physics "explode" or the solver crashes, the validation fails.
-4.  **Visual Artifacts**: For every stable scenario, the system automatically renders visual previews (PNGs) from multiple camera angles.
-5.  **Refinement**: If errors are detected, a critic agent analyzes the simulation telemetry (like high velocities or interpenetration) and provides corrective instructions to the coder for a second attempt.
+1. **Planning**: A specialized agent decomposes your functional request (e.g., "a sliding drawer") into a concrete geometric and kinematic plan.
+2. **Implementation**: The coder agent generates a `build123d` Python script. This script must implement a `build(seed: int) -> str` function that returns the model's MJCF XML.
+3. **Validation**: A headless MuJoCo instance runs the model for 1,000 steps. If the physics "explode" or the solver crashes, the validation fails.
+4. **Visual Artifacts**: For every stable scenario, the system automatically renders visual previews (PNGs) from multiple camera angles.
+5. **Refinement**: If errors are detected, a critic agent analyzes the simulation telemetry (like high velocities or interpenetration) and provides corrective instructions to the coder for a second attempt.
 
 ## Getting Started
 
 ### Prerequisites
 
-Ensure your environment includes:
+The generator requires a running **Controller** and at least one **Worker** node.
 
-- **MuJoCo** (>= 3.4.0) for physics simulation.
-- **build123d** (>= 0.10.0) for procedural CAD generation.
-- **trimesh** (>= 4.11.1) for geometry processing.
-- **Pillow** for image processing.
+### CLI Execution (via Controller)
 
-### Basic Execution
-
-To generate a new scenario via the command line, provide a descriptive prompt:
+Trigger a generation episode on the distributed system:
 
 ```bash
-uv run python -m src.generators.benchmark.manager --prompt "A sliding drawer with a handle" --count 1
+# Generate 5 variations of a sliding drawer benchmark
+python -m src.generators.benchmark.manager \
+    --prompt "A sliding drawer with a handle" \
+    --count 5 \
+    --mode distributed
 ```
 
-### Programmatic Integration
+### API Integration
 
 ```python
-from src.generators.benchmark.manager import BenchmarkManager
+import requests
 
-manager = BenchmarkManager()
-# Note: The 'generate' command in CLI is implemented as a typer command.
-# For programmatic use, you might want to call the underlying logic.
+# Submit a generation request to the Controller
+response = requests.post(
+    "http://controller:8000/api/benchmarks/generate",
+    json={
+        "prompt": "Elevator mechanism with gravity safety",
+        "tier": "kinematic",
+        "variation_count": 3
+    }
+)
 ```
+
+## Verification & Iteration
+
+1. **Observability**: Follow the generator agent's reasoning in **Langfuse**.
+2. **Worker Logs**: If validation fails, check the worker's stdout in the `StepTrace`.
+3. **Assets**: Access generated MJCF and renders via the S3 links provided in the final `BenchmarkScenario` record.
 
 ## The "Big Bang" Stability Test
 
@@ -77,9 +88,11 @@ Rendered images are saved in the `images/` subdirectory of each scenario:
 
 When a design fails to converge, you can intervene manually:
 
-1.  **Inspect the Code**: The `template.py` in the output directory can be run directly.
-2.  **Manual Validation**: Test any MJCF file against the stability gates:
+1. **Inspect the Code**: The `template.py` in the output directory can be run directly.
+2. **Manual Validation**: Test any MJCF file against the stability gates:
+
     ```bash
     uv run python -m src.generators.benchmark.validator --xml path/to/scene.xml
     ```
-3.  **Refine Constraints**: If the agent is struggling, try providing more explicit joint limits or clearance requirements in the input prompt.
+
+3. **Refine Constraints**: If the agent is struggling, try providing more explicit joint limits or clearance requirements in the input prompt.

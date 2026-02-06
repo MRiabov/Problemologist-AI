@@ -1,43 +1,35 @@
 # Quickstart: COTS Assembly System
 
-## Prerequisites
+## 1. Agent Usage (In Reasoning Loop)
 
-1. Install dependencies:
-   ```bash
-   uv add bd_warehouse
-   ```
+The agent interacts with the COTS catalog through the **Catalog Sub-Agent**.
 
-## Usage
-
-### 1. Initialize the Index
-```python
-from src.cots.core import PartIndex
-from src.cots.providers.bd_warehouse import BDWarehouseProvider
-
-index = PartIndex()
-index.register_provider(BDWarehouseProvider())
+```text
+ENGINEER: "I need an M6 hex nut for the assembly."
+SUB-AGENT: Invoke search_parts(query="M6 hex nut")
+SUB-AGENT: Return [COTSPartSummary(id="bdw:fastener:HexNut:M6", ...)]
+ENGINEER: "Preview the M6 nut."
+SUB-AGENT: Invoke preview_part(id="bdw:fastener:HexNut:M6")
+SUB-AGENT: Return COTSPartDetail(recipe="HexNut('M6')", ...)
 ```
 
-### 2. Search for Parts
+## 2. API Integration
+
+Trigger a catalog search from the Controller:
+
 ```python
-results = index.search("NEMA 17")
-for res in results:
-    print(f"Found: {res.name} ({res.id})")
+import requests
+
+response = requests.get(
+    "http://controller:8000/api/catalog/search",
+    params={"q": "NEMA 17"}
+)
 ```
 
-### 3. Preview a Part
-```python
-part_id = results[0].id
-preview = index.preview(part_id)
+## 3. Maintenance
 
-print(f"Description: {preview.description}")
-print(f"Image: {preview.image_path}")
-print(f"Recipe:\n{preview.recipe}")
-```
+To update the catalog index after adding new parts to `bd_warehouse`:
 
-### 4. Use in Agent Tool
-The system exposes two tools to the agent:
-* `search_parts(query="bearing")`
-* `preview_part(part_id="...")`
-
+```bash
+python -m src.catalog.builder --rebuild
 ```

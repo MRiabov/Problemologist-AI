@@ -5,17 +5,24 @@
 ### 1.1. Architecture Coupling
 
 * **Question**: Should the Agent be tightly coupled (module import) or loosely coupled (process/container) to the Environment?
-* **Decision**: **Loose Coupling** via Gymnasium interface.
-* **Rationale**: Security isolation. The environment executes code in a sandboxed container. The agent is a client.
+* **Decision**: **Distributed Orchestration** via **`deepagents`**.
+* **Rationale**: The Controller (Agent) communicates with Worker nodes over the network via HTTP/S3. This provides maximum security and scalability.
 
 ### 1.2. VLM Integration
 
-* **Decision**: Use `litellm` for standardized API access.
-* **Rationale**: Supports switching between GPT-4o and Gemini Pro without code changes, essential for benchmarking spatial reasoning.
+* **Decision**: Use `litellm` within the `deepagents` framework.
+* **Rationale**: Standardized access to GPT-4o, Gemini, and DeepSeek, critical for benchmarking.
 
 ## 2. Technical Decisions
 
-* **Loop**: Custom ReAct loop instead of LangChain/CrewAI.
-  * *Reason*: Specific requirement for "Think, Plan, Act" phases with visual feedback cycles and strictly structured logging (`agent_trace.jsonl`).
+* **Loop**: **`deepagents` Graph (LangGraph)**.
+* **Middleware**:
+  * `FilesystemMiddleware`: For distributed file access.
+  * `TodoListMiddleware`: For structured task management.
+* **Learner Sidecar**: A dedicated sub-agent processes `journal.md` to update `SKILL.md` files.
+
+> [!NOTE]
+> For more details on the framework implementation, see [deepagents-research.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/kitty-specs/002-vlm-cad-agent/deepagents-research.md).
+
 * **Memory**: Flat file `journal.md`.
   * *Reason*: Simplicity and portability. Vector DB adds unnecessary complexity for <1000 journal entries.

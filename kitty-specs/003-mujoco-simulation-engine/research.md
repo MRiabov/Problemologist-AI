@@ -16,9 +16,9 @@
     * *Pros*: Low latency (<100ms), native performance, simple to implement.
     * *Cons*: Not a security boundary (can still access FS), but prevents Main Loop crash.
 
-**Decision**: **Option 3 (Process Isolation)**.
+**Decision**: **Option 1 (Containerized Isolation)**.
 
-* **Rationale**: We are running "Internal Agent" code, so malicious intent is low. The primary risk is *accidental* crashes or infinite loops. A separate process with a `timeout` and simple restrictions is sufficient and keeps the loop fast (Sim Speed goal: < 2s).
+* **Rationale**: We use **Podman** containers on the Worker nodes to provide a "disposable sandbox" for simulation execution. This ensures OS-level isolation for untrusted agent code, prevents environment pollution, and is natively supported by the `deepagents` `SandboxFilesystemBackend`. Startup latency is mitigated by keeping a pool of warm containers if necessary, though reliability is preferred over sub-second latency for this use case.
 
 ## 2. Mesh Collision Handling
 

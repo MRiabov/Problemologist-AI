@@ -8,19 +8,31 @@
 **Rationale**:
 
 - `build123d` exports high-quality STLs.
-- `trimesh` is the standard library for mesh processing in Python. It can handle inertia calculation and convex hull generation which `mujoco` needs for stable collisions.
-- For MVP, we will use **Convex Hulls** of individual solids. If a part has multiple solids, we represent them as a multi-body MJCF.
-**Alternatives**:
-- Direct Step-to-MJCF: Too complex to implement a custom mesher.
-- `gmsh`: powerful but heavier dependency.
+- `trimesh` handles inertia and convex hull generation for stable MuJoCo collisions.
+- MJCF is generated programmatically from the geometry data.
 
-### 2. Sandbox Security
+### 2. Framework & Security
 
-**Decision**: Local execution with restricted imports (if possible) or simply reliance on Docker container isolation.
-**Rationale**: Implementing a robust python sandbox in pure python is non-trivial. Docker provides OS-level isolation which is sufficient for "System Damage" prevention.
-**Alternatives**: `restrictedpython` (too restrictive for CAD), `pywasm` (too slow/complex).
+**Decision**: Use **`deepagents`** with `FilesystemMiddleware` and `SandboxFilesystemBackend`.
+**Rationale**:
 
-### 3. Documentation Search
+- Provides native support for distributed workers and sandboxed execution.
+- `FilesystemMiddleware` allows agents to work directly in a familiar file-based environment while maintaining safety.
+- Podman-based worker nodes provide robust isolation for untrusted code execution.
 
-**Decision**: Grep-based search on a local directory of markdown files.
-**Rationale**: Extremely fast, simple to implement, zero dependencies. User specified this.
+### 3. Documentation & Learning
+
+**Decision**: Use **`SKILL.md`** files and a dedicated **Learner Agent**.
+**Rationale**:
+
+- Agents acquire skills (e.g., `build123d` best practices) which are persisted as `SKILL.md` artifacts.
+- A sidecar Learner Agent asynchronously updates skills based on successful reasoning traces in the `journal.md`.
+- Documentation is accessible through `deepagents` memory and the filesystem.
+
+### 4. Orchestration
+
+**Decision**: Use **Temporal** for worker orchestration.
+**Rationale**:
+
+- Simplifies long-running tasks like simulation and renders.
+- Handles retries and state persistence across worker failures.

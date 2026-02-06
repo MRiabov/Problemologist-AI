@@ -1,34 +1,31 @@
 # Data Model: COTS Assembly System
 
-**Feature**: 006-cots-assembly-system
+## Core Models (Pydantic)
 
-## Entities
+### 1. COTSPartSummary
 
-### PartSummary
-Lightweight object returned by search.
+```python
+class COTSPartSummary(BaseModel):
+    id: str
+    name: str
+    category: str
+    provider: str = "bd_warehouse"
+```
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `str` | Unique identifier (e.g., `bd_warehouse:motor:Nema17`) |
-| `name` | `str` | Human/Agent readable name (e.g., "NEMA 17 Stepper Motor") |
-| `provider` | `str` | Source identifier (e.g., `bd_warehouse`) |
+### 2. COTSPartDetail
 
-### PartPreview
-Rich object returned by preview tool.
+```python
+class COTSPartDetail(BaseModel):
+    id: str
+    name: str
+    image_url: str  # S3 URL
+    description: str
+    recipe: str      # Python instantiation code
+    properties: Dict[str, Any] # mass, dimensions, etc.
+```
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `str` | Unique identifier |
-| `image_path` | `str` | Absolute path to the rendered image (PNG) |
-| `description` | `str` | Natural language text describing features/orientation |
-| `metadata` | `dict` | Physical properties (mass, dimensions, voltage, etc.) |
-| `recipe` | `str` | Python code snippet to instantiate this part |
+## Persistence
 
-### Part (Internal)
-Internal representation within the Index.
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `str` | Unique identifier |
-| `factory` | `Callable` | Function to create the `build123d` object |
-| `params` | `dict` | Parameters to pass to the factory |
+1. **Catalog**: Stored as a versioned JSON/SQLite file on **S3**.
+2. **Search Index**: Maintained by the **Catalog Sub-Agent** in memory or via a lightweight vector store if the catalog grows.
+3. **Observation DB**: Selected part IDs are recorded in the global trace for reproducibility.

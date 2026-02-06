@@ -1,42 +1,40 @@
 # Quickstart: Advanced Manufacturing Workbenches
 
-## 1. Installation
-Ensure dependencies are installed:
-```bash
-uv sync  # installs trimesh
+## 1. Agent Usage (In Sandbox)
+
+The agent interacts with the workbenches via the `validate_and_price` utility imported from `utils`.
+
+```python
+from build123d import Box
+from utils import validate_and_price, ManufacturingMethod
+
+# 1. Create part
+part = Box(10, 10, 10)
+part.label = "bracket"
+part.metadata = {
+    "manufacturing_method": ManufacturingMethod.CNC,
+    "material": "aluminum-6061"
+}
+
+# 2. Validate and get price (prints results to stdout for the agent)
+validate_and_price(part)
 ```
 
-## 2. Running a Manual Check
+## 2. Testing Logic (Direct API)
 
-You can use the python API directly to test the workbenches.
+For internal testing on the worker node:
 
 ```python
 from src.workbenches.cnc import CNCWorkbench
-from src.workbenches.injection_molding import InjectionMoldingWorkbench
-from build123d import Box, Cylinder
+from build123d import Box
 
-# Create a test part (simple cylinder is friendly for both)
-part = Cylinder(radius=10, height=20)
-
-# 1. Check CNC Manufacturability
 cnc = CNCWorkbench()
-report_cnc = cnc.analyze(part, quantity=1)
-print(f"CNC Status: {report_cnc['status']}")
-print(f"CNC Cost: ${report_cnc['cost_analysis']['total_cost']}")
+report = cnc.analyze(Box(10, 10, 10))
 
-# 2. Check Injection Molding
-im = InjectionMoldingWorkbench()
-report_im = im.analyze(part, quantity=10000)
-print(f"IM Status: {report_im['status']}")
-print(f"IM Unit Cost: ${report_im['cost_analysis']['unit_cost']}")
+print(f"Status: {report.status}")
+print(f"Unit Cost: {report.cost.unit_price}")
 ```
 
 ## 3. Configuration
-Modify `src/workbenches/manufacturing_config.yaml` to adjust material costs or machine rates.
 
-```yaml
-cnc:
-  materials:
-    aluminum_6061:
-      cost_per_kg: 6.00  # Updated price
-```
+Materials and machine rates are configured in `src/workbenches/manufacturing_config.yaml`.
