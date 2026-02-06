@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Graph Orchestration
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: 002-vlm-cad-agent-WP05
 base_commit: 71b0688ff1eab316e8ffebdda302044a2c68f2ee
@@ -70,3 +70,4 @@ Enable `deepagents` persistence.
 ## Activity Log
 
 - 2026-02-06T14:42:04Z – Gemini – shell_pid=659900 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T15:02:28Z – Gemini – shell_pid=659900 – lane=for_review – Ready for review: Full graph orchestration implemented with routing and checkpointing.
