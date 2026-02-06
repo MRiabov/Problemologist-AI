@@ -61,7 +61,6 @@ def run_python_code(
         timeout=config.timeout_seconds,
     )
 
-<<<<<<< HEAD
     # Set up PYTHONPATH to include src/worker for utils import
     actual_env = env.copy() if env else {}
     current_pythonpath = actual_env.get("PYTHONPATH", "")
@@ -75,8 +74,6 @@ def run_python_code(
     else:
         actual_env["PYTHONPATH"] = worker_path
 
-=======
->>>>>>> 001-agentic-cad-environment-WP03
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -96,11 +93,7 @@ def run_python_code(
             capture_output=True,
             text=True,
             timeout=config.timeout_seconds,
-<<<<<<< HEAD
             env=actual_env,
-=======
-            env=env,
->>>>>>> 001-agentic-cad-environment-WP03
             cwd=config.working_directory,
         )
 
@@ -165,7 +158,6 @@ async def run_python_code_async(
         timeout=config.timeout_seconds,
     )
 
-<<<<<<< HEAD
     # Set up PYTHONPATH to include src/worker for utils import
     actual_env = env.copy() if env else {}
     current_pythonpath = actual_env.get("PYTHONPATH", "")
@@ -179,8 +171,6 @@ async def run_python_code_async(
     else:
         actual_env["PYTHONPATH"] = worker_path
 
-=======
->>>>>>> 001-agentic-cad-environment-WP03
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -197,11 +187,7 @@ async def run_python_code_async(
             script_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-<<<<<<< HEAD
             env=actual_env,
-=======
-            env=env,
->>>>>>> 001-agentic-cad-environment-WP03
             cwd=config.working_directory,
         )
 
@@ -256,8 +242,4 @@ async def run_python_code_async(
 
     finally:
         # Clean up temporary file
-<<<<<<< HEAD
         Path(script_path).unlink(missing_ok=True)
-=======
-        Path(script_path).unlink(missing_ok=True)
->>>>>>> 001-agentic-cad-environment-WP03

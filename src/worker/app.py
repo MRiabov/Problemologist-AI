@@ -3,13 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes import router as api_router
+from src.shared.logging import configure_logging
 
 # Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.processors.JSONRenderer(),
-    ]
-)
+configure_logging("worker")
 
 logger = structlog.get_logger(__name__)
 
