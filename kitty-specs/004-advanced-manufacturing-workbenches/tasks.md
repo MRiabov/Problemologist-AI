@@ -8,10 +8,10 @@
 
 ### Included Subtasks
 
-- [ ] **T001**: Implement Core Pydantic Models (`WorkbenchResult`, `DFMReport`, `ManufacturingMethod`, `MaterialDefinition`).
-- [ ] **T002**: Create `manufacturing_config.yaml` with initial cost/material data.
-- [ ] **T003**: Implement Configuration Loader with Pydantic validation and `structlog`.
-- [ ] **T004**: Define standard functional interfaces for workbenches in `base.py`.
+- [x] T001: Implement Core Pydantic Models (WorkbenchResult, DFMReport, ManufacturingMethod, MaterialDefinition).
+- [x] T002: Create manufacturing_config.yaml with initial cost/material data.
+- [x] T003: Implement Configuration Loader with Pydantic validation and structlog.
+- [x] T004: Define standard functional interfaces for workbenches in base.py.
 
 ### Implementation Sketch
 
