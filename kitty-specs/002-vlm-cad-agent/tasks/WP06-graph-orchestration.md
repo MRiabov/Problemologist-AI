@@ -1,9 +1,13 @@
 ---
 work_package_id: WP06
 title: Graph Orchestration
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: 002-vlm-cad-agent-WP05
+base_commit: 71b0688ff1eab316e8ffebdda302044a2c68f2ee
+created_at: '2026-02-06T14:42:04.319118+00:00'
 subtasks: [T024, T025, T026, T027]
+shell_pid: "659900"
 ---
 
 ## Objective
