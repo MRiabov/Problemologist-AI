@@ -27,38 +27,25 @@ It distinguishes between **Controller Observability** (LLM Traces, Agent State) 
 
 ## 3. Functional Requirements
 
-### 3.1. Controller Observability (Postgres + LangFuse)
+### 1.1 Run (Episode)
 
-- **Agent State**: Persisted via LangGraph Checkpointer (Postgres).
-- **LLM Traces**: Streamed to LangFuse (Self-hosted or Cloud).
-- **Structured Logs**: `structlog` for application events (Info/Error).
+- **Agent State**: Persisted via LangGraph Checkpointer in **Postgres**.
+- **LLM Traces**: Streamed to **Langfuse** (Postres-backed).
+- **Execution Logs**: Captured and stored in **Postgres** on the Controller.
 
-### 3.2. Worker Observability (S3 + Ephemeral)
+### 1.2 Storage
 
-- **Execution Logs**: Captured stdout/stderr from `run_command`, returned to Controller, and stored in Postgres.
-- **Simulation Artifacts**:
-  - **Videos**: Rendered `.mp4` uploaded to S3.
-  - **Git Bundles**: `.tar.gz` of the workspace uploaded to S3 after significant steps.
-
-### 3.3. Schemas & Contracts
-
-- **OpenAPI**: The Controller <-> Worker API is strictly typed.
-- **Validation**: `schemathesis` runs in CI to fuzz inputs/outputs against the schema.
-
-### 3.4. Backups
-
-- **Postgres**: Standard Railway backups / pg_dump to S3.
-- **S3**: Lifecycle policies to archive old videos (Cost optimization).
+- **Artifacts**: All light and heavy artifacts (Meshes, Videos, Code) are stored in **S3**.
+- **Persistence**: Any worker-side persistence is ephemeral; the source of truth is the central Controller database.
 
 ## 4. Technical Design
 
 ### 4.1. Tech Stack
 
-- **Databases**: Postgres (Controller), SQLite (Local Dev / Worker Ephemeral).
-- **Tracing**: `langfuse` Python SDK.
-- **Storage**: AWS S3 / MinIO.
-- **Logs**: `structlog`.
-- **Testing**: `schemathesis`.
+- **Datastores**: Postgres (Controller), S3 (Global Asset Store).
+- **Tracing**: Langfuse.
+- **Durable Execution**: Temporal.
+- **Models**: Pydantic/SQLAlchemy for strict typing.
 
 ### 4.2. Data Flow
 

@@ -1,45 +1,62 @@
 # Quickstart: Agentic CAD Environment
 
-## Initialization
+## Initializing an Agent Session
 
-The environment is managed via `deepagents` on the Controller, which delegates execution to Worker nodes.
+The environment is managed via the `deepagents` SDK. The Controller initializes the agent and injects the distributed worker's filesystem.
 
 ```python
-from deepagents.core import AgentNode
+from deepagents import AgentNode
 from deepagents.middlewares import FilesystemMiddleware, TodoListMiddleware
-from src.environment.worker import WorkerClient
+from src.environment.worker_client import SandboxClient
 
-# 1. Setup Worker Client (connecting to distributed worker)
-worker = WorkerClient(url="http://worker-service:8080")
+# 1. Connect to the distributed Worker
+worker = SandboxClient(api_key="...", endpoint="https://worker-node:8080")
 
-# 2. Initialize Agent with Middlewares
+# 2. Setup Agent with specific Middlewares
+# This exposes ls, aread, awrite, aexecute to the agent
 agent = AgentNode(
-    name="cad_engineer",
+    name="engineer_1",
     middlewares=[
-        FilesystemMiddleware(backend=worker.filesystem),
-        TodoListMiddleware()
+        FilesystemMiddleware(
+            backend=worker.get_backend(),
+            read_only_paths=["/skills", "/utils"]
+        ),
+        TodoListMiddleware(path="/todo.md")
     ]
 )
 
-# 3. Running an Episode (via Temporal)
-# Episodes are usually triggered via the Controller's API
+# 3. Start Task (Orchestrated via Temporal)
+# The agent will now 'live' in the worker's filesystem
 ```
 
-## Worker-Side Execution (Internal)
+## Agent Tool Usage (Example)
 
-The worker manages the `build123d` and `mujoco` context.
+The agent naturally uses tools to interact with the environment.
 
 ```python
-# The agent writes to 'script.py' in the sandbox
-# The environment then executes it on the worker:
-result = worker.execute("python script.py")
-
-print(f"Simulation Outcome: {result.stdout}")
+# Agent: "I need to check the template and write my solution."
+await agent.tools.aread("/utils/template.py")
+await agent.tools.awrite("/script.py", content="from utils import simulate...")
+await agent.tools.aexecute("python /script.py")
 ```
 
-## Running Verification
+## Domain Tools (Utils)
 
-```bash
-# Run the test suite against the distributed setup
-pytest tests/integration/test_worker_controller.py
+Within the `script.py`, the agent uses high-level Python utilities provided in the environment.
+
+```python
+from utils import simulate, validate_and_price
+from build123d import Box
+
+# Define solution
+part = Box(10, 10, 10)
+
+# Verify against constraints
+price_info = validate_and_price(part)
+print(f"Current unit cost: {price_info['unit_cost']}")
+
+# Run simulation
+result = simulate(part)
+if result.success:
+    print("Objective reached!")
 ```
