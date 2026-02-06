@@ -140,10 +140,10 @@
 **Priority**: Medium (Phase 3)
 **Tests**: Verify logs appear in structlog format. Verify traces in LangFuse.
 
-- [ ] T032: Configure `structlog` for JSON logging on both nodes.
-- [ ] T033: Setup Postgres DB with SQLAlchemy and Alembic.
-- [ ] T034: Define schema for `Episodes`, `Traces`, `Assets` (including skill git hashes for reproducibility).
-- [ ] T035: Integrate `langfuse` in Controller Agent.
+- [x] T032: Configure `structlog` for JSON logging on both nodes.
+- [x] T033: Setup Postgres DB with SQLAlchemy and Alembic.
+- [x] T034: Define schema for `Episodes`, `Traces`, `Assets` (including skill git hashes for reproducibility).
+- [x] T035: Integrate `langfuse` in Controller Agent.
 
 **Implementation**:
 
