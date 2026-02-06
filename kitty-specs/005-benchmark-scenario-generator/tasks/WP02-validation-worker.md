@@ -8,6 +8,7 @@ base_commit: aaa2c48775fd87ee5b01f821bbc42be1894eea50
 created_at: '2026-02-06T20:56:59.035885+00:00'
 subtasks: [T005, T006, T007, T008]
 shell_pid: "107007"
+agent: "Gemini"
 ---
 
 # WP02: Validation & Worker Utilities
@@ -68,3 +69,7 @@ shell_pid: "107007"
 - [ ] `validate()` catches overlapping parts or out-of-bounds geometry.
 - [ ] `submit_for_review()` correctly triggers the next stage in the graph.
 - [ ] Agent can successfully call these tools in a test sandbox.
+
+## Activity Log
+
+- 2026-02-06T20:56:59Z – Gemini – shell_pid=107007 – lane=doing – Assigned agent via workflow command
