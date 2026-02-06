@@ -33,6 +33,12 @@ This constitution captures the technical standards and core principles for Probl
 - **Orchestration**: Temporal
 - **Infrastructure**: Docker/Podman
 
+### Type Safety & Schemas
+
+- **Strict Typing**: All data models must use strict typing (Pydantic `Strict*` types) to ensure schema validity.
+- **Enums over Strings**: Always prefer `Enum` (or `StrEnum`) over raw strings for categorical data to ensure closed sets of values.
+- **Fuzz Testing**: Schemas must be robust enough to withstand fuzz testing via `schemathesis`.
+
 ### Testing Requirements
 
 - **Backend Logic**: Unit tests with `pytest`.
