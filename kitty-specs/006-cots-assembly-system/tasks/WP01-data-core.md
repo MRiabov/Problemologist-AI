@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP01"
-title: "Data Core & Foundation"
-lane: "planned"
+work_package_id: WP01
+title: Data Core & Foundation
+lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003", "T004"]
+base_branch: main
+base_commit: 6dbd512d6e4c2c388a3adf72b4a6d0d7982bc1d2
+created_at: '2026-02-06T14:28:01.365935+00:00'
+subtasks: [T001, T002, T003, T004]
+shell_pid: "644319"
 ---
 
 # WP01: Data Core & Foundation
