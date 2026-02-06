@@ -1,0 +1,78 @@
+---
+work_package_id: "WP05"
+title: "Domain Utils (Worker Side)"
+lane: "planned"
+dependencies: ["WP02"]
+subtasks: ["T022", "T023", "T024", "T025", "T026"]
+---
+
+# WP05: Domain Utils (Worker Side)
+
+**Goal**: Implement the "OS-level" utilities that agents will import and usage.
+
+## Context
+
+Agents don't write raw API calls or raw MuJoCo XML. They import `utils` which abstracts the complexity.
+These utils run *inside* the Worker container (invoked by `runtime`).
+
+## Subtasks
+
+### T022: Create Utils Package
+
+Location: `src/worker/utils/`
+
+- `__init__.py`: Export public functions.
+- `simulation.py`: Logic for simulation.
+- `validation.py`: Logic for pricing/checks.
+- `submission.py`: Logic for review.
+
+### T023: Implement `validate_and_price`
+
+File: `src/worker/utils/validation.py`
+Signature: `validate_and_price(component: Part|Compound) -> dict`
+
+Logic (Stub):
+
+- Check input type (must be `build123d.Part` or `Compound`).
+- Calculate bounding box.
+- (Mock) Return `{"valid": True, "cost": 10.5}`.
+
+### T024: Implement `simulate`
+
+File: `src/worker/utils/simulation.py`
+Signature: `simulate(component: Compound) -> SimulationResult`
+
+Logic (Stub):
+
+1. **Git Commit**: Call `git add . && git commit -m "Auto-commit"` (requires `git` installed in T003). *Add git to dependencies if missing.*
+2. **Compile**: Convert `component` to MJCF (xml string).
+3. **Execute**: Save XML to file. Write a "dummy" video file.
+4. **Upload**: Use `boto3` (available in worker) to upload video/xml to S3 `assets/`.
+5. **Return**: Markdown summary (e.g. "Simulation Passed. Video: s3://...").
+
+### T025: Implement `submit_for_review`
+
+File: `src/worker/utils/submission.py`
+Logic:
+
+- Mark the current state as "Ready".
+- Maybe write a `REVIEW_REQUEST.md` file.
+
+### T026: PYTHONPATH Integration
+
+- Ensure `src.worker.utils` is importable as `utils` inside the `runtime` execution.
+- Update `runtime/executor.py` (from WP02) to add `src/worker` (or wherever utils lives) to `PYTHONPATH` before execution.
+
+## Verification
+
+1. Create a script `test_utils.py`:
+
+   ```python
+   from utils import simulate
+   from build123d import Box
+   res = simulate(Box(1))
+   print(res)
+   ```
+
+2. Run it via `runtime/execute` API.
+3. Expect success output.
