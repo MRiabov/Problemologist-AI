@@ -2,6 +2,8 @@ from fastapi import APIRouter, Header, HTTPException, Depends
 from typing import List, Optional
 import structlog
 
+from src.shared.enums import ResponseStatus
+
 from .schema import (
     ListFilesRequest,
     ReadFileRequest,
@@ -17,6 +19,7 @@ from ..runtime.executor import run_python_code_async, RuntimeConfig
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
+
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
@@ -25,11 +28,9 @@ async def get_router(x_session_id: str = Header(...)):
         logger.error("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
+
 @router.post("/fs/ls", response_model=List[FileInfo])
-async def list_files(
-    request: ListFilesRequest,
-    fs_router=Depends(get_router)
-):
+async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     """List contents of a directory."""
     try:
         return fs_router.ls(request.path)
@@ -39,11 +40,9 @@ async def list_files(
         logger.error("api_ls_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/fs/read")
-async def read_file(
-    request: ReadFileRequest,
-    fs_router=Depends(get_router)
-):
+async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
     """Read file contents."""
     try:
         content = fs_router.read(request.path)
@@ -54,26 +53,22 @@ async def read_file(
         logger.error("api_read_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/fs/write")
-async def write_file(
-    request: WriteFileRequest,
-    fs_router=Depends(get_router)
-):
+async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     """Write content to a file."""
     try:
         fs_router.write(request.path, request.content)
-        return {"status": "success"}
+        return {"status": ResponseStatus.SUCCESS}
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_write_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/fs/edit")
-async def edit_file(
-    request: EditFileRequest,
-    fs_router=Depends(get_router)
-):
+async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
     """Edit a file with one or more operations."""
     try:
         # Check if file exists first
@@ -85,11 +80,11 @@ async def edit_file(
             success = fs_router.edit(request.path, edit.old_string, edit.new_string)
             if not success:
                 raise HTTPException(
-                    status_code=400, 
-                    detail=f"Content not found for replacement: {edit.old_string[:50]}..."
+                    status_code=400,
+                    detail=f"Content not found for replacement: {edit.old_string[:50]}...",
                 )
-        
-        return {"status": "success"}
+
+        return {"status": ResponseStatus.SUCCESS}
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
@@ -98,17 +93,16 @@ async def edit_file(
         logger.error("api_edit_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/runtime/execute", response_model=ExecuteResponse)
-async def execute_code(
-    request: ExecuteRequest
-):
+async def execute_code(request: ExecuteRequest):
     """Execute Python code."""
     config = RuntimeConfig(timeout_seconds=request.timeout)
     result = await run_python_code_async(code=request.code, config=config)
-    
+
     if result.timed_out:
         # According to T015, we can return 504 or structured error.
-        # We'll return 200 with timed_out=True in the response model, 
+        # We'll return 200 with timed_out=True in the response model,
         # but if we wanted 504:
         # raise HTTPException(status_code=504, detail="Execution timed out")
         pass
@@ -117,5 +111,5 @@ async def execute_code(
         stdout=result.stdout,
         stderr=result.stderr,
         exit_code=result.exit_code,
-        timed_out=result.timed_out
+        timed_out=result.timed_out,
     )
