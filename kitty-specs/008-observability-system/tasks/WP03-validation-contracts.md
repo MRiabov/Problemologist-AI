@@ -1,10 +1,10 @@
 ---
 work_package_id: "WP03"
 title: "Validation & Contracts"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: ["T008", "T009", "T010"]
-agent: "antigravity"
+agent: "Gemini"
 shell_pid: "36079"
 ---
 
@@ -93,3 +93,4 @@ To prevent "silent failures" and data corruption, we require strict schema valid
 - 2026-02-06T16:25:01Z – antigravity – shell_pid=11005 – lane=doing – Started review via workflow command
 - 2026-02-06T16:26:44Z – antigravity – shell_pid=11005 – lane=planned – Moved to planned
 - 2026-02-06T17:22:25Z – antigravity – shell_pid=36079 – lane=doing – Started implementation via workflow command
+- 2026-02-06T20:55:34Z – Gemini – shell_pid=36079 – lane=for_review – Moved to for_review
