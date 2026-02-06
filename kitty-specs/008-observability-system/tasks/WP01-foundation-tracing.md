@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Foundation - Tracing & Persistence"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003"]
+agent: "gemini-cli"
+shell_pid: "483300"
 ---
 
 # Work Package: Foundation - Tracing & Persistence
@@ -97,3 +99,7 @@ The observability system is critical for debugging, monitoring, and future train
 
 - Check that `LangFuse` is not imported if the package is optional (though it should be a dep).
 - Ensure Postgres connection pooling is considered (passing an engine vs connection).
+
+## Activity Log
+
+- 2026-02-06T08:07:50Z – gemini-cli – shell_pid=483300 – lane=doing – Started implementation via workflow command
