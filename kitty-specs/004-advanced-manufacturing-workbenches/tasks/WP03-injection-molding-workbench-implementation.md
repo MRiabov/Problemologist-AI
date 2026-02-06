@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP03"
-title: "Injection Molding Workbench Implementation"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T010", "T011", "T012", "T013", "T014"]
+work_package_id: WP03
+title: Injection Molding Workbench Implementation
+lane: "doing"
+dependencies: [WP01]
+base_branch: 004-advanced-manufacturing-workbenches-WP02
+base_commit: 11908c76e29b8964dd73e20485f87c80a221329f
+created_at: '2026-02-06T21:08:41.118506+00:00'
+subtasks: [T010, T011, T012, T013, T014]
+shell_pid: "119564"
 ---
 
 # WP03: Injection Molding Workbench Implementation
