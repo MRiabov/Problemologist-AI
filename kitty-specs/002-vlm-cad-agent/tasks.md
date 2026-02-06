@@ -66,10 +66,10 @@
 **Priority**: High
 **Dependencies**: WP02, WP03, WP04, WP05
 
-- [ ] T024: Register nodes in `graph.py`
-- [ ] T025: Define Conditional Edges
-- [ ] T026: Implement Checkpointing
-- [ ] T027: Test full Graph flow
+- [x] T024: Register nodes in `graph.py`
+- [x] T025: Define Conditional Edges
+- [x] T026: Implement Checkpointing
+- [x] T027: Test full Graph flow
 
 ### WP07: CLI Entrypoint
 
