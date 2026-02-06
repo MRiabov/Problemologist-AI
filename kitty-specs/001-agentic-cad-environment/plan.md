@@ -7,7 +7,7 @@
 
 ## Summary
 
-Implement the **Agentic CAD Environment** using the **`deepagents`** framework. This involves setting up the **Controller Node** (LangGraph orchestration) and the **Worker Node** (Podman execution sandbox), connected via a strict OpenAPI contract. The environment abstracts the Worker's filesystem (backed by MinIO/S3) and provides the "Utils" library for agents to perform CAD/Sim actions via Python calls.
+Implement the **Agentic CAD Environment** using the **`deepagents`** framework. This involves setting up the **Controller Node** (LangGraph orchestration) and the **Worker Node** (Podman execution sandbox), connected via a strict OpenAPI contract. The environment uses a **Hybrid Filesystem**: a local disposable sandbox for fast operations and reasoning artifacts, with selective routing of large media (via `CompositeBackend`) to **MinIO/S3**.
 
 ## Technical Context
 
@@ -17,20 +17,20 @@ Implement the **Agentic CAD Environment** using the **`deepagents`** framework. 
 - `deepagents`: Middleware for Filesystem, Process management.
 - `fastapi`: API for Worker node.
 - `temporal`: Workflow orchestration for robust long-running tasks.
-- `s3fs` / `minio`: Filesystem backend.
+- `s3fs` / `minio`: Filesystem backend for large assets.
 **Dependencies**:
 - `build123d`: CAD kernel (Worker).
 - `mujoco`: Physics (Worker).
 - `langfuse`: Observability (Controller).
 **Infrastructure**:
 - **Controller**: Railway Service (Postgres DB).
-- **Worker**: Podman Container (MinIO S3).
+- **Worker**: Podman Container (Local Storage + MinIO S3 for renders).
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[No conflicts. Aligned with Distributed Architecture.]
+[No conflicts. Aligned with Distributed & Hybrid Architecture.]
 
 ## Project Structure
 
@@ -55,7 +55,7 @@ src/
 │   └── persistence.py    # Postgres/S3 Logic
 ├── worker/               # Worker Container (Podman)
 │   ├── app.py            # FastAPI Entrypoint
-│   ├── filesystem/       # S3 FUSE/Virtual FS
+│   ├── filesystem/       # Hybrid FS (Local + S3 Routing)
 │   ├── runtime/          # Python Execution Wrapper
 │   └── utils/            # The "Utils" library agents import (simulate, validate)
 └── deepagents/           # Shared Framework Integrations
@@ -67,4 +67,4 @@ src/
 |-----------|------------|-------------------------------------|
 | Distributed Architecture | Safety & Scalability. Agents execute arbitrary code. | Running code on the Controller is a massive security risk and blocks the event loop. |
 | Temporal | Durability. Simulations take time and containers die. | Simple async/await fails if the container restarts or times out. |
-| S3 Filesystem | Persistence across worker restarts & Observability. | Local ephemeral storage loses reasoning traces and code history on crash. |
+| Hybrid Filesystem | Performance & Persistence. Fast local edits during reasoning, S3 for large assets. | S3-only is slow for edits; local-only loses traces on worker preemption. |

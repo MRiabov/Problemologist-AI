@@ -29,7 +29,7 @@ The **Benchmark Scenario Generator** is an autonomous agentic pipeline that crea
 The pipeline is an Agent Graph (Planner -> Coder -> Reviewer) executed via `deepagents`.
 
 1. **Planner**: Interprets the user's "Theme" (e.g., "Lever problems") and defines the randomization strategy.
-2. **Coder**: Writes a Python script in the Worker environment.
+2. **Coder**: Writes a Python script in the **local worker sandbox**.
     - Script must define a `build(seed, scale)` function.
     - Script imports `utils.simulate`.
 3. **Validation**:
@@ -43,9 +43,9 @@ The pipeline is an Agent Graph (Planner -> Coder -> Reviewer) executed via `deep
 
 A "Benchmark" consists of:
 
-- `script.py`: The generator script.
+- `script.py`: The generator script (stored in sandbox during generation).
 - `manifest.json`: Metadata (Tier, Description, Cost Targets).
-- `assets/`: Pre-rendered images/videos and reference MJCFs.
+- `assets/`: Pre-rendered images/videos (saved to `/renders/` which routes to S3) and reference MJCFs.
 
 ### 3.3. Randomization
 

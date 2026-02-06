@@ -20,8 +20,9 @@ Implement the **Engineer Agent** using **LangGraph** within the **`deepagents`**
 **Dependencies**:
 - `001-agentic-cad-environment`: The execution runtime API.
 **Storage**:
-- **Postgres**: LangGraph checkpoints (State).
-- **S3 (via Worker)**: Filesystem persistence (Journal, Code).
+- **Postgres**: LangGraph checkpoints (State/Reasoning Traces).
+- **Local Sandbox**: Ephemeral memory files (Journal, TODO, Script).
+- **Global S3**: Persistence of final renders, CAD assets, and media produced by tools.
 
 ## Constitution Check
 
