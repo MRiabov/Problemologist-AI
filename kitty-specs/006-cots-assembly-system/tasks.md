@@ -24,11 +24,11 @@
 **Dependencies**: WP01 (Data Models)
 **Estimated Size**: ~400 lines
 
-- [ ] T005: Implement `bd_warehouse` crawler to discover parts
-- [ ] T006: Implement metadata extractor (extract properties from `build123d` objects)
-- [ ] T007: Implement "Recipe Generator" (generate import/instantiation code)
-- [ ] T008: Implement `src/cots/indexer.py` main logic to process parts and save to DB
-- [ ] T009: Create unit test for indexer with a mock/small part subset
+- [x] T005: Implement `bd_warehouse` crawler to discover parts
+- [x] T006: Implement metadata extractor (extract properties from `build123d` objects)
+- [x] T007: Implement "Recipe Generator" (generate import/instantiation code)
+- [x] T008: Implement `src/cots/indexer.py` main logic to process parts and save to DB
+- [x] T009: Create unit test for indexer with a mock/small part subset
 
 ### WP03: Search Runtime
 
