@@ -70,4 +70,4 @@ def create_cots_search_agent(model_name: str = "gpt-4o"):
         "If you find multiple candidates, recommend the best fit based on the user's constraints (weight, cost, size)."
     )
 
-    return create_react_agent(llm, tools, state_modifier=system_prompt)
+    return create_react_agent(llm, tools, prompt=system_prompt)
