@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP01"
-title: "Foundation & Data Models"
-lane: "planned"
+work_package_id: WP01
+title: Foundation & Data Models
+lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003", "T004"]
+base_branch: main
+base_commit: 941e92e5cf286016e109cc9b0398e53712ad706f
+created_at: '2026-02-06T14:04:54.068309+00:00'
+subtasks: [T001, T002, T003, T004]
+shell_pid: "625191"
 ---
 
 # WP01: Foundation & Data Models
