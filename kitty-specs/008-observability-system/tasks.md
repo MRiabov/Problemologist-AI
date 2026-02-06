@@ -37,8 +37,8 @@
 **Implement the S3 interface for handling artifact storage (videos, large files).**
 
 - [x] T004: Create `S3Client` wrapper in `src/observability/storage.py` using `boto3`. <!-- id: T004 -->
-- [ ] T005: Implement `upload_file`, `download_file`, `list_files` methods. <!-- id: T005 -->
-- [ ] T006: Implement `get_presigned_url` method for secure access. <!-- id: T006 -->
+- [x] T005: Implement `upload_file`, `download_file`, `list_files` methods. <!-- id: T005 -->
+- [x] T006: Implement `get_presigned_url` method for secure access. <!-- id: T006 -->
 - [x] T007: Write unit tests for S3 wrapper using `moto` or mocks. <!-- id: T007 -->
 
 **Implementation Notes**:
