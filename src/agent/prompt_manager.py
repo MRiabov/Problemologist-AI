@@ -1,6 +1,7 @@
 import jinja2
 from typing import Any
 
+<<<<<<< HEAD
 
 class PromptManager:
     """Manager for Jinja2 templates for the agent."""
@@ -10,6 +11,15 @@ class PromptManager:
             loader=jinja2.DictLoader(
                 {
                     "architect": """You are the Architect. 
+=======
+class PromptManager:
+    """Manager for Jinja2 templates for the agent."""
+    
+    def __init__(self):
+        self.env = jinja2.Environment(
+            loader=jinja2.DictLoader({
+                "architect": """You are the Architect. 
+>>>>>>> 002-vlm-cad-agent-WP05
 Your goal is to plan the following task: {{ task }}
 
 Available skills:
@@ -28,7 +38,11 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
+<<<<<<< HEAD
                     "engineer": """You are the Engineer. 
+=======
+                "engineer": """You are the Engineer. 
+>>>>>>> 002-vlm-cad-agent-WP05
 Implement the following step: {{ current_step }}
 
 Execution Plan context:
@@ -45,7 +59,11 @@ Instructions:
 2. Use only available tools and libraries.
 3. Output ONLY the Python code inside a markdown code block.
 """,
+<<<<<<< HEAD
                     "critic": """You are the Critic. 
+=======
+                "critic": """You are the Critic. 
+>>>>>>> 002-vlm-cad-agent-WP05
 Evaluate the implementation of the task: {{ task }}
 
 Execution Journal:
@@ -66,8 +84,36 @@ Output your response in this format:
 DECISION: <APPROVE or REJECT>
 FEEDBACK: <your detailed feedback here>
 """,
+<<<<<<< HEAD
                 }
             )
+=======
+                "sidecar": """You are the Sidecar Learner. 
+Analyze the execution journal for the task: {{ task }}
+
+Journal:
+{{ journal }}
+
+Instructions:
+1. Identify any repeated struggles or successful breakthroughs.
+2. If a reusable pattern or "trick" is found, draft a new skill.
+3. If no significant new knowledge is found, say "No new skills identified."
+
+If suggesting a skill, output in this format:
+SKILL: <Short Title>
+CONTENT:
+# <Title>
+## Problem
+<Describe the problem encountered>
+## Solution
+<Describe the solution or best practice>
+## Example
+```python
+<Example code>
+```
+""",
+            })
+>>>>>>> 002-vlm-cad-agent-WP05
         )
 
     def render(self, template_name: str, **kwargs: Any) -> str:
