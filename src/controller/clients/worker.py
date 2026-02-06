@@ -1,5 +1,8 @@
 import httpx
 from typing import List, Optional, Dict, Any, Union
+from src.worker.api.schema import ExecuteResponse
+from src.worker.filesystem.backend import FileInfo
+
 
 class WorkerClient:
     """Async client for interacting with the Problemologist Worker API."""
@@ -15,24 +18,24 @@ class WorkerClient:
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
 
-    async def list_files(self, path: str = "/") -> List[Dict[str, Any]]:
+    async def list_files(self, path: str = "/") -> List[FileInfo]:
         """List contents of a directory.
 
         Args:
             path: Virtual directory path.
 
         Returns:
-            List of FileInfo dictionaries.
+            List of FileInfo objects.
         """
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/ls",
                 json={"path": path},
                 headers=self.headers,
-                timeout=10.0
+                timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()
+            return [FileInfo.model_validate(item) for item in response.json()]
 
     async def read_file(self, path: str) -> str:
         """Read file contents.
@@ -48,7 +51,7 @@ class WorkerClient:
                 f"{self.base_url}/fs/read",
                 json={"path": path},
                 headers=self.headers,
-                timeout=10.0
+                timeout=10.0,
             )
             response.raise_for_status()
             return response.json()["content"]
@@ -68,7 +71,7 @@ class WorkerClient:
                 f"{self.base_url}/fs/write",
                 json={"path": path, "content": content},
                 headers=self.headers,
-                timeout=10.0
+                timeout=10.0,
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
@@ -88,12 +91,12 @@ class WorkerClient:
                 f"{self.base_url}/fs/edit",
                 json={"path": path, "edits": edits},
                 headers=self.headers,
-                timeout=10.0
+                timeout=10.0,
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
 
-    async def execute_python(self, code: str, timeout: int = 30) -> Dict[str, Any]:
+    async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
         """Execute Python code in the sandboxed runtime.
 
         Args:
@@ -101,20 +104,20 @@ class WorkerClient:
             timeout: Execution timeout in seconds.
 
         Returns:
-            Dictionary with stdout, stderr, exit_code, and timed_out.
+            ExecuteResponse model with stdout, stderr, exit_code, and timed_out.
         """
         async with httpx.AsyncClient() as client:
-            # We add some buffer to the HTTP timeout to allow the runtime 
+            # We add some buffer to the HTTP timeout to allow the runtime
             # to finish and return the result even if it timed out internally.
             http_timeout = float(timeout) + 5.0
             response = await client.post(
                 f"{self.base_url}/runtime/execute",
                 json={"code": code, "timeout": timeout},
                 headers=self.headers,
-                timeout=http_timeout
+                timeout=http_timeout,
             )
             response.raise_for_status()
-            return response.json()
+            return ExecuteResponse.model_validate(response.json())
 
     async def get_health(self) -> Dict[str, str]:
         """Check the health of the worker service."""
