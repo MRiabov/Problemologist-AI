@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP02"
-title: "CNC Workbench Implementation"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T005", "T006", "T007", "T008", "T009"]
+work_package_id: WP02
+title: CNC Workbench Implementation
+lane: "doing"
+dependencies: [WP01]
+base_branch: 004-advanced-manufacturing-workbenches-WP01
+base_commit: 88a745c9ca863bcae9c8f185bc38a35717e5ed7b
+created_at: '2026-02-06T16:45:53.912737+00:00'
+subtasks: [T005, T006, T007, T008, T009]
+shell_pid: "7341"
 ---
 
 # WP02: CNC Workbench Implementation
