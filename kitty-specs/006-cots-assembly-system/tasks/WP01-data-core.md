@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Data Core & Foundation
-lane: "doing"
+lane: "done"
 dependencies: []
 base_branch: main
 base_commit: 6dbd512d6e4c2c388a3adf72b4a6d0d7982bc1d2
@@ -9,6 +9,8 @@ created_at: '2026-02-06T14:28:01.365935+00:00'
 subtasks: [T001, T002, T003, T004]
 shell_pid: "652963"
 agent: "Gemini"
+reviewed_by: "MRiabov"
+review_status: "approved"
 ---
 
 # WP01: Data Core & Foundation
@@ -90,3 +92,4 @@ agent: "Gemini"
 - 2026-02-06T14:33:32Z – Gemini – shell_pid=650971 – lane=doing – Started review via workflow command
 - 2026-02-06T14:34:53Z – Gemini – shell_pid=650971 – lane=for_review – Ready for review
 - 2026-02-06T14:34:57Z – Gemini – shell_pid=652963 – lane=doing – Started review via workflow command
+- 2026-02-06T14:35:25Z – Gemini – shell_pid=652963 – lane=done – Review passed: Implementation meets all requirements. Pydantic and ORM models defined and tested. Handled SQLAlchemy reserved name conflict for 'metadata' correctly.
