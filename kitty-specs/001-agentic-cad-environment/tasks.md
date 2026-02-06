@@ -9,12 +9,12 @@
 **Priority**: Critical (Phase 1)
 **Tests**: `docker-compose up` brings up both services healthy. `make test` runs basic lints.
 
-- [ ] T001: Create project directory structure for Controller (`src/controller`) and Worker (`src/worker`).
-- [ ] T002: Create `Dockerfile` for Controller (Python 3.10+, Railway-ready).
-- [ ] T003: Create `Dockerfile` for Worker (Python 3.10+, Podman-compatible, with `build123d` and `mujoco` deps).
-- [ ] T004: Create `docker-compose.yml` for local development setup (Controller, Worker, Postgres, MinIO).
-- [ ] T005: Setup `pyproject.toml` / `uv` workspace for dependency management.
-- [ ] T006: Configure basic strict linting (`ruff`, `pyright`) and pre-commit hooks.
+- [x] T001: Create project directory structure for Controller (`src/controller`) and Worker (`src/worker`).
+- [x] T002: Create `Dockerfile` for Controller (Python 3.10+, Railway-ready).
+- [x] T003: Create `Dockerfile` for Worker (Python 3.10+, Podman-compatible, with `build123d` and `mujoco` deps).
+- [x] T004: Create `docker-compose.yml` for local development setup (Controller, Worker, Postgres, MinIO).
+- [x] T005: Setup `pyproject.toml` / `uv` workspace for dependency management.
+- [x] T006: Configure basic strict linting (`ruff`, `pyright`) and pre-commit hooks.
 
 **Implementation**:
 
