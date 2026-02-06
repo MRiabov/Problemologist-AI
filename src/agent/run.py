@@ -6,6 +6,7 @@ from typing import Optional
 
 from .graph import graph
 from .state import AgentState
+from .config import settings
 
 app = typer.Typer()
 
@@ -25,8 +26,8 @@ async def _run_agent(task: str, thread_id: str):
     initial_state = AgentState(task=task)
     
     print(f"🚀 Starting Agent with thread_id: {thread_id}")
-    print(f"📝 Task: {task}
-")
+    print(f"📝 Task: {task}")
+    print(f"🔧 Config: Worker={settings.spec_001_api_url}, Session={settings.default_session_id}")
     print("---")
 
     async for event in graph.astream(initial_state, config=config):
