@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP02"
-title: "Validation & Worker Utilities"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T005", "T006", "T007", "T008"]
+work_package_id: WP02
+title: Validation & Worker Utilities
+lane: "doing"
+dependencies: [WP01]
+base_branch: 005-benchmark-scenario-generator-WP01
+base_commit: aaa2c48775fd87ee5b01f821bbc42be1894eea50
+created_at: '2026-02-06T20:56:59.035885+00:00'
+subtasks: [T005, T006, T007, T008]
+shell_pid: "107007"
 ---
 
 # WP02: Validation & Worker Utilities
