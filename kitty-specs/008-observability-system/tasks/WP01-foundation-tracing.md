@@ -1,11 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Foundation - Tracing & Persistence"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T003c"]
-agent: "gemini-cli"
-shell_pid: "483300"
+agent: "gemini"
+shell_pid: "424666"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -130,3 +130,4 @@ The observability system is critical for debugging, monitoring, and future train
 
 - 2026-02-06T08:07:50Z – gemini-cli – shell_pid=483300 – lane=doing – Started implementation via workflow command
 - 2026-02-06T14:34:49Z – gemini-cli – shell_pid=483300 – lane=planned – Moved to planned
+- 2026-02-06T15:51:53Z – gemini – shell_pid=424666 – lane=doing – Started implementation via workflow command
