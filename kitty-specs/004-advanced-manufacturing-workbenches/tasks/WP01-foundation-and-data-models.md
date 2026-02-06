@@ -1,13 +1,13 @@
 ---
 work_package_id: WP01
 title: Foundation & Data Models
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 941e92e5cf286016e109cc9b0398e53712ad706f
 created_at: '2026-02-06T14:04:54.068309+00:00'
 subtasks: [T001, T002, T003, T004]
-shell_pid: "653830"
+shell_pid: "656522"
 agent: "gemini-cli"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
@@ -93,3 +93,4 @@ We are implementing the "Advanced Manufacturing Workbenches" feature (Spec 004).
 - 2026-02-06T14:34:55Z – gemini-cli – shell_pid=644692 – lane=planned – Moved to planned
 - 2026-02-06T14:36:12Z – gemini-cli – shell_pid=653830 – lane=doing – Started implementation via workflow command
 - 2026-02-06T14:38:22Z – gemini-cli – shell_pid=653830 – lane=for_review – Ready for review: Fixed density units, implemented nested config structure, and added backward compatibility via dict-like interface.
+- 2026-02-06T14:38:37Z – gemini-cli – shell_pid=656522 – lane=doing – Started review via workflow command
