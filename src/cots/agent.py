@@ -1,0 +1,73 @@
+import os
+
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+
+from .models import SearchQuery
+from .runtime import search_parts
+
+# Default DB path relative to project root or configurable
+DEFAULT_DB_PATH = os.environ.get("COTS_DB_PATH", "parts.db")
+
+
+@tool
+def search_cots_catalog(
+    query: str,
+    max_weight_g: float | None = None,
+    max_cost: float | None = None,
+    category: str | None = None,
+    limit: int = 5,
+) -> str:
+    """
+    Search for off-the-shelf mechanical and electronic components (fasteners, bearings, etc.).
+    Returns a list of parts with their IDs, costs, weights, and Python import recipes.
+
+    Args:
+        query: Text description of the part (e.g. 'M6 hex nut').
+        max_weight_g: Maximum allowed weight in grams.
+        max_cost: Maximum allowed unit cost.
+        category: Filter by category ('fastener', 'motor', 'gear', 'bearing', 'electronic').
+        limit: Max number of results.
+    """
+    constraints = {}
+    if max_weight_g is not None:
+        constraints["max_weight"] = max_weight_g
+    if max_cost is not None:
+        constraints["max_cost"] = max_cost
+    if category is not None:
+        constraints["category"] = category
+
+    sq = SearchQuery(query=query, constraints=constraints, limit=limit)
+    parts = search_parts(sq, DEFAULT_DB_PATH)
+
+    if not parts:
+        return "No parts found matching the criteria."
+
+    output = []
+    for p in parts:
+        item_str = (
+            f"- {p.name} (ID: {p.part_id})\n"
+            f"  Category: {p.category}, Weight: {p.weight_g:.2f}g, Cost: ${p.unit_cost}\n"
+            f"  Recipe: {p.import_recipe}"
+        )
+        output.append(item_str)
+
+    return "\n\n".join(output)
+
+
+def create_cots_search_agent(model_name: str = "gpt-4o"):
+    """
+    Create a specialized agent for part lookup.
+    """
+    llm = ChatOpenAI(model=model_name, temperature=0)
+    tools = [search_cots_catalog]
+
+    system_prompt = (
+        "You are a COTS (Commercial Off-The-Shelf) assembly assistant. "
+        "Your goal is to find the best components for a given design requirement. "
+        "Use the search_cots_catalog tool to find parts. "
+        "If you find multiple candidates, recommend the best fit based on the user's constraints (weight, cost, size)."
+    )
+
+    return create_react_agent(llm, tools, prompt=system_prompt)
