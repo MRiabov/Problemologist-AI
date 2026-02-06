@@ -144,15 +144,32 @@ async def preview_design(
 
 
 @tool
-async def verify_solution(control_path: str, tool_runtime: Any | None = None) -> str:
+async def verify_solution(
+    control_path: str,
+    design_file: str = "design.py",
+    process: str = "print_3d",
+    target_quantity: int = 1,
+    max_unit_cost: float = float("inf"),
+    tool_runtime: Any | None = None,
+) -> str:
     """
     Runs the current design script, performs full Workbench validation, and returns final grades.
     Args:
         control_path: Path to the controller script to be used in simulation.
+        design_file: The name of the script file to analyze (default: design.py).
+        process: The manufacturing process (default: print_3d).
+        target_quantity: Target production quantity (default: 1).
+        max_unit_cost: Maximum allowed unit cost (default: infinite).
         tool_runtime: Injected runtime (do not provide).
     """
     return await _execute_tool(
-        "verify_solution", tool_runtime, control_path=control_path
+        "verify_solution",
+        tool_runtime,
+        control_path=control_path,
+        design_file=design_file,
+        process=process,
+        target_quantity=target_quantity,
+        max_unit_cost=max_unit_cost,
     )
 
 

@@ -85,6 +85,29 @@ class ToolRuntime:
 
     def write_file(self, content: str, path: str, mode: str = "overwrite") -> str:
         """Writes content to a file in the workspace or appends to it."""
+        # Intercept skills updates
+        if path.startswith("docs/skills/"):
+            skill_rel = path.removeprefix("docs/skills/")
+            host_path = Config.SKILLS_DIR / skill_rel
+
+            # Security check
+            if not str(host_path.resolve()).startswith(
+                str(Config.SKILLS_DIR.resolve())
+            ):
+                return f"Error: Skill path {path} attempts to traverse outside skills directory."
+
+            try:
+                host_path.parent.mkdir(parents=True, exist_ok=True)
+                if mode == "append":
+                    with host_path.open("a", encoding="utf-8") as f:
+                        f.write(content)
+                    return f"Successfully appended to skill {skill_rel}"
+                else:
+                    host_path.write_text(content, encoding="utf-8")
+                    return f"Successfully wrote to skill {skill_rel}"
+            except Exception as e:
+                return f"Error writing skill {path}: {e!s}"
+
         full_path = Path(self.workspace_dir) / path
 
         if not str(full_path.resolve()).startswith(
@@ -117,6 +140,36 @@ class ToolRuntime:
 
     def edit_file(self, path: str, find: str, replace: str) -> str:
         """Replaces a unique 'find' string with 'replace' in the specified file."""
+        # Intercept skills updates
+        if path.startswith("docs/skills/"):
+            skill_rel = path.removeprefix("docs/skills/")
+            host_path = Config.SKILLS_DIR / skill_rel
+
+            # Security check
+            if not str(host_path.resolve()).startswith(
+                str(Config.SKILLS_DIR.resolve())
+            ):
+                return f"Error: Skill path {path} attempts to traverse outside skills directory."
+
+            if not host_path.exists():
+                return f"Error: Skill file {path} does not exist."
+
+            try:
+                content = host_path.read_text(encoding="utf-8")
+
+                count = content.count(find)
+                if count == 0:
+                    return f"Error: 'find' string not found in {path}."
+                if count > 1:
+                    return f"Error: 'find' string is ambiguous ({count} found) in {path}."
+
+                new_content = content.replace(find, replace)
+                host_path.write_text(new_content, encoding="utf-8")
+
+                return f"Successfully edited skill {path}."
+            except Exception as e:
+                return f"Error editing skill {path}: {e!s}"
+
         full_path = Path(self.workspace_dir) / path
 
         if not full_path.exists():
@@ -317,6 +370,7 @@ class ToolRuntime:
         tool_map = {
             "write_file": self.write_file,
             "edit_file": self.edit_file,
+            "view_file": self.view_file,
             "preview_design": self.preview_design,
             "verify_solution": self.verify_solution,
             "search_docs": self.search_docs,
