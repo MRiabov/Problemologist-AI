@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Architect Node
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: 002-vlm-cad-agent-WP01
 base_commit: 477289a68f098334752b885623e6f40f2e3fbbb1
@@ -78,3 +78,4 @@ Verify functionality.
 ## Activity Log
 
 - 2026-02-06T14:16:09Z – Gemini – shell_pid=638431 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T14:24:34Z – Gemini – shell_pid=638431 – lane=for_review – Ready for review: Architect node implemented with skill discovery and planning logic.
