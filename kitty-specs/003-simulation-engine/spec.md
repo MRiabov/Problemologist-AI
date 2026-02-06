@@ -1,6 +1,6 @@
 # Feature Specification: MuJoCo Simulation Engine
 
-**Feature**: 003-mujoco-simulation-engine
+**Feature**: 003-simulation-engine
 **Status**: Draft
 **Mission**: software-dev
 

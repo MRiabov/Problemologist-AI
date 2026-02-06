@@ -1,9 +1,9 @@
 # Implementation Plan: MuJoCo Simulation Engine
 
-*Path: kitty-specs/003-mujoco-simulation-engine/plan.md*
+Path: `kitty-specs/003-simulation-engine/plan.md`
 
-**Branch**: `003-mujoco-simulation-engine` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `/kitty-specs/003-mujoco-simulation-engine/spec.md`
+**Branch**: `003-simulation-engine` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/003-simulation-engine/spec.md`
 
 ## Summary
 
@@ -32,8 +32,8 @@ Implement the **MuJoCo Simulation Engine** as a core `utils` library within the 
 
 ### Documentation
 
-```
-kitty-specs/003-mujoco-simulation-engine/
+```text
+kitty-specs/003-simulation-engine/
 ├── plan.md              # This file
 ├── research.md          # Research
 ├── data-model.md        # DB Schema
@@ -57,7 +57,7 @@ src/worker/
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| :--- | :--- | :--- |
 | Temporal | Simulation reliability. | Running huge sims in a simple HTTP handler leads to timeouts and zombie processes. |
 | FFmpeg | Video compression. | Raw frames fill up disk space instantly; GIFs are too large/low quality. |
 | Automatic Zone Detection | UX for Agents. | Agents struggle to configure physics engine params manually; Geometry-based config is intuitive. |
