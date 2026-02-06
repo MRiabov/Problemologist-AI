@@ -8,6 +8,7 @@ base_commit: 872ab04f9f4c239be6d4356d2898ae23339c05bf
 created_at: '2026-02-06T21:17:18.899183+00:00'
 subtasks: [T015, T016]
 shell_pid: "128035"
+agent: "Gemini"
 ---
 
 # WP04: Agent Integration & Facade
@@ -44,3 +45,7 @@ Implement the `validate_and_price` function in `src/worker/utils/dfm.py` which a
 - `validate_and_price` is callable.
 - Dispatches correctly.
 - Returns clear errors on misuse.
+
+## Activity Log
+
+- 2026-02-06T21:17:19Z – Gemini – shell_pid=128035 – lane=doing – Assigned agent via workflow command
