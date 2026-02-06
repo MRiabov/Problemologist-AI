@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Indexer Implementation
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: 006-cots-assembly-system-WP01
 base_commit: 22f6e149ae2d21566c7afdae80a281f72989dcbf
@@ -86,3 +86,4 @@ agent: "Gemini-CLI"
 ## Activity Log
 
 - 2026-02-06T15:07:15Z – Gemini-CLI – shell_pid=684091 – lane=doing – Assigned agent via workflow command
+- 2026-02-06T15:11:13Z – Gemini-CLI – shell_pid=684091 – lane=for_review – Implemented COTS Indexer. Crawls bd_warehouse for fasteners and bearings, extracts metadata (bbox, volume, weight, cost), and generates import recipes. Verified with unit tests.
