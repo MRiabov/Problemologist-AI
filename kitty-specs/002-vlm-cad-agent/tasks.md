@@ -19,11 +19,11 @@
 **Priority**: High
 **Dependencies**: WP01
 
-- [ ] T005: Implement `src/agent/nodes/architect.py`
-- [ ] T006: Add logic to read `skills/` directory
-- [ ] T007: Implement 'create plan' logic (writes `plan.md`)
-- [ ] T008: Implement 'create todo' logic (writes `todo.md`)
-- [ ] T009: Test Architect node with mock inputs
+- [x] T005: Implement `src/agent/nodes/architect.py`
+- [x] T006: Add logic to read `skills/` directory
+- [x] T007: Implement 'create plan' logic (writes `plan.md`)
+- [x] T008: Implement 'create todo' logic (writes `todo.md`)
+- [x] T009: Test Architect node with mock inputs
 
 ### WP03: Engineer Node
 
