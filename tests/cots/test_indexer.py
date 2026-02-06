@@ -1,0 +1,48 @@
+import os
+import pytest
+from src.cots.indexer import Indexer
+from src.cots.database.models import COTSItemORM
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
+def test_indexer_basic(tmp_path):
+    db_path = str(tmp_path / "test_parts.db")
+    indexer = Indexer(db_path)
+    
+    # Index only 1 item per class to be fast
+    indexer.index_all(limit_per_class=1)
+    
+    assert os.path.exists(db_path)
+    
+    engine = create_engine(f"sqlite:///{db_path}")
+    with Session(engine) as session:
+        items = session.query(COTSItemORM).all()
+        # We expect 4 classes * 1 item = 4 items
+        assert len(items) == 4
+        
+        # Check one item
+        nut = session.query(COTSItemORM).filter_by(category="fastener").first()
+        assert nut is not None
+        assert "HexNut" in nut.part_id
+        assert nut.unit_cost == 0.05
+        assert nut.weight_g > 0
+        assert "import HexNut" in nut.import_recipe
+        assert nut.metadata_dict["volume"] > 0
+
+def test_metadata_extraction():
+    indexer = Indexer(":memory:")
+    from bd_warehouse.fastener import HexNut
+    
+    meta = indexer.extract_metadata(HexNut, "M6-1")
+    assert meta["part_id"] == "HexNut_M6-1"
+    assert meta["category"] == "fastener"
+    assert meta["unit_cost"] == 0.05
+    assert "bbox" in meta
+
+def test_recipe_generation():
+    indexer = Indexer(":memory:")
+    from bd_warehouse.fastener import HexNut
+    
+    recipe = indexer.generate_recipe(HexNut, {"size": "M6-1"})
+    assert "from bd_warehouse.fastener import HexNut" in recipe
+    assert "HexNut(size='M6-1')" in recipe
