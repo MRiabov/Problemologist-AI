@@ -7,7 +7,7 @@ The internal state of the agent graph, managed by LangGraph and checkpointed in 
 ### 1. EngineerState
 
 ```python
-class EngineerState(TypedDict):
+class EngineerState(BaseModel):
     """The state shared across Architect, Engineer, and Critic."""
     episode_id: UUID
     goal: str

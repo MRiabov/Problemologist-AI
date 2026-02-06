@@ -90,13 +90,12 @@ The agent interacts with the domain *through code it writes*, leveraging the pre
 
 ### 5.2. Component Structure
 
-```text
 src/agent/
-├── graph.py            # LangGraph definition
-├── nodes/              # Architect, Engineer, Critic
-├── state.py            # AgentState (TypedDict)
+├── graph/
+│   ├── graph.py        # LangGraph definition
+│   ├── state.py        # AgentState (BaseModel)
+│   └── nodes/          # Architect, Engineer, Critic
 └── prompt_manager.py   # System prompts & template rendering
-```
 
 ## 6. Assumptions & Constraints
 
