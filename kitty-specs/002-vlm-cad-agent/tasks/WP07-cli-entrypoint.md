@@ -8,6 +8,7 @@ base_commit: 3518222e0cff6076161f46093c4870d73375c188
 created_at: '2026-02-06T15:02:55.074432+00:00'
 subtasks: [T028, T029, T030, T031]
 shell_pid: "678995"
+agent: "Gemini"
 ---
 
 ## Objective
@@ -66,3 +67,7 @@ Create the main entrypoint.
 
 - `python -m src.agent.run "Task"` works.
 - Environment is correctly configured.
+
+## Activity Log
+
+- 2026-02-06T15:02:55Z – Gemini – shell_pid=678995 – lane=doing – Assigned agent via workflow command
