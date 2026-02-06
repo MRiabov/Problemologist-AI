@@ -1,14 +1,14 @@
 ---
 work_package_id: WP06
 title: Temporal Orchestration
-lane: "for_review"
+lane: "doing"
 dependencies: [WP05, WP04]
 base_branch: 001-agentic-cad-environment-WP06-merge-base
 base_commit: 0b79d9c623e937f5967adc5b445192b489a677b5
 created_at: '2026-02-06T14:29:57.869827+00:00'
 subtasks: [T027, T028, T029, T030, T031]
-shell_pid: "646690"
-agent: "gemini-cli"
+shell_pid: "669179"
+agent: "Gemini"
 ---
 
 ## WP06: Temporal Orchestration
@@ -76,3 +76,4 @@ File: `src/controller/workflows/execution.py`
 
 - 2026-02-06T14:29:58Z – gemini-cli – shell_pid=646690 – lane=doing – Assigned agent via workflow command
 - 2026-02-06T14:50:54Z – gemini-cli – shell_pid=646690 – lane=for_review – Ready for review: Implemented Temporal orchestration for long-running simulations and durable script execution. Updated docker-compose with Temporal services and integrated Temporal into the Controller API and middleware.
+- 2026-02-06T14:51:36Z – Gemini – shell_pid=669179 – lane=doing – Started review via workflow command
