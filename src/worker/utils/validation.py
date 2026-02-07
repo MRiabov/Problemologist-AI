@@ -1,4 +1,5 @@
 from typing import Any, Union, List
+from pathlib import Path
 from build123d import Part, Compound, Location, export_stl
 import structlog
 import mujoco
@@ -28,11 +29,11 @@ def simulate(component: Compound) -> SimulationResult:
     logger.info("simulate_start")
     
     # 1. Export STL for MuJoCo
-    renders_dir = os.getenv("RENDERS_DIR", "./renders")
-    os.makedirs(renders_dir, exist_ok=True)
+    renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
+    renders_dir.mkdir(parents=True, exist_ok=True)
     
-    stl_path = os.path.join(renders_dir, "component.stl")
-    export_stl(component, stl_path)
+    stl_path = renders_dir / "component.stl"
+    export_stl(component, str(stl_path))
     
     # 2. Generate MJCF
     mjcf_xml = f"""
@@ -50,7 +51,7 @@ def simulate(component: Compound) -> SimulationResult:
   </worldbody>
 </mujoco>
 """
-    mjcf_path = os.path.join(renders_dir, "scene.xml")
+    mjcf_path = renders_dir / "scene.xml"
     with open(mjcf_path, "w") as f:
         f.write(mjcf_xml)
         
@@ -58,7 +59,7 @@ def simulate(component: Compound) -> SimulationResult:
         # 3. Load MuJoCo and run a few frames
         # We need to be careful with paths in MJCF if they are relative
         # MuJoCo will look for component.stl relative to scene.xml
-        model = mujoco.MjModel.from_xml_path(mjcf_path)
+        model = mujoco.MjModel.from_xml_path(str(mjcf_path))
         data = mujoco.MjData(model)
         
         # Run for 100 steps

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any, Dict
 
 from langchain_openai import ChatOpenAI
@@ -17,13 +18,13 @@ def architect_node(state: AgentState) -> AgentState:
     pm = PromptManager()
 
     # T006: Read skills
-    skills_dir = ".agent/skills"
+    skills_dir = Path(".agent/skills")
     skills = []
-    if os.path.exists(skills_dir):
+    if skills_dir.exists():
         skills = [
-            d
-            for d in os.listdir(skills_dir)
-            if os.path.isdir(os.path.join(skills_dir, d))
+            d.name
+            for d in skills_dir.iterdir()
+            if d.is_dir()
         ]
 
     skills_context = "\n".join([f"- {s}" for s in skills])
