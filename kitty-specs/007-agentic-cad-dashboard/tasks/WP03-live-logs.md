@@ -8,6 +8,7 @@ base_commit: 422ffc62c8a8174f4eebe4a08be3ba5bc346e0e6
 created_at: '2026-02-07T10:09:50.639685+00:00'
 subtasks: [T011, T012, T013, T014, T015]
 shell_pid: "322089"
+agent: "Gemini"
 ---
 
 ## Context
@@ -87,3 +88,7 @@ Build the "Run Detail" page's logging and observability panels utilizing WebSock
 - [ ] Incoming messages appear in "Log Stream" immediately.
 - [ ] "Thought Trace" updates structure dynamically.
 - [ ] Status badge reflects current state.
+
+## Activity Log
+
+- 2026-02-07T10:09:50Z – Gemini – shell_pid=322089 – lane=doing – Assigned agent via workflow command
