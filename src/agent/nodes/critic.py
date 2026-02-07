@@ -91,13 +91,13 @@ class CriticNode:
             }
         )
 
-    async def _read_artifact(self, path: str) -> Optional[str]:
+    async def _read_artifact(self, path: str) -> str | None:
         try:
             return await self.fs.read_file(path)
         except Exception:
             return None
 
-    async def _read_json_artifact(self, path: str) -> Optional[Dict[str, Any]]:
+    async def _read_json_artifact(self, path: str) -> dict[str, Any] | None:
         content = await self._read_artifact(path)
         if content:
             try:
