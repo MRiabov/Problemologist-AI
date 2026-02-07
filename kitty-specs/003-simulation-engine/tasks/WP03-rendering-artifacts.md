@@ -1,9 +1,13 @@
 ---
 work_package_id: WP03
 title: Rendering & Artifact Storage
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 064b45154507c1584b8b086c1c9d93b6dc52019f
+created_at: '2026-02-07T06:32:01.549481+00:00'
 subtasks: [T014, T015, T016, T017, T018, T019]
+shell_pid: "150427"
 ---
 
 ## WP03: Rendering & Artifact Storage
