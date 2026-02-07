@@ -54,3 +54,6 @@ npm-debug.log
 config/
 contracts/
 steps.id/
+
+# Outputs
+/renders/
