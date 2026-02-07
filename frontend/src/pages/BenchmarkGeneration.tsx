@@ -4,17 +4,13 @@ import { fetchEpisodes, runSimulation, type Episode } from '../api/client';
 import { 
   Play, 
   Cpu, 
-  CircleDot,
-  Box,
-  BrainCircuit,
-  ShieldCheck,
-  Check
+  CircleDot
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { cn } from "../lib/utils";
 import ReasoningTraces from '../components/workspace/ReasoningTraces';
 import ArtifactView from '../components/workspace/ArtifactView';
+import ModelViewer from '../components/visualization/ModelViewer';
 
 export default function BenchmarkGeneration() {
   const { 
@@ -22,7 +18,6 @@ export default function BenchmarkGeneration() {
   } = useEpisodes();
   const [, setEpisodes] = useState<Episode[]>([]);
   const [simulating, setSimulating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'traces' | 'audit'>('traces');
 
   useEffect(() => {
     async function loadData() {
@@ -85,50 +80,16 @@ export default function BenchmarkGeneration() {
         <div className="col-span-3 border-r overflow-hidden">
             <ReasoningTraces 
               traces={selectedEpisode?.traces}
-              journal={selectedEpisode?.journal}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              latestInsight={selectedEpisode?.metadata_vars?.latest_insight}
               isRunning={simulating}
             />
         </div>
 
         {/* Rightmost Column - span 6/9 */}
         <div className="col-span-6 flex flex-col overflow-hidden">
-            {/* Top: Stepper + Viewport */}
-            <div className="h-1/2 flex flex-col overflow-hidden border-b">
-                {/* Pipeline Status Stepper (Internal) */}
-                <div className="bg-muted/10 px-6 py-4 border-b">
-                    <div className="flex justify-between items-center max-w-2xl mx-auto">
-                        {[
-                            { step: 1, label: "Intent", icon: Check, active: true },
-                            { step: 2, label: "Strategy", icon: Check, active: true },
-                            { step: 3, label: "Synthesis", icon: BrainCircuit, active: true, current: true },
-                            { step: 4, label: "Validation", icon: ShieldCheck, active: false }
-                        ].map((s) => (
-                            <div key={s.step} className="flex flex-col items-center gap-1.5 opacity-80 scale-90">
-                            <div className={cn(
-                                "w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all",
-                                s.active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-transparent",
-                                s.current && "ring-2 ring-primary ring-offset-2 scale-110"
-                            )}>
-                                {s.active && s.step < 3 ? <Check className="h-3 w-3 stroke-[3px]" /> : <s.icon className="h-3 w-3" />}
-                            </div>
-                            <span className={cn(
-                                "text-[8px] font-black uppercase tracking-widest",
-                                s.active ? "text-primary" : "text-muted-foreground"
-                            )}>
-                                {s.label}
-                            </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Viewport Render Output */}
-                <div className="flex-1 relative bg-gradient-to-b from-muted to-background flex items-center justify-center p-8 overflow-hidden">
+            {/* Top: Viewport */}
+            <div className="h-1/2 flex flex-col overflow-hidden border-b relative bg-gradient-to-b from-muted to-background flex items-center justify-center">
                     {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
-                        <div className="w-full h-full flex items-center justify-center relative">
+                        <div className="w-full h-full flex items-center justify-center relative p-8">
                             {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
                                 <video 
                                     src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
@@ -143,13 +104,16 @@ export default function BenchmarkGeneration() {
                             )}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center gap-4 text-muted-foreground/30">
-                            <Box className="h-16 w-16" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">No Simulation Trace</span>
+                        <div className="w-full h-full relative">
+                            <ModelViewer className="w-full h-full" />
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
+                                    Simulation Preview • Multi-Body
+                                </Badge>
+                            </div>
                         </div>
                     )}
                 </div>
-            </div>
 
             {/* Bottom: Artifacts (MJCF / Validation) */}
             <div className="h-1/2 overflow-hidden flex flex-col">

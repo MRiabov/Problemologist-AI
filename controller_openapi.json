@@ -263,7 +263,8 @@
           "mjcf",
           "image",
           "step",
-          "stl"
+          "stl",
+          "python"
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."

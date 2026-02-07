@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
 import ReasoningTraces from '../components/workspace/ReasoningTraces';
 import ArtifactView from '../components/workspace/ArtifactView';
 
@@ -23,7 +24,6 @@ export default function EngineerWorkspace() {
   } = useEpisodes();
   
   const [taskPrompt, setTaskPrompt] = useState('');
-  const [activeTab, setActiveTab] = useState<'traces' | 'audit'>('traces');
 
   const handleRunAgent = async () => {
     if (!taskPrompt) return;
@@ -95,10 +95,6 @@ export default function EngineerWorkspace() {
             <div className="col-span-3 border-r overflow-hidden">
                 <ReasoningTraces 
                   traces={selectedEpisode?.traces}
-                  journal={selectedEpisode?.journal}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  latestInsight={selectedEpisode?.metadata_vars?.latest_insight}
                   isRunning={running}
                 />
             </div>
@@ -126,9 +122,9 @@ export default function EngineerWorkspace() {
                     </div>
 
                     {/* Render Area */}
-                    <div className="w-full h-full flex items-center justify-center p-6 bg-muted/20">
-                    {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
-                            <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center overflow-hidden bg-muted/20 relative group">
+                        {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
+                            <div className="w-full h-full flex items-center justify-center p-6">
                                 {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
                                     <video 
                                         src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
@@ -143,9 +139,13 @@ export default function EngineerWorkspace() {
                                 )}
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center gap-3 opacity-20">
-                                <Box className="h-16 w-16" />
-                                <span className="text-xs uppercase font-bold tracking-widest">No Render Output</span>
+                            <div className="w-full h-full relative">
+                                <ModelViewer className="w-full h-full" />
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
+                                        Live Viewport • Isolated
+                                    </Badge>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -155,19 +155,8 @@ export default function EngineerWorkspace() {
                 <div className="h-1/2 flex-1 border-t overflow-hidden">
                     <ArtifactView 
                       plan={selectedEpisode?.plan}
-                      code={`# Generated code for episode ${selectedEpisode?.task || selectedEpisode?.id.substring(0,8)}
-from build123d import *
-
-with BuildPart() as bracket:
-    with BuildSketch() as sk:
-        Rectangle(width=60, height=80)
-        fillet(sk.vertices(), radius=5)
-    extrude(amount=10)
-    
-    # Adding mounting patterns
-    add_mounting_holes(diameter=6.5, pattern="grid")
-    
-return bracket`}
+                      code={selectedEpisode?.assets?.find(a => a.asset_type === 'python')?.s3_path}
+                      mjcf={selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf')?.s3_path}
                     />
                 </div>
             </main>
