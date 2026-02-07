@@ -41,8 +41,17 @@ async def get_router(x_session_id: str = Header(...)):
 
 def _load_component(script_path: str):
     """Utility to load the component from the agent's script."""
-    if not Path(script_path).exists():
-        raise FileNotFoundError(f"Script not found: {script_path}")
+    path = Path(script_path)
+    if not path.is_absolute():
+        # Heuristic: if relative, try relative to root first, then maybe check if it's currently being written
+        pass
+
+    if not path.exists():
+        cwd = Path.cwd()
+        raise FileNotFoundError(
+            f"Script not found at {path.absolute()}. Current working directory: {cwd}. "
+            "Ensure the agent has written the file before calling simulate/validate."
+        )
 
     # Add current directory to sys.path to allow local imports in the script
     workspace_root = str(Path.cwd())

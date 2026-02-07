@@ -10,8 +10,17 @@ def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
     """Create a ReAct agent graph with filesystem tools."""
 
     # Initialize the LLM
-    # In a real scenario, we'd get the API key and model from config
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    import os
+
+    model = os.getenv("LLM_MODEL", "gpt-4o")
+    base_url = os.getenv("OPENAI_API_BASE")
+    temperature = float(os.getenv("LLM_TEMPERATURE", "0.0"))
+
+    llm = ChatOpenAI(
+        model=model,
+        temperature=temperature,
+        base_url=base_url,
+    )
 
     # Try to get Langfuse callback
     langfuse_callback = get_langfuse_callback()
