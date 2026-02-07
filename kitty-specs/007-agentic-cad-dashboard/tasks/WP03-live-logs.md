@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP03"
-title: "Run Detail View - Live Logs"
-lane: "planned"
-dependencies: ["WP02"]
-subtasks: ["T011", "T012", "T013", "T014", "T015"]
+work_package_id: WP03
+title: Run Detail View - Live Logs
+lane: "doing"
+dependencies: [WP02]
+base_branch: 007-agentic-cad-dashboard-WP02
+base_commit: 422ffc62c8a8174f4eebe4a08be3ba5bc346e0e6
+created_at: '2026-02-07T10:09:50.639685+00:00'
+subtasks: [T011, T012, T013, T014, T015]
+shell_pid: "322089"
 ---
 
 ## Context
