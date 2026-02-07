@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { fetchEpisodes, fetchSkills, runAgent } from '../api/client';
+import { fetchEpisodes, fetchSkills, runAgent, fetchEpisode } from '../api/client';
 import type { Episode, Skill } from '../api/types';
 
 export default function EngineerWorkspace() {
