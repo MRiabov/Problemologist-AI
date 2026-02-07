@@ -32,9 +32,15 @@ def sim_loop(tmp_path):
 
 
 def test_initialization(sim_loop):
+    import mujoco
+
     assert sim_loop.model is not None
     assert sim_loop.data is not None
-    assert "zone_forbid_1" in sim_loop.forbidden_geoms
+    # Check if ID of forbidden zone is in the set
+    geom_id = mujoco.mj_name2id(
+        sim_loop.model, mujoco.mjtObj.mjOBJ_GEOM, "zone_forbid_1"
+    )
+    assert geom_id in sim_loop.forbidden_geoms
 
 
 def test_step_simulation(sim_loop):
