@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP03"
-title: "Coder Agent (Generation Logic)"
-lane: "planned"
-dependencies: ["WP01", "WP02"]
-subtasks: ["T009", "T010", "T011", "T012"]
+work_package_id: WP03
+title: Coder Agent (Generation Logic)
+lane: "doing"
+dependencies: [WP01, WP02]
+base_branch: 005-benchmark-scenario-generator-WP02
+base_commit: 601ec0e687529bdabaab4c87f855377faf436b19
+created_at: '2026-02-07T07:02:29.916799+00:00'
+subtasks: [T009, T010, T011, T012]
+shell_pid: "188309"
 ---
 
 # WP03: Coder Agent (Generation Logic)
