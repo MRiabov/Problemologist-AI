@@ -9,14 +9,19 @@ from ..prompt_manager import PromptManager
 from ..state import AgentState
 
 
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from ..config import settings
+
+
 @type_check
-def architect_node(state: AgentState) -> AgentState:
+async def architect_node(state: AgentState) -> AgentState:
     """
     Architect node: Analyzes the task and creates plan.md and todo.md.
     """
     pm = PromptManager()
 
-    # T006: Read skills
+    # T006: Read skills (local controller FS is fine for skills)
     skills_dir = Path(".agent/skills")
     skills = []
     if skills_dir.exists():
@@ -31,16 +36,10 @@ def architect_node(state: AgentState) -> AgentState:
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
     # We pass the prompt as a human message for simplicity in this skeleton
-    response = llm.invoke([HumanMessage(content=prompt_text)])
+    response = await llm.ainvoke([HumanMessage(content=prompt_text)])
     content = str(response.content)
 
     # T007 & T008: Parse output and create artifacts
-    # Expecting a format like:
-    # # PLAN
-    # ...
-    # # TODO
-    # ...
-
     plan_content = ""
     todo_content = ""
 
@@ -53,12 +52,15 @@ def architect_node(state: AgentState) -> AgentState:
         plan_content = content
         todo_content = "- [ ] Implement the plan"
 
-    # Write files to the workspace root
-    with open("plan.md", "w") as f:
-        f.write(plan_content)
+    # Write files to the worker session workspace
+    session_id = state.session_id or settings.default_session_id
+    worker_client = WorkerClient(
+        base_url=settings.spec_001_api_url, session_id=session_id
+    )
+    fs = RemoteFilesystemMiddleware(worker_client)
 
-    with open("todo.md", "w") as f:
-        f.write(todo_content)
+    await fs.write_file("plan.md", plan_content)
+    await fs.write_file("todo.md", todo_content)
 
     return state.model_copy(
         update={

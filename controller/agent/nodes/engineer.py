@@ -116,7 +116,7 @@ from ..config import settings
 # Factory function for LangGraph
 @type_check
 async def engineer_node(state: AgentState) -> AgentState:
-    node = EngineerNode(
-        worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
-    )
+    # Use session_id from state, fallback to default if not set (e.g. tests)
+    session_id = state.session_id or settings.default_session_id
+    node = EngineerNode(worker_url=settings.spec_001_api_url, session_id=session_id)
     return await node(state)

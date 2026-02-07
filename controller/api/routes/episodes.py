@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from controller.api.manager import manager
+from controller.api.manager import manager, task_tracker
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
-from shared.enums import AssetType, EpisodeStatus
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
@@ -69,6 +69,7 @@ async def list_episodes(db: AsyncSession = Depends(get_db)):
         return episodes
     except Exception as e:
         import structlog
+
         logger = structlog.get_logger(__name__)
         logger.error("list_episodes_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
@@ -110,3 +111,42 @@ async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
     except Exception as e:
         print(f"WebSocket error: {e}")
         manager.disconnect(episode_id, websocket)
+
+
+@router.post("/{episode_id}/interrupt")
+async def interrupt_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Interrupt a running episode."""
+    import structlog
+
+    logger = structlog.get_logger(__name__)
+
+    # 1. Cancel the asyncio task
+    task = task_tracker.get_task(episode_id)
+    if task and not task.done():
+        logger.info("cancelling_episode_task", episode_id=str(episode_id))
+        task.cancel()
+    else:
+        logger.warning("task_not_found_or_already_done", episode_id=str(episode_id))
+
+    # 2. Update status in DB immediately (failsafe)
+    # The cancelled task exception handler in main.py will also do this,
+    # but we do it here to give immediate feedback.
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+
+    if episode:
+        if episode.status in [EpisodeStatus.RUNNING]:
+            episode.status = EpisodeStatus.CANCELLED
+            await db.commit()
+
+            # Broadcast update
+            await manager.broadcast(
+                episode_id,
+                {
+                    "type": "status_update",
+                    "status": EpisodeStatus.CANCELLED,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            )
+
+    return {"status": ResponseStatus.ACCEPTED, "message": "Interruption requested"}

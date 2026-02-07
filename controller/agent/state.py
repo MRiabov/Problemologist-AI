@@ -31,3 +31,4 @@ class AgentState(BaseModel):
     iteration: StrictInt = 0
     status: AgentStatus = AgentStatus.IDLE
     feedback: StrictStr = ""
+    session_id: StrictStr = ""

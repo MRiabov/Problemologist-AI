@@ -26,6 +26,10 @@ export async function runAgent(task: string, sessionId: string): Promise<any> {
     });
 }
 
+export async function interruptEpisode(id: string): Promise<any> {
+    return EpisodesService.interruptEpisodeEpisodesEpisodeIdInterruptPost(id);
+}
+
 export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<any> {
     return DefaultService.runSimulationSimulationRunPost({
         session_id: sessionId,

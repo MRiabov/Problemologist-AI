@@ -39,18 +39,47 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
+def _get_session_dir(session_id: str) -> Path:
+    """Get or create a local temporary directory for the session."""
+    base_dir = Path("/tmp/problemologist/sessions")
+    session_dir = base_dir / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+    return session_dir
+
+
+async def _sync_to_local(fs_router, session_dir: Path):
+    """Synchronize files from S3/FS_ROUTER to the local session directory."""
+    try:
+        files = fs_router.ls("/")
+        for file_info in files:
+            if not file_info.is_dir:
+                try:
+                    content = fs_router.read(file_info.path)
+
+                    rel_path = file_info.path.lstrip("/")
+                    local_file_path = session_dir / rel_path
+                    local_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                    mode = "wb" if isinstance(content, bytes) else "w"
+                    with open(local_file_path, mode) as f:
+                        f.write(content)
+                except Exception as e:
+                    logger.warning(
+                        "session_sync_file_failed", path=file_info.path, error=str(e)
+                    )
+    except Exception as e:
+        logger.error("session_sync_failed", error=str(e))
+
+
 def _load_component(script_path: str, script_content: str | None = None):
     """Utility to load the component from the agent's script."""
     # 1. If content is provided, use it directly (stateless/memory execution)
     if script_content:
         local_scope = {}
-        # Mocking or providing necessary imports for exec if needed
-        # But usually built-in imports work if installed in environment
         try:
             exec(script_content, local_scope)
             build_func = local_scope.get("build")
             if not build_func:
-                # Search for alias
                 for val in local_scope.values():
                     if callable(val) and getattr(val, "__name__", "") == "build":
                         build_func = val
@@ -64,28 +93,31 @@ def _load_component(script_path: str, script_content: str | None = None):
 
     # 2. Fallback to file path loading
     path = Path(script_path)
+
+    # We expect the caller to provide an absolute path (mapped to session dir)
+    # But if not, we fallback to CWD for backward compatibility
     if not path.is_absolute():
-        # Heuristic: if relative, try relative to root first, then maybe check if it's currently being written
-        pass
+        path = Path.cwd() / script_path
 
     if not path.exists():
-        cwd = Path.cwd()
         raise FileNotFoundError(
-            f"Script not found at {path.absolute()}. Current working directory: {cwd}. "
+            f"Script not found at {path}. "
             "Ensure the agent has written the file before calling simulate/validate."
         )
 
-    # Add current directory to sys.path to allow local imports in the script
-    workspace_root = str(Path.cwd())
-    if workspace_root not in sys.path:
-        sys.path.insert(0, workspace_root)
+    # Add script's directory to sys.path
+    script_dir = str(path.parent)
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
 
-    spec = importlib.util.spec_from_file_location("dynamic_build", script_path)
+    spec = importlib.util.spec_from_file_location("dynamic_build", str(path))
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load spec from {path}")
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
     if hasattr(module, "build"):
-        # We assume build() takes no args or uses default seed
         return module.build()
     raise AttributeError("build() function not found in script.")
 
@@ -156,9 +188,19 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
 
 
 @router.post("/runtime/execute", response_model=ExecuteResponse)
-async def execute_code(request: ExecuteRequest):
-    """Execute Python code."""
-    config = RuntimeConfig(timeout_seconds=request.timeout)
+async def execute_code(
+    request: ExecuteRequest,
+    fs_router=Depends(get_router),
+    x_session_id: str = Header(...),
+):
+    """Execute Python code in session-isolated environment."""
+    session_dir = _get_session_dir(x_session_id)
+    await _sync_to_local(fs_router, session_dir)
+
+    config = RuntimeConfig(
+        timeout_seconds=request.timeout,
+        working_directory=str(session_dir),
+    )
     result = await run_python_code_async(code=request.code, config=config)
 
     return ExecuteResponse(
@@ -169,12 +211,42 @@ async def execute_code(request: ExecuteRequest):
     )
 
 
+import asyncio
+
+# Global semaphore to limit concurrent simulations
+# Spec: "only one can simulate"
+SIMULATION_SEMAPHORE = asyncio.Semaphore(1)
+
+
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
-async def api_simulate(request: BenchmarkToolRequest):
-    """Physics-backed stability check."""
+async def api_simulate(
+    request: BenchmarkToolRequest,
+    fs_router=Depends(get_router),
+    x_session_id: str = Header(...),
+):
+    """Physics-backed stability check in isolated session."""
     try:
-        component = _load_component(request.script_path, request.script_content)
-        result = simulate(component)
+        session_dir = _get_session_dir(x_session_id)
+        await _sync_to_local(fs_router, session_dir)
+
+        script_path = Path(request.script_path)
+        if not script_path.is_absolute():
+            script_path = session_dir / script_path
+
+        component = _load_component(str(script_path), request.script_content)
+
+        # Enforce single concurrent simulation
+        async with SIMULATION_SEMAPHORE:
+            # We run simulate (sync) in a threadpool, but the semaphore prevents conflicting
+            # concurrent runs. Ideally we'd wrap simulate in run_in_executor but FastAPI does it.
+            # However, holding an async lock while running blocking code in the *simultaneous*
+            # handling is tricky if not awaiting.
+            # Since `simulate` is blocking, we should ideally run it in a thread and await it.
+            # But the semaphore is async.
+            result = await asyncio.to_thread(
+                simulate, component, output_dir=session_dir
+            )
+
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
@@ -189,10 +261,21 @@ async def api_simulate(request: BenchmarkToolRequest):
 
 
 @router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
-async def api_validate(request: BenchmarkToolRequest):
-    """Geometric validity check."""
+async def api_validate(
+    request: BenchmarkToolRequest,
+    fs_router=Depends(get_router),
+    x_session_id: str = Header(...),
+):
+    """Geometric validity check in isolated session."""
     try:
-        component = _load_component(request.script_path, request.script_content)
+        session_dir = _get_session_dir(x_session_id)
+        await _sync_to_local(fs_router, session_dir)
+
+        script_path = Path(request.script_path)
+        if not script_path.is_absolute():
+            script_path = session_dir / script_path
+
+        component = _load_component(str(script_path), request.script_content)
         is_valid = validate(component)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -204,10 +287,21 @@ async def api_validate(request: BenchmarkToolRequest):
 
 
 @router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
-async def api_submit(request: BenchmarkToolRequest):
-    """Handover to reviewer."""
+async def api_submit(
+    request: BenchmarkToolRequest,
+    fs_router=Depends(get_router),
+    x_session_id: str = Header(...),
+):
+    """Handover to reviewer in isolated session."""
     try:
-        component = _load_component(request.script_path, request.script_content)
+        session_dir = _get_session_dir(x_session_id)
+        await _sync_to_local(fs_router, session_dir)
+
+        script_path = Path(request.script_path)
+        if not script_path.is_absolute():
+            script_path = session_dir / script_path
+
+        component = _load_component(str(script_path), request.script_content)
         success = submit_for_review(component)
         return BenchmarkToolResponse(
             success=success,

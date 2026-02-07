@@ -26,7 +26,7 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
 
 
-def simulate(component: Compound) -> SimulationResult:
+def simulate(component: Compound, output_dir: Path | None = None) -> SimulationResult:
     """
     Provide a physics-backed stability check.
     Logic:
@@ -39,7 +39,10 @@ def simulate(component: Compound) -> SimulationResult:
     logger.info("simulate_start")
 
     # 1. Export STL for MuJoCo
-    renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
+    if output_dir:
+        renders_dir = output_dir / "renders"
+    else:
+        renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     stl_path = renders_dir / "component.stl"
