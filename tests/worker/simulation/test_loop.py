@@ -61,12 +61,12 @@ def test_metrics_collection(sim_loop):
     # Apply control to actuator
     # Gear is 1, so control 1.0 should apply 1.0 torque
     metrics = sim_loop.step({"test_actuator": 1.0}, duration=0.5)
-    
+
     assert metrics.total_energy > 0
-    assert metrics.max_velocity >= 0 # Target box might not move much but hinges will
-    
+    assert metrics.max_velocity >= 0  # Target box might not move much but hinges will
+
     # Check velocity of target box specifically
-    sim_loop.data.qvel[0] = 5.0 # Set x-velocity of target box
+    sim_loop.data.qvel[0] = 5.0  # Set x-velocity of target box
     metrics = sim_loop.step({}, duration=0.01)
     assert metrics.max_velocity >= 5.0
 

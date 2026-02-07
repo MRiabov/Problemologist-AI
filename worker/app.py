@@ -16,24 +16,26 @@ configure_logging("worker")
 
 logger = structlog.get_logger(__name__)
 
+
 def _get_auth_url(repo_url: str, pat: str | None) -> str:
     """Inject PAT into URL if available."""
     if pat and "https://" in repo_url:
         return repo_url.replace("https://", f"https://{pat}@")
     return repo_url
 
+
 def _sync_skills():
     """Clone or pull skills from git repo on startup."""
     repo_url = os.getenv("GIT_REPO_URL")
     pat = os.getenv("GIT_PAT")
-    
+
     if not repo_url:
         logger.info("GIT_REPO_URL not set, skipping skills sync.")
         return
 
     skills_dir = Path(__file__).parent / "skills"
     skills_dir.mkdir(parents=True, exist_ok=True)
-    
+
     auth_url = _get_auth_url(repo_url, pat)
 
     try:
@@ -52,21 +54,22 @@ def _sync_skills():
             # Assuming standard container setup where it might be empty or mapped.
             # If it has __init__.py, we should probably use init + remote add + pull
             if any(skills_dir.iterdir()):
-                 repo = Repo.init(skills_dir)
-                 if "origin" not in repo.remotes:
-                     repo.create_remote("origin", auth_url)
-                 repo.remotes.origin.pull("master") # or main
+                repo = Repo.init(skills_dir)
+                if "origin" not in repo.remotes:
+                    repo.create_remote("origin", auth_url)
+                repo.remotes.origin.pull("master")  # or main
             else:
                 Repo.clone_from(auth_url, skills_dir)
             logger.info("Skills cloned successfully.")
     except Exception as e:
         logger.error(f"Failed to sync skills: {e}")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Sync skills
     _sync_skills()
-    
+
     # Startup: Start the filesystem watchdog
     # We watch the current directory as it's likely the workspace root in the container
     observer = start_watchdog(".")

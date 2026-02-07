@@ -209,89 +209,119 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
 
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Visual inspection of the generated benchmark using Vision-capable LLM.
-    Saves the review to the /reviews/ directory.
+    Agentic review of the generated benchmark.
+    Uses vision to inspect renders and writes a persistent review file.
     """
     import base64
+    from langgraph.prebuilt import create_react_agent
+    from langchain_core.tools import tool
 
-    logger.info("reviewer_node_start")
+    logger.info("reviewer_node_start", round=state.get("review_round", 0))
 
+    # Increment round
+    state["review_round"] = state.get("review_round", 0) + 1
+    current_round = state["review_round"]
+    review_dir = Path(f"worker/reviews/review-round-{current_round}")
+    review_dir.mkdir(parents=True, exist_ok=True)
+
+    # Define restricted filesystem tools for the reviewer
+    @tool
+    def list_workspace(path: str = "."):
+        """List files in the workspace. Use this to see what's available."""
+        # Read-only access to most things
+        try:
+            p = Path(path)
+            return [f.name for f in p.iterdir()]
+        except Exception as e:
+            return str(e)
+
+    @tool
+    def read_workspace_file(path: str):
+        """Read a file from the workspace (read-only)."""
+        try:
+            return Path(path).read_text()
+        except Exception as e:
+            return str(e)
+
+    @tool
+    def write_review(content: str):
+        """
+        Write the final review file.
+        MUST include YAML frontmatter with 'decision' (approved/rejected) and 'comments' (list).
+        Save to the designated review folder for this round.
+        """
+        try:
+            review_path = review_dir / "review.md"
+            review_path.write_text(content)
+            return f"Review saved to {review_path}"
+        except Exception as e:
+            return str(e)
+
+    tools = [list_workspace, read_workspace_file, write_review]
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+
+    # Prepare system prompt
     template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
-    template = template_path.read_text()
+    base_prompt = template_path.read_text()
 
+    system_message = f"""{base_prompt}
+
+You are an agentic reviewer. You have access to the filesystem to inspect code and renders.
+You MUST:
+1. Inspect the renders provided in the message.
+2. Use the 'write_review' tool to persist your findings to '{review_dir}/review.md'.
+3. The review file MUST start with a YAML frontmatter:
+---
+decision: approved  # or rejected
+comments:
+  - "Comment 1"
+  - "Comment 2"
+---
+
+4. If you approve, you MUST include 'STATUS: APPROVE' in your final response.
+5. If you reject, you MUST include 'STATUS: REJECT' and provide feedback.
+"""
+
+    # Load and encode images for vision model to be passed in the initial message
     renders = state.get("simulation_result", {}).get("render_paths", [])
-    
-    # Load and encode images for vision model
     image_contents = []
-    for path_str in renders[:8]:  # Limit to 8 images to avoid token issues
+    for path_str in renders[:8]:
         try:
             path = Path(path_str)
             if path.exists():
                 with open(path, "rb") as f:
                     encoded = base64.b64encode(f.read()).decode("utf-8")
-                    image_contents.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{encoded}"}
-                    })
+                    image_contents.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{encoded}"},
+                        }
+                    )
         except Exception as e:
-            logger.warning("failed_to_load_render_for_vision", path=path_str, error=str(e))
+            logger.warning(
+                "failed_to_load_render_for_vision", path=path_str, error=str(e)
+            )
 
-    prompt_text = template.format(
-        theme=state.get("plan", {}).get("theme", "Unknown"),
-        prompt=state["session"].prompt,
-    )
-
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    
-    content = [{"type": "text", "text": prompt_text}]
-    content.extend(image_contents)
-
-    messages = [
-        SystemMessage(content="You are a CAD quality assurance engineer with vision capabilities."),
-        HumanMessage(content=content),
+    user_content = [
+        {
+            "type": "text",
+            "text": f"Please review the benchmark for theme: {state.get('plan', {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}",
+        }
     ]
+    user_content.extend(image_contents)
 
-    response = await llm.ainvoke(messages)
-    review_text = str(response.content)
+    # Create and run the react agent
+    agent = create_react_agent(llm, tools, prompt=system_message)
 
-    # Parse status and feedback
-    status = "REJECT"
-    if "STATUS: APPROVE" in review_text.upper():
-        status = "APPROVE"
+    result = await agent.ainvoke({"messages": [HumanMessage(content=user_content)]})
+
+    final_response = str(result["messages"][-1].content)
+
+    # Extract status from the agent's reasoning/response
+    if "APPROVE" in final_response.upper():
         state["review_feedback"] = "Approved"
     else:
-        # Extract feedback part if possible
-        if "FEEDBACK:" in review_text.upper():
-            state["review_feedback"] = review_text.split("FEEDBACK:")[1].strip()
-        else:
-            state["review_feedback"] = review_text
+        state["review_feedback"] = final_response
 
-    # Save review to /reviews/ folder
-    try:
-        reviews_dir = Path("worker/reviews")
-        reviews_dir.mkdir(parents=True, exist_ok=True)
-        
-        session_id = state["session"].session_id
-        review_filename = f"review-{session_id}.md"
-        review_path = reviews_dir / review_filename
-        
-        # Prepare YAML frontmatter
-        decision = "approved" if status == "APPROVE" else "rejected"
-        comments = [c.strip() for c in state["review_feedback"].split("\n") if c.strip()]
-        
-        import yaml
-        frontmatter = {
-            "decision": decision,
-            "comments": comments[:10] # Limit number of comments
-        }
-        
-        yaml_str = yaml.dump(frontmatter, sort_keys=False)
-        markdown_content = f"---\n{yaml_str}---\n\n# Review for {state.get('plan', {}).get('theme', 'Benchmark')}\n\n{review_text}"
-        
-        review_path.write_text(markdown_content)
-        logger.info("review_persisted", path=str(review_path))
-    except Exception as e:
-        logger.error("failed_to_persist_review", error=str(e))
-
-    logger.info("reviewer_node_complete", status=status)
+    logger.info("reviewer_node_complete", feedback=state["review_feedback"])
     return state
