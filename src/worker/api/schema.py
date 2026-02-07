@@ -1,20 +1,15 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, StrictStr, StrictInt, StrictBool
 from ..filesystem.backend import FileInfo
-
-
 from src.shared.enums import ResponseStatus
-
 
 class ReadFileResponse(BaseModel):
     """Response from reading a file."""
     content: StrictStr
 
-
 class StatusResponse(BaseModel):
     """Generic status response."""
     status: ResponseStatus
-
 
 class ListFilesRequest(BaseModel):
     """Request to list files in a directory."""
@@ -50,3 +45,13 @@ class ExecuteResponse(BaseModel):
     stderr: StrictStr
     exit_code: StrictInt
     timed_out: StrictBool = False
+
+class BenchmarkToolRequest(BaseModel):
+    """Request to run a benchmark tool (simulate, validate, etc.)."""
+    script_path: str = Field(default="script.py", description="Path to the script containing the build() function.")
+
+class BenchmarkToolResponse(BaseModel):
+    """Response from a benchmark tool."""
+    success: bool
+    message: str
+    artifacts: Optional[Dict[str, Any]] = None
