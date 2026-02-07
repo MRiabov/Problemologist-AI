@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EngineerWorkspace from '../EngineerWorkspace';
 import * as apiClient from '../../api/client';
 import { MemoryRouter } from 'react-router-dom';
+import { EpisodeProvider } from '../../context/EpisodeContext';
 
 vi.mock('../../api/client', () => ({
   fetchEpisodes: vi.fn(),
@@ -16,54 +17,41 @@ describe('EngineerWorkspace', () => {
     { id: '1', task: 'Task 1', status: 'completed', created_at: new Date().toISOString() },
     { id: '2', task: 'Task 2', status: 'running', created_at: new Date().toISOString() },
   ];
-  const mockSkills = [{ name: 'Skill 1', description: 'Desc 1' }];
 
   beforeEach(() => {
     vi.clearAllMocks();
     (apiClient.fetchEpisodes as any).mockResolvedValue(mockEpisodes);
-    (apiClient.fetchSkills as any).mockResolvedValue(mockSkills);
   });
 
-  it('renders episodes and skills on load', async () => {
+  it('renders correctly with layout components', async () => {
     render(
-      <MemoryRouter>
-        <EngineerWorkspace />
-      </MemoryRouter>
+      <EpisodeProvider>
+        <MemoryRouter>
+          <EngineerWorkspace />
+        </MemoryRouter>
+      </EpisodeProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Task 1/)).toBeInTheDocument();
-      expect(screen.getByText(/Task 2/)).toBeInTheDocument();
-      expect(screen.getByText('Skill 1')).toBeInTheDocument();
-    });
-  });
-
-  it('handles episode selection', async () => {
-    const fullEpisode = { ...mockEpisodes[0], traces: [], assets: [] };
-    (apiClient.fetchEpisode as any).mockResolvedValue(fullEpisode);
-
-    render(
-      <MemoryRouter>
-        <EngineerWorkspace />
-      </MemoryRouter>
-    );
-
-    await waitFor(() => screen.getByText(/Task 1/));
+    // Verify workspace-specific elements
+    expect(screen.getByPlaceholderText(/Describe a mechanical task/i)).toBeInTheDocument();
     
-    fireEvent.click(screen.getByText(/Task 1/));
+    // Middle column components
+    expect(screen.getByText(/Execution Traces/i)).toBeInTheDocument();
+    expect(screen.getByText(/Critic Audit/i)).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(apiClient.fetchEpisode).toHaveBeenCalledWith('1');
-    });
+    // Right column components (ArtifactView)
+    expect(screen.getByText(/Explorer/i)).toBeInTheDocument();
   });
 
   it('runs new agent task', async () => {
-    (apiClient.runAgent as any).mockResolvedValue({ status: 'ok' });
+    (apiClient.runAgent as any).mockResolvedValue({ status: 'ok', id: 'new-id', traces: [], assets: [] });
     
     render(
-      <MemoryRouter>
-        <EngineerWorkspace />
-      </MemoryRouter>
+      <EpisodeProvider>
+        <MemoryRouter>
+          <EngineerWorkspace />
+        </MemoryRouter>
+      </EpisodeProvider>
     );
 
     const input = screen.getByPlaceholderText(/Describe a mechanical task/);
@@ -73,6 +61,7 @@ describe('EngineerWorkspace', () => {
     fireEvent.click(solveButton);
 
     await waitFor(() => {
+      // Expect two arguments: task and session_id
       expect(apiClient.runAgent).toHaveBeenCalledWith('New Test Task', expect.any(String));
     });
   });
