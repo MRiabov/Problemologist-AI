@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP04"
-title: "Planner & Reviewer Agents"
-lane: "planned"
-dependencies: ["WP03"]
-subtasks: ["T013", "T014", "T015", "T016"]
+work_package_id: WP04
+title: Planner & Reviewer Agents
+lane: "doing"
+dependencies: [WP03]
+base_branch: 005-benchmark-scenario-generator-WP03
+base_commit: 2962558c1cdd376ffb4b30162397bc520bec9635
+created_at: '2026-02-07T07:18:13.777909+00:00'
+subtasks: [T013, T014, T015, T016]
+shell_pid: "212824"
 ---
 
 # WP04: Planner & Reviewer Agents
