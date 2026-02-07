@@ -1,29 +1,29 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
-from typing import List, Optional
-import structlog
 import importlib.util
 import os
 import sys
 from pathlib import Path
 
+import structlog
+from fastapi import APIRouter, Depends, Header, HTTPException
+
 from shared.enums import ResponseStatus
 
+from ..filesystem.backend import FileInfo
+from ..filesystem.router import WritePermissionError, create_filesystem_router
+from ..runtime.executor import RuntimeConfig, run_python_code_async
+from ..utils import simulate, submit_for_review, validate
 from .schema import (
-    ListFilesRequest,
-    ReadFileRequest,
-    ReadFileResponse,
-    WriteFileRequest,
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    ListFilesRequest,
+    ReadFileRequest,
+    ReadFileResponse,
     StatusResponse,
-    BenchmarkToolRequest,
-    BenchmarkToolResponse,
+    WriteFileRequest,
 )
-from ..filesystem.router import create_filesystem_router, WritePermissionError
-from ..filesystem.backend import FileInfo
-from ..runtime.executor import run_python_code_async, RuntimeConfig
-from ..utils import simulate, validate, submit_for_review
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -42,23 +42,23 @@ def _load_component(script_path: str):
     """Utility to load the component from the agent's script."""
     if not Path(script_path).exists():
         raise FileNotFoundError(f"Script not found: {script_path}")
-    
+
     # Add current directory to sys.path to allow local imports in the script
     workspace_root = os.getcwd()
     if workspace_root not in sys.path:
         sys.path.insert(0, workspace_root)
-        
+
     spec = importlib.util.spec_from_file_location("dynamic_build", script_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    
+
     if hasattr(module, "build"):
         # We assume build() takes no args or uses default seed
         return module.build()
     raise AttributeError("build() function not found in script.")
 
 
-@router.post("/fs/ls", response_model=List[FileInfo])
+@router.post("/fs/ls", response_model=list[FileInfo])
 async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     """List contents of a directory."""
     try:
@@ -146,7 +146,7 @@ async def api_simulate(request: BenchmarkToolRequest):
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
-            artifacts={"render_paths": result.render_paths}
+            artifacts={"render_paths": result.render_paths},
         )
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
@@ -161,7 +161,7 @@ async def api_validate(request: BenchmarkToolRequest):
         is_valid = validate(component)
         return BenchmarkToolResponse(
             success=is_valid,
-            message="Validation successful" if is_valid else "Validation failed"
+            message="Validation successful" if is_valid else "Validation failed",
         )
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
@@ -176,7 +176,7 @@ async def api_submit(request: BenchmarkToolRequest):
         success = submit_for_review(component)
         return BenchmarkToolResponse(
             success=success,
-            message="Handover complete" if success else "Handover failed"
+            message="Handover complete" if success else "Handover failed",
         )
     except Exception as e:
         logger.error("api_benchmark_submit_failed", error=str(e))

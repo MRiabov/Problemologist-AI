@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -11,12 +10,14 @@ sys.path.append(str(project_root / "src"))
 from src.controller.api.main import app as controller_app
 from src.worker.app import app as worker_app
 
+
 def generate_schema(app, filename):
     schema = app.openapi()
     output_path = project_root / filename
     with open(output_path, "w") as f:
         json.dump(schema, f, indent=2)
     print(f"Generated {filename}")
+
 
 if __name__ == "__main__":
     generate_schema(controller_app, "controller_openapi.json")

@@ -1,13 +1,12 @@
-import os
 from pathlib import Path
-from typing import Any, Dict
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
+
+from shared.type_checking import type_check
 
 from ..prompt_manager import PromptManager
 from ..state import AgentState
-from shared.type_checking import type_check
 
 
 @type_check
@@ -21,11 +20,7 @@ def architect_node(state: AgentState) -> AgentState:
     skills_dir = Path(".agent/skills")
     skills = []
     if skills_dir.exists():
-        skills = [
-            d.name
-            for d in skills_dir.iterdir()
-            if d.is_dir()
-        ]
+        skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
 
     skills_context = "\n".join([f"- {s}" for s in skills])
 

@@ -5,8 +5,11 @@ from typing import Any, Protocol
 from build123d import Compound, Part
 
 from shared.type_checking import type_check
-from worker.workbenches.models import CostBreakdown, ManufacturingConfig, WorkbenchResult
-
+from worker.workbenches.models import (
+    CostBreakdown,
+    ManufacturingConfig,
+    WorkbenchResult,
+)
 
 # Functional interface for workbench analysis
 AnalyzeFunction = Callable[[Part | Compound, ManufacturingConfig], WorkbenchResult]

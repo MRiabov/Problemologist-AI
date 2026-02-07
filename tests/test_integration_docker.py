@@ -1,11 +1,13 @@
-import pytest
-import httpx
+import asyncio
 import os
 import time
-import asyncio
+
+import httpx
+import pytest
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8001")
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -29,6 +31,7 @@ async def test_services_health():
         except Exception as e:
             pytest.fail(f"Worker at {WORKER_URL} is not reachable: {e}")
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_controller_to_worker_agent_run():
@@ -37,14 +40,12 @@ async def test_controller_to_worker_agent_run():
         session_id = f"test-agent-{int(time.time())}"
         payload = {
             "task": "Write a file named 'hello_integration.txt' with content 'integration test'",
-            "session_id": session_id
+            "session_id": session_id,
         }
-        
+
         # Trigger agent run
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", 
-            json=payload,
-            timeout=10.0
+            f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -61,21 +62,22 @@ async def test_controller_to_worker_agent_run():
                 if status_resp.json()["status"] == "completed":
                     completed = True
                     break
-                elif status_resp.json()["status"] == "failed":
+                if status_resp.json()["status"] == "failed":
                     pytest.fail("Agent run failed in background")
             await asyncio.sleep(2)
-        
+
         if not completed:
             pytest.fail("Agent run timed out")
-            
+
         # Verify the file was actually written to the worker's filesystem
         fs_resp = await client.post(
             f"{WORKER_URL}/fs/read",
             json={"path": "hello_integration.txt"},
-            headers={"X-Session-ID": session_id}
+            headers={"X-Session-ID": session_id},
         )
         assert fs_resp.status_code == 200
         assert fs_resp.json()["content"] == "integration test"
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -83,22 +85,17 @@ async def test_simulation_workflow():
     """Verify simulation workflow (Controller -> Temporal -> Worker activity)."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-sim-{int(time.time())}"
-        payload = {
-            "session_id": session_id,
-            "compound_json": '{"components": []}'
-        }
-        
+        payload = {"session_id": session_id, "compound_json": '{"components": []}'}
+
         # Trigger simulation
         resp = await client.post(
-            f"{CONTROLLER_URL}/simulation/run", 
-            json=payload,
-            timeout=10.0
+            f"{CONTROLLER_URL}/simulation/run", json=payload, timeout=10.0
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "accepted"
         workflow_id = data["workflow_id"]
-        
+
         # Note: We don't have an endpoint to poll workflow status yet in the controller,
         # but the SimulationWorkflow returns an S3 URL.
         # For now, we just verify it was accepted and Temporal is working.

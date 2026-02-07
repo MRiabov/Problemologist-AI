@@ -1,13 +1,16 @@
-import jinja2
 from typing import Any
+
+import jinja2
+
 
 class PromptManager:
     """Manager for Jinja2 templates for the agent."""
-    
+
     def __init__(self):
         self.env = jinja2.Environment(
-            loader=jinja2.DictLoader({
-                "architect": """You are the Architect. 
+            loader=jinja2.DictLoader(
+                {
+                    "architect": """You are the Architect. 
 Your goal is to plan the following task: {{ task }}
 
 Available skills:
@@ -26,7 +29,7 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
-                "engineer": """You are the Engineer. 
+                    "engineer": """You are the Engineer. 
 Implement the following step: {{ current_step }}
 
 Execution Plan context:
@@ -43,7 +46,7 @@ Instructions:
 2. Use only available tools and libraries.
 3. Output ONLY the Python code inside a markdown code block.
 """,
-                "critic": """You are the Critic. 
+                    "critic": """You are the Critic. 
 Evaluate the implementation of the task: {{ task }}
 
 Execution Journal:
@@ -73,7 +76,7 @@ required_fixes:
 # Review Analysis
 [Your detailed reasoning and feedback here...]
 """,
-                "sidecar": """You are the Sidecar Learner. 
+                    "sidecar": """You are the Sidecar Learner. 
 Analyze the execution journal for the task: {{ task }}
 
 Journal:
@@ -97,7 +100,8 @@ CONTENT:
 <Example code>
 ```
 """,
-            })
+                }
+            )
         )
 
     def render(self, template_name: str, **kwargs: Any) -> str:

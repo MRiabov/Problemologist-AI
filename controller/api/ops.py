@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Header, Request, Depends
 import os
+
 import structlog
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+
 from shared.ops.workflows import BackupWorkflow
 
 logger = structlog.get_logger(__name__)
@@ -8,6 +10,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/ops", tags=["Operations"])
 
 BACKUP_SECRET = os.getenv("BACKUP_SECRET", "change-me-in-production")
+
 
 async def verify_backup_secret(x_backup_secret: str = Header(None)):
     """
@@ -17,11 +20,9 @@ async def verify_backup_secret(x_backup_secret: str = Header(None)):
         logger.warning("Unauthorized backup attempt")
         raise HTTPException(status_code=403, detail="Invalid backup secret")
 
+
 @router.post("/backup", status_code=202)
-async def trigger_backup(
-    request: Request,
-    _ = Depends(verify_backup_secret)
-):
+async def trigger_backup(request: Request, _=Depends(verify_backup_secret)):
     """
     Trigger the automated backup workflow.
     """
@@ -38,25 +39,25 @@ async def trigger_backup(
         "source_bucket": os.getenv("ASSET_S3_BUCKET"),
         "backup_bucket": os.getenv("BACKUP_S3_BUCKET"),
     }
-    
+
     # Validate that we have at least some parameters to work with
     if not any(params.values()):
         logger.error("Missing backup configuration", params=params)
         raise HTTPException(status_code=500, detail="Backup configuration missing")
 
     workflow_id = f"backup-{os.urandom(4).hex()}"
-    
+
     logger.info("Starting backup workflow", workflow_id=workflow_id)
-    
+
     handle = await client.start_workflow(
         BackupWorkflow.run,
         params,
         id=workflow_id,
         task_queue="ops-tasks",
     )
-    
+
     return {
         "workflow_id": handle.id,
         "status": "Accepted",
-        "detail": "Backup workflow initiated"
+        "detail": "Backup workflow initiated",
     }

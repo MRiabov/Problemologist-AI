@@ -18,19 +18,19 @@ import importlib.util
 import os
 import re
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
-from typing import Mapping, Optional
 
 from task_helpers import (
     TaskCliError,
     run_git,
 )
 
-
 # ---------------------------------------------------------------------------
 # Core module import resolution
 # ---------------------------------------------------------------------------
+
 
 def _load_module_from_file(filepath: Path, module_name: str) -> ModuleType:
     """Load a Python module directly from a file path."""
@@ -63,9 +63,7 @@ def _import_acceptance_core() -> ModuleType:
     # Strategy 3: source tree (src/specify_cli/scripts/tasks/ -> src/specify_cli/core/)
     source_core = script_dir.parents[1] / "core" / "acceptance_core.py"
     if source_core.is_file():
-        return _load_module_from_file(
-            source_core, "specify_cli.core.acceptance_core"
-        )
+        return _load_module_from_file(source_core, "specify_cli.core.acceptance_core")
 
     raise ImportError(
         "Cannot locate acceptance_core module. "
@@ -97,11 +95,12 @@ normalize_feature_encoding = _core.normalize_feature_encoding
 # Standalone feature detection (no dependency on core.feature_detection)
 # ---------------------------------------------------------------------------
 
+
 def detect_feature_slug(
     repo_root: Path,
     *,
-    env: Optional[Mapping[str, str]] = None,
-    cwd: Optional[Path] = None,
+    env: Mapping[str, str] | None = None,
+    cwd: Path | None = None,
 ) -> str:
     """Detect feature slug from environment, git branch, or current directory.
 
@@ -123,12 +122,9 @@ def detect_feature_slug(
         return env["SPECIFY_FEATURE"].strip()
 
     try:
-        branch = (
-            run_git(
-                ["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root, check=True
-            )
-            .stdout.strip()
-        )
+        branch = run_git(
+            ["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root, check=True
+        ).stdout.strip()
         if branch and branch != "HEAD" and re.match(r"^\d{3}-", branch):
             return branch
     except TaskCliError:

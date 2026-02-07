@@ -1,7 +1,6 @@
 import pytest
-import mujoco
-import numpy as np
-from worker.simulation.loop import SimulationLoop, SimulationMetrics
+
+from worker.simulation.loop import SimulationLoop
 
 # Mock XML for testing
 TEST_XML = """
@@ -83,6 +82,7 @@ def test_forbidden_zone_trigger(sim_loop):
 
 def test_validation_hook_failure(tmp_path):
     from unittest.mock import patch
+
     from build123d import Box
 
     xml_path = tmp_path / "test.xml"
@@ -91,7 +91,10 @@ def test_validation_hook_failure(tmp_path):
     # Mock validate_and_price to return invalid
     with patch("worker.utils.dfm.validate_and_price") as mock_val:
         from unittest.mock import MagicMock
-        mock_val.return_value = MagicMock(is_manufacturable=False, violations=["Part too large"])
+
+        mock_val.return_value = MagicMock(
+            is_manufacturable=False, violations=["Part too large"]
+        )
 
         # Pass a dummy component to trigger validation
         loop = SimulationLoop(str(xml_path), component=Box(1, 1, 1))

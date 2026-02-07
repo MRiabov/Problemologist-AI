@@ -83,9 +83,7 @@ def _import_shared() -> ModuleType:
     # Strategy 3: source tree (src/specify_cli/scripts/tasks/ -> src/specify_cli/)
     source_shared = script_dir.parents[1] / "task_helpers_shared.py"
     if source_shared.is_file():
-        return _load_module_from_file(
-            source_shared, "specify_cli.task_helpers_shared"
-        )
+        return _load_module_from_file(source_shared, "specify_cli.task_helpers_shared")
 
     raise ImportError(
         "Cannot locate task_helpers_shared module. "

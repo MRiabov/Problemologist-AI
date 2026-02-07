@@ -1,10 +1,12 @@
 import os
-import boto3
 from pathlib import Path
+
+import boto3
 import structlog
 from botocore.exceptions import ClientError
 
 logger = structlog.get_logger(__name__)
+
 
 class StorageClient:
     """Simple S3 client for uploading simulation artifacts."""
@@ -28,14 +30,16 @@ class StorageClient:
         """Uploads a file to S3 and returns a public/presigned URL."""
         try:
             self.client.upload_file(str(file_path), self.bucket, object_name)
-            
+
             # Generate a presigned URL (valid for 7 days)
             url = self.client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket, 'Key': object_name},
-                ExpiresIn=604800
+                "get_object",
+                Params={"Bucket": self.bucket, "Key": object_name},
+                ExpiresIn=604800,
             )
-            logger.info("file_uploaded_to_s3", bucket=self.bucket, key=object_name, url=url)
+            logger.info(
+                "file_uploaded_to_s3", bucket=self.bucket, key=object_name, url=url
+            )
             return url
         except ClientError as e:
             logger.error("s3_upload_failed", error=str(e))

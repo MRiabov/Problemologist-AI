@@ -1,6 +1,7 @@
-from enum import Enum, StrEnum
+from enum import StrEnum
+
 from langchain_core.messages import BaseMessage
-from pydantic import BaseModel, Field, StrictStr, StrictInt
+from pydantic import BaseModel, Field, StrictInt, StrictStr
 
 from shared.type_checking import type_check
 

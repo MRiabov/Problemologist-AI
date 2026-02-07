@@ -1,17 +1,13 @@
 from datetime import timedelta
-from temporalio import workflow
-from shared.type_checking import type_check
 from typing import TYPE_CHECKING
+
+from temporalio import workflow
+
+from shared.type_checking import type_check
 
 # Import activities for type hinting in workflow (optional but good for clarity)
 if TYPE_CHECKING:
-    from controller.activities.simulation import (
-        compile_mjcf_activity,
-        run_simulation_activity,
-        render_video_activity,
-        upload_to_s3_activity,
-        update_trace_activity,
-    )
+    pass
 
 
 @type_check

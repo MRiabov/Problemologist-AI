@@ -1,8 +1,8 @@
-import structlog
-import numpy as np
-import trimesh
-from typing import Any, Optional
+from typing import Any
 
+import numpy as np
+import structlog
+import trimesh
 from build123d import Compound, Part
 
 from shared.type_checking import type_check

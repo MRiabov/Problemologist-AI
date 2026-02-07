@@ -1,13 +1,13 @@
 import hashlib
-import tempfile
 import pathlib
-import trimesh
+import tempfile
+
 import numpy as np
-from build123d import Part, Compound
-from typing import Union, List, Tuple
+import trimesh
+from build123d import Compound, Part
 
 
-def part_to_trimesh(part: Union[Part, Compound]) -> trimesh.Trimesh:
+def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     """
     Converts a build123d Part or Compound to a trimesh.Trimesh object.
     """
@@ -30,8 +30,8 @@ def part_to_trimesh(part: Union[Part, Compound]) -> trimesh.Trimesh:
 
 def check_undercuts(
     mesh: trimesh.Trimesh,
-    approach_direction: Tuple[float, float, float] = (0.0, 0.0, 1.0),
-) -> List[int]:
+    approach_direction: tuple[float, float, float] = (0.0, 0.0, 1.0),
+) -> list[int]:
     """
     Identifies faces that are undercuts from a given approach direction.
     A face is an undercut if its normal points away from the approach direction.
@@ -82,7 +82,7 @@ def check_undercuts(
     return list(set(undercut_indices))
 
 
-def compute_part_hash(part: Union[Part, Compound]) -> str:
+def compute_part_hash(part: Part | Compound) -> str:
     """
     Computes a stable hash for a build123d Part or Compound.
     Uses STL export as a proxy for geometry.

@@ -1,24 +1,26 @@
-from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
 
-from .state import AgentState, AgentStatus
 from .nodes.architect import architect_node
-from .nodes.engineer import engineer_node
 from .nodes.critic import critic_node
+from .nodes.engineer import engineer_node
 from .nodes.sidecar import sidecar_node
+from .state import AgentState, AgentStatus
+
 
 def should_continue(state: AgentState) -> str:
     """Route after critic based on approval status."""
     if state.status == AgentStatus.APPROVED:
         return "sidecar"
-    
+
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
         if state.status == AgentStatus.PLAN_REJECTED:
             return "architect"
         return "engineer"
-    
+
     return "sidecar"
+
 
 # Initialize the StateGraph with our AgentState
 builder = StateGraph(AgentState)
@@ -38,11 +40,7 @@ builder.add_edge("engineer", "critic")
 builder.add_conditional_edges(
     "critic",
     should_continue,
-    {
-        "engineer": "engineer",
-        "architect": "architect",
-        "sidecar": "sidecar"
-    }
+    {"engineer": "engineer", "architect": "architect", "sidecar": "sidecar"},
 )
 
 builder.add_edge("sidecar", END)

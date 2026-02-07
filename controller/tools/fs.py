@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, StrictStr, StrictInt
 from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field, StrictInt, StrictStr
+
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 
 
@@ -22,7 +23,10 @@ class ExecInput(BaseModel):
 
 
 class BenchmarkInput(BaseModel):
-    script_path: str = Field(default="script.py", description="Path to the script containing the build() function.")
+    script_path: str = Field(
+        default="script.py",
+        description="Path to the script containing the build() function.",
+    )
 
 
 def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[StructuredTool]:
@@ -77,4 +81,12 @@ def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[StructuredTool]:
         args_schema=BenchmarkInput,
     )
 
-    return [ls_tool, read_tool, write_tool, exec_tool, simulate_tool, validate_tool, submit_tool]
+    return [
+        ls_tool,
+        read_tool,
+        write_tool,
+        exec_tool,
+        simulate_tool,
+        validate_tool,
+        submit_tool,
+    ]

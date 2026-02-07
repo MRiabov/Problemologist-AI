@@ -1,15 +1,21 @@
 import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
 from functools import lru_cache
 
-# Default to sqlite for local dev if POSTGRES_URL is not provided, 
-# but requirement says POSTGRES_URL. 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+
+
+# Default to sqlite for local dev if POSTGRES_URL is not provided,
+# but requirement says POSTGRES_URL.
 # SQLAlchemy async postgres uses postgresql+asyncpg://
 @lru_cache
 def get_engine():
-    DATABASE_URL = os.getenv("POSTGRES_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/problemologist")
+    DATABASE_URL = os.getenv(
+        "POSTGRES_URL",
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/problemologist",
+    )
     return create_async_engine(DATABASE_URL, echo=False)
+
 
 def get_sessionmaker():
     return async_sessionmaker(
@@ -18,8 +24,10 @@ def get_sessionmaker():
         expire_on_commit=False,
     )
 
+
 class Base(DeclarativeBase):
     pass
+
 
 async def get_db():
     session_local = get_sessionmaker()

@@ -1,10 +1,7 @@
-import io
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from xml.dom import minidom
-from typing import List, Optional, Union
 
-import numpy as np
 import trimesh
 from build123d import Compound, Solid, export_stl
 
@@ -14,11 +11,11 @@ class MeshProcessor:
 
     def process_geometry(
         self,
-        part: Union[Solid, Compound],
+        part: Solid | Compound,
         filepath: Path,
         decompose: bool = True,
         use_vhacd: bool = False,
-    ) -> List[Path]:
+    ) -> list[Path]:
         """Converts a build123d object to one or more STL files, optionally computing convex hulls."""
         # Ensure the directory exists
         filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -41,7 +38,10 @@ class MeshProcessor:
                         decomposed_meshes = trimesh.decomposition.convex_decomposition(
                             mesh
                         )
-                        if isinstance(decomposed_meshes, list) and len(decomposed_meshes) > 1:
+                        if (
+                            isinstance(decomposed_meshes, list)
+                            and len(decomposed_meshes) > 1
+                        ):
                             for i, dm in enumerate(decomposed_meshes):
                                 sub_path = filepath.with_name(
                                     f"{filepath.stem}_{i}{filepath.suffix}"
@@ -52,7 +52,7 @@ class MeshProcessor:
                     except Exception:
                         # Fallback to single convex hull if VHACD fails
                         pass
-                
+
                 mesh = self.compute_convex_hull(mesh)
 
             mesh.export(str(filepath))
@@ -132,12 +132,12 @@ class SceneCompiler:
     def add_body(
         self,
         name: str,
-        mesh_names: Optional[List[str]] = None,
-        pos: List[float] = [0, 0, 0],
-        euler: List[float] = [0, 0, 0],
+        mesh_names: list[str] | None = None,
+        pos: list[float] = [0, 0, 0],
+        euler: list[float] = [0, 0, 0],
         is_zone: bool = False,
-        zone_type: Optional[str] = None,
-        zone_size: Optional[List[float]] = None,
+        zone_type: str | None = None,
+        zone_size: list[float] | None = None,
     ):
         """Adds a body to the worldbody. Can be a physical mesh or a logical zone."""
         body = ET.SubElement(
@@ -204,7 +204,7 @@ class SimulationBuilder:
                 bb = child.bounding_box()
                 # MuJoCo box size is half-extents
                 zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
-                
+
                 self.compiler.add_body(
                     name=label,
                     is_zone=True,

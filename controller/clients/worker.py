@@ -1,6 +1,6 @@
 import httpx
-from typing import List, Optional, Dict, Any, Union
-from worker.api.schema import ExecuteResponse, EditOp, BenchmarkToolResponse
+
+from worker.api.schema import BenchmarkToolResponse, EditOp, ExecuteResponse
 from worker.filesystem.backend import FileInfo
 
 
@@ -18,7 +18,7 @@ class WorkerClient:
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
 
-    async def list_files(self, path: str = "/") -> List[FileInfo]:
+    async def list_files(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -54,7 +54,7 @@ class WorkerClient:
             response.raise_for_status()
             return response.json()["status"] == "success"
 
-    async def edit_file(self, path: str, edits: List[EditOp]) -> bool:
+    async def edit_file(self, path: str, edits: list[EditOp]) -> bool:
         """Edit a file with one or more operations.
 
         Args:
@@ -125,7 +125,7 @@ class WorkerClient:
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
 
-    async def get_health(self) -> Dict[str, str]:
+    async def get_health(self) -> dict[str, str]:
         """Check the health of the worker service."""
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.base_url}/health", timeout=5.0)

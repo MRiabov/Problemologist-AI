@@ -1,23 +1,26 @@
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from langchain_core.callbacks import BaseCallbackHandler
+
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
 
+
 class DatabaseCallbackHandler(BaseCallbackHandler):
     """Callback handler that stores traces in the database."""
-    
+
     def __init__(self, episode_id: uuid.UUID):
         self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
 
     async def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
+        self, serialized: dict[str, Any], inputs: dict[str, Any], **kwargs: Any
     ) -> None:
         pass
 
     async def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         async with self.session_factory() as db:
             trace = Trace(
@@ -25,8 +28,8 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 raw_trace={
                     "type": "tool_start",
                     "name": serialized.get("name"),
-                    "input": input_str
-                }
+                    "input": input_str,
+                },
             )
             db.add(trace)
             await db.commit()
@@ -35,10 +38,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         async with self.session_factory() as db:
             trace = Trace(
                 episode_id=self.episode_id,
-                raw_trace={
-                    "type": "tool_end",
-                    "output": output
-                }
+                raw_trace={"type": "tool_end", "output": output},
             )
             db.add(trace)
             await db.commit()
@@ -53,13 +53,10 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             content = ""
             if response.generations and response.generations[0]:
                 content = response.generations[0][0].text
-            
+
             trace = Trace(
                 episode_id=self.episode_id,
-                raw_trace={
-                    "type": "llm_end",
-                    "content": content
-                }
+                raw_trace={"type": "llm_end", "content": content},
             )
             db.add(trace)
             await db.commit()

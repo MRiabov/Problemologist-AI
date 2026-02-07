@@ -1,8 +1,9 @@
-import os
 import sqlite3
+
 import pytest
-from shared.cots.models import COTSItem
+
 from shared.cots.database.init import init_db
+from shared.cots.models import COTSItem
 from shared.type_checking import type_check
 
 
@@ -15,7 +16,7 @@ def test_cots_item_validation():
         "unit_cost": 0.15,
         "weight_g": 1.2,
         "import_recipe": "Box(3, 3, 10)",
-        "metadata": {"material": "steel", "finish": "zinc"}
+        "metadata": {"material": "steel", "finish": "zinc"},
     }
     item = COTSItem(**data)
     assert item.part_id == "M3-HEX-10"
@@ -31,7 +32,7 @@ def test_cots_item_invalid_category():
         "unit_cost": 0.15,
         "weight_g": 1.2,
         "import_recipe": "Box(3, 3, 10)",
-        "metadata": {}
+        "metadata": {},
     }
     with pytest.raises(ValueError):
         COTSItem(**data)
@@ -41,17 +42,19 @@ def test_cots_item_invalid_category():
 def test_init_db(tmp_path):
     db_file = tmp_path / "test_parts.db"
     init_db(str(db_file))
-    
+
     assert db_file.exists()
-    
+
     # Verify table exists using sqlite3
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='parts';")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='parts';"
+    )
     table = cursor.fetchone()
     assert table is not None
     assert table[0] == "parts"
-    
+
     # Verify columns
     cursor.execute("PRAGMA table_info(parts);")
     columns = {col[1]: col[2] for col in cursor.fetchall()}
@@ -62,5 +65,5 @@ def test_init_db(tmp_path):
     assert "weight_g" in columns
     assert "import_recipe" in columns
     assert "metadata" in columns
-    
+
     conn.close()

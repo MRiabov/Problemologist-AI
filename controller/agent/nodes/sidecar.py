@@ -1,14 +1,13 @@
-import os
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
+from shared.type_checking import type_check
+
 from ..prompt_manager import PromptManager
 from ..state import AgentState
-from shared.type_checking import type_check
 
 logger = logging.getLogger(__name__)
 

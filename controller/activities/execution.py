@@ -1,6 +1,8 @@
-from temporalio import activity
-from controller.clients.worker import WorkerClient
 import os
+
+from temporalio import activity
+
+from controller.clients.worker import WorkerClient
 from shared.type_checking import type_check
 
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")

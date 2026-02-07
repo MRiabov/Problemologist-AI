@@ -1,8 +1,9 @@
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
+
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.tools.fs import create_fs_tools
 from controller.observability.langfuse import get_langfuse_callback
+from controller.tools.fs import create_fs_tools
 
 
 def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
@@ -11,7 +12,7 @@ def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
     # Initialize the LLM
     # In a real scenario, we'd get the API key and model from config
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    
+
     # Try to get Langfuse callback
     langfuse_callback = get_langfuse_callback()
     callbacks = [langfuse_callback] if langfuse_callback else []
@@ -28,7 +29,7 @@ def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
 
     # We return the agent. Callers should pass callbacks to invoke if they want tracing.
     # However, create_react_agent doesn't store callbacks.
-    # We'll modify the invoke call in main.py if needed, 
+    # We'll modify the invoke call in main.py if needed,
     # but some people prefer binding callbacks to the LLM.
     if callbacks:
         llm = llm.with_config({"callbacks": callbacks})

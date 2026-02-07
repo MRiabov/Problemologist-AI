@@ -1,9 +1,9 @@
-import mujoco
-from pydantic import BaseModel, StrictFloat, StrictBool, StrictStr
-from typing import Dict, Optional, List, Union
-import numpy as np
 import logging
-from build123d import Part, Compound
+
+import mujoco
+import numpy as np
+from build123d import Compound, Part
+from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
 
 logger = logging.getLogger(__name__)
 
@@ -13,14 +13,14 @@ class SimulationMetrics(BaseModel):
     total_energy: StrictFloat
     max_velocity: StrictFloat
     success: StrictBool
-    fail_reason: Optional[StrictStr] = None
+    fail_reason: StrictStr | None = None
 
 
 class SimulationLoop:
     def __init__(
         self,
         xml_path: str,
-        component: Optional[Union[Part, Compound]] = None,
+        component: Part | Compound | None = None,
     ):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
@@ -29,12 +29,14 @@ class SimulationLoop:
 
         if self.component:
             from worker.utils.dfm import validate_and_price
-            from worker.workbenches.models import ManufacturingMethod
             from worker.workbenches.config import load_config
+            from worker.workbenches.models import ManufacturingMethod
 
             # Default to CNC for simulation validation
             config = load_config()
-            self.validation_report = validate_and_price(self.component, ManufacturingMethod.CNC, config)
+            self.validation_report = validate_and_price(
+                self.component, ManufacturingMethod.CNC, config
+            )
 
         # Cache zone IDs for forbidden zones
         self.forbidden_geoms = []
@@ -54,7 +56,7 @@ class SimulationLoop:
 
     def step(
         self,
-        control_inputs: Dict[str, float],
+        control_inputs: dict[str, float],
         duration: float = 10.0,
         render_callback=None,
     ) -> SimulationMetrics:
@@ -65,8 +67,12 @@ class SimulationLoop:
         self.reset_metrics()
 
         # T012: Check validation hook before starting
-        if self.validation_report and not getattr(self.validation_report, "is_manufacturable", False):
-            violations = getattr(self.validation_report, "violations", ["unknown error"])
+        if self.validation_report and not getattr(
+            self.validation_report, "is_manufacturable", False
+        ):
+            violations = getattr(
+                self.validation_report, "violations", ["unknown error"]
+            )
             self.fail_reason = f"validation_failed: {', '.join(map(str, violations))}"
             return SimulationMetrics(
                 total_time=0.0,
