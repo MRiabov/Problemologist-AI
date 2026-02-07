@@ -1,11 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Foundation - Tracing & Persistence"
-lane: "done"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T003c"]
-agent: "gemini"
-shell_pid: "734593"
+agent: "Gemini"
+shell_pid: "138061"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -134,3 +134,4 @@ The observability system is critical for debugging, monitoring, and future train
 - 2026-02-06T15:59:18Z – gemini – shell_pid=424666 – lane=for_review – Ready for review: LangFuse tracing, PostgresSaver persistence, structlog - 17 tests passing
 - 2026-02-06T15:59:21Z – gemini – shell_pid=734593 – lane=doing – Started review via workflow command
 - 2026-02-06T16:26:46Z – gemini – shell_pid=734593 – lane=done – Review passed: Implemented tracing with LangFuse, Postgres persistence for LangGraph, and structured logging with structlog. 17 unit tests passed.
+- 2026-02-07T06:21:18Z – Gemini – shell_pid=138061 – lane=doing – Started review via workflow command
