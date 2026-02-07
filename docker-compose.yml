@@ -19,6 +19,8 @@ services:
         condition: service_healthy
       temporal:
         condition: service_started
+      migrations:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
@@ -29,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: src/controller/Dockerfile
-    command: ["uv", "run", "alembic", "upgrade", "head"]
+    command: ["uv", "run", "alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
     depends_on:

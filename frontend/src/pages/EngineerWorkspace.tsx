@@ -28,6 +28,7 @@ export default function EngineerWorkspace() {
   const { isConnected } = useConnection();
   
   const [taskPrompt, setTaskPrompt] = useState('');
+  const [resetTrigger, setResetTrigger] = useState(0);
 
   const handleRunAgent = async () => {
     // If no prompt is provided (since we removed the input), use a default task or current context
@@ -126,7 +127,12 @@ export default function EngineerWorkspace() {
                     </div>
 
                     <div className="absolute bottom-4 left-4 z-10 flex gap-2">
-                        <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-lg border-primary/20">
+                        <Button 
+                          variant="secondary" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-full shadow-lg border-primary/20"
+                          onClick={() => setResetTrigger(prev => prev + 1)}
+                        >
                           <Box className="h-4 w-4" />
                         </Button>
                     </div>
@@ -155,6 +161,7 @@ export default function EngineerWorkspace() {
                                     className="w-full h-full" 
                                     assetUrl={selectedEpisode?.assets?.find(a => a.asset_type === 'stl' || a.asset_type === 'step')?.s3_path}
                                     isConnected={isConnected}
+                                    resetTrigger={resetTrigger}
                                 />
                                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">

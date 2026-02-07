@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
@@ -28,15 +28,30 @@ interface ModelViewerProps {
   className?: string;
   assetUrl?: string | null;
   isConnected?: boolean;
+  resetTrigger?: number;
 }
 
-export default function ModelViewer({ className, assetUrl, isConnected = true }: ModelViewerProps) {
+export default function ModelViewer({ className, assetUrl, isConnected = true, resetTrigger = 0 }: ModelViewerProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const controlsRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (resetTrigger > 0 && controlsRef.current) {
+      const controls = controlsRef.current
+      // Isometric view: position camera at equal distance from origin on all axes
+      controls.object.position.set(3, 3, 3)
+      controls.target.set(0, 0, 0)
+      controls.update()
+    }
+  }, [resetTrigger])
+
   return (
     <div className={`${className} relative`}>
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       <Canvas shadows dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
         <OrbitControls 
+          ref={controlsRef}
           enableDamping 
           dampingFactor={0.2}
           minDistance={2}

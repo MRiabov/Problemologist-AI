@@ -6,10 +6,13 @@ interface EpisodeContextType {
   selectedEpisode: Episode | null;
   loading: boolean;
   running: boolean;
+  isCreationMode: boolean;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string) => Promise<void>;
   setRunning: (running: boolean) => void;
+  createNewBenchmark: () => void;
+  clearSelection: () => void;
 }
 
 const EpisodeContext = createContext<EpisodeContextType | undefined>(undefined);
@@ -19,6 +22,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [isCreationMode, setIsCreationMode] = useState(false);
 
   const refreshEpisodes = useCallback(async () => {
     try {
@@ -32,6 +36,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectEpisode = useCallback(async (id: string) => {
+    setIsCreationMode(false);
     try {
       const fullEp = await fetchEpisode(id);
       setSelectedEpisode(fullEp);
@@ -42,8 +47,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [episodes]);
 
+  const clearSelection = useCallback(() => {
+    setSelectedEpisode(null);
+    setIsCreationMode(false);
+  }, []);
+
+  const createNewBenchmark = useCallback(() => {
+    setSelectedEpisode(null);
+    setIsCreationMode(true);
+  }, []);
+
   const startAgent = useCallback(async (task: string) => {
     setRunning(true);
+    setIsCreationMode(false);
     try {
       const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
       const response = await runAgent(task, sessionId);
@@ -101,10 +117,13 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       selectedEpisode,
       loading,
       running,
+      isCreationMode,
       refreshEpisodes,
       selectEpisode,
       startAgent,
-      setRunning
+      setRunning,
+      createNewBenchmark,
+      clearSelection
     }}>
       {children}
     </EpisodeContext.Provider>
