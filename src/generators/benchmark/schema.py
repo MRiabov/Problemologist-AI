@@ -15,7 +15,7 @@ class BenchmarkAssetModel(Base):
     preview_bundle_url = Column(String, nullable=False)
     random_variants = Column(JSON, default=list)  # List of UUIDs
     difficulty_score = Column(Float, default=0.0)
-    metadata = Column(JSON, default=dict)
+    benchmark_metadata = Column(JSON, default=dict)
 
 
 class GenerationSessionModel(Base):
