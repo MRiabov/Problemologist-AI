@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage
@@ -21,8 +22,8 @@ class SidecarNode:
     def __init__(self, suggested_skills_dir: str = "suggested_skills"):
         self.pm = PromptManager()
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.suggested_skills_dir = suggested_skills_dir
-        os.makedirs(self.suggested_skills_dir, exist_ok=True)
+        self.suggested_skills_dir = Path(suggested_skills_dir)
+        self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the sidecar node logic."""
@@ -43,7 +44,7 @@ class SidecarNode:
             title = parts[0].replace("SKILL:", "").strip().lower().replace(" ", "_")
             skill_content = parts[1].strip()
 
-            file_path = os.path.join(self.suggested_skills_dir, f"{title}.md")
+            file_path = self.suggested_skills_dir / f"{title}.md"
             with open(file_path, "w") as f:
                 f.write(skill_content)
             suggested_skill = title

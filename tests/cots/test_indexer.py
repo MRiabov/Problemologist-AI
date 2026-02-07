@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pytest
 from src.cots.indexer import Indexer
 from src.cots.database.models import COTSItemORM
@@ -6,13 +7,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 def test_indexer_basic(tmp_path):
-    db_path = str(tmp_path / "test_parts.db")
-    indexer = Indexer(db_path)
+    db_path = tmp_path / "test_parts.db"
+    indexer = Indexer(str(db_path))
     
     # Index only 1 item per class to be fast
     indexer.index_all(limit_per_class=1)
     
-    assert os.path.exists(db_path)
+    assert db_path.exists()
     
     engine = create_engine(f"sqlite:///{db_path}")
     with Session(engine) as session:

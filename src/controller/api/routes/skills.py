@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel, StrictStr
@@ -16,13 +17,13 @@ class Skill(BaseModel):
 @router.get("/", response_model=List[Skill])
 async def list_skills():
     """List available skills."""
-    skills_dir = "docs/skills"
+    skills_dir = Path("docs/skills")
     found_skills = []
 
-    if os.path.exists(skills_dir):
-        for filename in os.listdir(skills_dir):
-            if filename.endswith(".md") or filename.endswith(".py"):
-                name = os.path.splitext(filename)[0]
+    if skills_dir.exists():
+        for file_path in skills_dir.iterdir():
+            if file_path.suffix in [".md", ".py"]:
+                name = file_path.stem
                 found_skills.append(Skill(name=name, description="Custom skill"))
 
     # Fallback/Default skills if none found (or strictly from DB in future)

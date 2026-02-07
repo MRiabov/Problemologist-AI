@@ -2,6 +2,7 @@ import subprocess
 import gzip
 import shutil
 import os
+from pathlib import Path
 import boto3
 from datetime import datetime, UTC
 import structlog
@@ -13,8 +14,8 @@ def backup_postgres(db_url: str, s3_bucket: str, s3_key_prefix: str = "backups/p
     Dumps the postgres database using pg_dump, compresses it, and uploads to S3.
     """
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    dump_file = f"db_dump_{timestamp}.sql"
-    gz_file = f"{dump_file}.gz"
+    dump_path = Path(f"db_dump_{timestamp}.sql")
+    gz_path = Path(f"{dump_path}.gz")
     
     try:
         logger.info("Starting postgres backup", s3_bucket=s3_bucket)
@@ -22,21 +23,21 @@ def backup_postgres(db_url: str, s3_bucket: str, s3_key_prefix: str = "backups/p
         # Run pg_dump
         # We assume pg_dump is in the PATH and db_url is a valid libpq connection string
         subprocess.run(
-            ["pg_dump", "--dbname", db_url, "-f", dump_file],
+            ["pg_dump", "--dbname", db_url, "-f", str(dump_path)],
             check=True,
             capture_output=True,
             text=True
         )
         
         # Compress
-        with open(dump_file, 'rb') as f_in:
-            with gzip.open(gz_file, 'wb') as f_out:
+        with dump_path.open('rb') as f_in:
+            with gzip.open(gz_path, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
         
         # Upload to S3
         s3 = boto3.client('s3')
-        s3_key = f"{s3_key_prefix}/{gz_file}"
-        s3.upload_file(gz_file, s3_bucket, s3_key)
+        s3_key = f"{s3_key_prefix}/{gz_path.name}"
+        s3.upload_file(str(gz_path), s3_bucket, s3_key)
         
         logger.info("Postgres backup completed and uploaded", s3_key=s3_key)
         return s3_key
@@ -45,10 +46,10 @@ def backup_postgres(db_url: str, s3_bucket: str, s3_key_prefix: str = "backups/p
         raise
     finally:
         # Cleanup temporary files
-        if os.path.exists(dump_file):
-            os.remove(dump_file)
-        if os.path.exists(gz_file):
-            os.remove(gz_file)
+        if dump_path.exists():
+            dump_path.unlink()
+        if gz_path.exists():
+            gz_path.unlink()
 
 def backup_s3_files(source_bucket: str, backup_bucket: str, backup_prefix: str = "backups/files"):
     """
