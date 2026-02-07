@@ -253,6 +253,33 @@ class FilesystemRouter:
 
         return self.s3_backend.edit(path, old_content, new_content)
 
+    def batch_edit(
+        self,
+        path: str,
+        edits: list[tuple[str, str]],
+    ) -> bool:
+        """Edit file by applying multiple replacements sequentially.
+
+        Args:
+            path: Virtual file path.
+            edits: List of (old_content, new_content) tuples.
+
+        Returns:
+            True if all replacements were made, False if any old_content not found.
+            If False, no changes are written to the file.
+
+        Raises:
+            PermissionError: If path is in a read-only directory.
+            FileNotFoundError: If file does not exist.
+        """
+        logger.debug("router_batch_edit", path=path)
+
+        if self._is_read_only(path):
+            logger.warning("router_batch_edit_blocked", path=path)
+            raise WritePermissionError(f"Cannot edit read-only path: {path}")
+
+        return self.s3_backend.batch_edit(path, edits)
+
     def exists(self, path: str) -> bool:
         """Check if a path exists.
 

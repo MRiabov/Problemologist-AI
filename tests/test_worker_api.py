@@ -71,7 +71,7 @@ def test_fs_edit(mock_create_router):
     """Test editing a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
     mock_router.exists.return_value = True
-    mock_router.edit.return_value = True
+    mock_router.batch_edit.return_value = True
     mock_create_router.return_value = mock_router
     
     response = client.post(
@@ -85,7 +85,7 @@ def test_fs_edit(mock_create_router):
     
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    mock_router.edit.assert_called_with("/test.txt", "old", "new")
+    mock_router.batch_edit.assert_called_with("/test.txt", [("old", "new")])
 
 def test_execute_runtime():
     """Test executing Python code via API."""
