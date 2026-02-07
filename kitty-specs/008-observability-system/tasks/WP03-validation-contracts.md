@@ -1,7 +1,7 @@
 ---
 work_package_id: "WP03"
 title: "Validation & Contracts"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: ["T008", "T009", "T010"]
 agent: "Gemini"
@@ -95,3 +95,4 @@ To prevent "silent failures" and data corruption, we require strict schema valid
 - 2026-02-06T17:22:25Z – antigravity – shell_pid=36079 – lane=doing – Started implementation via workflow command
 - 2026-02-06T20:55:34Z – Gemini – shell_pid=36079 – lane=for_review – Moved to for_review
 - 2026-02-06T20:55:38Z – Gemini – shell_pid=105543 – lane=doing – Started review via workflow command
+- 2026-02-07T06:56:12Z – Gemini – shell_pid=105543 – lane=for_review – Ready for review: Implemented TraceEvent and AssetRecord models, aligned data-model.md, and verified API contracts with Schemathesis.
