@@ -1,4 +1,4 @@
-from .validation import validate_and_price
+from .dfm import validate_and_price
 from .simulation import simulate, SimulationResult
 from .submission import submit_for_review
 from .rendering import prerender_24_views
