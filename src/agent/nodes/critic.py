@@ -1,5 +1,7 @@
 from enum import Enum, StrEnum
 import json
+import re
+import yaml
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage
@@ -55,25 +57,41 @@ class CriticNode:
 
         # T018: Decision logic
         # Expecting format:
-        # DECISION: APPROVE | REJECT_PLAN | REJECT_CODE
-        # FEEDBACK: <feedback>
+        # ---
+        # decision: "approve" | "reject_plan" | "reject_code"
+        # required_fixes: ...
+        # ---
+        # ...
 
         decision = CriticDecision.REJECT_CODE
         feedback = "Failed to parse critic decision."
 
-        if f"DECISION: {CriticDecision.APPROVE}" in content:
-            decision = CriticDecision.APPROVE
-        elif f"DECISION: {CriticDecision.REJECT_PLAN}" in content:
-            decision = CriticDecision.REJECT_PLAN
-        elif f"DECISION: {CriticDecision.REJECT_CODE}" in content:
-            decision = CriticDecision.REJECT_CODE
-        elif "DECISION: REJECT" in content:
-            decision = CriticDecision.REJECT_CODE  # Default reject
-
-        if "FEEDBACK:" in content:
-            feedback = content.split("FEEDBACK:")[1].strip()
-        else:
-            feedback = content.strip()
+        try:
+            # Flexible match for frontmatter (start of string or after whitespace)
+            match = re.search(r"^---\n(.*?)\n---\n(.*)", content, re.DOTALL | re.MULTILINE)
+            if match:
+                yaml_block = match.group(1)
+                body = match.group(2)
+                data = yaml.safe_load(yaml_block)
+                
+                decision_str = data.get("decision", "").upper()
+                if decision_str == "APPROVE":
+                    decision = CriticDecision.APPROVE
+                elif decision_str == "REJECT_PLAN":
+                    decision = CriticDecision.REJECT_PLAN
+                elif decision_str == "REJECT_CODE":
+                    decision = CriticDecision.REJECT_CODE
+                
+                required_fixes = data.get("required_fixes", [])
+                if required_fixes:
+                    fixes_text = "\n".join([f"- {fix}" for fix in required_fixes])
+                    feedback = f"{body.strip()}\n\nRequired Fixes:\n{fixes_text}"
+                else:
+                    feedback = body.strip()
+            else:
+                 feedback = f"Critic failed to produce valid frontmatter. Raw output:\n{content}"
+        except Exception as e:
+            feedback = f"Error parsing critic output: {e}\nRaw output:\n{content}"
 
         journal_entry = f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
 

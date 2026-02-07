@@ -44,10 +44,10 @@
 ### WP04: 3D Asset Viewer
 
 - [ ] T016: Provide `react-three-fiber` and `drei` setup
-- [ ] T017: Implement STL/GLTF Reader Component
-- [ ] T018: Build "3D Scene" Component with OrbitControls, Grid, and Lights (Visual skeleton exists)
-- [ ] T019: Integrate 3D Viewer into "Run Detail" Tabs
-- [ ] T020: Add "View Controls" (Wireframe, Auto-rotate, Reset View) (Visual buttons exist)
+- [x] T017: Implement STL/GLTF Reader Component
+- [x] T018: Build "3D Scene" Component with OrbitControls, Grid, and Lights (Visual skeleton exists)
+- [x] T019: Integrate 3D Viewer into "Run Detail" Tabs
+- [x] T020: Add "View Controls" (Wireframe, Auto-rotate, Reset View) (Visual buttons exist)
 
 **Summary**: Implement the visualization capabilities for CAD artifacts.
 **Dependencies**: WP02

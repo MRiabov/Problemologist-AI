@@ -60,9 +60,18 @@ Instructions:
 2. Check if the part is manufacturable and within budget.
 3. Decide whether to APPROVE, REJECT_PLAN (if the whole strategy is wrong), or REJECT_CODE (if it's just a small bug).
 
-Output your response in this format:
-DECISION: <APPROVE, REJECT_PLAN or REJECT_CODE>
-FEEDBACK: <your detailed feedback here>
+You MUST output your review as a valid Markdown file with YAML frontmatter.
+
+Your output format MUST be exactly:
+---
+decision: "approve" | "reject_code" | "reject_plan"
+required_fixes:
+  - "Short bullet point 1"
+  - "Short bullet point 2"
+---
+
+# Review Analysis
+[Your detailed reasoning and feedback here...]
 """,
                 "sidecar": """You are the Sidecar Learner. 
 Analyze the execution journal for the task: {{ task }}
