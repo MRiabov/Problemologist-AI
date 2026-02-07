@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 import structlog
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 
 from worker.utils.storage import StorageClient
@@ -11,8 +11,13 @@ from worker.utils.storage import StorageClient
 logger = structlog.get_logger(__name__)
 
 
-class STLWatchdogHandler(FileSystemEventHandler):
+class STLWatchdogHandler(PatternMatchingEventHandler):
     def __init__(self, storage_client: StorageClient, controller_url: str | None):
+        super().__init__(
+            patterns=["*.stl", "*.STL"],
+            ignore_patterns=["*/.venv/*", "*/.git/*", "*/__pycache__/*"],
+            ignore_directories=True,
+        )
         self.storage_client = storage_client
         self.controller_url = controller_url
 
@@ -23,13 +28,8 @@ class STLWatchdogHandler(FileSystemEventHandler):
         self._process(event)
 
     def _process(self, event):
-        if event.is_directory:
-            return
-
+        # PatternMatchingEventHandler already filters by patterns and ignore_patterns
         filename = Path(event.src_path).name
-        if not filename.lower().endswith(".stl"):
-            return
-
         logger.info("stl_file_detected", path=event.src_path)
 
         try:

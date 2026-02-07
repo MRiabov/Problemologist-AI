@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { Terminal, Send } from "lucide-react";
+import { Terminal, Send, Square } from "lucide-react";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -21,7 +21,7 @@ export default function ReasoningTraces({
   isConnected = true
 }: ReasoningTracesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { isCreationMode, startAgent } = useEpisodes();
+  const { isCreationMode, startAgent, interruptAgent, selectedEpisode } = useEpisodes();
   const [prompt, setPrompt] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,6 +49,21 @@ export default function ReasoningTraces({
     <div className="flex flex-col h-full bg-card/30 border-r border-border relative">
       {!isConnected && <ConnectionError className="absolute inset-0" />}
       
+      {/* Header with Stop Button */}
+      <div className="flex items-center justify-between p-2 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
+          <span className="text-[10px] font-bold uppercase tracking-widest opacity-50 pl-2">Reasoning Trace</span>
+          {isRunning && selectedEpisode && (
+              <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="h-6 text-[10px] px-2 uppercase tracking-wider font-bold hover:bg-red-500/20 hover:text-red-400 bg-red-500/10 text-red-500 border border-red-500/20"
+                  onClick={() => interruptAgent(selectedEpisode.id)}
+              >
+                  <Square className="h-3 w-3 mr-1 fill-current" /> Stop
+              </Button>
+          )}
+      </div>
+
       {/* Creation Mode Prompt */}
       {isCreationMode && !isRunning && (
         <div className="p-4 border-b bg-primary/5">

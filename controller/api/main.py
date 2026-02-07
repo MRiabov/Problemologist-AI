@@ -31,6 +31,13 @@ app.include_router(episodes.router)
 app.include_router(skills.router)
 app.include_router(ops.router)
 
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+
+
 # Temporal client
 temporal_client_instance: Client = None
 

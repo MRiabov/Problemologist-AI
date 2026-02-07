@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from worker.generators.benchmark.nodes import planner_node, coder_node
-from worker.generators.benchmark.state import BenchmarkGeneratorState
-from worker.generators.benchmark.models import GenerationSession
+from controller.agent.benchmark.nodes import planner_node, coder_node
+from controller.agent.benchmark.state import BenchmarkGeneratorState
+from controller.agent.benchmark.models import GenerationSession
 
 
 @pytest.mark.asyncio
@@ -25,12 +25,12 @@ async def test_planner_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "worker.generators.benchmark.nodes.create_deep_agent"
+            "deepagents.create_deep_agent"
         ) as mock_create_agent,
         patch(
-            "worker.generators.benchmark.nodes.SandboxFilesystemBackend"
+            "worker.filesystem.backend.SandboxFilesystemBackend"
         ) as mock_backend,
-        patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
     ):
         # Mock agent response
         mock_agent = AsyncMock()
@@ -75,12 +75,12 @@ async def test_coder_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "worker.generators.benchmark.nodes.create_deep_agent"
+            "deepagents.create_deep_agent"
         ) as mock_create_agent,
         patch(
-            "worker.generators.benchmark.nodes.SandboxFilesystemBackend"
+            "worker.filesystem.backend.SandboxFilesystemBackend"
         ) as mock_backend,
-        patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
     ):
         # Mock agent response
         mock_agent = AsyncMock()
