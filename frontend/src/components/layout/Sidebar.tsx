@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers } from "lucide-react";
+import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers, Plus } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import { useState } from "react";
 
 const navigation = [
@@ -12,7 +13,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const { episodes, selectedEpisode, selectEpisode, loading } = useEpisodes();
+  const { episodes, selectedEpisode, selectEpisode, createNewBenchmark, loading } = useEpisodes();
   const location = useLocation();
   const [filter, setFilter] = useState("");
 
@@ -62,7 +63,18 @@ export default function Sidebar() {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         {location.pathname === '/' ? 'Engineer History' : 'Benchmark Runs'}
                     </h3>
-                    <History className="h-3 w-3 text-muted-foreground" />
+                    {location.pathname === '/benchmark' ? (
+                        <Button 
+                            size="sm" 
+                            className="h-6 px-2 text-[9px] font-bold gap-1"
+                            onClick={createNewBenchmark}
+                        >
+                            <Plus className="h-3 w-3" />
+                            CREATE NEW
+                        </Button>
+                    ) : (
+                        <History className="h-3 w-3 text-muted-foreground" />
+                    )}
                 </div>
                 <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />

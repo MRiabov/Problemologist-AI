@@ -18,7 +18,8 @@ import ConnectionError from '../components/shared/ConnectionError';
 
 export default function BenchmarkGeneration() {
   const { 
-    selectedEpisode 
+    selectedEpisode,
+    running
   } = useEpisodes();
   const { isConnected } = useConnection();
   const [, setEpisodes] = useState<Episode[]>([]);
@@ -100,7 +101,7 @@ export default function BenchmarkGeneration() {
         <div className="col-span-3 border-r overflow-hidden">
             <ReasoningTraces 
               traces={selectedEpisode?.traces}
-              isRunning={simulating}
+              isRunning={simulating || running}
               isConnected={isConnected}
             />
         </div>

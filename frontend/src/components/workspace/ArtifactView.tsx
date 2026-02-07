@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
-import { FileCode, FileText, FileJson, BadgeCheck, Code2, FolderTree, ChevronRight, ChevronDown, File } from "lucide-react";
+import { FileCode, FileText, FileJson, BadgeCheck, Code2, FolderTree, ChevronRight, ChevronDown, File, Play } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
+import { Button } from "../ui/button";
+import { runSimulation } from "../../api/client";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -78,16 +80,43 @@ export default function ArtifactView({
     }
 
     return (
-        <div className="font-mono text-[13px] leading-6 text-gray-300 p-4">
-            {activeAsset.content ? (
-                <pre className="whitespace-pre-wrap">{activeAsset.content}</pre>
-            ) : (
-                <div className="text-muted-foreground/50 italic flex flex-col items-center justify-center h-40 gap-2">
-                   <File className="h-8 w-8 opacity-20" />
-                   <span>No content available for this asset.</span>
-                   { (activeAsset as any).s3_path && <span className="text-[10px] opacity-70">{(activeAsset as any).s3_path}</span> }
+        <div className="flex-1 flex flex-col h-full min-h-0">
+            {activeAsset.type === 'plan' && (
+                <div className="p-4 border-b bg-green-500/5 flex items-center justify-between shrink-0">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-green-500/70">Execution Plan</span>
+                        <span className="text-[11px] text-muted-foreground">Review and approve the benchmark implementation steps.</span>
+                    </div>
+                    <Button 
+                        size="sm" 
+                        className="h-8 bg-green-600 hover:bg-green-700 text-white gap-2 font-bold text-[10px]"
+                        onClick={async () => {
+                            try {
+                                const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
+                                await runSimulation(sessionId);
+                            } catch (e) {
+                                console.error("Failed to start implementation", e);
+                            }
+                        }}
+                    >
+                        <Play className="h-3 w-3 fill-current" />
+                        START IMPLEMENTATION
+                    </Button>
                 </div>
             )}
+            <ScrollArea className="flex-1">
+                <div className="font-mono text-[13px] leading-6 text-gray-300 p-4">
+                    {activeAsset.content ? (
+                        <pre className="whitespace-pre-wrap">{activeAsset.content}</pre>
+                    ) : (
+                        <div className="text-muted-foreground/50 italic flex flex-col items-center justify-center h-40 gap-2">
+                        <File className="h-8 w-8 opacity-20" />
+                        <span>No content available for this asset.</span>
+                        { (activeAsset as any).s3_path && <span className="text-[10px] opacity-70">{(activeAsset as any).s3_path}</span> }
+                        </div>
+                    )}
+                </div>
+            </ScrollArea>
         </div>
     );
   };

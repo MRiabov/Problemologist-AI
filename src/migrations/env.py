@@ -11,7 +11,8 @@ from alembic import context
 sys.path.insert(0, os.getcwd())
 
 from src.controller.persistence.db import Base
-# Ensure benchmark models are registered
+# Ensure all models are registered for autogenerate
+from src.controller.persistence.models import Episode, Trace, Asset
 from src.generators.benchmark.schema import BenchmarkAssetModel, GenerationSessionModel
 
 # this is the Alembic Config object, which provides
