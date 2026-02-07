@@ -199,6 +199,12 @@ The agents will delimit their reasoning with markdown headings, which would allo
 
 The Planner will build a list of TODOs for the agent to do. The critic will verify against the plan and the list of TODOs.
 
+#### Reviews by reviewers
+
+Reviews will be written by a markdown document and stored in `/reviews/` folder, to be able to access it later.
+Notably, to keep the agents accountable and enforce stricter and more consistent typing, agents would write a yaml frontmatter on reviews - e.g. `planned`, `has_feedback`, `done`
+<!-- Note: the entire schema was not defined yet. However, I like how spec-kitty that I use in the project does it. -->
+
 ### Token compression
 
 As the agent will near its token generation limits, they will compress their old memory by a summarizing agent.
