@@ -1,12 +1,19 @@
 ---
 work_package_id: WP02
 title: Physics Simulation Loop
-lane: "planned"
+lane: "done"
 dependencies: []
 base_branch: main
 base_commit: a507a4f4fd2aa747191815080ecb718df03878e2
 created_at: '2026-02-06T20:15:49.611838+00:00'
-subtasks: [T007, T008, T009, T010, T011, T012, T013]
+subtasks:
+  - {id: T007, status: done}
+  - {id: T008, status: done}
+  - {id: T009, status: done}
+  - {id: T010, status: done}
+  - {id: T011, status: done}
+  - {id: T012, status: done}
+  - {id: T013, status: done}
 shell_pid: "164431"
 agent: "Gemini"
 review_status: "has_feedback"
@@ -106,3 +113,4 @@ The loop must verify "Zones" defined in WP01.
 - 2026-02-07T06:34:17Z – Gemini – shell_pid=146772 – lane=planned – Moved to planned
 - 2026-02-07T06:41:13Z – Gemini – shell_pid=164431 – lane=doing – Started review via workflow command
 - 2026-02-07T06:41:51Z – Gemini – shell_pid=164431 – lane=planned – Moved to planned
+- 2026-02-07T06:44:20Z – Gemini – shell_pid=164431 – lane=done – Review passed: Fixed broken validation hook and updated tests to match new DFM facade. Physics loop and zone detection verified with tests.
