@@ -36,13 +36,13 @@ class RemoteFilesystemMiddleware:
 
         if success:
             from datetime import datetime
-            from controller.api.manager import manager
+            from controller.observability.broadcast import EpisodeBroadcaster
             import uuid
 
-            # Broadcast update to frontend
+            # Broadcast update to frontend via unified event hub
             try:
                 episode_id = uuid.UUID(self.client.session_id)
-                await manager.broadcast(
+                await EpisodeBroadcaster.get_instance().broadcast(
                     episode_id,
                     {
                         "type": "file_update",

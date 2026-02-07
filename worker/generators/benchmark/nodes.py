@@ -209,38 +209,89 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
 
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Visual inspection of the generated benchmark.
+    Visual inspection of the generated benchmark using Vision-capable LLM.
+    Saves the review to the /reviews/ directory.
     """
+    import base64
+
     logger.info("reviewer_node_start")
 
     template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
     template = template_path.read_text()
 
     renders = state.get("simulation_result", {}).get("render_paths", [])
+    
+    # Load and encode images for vision model
+    image_contents = []
+    for path_str in renders[:8]:  # Limit to 8 images to avoid token issues
+        try:
+            path = Path(path_str)
+            if path.exists():
+                with open(path, "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode("utf-8")
+                    image_contents.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{encoded}"}
+                    })
+        except Exception as e:
+            logger.warning("failed_to_load_render_for_vision", path=path_str, error=str(e))
 
-    prompt = template.format(
+    prompt_text = template.format(
         theme=state.get("plan", {}).get("theme", "Unknown"),
         prompt=state["session"].prompt,
     )
 
-    # In a real scenario, we would pass the images to a vision-capable LLM.
-    # We include the number of renders found to show the tool was "called".
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    
+    content = [{"type": "text", "text": prompt_text}]
+    content.extend(image_contents)
+
     messages = [
-        SystemMessage(content="You are a CAD quality assurance engineer."),
-        HumanMessage(
-            content=f"{prompt}\n\n[System: {len(renders)} render(s) available for inspection]"
-        ),
+        SystemMessage(content="You are a CAD quality assurance engineer with vision capabilities."),
+        HumanMessage(content=content),
     ]
 
     response = await llm.ainvoke(messages)
-    content = response.content
+    review_text = str(response.content)
 
     # Parse status and feedback
-    if "APPROVE" in content.upper():
+    status = "REJECT"
+    if "STATUS: APPROVE" in review_text.upper():
+        status = "APPROVE"
         state["review_feedback"] = "Approved"
     else:
-        state["review_feedback"] = content
+        # Extract feedback part if possible
+        if "FEEDBACK:" in review_text.upper():
+            state["review_feedback"] = review_text.split("FEEDBACK:")[1].strip()
+        else:
+            state["review_feedback"] = review_text
 
-    logger.info("reviewer_node_complete", feedback=state["review_feedback"])
+    # Save review to /reviews/ folder
+    try:
+        reviews_dir = Path("worker/reviews")
+        reviews_dir.mkdir(parents=True, exist_ok=True)
+        
+        session_id = state["session"].session_id
+        review_filename = f"review-{session_id}.md"
+        review_path = reviews_dir / review_filename
+        
+        # Prepare YAML frontmatter
+        decision = "approved" if status == "APPROVE" else "rejected"
+        comments = [c.strip() for c in state["review_feedback"].split("\n") if c.strip()]
+        
+        import yaml
+        frontmatter = {
+            "decision": decision,
+            "comments": comments[:10] # Limit number of comments
+        }
+        
+        yaml_str = yaml.dump(frontmatter, sort_keys=False)
+        markdown_content = f"---\n{yaml_str}---\n\n# Review for {state.get('plan', {}).get('theme', 'Benchmark')}\n\n{review_text}"
+        
+        review_path.write_text(markdown_content)
+        logger.info("review_persisted", path=str(review_path))
+    except Exception as e:
+        logger.error("failed_to_persist_review", error=str(e))
+
+    logger.info("reviewer_node_complete", status=status)
     return state

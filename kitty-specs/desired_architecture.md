@@ -114,6 +114,14 @@ Maybe use a dedicated public git repo? I think it's sound. However this is compl
 
 *Note on observability: for observability and reproducibility, the skills usage is to be tracked in the database.*
 
+##### Managing skills in git repo
+
+Yes, skills are versioned via a public git repo. Because of filesystem edits and more complex logic, I propose to send git commits and pushes directly from workers.
+
+Default logic: git commit & git push. If push fails due to merge conflict, do git merge. If merge fails, have the skill creator LLM handle it and push it. I suggest using `git2` as a library since it's more robust than using shell
+
+*note*: Ideally, we'd do this logic in controller since controller is the place where we manage all secrets, but... it's not that scary, and we trust our compute nodes, for now.
+
 #### Starting folder structure for various agents
 
 We define the file structure as follows, individual agents adapt to individual needs:
