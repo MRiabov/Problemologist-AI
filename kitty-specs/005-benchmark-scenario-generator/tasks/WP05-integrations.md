@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Persistence & Integration
-lane: "doing"
+lane: "planned"
 dependencies: [WP04]
 base_branch: 005-benchmark-scenario-generator-WP04
 base_commit: 945ec66510a2e3541b30e87040f26f0e831e12c0
@@ -9,6 +9,8 @@ created_at: '2026-02-07T08:55:48.149728+00:00'
 subtasks: [T017, T018, T019, T020]
 shell_pid: "292387"
 agent: "gemini-cli"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP05: Persistence & Integration
@@ -79,3 +81,4 @@ agent: "gemini-cli"
 - 2026-02-07T08:55:48Z – Gemini – shell_pid=285937 – lane=doing – Assigned agent via workflow command
 - 2026-02-07T09:05:08Z – Gemini – shell_pid=285937 – lane=for_review – Ready for review: Implemented persistence and CLI
 - 2026-02-07T09:06:57Z – gemini-cli – shell_pid=292387 – lane=doing – Started review via workflow command
+- 2026-02-07T09:08:51Z – gemini-cli – shell_pid=292387 – lane=planned – Changes requested regarding MJCF state management, DB field naming consistency, and Pathlib usage.
