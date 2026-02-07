@@ -3,8 +3,10 @@ import sqlite3
 import pytest
 from src.cots.models import COTSItem
 from src.cots.database.init import init_db
+from src.shared.type_checking import type_check
 
 
+@type_check
 def test_cots_item_validation():
     data = {
         "part_id": "M3-HEX-10",
@@ -20,6 +22,7 @@ def test_cots_item_validation():
     assert item.category == "fastener"
 
 
+@type_check
 def test_cots_item_invalid_category():
     data = {
         "part_id": "M3-HEX-10",
@@ -34,6 +37,7 @@ def test_cots_item_invalid_category():
         COTSItem(**data)
 
 
+@type_check
 def test_init_db(tmp_path):
     db_file = tmp_path / "test_parts.db"
     init_db(str(db_file))

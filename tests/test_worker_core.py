@@ -9,8 +9,10 @@ These tests verify:
 
 
 from worker.runtime.executor import RuntimeConfig, run_python_code
+from src.shared.type_checking import type_check
 
 
+@type_check
 class TestRuntimeExecutor:
     """Tests for the Python runtime executor."""
 

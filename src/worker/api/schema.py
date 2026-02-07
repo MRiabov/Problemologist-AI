@@ -48,10 +48,10 @@ class ExecuteResponse(BaseModel):
 
 class BenchmarkToolRequest(BaseModel):
     """Request to run a benchmark tool (simulate, validate, etc.)."""
-    script_path: str = Field(default="script.py", description="Path to the script containing the build() function.")
+    script_path: StrictStr = Field(default="script.py", description="Path to the script containing the build() function.")
 
 class BenchmarkToolResponse(BaseModel):
     """Response from a benchmark tool."""
-    success: bool
-    message: str
-    artifacts: Optional[Dict[str, Any]] = None
+    success: StrictBool
+    message: StrictStr
+    artifacts: Optional[Dict[StrictStr, Any]] = None

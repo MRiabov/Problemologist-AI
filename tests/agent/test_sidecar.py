@@ -37,7 +37,7 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     
     result = await node(state)
     
-    assert "Suggested skill build123d_import_trick" in result["journal"]
+    assert "Suggested skill build123d_import_trick" in result.journal
     assert os.path.exists(os.path.join(test_dir, "build123d_import_trick.md"))
     
     with open(os.path.join(test_dir, "build123d_import_trick.md"), "r") as f:
@@ -57,7 +57,7 @@ async def test_sidecar_node_no_skill(mock_llm):
     
     result = await node(state)
     
-    assert "No new skills identified" in result["journal"]
+    assert "No new skills identified" in result.journal
     
     if os.path.exists("test_suggested_skills"):
         shutil.rmtree("test_suggested_skills")

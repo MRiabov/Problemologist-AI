@@ -1,7 +1,7 @@
 import os
 from fastapi import APIRouter
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr
 
 # In a real scenario, we might fetch this from the Worker via FS or DB.
 # For now, we will scan the local 'docs/skills' directory if it exists,
@@ -10,8 +10,8 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/skills", tags=["skills"])
 
 class Skill(BaseModel):
-    name: str
-    description: str
+    name: StrictStr
+    description: StrictStr
 
 @router.get("/", response_model=List[Skill])
 async def list_skills():

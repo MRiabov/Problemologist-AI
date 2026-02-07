@@ -10,8 +10,9 @@ from typing import Protocol
 
 import s3fs
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr, StrictBool, StrictInt
 
+from src.shared.type_checking import type_check
 from .db import S3Config, get_s3_filesystem
 
 logger = structlog.get_logger(__name__)
@@ -20,10 +21,10 @@ logger = structlog.get_logger(__name__)
 class FileInfo(BaseModel):
     """Information about a file or directory."""
 
-    path: str
-    name: str
-    is_dir: bool
-    size: int | None = None
+    path: StrictStr
+    name: StrictStr
+    is_dir: StrictBool
+    size: StrictInt | None = None
 
 
 class SessionManager(Protocol):
@@ -45,6 +46,7 @@ class SimpleSessionManager:
         return self.session_id
 
 
+@type_check
 class SandboxFilesystemBackend:
     """S3-backed filesystem with session-based path isolation.
 

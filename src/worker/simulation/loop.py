@@ -1,5 +1,5 @@
 import mujoco
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictFloat, StrictBool, StrictStr
 from typing import Dict, Optional, List, Union
 import numpy as np
 import logging
@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class SimulationMetrics(BaseModel):
-    total_time: float
-    total_energy: float
-    max_velocity: float
-    success: bool
-    fail_reason: Optional[str] = None
+    total_time: StrictFloat
+    total_energy: StrictFloat
+    max_velocity: StrictFloat
+    success: StrictBool
+    fail_reason: Optional[StrictStr] = None
 
 
 class SimulationLoop:
