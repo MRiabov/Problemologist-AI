@@ -97,11 +97,11 @@
 **Priority**: Low
 **Dependencies**: WP04
 
-- [ ] T026: Create a reference "Pusher Bot" `build123d` model and test script. <!-- id: 24 -->
-- [ ] T027: Create an E2E test suite in `tests/e2e/test_simulation.py`. <!-- id: 25 -->
-- [ ] T028: Verify "Success" scenario (bot pushes box to goal). <!-- id: 26 -->
-- [ ] T029: Verify "Fail" scenario (bot hits forbidden zone). <!-- id: 27 -->
-- [ ] T030: detailed manual walkthrough verification. <!-- id: 28 -->
+- [x] T026: Create a reference "Pusher Bot" `build123d` model and test script. <!-- id: 24 -->
+- [x] T027: Create an E2E test suite in `tests/e2e/test_simulation.py`. <!-- id: 25 -->
+- [x] T028: Verify "Success" scenario (bot pushes box to goal). <!-- id: 26 -->
+- [x] T029: Verify "Fail" scenario (bot hits forbidden zone). <!-- id: 27 -->
+- [x] T030: detailed manual walkthrough verification. <!-- id: 28 -->
 
 **Implementation Logic**:
 
