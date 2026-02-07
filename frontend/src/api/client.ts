@@ -13,3 +13,29 @@ export async function fetchSkills(): Promise<Skill[]> {
     if (!res.ok) throw new Error('Failed to fetch skills');
     return res.json();
 }
+
+export async function fetchEpisode(id: string): Promise<Episode> {
+    const res = await fetch(`${API_BASE}/episodes/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch episode');
+    return res.json();
+}
+
+export async function runAgent(task: string, sessionId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/agent/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, session_id: sessionId })
+    });
+    if (!res.ok) throw new Error('Failed to run agent');
+    return res.json();
+}
+
+export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<any> {
+    const res = await fetch(`${API_BASE}/simulation/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, compound_json: compoundJson })
+    });
+    if (!res.ok) throw new Error('Failed to run simulation');
+    return res.json();
+}

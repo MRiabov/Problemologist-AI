@@ -1,4 +1,53 @@
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { fetchEpisodes, fetchEpisode, runSimulation } from '../api/client';
+import type { Episode } from '../api/types';
+
 export default function BenchmarkGeneration() {
+  const navigate = useNavigate();
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [simulating, setSimulating] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+        try {
+            const data = await fetchEpisodes();
+            setEpisodes(data);
+        } catch (e) {
+            console.error("Failed to load episodes", e);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadData();
+  }, []);
+
+  const handleSelectEpisode = async (ep: Episode) => {
+    try {
+        const fullEp = await fetchEpisode(ep.id);
+        setSelectedEpisode(fullEp);
+    } catch (e) {
+        console.error("Failed to fetch episode details", e);
+        setSelectedEpisode(ep);
+    }
+  };
+
+  const handleRunSimulation = async () => {
+    setSimulating(true);
+    try {
+        const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
+        await runSimulation(sessionId);
+        const data = await fetchEpisodes();
+        setEpisodes(data);
+    } catch (e) {
+        console.error("Failed to run simulation", e);
+    } finally {
+        setSimulating(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background-dark text-white font-display">
       {/* Header */}
@@ -21,6 +70,14 @@ export default function BenchmarkGeneration() {
             <span className="text-[11px] font-bold text-success uppercase tracking-wider">Isolated Container Active</span>
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={handleRunSimulation}
+              disabled={simulating}
+              className="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-white hover:bg-primary-dark transition-colors disabled:opacity-50 font-bold text-xs"
+            >
+              <span className="material-symbols-outlined text-xl mr-2">play_arrow</span>
+              {simulating ? 'SIMULATING...' : 'RUN BENCHMARK'}
+            </button>
             <button className="flex items-center justify-center rounded-lg h-9 w-9 bg-surface-border/30 text-white hover:bg-surface-border transition-colors">
               <span className="material-symbols-outlined text-xl">database</span>
             </button>
@@ -68,8 +125,34 @@ export default function BenchmarkGeneration() {
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
+        {/* Sidebar: Episode History */}
+        <aside className="w-64 flex flex-col border-r border-surface-border bg-surface-dark overflow-hidden">
+            <div className="p-4 border-b border-surface-border bg-background-dark/20">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Benchmark History</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+                {loading ? (
+                    <div className="p-4 text-xs text-text-secondary">Loading...</div>
+                ) : (
+                    episodes.map(ep => (
+                        <div 
+                            key={ep.id}
+                            onClick={() => handleSelectEpisode(ep)}
+                            className={`p-3 border-b border-surface-border/50 cursor-pointer hover:bg-white/5 transition-colors ${selectedEpisode?.id === ep.id ? 'bg-primary/10 border-l-2 border-primary' : ''}`}
+                        >
+                            <div className="text-xs font-bold text-white truncate mb-1">{ep.task || ep.id.substring(0,8)}</div>
+                            <div className="flex justify-between items-center text-[9px] text-text-secondary">
+                                <span>{new Date(ep.created_at).toLocaleTimeString()}</span>
+                                <span className={`uppercase font-bold ${ep.status === 'running' ? 'text-primary' : 'text-success'}`}>{ep.status}</span>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </aside>
+
         {/* Left Pane */}
-        <div className="w-5/12 flex flex-col border-r border-surface-border bg-surface-dark min-w-[450px]">
+        <div className="flex-1 flex flex-col border-r border-surface-border bg-surface-dark min-w-[450px]">
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Planner's Expected Solution */}
             <div className="h-1/3 flex flex-col border-b border-surface-border">
@@ -111,31 +194,40 @@ export default function BenchmarkGeneration() {
                     1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16
                   </div>
                   <div className="text-gray-400 leading-6 whitespace-pre font-mono text-xs">
-                    <span className="text-blue-400">&lt;mujoco&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;worldbody&gt;</span>
-                    {"\n"}
-                    <span className="text-slate-500">&lt;!-- Procedural Benchmark Floor --&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;geom</span> name="floor" pos="0 0 0" size="5 5 .1" type="plane"<span className="text-blue-400">/&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;body</span> name="pendulum" pos="0 0 3"<span className="text-blue-400">&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;joint</span> name="pivot" type="hinge" axis="0 1 0"<span className="text-blue-400">/&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;geom</span> size="0.05 1.5" type="cylinder" mass="1"<span className="text-blue-400">/&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;geom</span> pos="0 0 -1.5" size="0.2" type="sphere" rgba="0.8 0.2 0.2 1"<span className="text-blue-400">/&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;/body&gt;</span>
-                    {"\n"}
-                    <span className="text-slate-500">&lt;!-- Target Region --&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;site</span> name="goal" pos="1.5 0 0.5" size="0.3" rgba="0 1 0 0.3"<span className="text-blue-400">/&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;/worldbody&gt;</span>
-                    {"\n"}
-                    <span className="text-blue-400">&lt;/mujoco&gt;</span>
+                    {selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf') ? (
+                        // This would ideally be the actual content if we had it, but for now we'll just show the path or a placeholder
+                        // In a real app, we'd fetch the content of the MJCF asset.
+                        `<!-- Load MJCF from: ${selectedEpisode.assets.find(a => a.asset_type === 'mjcf')?.s3_path} -->\n` +
+                        `<mujoco>\n  <worldbody>\n    <!-- Content would be loaded here -->\n  </worldbody>\n</mujoco>`
+                    ) : (
+                        <>
+                        <span className="text-blue-400">&lt;mujoco&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;worldbody&gt;</span>
+                        {"\n"}
+                        <span className="text-slate-500">&lt;!-- Procedural Benchmark Floor --&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;geom</span> name="floor" pos="0 0 0" size="5 5 .1" type="plane"<span className="text-blue-400">/&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;body</span> name="pendulum" pos="0 0 3"<span className="text-blue-400">&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;joint</span> name="pivot" type="hinge" axis="0 1 0"<span className="text-blue-400">/&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;geom</span> size="0.05 1.5" type="cylinder" mass="1"<span className="text-blue-400">/&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;geom</span> pos="0 0 -1.5" size="0.2" type="sphere" rgba="0.8 0.2 0.2 1"<span className="text-blue-400">/&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;/body&gt;</span>
+                        {"\n"}
+                        <span className="text-slate-500">&lt;!-- Target Region --&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;site</span> name="goal" pos="1.5 0 0.5" size="0.3" rgba="0 1 0 0.3"<span className="text-blue-400">/&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;/worldbody&gt;</span>
+                        {"\n"}
+                        <span className="text-blue-400">&lt;/mujoco&gt;</span>
+                        </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -174,13 +266,32 @@ export default function BenchmarkGeneration() {
               </div>
             </div>
             {/* 3D Object */}
-            <div className="relative w-[500px] h-[350px]" style={{transformStyle: 'preserve-3d'}}>
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-slate-800/40 border-2 border-slate-700 shadow-2xl" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
-              <div className="absolute bottom-[180px] left-[55%] w-2 h-40 bg-slate-400/80" style={{transform: 'rotateX(65deg) rotateZ(45deg) translateY(-20px)'}}></div>
-              <div className="absolute bottom-[120px] left-[45%] w-10 h-10 rounded-full bg-danger/80 shadow-[0_20px_40px_rgba(239,68,68,0.4)]" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
-              <div className="absolute top-[80px] right-[100px] w-24 h-24 bg-success/10 border-2 border-dashed border-success/40 rounded-lg flex items-center justify-center" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}>
-                <span className="text-success text-[10px] font-bold uppercase tracking-tighter opacity-80">TARGET_01</span>
-              </div>
+            <div className="w-full h-full flex items-center justify-center">
+              {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
+                <div className="w-full h-full flex items-center justify-center p-8">
+                  {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
+                      <video 
+                          src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
+                          controls 
+                          className="max-w-full max-h-full rounded-lg shadow-2xl border border-white/10"
+                      />
+                  ) : (
+                      <img 
+                          src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
+                          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10"
+                      />
+                  )}
+                </div>
+              ) : (
+                <div className="relative w-[500px] h-[350px]" style={{transformStyle: 'preserve-3d'}}>
+                  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-slate-800/40 border-2 border-slate-700 shadow-2xl" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
+                  <div className="absolute bottom-[180px] left-[55%] w-2 h-40 bg-slate-400/80" style={{transform: 'rotateX(65deg) rotateZ(45deg) translateY(-20px)'}}></div>
+                  <div className="absolute bottom-[120px] left-[45%] w-10 h-10 rounded-full bg-danger/80 shadow-[0_20px_40px_rgba(239,68,68,0.4)]" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
+                  <div className="absolute top-[80px] right-[100px] w-24 h-24 bg-success/10 border-2 border-dashed border-success/40 rounded-lg flex items-center justify-center" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}>
+                    <span className="text-success text-[10px] font-bold uppercase tracking-tighter opacity-80">TARGET_01</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
