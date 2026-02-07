@@ -25,10 +25,10 @@ def test_architect_node_logic(mock_llm):
     result = architect_node(state)
     
     # Check return value
-    assert "plan" in result
-    assert "todo" in result
-    assert "Test Plan" in result["plan"]
-    assert "Test Todo" in result["todo"]
+    assert result.plan
+    assert result.todo
+    assert "Test Plan" in result.plan
+    assert "Test Todo" in result.todo
     
     # Check file creation
     assert os.path.exists("plan.md")
@@ -51,8 +51,8 @@ def test_architect_node_fallback(mock_llm):
     state = AgentState(task="Build a robot")
     result = architect_node(state)
     
-    assert result["plan"] == "Just some text without sections"
-    assert result["todo"] == "- [ ] Implement the plan"
+    assert result.plan == "Just some text without sections"
+    assert result.todo == "- [ ] Implement the plan"
     
     os.remove("plan.md")
     os.remove("todo.md")

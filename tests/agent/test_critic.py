@@ -33,9 +33,9 @@ async def test_critic_node_approve(mock_llm, mock_worker):
     
     result = await node(state)
     
-    assert result["status"] == "approved"
-    assert "Looks good" in result["feedback"]
-    assert "Critic Decision: APPROVE" in result["journal"]
+    assert result.status == "approved"
+    assert "Looks good" in result.feedback
+    assert "Critic Decision: APPROVE" in result.journal
 
 @pytest.mark.asyncio
 async def test_critic_node_reject(mock_llm, mock_worker):
@@ -51,9 +51,9 @@ FEEDBACK: Simulation failed.""")
     
     result = await node(state)
     
-    assert result["status"] == "code_rejected"
-    assert "Simulation failed" in result["feedback"]
-    assert "Critic Decision: REJECT" in result["journal"]
+    assert result.status == "code_rejected"
+    assert "Simulation failed" in result.feedback
+    assert "Critic Decision: REJECT" in result.journal
 
 @pytest.mark.asyncio
 async def test_critic_node_no_artifacts(mock_llm, mock_worker):

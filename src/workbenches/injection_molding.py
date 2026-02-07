@@ -24,7 +24,7 @@ logger = structlog.get_logger()
 @type_check
 def _check_draft_angles(
     mesh: trimesh.Trimesh,
-    pull_vector: tuple[float, float, float] = (0, 0, 1),
+    pull_vector: tuple[float, float, float] = (0.0, 0.0, 1.0),
     min_angle_deg: float = 2.0,
 ) -> list[str]:
     """
@@ -219,7 +219,7 @@ def analyze_im(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchR
 
     # 1. Draft Angle Check
     min_draft = constraints.get("min_draft_angle_deg", 2.0)
-    violations.extend(_check_draft_angles(mesh, (0, 0, 1), min_draft))
+    violations.extend(_check_draft_angles(mesh, (0.0, 0.0, 1.0), min_draft))
 
     # 2. Undercut Check (Moldability)
     # For IM, we check if it can be pulled from +Z or -Z

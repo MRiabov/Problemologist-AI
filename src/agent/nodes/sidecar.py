@@ -24,7 +24,7 @@ class SidecarNode:
         self.suggested_skills_dir = suggested_skills_dir
         os.makedirs(self.suggested_skills_dir, exist_ok=True)
 
-    async def __call__(self, state: AgentState) -> Dict[str, Any]:
+    async def __call__(self, state: AgentState) -> AgentState:
         """Execute the sidecar node logic."""
         # T021: Parse Journal for patterns
         prompt = self.pm.render("sidecar", journal=state.journal, task=state.task)
@@ -51,11 +51,11 @@ class SidecarNode:
 
         journal_entry = f"\nSidecar Learner: {'Suggested skill ' + suggested_skill if suggested_skill else 'No new skills identified.'}"
 
-        return {"journal": state.journal + journal_entry}
+        return state.model_copy(update={"journal": state.journal + journal_entry})
 
 
 # Factory function for LangGraph
 @type_check
-async def sidecar_node(state: AgentState) -> Dict[str, Any]:
+async def sidecar_node(state: AgentState) -> AgentState:
     node = SidecarNode()
     return await node(state)

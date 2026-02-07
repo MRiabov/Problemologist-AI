@@ -34,7 +34,7 @@ class CriticNode:
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
         self.fs = RemoteFilesystemMiddleware(self.worker_client)
 
-    async def __call__(self, state: AgentState) -> Dict[str, Any]:
+    async def __call__(self, state: AgentState) -> AgentState:
         # T016 & T017: Read artifacts
         sim_report = await self._read_json_artifact("simulation_report.json")
         mfg_report = await self._read_artifact("workbench_report.md")
@@ -83,11 +83,13 @@ class CriticNode:
             CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
         }
 
-        return {
-            "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
-            "feedback": feedback,
-            "journal": state.journal + journal_entry,
-        }
+        return state.model_copy(
+            update={
+                "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
+                "feedback": feedback,
+                "journal": state.journal + journal_entry,
+            }
+        )
 
     async def _read_artifact(self, path: str) -> Optional[str]:
         try:
@@ -110,7 +112,7 @@ from ..config import settings
 
 # Factory function for LangGraph
 @type_check
-async def critic_node(state: AgentState) -> Dict[str, Any]:
+async def critic_node(state: AgentState) -> AgentState:
     node = CriticNode(
         worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
     )
