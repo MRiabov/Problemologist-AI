@@ -76,7 +76,7 @@
 **Priority**: Medium
 **Dependencies**: WP03
 
-- [ ] T020: Create `src/worker/simulation/temporal/` activities. <!-- id: 18 -->
+- [x] T020: Create `src/worker/simulation/temporal/` activities. <!-- id: 18 -->
 - [ ] T021: Implement `run_simulation_activity` which wraps the full pipeline (Validation -> MJCF -> Sim). <!-- id: 19 -->
 - [ ] T022: Implement `src/worker/utils/simulation.py` with `simulate(component, render=False)` entrypoint. <!-- id: 20 -->
 - [ ] T023: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
