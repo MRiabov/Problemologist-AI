@@ -23,6 +23,8 @@ class BenchmarkGeneratorState(TypedDict):
 
     review_feedback: str | None  # Comments from reviewer
 
+    review_round: int  # Current review iteration
+
     plan: dict[str, Any] | None  # The randomization strategy
 
     messages: list[BaseMessage]  # Chat history

@@ -83,6 +83,7 @@ async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
         current_script="",
         simulation_result=None,
         review_feedback=None,
+        review_round=0,
         plan=None,
         messages=[],
     )
