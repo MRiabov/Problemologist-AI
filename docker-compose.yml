@@ -12,6 +12,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
+    command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
       - .env
     depends_on:
@@ -28,12 +29,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    develop:
+      watch:
+        - action: sync
+          path: ./controller
+          target: /app/controller
+        - action: sync
+          path: ./shared
+          target: /app/shared
+        - action: rebuild
+          path: pyproject.toml
 
   migrations:
     build:
       context: .
       dockerfile: controller/Dockerfile
-    command: ["uv", "run", "alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment:
       - POSTGRES_URL=postgresql+psycopg://postgres:postgres@postgres:5432/postgres
     depends_on:
@@ -58,6 +69,14 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./controller
+          target: /app/controller
+        - action: sync+restart
+          path: ./shared
+          target: /app/shared
 
   worker:
     build:
@@ -69,6 +88,7 @@ services:
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
+    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     env_file:
       - .env
     depends_on:
@@ -79,6 +99,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    develop:
+      watch:
+        - action: sync
+          path: ./worker
+          target: /app/worker
+        - action: sync
+          path: ./shared
+          target: /app/shared
+        - action: rebuild
+          path: pyproject.toml
 
   postgres:
     image: postgres:15-alpine
