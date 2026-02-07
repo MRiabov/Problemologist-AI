@@ -1,0 +1,46 @@
+import os
+import json
+import structlog
+from build123d import Compound, export_step
+from .rendering import prerender_24_views
+
+logger = structlog.get_logger(__name__)
+
+def submit_for_review(component: Compound):
+    """
+    Standardized handover from Coder to Reviewer.
+    Logic:
+    - Persist temporary assets to the /renders/ folder.
+    - Trigger a LangGraph event or update shared state for the Reviewer node.
+    """
+    logger.info("handover_started")
+    
+    renders_dir = os.getenv("RENDERS_DIR", "./renders")
+    
+    # Ensure renders_dir exists
+    os.makedirs(renders_dir, exist_ok=True)
+    
+    # 1. Persist renders
+    render_paths = prerender_24_views(component)
+    logger.info("renders_persisted", count=len(render_paths))
+    
+    # 2. Save models
+    cad_path = os.path.join(renders_dir, "model.step")
+    export_step(component, cad_path)
+    
+    # 3. Create review manifest (signal for next node)
+    manifest_path = os.path.join(renders_dir, "review_manifest.json")
+    manifest = {
+        "status": "ready_for_review",
+        "timestamp": os.getenv("TIMESTAMP"),
+        "session_id": os.getenv("SESSION_ID", "default"),
+        "renders": render_paths,
+        "mjcf_path": os.path.join(renders_dir, "scene.xml"), # Created by simulate()
+        "cad_path": cad_path
+    }
+    
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f)
+        
+    logger.info("handover_complete", manifest=manifest_path)
+    return True
