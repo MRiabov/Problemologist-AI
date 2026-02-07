@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
+import { useConnection } from '../context/ConnectionContext';
 import { 
   XCircle, 
   Zap,
   Play,
   Box,
   BrainCircuit,
-  Terminal
+  Signal,
+  SignalLow
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import ReasoningTraces from '../components/workspace/ReasoningTraces';
 import ArtifactView from '../components/workspace/ArtifactView';
+import ConnectionError from '../components/shared/ConnectionError';
 
 import ModelViewer from '../components/visualization/ModelViewer';
 
@@ -22,6 +25,7 @@ export default function EngineerWorkspace() {
     startAgent, 
     setRunning 
   } = useEpisodes();
+  const { isConnected } = useConnection();
   
   const [taskPrompt, setTaskPrompt] = useState('');
 
@@ -45,10 +49,20 @@ export default function EngineerWorkspace() {
                     <BrainCircuit className="h-6 w-6" />
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold tracking-tight">Engineer Workspace</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold tracking-tight">Engineer Workspace</h2>
+                        {isConnected ? (
+                            <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-green-500/30 text-green-500 bg-green-500/5 gap-1">
+                                <Signal className="h-2 w-2" /> ONLINE
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-red-500/30 text-red-500 bg-red-500/5 gap-1">
+                                <SignalLow className="h-2 w-2" /> DISCONNECTED
+                            </Badge>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Agentic CAD Design</span>
-                        <Badge variant="outline" className="text-[9px] h-4 py-0 font-mono border-green-500/30 text-green-500 bg-green-500/5">Live Worker</Badge>
                     </div>
                 </div>
             </div>
@@ -64,9 +78,14 @@ export default function EngineerWorkspace() {
                         INTERRUPT
                     </Button>
                 )}
+                {!isConnected && (
+                    <Badge variant="outline" className="text-[9px] h-6 px-3 font-bold border-red-500/30 text-red-500 bg-red-500/5 uppercase tracking-widest animate-pulse">
+                        System Offline
+                    </Badge>
+                )}
                 <Button
                     onClick={handleRunAgent}
-                    disabled={running}
+                    disabled={running || !isConnected}
                     className="gap-2 h-10 px-6 font-bold"
                 >
                     {running ? (
@@ -86,6 +105,7 @@ export default function EngineerWorkspace() {
                 <ReasoningTraces 
                   traces={selectedEpisode?.traces}
                   isRunning={running}
+                  isConnected={isConnected}
                 />
             </div>
 
@@ -114,7 +134,8 @@ export default function EngineerWorkspace() {
                     {/* Render Area */}
                     <div className="w-full h-full flex items-center justify-center overflow-hidden bg-muted/20 relative group">
                         {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
-                            <div className="w-full h-full flex items-center justify-center p-6">
+                            <div className="w-full h-full flex items-center justify-center p-6 relative">
+                                {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
                                 {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
                                     <video 
                                         src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
@@ -133,6 +154,7 @@ export default function EngineerWorkspace() {
                                 <ModelViewer 
                                     className="w-full h-full" 
                                     assetUrl={selectedEpisode?.assets?.find(a => a.asset_type === 'stl' || a.asset_type === 'step')?.s3_path}
+                                    isConnected={isConnected}
                                 />
                                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
@@ -148,8 +170,8 @@ export default function EngineerWorkspace() {
                 <div className="h-1/2 flex-1 border-t overflow-hidden">
                     <ArtifactView 
                       plan={selectedEpisode?.plan}
-                      code={selectedEpisode?.assets?.find(a => a.asset_type === 'python')?.content || undefined}
-                      mjcf={selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf')?.s3_path}
+                      assets={selectedEpisode?.assets}
+                      isConnected={isConnected}
                     />
                 </div>
             </main>

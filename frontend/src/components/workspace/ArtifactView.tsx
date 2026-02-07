@@ -1,111 +1,101 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
-import { FileCode, FileText, FileJson, BadgeCheck, Code2, FolderTree, ChevronRight, ChevronDown } from "lucide-react";
+import { FileCode, FileText, FileJson, BadgeCheck, Code2, FolderTree, ChevronRight, ChevronDown, File } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
+import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 
 interface ArtifactViewProps {
   plan?: string | null;
-  code?: string; // e.g. impl_build123d.py
-  mjcf?: string; // Benchmark XML
-  validationResults?: any; // Validation results object
-  activeFile?: string; // Allows parent to control active file context
+  assets?: AssetResponse[];
   isConnected?: boolean;
 }
 
 export default function ArtifactView({
   plan,
-  code,
-  mjcf,
-  validationResults,
+  assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const [activeTab, setActiveTab] = useState("code");
+  const [activeAssetId, setActiveAssetId] = useState<string | 'plan'>(plan ? 'plan' : 'none');
   const [isTreeOpen, setIsTreeOpen] = useState(true);
 
-  // Mock file tree structure based on context
-  const fileTree = [
-    { name: 'src', type: 'folder', children: [
-        { name: 'impl_build123d.py', type: 'file', icon: FileCode, id: 'code' },
-        { name: 'benchmark.xml', type: 'file', icon: FileJson, id: 'mjcf' },
-    ]},
-    { name: 'docs', type: 'folder', children: [
-        { name: 'plan.md', type: 'file', icon: FileText, id: 'plan' },
-        { name: 'validation.json', type: 'file', icon: BadgeCheck, id: 'validation' },
-    ]}
-  ];
+  // Group assets into a tree structure
+  const fileTree = useMemo(() => {
+    const tree: any[] = [];
+    
+    // Add Plan as a special file
+    if (plan) {
+        tree.push({ name: 'plan.md', type: 'file', icon: FileText, id: 'plan', content: plan });
+    }
+
+    // Add real assets
+    assets.forEach(asset => {
+        let icon = File;
+        if (asset.asset_type === 'python') icon = FileCode;
+        if (asset.asset_type === 'mjcf') icon = FileJson;
+        if (asset.asset_type === 'video' || asset.asset_type === 'image') icon = File; // Could use better icons
+
+        tree.push({
+            name: asset.s3_path.split('/').pop() || asset.s3_path,
+            type: 'file',
+            icon: icon,
+            id: asset.id.toString(),
+            content: asset.content,
+            asset_type: asset.asset_type
+        });
+    });
+
+    return [
+        { name: 'workspace', type: 'folder', children: tree }
+    ];
+  }, [plan, assets]);
+
+  // Automatically select first asset if none selected
+  useMemo(() => {
+    if (activeAssetId === 'none' || activeAssetId === 'plan') {
+        if (plan) {
+            setActiveAssetId('plan');
+        } else if (assets.length > 0) {
+            setActiveAssetId(assets[0].id.toString());
+        }
+    }
+  }, [plan, assets]);
+
+  const activeAsset = useMemo(() => {
+    if (activeAssetId === 'plan') return { name: 'plan.md', content: plan, type: 'plan' };
+    const asset = assets.find(a => a.id.toString() === activeAssetId);
+    return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
+  }, [activeAssetId, assets, plan]);
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'code':
+    if (!activeAsset) {
         return (
-          <div className="font-mono text-[13px] leading-6 text-gray-300 p-4">
-             {code ? (
-                 <pre className="whitespace-pre-wrap">{code}</pre>
-             ) : (
-                 <div className="text-muted-foreground/50 italic flex flex-col items-center justify-center h-40 gap-2">
-                    <Code2 className="h-8 w-8 opacity-20" />
-                    <span>No Python implementation generated yet.</span>
-                 </div>
-             )}
-          </div>
-        );
-      case 'mjcf':
-        return (
-            <div className="font-mono text-[12px] leading-6 text-blue-100 p-4">
-               {mjcf ? (
-                   <div className="space-y-4">
-                       {mjcf.startsWith('sessions/') || mjcf.startsWith('http') ? (
-                           <div className="bg-blue-900/20 p-3 rounded border border-blue-500/30 text-blue-300">
-                               Asset Path: <span className="font-bold">{mjcf}</span>
-                           </div>
-                       ) : (
-                           <pre className="whitespace-pre-wrap">{mjcf}</pre>
-                       )}
-                   </div>
-               ) : (
-                   <div className="text-muted-foreground/50 italic text-center py-10">
-                      Waiting for MJCF generation...
-                   </div>
-               )}
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground/30 gap-2">
+                <Code2 className="h-8 w-8 opacity-20" />
+                <span className="text-[10px] uppercase font-bold tracking-widest">No artifact selected</span>
             </div>
         );
-      case 'plan':
-            return (
-                <div className="prose prose-invert prose-xs max-w-none p-6">
-                    {plan ? (
-                        <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
-                            {plan}
-                        </div>
-                    ) : (
-                        <div className="text-muted-foreground/50 italic text-center py-10">
-                            No active plan.
-                        </div>
-                    )}
-                </div>
-            );
-      case 'validation':
-            return (
-                <div className="p-4 font-mono text-xs">
-                    {validationResults ? (
-                        <pre className="text-green-400 whitespace-pre-wrap">
-                            {JSON.stringify(validationResults, null, 2)}
-                        </pre>
-                    ) : (
-                        <div className="text-muted-foreground/50 italic text-center py-10">
-                            No validation results available.
-                        </div>
-                    )}
-                </div>
-            );
-      default:
-        return null;
     }
+
+    return (
+        <div className="font-mono text-[13px] leading-6 text-gray-300 p-4">
+            {activeAsset.content ? (
+                <pre className="whitespace-pre-wrap">{activeAsset.content}</pre>
+            ) : (
+                <div className="text-muted-foreground/50 italic flex flex-col items-center justify-center h-40 gap-2">
+                   <File className="h-8 w-8 opacity-20" />
+                   <span>No content available for this asset.</span>
+                   { (activeAsset as any).s3_path && <span className="text-[10px] opacity-70">{(activeAsset as any).s3_path}</span> }
+                </div>
+            )}
+        </div>
+    );
   };
 
   return (
     <div className="flex h-full bg-[#0d1116] border-t border-border overflow-hidden relative">
         {!isConnected && <ConnectionError className="absolute inset-0 z-[100]" />}
+        
         {/* Artifact Sidebar (File Tree) */}
         <div className="w-48 border-r border-white/5 flex flex-col bg-muted/5">
             <div className="h-9 px-3 flex items-center border-b border-white/5 bg-white/5">
@@ -128,10 +118,10 @@ export default function ArtifactView({
                                     {folder.children.map((file: any) => (
                                          <button
                                             key={file.id}
-                                            onClick={() => setActiveTab(file.id)}
+                                            onClick={() => setActiveAssetId(file.id)}
                                             className={cn(
                                                 "flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-[11px] transition-all",
-                                                activeTab === file.id 
+                                                activeAssetId === file.id 
                                                     ? "bg-primary/20 text-primary font-medium" 
                                                     : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
                                             )}
@@ -154,14 +144,10 @@ export default function ArtifactView({
             <div className="h-9 flex items-center bg-muted/5 border-b border-white/5 px-2 gap-1 overflow-x-auto no-scrollbar">
                 <BadgeCheck className={cn(
                     "h-3 w-3 mr-2",
-                    activeTab === 'validation' ? "text-green-500" : 
-                    activeTab === 'code' ? "text-blue-400" : 
-                    activeTab === 'mjcf' ? "text-yellow-500" : "text-purple-400"
+                    activeAssetId === 'plan' ? "text-purple-400" : "text-blue-400"
                 )} />
                 <span className="text-[11px] font-mono text-muted-foreground">
-                   {activeTab === 'code' ? 'impl_build123d.py' : 
-                    activeTab === 'mjcf' ? 'benchmark.xml' : 
-                    activeTab === 'plan' ? 'plan.md' : 'validation.json'}
+                   {activeAsset?.name || 'Untitled'}
                 </span>
                 <div className="flex-1" />
                 <span className="text-[9px] text-muted-foreground/30 font-mono">UTF-8</span>
@@ -177,3 +163,4 @@ export default function ArtifactView({
     </div>
   );
 }
+
