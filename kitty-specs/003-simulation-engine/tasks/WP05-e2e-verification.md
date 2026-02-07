@@ -1,9 +1,13 @@
 ---
 work_package_id: WP05
 title: End-to-End Verification
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 94cbb1fb937318617d3eea31a4ba23d79d6faa4e
+created_at: '2026-02-07T07:09:05.991145+00:00'
 subtasks: [T026, T027, T028, T029, T030]
+shell_pid: "199200"
 ---
 
 # WP05: End-to-End Verification
