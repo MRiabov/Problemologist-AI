@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from uuid import uuid4
 import textwrap
 
-from src.generators.benchmark.nodes import coder_node, extract_python_code
-from src.generators.benchmark.models import GenerationSession
-from src.generators.benchmark.state import BenchmarkGeneratorState
+from worker.generators.benchmark.nodes import coder_node, extract_python_code
+from worker.generators.benchmark.models import GenerationSession
+from worker.generators.benchmark.state import BenchmarkGeneratorState
 
 @pytest.fixture
 def mock_state():
@@ -50,7 +50,7 @@ async def test_coder_node_success(mock_state):
     mock_response = MagicMock()
     mock_response.content = f"```python\n{valid_script}\n```"
     
-    with patch("src.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
+    with patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
         mock_llm = mock_llm_class.return_value
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         
@@ -76,11 +76,11 @@ async def test_coder_node_with_feedback(mock_state):
     mock_response = MagicMock()
     mock_response.content = "```python\n# refined script\n```"
     
-    with patch("src.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
+    with patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
         mock_llm = mock_llm_class.return_value
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         
-        with patch("src.generators.benchmark.nodes.Path.read_text") as mock_read:
+        with patch("worker.generators.benchmark.nodes.Path.read_text") as mock_read:
             mock_read.return_value = "{plan} {review_feedback} {validation_logs}"
             
             await coder_node(mock_state)
@@ -93,7 +93,7 @@ async def test_coder_node_with_feedback(mock_state):
 
 @pytest.mark.asyncio
 async def test_validator_node_success(mock_state):
-    from src.generators.benchmark.nodes import validator_node
+    from worker.generators.benchmark.nodes import validator_node
     mock_state["current_script"] = textwrap.dedent("""
         import build123d as bd
         def build(seed: int, scale: float = 1.0):
@@ -102,8 +102,8 @@ async def test_validator_node_success(mock_state):
             return p.part, "<mujoco/>"
     """)
     
-    with patch("src.worker.utils.validation.simulate") as mock_sim:
-        with patch("src.worker.utils.validation.validate") as mock_val:
+    with patch("worker.utils.validation.simulate") as mock_sim:
+        with patch("worker.utils.validation.validate") as mock_val:
             mock_sim.return_value.success = True
             mock_val.return_value = True
             
@@ -114,7 +114,7 @@ async def test_validator_node_success(mock_state):
 
 @pytest.mark.asyncio
 async def test_validator_node_failure(mock_state):
-    from src.generators.benchmark.nodes import validator_node
+    from worker.generators.benchmark.nodes import validator_node
     mock_state["current_script"] = "invalid code"
     
     updated_state = await validator_node(mock_state)

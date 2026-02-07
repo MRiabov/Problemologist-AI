@@ -2,10 +2,10 @@ import pytest
 from fastapi.testclient import TestClient
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.controller.api.main import app
-from src.controller.api.routes.episodes import get_db
-from src.controller.persistence.models import Episode, Asset
-from src.shared.enums import EpisodeStatus, AssetType
+from controller.api.main import app
+from controller.api.routes.episodes import get_db
+from controller.persistence.models import Episode, Asset
+from shared.enums import EpisodeStatus, AssetType
 from datetime import datetime
 
 @pytest.fixture

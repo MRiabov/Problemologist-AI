@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 import pytest
-from src.cots.indexer import Indexer
-from src.cots.database.models import COTSItemORM
+from shared.cots.indexer import Indexer
+from shared.cots.database.models import COTSItemORM
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 

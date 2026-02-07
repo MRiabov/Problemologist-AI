@@ -2,8 +2,8 @@ import pytest
 import pathlib
 import structlog
 from structlog.testing import capture_logs
-from src.workbenches.config import load_config
-from src.workbenches.models import ManufacturingConfig, ManufacturingMethod
+from worker.workbenches.config import load_config
+from worker.workbenches.models import ManufacturingConfig, ManufacturingMethod
 
 def test_load_config():
     with capture_logs() as captured:

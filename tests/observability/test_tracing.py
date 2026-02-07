@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 
-from src.observability.tracing import get_trace_callback
+from shared.observability.tracing import get_trace_callback
 
 
 def test_get_trace_callback_missing_env():
@@ -20,7 +20,7 @@ def test_get_trace_callback_with_env():
     }
     with patch.dict(os.environ, env):
         # Mock CallbackHandler to avoid actual initialization
-        with patch("src.observability.tracing.CallbackHandler") as mock_handler:
+        with patch("shared.observability.tracing.CallbackHandler") as mock_handler:
             get_trace_callback()
             mock_handler.assert_called_once_with(
                 public_key="pk-123",
@@ -36,7 +36,7 @@ def test_get_trace_callback_default_host():
         "LANGFUSE_SECRET_KEY": "sk-123"
     }
     with patch.dict(os.environ, env, clear=True):
-        with patch("src.observability.tracing.CallbackHandler") as mock_handler:
+        with patch("shared.observability.tracing.CallbackHandler") as mock_handler:
             get_trace_callback()
             mock_handler.assert_called_once_with(
                 public_key="pk-123",

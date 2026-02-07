@@ -1,8 +1,8 @@
 import pytest
 from build123d import Box
-from src.worker.utils.dfm import validate_and_price
-from src.workbenches.models import ManufacturingMethod
-from src.workbenches.config import load_config
+from worker.utils.dfm import validate_and_price
+from worker.workbenches.models import ManufacturingMethod
+from worker.workbenches.config import load_config
 
 def test_facade_cnc():
     part = Box(10, 10, 10)

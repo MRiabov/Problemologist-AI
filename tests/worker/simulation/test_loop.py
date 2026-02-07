@@ -1,7 +1,7 @@
 import pytest
 import mujoco
 import numpy as np
-from src.worker.simulation.loop import SimulationLoop, SimulationMetrics
+from worker.simulation.loop import SimulationLoop, SimulationMetrics
 
 # Mock XML for testing
 TEST_XML = """
@@ -89,7 +89,7 @@ def test_validation_hook_failure(tmp_path):
     xml_path.write_text(TEST_XML)
 
     # Mock validate_and_price to return invalid
-    with patch("src.worker.utils.dfm.validate_and_price") as mock_val:
+    with patch("worker.utils.dfm.validate_and_price") as mock_val:
         from unittest.mock import MagicMock
         mock_val.return_value = MagicMock(is_manufacturable=False, violations=["Part too large"])
 

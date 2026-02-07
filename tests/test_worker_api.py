@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-from src.worker.app import app
-from src.worker.filesystem.router import FilesystemRouter
-from src.worker.filesystem.backend import FileInfo
+from worker.app import app
+from worker.filesystem.router import FilesystemRouter
+from worker.filesystem.backend import FileInfo
 
 client = TestClient(app)
 
@@ -13,7 +13,7 @@ def test_health():
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
-@patch("src.worker.api.routes.create_filesystem_router")
+@patch("worker.api.routes.create_filesystem_router")
 def test_fs_ls(mock_create_router):
     """Test listing files via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
@@ -33,7 +33,7 @@ def test_fs_ls(mock_create_router):
     assert response.json()[0]["name"] == "test.txt"
     mock_router.ls.assert_called_with("/")
 
-@patch("src.worker.api.routes.create_filesystem_router")
+@patch("worker.api.routes.create_filesystem_router")
 def test_fs_read(mock_create_router):
     """Test reading a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
@@ -50,7 +50,7 @@ def test_fs_read(mock_create_router):
     assert response.json()["content"] == "hello world"
     mock_router.read.assert_called_with("/test.txt")
 
-@patch("src.worker.api.routes.create_filesystem_router")
+@patch("worker.api.routes.create_filesystem_router")
 def test_fs_write(mock_create_router):
     """Test writing a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
@@ -66,7 +66,7 @@ def test_fs_write(mock_create_router):
     assert response.json()["status"] == "success"
     mock_router.write.assert_called_with("/test.txt", "new content")
 
-@patch("src.worker.api.routes.create_filesystem_router")
+@patch("worker.api.routes.create_filesystem_router")
 def test_fs_edit(mock_create_router):
     """Test editing a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)

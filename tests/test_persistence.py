@@ -3,9 +3,9 @@ import pytest_asyncio
 import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from src.controller.persistence.db import Base
-from src.controller.persistence.models import Episode, Asset
-from src.shared.enums import EpisodeStatus, AssetType
+from controller.persistence.db import Base
+from controller.persistence.models import Episode, Asset
+from shared.enums import EpisodeStatus, AssetType
 
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

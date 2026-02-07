@@ -1,15 +1,15 @@
 import pytest
 import importlib
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.agent.state import AgentState
-import src.agent.graph
+from controller.agent.state import AgentState
+import controller.agent.graph
 
 @pytest.fixture
 def fresh_graph():
     """Fixture to reload the graph after patching."""
     def _reload():
-        importlib.reload(src.agent.graph)
-        return src.agent.graph.graph
+        importlib.reload(controller.agent.graph)
+        return controller.agent.graph.graph
     return _reload
 
 @pytest.mark.asyncio
@@ -21,10 +21,10 @@ async def test_full_graph_flow(fresh_graph):
     mock_critic = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
     mock_sidecar = AsyncMock(return_value={"journal": "Learned"})
 
-    with patch("src.agent.nodes.architect.architect_node", mock_architect), \
-         patch("src.agent.nodes.engineer.engineer_node", mock_engineer), \
-         patch("src.agent.nodes.critic.critic_node", mock_critic), \
-         patch("src.agent.nodes.sidecar.sidecar_node", mock_sidecar):
+    with patch("controller.agent.nodes.architect.architect_node", mock_architect), \
+         patch("controller.agent.nodes.engineer.engineer_node", mock_engineer), \
+         patch("controller.agent.nodes.critic.critic_node", mock_critic), \
+         patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar):
         
         graph = fresh_graph()
         
@@ -56,10 +56,10 @@ async def test_graph_rejection_loop(fresh_graph):
     
     mock_sidecar = AsyncMock(return_value={})
 
-    with patch("src.agent.nodes.architect.architect_node", mock_architect), \
-         patch("src.agent.nodes.engineer.engineer_node", mock_engineer), \
-         patch("src.agent.nodes.critic.critic_node", mock_critic), \
-         patch("src.agent.nodes.sidecar.sidecar_node", mock_sidecar):
+    with patch("controller.agent.nodes.architect.architect_node", mock_architect), \
+         patch("controller.agent.nodes.engineer.engineer_node", mock_engineer), \
+         patch("controller.agent.nodes.critic.critic_node", mock_critic), \
+         patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar):
         
         graph = fresh_graph()
         

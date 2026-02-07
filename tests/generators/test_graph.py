@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from src.generators.benchmark.graph import run_generation_session, define_graph
-from src.generators.benchmark.models import SessionStatus
+from worker.generators.benchmark.graph import run_generation_session, define_graph
+from worker.generators.benchmark.models import SessionStatus
 
 @pytest.mark.asyncio
 async def test_define_graph_compiles():
@@ -16,7 +16,7 @@ async def test_run_generation_session_mocked():
     mock_plan = {"theme": "gears"}
     mock_script = "print('hello')"
     
-    with patch("src.generators.benchmark.graph.define_graph") as mock_define:
+    with patch("worker.generators.benchmark.graph.define_graph") as mock_define:
         # Mock the compiled graph's ainvoke method
         mock_app = AsyncMock()
         mock_app.ainvoke.return_value = {
@@ -38,7 +38,7 @@ async def test_run_generation_session_mocked():
 async def test_run_generation_session_rejected():
     prompt = "A complex linkage"
     
-    with patch("src.generators.benchmark.graph.define_graph") as mock_define:
+    with patch("worker.generators.benchmark.graph.define_graph") as mock_define:
         mock_app = AsyncMock()
         mock_app.ainvoke.return_value = {
             "session": MagicMock(status=SessionStatus.planning), # Initial status

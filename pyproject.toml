@@ -69,7 +69,7 @@ ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "src"]
+pythonpath = [".", "controller", "worker", "shared"]
 addopts = "-m 'not integration' -n auto"
 filterwarnings = [
     "ignore::DeprecationWarning:ezdxf.queryparser",

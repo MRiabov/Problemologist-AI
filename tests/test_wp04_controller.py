@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
-from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from src.controller.tools.fs import create_fs_tools
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.tools.fs import create_fs_tools
 
 
 @pytest.mark.asyncio

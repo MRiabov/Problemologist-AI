@@ -1,15 +1,15 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.controller.api.main import execute_agent_task
-from src.controller.persistence.models import Episode
-from src.shared.enums import EpisodeStatus, AssetType
+from controller.api.main import execute_agent_task
+from controller.persistence.models import Episode
+from shared.enums import EpisodeStatus, AssetType
 
 @pytest.mark.asyncio
-@patch("src.controller.api.main.get_sessionmaker")
-@patch("src.controller.api.main.get_worker_client")
-@patch("src.controller.api.main.create_agent_graph")
-@patch("src.controller.api.main.RemoteFilesystemMiddleware")
+@patch("controller.api.main.get_sessionmaker")
+@patch("controller.api.main.get_worker_client")
+@patch("controller.api.main.create_agent_graph")
+@patch("controller.api.main.RemoteFilesystemMiddleware")
 async def test_execute_agent_task_success(
     mock_middleware_cls, mock_create_graph, mock_get_worker, mock_get_sessionmaker
 ):
@@ -49,7 +49,7 @@ async def test_execute_agent_task_success(
     assert mock_session.commit.call_count >= 2
 
 @pytest.mark.asyncio
-@patch("src.controller.api.main.get_sessionmaker")
+@patch("controller.api.main.get_sessionmaker")
 async def test_execute_agent_task_not_found(mock_get_sessionmaker):
     episode_id = uuid.uuid4()
     
@@ -69,9 +69,9 @@ async def test_execute_agent_task_not_found(mock_get_sessionmaker):
     mock_session.commit.assert_not_called()
 
 @pytest.mark.asyncio
-@patch("src.controller.api.main.get_sessionmaker")
-@patch("src.controller.api.main.get_worker_client")
-@patch("src.controller.api.main.create_agent_graph")
+@patch("controller.api.main.get_sessionmaker")
+@patch("controller.api.main.get_worker_client")
+@patch("controller.api.main.create_agent_graph")
 async def test_execute_agent_task_failure(
     mock_create_graph, mock_get_worker, mock_get_sessionmaker
 ):

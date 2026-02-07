@@ -785,6 +785,21 @@ As the agents are long-running (and cost money!) it is desirable to be able to:
 3. Interrupt them before they finish.
 4. (dev only) using an environmental variable on all all nodes(dev_mode=True), fetch logs from either controller or worker (and maybe view in UI) (this may be easier as we use `structlog`)
 
+##### Benchmark generation workflow
+
+I need a place to enable "create benchmark" functionality. So go from a high-level prompt to a benchmark
+   plan, through the confirm and implementation.
+
+   here's what I suggest: add a "+ Create new" primary button instead of "history" icon next to "benchmark
+   runs". Upon this, the data from the the current will clear (from the UI, not from the DB), and we'll go
+   into "benchmark creation" mode. Here the "traces" section will have a textbox on top of it, prompting to
+   create a benchmark.
+   Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder
+   directory. the plan file will have a "start implementation" on the top of it; with it the benchmark
+   genration will start.
+
+   The UI will be automatically updated with new models as the build123d genration will progress.
+
 ##### Interrupting the worker and progress bars
 
 If we want to stop the generation in the controller, it will also halt the job(s) in the workers.

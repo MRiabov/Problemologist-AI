@@ -2,7 +2,7 @@ services:
   controller:
     build:
       context: .
-      dockerfile: src/controller/Dockerfile
+      dockerfile: controller/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -30,7 +30,7 @@ services:
   migrations:
     build:
       context: .
-      dockerfile: src/controller/Dockerfile
+      dockerfile: controller/Dockerfile
     command: ["uv", "run", "alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment:
       - POSTGRES_URL=postgresql+psycopg://postgres:postgres@postgres:5432/postgres
@@ -41,8 +41,8 @@ services:
   controller-worker:
     build:
       context: .
-      dockerfile: src/controller/Dockerfile
-    command: ["python", "src/controller/worker.py"]
+      dockerfile: controller/Dockerfile
+    command: ["python", "controller/temporal_worker.py"]
     environment:
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=minioadmin
@@ -58,7 +58,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: src/worker/Dockerfile
+      dockerfile: worker/Dockerfile
     ports:
       - "8001:8001"
     environment:
