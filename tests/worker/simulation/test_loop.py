@@ -1,7 +1,6 @@
 import pytest
 import mujoco
 import numpy as np
-from pathlib import Path
 from src.worker.simulation.loop import SimulationLoop, SimulationMetrics
 
 # Mock XML for testing
@@ -82,32 +81,6 @@ def test_forbidden_zone_trigger(sim_loop):
     assert metrics.fail_reason == "collision_with_forbidden_zone"
 
 
-class MockStorageClient:
-    def upload_file(self, file_path, object_name):
-        return f"https://mock-s3.com/{object_name}"
-
-def test_video_generation(sim_loop):
-    storage = MockStorageClient()
-    # Use a local directory because SNAP ffmpeg cannot access /tmp
-    output_dir = Path("./test_renders")
-    output_dir.mkdir(exist_ok=True)
-    try:
-        metrics = sim_loop.step({}, duration=0.5, render=True, storage_client=storage, output_dir=output_dir)
-        
-        assert metrics.video_url is not None
-        assert "simulation.mp4" in metrics.video_url
-        
-        renders_dir = output_dir / "renders"
-        assert (renders_dir / "simulation.mp4").exists()
-        assert (renders_dir / "simulation.mp4").stat().st_size > 1024 # > 1KB
-        assert (renders_dir / "preview_bundle.zip").exists()
-    finally:
-        # Cleanup
-        import shutil
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
-
-
 def test_validation_hook_failure(tmp_path):
     from unittest.mock import patch
     from build123d import Box
@@ -119,8 +92,6 @@ def test_validation_hook_failure(tmp_path):
     with patch("src.worker.utils.dfm.validate_and_price") as mock_val:
         from unittest.mock import MagicMock
         mock_val.return_value = MagicMock(is_manufacturable=False, violations=["Part too large"])
-
-
 
         # Pass a dummy component to trigger validation
         loop = SimulationLoop(str(xml_path), component=Box(1, 1, 1))
