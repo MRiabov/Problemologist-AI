@@ -1,6 +1,7 @@
 import structlog
 from typing import Literal
 from uuid import uuid4
+from pathlib import Path
 from sqlalchemy import update
 
 from langgraph.graph import StateGraph, END, START
@@ -148,14 +149,12 @@ async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
                 sim_result = final_state.get("simulation_result", {})
                 images = []
                 if sim_result:
-                    for path in sim_result.get("render_paths", []):
+                    for path_str in sim_result.get("render_paths", []):
                         try:
-                            with open(path, "rb") as f:
-                                images.append(f.read())
+                            images.append(Path(path_str).read_bytes())
                         except Exception as e:
-                            logger.warn("image_read_failed", path=path, error=str(e))
+                            logger.warn("image_read_failed", path=path_str, error=str(e))
                 
-                # Placeholder for MJCF content if not explicitly in state
                 mjcf_content = final_state.get("mjcf_content", "<!-- MJCF content missing in state -->")
                 
                 await storage.save_asset(
