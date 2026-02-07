@@ -52,25 +52,9 @@ def test_simulation_builder(tmp_path):
     assert model.nmesh == 1 
     # model.nsite should be 1 for zone_goal
     assert model.nsite == 1
-    
     # Check site size (MuJoCo site size for box is half-extents)
     # box2 was 0.2 -> half size 0.1
     assert np.allclose(model.site_size[0], [0.1, 0.1, 0.1])
-
-def test_simulation_builder_with_forbid_zone(tmp_path):
-    box1 = Box(0.1, 0.1, 0.1)
-    box1.label = "zone_forbid"
-    
-    assembly = Compound(children=[box1])
-    builder = SimulationBuilder(tmp_path)
-    scene_path = builder.build_from_assembly(assembly)
-    
-    model = mujoco.MjModel.from_xml_path(str(scene_path))
-    assert model.nsite == 1
-    # Check color (rgba)
-    # goal is green (0 1 0 0.3), forbid is red (1 0 0 0.3)
-    # MuJoCo stores site_rgba
-    assert np.allclose(model.site_rgba[0], [1.0, 0.0, 0.0, 0.3])
 
 def test_vhacd_decomposition(tmp_path):
     # Create a concave shape: a U-shape

@@ -1,8 +1,6 @@
 import mujoco
 from pydantic import BaseModel
 from typing import Dict, Optional, List, Union
-from datetime import datetime
-from pathlib import Path
 import numpy as np
 import logging
 from build123d import Part, Compound
@@ -16,7 +14,6 @@ class SimulationMetrics(BaseModel):
     max_velocity: float
     success: bool
     fail_reason: Optional[str] = None
-    video_url: Optional[str] = None
 
 
 class SimulationLoop:
@@ -59,9 +56,7 @@ class SimulationLoop:
         self,
         control_inputs: Dict[str, float],
         duration: float = 10.0,
-        render: bool = False,
-        storage_client: Optional[any] = None,
-        output_dir: Optional[Path] = None,
+        render_callback=None,
     ) -> SimulationMetrics:
         """
         Runs the simulation for the specified duration.
@@ -80,17 +75,6 @@ class SimulationLoop:
                 success=False,
                 fail_reason=self.fail_reason,
             )
-
-        # Rendering setup
-        renderer = None
-        last_render_time = -1.0
-        fps_render = 30
-        render_interval = 1.0 / fps_render
-        video_url = None
-
-        if render:
-            from src.worker.simulation.renderer import Renderer
-            renderer = Renderer(self.model, self.data)
 
         # Apply static controls (if any)
         for name, value in control_inputs.items():
@@ -122,19 +106,24 @@ class SimulationLoop:
         for _ in range(steps):
             mujoco.mj_step(self.model, self.data)
 
-            # Frame capture logic
-            if render and (self.data.time - last_render_time >= render_interval):
-                renderer.add_frame()
-                last_render_time = self.data.time
-
             # 1. Update Metrics
+            # Energy proxy: abs(ctrl) * abs(velocity) is power. Energy is integral of power * dt.
+            # But here we just sum power? T011 says "sum of ctrl * velocity".
+            # We add it per step.
             power = 0.0
             if self.model.nu > 0:
+                # Check shapes properly: ctrl (nu,), qvel (nv,)
+                # Generally nu <= nv. For simple joints, they map 1:1.
+                # We can use actuator velocity? mujoco.mj_objectVelocity?
+                # data.actuator_velocity exists? No.
+                # data.qvel is joint vel.
+                # Using simple norm for now as strict physics valid energy computation is complex.
                 power = np.sum(np.abs(self.data.ctrl * self.data.qvel[: self.model.nu]))
 
             self.total_energy += float(power)
 
             if target_body_id != -1:
+                # cvel is rotational(3)+translational(3)
                 vel = np.linalg.norm(self.data.cvel[target_body_id][3:])
                 if vel > self.max_velocity:
                     self.max_velocity = vel
@@ -151,19 +140,8 @@ class SimulationLoop:
                 logger.info("Simulation SUCCESS: Goal reached")
                 break
 
-        # Finalize artifacts
-        if render and output_dir:
-            video_path, bundle_path = renderer.save_artifacts(output_dir, fps=fps_render)
-            
-            if storage_client:
-                # Use a unique prefix for this run
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                video_url = storage_client.upload_file(video_path, f"sims/{timestamp}/simulation.mp4")
-                storage_client.upload_file(bundle_path, f"sims/{timestamp}/preview_bundle.zip")
-                # Also upload scene.xml if it exists
-                xml_path = output_dir / "scene.xml"
-                if xml_path.exists():
-                    storage_client.upload_file(xml_path, f"sims/{timestamp}/scene.xml")
+            if render_callback:
+                render_callback(self.model, self.data)
 
         return SimulationMetrics(
             total_time=self.data.time - start_time,
@@ -171,7 +149,6 @@ class SimulationLoop:
             max_velocity=self.max_velocity,
             success=self.success,
             fail_reason=self.fail_reason,
-            video_url=video_url
         )
 
     def _check_forbidden_collision(self) -> bool:
