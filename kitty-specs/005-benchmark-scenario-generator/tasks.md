@@ -30,10 +30,10 @@
 
 **Goal**: Implement the core agent that writes the `build123d` scripts.
 
-- [ ] T009: Create Coder prompt template with `build(seed, scale)` requirements.
-- [ ] T010: Implement Coder node in `graph.py` with access to validation tools.
-- [ ] T011: Implement feedback loop: Parse `ValidationResult` and re-prompt Coder on failure.
-- [ ] T012: Verify Coder can generate a simple valid script.
+- [x] T009: Create Coder prompt template with `build(seed, scale)` requirements.
+- [x] T010: Implement Coder node in `graph.py` with access to validation tools.
+- [x] T011: Implement feedback loop: Parse `ValidationResult` and re-prompt Coder on failure.
+- [x] T012: Verify Coder can generate a simple valid script.
 
 ~350 lines
 
