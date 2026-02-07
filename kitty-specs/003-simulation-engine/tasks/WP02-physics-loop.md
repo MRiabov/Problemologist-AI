@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Physics Simulation Loop
-lane: "doing"
+lane: "planned"
 dependencies: []
 base_branch: main
 base_commit: a507a4f4fd2aa747191815080ecb718df03878e2
@@ -105,3 +105,4 @@ The loop must verify "Zones" defined in WP01.
 - 2026-02-07T06:28:55Z – Gemini – shell_pid=146772 – lane=doing – Started review via workflow command
 - 2026-02-07T06:34:17Z – Gemini – shell_pid=146772 – lane=planned – Moved to planned
 - 2026-02-07T06:41:13Z – Gemini – shell_pid=164431 – lane=doing – Started review via workflow command
+- 2026-02-07T06:41:51Z – Gemini – shell_pid=164431 – lane=planned – Moved to planned
