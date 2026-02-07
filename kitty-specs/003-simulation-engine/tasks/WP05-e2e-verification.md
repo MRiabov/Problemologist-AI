@@ -1,13 +1,13 @@
 ---
 work_package_id: WP05
 title: End-to-End Verification
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 94cbb1fb937318617d3eea31a4ba23d79d6faa4e
 created_at: '2026-02-07T07:09:05.991145+00:00'
 subtasks: [T026, T027, T028, T029, T030]
-shell_pid: "199200"
+shell_pid: "232666"
 agent: "Gemini"
 ---
 
@@ -96,3 +96,4 @@ We will use a "Pusher Bot" scenario: A simple robot arm (or sliding block) pushi
 
 - 2026-02-07T07:09:06Z – Gemini – shell_pid=199200 – lane=doing – Assigned agent via workflow command
 - 2026-02-07T07:36:38Z – Gemini – shell_pid=199200 – lane=for_review – Implemented E2E tests with 'Pusher Bot' scenario. Verified pipeline execution, rendering, and basic zone detection. Relaxed success criteria for MVP due to missing actuators.
+- 2026-02-07T07:36:45Z – Gemini – shell_pid=232666 – lane=doing – Started review via workflow command
