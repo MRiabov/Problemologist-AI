@@ -31,11 +31,11 @@
 
 ### WP03: Run Detail View - Live Logs
 
-- [ ] T011: Implement WebSocket Client for live updates (`/api/episodes/{id}/ws`)
-- [ ] T012: Build "Log Stream" Component (Console-like view for generic logs) (Visual skeleton exists)
-- [ ] T013: Build "Structured Thought" Component (Collapsible steps for Thoughts/Tools) (Visual skeleton exists)
-- [ ] T014: Integrate Live Updates into Run Detail Page
-- [ ] T015: Add "Status Badge" and real-time state indicators (Visual skeleton exists)
+- [x] T011: Implement WebSocket Client for live updates (`/api/episodes/{id}/ws`)
+- [x] T012: Build "Log Stream" Component (Console-like view for generic logs) (Visual skeleton exists)
+- [x] T013: Build "Structured Thought" Component (Collapsible steps for Thoughts/Tools) (Visual skeleton exists)
+- [x] T014: Integrate Live Updates into Run Detail Page
+- [x] T015: Add "Status Badge" and real-time state indicators (Visual skeleton exists)
 
 **Summary**: Create the real-time debugging interface for agent observation.
 **Dependencies**: WP02
