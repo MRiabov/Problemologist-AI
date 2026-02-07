@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
 from shared.enums import ResponseStatus
 
@@ -181,3 +181,24 @@ async def api_submit(request: BenchmarkToolRequest):
     except Exception as e:
         logger.error("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+
+
+@router.get("/assets/{path:path}")
+async def get_asset(path: str, fs_router=Depends(get_router)):
+    """Serve assets from the filesystem."""
+    try:
+        content = fs_router.read(path)
+        media_type = "application/octet-stream"
+        if path.endswith(".glb"):
+            media_type = "model/gltf-binary"
+        elif path.endswith(".py"):
+            media_type = "text/x-python"
+        elif path.endswith(".stl"):
+            media_type = "model/stl"
+
+        return Response(content=content, media_type=media_type)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    except Exception as e:
+        logger.error("api_asset_failed", path=path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))

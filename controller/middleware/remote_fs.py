@@ -31,7 +31,33 @@ class RemoteFilesystemMiddleware:
         """Write file via the Worker client, enforcing read-only constraints."""
         if self._is_read_only(path):
             raise PermissionError(f"Path '{path}' is read-only.")
-        return await self.client.write_file(path, content)
+
+        success = await self.client.write_file(path, content)
+
+        if success:
+            from datetime import datetime
+            from controller.api.manager import manager
+            import uuid
+
+            # Broadcast update to frontend
+            try:
+                episode_id = uuid.UUID(self.client.session_id)
+                await manager.broadcast(
+                    episode_id,
+                    {
+                        "type": "file_update",
+                        "data": {"path": path, "content": content},
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
+                )
+            except ValueError:
+                # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
+                pass
+            except Exception as e:
+                # Don't fail the write operation if broadcast fails
+                pass
+
+        return success
 
     async def run_command(self, code: str, timeout: int = 30) -> dict[str, Any]:
         """Execute a command (Python code) via the Worker client, wrapped in Temporal for durability."""

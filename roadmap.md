@@ -83,6 +83,7 @@ it's not necessarily a difficult piece of work, but, it'll need to plan it's cha
 2. Adding CAD to be able to design pipes and other vessels.
 3. Tuning the agent
 4. A dataset of improvements. Notably, this is pretty easy to do, as we have a Critic model that would suggest improvements from day 1.
+5. Extra: users can click on a certain face and say "move something on this face". The issue is that it would require, again, propmts, and a CAD viewer in frontend (4-8 hours of work?). But it's a *good* extra.
 
 #### Tech stack
 
