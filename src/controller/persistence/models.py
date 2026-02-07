@@ -60,6 +60,7 @@ class Asset(Base):
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     asset_type: Mapped[AssetType] = mapped_column(SQLEnum(AssetType))
     s3_path: Mapped[str] = mapped_column(String)
+    content: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     episode: Mapped["Episode"] = relationship(back_populates="assets")

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
 import { 
-  Search, 
   XCircle, 
   Zap,
   Play,
-  Box
+  Box,
+  BrainCircuit,
+  Terminal
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import ReasoningTraces from '../components/workspace/ReasoningTraces';
 import ArtifactView from '../components/workspace/ArtifactView';
@@ -26,8 +26,8 @@ export default function EngineerWorkspace() {
   const [taskPrompt, setTaskPrompt] = useState('');
 
   const handleRunAgent = async () => {
-    if (!taskPrompt) return;
-    await startAgent(taskPrompt);
+    // If no prompt is provided (since we removed the input), use a default task or current context
+    await startAgent(taskPrompt || "Generate mechanical implementation for current specifications");
     setTaskPrompt('');
   };
 
@@ -39,25 +39,17 @@ export default function EngineerWorkspace() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
         {/* Workspace Header */}
-        <header className="flex shrink-0 items-center justify-between border-b px-4 h-14 bg-card/50 backdrop-blur-sm">
-            <div className="flex items-center gap-4 flex-1">
-                <div className="relative w-full max-w-xl">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        className="pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-9 text-sm" 
-                        placeholder="Describe a mechanical task for the engineer..." 
-                        type="text"
-                        value={taskPrompt}
-                        onChange={(e) => setTaskPrompt(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRunAgent()}
-                    />
+        <header className="flex shrink-0 items-center justify-between border-b px-6 h-16 bg-card/50 backdrop-blur-sm">
+            <div className="flex items-center gap-4">
+                <div className="size-10 flex items-center justify-center bg-primary/10 rounded-lg text-primary border border-primary/20">
+                    <BrainCircuit className="h-6 w-6" />
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Live Worker</span>
+                <div>
+                    <h2 className="text-lg font-bold tracking-tight">Engineer Workspace</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Agentic CAD Design</span>
+                        <Badge variant="outline" className="text-[9px] h-4 py-0 font-mono border-green-500/30 text-green-500 bg-green-500/5">Live Worker</Badge>
+                    </div>
                 </div>
             </div>
             
@@ -66,8 +58,7 @@ export default function EngineerWorkspace() {
                     <Button
                         onClick={handleInterrupt}
                         variant="destructive"
-                        size="sm"
-                        className="gap-2 h-9"
+                        className="gap-2 h-10 px-4 font-bold"
                     >
                         <XCircle className="h-4 w-4" />
                         INTERRUPT
@@ -75,14 +66,13 @@ export default function EngineerWorkspace() {
                 )}
                 <Button
                     onClick={handleRunAgent}
-                    disabled={running || !taskPrompt}
-                    size="sm"
-                    className="gap-2 h-9"
+                    disabled={running}
+                    className="gap-2 h-10 px-6 font-bold"
                 >
                     {running ? (
                       <Zap className="h-4 w-4 animate-pulse" />
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <Play className="h-4 w-4 fill-current" />
                     )}
                     {running ? 'RUNNING...' : 'SOLVE'}
                 </Button>
@@ -140,7 +130,10 @@ export default function EngineerWorkspace() {
                             </div>
                         ) : (
                             <div className="w-full h-full relative">
-                                <ModelViewer className="w-full h-full" />
+                                <ModelViewer 
+                                    className="w-full h-full" 
+                                    assetUrl={selectedEpisode?.assets?.find(a => a.asset_type === 'stl' || a.asset_type === 'step')?.s3_path}
+                                />
                                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
                                         Live Viewport • Isolated
@@ -155,7 +148,7 @@ export default function EngineerWorkspace() {
                 <div className="h-1/2 flex-1 border-t overflow-hidden">
                     <ArtifactView 
                       plan={selectedEpisode?.plan}
-                      code={selectedEpisode?.assets?.find(a => a.asset_type === 'python')?.s3_path}
+                      code={selectedEpisode?.assets?.find(a => a.asset_type === 'python')?.content || undefined}
                       mjcf={selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf')?.s3_path}
                     />
                 </div>
