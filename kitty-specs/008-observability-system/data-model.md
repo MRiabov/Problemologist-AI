@@ -2,7 +2,35 @@
 
 ## Core Observability Models (Pydantic)
 
-### 1. StepTrace
+### 1. TraceEvent
+
+Captures discrete reasoning or execution events.
+
+```python
+class TraceEvent(BaseModel):
+    trace_id: StrictStr
+    agent_id: StrictStr
+    input_tokens: Optional[StrictInt]
+    output_tokens: Optional[StrictInt]
+    latency_ms: Optional[float]
+    content: Any
+    timestamp: datetime
+```
+
+### 2. AssetRecord
+
+Links heavy artifacts in S3 to specific traces.
+
+```python
+class AssetRecord(BaseModel):
+    asset_id: StrictStr
+    trace_id: StrictStr
+    s3_key: StrictStr
+    asset_type: AssetType # Enum: VIDEO, IMAGE, LOG
+    created_at: datetime
+```
+
+### 3. StepTrace (Legacy/Internal)
 
 A single step in an episode, encompassing reasoning and results.
 
@@ -18,7 +46,7 @@ class StepTrace(BaseModel):
     metadata: Dict[str, Any]
 ```
 
-### 2. EpisodeMetadata
+### 4. EpisodeMetadata (Legacy/Internal)
 
 High-level session tracking.
 
@@ -37,4 +65,4 @@ class EpisodeMetadata(BaseModel):
 
 1. **Relational (Postgres)**: Traces and Metadata are stored in the Observability DB for sub-second retrieval.
 2. **Deep Traces (LangFuse)**: Detailed LLM internals are streamed directly to LangFuse.
-3. **Assets (S3)**: Heavy artifacts (meshes, videos, git diffs) are stored in S3 and linked via `StepTrace.artifacts`.
+3. **Assets (S3)**: Heavy artifacts (meshes, videos, git diffs) are stored in S3 and linked via `AssetRecord`.
