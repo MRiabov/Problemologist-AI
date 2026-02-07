@@ -41,13 +41,14 @@ describe('BenchmarkGeneration', () => {
       </MemoryRouter>
     );
 
-    const runButton = screen.getByText(/RUN PIPELINE/i);
+    const runButton = screen.getByRole('button', { name: /RUN PIPELINE/i });
     fireEvent.click(runButton);
 
     await waitFor(() => {
       expect(apiClient.runSimulation).toHaveBeenCalled();
-      expect(screen.getByText(/RUNNING/i)).toBeInTheDocument();
     });
+    
+    expect(await screen.findByText(/RUNNING/i)).toBeInTheDocument();
   });
 
   it('shows MJCF path when an asset is selected', async () => {
@@ -66,9 +67,7 @@ describe('BenchmarkGeneration', () => {
     await waitFor(() => screen.getByText(/Sim Task 1/i));
     fireEvent.click(screen.getByText(/Sim Task 1/i));
 
-    await waitFor(() => {
-      expect(screen.getByText(/test.xml/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText((content) => content.includes('test.xml'))).toBeInTheDocument();
   });
 
   it('selects an episode and updates the view', async () => {
@@ -89,7 +88,7 @@ describe('BenchmarkGeneration', () => {
 
     await waitFor(() => {
       expect(apiClient.fetchEpisode).toHaveBeenCalledWith('sim-1');
-      expect(screen.getByText(/test.xml/i)).toBeInTheDocument();
     });
+    expect(await screen.findByText((content) => content.includes('test.xml'))).toBeInTheDocument();
   });
 });

@@ -1,0 +1,14 @@
+{
+  "wp_id": "WP03",
+  "feature_slug": "007-agentic-cad-dashboard",
+  "worktree_path": ".worktrees/007-agentic-cad-dashboard-WP03",
+  "branch_name": "007-agentic-cad-dashboard-WP03",
+  "base_branch": "007-agentic-cad-dashboard-WP02",
+  "base_commit": "422ffc62c8a8174f4eebe4a08be3ba5bc346e0e6",
+  "dependencies": [
+    "WP02"
+  ],
+  "created_at": "2026-02-07T10:09:50.639685+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}

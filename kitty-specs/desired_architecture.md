@@ -354,6 +354,7 @@ The reviewer will also have `write` and `edit` tool with permissions of editing 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
 
 The reviews will also come with the following YAML frontmatter:
+
 ```yaml
 decision: approved # [approved, rejected]
 comments: [
@@ -361,6 +362,7 @@ comments: [
    # Up to 100 chars per issue.
 ]
 ```
+
 As usual, the reviews will be strictly typed.
 
 ## Distributed execution
@@ -389,6 +391,10 @@ Railway supports docker-compose import and we will start with the docker-compose
 #### Podman containers
 
 We decided to run in Podman containers because they are leaner than Docker and serve all same purposes. Worker containers have an attached volume.
+
+##### `uv` base containers
+
+We will use astral-sh/uv as base containers and not standard python ones (for quality).
 
 ### Persisting files
 
