@@ -80,7 +80,7 @@
 - [x] T021: Implement `run_simulation_activity` which wraps the full pipeline (Validation -> MJCF -> Sim). <!-- id: 19 -->
 - [x] T022: Implement `src/worker/utils/simulation.py` with `simulate(component, render=False)` entrypoint. <!-- id: 20 -->
 - [x] T023: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
-- [ ] T024: Integrate with Temporal Worker startup and `SandboxFilesystemBackend`. <!-- id: 22 -->
+- [x] T024: Integrate with Temporal Worker startup and `SandboxFilesystemBackend`. <!-- id: 22 -->
 - [ ] T025: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
 
 **Implementation Logic**:
