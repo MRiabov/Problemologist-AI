@@ -2,70 +2,71 @@
 
 *Path: kitty-specs/005-benchmark-scenario-generator/plan.md*
 
-**Branch**: `005-benchmark-scenario-generator` | **Date**: 2026-02-05 | **Spec**: [spec.md](spec.md)
-**Input**: Feature specification from `/kitty-specs/005-benchmark-scenario-generator/spec.md`
+**Branch**: `005-benchmark-scenario-generator` | **Date**: 2026-02-07 | **Spec**: [spec.md](spec.md)
 
 ## Summary
 
-Implement the **Benchmark Scenario Generator** as a `deepagents` based tool. It consists of a "Generator Agent" that writes randomized `build123d` scripts, validates them using the Worker's `simulate` validated-execution pipeline, and packages them into the `dataset/` structure.
+Implement the **Benchmark Scenario Generator** using the `deepagents` framework over LangChain/LangGraph. This system will autonomously generate, verify, and review mechanical engineering benchmarks. It features a distributed architecture with a central Controller and specialized Worker nodes for safe execution and simulation.
 
 ## Technical Context
 
-**Language/Version**: Python 3.10+
-**Frameworks**:
-
-- `deepagents`: Agent orchestration.
-- `build123d`: CAD.
-- `mujoco`: Stability checks.
-- `LangChain` / `LangGraph`: Underlying agentic infrastructure.
-**Infrastructure**:
-- **Temporal**: Orchestrates the distributed worker nodes for long-running generation/validation jobs.
-- **Langfuse**: Provides full observability into LLM traces, prompts, and tool calls.
-- **Worker Node**: Runs the generation and validation scripts in a `SandboxFilesystemBackend`.
-- **S3**: Stores the generated dataset media via the `/renders/` routed path.
-
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-[No conflicts. Aligned with Dataset creation goals.]
+- **Framework**: `deepagents` (with `FilesystemMiddleware` and `TodoListMiddleware`).
+- **Orchestration**: LangGraph for agent flow, Temporal for durable execution of worker tasks.
+- **CAD/Physics**: `build123d` for geometry, MuJoCo for dynamics simulation.
+- **Observability**: Langfuse for trace logging, Postgres for state/metadata.
+- **Storage**: S3-compatible buckets for videos and renders.
 
 ## Project Structure
-
-### Documentation
-
-```
-kitty-specs/005-benchmark-scenario-generator/
-├── plan.md              # This file
-├── research.md          # Research
-├── data-model.md        # Dataset Schema
-├── tasks.md             # Tasks
-└── tasks/               # Individual Task Prompt Files
-```
 
 ### Source Code
 
 ```text
 src/
-├── generators/
-│   ├── benchmark/       # Generator Agent Logic (Controller)
-│   │   ├── graph.py     # Planner -> Coder -> Reviewer Graph
-│   │   ├── state.py     # LangGraph State
-│   │   ├── models.py    # Pydantic Models
-│   │   └── templates/   # Script Templates
+├── agent/
+│   ├── benchmark/           # Generator Agent (Controller)
+│   │   ├── graph.py         # LangGraph definition
+│   │   ├── state.py         # Agent state schema
+│   │   ├── planner.py       # Planner node logic
+│   │   ├── coder.py         # Coder node logic
+│   │   └── reviewer.py      # Reviewer node logic
+│   └── learner/             # Sidecar Skill Learner agent
 ├── worker/
-│   ├── utils/
-│   │   ├── validation.py # simulate() / validate() implementation
-│   │   └── filesystem.py # Standard agent filesystem setup
-│   └── agent_files/      # Template for agent filesystem
-│       ├── journal.md
-│       ├── todo.md
-│       └── script.py
+│   ├── sandbox/             # Sandbox configuration & templates
+│   ├── utils/               # Python utils (simulate, validate)
+│   └── tools/               # Agent-native tools (read, write, execute)
+└── shared/
+    ├── models/              # Pydantic & SQLAlchemy models
+    └── schema/              # API and Task schemas
 ```
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Agentic Generation | Diversity. | Hand-coding 1000s of benchmarks is impossible. Static templates lack variation. |
-| Stability Check | Quality Assurance. | Proceeding with unstable physics simulations wastes Engineer Agent compute time and confuses the learning process. |
+| `deepagents` Framework | Required for advanced filesystem/TODO/Subagent abstractions. | Manual implementation of middlewares is error-prone and non-standard. |
+| Temporal Integration | Ensures durable execution of long-running simulations. | Standard HTTP retries don't handle container preemption or 10-minute tasks well. |
+| Python Tool Imports | Agents perform better calling scripts through code than via JSON tool calls (CodeAct). | Traditional tool calls often confuse agents regarding context and object persistence. |
+| Async Skill Learner | Continuous improvement of build123d proficiency without polluting main agent context. | Main agents are often too "in the moment" to perform high-level architectural reflection. |
+
+## Implementation Phases
+
+### Phase 1: Infrastructure & Data (WP01)
+- Set up Postgres/Temporal/Langfuse.
+- Define SQLAlchemy/Pydantic models for Sessions, Benchmarks, and Assets.
+- Implement `SandboxFilesystemBackend` for workers.
+
+### Phase 2: Worker Utilities (WP02)
+- Implement `simulate()` with MuJoCo stability checks and video rendering.
+- Implement `validate()` for CAD constraints and randomization bounds.
+- Set up S3 routing for the `/renders/` directory.
+
+### Phase 3: Agent Graph (WP03 & WP04)
+- Implement Planner (TODO list creation).
+- Implement Coder (build123d script generation).
+- Implement Reviewer (Visual + text summary analysis).
+- Configure `deepagents` middlewares.
+
+### Phase 4: Skills & Observability (WP05)
+- Implement Journal compression and Learner agent node.
+- Integrate Langfuse tracing.
+- Create CLI for batch benchmark generation.
