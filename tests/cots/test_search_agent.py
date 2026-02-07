@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.cots.agent import search_cots_catalog, create_cots_search_agent
-from src.cots.models import COTSItem
+from shared.cots.agent import search_cots_catalog, create_cots_search_agent
+from shared.cots.models import COTSItem
 
 @pytest.fixture
 def mock_parts():
@@ -19,7 +19,7 @@ bolt = HexBolt(size='M6')""",
     ]
 
 def test_search_cots_catalog_tool(mock_parts):
-    with patch("src.cots.agent.search_parts") as mock_search:
+    with patch("shared.cots.agent.search_parts") as mock_search:
         mock_search.return_value = mock_parts
         
         # Tools in LangChain are invoked via .invoke()
@@ -39,7 +39,7 @@ def test_search_cots_catalog_tool(mock_parts):
         assert sq.constraints["max_weight"] == 20.0
 
 def test_search_cots_catalog_no_results():
-    with patch("src.cots.agent.search_parts") as mock_search:
+    with patch("shared.cots.agent.search_parts") as mock_search:
         mock_search.return_value = []
         
         result = search_cots_catalog.invoke({"query": "nonexistent"})
@@ -47,6 +47,6 @@ def test_search_cots_catalog_no_results():
         assert "No parts found" in result
 
 def test_create_cots_search_agent():
-    with patch("src.cots.agent.ChatOpenAI") as mock_chat:
+    with patch("shared.cots.agent.ChatOpenAI") as mock_chat:
         agent = create_cots_search_agent()
         assert agent is not None

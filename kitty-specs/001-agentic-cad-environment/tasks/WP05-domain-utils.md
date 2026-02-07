@@ -73,7 +73,7 @@ Logic:
 
 ### T026: PYTHONPATH Integration
 
-- Ensure `src.worker.utils` is importable as `utils` inside the `runtime` execution.
+- Ensure `worker.utils` is importable as `utils` inside the `runtime` execution.
 - Update `runtime/executor.py` (from WP02) to add `src/worker` (or wherever utils lives) to `PYTHONPATH` before execution.
 
 ## Verification

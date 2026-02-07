@@ -17,7 +17,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 - [skill_populator.py:L15](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/agent/graph/nodes/skill_populator.py#L15)
 
 ```python
-from src.agent.tools.env_adapter import set_current_role
+from controller.agent.tools.env_adapter import set_current_role
 # ...
 set_current_role("SkillPopulator")  # Called but function doesn't exist
 ```
@@ -256,7 +256,7 @@ def load_docs(directory: str) -> list[dict[str, str]]:
 - [planner.py:L4](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/agent/graph/nodes/planner.py#L4)
 
 ```python
-from src.agent.tools.env_adapter import set_current_role
+from controller.agent.tools.env_adapter import set_current_role
 # ... but never used in the file
 ```
 

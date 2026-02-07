@@ -24,7 +24,7 @@ Trigger a generation episode on the distributed system:
 
 ```bash
 # Generate 5 variations of a sliding drawer benchmark
-python -m src.generators.benchmark.manager \
+python -m controller.generators.benchmark.manager \
     --prompt "A sliding drawer with a handle" \
     --count 5 \
     --mode distributed
@@ -92,7 +92,7 @@ When a design fails to converge, you can intervene manually:
 2. **Manual Validation**: Test any MJCF file against the stability gates:
 
     ```bash
-    uv run python -m src.generators.benchmark.validator --xml path/to/scene.xml
+    uv run python -m controller.generators.benchmark.validator --xml path/to/scene.xml
     ```
 
 3. **Refine Constraints**: If the agent is struggling, try providing more explicit joint limits or clearance requirements in the input prompt.

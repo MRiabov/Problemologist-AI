@@ -81,7 +81,7 @@ File: `src/worker/api/routes.py`
 
 ## Verification
 
-1. Start Worker: `uvicorn src.worker.app:app`.
+1. Start Worker: `uvicorn worker.app:app`.
 2. Access `/docs` -> OpenAPI UI.
 3. Test `ExecuteRequest` via docs: `print("test")`. Expect structured response.
 4. Verify `WorkerClient` can connect to local worker.

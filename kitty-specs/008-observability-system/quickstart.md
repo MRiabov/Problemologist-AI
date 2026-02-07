@@ -36,5 +36,5 @@ uv run schemathesis run http://localhost:8000/openapi.json
 To rebuild the environment as the agent saw it at step 5:
 
 ```bash
-uv run python -m src.observability.reconstruct --episode <ID> --step 5
+uv run python -m shared.observability.reconstruct --episode <ID> --step 5
 ```

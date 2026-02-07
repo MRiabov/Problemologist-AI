@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import structlog
 
-from src.observability.logging import (
+from shared.observability.logging import (
     add_trace_id,
     clear_trace_id,
     configure_logging,

@@ -8,8 +8,8 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 sys.path.append(str(project_root / "src"))
 
-from src.controller.api.main import app as controller_app
-from src.worker.app import app as worker_app
+from controller.api.main import app as controller_app
+from worker.app import app as worker_app
 
 def generate_schema(app, filename):
     schema = app.openapi()

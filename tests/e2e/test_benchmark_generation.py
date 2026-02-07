@@ -3,8 +3,8 @@ import contextlib
 from unittest.mock import MagicMock, patch, AsyncMock
 from uuid import uuid4
 
-from src.generators.benchmark.graph import run_generation_session
-from src.generators.benchmark.models import SessionStatus
+from controller.generators.benchmark.graph import run_generation_session
+from controller.generators.benchmark.models import SessionStatus
 
 @pytest.mark.asyncio
 async def test_benchmark_generation_e2e():
@@ -50,10 +50,10 @@ async def test_benchmark_generation_e2e():
     
     # Patch dependencies
     # Note: We patch where they are IMPORTED in graph.py and storage.py
-    with (patch("src.generators.benchmark.graph.get_db", side_effect=mock_get_db_gen), 
-         patch("src.generators.benchmark.storage.boto3", mock_boto), 
-         patch("src.generators.benchmark.graph.define_graph", return_value=mock_app), 
-         patch("src.generators.benchmark.graph.Path.read_bytes", return_value=b"fake_bytes")):
+    with (patch("controller.generators.benchmark.graph.get_db", side_effect=mock_get_db_gen),
+         patch("controller.generators.benchmark.storage.boto3", mock_boto),
+         patch("controller.generators.benchmark.graph.define_graph", return_value=mock_app),
+         patch("controller.generators.benchmark.graph.Path.read_bytes", return_value=b"fake_bytes")):
         
         prompt = "Create a stack of blocks"
         final_state = await run_generation_session(prompt)

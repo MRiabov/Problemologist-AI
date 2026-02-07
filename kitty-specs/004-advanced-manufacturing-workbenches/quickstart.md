@@ -25,7 +25,7 @@ validate_and_price(part)
 For internal testing on the worker node:
 
 ```python
-from src.workbenches.cnc import CNCWorkbench
+from shared.workbenches.cnc import CNCWorkbench
 from build123d import Box
 
 cnc = CNCWorkbench()

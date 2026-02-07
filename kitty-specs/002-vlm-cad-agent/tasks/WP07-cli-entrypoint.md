@@ -19,7 +19,7 @@ Implement the entrypoint for running the agent from the CLI. This includes confi
 
 ## Context
 
-The agent needs to be runnable via `python -m src.agent.run`. It should load API keys for Spec 001 and DB connection strings from environment variables.
+The agent needs to be runnable via `python -m controller.agent.run`. It should load API keys for Spec 001 and DB connection strings from environment variables.
 
 ## Subtasks
 
@@ -67,7 +67,7 @@ Create the main entrypoint.
 
 ## Definition of Done
 
-- `python -m src.agent.run "Task"` works.
+- `python -m controller.agent.run "Task"` works.
 - Environment is correctly configured.
 
 ## Activity Log

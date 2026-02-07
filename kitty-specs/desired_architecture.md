@@ -645,7 +645,7 @@ So suppose the agent's code is as follows:
 ```py
 from build123d import *
 from utils import ManufacturingMethod, submit # mock
-from src.workbenches import validate_and_price
+from shared.workbenches import validate_and_price
 from 
 
 with BuildPart() as part_builder:

@@ -1,15 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
-from src.controller.api.main import app
-from src.shared.enums import ResponseStatus, EpisodeStatus
+from controller.api.main import app
+from shared.enums import ResponseStatus, EpisodeStatus
 import uuid
 
 client = TestClient(app)
 
 @pytest.mark.asyncio
 async def test_api_list_episodes():
-    with patch("src.controller.api.routes.episodes.get_db") as mock_db:
+    with patch("controller.api.routes.episodes.get_db") as mock_db:
         # We need to mock the SQLAlchemy session and the result
         mock_session = AsyncMock()
         mock_result = MagicMock()
@@ -28,7 +28,7 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json()["status"] == ResponseStatus.HEALTHY
 
-@patch("src.controller.api.main.Client.connect")
+@patch("controller.api.main.Client.connect")
 def test_run_simulation_accepted(mock_temporal_connect):
     mock_temporal_client = AsyncMock()
     mock_temporal_connect.return_value = mock_temporal_client
@@ -45,8 +45,8 @@ def test_run_simulation_accepted(mock_temporal_connect):
     if response.json()["status"] == ResponseStatus.ACCEPTED:
         assert "workflow_id" in response.json()
 
-@patch("src.controller.api.main.get_worker_client")
-@patch("src.controller.api.main.create_agent_graph")
+@patch("controller.api.main.get_worker_client")
+@patch("controller.api.main.create_agent_graph")
 def test_run_agent_endpoint(mock_create_graph, mock_get_worker):
     mock_agent = AsyncMock()
     mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="agent response")]}

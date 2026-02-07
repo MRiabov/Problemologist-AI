@@ -82,7 +82,7 @@ The loop must verify "Zones" defined in WP01.
 
 **File**: `src/worker/simulation/loop.py` or entry point
 
-1. Ensure that before the simulation starts, `src.workbenches.validate_and_price` is called.
+1. Ensure that before the simulation starts, `shared.workbenches.validate_and_price` is called.
 2. If validation fails, the simulation should raise an exception or return a FAILURE result immediately without stepping.
 
 ### T013: Add Tests

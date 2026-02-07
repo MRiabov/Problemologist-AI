@@ -5,7 +5,7 @@ from pathlib import Path
 # Add current directory to path so we can import src
 sys.path.append(str(Path(__file__).parent))
 
-from src.worker.runtime.executor import run_python_code, RuntimeConfig
+from worker.runtime.executor import run_python_code, RuntimeConfig
 
 code = """
 import sys

@@ -59,7 +59,7 @@ Base: `python:3.10-slim`
 - Copy `pyproject.toml` and lock file.
 - Install dependencies (including `fastapi`, `uvicorn`, `langchain`, `deepagents`).
 - Copy `src/controller`.
-- Entrypoint: `uvicorn src.controller.api.main:app --host 0.0.0.0 --port 8000`
+- Entrypoint: `uvicorn controller.api.main:app --host 0.0.0.0 --port 8000`
 
 ### T003: Create Dockerfile for Worker
 
@@ -71,7 +71,7 @@ Base: `python:3.10-slim` OR a base image with `build123d` pre-compiled if needed
 - Install system deps for `build123d` (OCP) and `mujoco` (if needed for rendering, e.g. `libgl1-mesa-glx`).
 - Install `build123d`, `mujoco`, `fastapi`, `uvicorn`, `s3fs`.
 - Setup a non-root user `agent` for security.
-- Entrypoint: `uvicorn src.worker.app:app --host 0.0.0.0 --port 8001`
+- Entrypoint: `uvicorn worker.app:app --host 0.0.0.0 --port 8001`
 
 ### T004: Create docker-compose.yml
 

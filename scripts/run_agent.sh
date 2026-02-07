@@ -19,4 +19,4 @@ docker run --rm
   -e OPENAI_API_KEY=$OPENAI_API_KEY 
   -e SPEC_001_API_URL=${SPEC_001_API_URL:-http://worker:8001} 
   problemologist-agent 
-  python -m src.agent.run "$TASK"
+  python -m controller.agent.run "$TASK"

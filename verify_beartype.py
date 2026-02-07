@@ -2,11 +2,11 @@ import sys
 import asyncio
 from typing import Any
 from build123d import Part, Box
-from src.workbenches.print_3d import Print3DWorkbench
-from src.workbenches.models import ManufacturingConfig
-from src.cots.indexer import Indexer
-from src.agent.nodes.architect import architect_node
-from src.controller.workflows.simulation import compile_mjcf_activity
+from shared.workbenches.print_3d import Print3DWorkbench
+from shared.workbenches.models import ManufacturingConfig
+from shared.cots.indexer import Indexer
+from controller.agent.nodes.architect import architect_node
+from controller.workflows.simulation import compile_mjcf_activity
 from beartype.roar import BeartypeCallHintParamViolation
 
 

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock, mock_open
 import subprocess
 import os
-from src.ops.backup import backup_postgres, backup_s3_files
+from controller.ops.backup import backup_postgres, backup_s3_files
 
 def test_backup_postgres_success():
     # Mock all external dependencies
@@ -10,11 +10,11 @@ def test_backup_postgres_success():
         patch("subprocess.run") as mock_run,
         patch("boto3.client") as mock_boto,
         patch("builtins.open", mock_open(read_data=b"dummy data")),
-        patch("src.ops.backup.Path.open", mock_open(read_data=b"dummy data")),
+        patch("controller.ops.backup.Path.open", mock_open(read_data=b"dummy data")),
         patch("gzip.open", mock_open()) as mock_gzip,
         patch("shutil.copyfileobj") as mock_copy,
-        patch("src.ops.backup.Path.unlink") as mock_unlink,
-        patch("src.ops.backup.Path.exists", return_value=True)
+        patch("controller.ops.backup.Path.unlink") as mock_unlink,
+        patch("controller.ops.backup.Path.exists", return_value=True)
     ):
         mock_run.return_value = MagicMock(returncode=0)
         mock_s3 = MagicMock()

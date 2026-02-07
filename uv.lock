@@ -2,6 +2,14 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "controller",
+    "problemologist-ai-monorepo",
+    "shared",
+    "worker",
+]
+
 [[package]]
 name = "absl-py"
 version = "2.4.0"
@@ -745,6 +753,63 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/93/8a/68a4ec5c55a2971213d29a9374913f7e9f18581945a7a31d1a39b5d2dfe5/contourpy-1.3.3-cp314-cp314t-win32.whl", hash = "sha256:e74a9a0f5e3fff48fb5a7f2fd2b9b70a3fe014a67522f79b7cca4c0c7e43c9ae", size = 202428, upload-time = "2025-07-26T12:02:48.691Z" },
     { url = "https://files.pythonhosted.org/packages/fa/96/fd9f641ffedc4fa3ace923af73b9d07e869496c9cc7a459103e6e978992f/contourpy-1.3.3-cp314-cp314t-win_amd64.whl", hash = "sha256:13b68d6a62db8eafaebb8039218921399baf6e47bf85006fd8529f2a08ef33fc", size = 250331, upload-time = "2025-07-26T12:02:50.137Z" },
     { url = "https://files.pythonhosted.org/packages/ae/8c/469afb6465b853afff216f9528ffda78a915ff880ed58813ba4faf4ba0b6/contourpy-1.3.3-cp314-cp314t-win_arm64.whl", hash = "sha256:b7448cb5a725bb1e35ce88771b86fba35ef418952474492cf7c764059933ff8b", size = 203831, upload-time = "2025-07-26T12:02:51.449Z" },
+]
+
+[[package]]
+name = "controller"
+version = "0.1.0"
+source = { editable = "controller" }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "boto3" },
+    { name = "deepagents" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+    { name = "langfuse" },
+    { name = "langgraph" },
+    { name = "langgraph-checkpoint-postgres" },
+    { name = "langgraph-checkpoint-sqlite" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "shared" },
+    { name = "sqlalchemy" },
+    { name = "stpyvista" },
+    { name = "streamlit" },
+    { name = "streamlit-autorefresh" },
+    { name = "temporalio" },
+    { name = "typer" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.18.3" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "boto3", specifier = ">=1.36.0" },
+    { name = "deepagents", specifier = ">=0.3.10" },
+    { name = "fastapi", specifier = ">=0.128.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "langchain-core", specifier = ">=0.3.35" },
+    { name = "langchain-openai", specifier = ">=0.3.6" },
+    { name = "langfuse", specifier = ">=2.59.3" },
+    { name = "langgraph", specifier = ">=0.2.72" },
+    { name = "langgraph-checkpoint-postgres", specifier = ">=2.0.12" },
+    { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0.3" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.4" },
+    { name = "pydantic-settings", specifier = ">=2.12.0" },
+    { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "shared", editable = "shared" },
+    { name = "sqlalchemy", specifier = ">=2.0.46" },
+    { name = "stpyvista", specifier = ">=0.0.8" },
+    { name = "streamlit", specifier = ">=1.42.0" },
+    { name = "streamlit-autorefresh", specifier = ">=1.0.1" },
+    { name = "temporalio", specifier = ">=1.11.0" },
+    { name = "typer", specifier = ">=0.15.1" },
+    { name = "uvicorn", specifier = ">=0.40.0" },
 ]
 
 [[package]]
@@ -3114,46 +3179,9 @@ wheels = [
 ]
 
 [[package]]
-name = "problemologist-ai"
+name = "problemologist-ai-monorepo"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "bd-warehouse" },
-    { name = "boto3" },
-    { name = "build123d" },
-    { name = "deepagents" },
-    { name = "fastapi" },
-    { name = "ffmpeg-python" },
-    { name = "httpx" },
-    { name = "langchain-core" },
-    { name = "langchain-openai" },
-    { name = "langfuse" },
-    { name = "langgraph" },
-    { name = "langgraph-checkpoint-postgres" },
-    { name = "langgraph-checkpoint-sqlite" },
-    { name = "mujoco" },
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "pyvista" },
-    { name = "pyyaml" },
-    { name = "s3fs" },
-    { name = "scipy" },
-    { name = "sqlalchemy" },
-    { name = "stpyvista" },
-    { name = "streamlit" },
-    { name = "streamlit-autorefresh" },
-    { name = "structlog" },
-    { name = "temporalio" },
-    { name = "trimesh", extra = ["easy"] },
-    { name = "typer" },
-    { name = "uvicorn" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -3161,7 +3189,6 @@ dev = [
     { name = "datamodel-code-generator" },
     { name = "moto", extra = ["s3"] },
     { name = "playwright" },
-    { name = "pyrefly" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -3172,44 +3199,6 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.18.3" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "bd-warehouse" },
-    { name = "boto3", specifier = ">=1.36.0" },
-    { name = "build123d", specifier = ">=0.10.0" },
-    { name = "deepagents", specifier = ">=0.3.10" },
-    { name = "fastapi", specifier = ">=0.128.0" },
-    { name = "ffmpeg-python", specifier = ">=0.2.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "langchain-core", specifier = ">=0.3.35" },
-    { name = "langchain-openai", specifier = ">=0.3.6" },
-    { name = "langfuse", specifier = ">=2.0.0" },
-    { name = "langfuse", specifier = ">=2.59.3" },
-    { name = "langgraph", specifier = ">=0.2.72" },
-    { name = "langgraph-checkpoint-postgres", specifier = ">=2.0.12" },
-    { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0.3" },
-    { name = "mujoco", specifier = ">=3.4.0" },
-    { name = "numpy", specifier = ">=2.4.2" },
-    { name = "pillow", specifier = ">=12.1.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.4" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "pyvista", specifier = ">=0.46.5" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "s3fs", specifier = ">=2026.2.0" },
-    { name = "scipy", specifier = ">=1.13.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.46" },
-    { name = "stpyvista", specifier = ">=0.0.8" },
-    { name = "streamlit", specifier = ">=1.42.0" },
-    { name = "streamlit-autorefresh", specifier = ">=1.0.1" },
-    { name = "structlog", specifier = ">=25.5.0" },
-    { name = "temporalio", specifier = ">=1.11.0" },
-    { name = "trimesh", extras = ["easy"], specifier = ">=4.11.1" },
-    { name = "typer", specifier = ">=0.15.1" },
-    { name = "uvicorn", specifier = ">=0.40.0" },
-]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3217,7 +3206,6 @@ dev = [
     { name = "datamodel-code-generator", specifier = ">=0.53.0" },
     { name = "moto", extras = ["s3"], specifier = ">=5.0.0" },
     { name = "playwright", specifier = ">=1.58.0" },
-    { name = "pyrefly", specifier = ">=0.50.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=0.25.3" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
@@ -3708,22 +3696,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ec/da/f682c5c5f9f0a5414363eb4397e6b07d84a02cde69c4ceadcbf32c85537c/pyrate_limiter-3.9.0.tar.gz", hash = "sha256:6b882e2c77cda07a241d3730975daea4258344b39c878f1dd8849df73f70b0ce", size = 289308, upload-time = "2025-07-30T14:36:58.659Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/af/d8bf0959ece9bc4679bd203908c31019556a421d76d8143b0c6871c7f614/pyrate_limiter-3.9.0-py3-none-any.whl", hash = "sha256:77357840c8cf97a36d67005d4e090787043f54000c12c2b414ff65657653e378", size = 33628, upload-time = "2025-07-30T14:36:57.71Z" },
-]
-
-[[package]]
-name = "pyrefly"
-version = "0.51.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/cd/9fba932665ef1049cbf4cdbdefd997f02802c69373b97ec8aa07ab9fc003/pyrefly-0.51.1.tar.gz", hash = "sha256:5835c93e568a7507926095b67ef269ecf3842eba604c0ac49290943b2b3bb21b", size = 4947820, upload-time = "2026-02-05T19:04:01.423Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/d2/aa49c4ea9190ce52ab610fd17c28f4899ae18844eeaa40576d628f8be17d/pyrefly-0.51.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:7d4b9c13edf6a0c1ef1fb80c8429ed1ce023d6c1faa282032b32900bc4ae7fc1", size = 11977835, upload-time = "2026-02-05T19:03:40.659Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/d4/96822a5f5262453a29ac97a07e7098267367bbac8117f6cee9885f320e7c/pyrefly-0.51.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:252d920b21a1ce0e00f077f560e48913370fbff3b6aab4426902eab9a57f5bee", size = 11556062, upload-time = "2026-02-05T19:03:42.95Z" },
-    { url = "https://files.pythonhosted.org/packages/dc/86/c386fd3f04c519c44751c85291d2109b9cdbbfec5a5b4fc79f6648e45cba/pyrefly-0.51.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c48ec5c9f24361e903e1c60a0a32099ddd1d12b47c314414a980db2129ff040d", size = 32847386, upload-time = "2026-02-05T19:03:45.713Z" },
-    { url = "https://files.pythonhosted.org/packages/2b/f4/7bac5a7baba3cb445affd0922fbacb4abdfc3d2abb8784d8b3a65f7c55f3/pyrefly-0.51.1-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:10e4ee82a90e493a07d4d8bc9683185005169f17454ad56d37c19f4794387581", size = 35150779, upload-time = "2026-02-05T19:03:48.449Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/d3/4947ea6745045a884885d1f30693e6d3f567dee02b1cd80f96d5d83e7246/pyrefly-0.51.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cffebed312e85c4af91b9e398cf26c988ad4b442e815300e8478c1e0176f826a", size = 36274600, upload-time = "2026-02-05T19:03:51.72Z" },
-    { url = "https://files.pythonhosted.org/packages/40/5a/0debe6ee5fe84c4bb1e87a40830d0db757729b2595830391165f0c134ff6/pyrefly-0.51.1-py3-none-win32.whl", hash = "sha256:8ce1693457a4d856faf35ec519f7866ee13dd79d7db085e95caec8eaa21f1450", size = 10967000, upload-time = "2026-02-05T19:03:54.168Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/f6/50b7fe84a79f02681c2aed97dec3710da0bbdf514d1d5703a229c81e20c6/pyrefly-0.51.1-py3-none-win_amd64.whl", hash = "sha256:42c05e88da2f18aeab45e9b0384ef8e776630ed270c8bfcb33e0668757ea2d4f", size = 11747107, upload-time = "2026-02-05T19:03:56.384Z" },
-    { url = "https://files.pythonhosted.org/packages/0e/aa/1fd05568b1c14140e659133efd9a0d8243274bf950d6c10ed64cbc2d51d4/pyrefly-0.51.1-py3-none-win_arm64.whl", hash = "sha256:c0f30432cfaf13c7c2d4188c94146cdaab2ce52bbd292d48c7d18ad4a168ecfb", size = 11270642, upload-time = "2026-02-05T19:03:58.909Z" },
 ]
 
 [[package]]
@@ -4443,6 +4415,35 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7c/75/c24ed871c576d7e2b64b04b1fe3d075157f6eb54e59670d3f5ffb36e25c7/shapely-2.1.2-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:361b6d45030b4ac64ddd0a26046906c8202eb60d0f9f53085f5179f1d23021a0", size = 4169511, upload-time = "2025-09-24T13:51:36.297Z" },
     { url = "https://files.pythonhosted.org/packages/b1/f7/b3d1d6d18ebf55236eec1c681ce5e665742aab3c0b7b232720a7d43df7b6/shapely-2.1.2-cp314-cp314t-win32.whl", hash = "sha256:b54df60f1fbdecc8ebc2c5b11870461a6417b3d617f555e5033f1505d36e5735", size = 1602607, upload-time = "2025-09-24T13:51:37.757Z" },
     { url = "https://files.pythonhosted.org/packages/9a/f6/f09272a71976dfc138129b8faf435d064a811ae2f708cb147dccdf7aacdb/shapely-2.1.2-cp314-cp314t-win_amd64.whl", hash = "sha256:0036ac886e0923417932c2e6369b6c52e38e0ff5d9120b90eef5cd9a5fc5cae9", size = 1796682, upload-time = "2025-09-24T13:51:39.233Z" },
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+source = { editable = "shared" }
+dependencies = [
+    { name = "bd-warehouse" },
+    { name = "build123d" },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "scipy" },
+    { name = "structlog" },
+    { name = "trimesh", extra = ["easy"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bd-warehouse" },
+    { name = "build123d", specifier = ">=0.10.0" },
+    { name = "numpy", specifier = ">=2.4.2" },
+    { name = "pillow", specifier = ">=12.1.0" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "scipy", specifier = ">=1.13.0" },
+    { name = "structlog", specifier = ">=25.5.0" },
+    { name = "trimesh", extras = ["easy"], specifier = ">=4.11.1" },
 ]
 
 [[package]]
@@ -5188,6 +5189,35 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/70/1469ef1d3542ae7c2c7b72bd5e3a4e6ee69d7978fa8a3af05a38eca5becf/werkzeug-3.1.5.tar.gz", hash = "sha256:6a548b0e88955dd07ccb25539d7d0cc97417ee9e179677d22c7041c8f078ce67", size = 864754, upload-time = "2026-01-08T17:49:23.247Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ad/e4/8d97cca767bcc1be76d16fb76951608305561c6e056811587f36cb1316a8/werkzeug-3.1.5-py3-none-any.whl", hash = "sha256:5111e36e91086ece91f93268bb39b4a35c1e6f1feac762c9c822ded0a4e322dc", size = 225025, upload-time = "2026-01-08T17:49:21.859Z" },
+]
+
+[[package]]
+name = "worker"
+version = "0.1.0"
+source = { editable = "worker" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "ffmpeg-python" },
+    { name = "mujoco" },
+    { name = "numpy" },
+    { name = "pyvista" },
+    { name = "s3fs" },
+    { name = "shared" },
+    { name = "trimesh", extra = ["easy"] },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.128.0" },
+    { name = "ffmpeg-python", specifier = ">=0.2.0" },
+    { name = "mujoco", specifier = ">=3.4.0" },
+    { name = "numpy", specifier = ">=2.4.2" },
+    { name = "pyvista", specifier = ">=0.46.5" },
+    { name = "s3fs", specifier = ">=2026.2.0" },
+    { name = "shared", editable = "shared" },
+    { name = "trimesh", extras = ["easy"], specifier = ">=4.11.1" },
+    { name = "uvicorn", specifier = ">=0.40.0" },
 ]
 
 [[package]]

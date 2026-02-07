@@ -97,7 +97,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [mujoco_bridge.py:L36](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/compiler/mujoco_bridge.py#L36): `from src.agent.utils.config import Config`
+- [mujoco_bridge.py:L36](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/compiler/mujoco_bridge.py#L36): `from controller.agent.utils.config import Config`
 - [mujoco_bridge.py:L47](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/src/compiler/mujoco_bridge.py#L47): `from src.environment.sandbox import PodmanSandbox`
 
 **The Smell:**

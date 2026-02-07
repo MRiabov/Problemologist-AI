@@ -1,0 +1,21 @@
+[project]
+name = "shared"
+version = "0.1.0"
+description = "Shared components for Problemologist AI"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "build123d>=0.10.0",
+    "numpy>=2.4.2",
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.2",
+    "trimesh[easy]>=4.11.1",
+    "structlog>=25.5.0",
+    "scipy>=1.13.0",
+    "pillow>=12.1.0",
+    "bd_warehouse",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"

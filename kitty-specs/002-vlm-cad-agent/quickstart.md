@@ -37,7 +37,7 @@ During execution, the agent's internal state is reflected in the worker's filesy
 To run the agent graph locally without a full distributed setup:
 
 ```python
-from src.agent.engineer_graph import create_engineer_graph
+from controller.agent.engineer_graph import create_engineer_graph
 from deepagents.backends import LocalFilesystemBackend
 
 # Initialize with local sandbox for rapid testing

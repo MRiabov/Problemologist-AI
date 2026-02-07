@@ -51,8 +51,8 @@ reviewed_by: "MRiabov"
 
 1. Create `src/cli/benchmark.py` (or integrated into main entry point).
 2. Commands:
-   - `python -m src.cli.benchmark generate "A stack of 3 blocks"`
-   - `python -m src.cli.benchmark batch --file prompts.txt`
+   - `python -m controller.cli.benchmark generate "A stack of 3 blocks"`
+   - `python -m controller.cli.benchmark batch --file prompts.txt`
 3. Output: Print Session ID and final Asset URL.
 
 ### T020: End-to-End Integration Test
