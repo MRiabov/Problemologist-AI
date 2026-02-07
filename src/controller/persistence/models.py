@@ -27,6 +27,11 @@ class Episode(Base):
     skill_git_hash: Mapped[Optional[str]] = mapped_column(String)
     template_versions: Mapped[Optional[dict]] = mapped_column(JSON)
     metadata_vars: Mapped[Optional[dict]] = mapped_column(JSON)
+    
+    # Agent state
+    todo_list: Mapped[Optional[dict]] = mapped_column(JSON)
+    journal: Mapped[Optional[str]] = mapped_column(String)
+    plan: Mapped[Optional[str]] = mapped_column(String)
 
     traces: Mapped[List["Trace"]] = relationship(
         back_populates="episode", cascade="all, delete-orphan"

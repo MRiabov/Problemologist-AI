@@ -14,6 +14,9 @@ export type EpisodeResponse = {
     skill_git_hash?: (string | null);
     template_versions?: (Record<string, any> | null);
     metadata_vars?: (Record<string, any> | null);
+    todo_list?: (Record<string, any> | null);
+    journal?: (string | null);
+    plan?: (string | null);
     traces?: Array<TraceResponse>;
     assets?: Array<AssetResponse>;
 };

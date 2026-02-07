@@ -1,14 +1,17 @@
 import os
+import uuid
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
+from src.controller.persistence.db import get_sessionmaker
+from src.controller.persistence.models import Episode
 from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
 from src.controller.api.routes import episodes, skills
-from src.shared.enums import ResponseStatus
+from src.shared.enums import ResponseStatus, EpisodeStatus
 from src.shared.logging import configure_logging, get_logger
 
 # Configure logging
@@ -79,17 +82,42 @@ async def run_simulation(request: SimulationRequest):
 
 @app.post("/agent/run")
 async def run_agent(request: AgentRunRequest):
-    client = get_worker_client(request.session_id)
-    # Pass temporal_client to middleware for durable execution
-    fs_middleware = RemoteFilesystemMiddleware(
-        client, temporal_client=temporal_client_instance
-    )
-    agent = create_agent_graph(fs_middleware)
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = Episode(
+            id=uuid.uuid4(),
+            task=request.task,
+            status=EpisodeStatus.RUNNING,
+        )
+        db.add(episode)
+        await db.commit()
+        await db.refresh(episode)
 
-    # Run the agent
-    result = await agent.ainvoke({"messages": [("user", request.task)]})
+        try:
+            client = get_worker_client(request.session_id)
+            # Pass temporal_client to middleware for durable execution
+            fs_middleware = RemoteFilesystemMiddleware(
+                client, temporal_client=temporal_client_instance
+            )
+            agent = create_agent_graph(fs_middleware)
 
-    return {
-        "status": ResponseStatus.COMPLETED,
-        "output": result["messages"][-1].content,
-    }
+            # Run the agent
+            result = await agent.ainvoke({"messages": [("user", request.task)]})
+            
+            episode.status = EpisodeStatus.COMPLETED
+            await db.commit()
+
+            return {
+                "status": ResponseStatus.COMPLETED,
+                "output": result["messages"][-1].content,
+                "episode_id": episode.id
+            }
+        except Exception as e:
+            episode.status = EpisodeStatus.FAILED
+            await db.commit()
+            logger.error("agent_run_failed", error=str(e), episode_id=episode.id)
+            return {
+                "status": ResponseStatus.ERROR,
+                "message": str(e),
+                "episode_id": episode.id
+            }
