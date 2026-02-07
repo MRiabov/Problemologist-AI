@@ -10,10 +10,11 @@ def test_backup_postgres_success():
         patch("subprocess.run") as mock_run,
         patch("boto3.client") as mock_boto,
         patch("builtins.open", mock_open(read_data=b"dummy data")),
+        patch("src.ops.backup.Path.open", mock_open(read_data=b"dummy data")),
         patch("gzip.open", mock_open()) as mock_gzip,
         patch("shutil.copyfileobj") as mock_copy,
-        patch("os.remove") as mock_remove,
-        patch("os.path.exists", return_value=True)
+        patch("src.ops.backup.Path.unlink") as mock_unlink,
+        patch("src.ops.backup.Path.exists", return_value=True)
     ):
         mock_run.return_value = MagicMock(returncode=0)
         mock_s3 = MagicMock()
@@ -41,7 +42,7 @@ def test_backup_postgres_success():
         assert result.startswith("backups/postgres/")
         
         # Verify cleanup
-        assert mock_remove.call_count >= 2
+        assert mock_unlink.call_count >= 2
 
 def test_backup_s3_files_success():
     with patch("boto3.resource") as mock_boto:

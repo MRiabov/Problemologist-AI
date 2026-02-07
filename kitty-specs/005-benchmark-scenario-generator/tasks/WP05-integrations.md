@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP05"
-title: "Persistence & Integration"
-lane: "planned"
-dependencies: ["WP04"]
-subtasks: ["T017", "T018", "T019", "T020"]
+work_package_id: WP05
+title: Persistence & Integration
+lane: "doing"
+dependencies: [WP04]
+base_branch: 005-benchmark-scenario-generator-WP04
+base_commit: 945ec66510a2e3541b30e87040f26f0e831e12c0
+created_at: '2026-02-07T08:55:48.149728+00:00'
+subtasks: [T017, T018, T019, T020]
+shell_pid: "285937"
 ---
 
 # WP05: Persistence & Integration
