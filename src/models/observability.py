@@ -1,7 +1,7 @@
 from datetime import datetime, UTC
 from enum import Enum
 from typing import Any, Optional
-from pydantic import BaseModel, Field, StrictStr, StrictInt
+from pydantic import BaseModel, Field, StrictStr, StrictInt, StrictFloat
 
 class AssetType(str, Enum):
     VIDEO = "VIDEO"
@@ -13,7 +13,7 @@ class TraceEvent(BaseModel):
     agent_id: StrictStr = Field(..., description="ID of the agent producing the event")
     input_tokens: Optional[StrictInt] = Field(None, description="Number of input tokens used")
     output_tokens: Optional[StrictInt] = Field(None, description="Number of output tokens used")
-    latency_ms: Optional[float] = Field(None, description="Latency in milliseconds")
+    latency_ms: Optional[StrictFloat] = Field(None, description="Latency in milliseconds")
     content: Any = Field(..., description="Content of the event")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Timestamp of the event")
 

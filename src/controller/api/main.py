@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
 from src.controller.clients.worker import WorkerClient
@@ -37,13 +37,13 @@ async def startup_event():
 
 
 class AgentRunRequest(BaseModel):
-    task: str = Field(..., description="The task for the agent to perform.")
-    session_id: str = Field(..., description="Session ID for the worker.")
+    task: StrictStr = Field(..., description="The task for the agent to perform.")
+    session_id: StrictStr = Field(..., description="Session ID for the worker.")
 
 
 class SimulationRequest(BaseModel):
-    session_id: str = Field(..., description="Session ID for the worker.")
-    compound_json: str = Field(default="{}", description="Component data.")
+    session_id: StrictStr = Field(..., description="Session ID for the worker.")
+    compound_json: StrictStr = Field(default="{}", description="Component data.")
 
 
 def get_worker_client(session_id: str) -> WorkerClient:

@@ -6,29 +6,32 @@ from typing import List, Optional
 import boto3
 import structlog
 from botocore.exceptions import ClientError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr, StrictInt
+
+from src.shared.type_checking import type_check
 
 logger = structlog.get_logger()
 
 
 class S3File(BaseModel):
-    key: str
-    size: int
+    key: StrictStr
+    size: StrictInt
     last_modified: datetime
-    content_type: Optional[str] = None
-    etag: Optional[str] = None
+    content_type: Optional[StrictStr] = None
+    etag: Optional[StrictStr] = None
 
 
 class S3Config(BaseModel):
-    endpoint_url: Optional[str] = Field(
+    endpoint_url: Optional[StrictStr] = Field(
         default=None, description="Custom S3 endpoint URL (e.g. MinIO)"
     )
-    access_key_id: str = Field(..., description="AWS Access Key ID")
-    secret_access_key: str = Field(..., description="AWS Secret Access Key")
-    bucket_name: str = Field(..., description="Target S3 bucket name")
-    region_name: str = Field(default="us-east-1", description="AWS Region")
+    access_key_id: StrictStr = Field(..., description="AWS Access Key ID")
+    secret_access_key: StrictStr = Field(..., description="AWS Secret Access Key")
+    bucket_name: StrictStr = Field(..., description="Target S3 bucket name")
+    region_name: StrictStr = Field(default="us-east-1", description="AWS Region")
 
 
+@type_check
 class S3Client:
     """Wrapper around boto3 S3 client for observability artifacts."""
 

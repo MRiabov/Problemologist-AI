@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum
 import json
 from typing import Any, Dict, Optional
 
@@ -12,7 +12,7 @@ from src.controller.clients.worker import WorkerClient
 from src.shared.type_checking import type_check
 
 
-class CriticDecision(str, Enum):
+class CriticDecision(StrEnum):
     APPROVE = "APPROVE"
     REJECT_PLAN = "REJECT_PLAN"
     REJECT_CODE = "REJECT_CODE"

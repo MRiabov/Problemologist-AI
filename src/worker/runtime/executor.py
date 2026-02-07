@@ -12,6 +12,8 @@ from pathlib import Path
 import structlog
 from pydantic import BaseModel, StrictStr, StrictInt, StrictBool
 
+from src.shared.type_checking import type_check
+
 logger = structlog.get_logger(__name__)
 
 # Default execution timeout in seconds
@@ -35,6 +37,7 @@ class RuntimeConfig(BaseModel):
     working_directory: StrictStr | None = None
 
 
+@type_check
 def run_python_code(
     code: str,
     env: dict[str, str] | None = None,
@@ -132,6 +135,7 @@ def run_python_code(
         Path(script_path).unlink(missing_ok=True)
 
 
+@type_check
 async def run_python_code_async(
     code: str,
     env: dict[str, str] | None = None,

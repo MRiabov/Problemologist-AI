@@ -1,24 +1,24 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr, StrictInt
 from langchain_core.tools import StructuredTool
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 
 
 class LsInput(BaseModel):
-    path: str = Field(default="/", description="Path to list contents of.")
+    path: StrictStr = Field(default="/", description="Path to list contents of.")
 
 
 class ReadInput(BaseModel):
-    path: str = Field(..., description="Path to the file to read.")
+    path: StrictStr = Field(..., description="Path to the file to read.")
 
 
 class WriteInput(BaseModel):
-    path: str = Field(..., description="Path to the file to write.")
-    content: str = Field(..., description="Content to write to the file.")
+    path: StrictStr = Field(..., description="Path to the file to write.")
+    content: StrictStr = Field(..., description="Content to write to the file.")
 
 
 class ExecInput(BaseModel):
-    code: str = Field(..., description="Python code to execute.")
-    timeout: int = Field(default=30, description="Execution timeout in seconds.")
+    code: StrictStr = Field(..., description="Python code to execute.")
+    timeout: StrictInt = Field(default=30, description="Execution timeout in seconds.")
 
 
 def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[StructuredTool]:

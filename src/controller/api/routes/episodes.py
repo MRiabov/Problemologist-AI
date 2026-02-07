@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr
 import uuid
 from datetime import datetime
 
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 
 class EpisodeResponse(BaseModel):
     id: uuid.UUID
-    task: str
+    task: StrictStr
     status: EpisodeStatus
     created_at: datetime
 

@@ -65,5 +65,5 @@ async def test_critic_node_no_artifacts(mock_llm, mock_worker):
     result = await node(state)
     
     # Even without artifacts, LLM decides based on journal
-    assert "status" in result
+    assert result.status
     mock_llm.ainvoke.assert_called_once()

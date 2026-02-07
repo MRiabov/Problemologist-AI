@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import Enum, StrEnum
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, StrictStr, StrictInt
 
 
-class AgentStatus(str, Enum):
+class AgentStatus(StrEnum):
     IDLE = "idle"
     THINKING = "thinking"
     EXECUTING = "executing"
