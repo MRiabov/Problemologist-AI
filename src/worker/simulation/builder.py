@@ -23,43 +23,35 @@ class MeshProcessor:
         # Ensure the directory exists
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        # Export build123d object to a temporary STL file
-        temp_stl = filepath.with_suffix(".tmp.stl")
-        export_stl(part, str(temp_stl))
+        # Tessellate directly from build123d
+        verts, faces = part.tessellate(tolerance=0.001)
+        # Convert build123d Vectors to list of tuples
+        vertices = [tuple(v) for v in verts]
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
 
         output_paths = []
-        try:
-            mesh = trimesh.load(str(temp_stl))
+        if decompose:
+            if use_vhacd:
+                try:
+                    decomposed_meshes = trimesh.decomposition.convex_decomposition(
+                        mesh
+                    )
+                    if isinstance(decomposed_meshes, list) and len(decomposed_meshes) > 1:
+                        for i, dm in enumerate(decomposed_meshes):
+                            sub_path = filepath.with_name(
+                                f"{filepath.stem}_{i}{filepath.suffix}"
+                            )
+                            dm.export(str(sub_path))
+                            output_paths.append(sub_path)
+                        return output_paths
+                except Exception:
+                    # Fallback to single convex hull if VHACD fails
+                    pass
+            
+            mesh = self.compute_convex_hull(mesh)
 
-            # If trimesh loaded a Scene, merge it into a single mesh for initial processing
-            if isinstance(mesh, trimesh.Scene):
-                mesh = mesh.dump(concatenate=True)
-
-            if decompose:
-                if use_vhacd:
-                    try:
-                        decomposed_meshes = trimesh.decomposition.convex_decomposition(
-                            mesh
-                        )
-                        if isinstance(decomposed_meshes, list) and len(decomposed_meshes) > 1:
-                            for i, dm in enumerate(decomposed_meshes):
-                                sub_path = filepath.with_name(
-                                    f"{filepath.stem}_{i}{filepath.suffix}"
-                                )
-                                dm.export(str(sub_path))
-                                output_paths.append(sub_path)
-                            return output_paths
-                    except Exception:
-                        # Fallback to single convex hull if VHACD fails
-                        pass
-                
-                mesh = self.compute_convex_hull(mesh)
-
-            mesh.export(str(filepath))
-            output_paths.append(filepath)
-        finally:
-            if temp_stl.exists():
-                temp_stl.unlink()
+        mesh.export(str(filepath))
+        output_paths.append(filepath)
 
         return output_paths
 
@@ -78,6 +70,7 @@ class SceneCompiler:
         self.compiler = ET.SubElement(
             self.root, "compiler", angle="degree", coordinate="local", assetdir="assets"
         )
+        ET.SubElement(self.root, "statistic", extent="2", center="0 0 1")
         ET.SubElement(self.root, "option", integrator="RK4", timestep="0.002")
 
         # Visual assets and lighting

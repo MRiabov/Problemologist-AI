@@ -41,10 +41,10 @@
 
 **Goal**: Implement the guiding Planner and the quality-assuring Reviewer.
 
-- [ ] T013: Implement Planner node (Theme -> Randomization Strategy).
-- [ ] T014: Implement Reviewer node (Image analysis -> Approve/Reject).
-- [ ] T015: Connect nodes in `graph.py` (Planner -> Coder -> Reviewer).
-- [ ] T016: Define graph entry point.
+- [x] T013: Implement Planner node (Theme -> Randomization Strategy).
+- [x] T014: Implement Reviewer node (Image analysis -> Approve/Reject).
+- [x] T015: Connect nodes in `graph.py` (Planner -> Coder -> Reviewer).
+- [x] T016: Define graph entry point.
 
 ~350 lines
 
