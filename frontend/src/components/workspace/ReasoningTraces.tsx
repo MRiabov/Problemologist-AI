@@ -46,9 +46,43 @@ export default function ReasoningTraces({
                                 <span className="opacity-50 uppercase group-hover:opacity-100 transition-opacity">Trace: {trace.id}</span>
                             </div>
                             <div className="text-muted-foreground break-all opacity-90 whitespace-pre-wrap">
-                                {typeof trace.raw_trace === 'string' 
-                                    ? trace.raw_trace 
-                                    : JSON.stringify(trace.raw_trace, null, 2)}
+                                {(() => {
+                                    const rt = trace.raw_trace as any;
+                                    if (typeof rt === 'string') return rt;
+                                    if (!rt) return null;
+
+                                    if (rt.type === 'tool_start') {
+                                        return (
+                                            <div className="text-blue-400">
+                                                <span className="font-bold">Tool Call: </span>
+                                                <span className="text-blue-300">{rt.name}</span>
+                                                <div className="mt-1 bg-blue-900/20 p-2 rounded text-[10px] text-blue-200/70 border border-blue-500/10">
+                                                    {rt.input}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    if (rt.type === 'tool_end') {
+                                        return (
+                                            <div className="text-green-400/80">
+                                                <span className="font-bold">Output: </span>
+                                                <div className="mt-1 bg-green-900/10 p-2 rounded text-[10px] text-green-200/60 border border-green-500/5">
+                                                    {rt.output}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    if (rt.type === 'llm_end') {
+                                        return (
+                                            <div className="text-purple-300/90 italic">
+                                                {rt.content}
+                                            </div>
+                                        );
+                                    }
+                                    if (rt.message) return rt.message;
+
+                                    return JSON.stringify(rt, null, 2);
+                                })()}
                             </div>
                         </div>
                     ))

@@ -17,21 +17,12 @@ class Skill(BaseModel):
 @router.get("/", response_model=List[Skill])
 async def list_skills():
     """List available skills."""
-    skills_dir = Path("docs/skills")
+    skills_dir = Path(".agent/skills")
     found_skills = []
 
     if skills_dir.exists():
-        for file_path in skills_dir.iterdir():
-            if file_path.suffix in [".md", ".py"]:
-                name = file_path.stem
-                found_skills.append(Skill(name=name, description="Custom skill"))
-
-    # Fallback/Default skills if none found (or strictly from DB in future)
-    if not found_skills:
-        return [
-            Skill(name="lattice_generator_v2", description="Generates lattice structures"),
-            Skill(name="compliant_hinge_pt", description="Parametric compliant hinge"),
-            Skill(name="multi_shell_union", description="Robust boolean union for shells"),
-        ]
+        for item in skills_dir.iterdir():
+            if item.is_dir():
+                found_skills.append(Skill(name=item.name, description=f"Skill from {item.name}"))
 
     return found_skills

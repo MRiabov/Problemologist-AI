@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
-import { fetchEpisodes, runSimulation, checkConnection, type Episode } from '../api/client';
+import { useConnection } from '../context/ConnectionContext';
+import { fetchEpisodes, runSimulation, type Episode } from '../api/client';
 import { 
   Play, 
   Cpu, 
@@ -13,35 +14,26 @@ import { Badge } from "../components/ui/badge";
 import ReasoningTraces from '../components/workspace/ReasoningTraces';
 import ArtifactView from '../components/workspace/ArtifactView';
 import ModelViewer from '../components/visualization/ModelViewer';
+import ConnectionError from '../components/shared/ConnectionError';
 
 export default function BenchmarkGeneration() {
   const { 
     selectedEpisode 
   } = useEpisodes();
+  const { isConnected } = useConnection();
   const [, setEpisodes] = useState<Episode[]>([]);
   const [simulating, setSimulating] = useState(false);
-  const [isConnected, setIsConnected] = useState(true);
 
   useEffect(() => {
     async function loadData() {
         try {
             const data = await fetchEpisodes();
             setEpisodes(data);
-            setIsConnected(true);
         } catch (e) {
             console.error("Failed to load episodes", e);
-            setIsConnected(false);
         }
     }
     loadData();
-
-    // Connection polling
-    const interval = setInterval(async () => {
-        const connected = await checkConnection();
-        setIsConnected(connected);
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, []);
 
   const handleRunSimulation = async () => {
@@ -51,10 +43,8 @@ export default function BenchmarkGeneration() {
         await runSimulation(sessionId);
         const data = await fetchEpisodes();
         setEpisodes(data);
-        setIsConnected(true);
     } catch (e) {
         console.error("Failed to run simulation", e);
-        setIsConnected(false);
     } finally {
         setSimulating(false);
     }
@@ -153,15 +143,9 @@ export default function BenchmarkGeneration() {
             {/* Bottom: Artifacts (MJCF / Validation) */}
             <div className="h-1/2 overflow-hidden flex flex-col">
                 <ArtifactView 
-                    mjcf={selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf')?.s3_path}
+                    plan={selectedEpisode?.plan}
+                    assets={selectedEpisode?.assets}
                     isConnected={isConnected}
-                    validationResults={{
-                        integrity_checks: [
-                            { label: "XML Schema", status: "success", info: "mj_v3.1" },
-                            { label: "Frame Stability", status: "success", info: "ΔE < 1e-4" },
-                            { label: "Intersections", status: "active", info: "Verifying..." }
-                        ]
-                    }}
                 />
             </div>
         </div>

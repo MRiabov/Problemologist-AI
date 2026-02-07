@@ -1,27 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from src.controller.api.main import app
 from src.shared.enums import ResponseStatus, EpisodeStatus
 import uuid
 
 client = TestClient(app)
-
-@pytest.mark.asyncio
-async def test_api_list_episodes():
-    with patch("src.controller.api.routes.episodes.get_db") as mock_db:
-        # We need to mock the SQLAlchemy session and the result
-        mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalars().all.return_value = []
-        mock_session.execute.return_value = mock_result
-        mock_db.return_value = mock_session
-        
-        # Using the standard FastAPI TestClient (synchronous)
-        # However, since the route depends on an async DB session, 
-        # it might be easier to mock the persistence layer higher up if needed.
-        # For MVP, let's just ensure the health and basic structure.
-        pass
 
 def test_health_check():
     response = client.get("/health")
@@ -39,18 +23,23 @@ def test_run_simulation_accepted(mock_temporal_connect):
         json={"session_id": "test-session", "compound_json": "{}"}
     )
     
-    # If temporal isn't connected in the app instance used by TestClient
-    # we might get an error status, but we are testing the endpoint logic.
     assert response.status_code == 200
     if response.json()["status"] == ResponseStatus.ACCEPTED:
         assert "workflow_id" in response.json()
 
+@patch("src.controller.api.main.get_sessionmaker")
 @patch("src.controller.api.main.get_worker_client")
 @patch("src.controller.api.main.create_agent_graph")
-def test_run_agent_endpoint(mock_create_graph, mock_get_worker):
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="agent response")]}
-    mock_create_graph.return_value = mock_agent
+def test_run_agent_endpoint(mock_create_graph, mock_get_worker, mock_get_sessionmaker):
+    # Mock session factory and session
+    mock_session = MagicMock()
+    mock_session.commit = AsyncMock()
+    mock_session.refresh = AsyncMock()
+    mock_session.get = AsyncMock() # Important for background task
+    
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__.return_value = mock_session
+    mock_get_sessionmaker.return_value = mock_session_factory
     
     response = client.post(
         "/agent/run",
@@ -58,7 +47,9 @@ def test_run_agent_endpoint(mock_create_graph, mock_get_worker):
     )
     
     assert response.status_code == 200
-    assert response.json()["status"] == ResponseStatus.COMPLETED
-    assert response.json()["output"] == "agent response"
-
-from unittest.mock import MagicMock
+    assert response.json()["status"] == ResponseStatus.ACCEPTED
+    assert "episode_id" in response.json()
+    
+    # Verify DB was called to create episode
+    mock_session.add.assert_called()
+    mock_session.commit.assert_called()

@@ -11,6 +11,7 @@ from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
 from src.controller.api.routes import episodes, skills
+from src.controller.observability.database import DatabaseCallbackHandler
 from src.shared.enums import ResponseStatus, EpisodeStatus, AssetType
 from src.shared.logging import configure_logging, get_logger
 
@@ -68,16 +69,14 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             )
             agent = create_agent_graph(fs_middleware)
 
-            # Initial trace to show progress
-            initial_trace = Trace(
-                episode_id=episode_id,
-                raw_trace={"message": f"Starting task: {task}"}
-            )
-            db.add(initial_trace)
-            await db.commit()
+            # Setup real-time tracing to DB
+            db_callback = DatabaseCallbackHandler(episode_id)
 
-            # Run the agent
-            result = await agent.ainvoke({"messages": [("user", task)]})
+            # Run the agent with tracing
+            result = await agent.ainvoke(
+                {"messages": [("user", task)]},
+                config={"callbacks": [db_callback]}
+            )
             
             # Final trace
             final_output = result["messages"][-1].content
@@ -87,20 +86,41 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             )
             db.add(final_trace)
 
+            # Sync assets from worker
+            try:
+                files = await fs_middleware.list_files("/")
+                for file_info in files:
+                    if file_info.get("type") == "file":
+                        path = file_info.get("path")
+                        asset_type = AssetType.OTHER
+                        if path.endswith(".py"):
+                            asset_type = AssetType.PYTHON
+                        elif path.endswith(".xml") or path.endswith(".mjcf"):
+                            asset_type = AssetType.MJCF
+                        
+                        # Read content for small files
+                        content = None
+                        try:
+                            content = await fs_middleware.read_file(path)
+                        except:
+                            pass
+
+                        asset = Asset(
+                            episode_id=episode_id,
+                            asset_type=asset_type,
+                            s3_path=path,
+                            content=content
+                        )
+                        db.add(asset)
+            except Exception as e:
+                logger.error("failed_to_sync_assets", error=str(e))
+
             # Update episode
             episode = await db.get(Episode, episode_id)
             episode.status = EpisodeStatus.COMPLETED
-            episode.plan = f"Plan for: {task}\n\n1. Explored workspace\n2. Implemented solution\n3. Verified results"
             
-            # Save a mock python asset for demonstration
-            mock_code = f"# Implementation for {task}\nfrom build123d import *\n\n# ... code would go here ..."
-            python_asset = Asset(
-                episode_id=episode_id,
-                asset_type=AssetType.PYTHON,
-                s3_path=f"sessions/{session_id}/impl.py",
-                content=mock_code
-            )
-            db.add(python_asset)
+            # Simple summary as plan
+            episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
 
             await db.commit()
             logger.info("agent_run_completed", episode_id=episode_id)
