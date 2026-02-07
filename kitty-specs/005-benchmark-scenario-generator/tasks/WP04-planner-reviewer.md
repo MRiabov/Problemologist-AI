@@ -8,6 +8,7 @@ base_commit: 2962558c1cdd376ffb4b30162397bc520bec9635
 created_at: '2026-02-07T07:18:13.777909+00:00'
 subtasks: [T013, T014, T015, T016]
 shell_pid: "212824"
+agent: "Gemini"
 ---
 
 # WP04: Planner & Reviewer Agents
@@ -76,3 +77,7 @@ shell_pid: "212824"
 - [ ] Planner produces structured JSON plan.
 - [ ] Reviewer node correctly processes images (mocked inputs).
 - [ ] State transitions logic covers all paths (Success, Validation Fail, Review Fail).
+
+## Activity Log
+
+- 2026-02-07T07:18:13Z – Gemini – shell_pid=212824 – lane=doing – Assigned agent via workflow command
