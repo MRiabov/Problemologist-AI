@@ -81,7 +81,7 @@
 - [x] T022: Implement `src/worker/utils/simulation.py` with `simulate(component, render=False)` entrypoint. <!-- id: 20 -->
 - [x] T023: Implement `SimulationResult` Pydantic model and return logic. <!-- id: 21 -->
 - [x] T024: Integrate with Temporal Worker startup and `SandboxFilesystemBackend`. <!-- id: 22 -->
-- [ ] T025: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
+- [x] T025: Add integration tests for the full flow (mocking Temporal if needed). <!-- id: 23 -->
 
 **Implementation Logic**:
 
