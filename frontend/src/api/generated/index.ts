@@ -8,11 +8,14 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AgentRunRequest } from './models/AgentRunRequest';
+export type { AssetResponse } from './models/AssetResponse';
+export { AssetType } from './models/AssetType';
 export type { EpisodeResponse } from './models/EpisodeResponse';
 export { EpisodeStatus } from './models/EpisodeStatus';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export type { SimulationRequest } from './models/SimulationRequest';
 export type { Skill } from './models/Skill';
+export type { TraceResponse } from './models/TraceResponse';
 export type { ValidationError } from './models/ValidationError';
 
 export { DefaultService } from './services/DefaultService';
