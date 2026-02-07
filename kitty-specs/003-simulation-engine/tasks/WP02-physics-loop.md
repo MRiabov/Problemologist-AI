@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Physics Simulation Loop
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: a507a4f4fd2aa747191815080ecb718df03878e2
@@ -99,3 +99,4 @@ The loop must verify "Zones" defined in WP01.
 ## Activity Log
 
 - 2026-02-06T20:15:49Z – gemini – shell_pid=7341 – lane=doing – Assigned agent via workflow command
+- 2026-02-07T06:28:20Z – gemini – shell_pid=7341 – lane=for_review – Physics simulation loop implemented with forbidden zone detection (contact-based), goal zone detection (AABB check), simulation metrics, and a pre-simulation validation hook. All tests pass.
