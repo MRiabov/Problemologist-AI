@@ -344,12 +344,24 @@ The Engineer agent(s) have can access to meshes and a exact reconstruction of th
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
+The engineer will receive exact positions of objectives in a YAML file, and information on randomization of starting object positions, so as to prevent guessing.
+
 #### Coder and Reviewer interaction
 
 1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
+
+The reviews will also come with the following YAML frontmatter:
+```yaml
+decision: approved # [approved, rejected]
+comments: [
+   # short commentary on issues, as a array.
+   # Up to 100 chars per issue.
+]
+```
+As usual, the reviews will be strictly typed.
 
 ## Distributed execution
 
