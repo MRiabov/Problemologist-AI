@@ -19,10 +19,10 @@
 
 **Goal**: Implement the physics validation logic that runs on the worker.
 
-- [ ] T005: Implement `simulate(Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
-- [ ] T006: Implement `validate(Compound) -> bool` for geometric/randomization verification.
-- [ ] T007: Implement `submit_for_review(Compound)` to handover results to Reviewer.
-- [ ] T008: Expose these tools to the Agent environment via `deepagents` tools.
+- [x] T005: Implement `simulate(Compound) -> SimulationResult` in `src/worker/utils/validation.py`.
+- [x] T006: Implement `validate(Compound) -> bool` for geometric/randomization verification.
+- [x] T007: Implement `submit_for_review(Compound)` to handover results to Reviewer.
+- [x] T008: Expose these tools to the Agent environment via `deepagents` tools.
 
 ~300 lines
 
