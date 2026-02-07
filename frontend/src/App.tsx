@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import AppLayout from './components/layout/AppLayout';
 import EngineerWorkspace from './pages/EngineerWorkspace';
 import IdeDashboard from './pages/IdeDashboard';
 import BenchmarkGeneration from './pages/BenchmarkGeneration';
@@ -7,7 +7,7 @@ import BenchmarkGeneration from './pages/BenchmarkGeneration';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/" element={<AppLayout />}>
         <Route index element={<EngineerWorkspace />} />
         <Route path="ide" element={<IdeDashboard />} />
         <Route path="benchmark" element={<BenchmarkGeneration />} />
