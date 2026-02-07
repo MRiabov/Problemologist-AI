@@ -33,11 +33,11 @@ services:
       dockerfile: src/controller/Dockerfile
     command: ["uv", "run", "alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - POSTGRES_URL=postgresql+psycopg://postgres:postgres@postgres:5432/postgres
     depends_on:
       postgres:
         condition: service_healthy
-
+  
   controller-worker:
     build:
       context: .

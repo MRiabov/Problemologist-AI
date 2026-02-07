@@ -63,7 +63,11 @@ def run_python_code(
     )
 
     # Set up PYTHONPATH to include src/worker for utils import
-    actual_env = env.copy() if env else {}
+    import os
+    actual_env = os.environ.copy()
+    if env:
+        actual_env.update(env)
+
     current_pythonpath = actual_env.get("PYTHONPATH", "")
     
     # Get absolute path to src/worker
@@ -161,7 +165,11 @@ async def run_python_code_async(
     )
 
     # Set up PYTHONPATH to include src/worker for utils import
-    actual_env = env.copy() if env else {}
+    import os
+    actual_env = os.environ.copy()
+    if env:
+        actual_env.update(env)
+
     current_pythonpath = actual_env.get("PYTHONPATH", "")
     
     # Get absolute path to src/worker

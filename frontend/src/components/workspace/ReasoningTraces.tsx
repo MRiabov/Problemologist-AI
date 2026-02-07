@@ -1,8 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { Terminal } from "lucide-react";
+import { Terminal, Send } from "lucide-react";
 import ConnectionError from "../shared/ConnectionError";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { useEpisodes } from "../../context/EpisodeContext";
 
 interface ReasoningTracesProps {
   traces?: TraceResponse[];
@@ -16,6 +19,16 @@ export default function ReasoningTraces({
   isConnected = true
 }: ReasoningTracesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { isCreationMode, startAgent } = useEpisodes();
+  const [prompt, setPrompt] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (prompt.trim()) {
+      startAgent(prompt);
+      setPrompt("");
+    }
+  };
 
   // Auto-scroll to bottom when new traces arrive
   useEffect(() => {
@@ -34,6 +47,26 @@ export default function ReasoningTraces({
     <div className="flex flex-col h-full bg-card/30 border-r border-border relative">
       {!isConnected && <ConnectionError className="absolute inset-0" />}
       
+      {/* Creation Mode Prompt */}
+      {isCreationMode && !isRunning && (
+        <div className="p-4 border-b bg-primary/5">
+            <form onSubmit={handleSubmit} className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-primary/70">Create Benchmark</label>
+                <div className="flex gap-2">
+                    <Input 
+                        placeholder="Describe the benchmark goal..." 
+                        className="h-9 text-xs"
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                    />
+                    <Button type="submit" size="icon" className="h-9 w-9 shrink-0">
+                        <Send className="h-4 w-4" />
+                    </Button>
+                </div>
+            </form>
+        </div>
+      )}
+
       {/* Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <ScrollArea className="flex-1 bg-black/20" ref={scrollRef}>
