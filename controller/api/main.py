@@ -70,6 +70,14 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             )
             agent = create_agent_graph(fs_middleware)
 
+            # Add initial trace
+            initial_trace = Trace(
+                episode_id=episode_id,
+                raw_trace={"message": "Agent starting execution", "task": task},
+            )
+            db.add(initial_trace)
+            await db.commit()
+
             # Setup real-time tracing to DB
             db_callback = DatabaseCallbackHandler(episode_id)
 
