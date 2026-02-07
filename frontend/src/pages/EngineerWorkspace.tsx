@@ -8,10 +8,8 @@ import {
   Clock, 
   Code2, 
   GraduationCap, 
-  Binary as Architecture, 
   Terminal, 
   MessageSquare,
-  BoxSelect as View3d,
   Box,
   Cpu,
   Zap,
@@ -21,7 +19,6 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
@@ -33,6 +30,7 @@ export default function EngineerWorkspace() {
   const [taskPrompt, setTaskPrompt] = useState('');
   const [running, setRunning] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  const [activeTab, setActiveTab] = useState<'logs' | 'audit'>('logs');
 
   useEffect(() => {
     async function loadData() {
@@ -52,6 +50,28 @@ export default function EngineerWorkspace() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    let interval: number | undefined;
+    if (selectedEpisode && (selectedEpisode.status === 'running' || running)) {
+        interval = window.setInterval(async () => {
+            try {
+                const [episodesData, currentEp] = await Promise.all([
+                    fetchEpisodes(),
+                    fetchEpisode(selectedEpisode.id)
+                ]);
+                setEpisodes(episodesData);
+                setSelectedEpisode(currentEp);
+                if (currentEp.status !== 'running') {
+                    setRunning(false);
+                }
+            } catch (e) {
+                console.error("Polling failed", e);
+            }
+        }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [selectedEpisode, running]);
+
   const handleSelectEpisode = async (ep: Episode) => {
     try {
         const fullEp = await fetchEpisode(ep.id);
@@ -67,15 +87,30 @@ export default function EngineerWorkspace() {
     setRunning(true);
     try {
         const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
-        await runAgent(taskPrompt, sessionId);
+        const response = await runAgent(taskPrompt, sessionId);
+        
+        // Refresh episodes to see the new one
         const episodesData = await fetchEpisodes();
         setEpisodes(episodesData);
+        
+        // If we have an episode_id in response, select it
+        if (response.episode_id) {
+            const ep = episodesData.find(e => e.id === response.episode_id);
+            if (ep) handleSelectEpisode(ep);
+        }
+        
         setTaskPrompt('');
     } catch (e) {
         console.error("Failed to run agent", e);
     } finally {
         setRunning(false);
     }
+  };
+
+  const handleInterrupt = () => {
+    // In a real implementation, we would call a backend endpoint to cancel the temporal workflow
+    console.log("Interrupting execution...");
+    setRunning(false);
   };
 
   return (
@@ -104,6 +139,17 @@ export default function EngineerWorkspace() {
             </div>
             
             <div className="flex items-center gap-3">
+                {running && (
+                    <Button
+                        onClick={handleInterrupt}
+                        variant="destructive"
+                        size="sm"
+                        className="gap-2 h-9"
+                    >
+                        <XCircle className="h-4 w-4" />
+                        INTERRUPT
+                    </Button>
+                )}
                 <Button
                     onClick={handleRunAgent}
                     disabled={running || !taskPrompt}
@@ -162,7 +208,7 @@ export default function EngineerWorkspace() {
                                             </span>
                                             {ep.status === 'running' ? (
                                                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse mt-1" />
-                                            ) : ep.status === 'completed' || ep.status === 'success' ? (
+                                            ) : ep.status === 'completed' ? (
                                                 <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
                                             ) : (
                                                 <XCircle className="h-3.5 w-3.5 text-destructive" />
@@ -214,7 +260,7 @@ export default function EngineerWorkspace() {
                     <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-2">
                             <Rocket className="h-4 w-4 text-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Architect's TODO List</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Architect's Guidance</span>
                         </div>
                         {selectedEpisode && (
                             <Badge variant="outline" className="text-[9px] font-mono border-primary/20 text-primary bg-primary/5 px-2">
@@ -222,32 +268,52 @@ export default function EngineerWorkspace() {
                             </Badge>
                         )}
                     </div>
-                    <ScrollArea className="flex-1 p-4">
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-4 bg-green-500/5 p-3 rounded-lg border border-green-500/10">
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                <div className="flex-1">
-                                    <div className="text-xs font-bold">Define bounding volume and mounting holes</div>
-                                    <div className="text-[10px] text-green-600/80 font-mono mt-0.5 tracking-tight">Status: Verified & Validated</div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 space-y-6">
+                            {selectedEpisode?.plan && (
+                                <div className="space-y-2">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/70">High-Level Plan</h4>
+                                    <div className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/10 whitespace-pre-wrap leading-relaxed">
+                                        {selectedEpisode.plan}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4 bg-primary/5 p-3 rounded-lg border border-primary/20">
-                                <Clock className="h-5 w-5 text-primary animate-pulse" />
-                                <div className="flex-1">
-                                    <div className="text-xs font-bold">Implement stress-relieving fillets on inner corners</div>
-                                    <div className="text-[10px] text-primary/80 font-mono mt-0.5 tracking-tight">Status: In Progress...</div>
+                            )}
+
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Execution TODOs</h4>
+                                {selectedEpisode?.todo_list?.tasks ? (
+                                (selectedEpisode.todo_list.tasks as any[]).map((task: any, idx: number) => (
+                                    <div key={idx} className={cn(
+                                        "flex items-center gap-4 p-3 rounded-lg border",
+                                        task.status === 'completed' ? "bg-green-500/5 border-green-500/10" : 
+                                        task.status === 'in_progress' ? "bg-primary/5 border-primary/20" : "bg-muted/5 border-border opacity-60"
+                                    )}>
+                                        {task.status === 'completed' ? (
+                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                        ) : task.status === 'in_progress' ? (
+                                            <Clock className="h-5 w-5 text-primary animate-pulse" />
+                                        ) : (
+                                            <div className="h-5 w-5 rounded-sm border-2 border-muted-foreground" />
+                                        )}
+                                        <div className="flex-1">
+                                            <div className="text-xs font-bold">{task.title}</div>
+                                            <div className={cn(
+                                                "text-[10px] font-mono mt-0.5 tracking-tight",
+                                                task.status === 'completed' ? "text-green-600/80" :
+                                                task.status === 'in_progress' ? "text-primary/80" : "text-muted-foreground"
+                                            )}>Status: {task.status_text || task.status}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-xs text-muted-foreground italic text-center py-8">
+                                    Waiting for architect to generate TODO list...
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4 bg-muted/5 p-3 rounded-lg border border-border opacity-60">
-                                <div className="h-5 w-5 rounded-sm border-2 border-muted-foreground" />
-                                <div className="flex-1">
-                                    <div className="text-xs font-bold">Optimise mass for 3D printing (hollowing)</div>
-                                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5 tracking-tight">Status: Queued</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
-                    </ScrollArea>
-                </section>
+                    </div>
+                </ScrollArea>
+            </section>
 
                 {/* Editor Section */}
                 <section className="flex-1 flex flex-col min-h-0">
@@ -293,17 +359,20 @@ export default function EngineerWorkspace() {
                     <div className="absolute top-4 right-4 z-10 w-40 p-3 space-y-2 bg-background/80 backdrop-blur-md rounded-lg border shadow-sm">
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] text-muted-foreground uppercase font-black">Est. Cost</span>
-                            <span className="text-xs font-mono font-bold">$4.82</span>
+                            <span className="text-xs font-mono font-bold">${selectedEpisode?.metadata_vars?.cost ?? '0.00'}</span>
                         </div>
                         <Separator className="opacity-50" />
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] text-muted-foreground uppercase font-black">Weight</span>
-                            <span className="text-xs font-mono font-bold">240g</span>
+                            <span className="text-xs font-mono font-bold">{selectedEpisode?.metadata_vars?.weight ?? '0'}g</span>
                         </div>
                         <Separator className="opacity-50" />
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] text-muted-foreground uppercase font-black">DFM Score</span>
-                            <span className="text-xs font-mono font-bold text-green-500">92%</span>
+                            <span className={cn(
+                                "text-xs font-mono font-bold",
+                                (selectedEpisode?.metadata_vars?.dfm ?? 0) > 80 ? "text-green-500" : "text-yellow-500"
+                            )}>{selectedEpisode?.metadata_vars?.dfm ?? '0'}%</span>
                         </div>
                     </div>
                     
@@ -348,8 +417,20 @@ export default function EngineerWorkspace() {
                 <div className="flex-1 flex flex-col border-t bg-card/30">
                     <div className="flex h-10 border-b items-center px-4 justify-between bg-muted/10">
                         <div className="flex gap-4">
-                          <button className="text-[10px] font-black uppercase tracking-widest text-foreground border-b-2 border-primary h-10">Container Logs</button>
-                          <button className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground h-10">Critic Audit</button>
+                          <button 
+                            onClick={() => setActiveTab('logs')}
+                            className={cn(
+                                "text-[10px] font-black uppercase tracking-widest h-10",
+                                activeTab === 'logs' ? "text-foreground border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >Container Logs</button>
+                          <button 
+                            onClick={() => setActiveTab('audit')}
+                            className={cn(
+                                "text-[10px] font-black uppercase tracking-widest h-10",
+                                activeTab === 'audit' ? "text-foreground border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >Critic Audit</button>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -358,29 +439,36 @@ export default function EngineerWorkspace() {
                     </div>
                     <ScrollArea className="flex-1 bg-black/20">
                         <div className="p-4 font-mono text-[11px] leading-relaxed">
-                            {selectedEpisode?.traces && selectedEpisode.traces.length > 0 ? (
-                                selectedEpisode.traces.map(trace => (
-                                    <div key={trace.id} className="space-y-1 mb-3 border-b border-white/5 pb-2">
-                                        <div className="flex justify-between text-[9px] text-muted-foreground">
-                                            <span className="text-primary/70">[{new Date(trace.created_at).toLocaleTimeString()}]</span>
-                                            <span className="opacity-50 uppercase">Trace: {trace.id.substring(0,8)}</span>
+                            {activeTab === 'logs' ? (
+                                selectedEpisode?.traces && selectedEpisode.traces.length > 0 ? (
+                                    selectedEpisode.traces.map(trace => (
+                                        <div key={trace.id} className="space-y-1 mb-3 border-b border-white/5 pb-2">
+                                                                                    <div className="flex justify-between text-[9px] text-muted-foreground">
+                                                                                        <span className="text-primary/70">[{new Date(trace.created_at).toLocaleTimeString()}]</span>
+                                                                                        <span className="opacity-50 uppercase">Trace: {trace.id}</span>
+                                                                                    </div>
+                                            
+                                            <div className="text-muted-foreground break-all opacity-90">
+                                                {typeof trace.raw_trace === 'string' 
+                                                    ? trace.raw_trace 
+                                                    : JSON.stringify(trace.raw_trace, null, 2)}
+                                            </div>
                                         </div>
-                                        <div className="text-muted-foreground break-all opacity-90">
-                                            {typeof trace.raw_trace === 'string' 
-                                                ? trace.raw_trace 
-                                                : JSON.stringify(trace.raw_trace, null, 2)}
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="space-y-1">
+                                        <div className="text-muted-foreground/50 opacity-80">[0.00s] Initializing build123d kernel...</div>
+                                        <div className="text-muted-foreground/50 opacity-80">[0.02s] Loading geometry policy: <span className="text-blue-400">STRICT_PHYSICS</span></div>
+                                        <div className="text-blue-300 font-bold">&gt;&gt;&gt; Running impl_build123d.py</div>
+                                        <div className="text-green-500/80">[OK] BuildPart created. Vol: 12.4cm³</div>
+                                        <div className="text-green-500/80">[OK] Vertex fillets applied. Max Curvature: 0.2</div>
+                                        <div className="text-yellow-400/80">[WARN] Hole clearance near edge &lt; 2.0mm</div>
+                                        <div className="text-primary animate-pulse">_</div>
                                     </div>
-                                ))
+                                )
                             ) : (
-                                <div className="space-y-1">
-                                    <div className="text-muted-foreground/50 opacity-80">[0.00s] Initializing build123d kernel...</div>
-                                    <div className="text-muted-foreground/50 opacity-80">[0.02s] Loading geometry policy: <span className="text-blue-400">STRICT_PHYSICS</span></div>
-                                    <div className="text-blue-300 font-bold">&gt;&gt;&gt; Running impl_build123d.py</div>
-                                    <div className="text-green-500/80">[OK] BuildPart created. Vol: 12.4cm³</div>
-                                    <div className="text-green-500/80">[OK] Vertex fillets applied. Max Curvature: 0.2</div>
-                                    <div className="text-yellow-400/80">[WARN] Hole clearance near edge &lt; 2.0mm</div>
-                                    <div className="text-primary animate-pulse">_</div>
+                                <div className="text-muted-foreground whitespace-pre-wrap">
+                                    {selectedEpisode?.journal || "No critic journal available for this episode."}
                                 </div>
                             )}
                         </div>
@@ -395,7 +483,7 @@ export default function EngineerWorkspace() {
                             <div className="space-y-1">
                                 <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Latest Insight</h4>
                                 <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                                  "Geometry is valid, but consider increasing fillet radius on the top flange to reduce stress concentrations identified in simulation."
+                                  "{selectedEpisode?.metadata_vars?.latest_insight || "No specific insights recorded yet."}"
                                 </p>
                             </div>
                         </div>

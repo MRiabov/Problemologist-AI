@@ -4,7 +4,6 @@ import {
   Play, 
   Database, 
   Check, 
-  FileJson as Schema, 
   ShieldCheck, 
   Settings2, 
   History, 
@@ -13,7 +12,6 @@ import {
   Dices, 
   Layers, 
   CircleDot,
-  ArrowRight,
   MonitorPlay,
   Box,
   BrainCircuit,
@@ -22,7 +20,6 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
@@ -97,7 +94,7 @@ export default function BenchmarkGeneration() {
             {simulating ? <CircleDot className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
             {simulating ? 'SIMULATING...' : 'RUN PIPELINE'}
           </Button>
-          <Button variant="outline" size="icon" className="h-10 w-10">
+          <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => console.log('Database view')}>
             <Database className="h-4 w-4" />
           </Button>
         </div>
@@ -214,7 +211,7 @@ export default function BenchmarkGeneration() {
                 <Terminal className="h-3.5 w-3.5 text-primary" />
                 MuJoCo Benchmark (MJCF)
               </h3>
-              <Button variant="ghost" size="sm" className="h-6 text-[9px] gap-1 px-2 uppercase font-bold text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="h-6 text-[9px] gap-1 px-2 uppercase font-bold text-muted-foreground hover:text-foreground" onClick={() => console.log('Copy XML')}>
                 <Layers className="h-3 w-3" /> Copy XML
               </Button>
             </div>
@@ -265,10 +262,10 @@ export default function BenchmarkGeneration() {
           <div className="flex-1 relative bg-gradient-to-b from-muted/50 to-background overflow-hidden flex items-center justify-center p-8">
             <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
               <div className="bg-background/80 backdrop-blur border rounded-lg p-1.5 flex flex-col gap-1 shadow-xl">
-                <Button variant="ghost" size="icon" className="h-8 w-8"><MonitorPlay className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Dices className="h-4 w-4 text-primary" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => console.log('Play')}><MonitorPlay className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => console.log('Dices')}><Dices className="h-4 w-4 text-primary" /></Button>
                 <Separator className="mx-1 my-1 opacity-50" />
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Settings2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => console.log('Settings')}><Settings2 className="h-4 w-4" /></Button>
               </div>
               <Badge variant="secondary" className="font-mono text-[9px] h-5 opacity-60">SEED: 8841-A2</Badge>
             </div>
@@ -349,7 +346,7 @@ export default function BenchmarkGeneration() {
               </div>
 
               <div className="flex flex-col gap-3 shrink-0">
-                <Button className="h-12 px-6 gap-3 group relative overflow-hidden font-bold">
+                <Button className="h-12 px-6 gap-3 group relative overflow-hidden font-bold" onClick={() => console.log('Commit')}>
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/10 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                   <span className="uppercase tracking-widest text-xs">Commit to Benchmark Suite</span>
                   <DatabaseZap className="h-4 w-4 group-hover:scale-110 transition-transform" />

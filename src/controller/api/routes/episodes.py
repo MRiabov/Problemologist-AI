@@ -42,6 +42,9 @@ class EpisodeResponse(BaseModel):
     skill_git_hash: Optional[str] = None
     template_versions: Optional[dict] = None
     metadata_vars: Optional[dict] = None
+    todo_list: Optional[dict] = None
+    journal: Optional[str] = None
+    plan: Optional[str] = None
     traces: List[TraceResponse] = []
     assets: List[AssetResponse] = []
 
