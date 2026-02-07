@@ -57,12 +57,16 @@ export default function BenchmarkGeneration() {
             <h2 className="text-lg font-bold tracking-tight">Benchmark Pipeline</h2>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Mechanical Physics Validation</span>
-              <Badge variant="outline" className="text-[9px] h-4 py-0 font-mono border-green-500/30 text-green-500 bg-green-500/5">Isolated</Badge>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
+          {!simulating && (
+            <Badge variant="outline" className="text-[9px] h-6 px-3 font-bold border-red-500/30 text-red-500 bg-red-500/5 uppercase tracking-widest">
+              Offline
+            </Badge>
+          )}
           <Button 
             onClick={handleRunSimulation}
             disabled={simulating}

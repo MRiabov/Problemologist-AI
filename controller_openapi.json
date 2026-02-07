@@ -241,6 +241,17 @@
             "type": "string",
             "title": "S3 Path"
           },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",

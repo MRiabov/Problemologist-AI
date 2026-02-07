@@ -7,6 +7,7 @@ export type AssetResponse = {
     id: number;
     asset_type: AssetType;
     s3_path: string;
+    content?: (string | null);
     created_at: string;
 };
 

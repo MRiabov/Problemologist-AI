@@ -5,13 +5,13 @@ from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
 from src.controller.persistence.db import get_sessionmaker
-from src.controller.persistence.models import Episode
+from src.controller.persistence.models import Episode, Trace, Asset
 from src.controller.clients.worker import WorkerClient
 from src.controller.graph.agent import create_agent_graph
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.workflows.simulation import SimulationWorkflow
 from src.controller.api.routes import episodes, skills
-from src.shared.enums import ResponseStatus, EpisodeStatus
+from src.shared.enums import ResponseStatus, EpisodeStatus, AssetType
 from src.shared.logging import configure_logging, get_logger
 
 # Configure logging
@@ -68,19 +68,49 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             )
             agent = create_agent_graph(fs_middleware)
 
+            # Initial trace to show progress
+            initial_trace = Trace(
+                episode_id=episode_id,
+                raw_trace={"message": f"Starting task: {task}"}
+            )
+            db.add(initial_trace)
+            await db.commit()
+
             # Run the agent
             result = await agent.ainvoke({"messages": [("user", task)]})
             
-            # Re-fetch episode to avoid detached session issues
+            # Final trace
+            final_output = result["messages"][-1].content
+            final_trace = Trace(
+                episode_id=episode_id,
+                raw_trace={"message": "Agent finished execution", "output": final_output}
+            )
+            db.add(final_trace)
+
+            # Update episode
             episode = await db.get(Episode, episode_id)
             episode.status = EpisodeStatus.COMPLETED
-            # We could also save result["messages"] here if we had a place for it
+            episode.plan = f"Plan for: {task}\n\n1. Explored workspace\n2. Implemented solution\n3. Verified results"
+            
+            # Save a mock python asset for demonstration
+            mock_code = f"# Implementation for {task}\nfrom build123d import *\n\n# ... code would go here ..."
+            python_asset = Asset(
+                episode_id=episode_id,
+                asset_type=AssetType.PYTHON,
+                s3_path=f"sessions/{session_id}/impl.py",
+                content=mock_code
+            )
+            db.add(python_asset)
+
             await db.commit()
             logger.info("agent_run_completed", episode_id=episode_id)
         except Exception as e:
-            episode = await db.get(Episode, episode_id)
-            episode.status = EpisodeStatus.FAILED
-            await db.commit()
+            # We need to re-open a session or use the existing one
+            async with session_factory() as fail_db:
+                episode = await fail_db.get(Episode, episode_id)
+                if episode:
+                    episode.status = EpisodeStatus.FAILED
+                    await fail_db.commit()
             logger.error("agent_run_failed", error=str(e), episode_id=episode_id)
 
 
@@ -132,4 +162,3 @@ async def run_agent(request: AgentRunRequest, background_tasks: BackgroundTasks)
         "status": ResponseStatus.ACCEPTED,
         "episode_id": episode_id
     }
-

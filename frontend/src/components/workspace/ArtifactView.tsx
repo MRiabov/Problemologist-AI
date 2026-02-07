@@ -51,7 +51,15 @@ export default function ArtifactView({
         return (
             <div className="font-mono text-[12px] leading-6 text-blue-100 p-4">
                {mjcf ? (
-                   <pre className="whitespace-pre-wrap">{mjcf}</pre>
+                   <div className="space-y-4">
+                       {mjcf.startsWith('sessions/') || mjcf.startsWith('http') ? (
+                           <div className="bg-blue-900/20 p-3 rounded border border-blue-500/30 text-blue-300">
+                               Asset Path: <span className="font-bold">{mjcf}</span>
+                           </div>
+                       ) : (
+                           <pre className="whitespace-pre-wrap">{mjcf}</pre>
+                       )}
+                   </div>
                ) : (
                    <div className="text-muted-foreground/50 italic text-center py-10">
                       Waiting for MJCF generation...

@@ -29,20 +29,6 @@ export default function ReasoningTraces({
 
   return (
     <div className="flex flex-col h-full bg-card/30 border-r border-border">
-      {/* Header */}
-      <div className="flex h-10 border-b items-center px-4 justify-between bg-muted/10 shrink-0">
-        <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-primary opacity-70" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Reasoning Traces</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {isRunning && <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />}
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
-            {isRunning ? 'Live Stream' : 'Offline'}
-          </span>
-        </div>
-      </div>
-
       {/* Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <ScrollArea className="flex-1 bg-black/20" ref={scrollRef}>

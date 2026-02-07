@@ -28,6 +28,7 @@ class AssetResponse(BaseModel):
     id: int
     asset_type: AssetType
     s3_path: str
+    content: Optional[str] = None
     created_at: datetime
 
     class Config:
