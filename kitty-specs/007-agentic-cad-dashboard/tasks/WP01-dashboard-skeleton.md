@@ -1,11 +1,13 @@
 ---
 work_package_id: "WP01"
 title: "Dashboard Skeleton & Infrastructure"
-lane: "doing"
+lane: "done"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
 agent: "gemini-cli"
 shell_pid: "477755"
+reviewed_by: "MRiabov"
+review_status: "approved"
 ---
 
 ## Context
@@ -115,3 +117,4 @@ Initialize the frontend project with the correct stack and directory structure, 
 ## Activity Log
 
 - 2026-02-06T07:59:48Z – gemini-cli – shell_pid=477755 – lane=doing – Started implementation via workflow command
+- 2026-02-07T09:38:59Z – gemini-cli – shell_pid=477755 – lane=done – Refactored dashboard to use Shadcn/UI, setup layout/sidebar, and updated all pages to new premium UI.
