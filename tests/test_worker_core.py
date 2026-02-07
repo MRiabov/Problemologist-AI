@@ -57,6 +57,7 @@ class TestRuntimeExecutor:
         assert "test_value" in result.stdout
 
 
+@type_check
 class TestFilesystemRouter:
     """Tests for the filesystem router read-only restrictions."""
 
@@ -80,6 +81,7 @@ class TestFilesystemRouter:
         assert router._is_read_only("/hello.txt") is False
 
 
+@type_check
 class TestDependencyVerification:
     """Tests for CAD dependency verification."""
 

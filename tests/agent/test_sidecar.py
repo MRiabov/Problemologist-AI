@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 from src.agent.nodes.sidecar import SidecarNode
 from src.agent.state import AgentState
+from src.shared.type_checking import type_check
 
 @pytest.fixture
 def mock_llm():
@@ -23,6 +24,7 @@ from build123d import Box
 ```""")
         yield instance
 
+@type_check
 @pytest.mark.asyncio
 async def test_sidecar_node_suggest_skill(mock_llm):
     test_dir = "test_suggested_skills"
@@ -48,6 +50,7 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     # Cleanup
     shutil.rmtree(test_dir)
 
+@type_check
 @pytest.mark.asyncio
 async def test_sidecar_node_no_skill(mock_llm):
     mock_llm.ainvoke.return_value = MagicMock(content="No new skills identified.")

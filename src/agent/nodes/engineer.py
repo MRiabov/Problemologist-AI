@@ -97,7 +97,7 @@ class EngineerNode:
         )
 
 
-    def _get_next_step(self, todo: str) -> Optional[str]:
+    def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list."""
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):

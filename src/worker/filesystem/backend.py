@@ -6,7 +6,7 @@ to S3 storage with session-based isolation.
 
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import s3fs
 import structlog
@@ -27,6 +27,7 @@ class FileInfo(BaseModel):
     size: StrictInt | None = None
 
 
+@runtime_checkable
 class SessionManager(Protocol):
     """Protocol for session management."""
 
