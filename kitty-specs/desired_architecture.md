@@ -408,7 +408,7 @@ We will use astral-sh/uv as base containers and not standard python ones (for qu
 
 The files are written directly to the worker container. We don't store it on controller. However, we upload final results ("Assets") to the Railway bucket S3.
 
-The worker's filesystem is implemented as a "disposable sandbox" via `SandboxFilesystemBackend` in ``deepagents`.
+The worker's filesystem is implemented as a "disposable sandbox" via `SandboxFilesystemBackend` in `deepagents`.
 
 The "main app" essentially serves as a business logic layer that also forwards requests to observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 
@@ -692,10 +692,12 @@ Both planner agent and engineer can only prompt the searching agent for searchin
 
 We are building open-source, and we trust our compute nodes, so no complex "zero-trust" architecture is necessary.
 
-All the code that runs in the controller/main app will be in the controller node directory, and all the worker node will be packaged into the controller node.
+All the code that runs in the controller app will be in the controller node directory, and all the worker node will be packaged into the controller node.
 <!-- note: the above was failed. -->
 
 Both controller and worker will have their own container files.
+
+Controller will be responsible for scheduling the jobs and using LLMs (and containing all secrets, except github push personal access token for skill repo - and even that is for simplicity) and worker should be responsible for doing all the heavy lifting - from linting, formatting, (and have ephemeral storage) .
 
 ### Database(s)
 
@@ -747,6 +749,13 @@ We primarily use the internal networking for Railway for inter-node communicatio
 #### Communication between containers
 
 The controller controls the execution of LLMs, and frontend communicates only to controller, and worker also communicates only to controller. The frontend does not communicate to worker nodes.
+
+#### Multiple agents per machine CPU
+
+A single agent would consume a single cpu only during simulation. Thus, it's ideal to allow multiple agents to run on a single node; but don't allow multiple simulations at the same time to avoid OOM issues or CPU overload.
+By default, there should be 4 agents per a machine or two, but only one can simulate.
+There will also likely be multiple workers. At least, the system should be implemented such that it can (because it makes for clear and easy devops).
+This requires agents writing in different directories (presumably /tmp/) and cleaning up after they are finished.
 
 ### On container termination
 

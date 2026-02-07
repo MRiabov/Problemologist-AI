@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 
@@ -57,127 +58,123 @@ def get_worker_client(session_id: str) -> WorkerClient:
     return WorkerClient(base_url=WORKER_URL, session_id=session_id)
 
 
+from controller.api.manager import task_tracker
+
+
 async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
     session_factory = get_sessionmaker()
-    async with session_factory() as db:
-        episode = await db.get(Episode, episode_id)
-        if not episode:
-            logger.error("episode_not_found_for_background_task", episode_id=episode_id)
-            return
 
-        try:
-            client = get_worker_client(session_id)
-            fs_middleware = RemoteFilesystemMiddleware(
-                client, temporal_client=temporal_client_instance
-            )
-            agent = create_agent_graph(fs_middleware)
-
-            # Add initial trace
-            initial_trace = Trace(
-                episode_id=episode_id,
-                raw_trace={"message": "Agent starting execution", "task": task},
-            )
-            db.add(initial_trace)
-            await db.commit()
-
-            # Setup real-time tracing to DB
-            db_callback = DatabaseCallbackHandler(episode_id)
-
-            # Run the agent with tracing
-            result = await agent.ainvoke(
-                {"messages": [("user", task)]}, config={"callbacks": [db_callback]}
-            )
-
-            # Final trace
-            final_output = result["messages"][-1].content
-            final_trace = Trace(
-                episode_id=episode_id,
-                raw_trace={
-                    "message": "Agent finished execution",
-                    "output": final_output,
-                },
-            )
-            db.add(final_trace)
-
-            # Sync assets from worker
-            try:
-                files = await fs_middleware.list_files("/")
-                for file_info in files:
-                    if file_info.get("type") == "file":
-                        path = file_info.get("path")
-                        asset_type = AssetType.OTHER
-                        if path.endswith(".py"):
-                            asset_type = AssetType.PYTHON
-                        elif path.endswith(".xml") or path.endswith(".mjcf"):
-                            asset_type = AssetType.MJCF
-
-                        # Read content for small files
-                        content = None
-                        try:
-                            content = await fs_middleware.read_file(path)
-                        except:
-                            pass
-
-                        asset = Asset(
-                            episode_id=episode_id,
-                            asset_type=asset_type,
-                            s3_path=path,
-                            content=content,
-                        )
-                        db.add(asset)
-            except Exception as e:
-                logger.error("failed_to_sync_assets", error=str(e))
-
-            # Update episode
+    try:
+        async with session_factory() as db:
             episode = await db.get(Episode, episode_id)
-            episode.status = EpisodeStatus.COMPLETED
+            if not episode:
+                logger.error(
+                    "episode_not_found_for_background_task", episode_id=episode_id
+                )
+                return
 
-            # Simple summary as plan
-            episode.plan = (
-                f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
-            )
+            try:
+                client = get_worker_client(session_id)
+                fs_middleware = RemoteFilesystemMiddleware(
+                    client, temporal_client=temporal_client_instance
+                )
+                agent = create_agent_graph(fs_middleware)
 
-            await db.commit()
-            logger.info("agent_run_completed", episode_id=episode_id)
-        except Exception as e:
-            # We need to re-open a session or use the existing one
-            async with session_factory() as fail_db:
-                episode = await fail_db.get(Episode, episode_id)
+                # Add initial trace
+                initial_trace = Trace(
+                    episode_id=episode_id,
+                    raw_trace={"message": "Agent starting execution", "task": task},
+                )
+                db.add(initial_trace)
+                await db.commit()
+
+                # Setup real-time tracing to DB
+                db_callback = DatabaseCallbackHandler(episode_id)
+
+                # Run the agent with tracing
+                result = await agent.ainvoke(
+                    {"messages": [("user", task)], "session_id": session_id},
+                    config={"callbacks": [db_callback]},
+                )
+
+                # Final trace
+                final_output = result["messages"][-1].content
+                final_trace = Trace(
+                    episode_id=episode_id,
+                    raw_trace={
+                        "message": "Agent finished execution",
+                        "output": final_output,
+                    },
+                )
+                db.add(final_trace)
+
+                # Sync assets from worker
+                try:
+                    files = await fs_middleware.list_files("/")
+                    for file_info in files:
+                        if file_info.get("type") == "file":
+                            path = file_info.get("path")
+                            asset_type = AssetType.OTHER
+                            if path.endswith(".py"):
+                                asset_type = AssetType.PYTHON
+                            elif path.endswith(".xml") or path.endswith(".mjcf"):
+                                asset_type = AssetType.MJCF
+
+                            # Read content for small files
+                            content = None
+                            try:
+                                content = await fs_middleware.read_file(path)
+                            except:
+                                pass
+
+                            asset = Asset(
+                                episode_id=episode_id,
+                                asset_type=asset_type,
+                                s3_path=path,
+                                content=content,
+                            )
+                            db.add(asset)
+                except Exception as e:
+                    logger.error("failed_to_sync_assets", error=str(e))
+
+                # Update episode
+                episode = await db.get(Episode, episode_id)
+                # Check if it was cancelled in the meantime
+                if episode.status != EpisodeStatus.CANCELLED:
+                    episode.status = EpisodeStatus.COMPLETED
+                    episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
+                    await db.commit()
+                    logger.info("agent_run_completed", episode_id=episode_id)
+
+            except asyncio.CancelledError:
+                logger.info("agent_run_cancelled", episode_id=episode_id)
+                # Re-fetch to ensure session is valid
+                episode = await db.get(Episode, episode_id)
+                if episode:
+                    episode.status = EpisodeStatus.CANCELLED
+                    final_trace = Trace(
+                        episode_id=episode_id,
+                        raw_trace={"message": "Episode cancelled by user"},
+                    )
+                    db.add(final_trace)
+                    await db.commit()
+                raise  # Re-raise to ensure proper task cancellation
+            except Exception as e:
+                # We reuse the existing session if possible, or handle generic error
+                logger.error("agent_run_failed", error=str(e), episode_id=episode_id)
+                episode = await db.get(Episode, episode_id)
                 if episode:
                     episode.status = EpisodeStatus.FAILED
-                    await fail_db.commit()
-            logger.error("agent_run_failed", error=str(e), episode_id=episode_id)
+                    await db.commit()
 
-
-@app.get("/")
-async def read_root():
-    return {"status": ResponseStatus.OK, "service": "controller"}
-
-
-@app.get("/health")
-async def health():
-    return {"status": ResponseStatus.HEALTHY}
-
-
-@app.post("/simulation/run")
-async def run_simulation(request: SimulationRequest):
-    if not temporal_client_instance:
-        return {
-            "status": ResponseStatus.ERROR,
-            "message": "Temporal client not connected",
-        }
-
-    handle = await temporal_client_instance.start_workflow(
-        SimulationWorkflow.run,
-        request.compound_json,
-        id=f"sim-{request.session_id}-{os.urandom(4).hex()}",
-        task_queue="simulation-task-queue",
-    )
-    return {"status": ResponseStatus.ACCEPTED, "workflow_id": handle.id}
+    finally:
+        # Always remove task from tracker
+        task_tracker.remove_task(episode_id)
 
 
 @app.post("/agent/run")
-async def run_agent(request: AgentRunRequest, background_tasks: BackgroundTasks):
+async def run_agent(request: AgentRunRequest):
+    # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         episode = Episode(
@@ -191,8 +188,12 @@ async def run_agent(request: AgentRunRequest, background_tasks: BackgroundTasks)
 
         episode_id = episode.id
 
-    background_tasks.add_task(
-        execute_agent_task, episode_id, request.task, request.session_id
+    # Create task and register it
+    import asyncio
+
+    task = asyncio.create_task(
+        execute_agent_task(episode_id, request.task, request.session_id)
     )
+    task_tracker.register_task(episode_id, task)
 
     return {"status": ResponseStatus.ACCEPTED, "episode_id": episode_id}

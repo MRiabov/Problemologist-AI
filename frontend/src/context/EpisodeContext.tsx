@@ -10,6 +10,7 @@ interface EpisodeContextType {
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string) => Promise<void>;
+  interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
   createNewBenchmark: () => void;
   clearSelection: () => void;
@@ -69,7 +70,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
         const newEpisode: Episode = {
           id: response.episode_id,
           task: task,
-          status: 'running',
+          status: 'running' as any, // Cast to any to avoid enum issues for now, or import EpisodeStatus
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           traces: [],
@@ -83,6 +84,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       setRunning(false);
     }
   }, [refreshEpisodes]);
+
+  const interruptAgent = useCallback(async (id: string) => {
+    try {
+        await import('../api/client').then(m => m.interruptEpisode(id));
+    } catch (e) {
+        console.error("Failed to interrupt agent", e);
+    }
+  }, []);
 
   useEffect(() => {
     refreshEpisodes();

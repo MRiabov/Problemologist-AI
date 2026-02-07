@@ -61,3 +61,34 @@ class ConnectionManager:
 
 # Singleton instance
 manager = ConnectionManager()
+
+
+class TaskTracker:
+    """Tracks active asyncio Tasks for episodes to allow cancellation."""
+
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.active_tasks: dict[uuid.UUID, asyncio.Task] = {}
+        return cls._instance
+
+    def register_task(self, episode_id: uuid.UUID, task: asyncio.Task):
+        """Register a task for an episode."""
+        self.active_tasks[episode_id] = task
+        logger.info("task_registered", episode_id=str(episode_id))
+
+    def remove_task(self, episode_id: uuid.UUID):
+        """Remove a task for an episode."""
+        if episode_id in self.active_tasks:
+            del self.active_tasks[episode_id]
+            logger.info("task_removed", episode_id=str(episode_id))
+
+    def get_task(self, episode_id: uuid.UUID) -> asyncio.Task | None:
+        """Get the task for an episode."""
+        return self.active_tasks.get(episode_id)
+
+
+# Singleton instance
+task_tracker = TaskTracker()
