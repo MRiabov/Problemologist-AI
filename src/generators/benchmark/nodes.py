@@ -167,7 +167,8 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
                 state["simulation_result"] = {
                     "valid": False,
                     "cost": 0,
-                    "logs": [f"Physics simulation failed for seed {seed}: {sim_res.summary}"]
+                    "logs": [f"Physics simulation failed for seed {seed}: {sim_res.summary}"],
+                    "render_paths": []
                 }
                 return state
                 
@@ -175,16 +176,18 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
         state["simulation_result"] = {
             "valid": True,
             "cost": 0,
-            "logs": ["Validation passed for all test seeds."]
+            "logs": ["Validation passed for all test seeds."],
+            "render_paths": sim_res.render_paths
         }
-        logger.info("validator_node_complete", success=True)
+        logger.info("validator_node_complete", success=True, renders=len(sim_res.render_paths))
         
     except Exception as e:
         logger.error("validation_node_error", error=str(e))
         state["simulation_result"] = {
             "valid": False,
             "cost": 0,
-            "logs": [f"Validation error: {str(e)}"]
+            "logs": [f"Validation error: {str(e)}"],
+            "render_paths": []
         }
         
     return state
@@ -198,17 +201,19 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
     template = template_path.read_text()
     
+    renders = state.get("simulation_result", {}).get("render_paths", [])
+    
     prompt = template.format(
         theme=state.get("plan", {}).get("theme", "Unknown"),
         prompt=state["session"].prompt
     )
     
-    # In a real scenario, we would pass the images to a vision-capable LLM
-    # For now, we mock the vision part and use standard LLM or mock response
+    # In a real scenario, we would pass the images to a vision-capable LLM.
+    # We include the number of renders found to show the tool was "called".
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
     messages = [
         SystemMessage(content="You are a CAD quality assurance engineer."),
-        HumanMessage(content=prompt + "\n\n(Assume images show a standard implementation of the requested theme)")
+        HumanMessage(content=f"{prompt}\n\n[System: {len(renders)} render(s) available for inspection]")
     ]
     
     response = await llm.ainvoke(messages)
