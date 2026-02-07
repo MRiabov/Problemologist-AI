@@ -1,12 +1,16 @@
 import structlog
 from typing import Literal
 from uuid import uuid4
+from sqlalchemy import update
 
 from langgraph.graph import StateGraph, END, START
 
 from .state import BenchmarkGeneratorState
 from .nodes import planner_node, coder_node, validator_node, reviewer_node
 from .models import GenerationSession, SessionStatus
+from .schema import GenerationSessionModel
+from .storage import BenchmarkStorage
+from src.controller.persistence.db import get_db
 
 logger = structlog.get_logger(__name__)
 
@@ -62,11 +66,22 @@ def define_graph():
 
 async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
     """
-    Entry point to run the full generation pipeline.
+    Entry point to run the full generation pipeline with persistence.
     """
     session_id = uuid4()
     logger.info("running_generation_session", session_id=session_id, prompt=prompt)
     
+    # 1. Create DB entry
+    async with get_db() as db:
+        db_session = GenerationSessionModel(
+            session_id=session_id,
+            prompt=prompt,
+            status=SessionStatus.planning
+        )
+        db.add(db_session)
+        await db.commit()
+    
+    # 2. Setup State
     session = GenerationSession(
         session_id=session_id,
         prompt=prompt,
@@ -83,13 +98,77 @@ async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
     )
     
     app = define_graph()
-    final_state = await app.ainvoke(initial_state)
+    final_state = initial_state
     
-    # Update status based on final feedback
-    if final_state.get("review_feedback") == "Approved":
-        final_state["session"].status = SessionStatus.accepted
-    else:
-        final_state["session"].status = SessionStatus.rejected
-        
+    # 3. Stream execution and checkpoint
+    async for output in app.astream(initial_state):
+        for node_name, state in output.items():
+            final_state = state
+            
+            # Determine new status
+            new_status = SessionStatus.executing # Default active status
+            
+            if node_name == "planner":
+                new_status = SessionStatus.executing
+            elif node_name == "coder":
+                new_status = SessionStatus.validating
+            elif node_name == "validator":
+                 # If valid, it moves to reviewer (still validating/reviewing)
+                 # If invalid, moves back to coder (executing)
+                 if state.get("simulation_result") and state["simulation_result"]["valid"]:
+                     new_status = SessionStatus.validating
+                 else:
+                     new_status = SessionStatus.executing
+            elif node_name == "reviewer":
+                feedback = state.get("review_feedback", "")
+                if feedback == "Approved":
+                    new_status = SessionStatus.accepted
+                else:
+                    new_status = SessionStatus.rejected # Temporarily rejected, will retry
+
+            # Update DB
+            async with get_db() as db:
+                stmt = (
+                    update(GenerationSessionModel)
+                    .where(GenerationSessionModel.session_id == session_id)
+                    .values(status=new_status)
+                )
+                await db.execute(stmt)
+                await db.commit()
+
+            # Update local session object
+            final_state["session"].status = new_status
+    
+    # 4. Final Asset Persistence
+    if final_state["session"].status == SessionStatus.accepted:
+        try:
+            async with get_db() as db:
+                storage = BenchmarkStorage()
+                
+                sim_result = final_state.get("simulation_result", {})
+                images = []
+                if sim_result:
+                    for path in sim_result.get("render_paths", []):
+                        try:
+                            with open(path, "rb") as f:
+                                images.append(f.read())
+                        except Exception as e:
+                            logger.warn("image_read_failed", path=path, error=str(e))
+                
+                # Placeholder for MJCF content if not explicitly in state
+                mjcf_content = final_state.get("mjcf_content", "<!-- MJCF content missing in state -->")
+                
+                await storage.save_asset(
+                    benchmark_id=session_id,
+                    script=final_state["current_script"],
+                    mjcf=mjcf_content,
+                    images=images,
+                    metadata=final_state.get("plan", {}),
+                    db=db
+                )
+                logger.info("asset_persisted", session_id=session_id)
+        except Exception as e:
+            logger.error("asset_persistence_failed", session_id=session_id, error=str(e))
+
     logger.info("generation_session_complete", session_id=session_id, status=final_state["session"].status)
     return final_state
