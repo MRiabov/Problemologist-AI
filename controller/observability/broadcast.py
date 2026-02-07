@@ -32,6 +32,12 @@ class EpisodeBroadcaster:
 
     async def broadcast(self, episode_id: uuid.UUID, message: Any) -> None:
         """Broadcast a message to all subscribers of an episode."""
+        # 1. Internal Queue Broadcasting (legacy/internal)
         if episode_id in self._subscribers:
             for queue in self._subscribers[episode_id]:
                 await queue.put(message)
+
+        # 2. WebSocket Broadcasting (new unified mechanism)
+        from controller.api.manager import manager
+
+        await manager.broadcast(episode_id, message)
