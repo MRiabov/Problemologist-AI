@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchEpisodes, fetchEpisode, runSimulation } from '../api/client';
-import type { Episode } from '../api/types';
+import { fetchEpisodes, fetchEpisode, runSimulation, type Episode } from '../api/client';
 import { 
   Play, 
   Database, 
@@ -20,12 +19,12 @@ import {
   BrainCircuit,
   DatabaseZap
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Button } from "../components/ui/button";
+import { ScrollArea } from "../components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Separator } from "../components/ui/separator";
+import { Badge } from "../components/ui/badge";
+import { cn } from "../lib/utils";
 
 export default function BenchmarkGeneration() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);

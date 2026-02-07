@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchEpisodes, fetchSkills, runAgent, fetchEpisode } from '../api/client';
-import type { Episode, Skill } from '../api/types';
+import { fetchEpisodes, fetchSkills, runAgent, fetchEpisode, type Episode, type Skill } from '../api/client';
 import { 
   Search, 
   Rocket, 
@@ -18,13 +17,13 @@ import {
   Zap,
   Play
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge"; // Note: I should add Badge component too
-import { cn } from "@/lib/utils";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { ScrollArea } from "../components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Separator } from "../components/ui/separator";
+import { Badge } from "../components/ui/badge";
+import { cn } from "../lib/utils";
 
 export default function EngineerWorkspace() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
