@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
-import { fetchEpisodes, runSimulation, type Episode } from '../api/client';
+import { fetchEpisodes, runSimulation, checkConnection, type Episode } from '../api/client';
 import { 
   Play, 
   Cpu, 
-  CircleDot
+  CircleDot,
+  Signal,
+  SignalLow
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -18,17 +20,28 @@ export default function BenchmarkGeneration() {
   } = useEpisodes();
   const [, setEpisodes] = useState<Episode[]>([]);
   const [simulating, setSimulating] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
 
   useEffect(() => {
     async function loadData() {
         try {
             const data = await fetchEpisodes();
             setEpisodes(data);
+            setIsConnected(true);
         } catch (e) {
             console.error("Failed to load episodes", e);
+            setIsConnected(false);
         }
     }
     loadData();
+
+    // Connection polling
+    const interval = setInterval(async () => {
+        const connected = await checkConnection();
+        setIsConnected(connected);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleRunSimulation = async () => {
@@ -38,8 +51,10 @@ export default function BenchmarkGeneration() {
         await runSimulation(sessionId);
         const data = await fetchEpisodes();
         setEpisodes(data);
+        setIsConnected(true);
     } catch (e) {
         console.error("Failed to run simulation", e);
+        setIsConnected(false);
     } finally {
         setSimulating(false);
     }
@@ -54,7 +69,18 @@ export default function BenchmarkGeneration() {
             <Cpu className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Benchmark Pipeline</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold tracking-tight">Benchmark Pipeline</h2>
+              {isConnected ? (
+                <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-green-500/30 text-green-500 bg-green-500/5 gap-1">
+                  <Signal className="h-2 w-2" /> ONLINE
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-red-500/30 text-red-500 bg-red-500/5 gap-1">
+                  <SignalLow className="h-2 w-2" /> DISCONNECTED
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Mechanical Physics Validation</span>
             </div>
@@ -62,14 +88,14 @@ export default function BenchmarkGeneration() {
         </div>
         
         <div className="flex items-center gap-3">
-          {!simulating && (
-            <Badge variant="outline" className="text-[9px] h-6 px-3 font-bold border-red-500/30 text-red-500 bg-red-500/5 uppercase tracking-widest">
-              Offline
+          {!isConnected && (
+            <Badge variant="outline" className="text-[9px] h-6 px-3 font-bold border-red-500/30 text-red-500 bg-red-500/5 uppercase tracking-widest animate-pulse">
+              System Offline
             </Badge>
           )}
           <Button 
             onClick={handleRunSimulation}
-            disabled={simulating}
+            disabled={simulating || !isConnected}
             className="gap-2 h-10 px-6 font-bold"
           >
             {simulating ? <CircleDot className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
@@ -85,6 +111,7 @@ export default function BenchmarkGeneration() {
             <ReasoningTraces 
               traces={selectedEpisode?.traces}
               isRunning={simulating}
+              isConnected={isConnected}
             />
         </div>
 
@@ -94,6 +121,7 @@ export default function BenchmarkGeneration() {
             <div className="h-1/2 flex flex-col overflow-hidden border-b relative bg-gradient-to-b from-muted to-background flex items-center justify-center">
                     {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
                         <div className="w-full h-full flex items-center justify-center relative p-8">
+                            {!isConnected && <ConnectionError className="absolute inset-0 z-[60]" />}
                             {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
                                 <video 
                                     src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
@@ -109,7 +137,10 @@ export default function BenchmarkGeneration() {
                         </div>
                     ) : (
                         <div className="w-full h-full relative">
-                            <ModelViewer className="w-full h-full" />
+                            <ModelViewer 
+                                className="w-full h-full" 
+                                isConnected={isConnected}
+                            />
                             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
                                     Simulation Preview • Multi-Body
@@ -123,6 +154,7 @@ export default function BenchmarkGeneration() {
             <div className="h-1/2 overflow-hidden flex flex-col">
                 <ArtifactView 
                     mjcf={selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf')?.s3_path}
+                    isConnected={isConnected}
                     validationResults={{
                         integrity_checks: [
                             { label: "XML Schema", status: "success", info: "mj_v3.1" },

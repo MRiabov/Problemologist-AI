@@ -2,15 +2,18 @@ import { useRef, useEffect } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { Terminal } from "lucide-react";
+import ConnectionError from "../shared/ConnectionError";
 
 interface ReasoningTracesProps {
   traces?: TraceResponse[];
   isRunning?: boolean;
+  isConnected?: boolean;
 }
 
 export default function ReasoningTraces({
   traces,
-  isRunning
+  isRunning,
+  isConnected = true
 }: ReasoningTracesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +31,9 @@ export default function ReasoningTraces({
   }, [traces]);
 
   return (
-    <div className="flex flex-col h-full bg-card/30 border-r border-border">
+    <div className="flex flex-col h-full bg-card/30 border-r border-border relative">
+      {!isConnected && <ConnectionError className="absolute inset-0" />}
+      
       {/* Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <ScrollArea className="flex-1 bg-black/20" ref={scrollRef}>

@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
+import ConnectionError from '../shared/ConnectionError'
 
 function PlaceholderModel() {
   const meshRef = useRef<THREE.Mesh>(null!)
@@ -26,11 +27,13 @@ function PlaceholderModel() {
 interface ModelViewerProps {
   className?: string;
   assetUrl?: string | null;
+  isConnected?: boolean;
 }
 
-export default function ModelViewer({ className, assetUrl }: ModelViewerProps) {
+export default function ModelViewer({ className, assetUrl, isConnected = true }: ModelViewerProps) {
   return (
-    <div className={className}>
+    <div className={`${className} relative`}>
+      {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       <Canvas shadows dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
         <OrbitControls 
