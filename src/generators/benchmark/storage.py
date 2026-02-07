@@ -77,7 +77,7 @@ class BenchmarkStorage:
             mjcf_url=mjcf_url,
             build123d_url=script_url,
             preview_bundle_url=bundle_url,
-            meta_data=metadata,
+            benchmark_metadata=metadata,
             difficulty_score=metadata.get("difficulty_score", 0.0),
             random_variants=[] # TODO: Handle variants logic if needed
         )
@@ -93,7 +93,7 @@ class BenchmarkStorage:
             preview_bundle_url=asset_model.preview_bundle_url,
             random_variants=asset_model.random_variants,
             difficulty_score=asset_model.difficulty_score,
-            metadata=asset_model.meta_data
+            metadata=asset_model.benchmark_metadata
         )
 
     async def _upload_string(self, bucket: str, key: str, content: str, content_type: str):

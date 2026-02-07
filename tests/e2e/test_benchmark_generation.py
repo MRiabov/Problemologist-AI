@@ -36,7 +36,11 @@ async def test_benchmark_generation_e2e():
         state_coder = {**initial_state, "current_script": "print('hello')", "plan": {"theme": "stack"}}
         yield {"coder": state_coder}
         # Validator
-        state_val = {**state_coder, "simulation_result": {"valid": True, "render_paths": ["/tmp/img1.png", "/tmp/img2.png"]}}
+        state_val = {
+            **state_coder, 
+            "mjcf_content": "<mujoco/>",
+            "simulation_result": {"valid": True, "render_paths": ["/tmp/img1.png", "/tmp/img2.png"]}
+        }
         yield {"validator": state_val}
         # Reviewer
         state_rev = {**state_val, "review_feedback": "Approved"}
@@ -49,12 +53,7 @@ async def test_benchmark_generation_e2e():
     with (patch("src.generators.benchmark.graph.get_db", side_effect=mock_get_db_gen), 
          patch("src.generators.benchmark.storage.boto3", mock_boto), 
          patch("src.generators.benchmark.graph.define_graph", return_value=mock_app), 
-         patch("builtins.open", new_callable=MagicMock) as mock_open):
-        
-        # Mock file reading for images
-        mock_file = MagicMock()
-        mock_file.read.return_value = b"fake_bytes"
-        mock_open.return_value.__enter__.return_value = mock_file
+         patch("src.generators.benchmark.graph.Path.read_bytes", return_value=b"fake_bytes")):
         
         prompt = "Create a stack of blocks"
         final_state = await run_generation_session(prompt)
