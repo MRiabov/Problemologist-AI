@@ -149,15 +149,18 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
             raise AttributeError("build() function not found in script.")
             
         # 2. Run a few test builds with different seeds
+        mjcf_str = ""
         for seed in [0, 42]:
             part, mjcf = build_func(seed=seed)
+            mjcf_str = mjcf
             
             # 3. Geometric Validation
             if not validate(part):
                 state["simulation_result"] = {
                     "valid": False,
                     "cost": 0,
-                    "logs": [f"Geometric validation failed for seed {seed}"]
+                    "logs": [f"Geometric validation failed for seed {seed}"],
+                    "render_paths": []
                 }
                 return state
                 
@@ -173,6 +176,7 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
                 return state
                 
         # 5. Success
+        state["mjcf_content"] = mjcf_str
         state["simulation_result"] = {
             "valid": True,
             "cost": 0,
