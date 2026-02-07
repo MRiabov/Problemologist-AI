@@ -57,9 +57,10 @@ Train the model to do electrical engineering in 3d.
 
 #### Work necessary
 
-1. Do a customer elecronic solver or find one that would
-2. Optimize the model to use electronics
-3. Generate more training data.
+1. Do a customer elecronic solver or find one that would fit
+2. electronics modelling in CAD
+3. Optimize the agent prompts to use electronics
+4. Generate more training data.
 
 At this point we'll almost definitely need a subagent. Although, it's actually easy to do (in fact, the MVP has multiple subagents) because of LangGraph.
 
@@ -79,13 +80,13 @@ it's not necessarily a difficult piece of work, but, it'll need to plan it's cha
 #### Work necessary
 
 1. New prompts
-2. Tuning the agent
-3. A dataset of improvements. Notably, this is pretty easy to do, as we have a Critic model that would suggest improvements from day 1.
+2. Adding CAD to be able to design pipes and other vessels.
+3. Tuning the agent
+4. A dataset of improvements. Notably, this is pretty easy to do, as we have a Critic model that would suggest improvements from day 1.
 
 #### Tech stack
 
 1. New prompts. LangFuse for evaluation.
-2.
 
 ### Work package 4 - Topology optimization (extra cool)
 
@@ -99,8 +100,8 @@ It's what every engineer wants to do, but doesn't always have time to do it. It 
 
 #### Work necessary
 
-1. Allow the LLMs new tools to make topology optimization
-2. Generate a new dataset with topology-optimized parts
+1. Add the new tools for agents to use to make topology optimization (more CAD work).
+2. Generate a new dataset with topology-optimized parts.
 3. Again, tune the model to use topology optimization.
 4. Possibly split the topology optimization to a more powerful CPU or even GPU machine because topology optimization is resource-intensive.
 
