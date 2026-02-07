@@ -52,9 +52,9 @@
 
 **Goal**: Persist results and provide a CLI for running the generator.
 
-- [ ] T017: Implement `save_asset` logic (Save images to `/renders/` for S3 routing, DB insert for metadata).
-- [ ] T018: Implement `save_session_state` checkpointing.
-- [ ] T019: Create CLI entry point/script to trigger generation sessions.
-- [ ] T020: End-to-End integration test.
+- [x] T017: Implement `save_asset` logic (Save images to `/renders/` for S3 routing, DB insert for metadata).
+- [x] T018: Implement `save_session_state` checkpointing.
+- [x] T019: Create CLI entry point/script to trigger generation sessions.
+- [x] T020: End-to-End integration test.
 
 ~300 lines
