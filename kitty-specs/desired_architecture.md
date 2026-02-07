@@ -787,18 +787,12 @@ As the agents are long-running (and cost money!) it is desirable to be able to:
 
 ##### Benchmark generation workflow
 
-I need a place to enable "create benchmark" functionality. So go from a high-level prompt to a benchmark
-   plan, through the confirm and implementation.
+I need a place to enable "create benchmark" functionality. So go from a high-level prompt to a benchmark plan, through the confirm and implementation.
 
-   here's what I suggest: add a "+ Create new" primary button instead of "history" icon next to "benchmark
-   runs". Upon this, the data from the the current will clear (from the UI, not from the DB), and we'll go
-   into "benchmark creation" mode. Here the "traces" section will have a textbox on top of it, prompting to
-   create a benchmark.
-   Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder
-   directory. the plan file will have a "start implementation" on the top of it; with it the benchmark
-   genration will start.
+Here's what I suggest: add a "+ Create new" primary button instead of "history" icon next to "benchmark runs". Upon this, the data from the the current will clear (from the UI, not from the DB), and we'll go into "benchmark creation" mode. Here the "traces" section will have a textbox on top of it, prompting to create a benchmark.
 
-   The UI will be automatically updated with new models as the build123d genration will progress.
+Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder directory. the plan file will have a "start implementation" on the top of it; with it the benchmark genration will start.
+The UI will be automatically updated with new models as the build123d genration will progress.
 
 ##### Interrupting the worker and progress bars
 
@@ -829,6 +823,18 @@ The rightmost column is split vertically into:
 
 1. a 3d view on top (like it currently is)
 2. an artifact view. Artifacts are plans, reviews etc. it's like a mini-tree + cards on top view - the file tree is collapsible and cards on top can be used to switch files.
+
+###### CAD viewer
+
+Turns out viewing CAD is not as easy. In addition, special-purpose CAD viewing funcionality is desired - for being able to "click" on a face and prompt something to a model - we'll need it in the future.
+
+Ideally, this is solved via WASM in the browser. But I can't give two craps about debugging WASM yet, e.g. by "Yet Another CAD viewer" which runs in WASM.
+
+So, use a Yet Another CAD Viewer" server-side rendering for now. integrate it into the worker, ideally.
+The file format is GLB (not STL) because of lesser volume.
+
+[!Note] Exception - the frontend will query the worker to get the GLB files. (we specified elsewhere that it will communicate only to controller first.) GET-method only though.
+<!-- Note: in the future it should be WASM+b123d viewer in the browser though. Or at least a CAD viewer. -->
 
 #### Frontend architecture
 
