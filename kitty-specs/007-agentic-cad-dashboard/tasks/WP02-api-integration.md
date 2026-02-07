@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP02"
-title: "API Integration & Data Layer"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T006", "T007", "T008", "T009", "T010"]
+work_package_id: WP02
+title: API Integration & Data Layer
+lane: "doing"
+dependencies: [WP01]
+base_branch: 007-agentic-cad-dashboard-WP01
+base_commit: b0b7bf77614a0fb87a464a2c2a457b04904e4222
+created_at: '2026-02-07T07:35:09.440759+00:00'
+subtasks: [T006, T007, T008, T009, T010]
+shell_pid: "229530"
 ---
 
 ## Context
