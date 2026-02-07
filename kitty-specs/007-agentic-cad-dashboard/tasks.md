@@ -19,11 +19,11 @@
 
 ### WP02: API Integration & Data Layer
 
-- [ ] T006: Setup OpenAPI Code Generation (from backend schema)
-- [ ] T007: Configure TanStack Query (React Query) and Axios client
+- [x] T006: Setup OpenAPI Code Generation (from backend schema)
+- [x] T007: Configure TanStack Query (React Query) and Axios client
 - [x] T008: Implement `RunService` and `BenchmarkService` wrappers (Basic `client.ts` implemented)
 - [x] T009: specific "Runs List" Component (Home View) with pagination (Episode History sidebar implemented)
-- [ ] T010: Create "Run Detail" Context/Hook for shared state
+- [x] T010: Create "Run Detail" Context/Hook for shared state
 
 **Summary**: Establish the type-safe communication layer with the Controller.
 **Dependencies**: WP01
