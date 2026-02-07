@@ -4,6 +4,7 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
+from controller.clients.worker import WorkerClient
 from shared.type_checking import type_check
 
 from ..prompt_manager import PromptManager
@@ -18,11 +19,15 @@ class SidecarNode:
     Sidecar Learner node: Analyzes the journal to suggest new skills.
     """
 
-    def __init__(self, suggested_skills_dir: str = "suggested_skills"):
+    def __init__(
+        self,
+        worker_url: str = "http://worker:8001",
+        session_id: str = "default-session",
+    ):
         self.pm = PromptManager()
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.suggested_skills_dir = Path(suggested_skills_dir)
-        self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
+        self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
+        self.suggested_skills_dir = "suggested_skills"
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the sidecar node logic."""
@@ -43,19 +48,27 @@ class SidecarNode:
             title = parts[0].replace("SKILL:", "").strip().lower().replace(" ", "_")
             skill_content = parts[1].strip()
 
-            file_path = self.suggested_skills_dir / f"{title}.md"
-            with open(file_path, "w") as f:
-                f.write(skill_content)
-            suggested_skill = title
-            logger.info(f"Suggested new skill: {title}")
+            file_path = f"{self.suggested_skills_dir}/{title}.md"
+
+            try:
+                await self.worker_client.write_file(file_path, skill_content)
+                suggested_skill = title
+                logger.info(f"Suggested new skill: {title}")
+            except Exception as e:
+                logger.error(f"Failed to write skill to worker: {e}")
 
         journal_entry = f"\nSidecar Learner: {'Suggested skill ' + suggested_skill if suggested_skill else 'No new skills identified.'}"
 
         return state.model_copy(update={"journal": state.journal + journal_entry})
 
 
+from ..config import settings
+
+
 # Factory function for LangGraph
 @type_check
 async def sidecar_node(state: AgentState) -> AgentState:
-    node = SidecarNode()
+    node = SidecarNode(
+        worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
+    )
     return await node(state)

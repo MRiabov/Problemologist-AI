@@ -1,5 +1,3 @@
-import shutil
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -29,15 +27,17 @@ from build123d import Box
         )
         yield instance
 
+@pytest.fixture
+def mock_worker_client():
+    with patch("controller.agent.nodes.sidecar.WorkerClient") as mock:
+        client = mock.return_value
+        client.write_file = AsyncMock()
+        yield client
 
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_node_suggest_skill(mock_llm):
-    test_dir = Path("test_suggested_skills")
-    if test_dir.exists():
-        shutil.rmtree(test_dir)
-
-    node = SidecarNode(suggested_skills_dir=str(test_dir))
+async def test_sidecar_node_suggest_skill(mock_llm, mock_worker_client):
+    node = SidecarNode(worker_url="http://test", session_id="test")
     state = AgentState(
         task="Test task", journal="I struggled with Box until I imported it correctly."
     )
@@ -45,30 +45,31 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     result = await node(state)
 
     assert "Suggested skill build123d_import_trick" in result.journal
-    skill_file = test_dir / "build123d_import_trick.md"
-    assert skill_file.exists()
 
-    with skill_file.open("r") as f:
-        content = f.read()
-        assert "Build123D Import Trick" in content
-        assert "from build123d import Box" in content
-
-    # Cleanup
-    shutil.rmtree(test_dir)
+    # Check write_file
+    mock_worker_client.write_file.assert_called_with(
+        "suggested_skills/build123d_import_trick.md",
+        """# Build123D Import Trick
+## Problem
+Syntax error when using Box.
+## Solution
+Import Box from build123d.
+## Example
+```python
+from build123d import Box
+```"""
+    )
 
 
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_node_no_skill(mock_llm):
+async def test_sidecar_node_no_skill(mock_llm, mock_worker_client):
     mock_llm.ainvoke.return_value = MagicMock(content="No new skills identified.")
 
-    test_dir = Path("test_suggested_skills")
-    node = SidecarNode(suggested_skills_dir=str(test_dir))
+    node = SidecarNode(worker_url="http://test", session_id="test")
     state = AgentState(task="Easy task", journal="Everything worked perfectly.")
 
     result = await node(state)
 
     assert "No new skills identified" in result.journal
-
-    if test_dir.exists():
-        shutil.rmtree(test_dir)
+    mock_worker_client.write_file.assert_not_called()
