@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr, StrictInt, StrictFloat, StrictBool
 
 class ManufacturingMethod(str, Enum):
     CNC = "cnc"
@@ -8,39 +8,39 @@ class ManufacturingMethod(str, Enum):
     INJECTION_MOLDING = "im"
 
 class WorkbenchResult(BaseModel):
-    is_manufacturable: bool
-    unit_cost: float
-    violations: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    is_manufacturable: StrictBool
+    unit_cost: StrictFloat
+    violations: List[StrictStr] = Field(default_factory=list)
+    metadata: Dict[StrictStr, Any] = Field(default_factory=dict)
 
 class DFMReport(BaseModel):
-    overall_status: bool
-    results: Dict[str, WorkbenchResult]
+    overall_status: StrictBool
+    results: Dict[StrictStr, WorkbenchResult]
 
 class MaterialDefinition(BaseModel):
-    name: str
-    density_g_cm3: float
-    cost_per_kg: float
+    name: StrictStr
+    density_g_cm3: StrictFloat
+    cost_per_kg: StrictFloat
     compatibility: List[ManufacturingMethod] = Field(default_factory=list)
 
 class CostBreakdown(BaseModel):
-    process: str
-    total_cost: float
-    unit_cost: float
-    material_cost_per_unit: float
-    setup_cost: float
-    is_reused: bool
-    details: Dict[str, Any] = Field(default_factory=dict)
-    pricing_explanation: str = ""
+    process: StrictStr
+    total_cost: StrictFloat
+    unit_cost: StrictFloat
+    material_cost_per_unit: StrictFloat
+    setup_cost: StrictFloat
+    is_reused: StrictBool
+    details: Dict[StrictStr, Any] = Field(default_factory=dict)
+    pricing_explanation: StrictStr = ""
 
 class MethodConfig(BaseModel):
-    materials: Dict[str, Dict[str, Any]]
-    constraints: Dict[str, Any] = Field(default_factory=dict)
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    costs: Dict[str, Any] = Field(default_factory=dict)
+    materials: Dict[StrictStr, Dict[StrictStr, Any]]
+    constraints: Dict[StrictStr, Any] = Field(default_factory=dict)
+    parameters: Dict[StrictStr, Any] = Field(default_factory=dict)
+    costs: Dict[StrictStr, Any] = Field(default_factory=dict)
 
 class ManufacturingConfig(BaseModel):
-    defaults: Dict[str, Any] = Field(default_factory=dict)
+    defaults: Dict[StrictStr, Any] = Field(default_factory=dict)
     cnc: Optional[MethodConfig] = None
     injection_molding: Optional[MethodConfig] = None
     three_dp: Optional[MethodConfig] = None

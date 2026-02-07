@@ -1,7 +1,6 @@
 import httpx
 from typing import List, Optional, Dict, Any, Union
-from src.worker.api.schema import ExecuteResponse
-from src.worker.filesystem.backend import FileInfo
+from src.worker.api.schema import ExecuteResponse, EditOp
 
 
 class WorkerClient:
@@ -76,20 +75,22 @@ class WorkerClient:
             response.raise_for_status()
             return response.json()["status"] == "success"
 
-    async def edit_file(self, path: str, edits: List[Dict[str, str]]) -> bool:
+    async def edit_file(self, path: str, edits: List[EditOp]) -> bool:
         """Edit a file with one or more operations.
 
         Args:
             path: Virtual file path.
-            edits: List of dicts with 'old_string' and 'new_string'.
+            edits: List of EditOp objects.
 
         Returns:
             True if successful.
         """
         async with httpx.AsyncClient() as client:
+            # Pydantic models need to be converted to dict for json serialization
+            json_edits = [op.model_dump() for op in edits]
             response = await client.post(
                 f"{self.base_url}/fs/edit",
-                json={"path": path, "edits": edits},
+                json={"path": path, "edits": json_edits},
                 headers=self.headers,
                 timeout=10.0,
             )

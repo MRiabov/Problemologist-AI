@@ -7,11 +7,10 @@ and subprocess isolation.
 import asyncio
 import subprocess
 import tempfile
-from dataclasses import dataclass
 from pathlib import Path
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr, StrictInt, StrictBool
 
 logger = structlog.get_logger(__name__)
 
@@ -22,19 +21,18 @@ DEFAULT_TIMEOUT_SECONDS = 30
 class ExecutionResult(BaseModel):
     """Result of a Python code execution."""
 
-    stdout: str
-    stderr: str
-    exit_code: int
-    timed_out: bool = False
+    stdout: StrictStr
+    stderr: StrictStr
+    exit_code: StrictInt
+    timed_out: StrictBool = False
 
 
-@dataclass
-class RuntimeConfig:
+class RuntimeConfig(BaseModel):
     """Configuration for the Python runtime executor."""
 
-    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
-    python_executable: str = "python3"
-    working_directory: str | None = None
+    timeout_seconds: StrictInt = DEFAULT_TIMEOUT_SECONDS
+    python_executable: StrictStr = "python3"
+    working_directory: StrictStr | None = None
 
 
 def run_python_code(

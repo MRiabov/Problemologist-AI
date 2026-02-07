@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 from typing import Any, Dict, Optional
 
@@ -5,9 +6,15 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
 from ..prompt_manager import PromptManager
-from ..state import AgentState
+from ..state import AgentState, AgentStatus
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.clients.worker import WorkerClient
+
+
+class CriticDecision(str, Enum):
+    APPROVE = "APPROVE"
+    REJECT_PLAN = "REJECT_PLAN"
+    REJECT_CODE = "REJECT_CODE"
 
 
 class CriticNode:
@@ -49,33 +56,33 @@ class CriticNode:
         # DECISION: APPROVE | REJECT_PLAN | REJECT_CODE
         # FEEDBACK: <feedback>
 
-        decision = "REJECT_CODE"
+        decision = CriticDecision.REJECT_CODE
         feedback = "Failed to parse critic decision."
 
-        if "DECISION: APPROVE" in content:
-            decision = "APPROVE"
-        elif "DECISION: REJECT_PLAN" in content:
-            decision = "REJECT_PLAN"
-        elif "DECISION: REJECT_CODE" in content:
-            decision = "REJECT_CODE"
+        if f"DECISION: {CriticDecision.APPROVE}" in content:
+            decision = CriticDecision.APPROVE
+        elif f"DECISION: {CriticDecision.REJECT_PLAN}" in content:
+            decision = CriticDecision.REJECT_PLAN
+        elif f"DECISION: {CriticDecision.REJECT_CODE}" in content:
+            decision = CriticDecision.REJECT_CODE
         elif "DECISION: REJECT" in content:
-            decision = "REJECT_CODE"  # Default reject
+            decision = CriticDecision.REJECT_CODE  # Default reject
 
         if "FEEDBACK:" in content:
             feedback = content.split("FEEDBACK:")[1].strip()
         else:
             feedback = content.strip()
 
-        journal_entry = f"\nCritic Decision: {decision}\nFeedback: {feedback}"
+        journal_entry = f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
 
         status_map = {
-            "APPROVE": "approved",
-            "REJECT_PLAN": "plan_rejected",
-            "REJECT_CODE": "code_rejected",
+            CriticDecision.APPROVE: AgentStatus.APPROVED,
+            CriticDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
+            CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
         }
 
         return {
-            "status": status_map.get(decision, "code_rejected"),
+            "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
             "feedback": feedback,
             "journal": state.journal + journal_entry,
         }

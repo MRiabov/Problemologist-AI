@@ -1,16 +1,29 @@
+from enum import Enum
 from langchain_core.messages import BaseMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictStr, StrictInt
+
+
+class AgentStatus(str, Enum):
+    IDLE = "idle"
+    THINKING = "thinking"
+    EXECUTING = "executing"
+    WAITING = "waiting"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    APPROVED = "approved"
+    PLAN_REJECTED = "plan_rejected"
+    CODE_REJECTED = "code_rejected"
 
 
 class AgentState(BaseModel):
     """The state of the agent passed between nodes in the graph."""
 
     messages: list[BaseMessage] = Field(default_factory=list)
-    task: str = ""
-    plan: str = ""
-    todo: str = ""
-    current_step: str = ""
-    journal: str = ""
-    iteration: int = 0
-    status: str = ""
-    feedback: str = ""
+    task: StrictStr = ""
+    plan: StrictStr = ""
+    todo: StrictStr = ""
+    current_step: StrictStr = ""
+    journal: StrictStr = ""
+    iteration: StrictInt = 0
+    status: AgentStatus = AgentStatus.IDLE
+    feedback: StrictStr = ""
