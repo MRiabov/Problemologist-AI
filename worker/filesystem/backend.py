@@ -4,14 +4,32 @@ This module provides a filesystem abstraction that maps virtual paths
 to S3 storage with session-based isolation.
 """
 
+import asyncio
+import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import PurePosixPath
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import s3fs
 import structlog
+import wcmatch.glob as wcglob
 from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
 
+from deepagents.backends.protocol import (
+    BackendProtocol,
+    EditResult,
+    FileDownloadResponse,
+    FileInfo as ProtocolFileInfo,
+    FileUploadResponse,
+    GrepMatch,
+    WriteResult,
+)
+from deepagents.backends.utils import (
+    check_empty_content,
+    format_content_with_line_numbers,
+    perform_string_replacement,
+)
 from shared.type_checking import type_check
 
 from .db import S3Config, get_s3_filesystem
@@ -49,12 +67,16 @@ class SimpleSessionManager:
 
 
 @type_check
-class SandboxFilesystemBackend:
+class SandboxFilesystemBackend(BackendProtocol):
     """S3-backed filesystem with session-based path isolation.
 
     Maps virtual paths (e.g., `/hello.txt`) to S3 paths
     (e.g., `s3://bucket/session_id/hello.txt`).
+    Implements BackendProtocol for compatibility with deepagents.
     """
+
+    # FIXME: actually, this should also override the "BaseSandbox" or whatever
+    # actual Sandbox backend in the deep agents implementation. However, I don't care.
 
     def __init__(
         self,
@@ -125,146 +147,231 @@ class SandboxFilesystemBackend:
             return "/" + s3_path[len(prefix) :]
         return "/" + s3_path.split("/")[-1]
 
-    def ls(self, path: str = "/") -> list[FileInfo]:
-        """List contents of a directory.
+    # --- BackendProtocol Implementation ---
 
-        Args:
-            path: Virtual directory path.
-
-        Returns:
-            List of FileInfo objects for directory contents.
-        """
+    def ls_info(self, path: str) -> list[ProtocolFileInfo]:
+        """List files and directories with metadata."""
         s3_path = self._resolve_path(path)
-        logger.debug("filesystem_ls", virtual_path=path, s3_path=s3_path)
-
         try:
-            # Ensure path ends with / for directory listing
             if not s3_path.endswith("/"):
                 s3_path += "/"
 
             entries = self._fs.ls(s3_path, detail=True)
-            result = []
-
+            results = []
             for entry in entries:
-                name = PurePosixPath(entry["name"]).name
-                virtual = self._virtual_path(entry["name"])
                 is_dir = entry["type"] == "directory"
-                size = entry.get("size") if not is_dir else None
+                virt = self._virtual_path(entry["name"])
+                if is_dir and not virt.endswith("/"):
+                    virt += "/"
 
-                result.append(
-                    FileInfo(path=virtual, name=name, is_dir=is_dir, size=size)
-                )
+                info: ProtocolFileInfo = {
+                    "path": virt,
+                    "is_dir": is_dir,
+                    "size": entry.get("size", 0) if not is_dir else 0,
+                }
+                # S3fs might provide LastModified
+                if "LastModified" in entry:
+                    info["modified_at"] = entry["LastModified"].isoformat()
+                results.append(info)
 
-            return result
+            results.sort(key=lambda x: x["path"])
+            return results
         except FileNotFoundError:
-            logger.debug("filesystem_ls_empty", virtual_path=path)
             return []
 
-    def read(self, path: str) -> bytes:
-        """Read file contents.
-
-        Args:
-            path: Virtual file path.
-
-        Returns:
-            File contents as bytes.
-
-        Raises:
-            FileNotFoundError: If file does not exist.
-        """
-        s3_path = self._resolve_path(path)
-        logger.debug("filesystem_read", virtual_path=path, s3_path=s3_path)
-
+    def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
+        """Read file content with line numbers."""
+        s3_path = self._resolve_path(file_path)
         try:
             with self._fs.open(s3_path, "rb") as f:
-                return f.read()
+                content = f.read().decode("utf-8")
+
+            empty_msg = check_empty_content(content)
+            if empty_msg:
+                return empty_msg
+
+            lines = content.splitlines()
+            start_idx = offset
+            end_idx = min(start_idx + limit, len(lines))
+
+            if start_idx >= len(lines):
+                return f"Error: Line offset {offset} exceeds file length ({len(lines)} lines)"
+
+            selected_lines = lines[start_idx:end_idx]
+            return format_content_with_line_numbers(
+                selected_lines, start_line=start_idx + 1
+            )
         except FileNotFoundError:
-            logger.warning("filesystem_read_not_found", virtual_path=path)
-            raise
+            return f"Error: File '{file_path}' not found"
+        except Exception as e:
+            return f"Error reading file '{file_path}': {e!s}"
 
-    def write(self, path: str, content: bytes | str) -> None:
-        """Write content to a file.
+    def write(self, file_path: str, content: str) -> WriteResult:
+        """Write content to a new file."""
+        s3_path = self._resolve_path(file_path)
+        if self._fs.exists(s3_path):
+            return WriteResult(
+                error=f"Cannot write to {file_path} because it already exists."
+            )
 
-        Args:
-            path: Virtual file path.
-            content: Content to write (bytes or string).
-        """
-        s3_path = self._resolve_path(path)
-        logger.debug(
-            "filesystem_write",
-            virtual_path=path,
-            s3_path=s3_path,
-            content_size=len(content),
-        )
-
-        # Convert string to bytes if needed
-        if isinstance(content, str):
-            content = content.encode("utf-8")
-
-        with self._fs.open(s3_path, "wb") as f:
-            f.write(content)
-
-        logger.info("filesystem_write_complete", virtual_path=path)
+        try:
+            with self._fs.open(s3_path, "wb") as f:
+                f.write(content.encode("utf-8"))
+            return WriteResult(path=file_path, files_update=None)
+        except Exception as e:
+            return WriteResult(error=f"Error writing file '{file_path}': {e!s}")
 
     def edit(
         self,
-        path: str,
-        old_content: str,
-        new_content: str,
-    ) -> bool:
-        """Edit file by replacing content.
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ) -> EditResult:
+        """Perform exact string replacements."""
+        s3_path = self._resolve_path(file_path)
+        if not self._fs.exists(s3_path):
+            return EditResult(error=f"Error: File '{file_path}' not found")
 
-        Args:
-            path: Virtual file path.
-            old_content: Content to find and replace.
-            new_content: Replacement content.
+        try:
+            with self._fs.open(s3_path, "rb") as f:
+                content = f.read().decode("utf-8")
 
-        Returns:
-            True if replacement was made, False if old_content not found.
+            result = perform_string_replacement(
+                content, old_string, new_string, replace_all
+            )
+            if isinstance(result, str):
+                return EditResult(error=result)
 
-        Raises:
-            FileNotFoundError: If file does not exist.
-        """
-        logger.debug("filesystem_edit", virtual_path=path)
+            new_content, occurrences = result
+            with self._fs.open(s3_path, "wb") as f:
+                f.write(new_content.encode("utf-8"))
 
-        current = self.read(path).decode("utf-8")
+            return EditResult(
+                path=file_path, files_update=None, occurrences=int(occurrences)
+            )
+        except Exception as e:
+            return EditResult(error=f"Error editing file '{file_path}': {e!s}")
 
-        if old_content not in current:
-            logger.warning("filesystem_edit_not_found", virtual_path=path)
-            return False
+    def grep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        """Literal text search in files. Fallback to Python search for S3."""
+        # For simplicity, we implement a basic Python search over S3
+        base_virt = path or "/"
+        try:
+            files = self.glob_info(glob or "**/*", path=base_virt)
+        except Exception as e:
+            return f"Error during grep: {e!s}"
 
-        updated = current.replace(old_content, new_content, 1)
-        self.write(path, updated)
+        regex = re.compile(re.escape(pattern))
+        matches: list[GrepMatch] = []
 
-        logger.info("filesystem_edit_complete", virtual_path=path)
-        return True
+        for f_info in files:
+            if f_info["is_dir"]:
+                continue
+
+            try:
+                # We need a dedicated 'read_raw' or similar, but we'll use aread internal logic
+                s3_p = self._resolve_path(f_info["path"])
+                with self._fs.open(s3_p, "rb") as f:
+                    content = f.read().decode("utf-8")
+
+                for line_num, line in enumerate(content.splitlines(), 1):
+                    if regex.search(line):
+                        matches.append(
+                            {"path": f_info["path"], "line": line_num, "text": line}
+                        )
+            except:
+                continue
+
+        return matches
+
+    def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
+        """Find files matching a glob pattern."""
+        # s3fs glob returns full paths
+        s3_base = self._resolve_path(path)
+        if not s3_base.endswith("/"):
+            s3_base += "/"
+
+        # Adjust pattern for s3fs
+        full_pattern = s3_base + pattern.lstrip("/")
+        try:
+            matched = self._fs.glob(full_pattern, detail=True)
+            results = []
+            for name, entry in matched.items():
+                is_dir = entry["type"] == "directory"
+                virt = self._virtual_path(name)
+                if is_dir and not virt.endswith("/"):
+                    virt += "/"
+
+                results.append(
+                    {
+                        "path": virt,
+                        "is_dir": is_dir,
+                        "size": entry.get("size", 0) if not is_dir else 0,
+                    }
+                )
+            results.sort(key=lambda x: x["path"])
+            return results
+        except:
+            return []
+
+    def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
+        """Upload multiple files."""
+        responses = []
+        for path, content in files:
+            s3_p = self._resolve_path(path)
+            try:
+                with self._fs.open(s3_p, "wb") as f:
+                    f.write(content)
+                responses.append(FileUploadResponse(path=path, error=None))
+            except Exception as e:
+                responses.append(FileUploadResponse(path=path, error="invalid_path"))
+        return responses
+
+    def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        """Download multiple files."""
+        responses = []
+        for path in paths:
+            s3_p = self._resolve_path(path)
+            try:
+                with self._fs.open(s3_p, "rb") as f:
+                    content = f.read()
+                responses.append(
+                    FileDownloadResponse(path=path, content=content, error=None)
+                )
+            except FileNotFoundError:
+                responses.append(
+                    FileDownloadResponse(path=path, error="file_not_found")
+                )
+            except Exception:
+                responses.append(FileDownloadResponse(path=path, error="invalid_path"))
+        return responses
+
+    # --- Legacy methods for backward compatibility if needed ---
+
+    def ls(self, path: str = "/") -> list[FileInfo]:
+        """List contents of a directory (Legacy)."""
+        infos = self.ls_info(path)
+        return [
+            FileInfo(
+                path=i["path"],
+                name=i["path"].rstrip("/").split("/")[-1] or "/",
+                is_dir=i["is_dir"],
+                size=i["size"],
+            )
+            for i in infos
+        ]
 
     def exists(self, path: str) -> bool:
-        """Check if a path exists.
-
-        Args:
-            path: Virtual path to check.
-
-        Returns:
-            True if path exists, False otherwise.
-        """
+        """Check if a path exists."""
         s3_path = self._resolve_path(path)
         return self._fs.exists(s3_path)
 
     def delete(self, path: str) -> None:
-        """Delete a file or directory.
-
-        Args:
-            path: Virtual path to delete.
-
-        Raises:
-            FileNotFoundError: If path does not exist.
-        """
+        """Delete a file or directory."""
         s3_path = self._resolve_path(path)
-        logger.debug("filesystem_delete", virtual_path=path, s3_path=s3_path)
-
         if not self._fs.exists(s3_path):
             raise FileNotFoundError(f"Path not found: {path}")
-
         self._fs.rm(s3_path, recursive=True)
-        logger.info("filesystem_delete_complete", virtual_path=path)
