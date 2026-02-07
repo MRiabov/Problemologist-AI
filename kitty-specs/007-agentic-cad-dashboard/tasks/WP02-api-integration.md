@@ -8,6 +8,7 @@ base_commit: b0b7bf77614a0fb87a464a2c2a457b04904e4222
 created_at: '2026-02-07T07:35:09.440759+00:00'
 subtasks: [T006, T007, T008, T009, T010]
 shell_pid: "229530"
+agent: "gemini-cli"
 ---
 
 ## Context
@@ -90,3 +91,7 @@ Establish a robust, type-safe data fetching layer and implement the "Runs List" 
 - [ ] Home Page loads and displays a list of "Runs" (dummy or real).
 - [ ] Navigation to Run Detail sets the context correctness.
 - [ ] No type errors in the console.
+
+## Activity Log
+
+- 2026-02-07T07:35:09Z – gemini-cli – shell_pid=229530 – lane=doing – Assigned agent via workflow command
