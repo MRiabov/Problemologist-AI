@@ -89,36 +89,42 @@ class WorkerClient:
             response.raise_for_status()
             return ExecuteResponse.model_validate(response.json())
 
-    async def simulate(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+    async def simulate(
+        self, script_path: str = "script.py", script_content: str | None = None
+    ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/benchmark/simulate",
-                json={"script_path": script_path},
+                json={"script_path": script_path, "script_content": script_content},
                 headers=self.headers,
                 timeout=60.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
 
-    async def validate(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+    async def validate(
+        self, script_path: str = "script.py", script_content: str | None = None
+    ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/benchmark/validate",
-                json={"script_path": script_path},
+                json={"script_path": script_path, "script_content": script_content},
                 headers=self.headers,
                 timeout=30.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
 
-    async def submit(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+    async def submit(
+        self, script_path: str = "script.py", script_content: str | None = None
+    ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/benchmark/submit",
-                json={"script_path": script_path},
+                json={"script_path": script_path, "script_content": script_content},
                 headers=self.headers,
                 timeout=30.0,
             )

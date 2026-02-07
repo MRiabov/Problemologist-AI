@@ -39,8 +39,30 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-def _load_component(script_path: str):
+def _load_component(script_path: str, script_content: str | None = None):
     """Utility to load the component from the agent's script."""
+    # 1. If content is provided, use it directly (stateless/memory execution)
+    if script_content:
+        local_scope = {}
+        # Mocking or providing necessary imports for exec if needed
+        # But usually built-in imports work if installed in environment
+        try:
+            exec(script_content, local_scope)
+            build_func = local_scope.get("build")
+            if not build_func:
+                # Search for alias
+                for val in local_scope.values():
+                    if callable(val) and getattr(val, "__name__", "") == "build":
+                        build_func = val
+                        break
+
+            if build_func:
+                return build_func()
+            raise AttributeError("build() function not found in script content.")
+        except Exception as e:
+            raise RuntimeError(f"Failed to execute script content: {e}")
+
+    # 2. Fallback to file path loading
     path = Path(script_path)
     if not path.is_absolute():
         # Heuristic: if relative, try relative to root first, then maybe check if it's currently being written
@@ -151,12 +173,15 @@ async def execute_code(request: ExecuteRequest):
 async def api_simulate(request: BenchmarkToolRequest):
     """Physics-backed stability check."""
     try:
-        component = _load_component(request.script_path)
+        component = _load_component(request.script_path, request.script_content)
         result = simulate(component)
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
-            artifacts={"render_paths": result.render_paths},
+            artifacts={
+                "render_paths": result.render_paths,
+                "mjcf_content": result.mjcf_content,
+            },
         )
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
@@ -167,7 +192,7 @@ async def api_simulate(request: BenchmarkToolRequest):
 async def api_validate(request: BenchmarkToolRequest):
     """Geometric validity check."""
     try:
-        component = _load_component(request.script_path)
+        component = _load_component(request.script_path, request.script_content)
         is_valid = validate(component)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -182,7 +207,7 @@ async def api_validate(request: BenchmarkToolRequest):
 async def api_submit(request: BenchmarkToolRequest):
     """Handover to reviewer."""
     try:
-        component = _load_component(request.script_path)
+        component = _load_component(request.script_path, request.script_content)
         success = submit_for_review(component)
         return BenchmarkToolResponse(
             success=success,

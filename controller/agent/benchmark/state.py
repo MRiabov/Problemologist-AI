@@ -10,6 +10,7 @@ class ValidationResult(TypedDict):
     cost: float
     logs: list[str]
     render_paths: list[str]
+    render_data: list[bytes] | None
 
 
 class BenchmarkGeneratorState(TypedDict):

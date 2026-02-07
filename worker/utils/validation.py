@@ -13,10 +13,17 @@ logger = structlog.get_logger(__name__)
 
 
 class SimulationResult:
-    def __init__(self, success: bool, summary: str, render_paths: list[str] = None):
+    def __init__(
+        self,
+        success: bool,
+        summary: str,
+        render_paths: list[str] = None,
+        mjcf_content: str | None = None,
+    ):
         self.success = success
         self.summary = summary
         self.render_paths = render_paths or []
+        self.mjcf_content = mjcf_content
 
 
 def simulate(component: Compound) -> SimulationResult:
@@ -81,7 +88,13 @@ def simulate(component: Compound) -> SimulationResult:
         # 4. Generate renders
         render_paths = prerender_24_views(component)
 
-        return SimulationResult(True, "Simulation stable.", render_paths)
+        # Read MJCF content
+        mjcf_content = None
+        if mjcf_path.exists():
+            with open(mjcf_path, "r") as f:
+                mjcf_content = f.read()
+
+        return SimulationResult(True, "Simulation stable.", render_paths, mjcf_content)
 
     except Exception as e:
         logger.error("simulation_error", error=str(e))

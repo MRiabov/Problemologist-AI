@@ -142,15 +142,12 @@ async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
                 storage = BenchmarkStorage()
 
                 sim_result = final_state.get("simulation_result", {})
-                images = []
-                if sim_result:
-                    for path_str in sim_result.get("render_paths", []):
-                        try:
-                            images.append(Path(path_str).read_bytes())
-                        except Exception as e:
-                            logger.warn(
-                                "image_read_failed", path=path_str, error=str(e)
-                            )
+                images = sim_result.get("render_data", [])
+
+                # If render_data is None or empty but paths exist (e.g. legacy/error), we depend on validator_node to have populated it.
+                # If images is None, initialize to empty list
+                if images is None:
+                    images = []
 
                 mjcf_content = final_state.get(
                     "mjcf_content", "<!-- MJCF content missing in state -->"

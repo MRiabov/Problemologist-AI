@@ -73,6 +73,10 @@ class BenchmarkToolRequest(BaseModel):
         default="script.py",
         description="Path to the script containing the build() function.",
     )
+    script_content: StrictStr | None = Field(
+        default=None,
+        description="Direct content of the script.",
+    )
 
 
 class BenchmarkToolResponse(BaseModel):
