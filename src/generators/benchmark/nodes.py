@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import structlog
 from pathlib import Path
 from typing import Any, Tuple
@@ -30,6 +31,42 @@ def verify_syntax(code: str) -> Tuple[bool, str | None]:
     except Exception as e:
         return False, f"Error: {str(e)}"
 
+async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    """
+    Breaks down the user prompt into a concrete randomization strategy.
+    """
+    logger.info("planner_node_start", session_id=state["session"].session_id)
+    
+    template_path = Path(__file__).parent / "templates" / "planner_prompt.txt"
+    template = template_path.read_text()
+    
+    prompt = template.format(prompt=state["session"].prompt)
+    
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    messages = [
+        SystemMessage(content="You are a mechanical engineering architect."),
+        HumanMessage(content=prompt)
+    ]
+    
+    response = await llm.ainvoke(messages)
+    
+    try:
+        # Extract JSON from response
+        content = response.content
+        json_match = re.search(r"\{.*\}", content, re.DOTALL)
+        if json_match:
+            plan = json.loads(json_match.group(0))
+            state["plan"] = plan
+        else:
+            logger.error("planner_json_not_found", content=content)
+            state["plan"] = {"error": "JSON not found in response"}
+    except Exception as e:
+        logger.error("planner_parse_error", error=str(e))
+        state["plan"] = {"error": str(e)}
+        
+    logger.info("planner_node_complete", plan=state["plan"])
+    return state
+
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Generates build123d script based on plan and feedback.
@@ -46,7 +83,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
         
     prompt = template.format(
-        plan=state.get("plan", "No plan provided."),
+        plan=json.dumps(state.get("plan"), indent=2),
         review_feedback=state.get("review_feedback", "No feedback provided."),
         validation_logs=validation_logs
     )
@@ -93,8 +130,21 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
     # 1. Load the script
     local_scope = {}
     try:
+        # Mocking or providing necessary imports for exec
+        import build123d
+        import mujoco
+        local_scope["build123d"] = build123d
+        local_scope["mujoco"] = mujoco
+        
         exec(script, local_scope)
         build_func = local_scope.get("build")
+        if not build_func:
+            # Maybe it used an alias
+            for val in local_scope.values():
+                if callable(val) and getattr(val, "__name__", "") == "build":
+                    build_func = val
+                    break
+                    
         if not build_func:
             raise AttributeError("build() function not found in script.")
             
@@ -137,4 +187,38 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
             "logs": [f"Validation error: {str(e)}"]
         }
         
+    return state
+
+async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    """
+    Visual inspection of the generated benchmark.
+    """
+    logger.info("reviewer_node_start")
+    
+    template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
+    template = template_path.read_text()
+    
+    prompt = template.format(
+        theme=state.get("plan", {}).get("theme", "Unknown"),
+        prompt=state["session"].prompt
+    )
+    
+    # In a real scenario, we would pass the images to a vision-capable LLM
+    # For now, we mock the vision part and use standard LLM or mock response
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    messages = [
+        SystemMessage(content="You are a CAD quality assurance engineer."),
+        HumanMessage(content=prompt + "\n\n(Assume images show a standard implementation of the requested theme)")
+    ]
+    
+    response = await llm.ainvoke(messages)
+    content = response.content
+    
+    # Parse status and feedback
+    if "APPROVE" in content.upper():
+        state["review_feedback"] = "Approved"
+    else:
+        state["review_feedback"] = content
+        
+    logger.info("reviewer_node_complete", feedback=state["review_feedback"])
     return state
