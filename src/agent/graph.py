@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from .state import AgentState
+from .state import AgentState, AgentStatus
 from .nodes.architect import architect_node
 from .nodes.engineer import engineer_node
 from .nodes.critic import critic_node
@@ -9,12 +9,12 @@ from .nodes.sidecar import sidecar_node
 
 def should_continue(state: AgentState) -> str:
     """Route after critic based on approval status."""
-    if state.status == "approved":
+    if state.status == AgentStatus.APPROVED:
         return "sidecar"
     
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
-        if state.status == "plan_rejected":
+        if state.status == AgentStatus.PLAN_REJECTED:
             return "architect"
         return "engineer"
     

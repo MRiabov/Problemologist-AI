@@ -7,10 +7,12 @@ from src.shared.enums import ResponseStatus
 from .schema import (
     ListFilesRequest,
     ReadFileRequest,
+    ReadFileResponse,
     WriteFileRequest,
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    StatusResponse,
 )
 from ..filesystem.router import create_filesystem_router, WritePermissionError
 from ..filesystem.backend import FileInfo
@@ -41,12 +43,12 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/read")
+@router.post("/fs/read", response_model=ReadFileResponse)
 async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
     """Read file contents."""
     try:
         content = fs_router.read(request.path)
-        return {"content": content.decode("utf-8")}
+        return ReadFileResponse(content=content.decode("utf-8"))
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
@@ -54,12 +56,12 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/write")
+@router.post("/fs/write", response_model=StatusResponse)
 async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     """Write content to a file."""
     try:
         fs_router.write(request.path, request.content)
-        return {"status": ResponseStatus.SUCCESS}
+        return StatusResponse(status=ResponseStatus.SUCCESS)
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
@@ -67,7 +69,7 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/edit")
+@router.post("/fs/edit", response_model=StatusResponse)
 async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
     """Edit a file with one or more operations."""
     try:
@@ -84,7 +86,7 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
                     detail=f"Content not found for replacement: {edit.old_string[:50]}...",
                 )
 
-        return {"status": ResponseStatus.SUCCESS}
+        return StatusResponse(status=ResponseStatus.SUCCESS)
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
