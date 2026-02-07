@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
 from controller.api.routes import episodes, skills
+from controller.api import ops
 from controller.clients.worker import WorkerClient
 from controller.graph.agent import create_agent_graph
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -27,6 +28,7 @@ app = FastAPI(title="Problemologist Controller")
 
 app.include_router(episodes.router)
 app.include_router(skills.router)
+app.include_router(ops.router)
 
 # Temporal client
 temporal_client_instance: Client = None
