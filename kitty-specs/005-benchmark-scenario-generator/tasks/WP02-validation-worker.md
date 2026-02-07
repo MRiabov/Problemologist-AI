@@ -74,3 +74,4 @@ agent: "Gemini"
 
 - 2026-02-06T20:56:59Z – Gemini – shell_pid=107007 – lane=doing – Assigned agent via workflow command
 - 2026-02-07T06:40:24Z – Gemini – shell_pid=107007 – lane=for_review – Ready for review: Implemented physics simulation, geometric validation, and review handover tools. Registered them as agent tools via RemoteFilesystemMiddleware.
+- 2026-02-07T06:48:57Z – Gemini – shell_pid=107007 – lane=for_review – Ready for review: Implemented simulate(), validate(), and submit_for_review() utilities. Exposed them as tools via FilesystemMiddleware and Worker API endpoints. Added unit tests.
