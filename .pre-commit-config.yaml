@@ -13,4 +13,9 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-
+      - id: generate-frontend-client
+        name: generate-frontend-client
+        entry: bash -c "cd frontend && npm run gen:api"
+        language: system
+        pass_filenames: false
+        always_run: true
