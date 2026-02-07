@@ -1,23 +1,26 @@
 import os
 from pathlib import Path
-from build123d import Part, Compound
+from build123d import Part, Compound, export_stl
 import structlog
 import pyvista as pv
 
 logger = structlog.get_logger(__name__)
 
-def prerender_24_views(component: Compound, output_dir: str = "/renders") -> list[str]:
+def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
     Saves to output_dir.
     """
+    if output_dir is None:
+        output_dir = os.getenv("RENDERS_DIR", "./renders")
+        
     logger.info("prerender_24_views", output_dir=output_dir)
     
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     # We use a temporary STL to render with pyvista
     stl_path = "temp_render.stl"
-    component.export_stl(stl_path)
+    export_stl(component, stl_path)
     
     mesh = pv.read(stl_path)
     plotter = pv.Plotter(off_screen=True)

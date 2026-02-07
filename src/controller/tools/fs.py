@@ -21,6 +21,10 @@ class ExecInput(BaseModel):
     timeout: StrictInt = Field(default=30, description="Execution timeout in seconds.")
 
 
+class BenchmarkInput(BaseModel):
+    script_path: str = Field(default="script.py", description="Path to the script containing the build() function.")
+
+
 def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[StructuredTool]:
     """Create a list of filesystem tools for the agent."""
 
@@ -52,4 +56,25 @@ def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[StructuredTool]:
         args_schema=ExecInput,
     )
 
-    return [ls_tool, read_tool, write_tool, exec_tool]
+    simulate_tool = StructuredTool.from_function(
+        coroutine=fs.simulate,
+        name="simulate",
+        description="Run a physics stability check on the current design.",
+        args_schema=BenchmarkInput,
+    )
+
+    validate_tool = StructuredTool.from_function(
+        coroutine=fs.validate,
+        name="validate",
+        description="Verify geometric validity and randomization robustness.",
+        args_schema=BenchmarkInput,
+    )
+
+    submit_tool = StructuredTool.from_function(
+        coroutine=fs.submit,
+        name="submit_for_review",
+        description="Submit the current design for human review.",
+        args_schema=BenchmarkInput,
+    )
+
+    return [ls_tool, read_tool, write_tool, exec_tool, simulate_tool, validate_tool, submit_tool]
