@@ -3,16 +3,25 @@ from typing import Callable, Protocol, Union, List, Any, Optional, Dict
 from build123d import Part, Compound
 from src.workbenches.models import WorkbenchResult, ManufacturingConfig, CostBreakdown
 
+from src.shared.type_checking import type_check
+
 # Functional interface for workbench analysis
-AnalyzeFunction = Callable[[Union[Part, Compound], ManufacturingConfig], WorkbenchResult]
+AnalyzeFunction = Callable[
+    [Union[Part, Compound], ManufacturingConfig], WorkbenchResult
+]
+
 
 class WorkbenchAnalyzer(Protocol):
     """
     Protocol for functional workbench analysis.
     """
-    def __call__(self, part: Union[Part, Compound], config: ManufacturingConfig) -> WorkbenchResult:
-        ...
 
+    def __call__(
+        self, part: Union[Part, Compound], config: ManufacturingConfig
+    ) -> WorkbenchResult: ...
+
+
+@type_check
 class Workbench(ABC):
     """
     Abstract Base Class for all Workbenches in the Agentic CAD Environment.
