@@ -1,10 +1,33 @@
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { fetchEpisodes, fetchEpisode, runSimulation } from '../api/client';
 import type { Episode } from '../api/types';
+import { 
+  Play, 
+  Database, 
+  Check, 
+  Schema, 
+  ShieldCheck, 
+  Settings2, 
+  History, 
+  Cpu, 
+  Terminal, 
+  Dices, 
+  Layers, 
+  CircleDot,
+  ArrowRight,
+  MonitorPlay,
+  Box,
+  BrainCircuit,
+  DatabaseZap
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function BenchmarkGeneration() {
-  const navigate = useNavigate();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,301 +72,291 @@ export default function BenchmarkGeneration() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background-dark text-white font-display">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-surface-border bg-surface-dark px-6 py-3 shrink-0 h-16">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
+      {/* Page Header */}
+      <header className="flex shrink-0 items-center justify-between border-b px-6 h-16 bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className="size-8 flex items-center justify-center bg-primary/20 rounded text-primary">
-            <span className="material-symbols-outlined text-2xl">precision_manufacturing</span>
+          <div className="size-10 flex items-center justify-center bg-primary/10 rounded-lg text-primary border border-primary/20">
+            <Cpu className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-white text-lg font-bold leading-tight tracking-tight">Benchmark Generation &amp; Validation</h2>
-            <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold">Mechanical Physics Pipeline</p>
+            <h2 className="text-lg font-bold tracking-tight">Benchmark Pipeline</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Mechanical Physics Validation</span>
+              <Badge variant="outline" className="text-[9px] h-4 py-0 font-mono border-green-500/30 text-green-500 bg-green-500/5">Isolated</Badge>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3 px-3 py-1.5 bg-background-dark/80 border border-surface-border rounded-full shadow-inner">
-            <div className="relative flex items-center justify-center">
-              <span className="absolute inline-flex h-2 w-2 rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-            </div>
-            <span className="text-[11px] font-bold text-success uppercase tracking-wider">Isolated Container Active</span>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={handleRunSimulation}
-              disabled={simulating}
-              className="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-white hover:bg-primary-dark transition-colors disabled:opacity-50 font-bold text-xs"
-            >
-              <span className="material-symbols-outlined text-xl mr-2">play_arrow</span>
-              {simulating ? 'SIMULATING...' : 'RUN BENCHMARK'}
-            </button>
-            <button className="flex items-center justify-center rounded-lg h-9 w-9 bg-surface-border/30 text-white hover:bg-surface-border transition-colors">
-              <span className="material-symbols-outlined text-xl">database</span>
-            </button>
-            <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm border-2 border-surface-border">
-              JD
-            </div>
-          </div>
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleRunSimulation}
+            disabled={simulating}
+            className="gap-2 h-10 px-6 font-bold"
+          >
+            {simulating ? <CircleDot className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+            {simulating ? 'SIMULATING...' : 'RUN PIPELINE'}
+          </Button>
+          <Button variant="outline" size="icon" className="h-10 w-10">
+            <Database className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      {/* Progress Steps */}
-      <div className="border-b border-surface-border bg-[#0d161f] px-6 py-4 shrink-0">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="relative flex justify-between items-center w-full">
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-surface-border -z-0"></div>
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2/3 h-0.5 bg-primary -z-0"></div>
+      {/* Pipeline Status Stepper */}
+      <div className="border-b bg-muted/20 px-6 py-5 shrink-0">
+        <div className="max-w-4xl mx-auto flex justify-between items-center relative">
+          <div className="absolute left-0 top-[18px] w-full h-0.5 bg-muted -z-0" />
+          <div className="absolute left-0 top-[18px] w-2/3 h-0.5 bg-primary -z-0" />
 
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold border-4 border-[#0d161f]">
-                <span className="material-symbols-outlined text-xs">check</span>
+          {[
+            { step: 1, label: "Intent", icon: Check, active: true },
+            { step: 2, label: "Strategy", icon: Check, active: true },
+            { step: 3, label: "Synthesis", icon: BrainCircuit, active: true, current: true },
+            { step: 4, label: "Validation", icon: ShieldCheck, active: false }
+          ].map((s) => (
+            <div key={s.step} className="relative z-10 flex flex-col items-center gap-2">
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center border-4 border-background transition-all duration-500",
+                s.active ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]" : "bg-muted text-muted-foreground",
+                s.current && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+              )}>
+                {s.active && s.step < 3 ? <Check className="h-4 w-4 stroke-[3px]" /> : <s.icon className="h-4 w-4" />}
               </div>
-              <span className="text-primary text-[11px] font-bold uppercase tracking-wider">1. Intent</span>
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-widest",
+                s.active ? "text-primary" : "text-muted-foreground"
+              )}>
+                {s.label}
+              </span>
             </div>
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold border-4 border-[#0d161f]">
-                <span className="material-symbols-outlined text-xs">check</span>
-              </div>
-              <span className="text-primary text-[11px] font-bold uppercase tracking-wider">2. Plan (Internal Review)</span>
-            </div>
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-[0_0_15px_rgba(30,148,246,0.4)] border-4 border-[#0d161f]">
-                <span className="material-symbols-outlined text-lg">schema</span>
-              </div>
-              <span className="text-white text-[12px] font-black uppercase tracking-widest">3. CAD/XML Compilation</span>
-            </div>
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-surface-border text-text-secondary flex items-center justify-center font-bold border-4 border-[#0d161f]">
-                4
-              </div>
-              <span className="text-text-secondary text-[11px] font-bold uppercase tracking-wider">4. Physics Validation</span>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Workspace Area */}
       <main className="flex-1 flex overflow-hidden">
-        {/* Sidebar: Episode History */}
-        <aside className="w-64 flex flex-col border-r border-surface-border bg-surface-dark overflow-hidden">
-            <div className="p-4 border-b border-surface-border bg-background-dark/20">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Benchmark History</h3>
+        {/* Left: History Sidebar */}
+        <aside className="w-72 flex flex-col border-r bg-muted/5 overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recent Benchmarks</h3>
+                <History className="h-3 w-3 text-muted-foreground" />
             </div>
-            <div className="flex-1 overflow-y-auto">
-                {loading ? (
-                    <div className="p-4 text-xs text-text-secondary">Loading...</div>
-                ) : (
-                    episodes.map(ep => (
-                        <div 
-                            key={ep.id}
-                            onClick={() => handleSelectEpisode(ep)}
-                            className={`p-3 border-b border-surface-border/50 cursor-pointer hover:bg-white/5 transition-colors ${selectedEpisode?.id === ep.id ? 'bg-primary/10 border-l-2 border-primary' : ''}`}
-                        >
-                            <div className="text-xs font-bold text-white truncate mb-1">{ep.task || ep.id.substring(0,8)}</div>
-                            <div className="flex justify-between items-center text-[9px] text-text-secondary">
-                                <span>{new Date(ep.created_at).toLocaleTimeString()}</span>
-                                <span className={`uppercase font-bold ${ep.status === 'running' ? 'text-primary' : 'text-success'}`}>{ep.status}</span>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-1">
+                  {loading ? (
+                      <div className="p-4 text-xs text-muted-foreground text-center italic">Loading history...</div>
+                  ) : (
+                      episodes.map(ep => (
+                          <button 
+                              key={ep.id}
+                              onClick={() => handleSelectEpisode(ep)}
+                              className={cn(
+                                "w-full text-left p-3 rounded-md transition-all group border border-transparent",
+                                selectedEpisode?.id === ep.id ? "bg-primary/10 border-primary/10" : "hover:bg-muted/50"
+                              )}
+                          >
+                              <div className={cn(
+                                "text-xs font-bold truncate mb-1",
+                                selectedEpisode?.id === ep.id ? "text-primary" : "text-foreground"
+                              )}>
+                                {ep.task || ep.id.substring(0,8)}
+                              </div>
+                              <div className="flex justify-between items-center text-[9px]">
+                                  <span className="text-muted-foreground font-mono">{new Date(ep.created_at).toLocaleTimeString()}</span>
+                                  <Badge variant="outline" className={cn(
+                                    "text-[8px] h-3.5 px-1 py-0 border-none uppercase font-bold",
+                                    ep.status === 'running' ? "bg-primary/20 text-primary animate-pulse" : "bg-green-500/20 text-green-500"
+                                  )}>
+                                    {ep.status}
+                                  </Badge>
+                              </div>
+                          </button>
+                      ))
+                  )}
+              </div>
+            </ScrollArea>
         </aside>
 
-        {/* Left Pane */}
-        <div className="flex-1 flex flex-col border-r border-surface-border bg-surface-dark min-w-[450px]">
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Planner's Expected Solution */}
-            <div className="h-1/3 flex flex-col border-b border-surface-border">
-              <div className="px-4 py-2 bg-background-dark/40 border-b border-surface-border flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-primary">psychology</span>
-                  Planner's Expected Solution
-                </h3>
-                <span className="text-[10px] text-primary/60 font-mono">v1.2.0-stable</span>
-              </div>
-              <div className="flex-1 p-4 overflow-y-auto custom-scrollbar bg-[#0a0f14]/30">
-                <div className="space-y-3 font-mono text-[13px] text-gray-400">
-                  <div className="bg-surface-border/10 p-2 border-l-2 border-primary">
-                    <span className="text-primary-dark"># Logic:</span>
-                    <p className="mt-1">Define agentive task where a pendulum must strike a hinged target with &gt; 2.5J kinetic energy.</p>
-                  </div>
-                  <div className="space-y-1 pl-2">
-                    <p><span className="text-warning">GIVEN</span> platform_pos = [0, 0, 0]</p>
-                    <p><span className="text-warning">WHEN</span> impulse applied to pivot_joint &gt;= 5.0</p>
-                    <p><span className="text-warning">THEN</span> verify goal_zone.collision == true</p>
-                  </div>
+        {/* Middle: Configuration & MJCF */}
+        <div className="flex-1 flex flex-col border-r bg-background min-w-[450px]">
+          {/* Top: Expected Strategy */}
+          <section className="h-1/3 flex flex-col border-b">
+            <div className="px-4 py-2 bg-muted/10 border-b flex justify-between items-center">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <BrainCircuit className="h-3.5 w-3.5 text-primary" />
+                Randomization Strategy
+              </h3>
+              <span className="text-[10px] text-primary/40 font-mono">v1.2.0-stable</span>
+            </div>
+            <ScrollArea className="flex-1 p-4 bg-black/5">
+              <div className="space-y-4 font-mono text-[12px]">
+                <div className="bg-primary/5 p-3 rounded border-l-2 border-primary">
+                  <span className="text-primary font-bold"># Generation Intent:</span>
+                  <p className="mt-2 text-muted-foreground/90 leading-relaxed">
+                    Instantiate a randomized pendulum scenario. Assert energy transfer to a hinged target &gt; 2.5J. 
+                    Randomize pivot height [2.5m - 3.5m] and mass distribution [0.5kg - 2.0kg].
+                  </p>
+                </div>
+                <div className="space-y-1.5 pl-2 opacity-80">
+                  <p><span className="text-yellow-600 font-bold">SET</span> platform_pos = [0, 0, 0]</p>
+                  <p><span className="text-yellow-600 font-bold">VARY</span> pivot_z in RANGE(2.5, 3.5)</p>
+                  <p><span className="text-yellow-600 font-bold">VERIFY</span> impact_sensor.triggered == TRUE</p>
                 </div>
               </div>
-            </div>
-            {/* Procedural CAD Script */}
-            <div className="flex-1 flex flex-col">
-              <div className="px-4 py-2 bg-background-dark/40 border-b border-surface-border flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-primary">terminal</span>
-                  Procedural CAD Script (MuJoCo XML)
-                </h3>
-                <button className="text-[10px] flex items-center gap-1 hover:text-primary transition-colors uppercase font-bold text-text-secondary">
-                  <span className="material-symbols-outlined text-xs">content_copy</span> Copy
-                </button>
-              </div>
-              <div className="flex-1 bg-[#080c10] overflow-hidden flex flex-col font-mono text-sm group relative">
-                <div className="flex-1 overflow-auto custom-scrollbar p-4 flex">
-                  <div className="text-surface-border select-none text-right pr-4 border-r border-surface-border/20 mr-4 font-mono text-xs leading-6">
-                    1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16
-                  </div>
-                  <div className="text-gray-400 leading-6 whitespace-pre font-mono text-xs">
-                    {selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf') ? (
-                        // This would ideally be the actual content if we had it, but for now we'll just show the path or a placeholder
-                        // In a real app, we'd fetch the content of the MJCF asset.
-                        `<!-- Load MJCF from: ${selectedEpisode.assets.find(a => a.asset_type === 'mjcf')?.s3_path} -->\n` +
-                        `<mujoco>\n  <worldbody>\n    <!-- Content would be loaded here -->\n  </worldbody>\n</mujoco>`
-                    ) : (
-                        <>
-                        <span className="text-blue-400">&lt;mujoco&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;worldbody&gt;</span>
-                        {"\n"}
-                        <span className="text-slate-500">&lt;!-- Procedural Benchmark Floor --&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;geom</span> name="floor" pos="0 0 0" size="5 5 .1" type="plane"<span className="text-blue-400">/&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;body</span> name="pendulum" pos="0 0 3"<span className="text-blue-400">&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;joint</span> name="pivot" type="hinge" axis="0 1 0"<span className="text-blue-400">/&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;geom</span> size="0.05 1.5" type="cylinder" mass="1"<span className="text-blue-400">/&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;geom</span> pos="0 0 -1.5" size="0.2" type="sphere" rgba="0.8 0.2 0.2 1"<span className="text-blue-400">/&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;/body&gt;</span>
-                        {"\n"}
-                        <span className="text-slate-500">&lt;!-- Target Region --&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;site</span> name="goal" pos="1.5 0 0.5" size="0.3" rgba="0 1 0 0.3"<span className="text-blue-400">/&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;/worldbody&gt;</span>
-                        {"\n"}
-                        <span className="text-blue-400">&lt;/mujoco&gt;</span>
-                        </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </ScrollArea>
+          </section>
 
-        {/* Right Pane */}
-        <div className="w-7/12 flex flex-col bg-background-dark">
-          {/* 3D Viewport */}
-          <div className="flex-1 relative viewport-gradient grid-bg overflow-hidden flex items-center justify-center group">
-            <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-              <div className="bg-surface-dark/80 backdrop-blur border border-surface-border rounded-lg p-1 flex flex-col gap-1 shadow-2xl">
-                <button className="p-2 hover:bg-primary/20 rounded-md text-white transition-colors">
-                  <span className="material-symbols-outlined text-xl">view_in_ar</span>
-                </button>
-                <button className="p-2 hover:bg-primary/20 rounded-md text-text-secondary transition-colors">
-                  <span className="material-symbols-outlined text-xl">videocam</span>
-                </button>
-                <div className="h-px bg-surface-border mx-1"></div>
-                <button className="p-2 hover:bg-primary/20 rounded-md text-text-secondary transition-colors">
-                  <span className="material-symbols-outlined text-xl">casino</span>
-                </button>
-              </div>
-              <div className="px-2 py-1 bg-black/40 border border-surface-border/50 rounded text-[10px] text-text-secondary font-mono">
-                SEED: 8841-A2
-              </div>
+          {/* Bottom: XML/MJCF Output */}
+          <section className="flex-1 flex flex-col bg-[#080c10]">
+            <div className="px-4 py-2 bg-black/40 border-b flex justify-between items-center">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <Terminal className="h-3.5 w-3.5 text-primary" />
+                MuJoCo Benchmark (MJCF)
+              </h3>
+              <Button variant="ghost" size="sm" className="h-6 text-[9px] gap-1 px-2 uppercase font-bold text-muted-foreground hover:text-foreground">
+                <Layers className="h-3 w-3" /> Copy XML
+              </Button>
             </div>
-            <div className="absolute top-4 right-4 z-20 text-right space-y-2">
-              <div className="bg-surface-dark/80 backdrop-blur border border-surface-border rounded-md px-3 py-1.5 shadow-lg flex items-center gap-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">Render Mode:</span>
-                <span className="text-[11px] font-black text-primary">MUJOCO_NATIVE</span>
+            <div className="flex-1 flex overflow-hidden group relative">
+              <div className="w-10 shrink-0 bg-black/20 border-r border-white/5 text-muted-foreground/20 text-right pr-3 pt-4 select-none font-mono text-[11px] leading-6">
+                1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12
               </div>
-              <div className="inline-block px-2 py-1 bg-warning/10 border border-warning/30 rounded text-[10px] text-warning font-bold">
-                PREVIEWING RANDOMIZED VARIATION 3/10
-              </div>
-            </div>
-            {/* 3D Object */}
-            <div className="w-full h-full flex items-center justify-center">
-              {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
-                <div className="w-full h-full flex items-center justify-center p-8">
-                  {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
-                      <video 
-                          src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
-                          controls 
-                          className="max-w-full max-h-full rounded-lg shadow-2xl border border-white/10"
-                      />
+              <ScrollArea className="flex-1">
+                <div className="p-4 text-slate-400 leading-6 font-mono text-[12px]">
+                  {selectedEpisode?.assets?.find(a => a.asset_type === 'mjcf') ? (
+                      <span className="text-muted-foreground/60 italic opacity-50">
+                        &lt;!-- MJCF data linked from: {selectedEpisode.assets.find(a => a.asset_type === 'mjcf')?.s3_path.split('/').pop()} --&gt;
+                      </span>
                   ) : (
-                      <img 
-                          src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
-                          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10"
-                      />
+                      <>
+                      <span className="text-blue-400">&lt;mujoco&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-400">&lt;worldbody&gt;</span>
+                      {"\n"}
+                      <span className="text-muted-foreground/50 opacity-60">  &lt;!-- Procedural Floor --&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">  &lt;geom</span> name="floor" type="plane" size="5 5 .1" <span className="text-blue-300">/&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">  &lt;body</span> name="pendulum" pos="0 0 3" <span className="text-blue-300">&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">    &lt;joint</span> type="hinge" axis="0 1 0" <span className="text-blue-300">/&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">    &lt;geom</span> size="0.05 1.5" type="cylinder" <span className="text-blue-300">/&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">    &lt;geom</span> pos="0 0 -1.5" size="0.2" type="sphere" rgba=".8 .2 .2 1" <span className="text-blue-300">/&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-300">  &lt;/body&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-400">&lt;/worldbody&gt;</span>
+                      {"\n"}
+                      <span className="text-blue-400">&lt;/mujoco&gt;</span>
+                      </>
                   )}
                 </div>
+              </ScrollArea>
+            </div>
+          </section>
+        </div>
+
+        {/* Right: Viewport & Validation */}
+        <div className="w-7/12 flex flex-col">
+          {/* Main Preview */}
+          <div className="flex-1 relative bg-gradient-to-b from-muted/50 to-background overflow-hidden flex items-center justify-center p-8">
+            <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+              <div className="bg-background/80 backdrop-blur border rounded-lg p-1.5 flex flex-col gap-1 shadow-xl">
+                <Button variant="ghost" size="icon" className="h-8 w-8"><MonitorPlay className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Dices className="h-4 w-4 text-primary" /></Button>
+                <Separator className="mx-1 my-1 opacity-50" />
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Settings2 className="h-4 w-4" /></Button>
+              </div>
+              <Badge variant="secondary" className="font-mono text-[9px] h-5 opacity-60">SEED: 8841-A2</Badge>
+            </div>
+            
+            <div className="absolute top-4 right-4 z-20 text-right space-y-2">
+              <div className="bg-background/80 backdrop-blur border rounded-md px-3 py-1.5 shadow-md flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-muted-foreground">Engine:</span>
+                <span className="text-[10px] font-black text-primary uppercase">MuJoCo Native</span>
+              </div>
+              <Badge variant="outline" className="text-yellow-500 border-yellow-500/30 bg-yellow-500/5 text-[9px] uppercase font-bold tracking-tight">
+                Preview Variation 3/10
+              </Badge>
+            </div>
+
+            {/* Render Output */}
+            <div className="w-full h-full flex items-center justify-center">
+              {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
+                  <div className="w-full h-full flex items-center justify-center relative">
+                    <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full scale-75 animate-pulse" />
+                    {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
+                        <video 
+                            src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
+                            controls 
+                            className="max-w-full max-h-full rounded-xl shadow-2xl border-4 border-card z-10"
+                        />
+                    ) : (
+                        <img 
+                            src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border-4 border-card z-10"
+                        />
+                    )}
+                  </div>
               ) : (
-                <div className="relative w-[500px] h-[350px]" style={{transformStyle: 'preserve-3d'}}>
-                  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-slate-800/40 border-2 border-slate-700 shadow-2xl" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
-                  <div className="absolute bottom-[180px] left-[55%] w-2 h-40 bg-slate-400/80" style={{transform: 'rotateX(65deg) rotateZ(45deg) translateY(-20px)'}}></div>
-                  <div className="absolute bottom-[120px] left-[45%] w-10 h-10 rounded-full bg-danger/80 shadow-[0_20px_40px_rgba(239,68,68,0.4)]" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}></div>
-                  <div className="absolute top-[80px] right-[100px] w-24 h-24 bg-success/10 border-2 border-dashed border-success/40 rounded-lg flex items-center justify-center" style={{transform: 'rotateX(65deg) rotateZ(45deg)'}}>
-                    <span className="text-success text-[10px] font-bold uppercase tracking-tighter opacity-80">TARGET_01</span>
+                <div className="relative w-[400px] h-[300px] flex items-center justify-center">
+                  <div className="absolute inset-0 border border-dashed border-primary/20 rounded-3xl" />
+                  <div className="flex flex-col items-center gap-4 text-muted-foreground/30">
+                    <Box className="h-16 w-16" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">No Simulation Trace</span>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Integrity Checklist */}
-          <div className="bg-surface-dark border-t border-surface-border p-5">
-            <div className="flex items-start justify-between">
-              <div className="space-y-4 flex-1">
+          {/* Validation Footer Panel */}
+          <div className="bg-card border-t p-6 shadow-inner">
+            <div className="flex items-center justify-between gap-8">
+              <div className="flex-1 space-y-5">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-xl">verified_user</span>
-                  <h4 className="text-sm font-bold uppercase tracking-[0.15em] text-white">MuJoCo Integrity Checklist</h4>
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  <h4 className="text-xs font-black uppercase tracking-[0.15em]">MuJoCo Integrity Checklist</h4>
                 </div>
-                <div className="grid grid-cols-3 gap-6 max-w-4xl">
-                  <div className="bg-background-dark/50 p-3 rounded-lg border border-surface-border">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] uppercase font-black text-text-secondary tracking-widest">XML Schema Validation</span>
-                      <span className="material-symbols-outlined text-success text-lg">check_circle</span>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: "XML Schema", status: "success", info: "mj_v3.1" },
+                    { label: "Frame Stability", status: "success", info: "ΔE < 1e-4" },
+                    { label: "Intersections", status: "active", info: "Verifying..." }
+                  ].map((check) => (
+                    <div key={check.label} className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">{check.label}</span>
+                        {check.status === 'success' ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <CircleDot className="h-4 w-4 text-primary animate-spin" />
+                        )}
+                      </div>
+                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                        <div className={cn(
+                          "h-full rounded-full transition-all duration-1000",
+                          check.status === 'success' ? "bg-green-500 w-full" : "bg-primary w-2/3"
+                        )} />
+                      </div>
+                      <p className="mt-2 text-[10px] text-muted-foreground/60 font-mono tracking-tighter">{check.info}</p>
                     </div>
-                    <div className="h-1 w-full bg-surface-border rounded-full overflow-hidden">
-                      <div className="h-full bg-success w-full"></div>
-                    </div>
-                    <p className="mt-2 text-[11px] text-gray-500 font-mono">MJCF Compliant (mj_v3.0)</p>
-                  </div>
-                  <div className="bg-background-dark/50 p-3 rounded-lg border border-surface-border">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] uppercase font-black text-text-secondary tracking-widest">Frame Stability (1s)</span>
-                      <span className="material-symbols-outlined text-success text-lg">check_circle</span>
-                    </div>
-                    <div className="h-1 w-full bg-surface-border rounded-full overflow-hidden">
-                      <div className="h-full bg-success w-full"></div>
-                    </div>
-                    <p className="mt-2 text-[11px] text-gray-500 font-mono">Max ΔE &lt; 1e-4</p>
-                  </div>
-                  <div className="bg-background-dark/50 p-3 rounded-lg border border-surface-border">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] uppercase font-black text-text-secondary tracking-widest">Intersection Check</span>
-                      <span className="material-symbols-outlined text-primary text-lg animate-pulse">sync</span>
-                    </div>
-                    <div className="h-1 w-full bg-surface-border rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-2/3"></div>
-                    </div>
-                    <p className="mt-2 text-[11px] text-gray-500 font-mono">Verifying contacts...</p>
-                  </div>
+                  ))}
                 </div>
               </div>
-              <div className="flex flex-col gap-3 self-end">
-                <button className="px-6 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white shadow-[0_0_20px_rgba(30,148,246,0.3)] transition-all font-bold flex items-center justify-center gap-3 group">
-                  <span className="uppercase tracking-widest text-xs">Promote to Benchmark Suite</span>
-                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">database_upload</span>
-                </button>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                  <span className="text-[9px] text-text-secondary uppercase font-bold tracking-tighter">Sync to shared_benchmarks.sqlite</span>
+
+              <div className="flex flex-col gap-3 shrink-0">
+                <Button className="h-12 px-6 gap-3 group relative overflow-hidden font-bold">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/10 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                  <span className="uppercase tracking-widest text-xs">Commit to Benchmark Suite</span>
+                  <DatabaseZap className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </Button>
+                <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground font-bold uppercase tracking-tighter opacity-60">
+                  <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                  Target: shared_benchmarks.sqlite
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import os
-from langfuse.callback import CallbackHandler
+from langfuse.langchain import CallbackHandler
 from typing import Optional
 
 def get_langfuse_callback() -> Optional[CallbackHandler]:
