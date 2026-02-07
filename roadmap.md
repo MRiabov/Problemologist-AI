@@ -67,6 +67,26 @@ At this point we'll almost definitely need a subagent. Although, it's actually e
 
 1. A custom electronics solver! probably. I didn't find one that would suit 6-12 months ago. It's not a very complex thing - but needs to be done.
 
+### Work package 4 - Adaptability
+
+Just like we can prompt the Cursor or Claude code to make edits, we have to be able to allow engineers propmt too.
+Up until now, all we did was a closed-loop system - we generate benchmarks from a prompt, it gets generated, then sent to an engineering LLM to be solved, it tries until succeeds/fails, and then further.
+
+Basically, we need to hone the model to use CAD so well that it would be able to make changes to CAD on the fly (e.g. - move this part 20cm backwards and constrain it with 4 M5 bolts). Right now, it fails.
+
+it's not necessarily a difficult piece of work, but, it'll need to plan it's changes, and execute on it.
+
+#### Work necessary
+
+1. New prompts
+2. Tuning the agent
+3. A dataset of improvements. Notably, this is pretty easy to do, as we have a Critic model that would suggest improvements from day 1.
+
+#### Tech stack
+
+1. New prompts. LangFuse for evaluation.
+2.
+
 ### Work package 4 - Topology optimization (extra cool)
 
 This is definitely an extra, but adds a huge value to the project. Topology optimization:
@@ -75,7 +95,7 @@ This is definitely an extra, but adds a huge value to the project. Topology opti
 Topology optimization (TO) is a computational design method that maximizes structural performance by finding the best material layout within a given space, based on loads and constraints. By removing unnecessary material, it creates lightweight, often organic-looking, and efficient designs, heavily used in aerospace and automotive industries to minimize mass and improve strength
 """
 Google it - it makes it very obvious. Essentially, it's optimization of engineering structures using AI to their peak performance (strength vs weight)
-It's what every engineer wants to do, but doesn't always have time to do it.
+It's what every engineer wants to do, but doesn't always have time to do it. It reduces cost, makes work easier, etc, but it needs setup. Optimize the setup via the LLM.
 
 #### Work necessary
 
@@ -87,6 +107,7 @@ It's what every engineer wants to do, but doesn't always have time to do it.
 #### Technology stack
 
 1. A topology optimization framework.
+2. Prompts
 
 ### Work package 5 - Productionizing
 
@@ -95,3 +116,13 @@ What can we make to make the actual engineers use this?
 1. Improve the models iteratively do a lot of experiments,
 2. Make the simulation engineering-grade.
 3. Making a better interface.
+4. Add functionality that they need for enterprisey features - from most to least important (AFAIK):
+    1. do they need code in their chips?
+    2. More materials? More off-the-shelf parts?
+    3. Thermal optimization?
+    4. Reliability analysis?
+    5. Extra manufacturability analysis?
+
+    Etc.
+
+At this point we'll the state of the art by a great margin.
