@@ -3121,7 +3121,6 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "bd-warehouse" },
-    { name = "beartype" },
     { name = "boto3" },
     { name = "build123d" },
     { name = "deepagents" },
@@ -3158,6 +3157,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "beartype" },
     { name = "datamodel-code-generator" },
     { name = "moto", extra = ["s3"] },
     { name = "playwright" },
@@ -3176,7 +3176,6 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.3" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bd-warehouse" },
-    { name = "beartype", specifier = ">=0.22.9" },
     { name = "boto3", specifier = ">=1.36.0" },
     { name = "build123d", specifier = ">=0.10.0" },
     { name = "deepagents", specifier = ">=0.3.10" },
@@ -3214,6 +3213,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "beartype", specifier = ">=0.22.9" },
     { name = "datamodel-code-generator", specifier = ">=0.53.0" },
     { name = "moto", extras = ["s3"], specifier = ">=5.0.0" },
     { name = "playwright", specifier = ">=1.58.0" },

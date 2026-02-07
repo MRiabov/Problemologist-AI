@@ -10,7 +10,7 @@ from src.shared.type_checking import type_check
 
 
 @type_check
-def architect_node(state: AgentState) -> Dict[str, Any]:
+def architect_node(state: AgentState) -> AgentState:
     """
     Architect node: Analyzes the task and creates plan.md and todo.md.
     """
@@ -64,7 +64,9 @@ def architect_node(state: AgentState) -> Dict[str, Any]:
     with open("todo.md", "w") as f:
         f.write(todo_content)
 
-    return {
-        "plan": plan_content,
-        "todo": todo_content,
-    }
+    return state.model_copy(
+        update={
+            "plan": plan_content,
+            "todo": todo_content,
+        }
+    )

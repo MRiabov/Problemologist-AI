@@ -9,9 +9,12 @@ from ..state import AgentState
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.clients.worker import WorkerClient
 
+from src.shared.type_checking import type_check
+
 logger = logging.getLogger(__name__)
 
 
+@type_check
 class EngineerNode:
     """
     Engineer node: Picks a task from TODO, writes code, executes it, and fixes errors.
@@ -28,13 +31,15 @@ class EngineerNode:
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
         self.fs = RemoteFilesystemMiddleware(self.worker_client)
 
-    async def __call__(self, state: AgentState) -> Dict[str, Any]:
+    async def __call__(self, state: AgentState) -> AgentState:
         """Execute the engineer node logic."""
         # T010: Find next active item in TODO
         todo = state.todo
         current_step = self._get_next_step(todo)
         if not current_step:
-            return {"journal": state.journal + "\nNo more steps in TODO."}
+            return state.model_copy(
+                update={"journal": state.journal + "\nNo more steps in TODO."}
+            )
 
         # T013: Write -> Run -> Fix loop
         max_retries = 3
@@ -65,11 +70,13 @@ class EngineerNode:
                     new_todo = todo.replace(
                         f"- [ ] {current_step}", f"- [x] {current_step}"
                     )
-                    return {
-                        "todo": new_todo,
-                        "journal": state.journal + journal_entry,
-                        "current_step": current_step,
-                    }
+                    return state.model_copy(
+                        update={
+                            "todo": new_todo,
+                            "journal": state.journal + journal_entry,
+                            "current_step": current_step,
+                        }
+                    )
                 else:
                     last_error = stderr or stdout or "Unknown error"
                     journal_entry += (
@@ -82,10 +89,13 @@ class EngineerNode:
                 retry_count += 1
 
         journal_entry += f"\nFailed to complete step after {max_retries} retries."
-        return {
-            "journal": state.journal + journal_entry,
-            "iteration": state.iteration + 1,
-        }
+        return state.model_copy(
+            update={
+                "journal": state.journal + journal_entry,
+                "iteration": state.iteration + 1,
+            }
+        )
+
 
     def _get_next_step(self, todo: str) -> Optional[str]:
         """Extract the first '- [ ]' item from the TODO list."""
@@ -107,7 +117,8 @@ from ..config import settings
 
 
 # Factory function for LangGraph
-async def engineer_node(state: AgentState) -> Dict[str, Any]:
+@type_check
+async def engineer_node(state: AgentState) -> AgentState:
     node = EngineerNode(
         worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
     )

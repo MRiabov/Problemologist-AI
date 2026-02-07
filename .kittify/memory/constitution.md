@@ -35,7 +35,7 @@ This constitution captures the technical standards and core principles for Probl
 
 ### Type Safety & Schemas
 
-- **Strict Typing**: All data models must use strict typing (Pydantic `Strict*` types) to ensure schema validity.
+- **Strict Typing**: All data models must use strict typing (Pydantic `Strict*` types) to ensure schema validity. In addition, we use Beartype for runtime type checking of critical functions.
 - **Enums over Strings**: Always prefer `Enum` (or `StrEnum`) over raw strings for categorical data to ensure closed sets of values.
 - **Fuzz Testing**: Schemas must be robust enough to withstand fuzz testing via `schemathesis`.
 
