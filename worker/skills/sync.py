@@ -22,8 +22,8 @@ def sync_skills():
         logger.info("GIT_REPO_URL not set, skipping skills sync.")
         return
 
-    # Assuming this runs in the worker context where skills dir is local
-    skills_dir = Path(__file__).parent.parent / "skills"
+    # Download skills to a separate directory from the code
+    skills_dir = Path("/app/skills")
     skills_dir.mkdir(parents=True, exist_ok=True)
 
     auth_url = _get_auth_url(repo_url, pat)

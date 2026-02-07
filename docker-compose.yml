@@ -12,7 +12,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
-    command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "controller", "--reload-dir", "shared"]
     env_file:
       - .env
     depends_on:
@@ -29,16 +29,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    develop:
-      watch:
-        - action: sync
-          path: ./controller
-          target: /app/controller
-        - action: sync
-          path: ./shared
-          target: /app/shared
-        - action: rebuild
-          path: pyproject.toml
+    # develop:
+      # watch:
+      #   - action: sync
+      #     path: ./controller
+      #     target: /app/controller
+      #   - action: sync
+      #     path: ./shared
+      #     target: /app/shared
+      #   - action: sync
+      #     path: ./config
+      #     target: /app/config
+      #   - action: rebuild
+      #     path: pyproject.toml
 
   migrations:
     build:
@@ -67,14 +70,17 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
-    develop:
-      watch:
-        - action: sync+restart
-          path: ./controller
-          target: /app/controller
-        - action: sync+restart
-          path: ./shared
-          target: /app/shared
+    # develop:
+    #   watch:
+    #     - action: sync+restart
+    #       path: ./controller
+    #       target: /app/controller
+    #     - action: sync+restart
+    #       path: ./shared
+    #       target: /app/shared
+    #     - action: sync+restart
+    #       path: ./config
+    #       target: /app/config
 
   worker:
     build:
@@ -84,7 +90,7 @@ services:
       - "8001:8001"
     environment:
       - S3_ENDPOINT=http://minio:9000
-    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001", "--reload", "--reload-dir", "worker", "--reload-dir", "shared"]
     env_file:
       - .env
     depends_on:
@@ -95,16 +101,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    develop:
-      watch:
-        - action: sync
-          path: ./worker
-          target: /app/worker
-        - action: sync
-          path: ./shared
-          target: /app/shared
-        - action: rebuild
-          path: pyproject.toml
+    # develop:
+    #   watch:
+    #     - action: sync
+    #       path: ./worker
+    #       target: /app/worker
+    #     - action: sync
+    #       path: ./shared
+    #       target: /app/shared
+    #     - action: rebuild
+    #       path: pyproject.toml
 
   postgres:
     image: postgres:15-alpine

@@ -130,6 +130,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       refreshEpisodes,
       selectEpisode,
       startAgent,
+      interruptAgent,
       setRunning,
       createNewBenchmark,
       clearSelection

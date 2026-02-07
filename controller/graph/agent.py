@@ -4,6 +4,10 @@ from langgraph.prebuilt import create_react_agent
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.langfuse import get_langfuse_callback
 from controller.tools.fs import create_fs_tools
+from controller.prompts import get_prompt
+from shared.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
@@ -29,12 +33,16 @@ def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
     # Create tools
     tools = create_fs_tools(fs_middleware)
 
-    # Create the ReAct agent
-    system_prompt = (
-        "You are a coding agent with access to a sandboxed filesystem. "
-        "Use the provided tools to explore the workspace, read/write files, "
-        "and execute Python code. Always think before you act."
-    )
+    # Load system prompt from config
+    try:
+        system_prompt = get_prompt("cad_agent.planner.system")
+    except Exception as e:
+        logger.warning("failed_to_load_custom_prompt", error=str(e))
+        system_prompt = (
+            "You are a coding agent with access to a sandboxed filesystem. "
+            "Use the provided tools to explore the workspace, read/write files, "
+            "and execute Python code. Always think before you act."
+        )
 
     # We return the agent. Callers should pass callbacks to invoke if they want tracing.
     # However, create_react_agent doesn't store callbacks.
