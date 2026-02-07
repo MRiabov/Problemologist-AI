@@ -28,21 +28,8 @@ def validate_and_price(
     elif method == ManufacturingMethod.INJECTION_MOLDING:
         return analyze_im(part, config)
     elif method == ManufacturingMethod.THREE_DP:
-        # For 3DP, we use the Workbench class as it doesn't have a functional entry point yet
-        from src.workbenches.print_3d import Print3DWorkbench
-        wb = Print3DWorkbench()
-        violations = wb.validate(part)
-        cost = wb.calculate_cost(part)
-        
-        is_manufacturable = len(violations) == 0
-        logger.info("3dp_analysis_complete", is_manufacturable=is_manufacturable)
-        
-        return WorkbenchResult(
-            is_manufacturable=is_manufacturable,
-            unit_cost=cost.unit_cost,
-            violations=violations,
-            metadata={"cost_breakdown": cost.model_dump()}
-        )
+        from src.workbenches.print_3d import analyze_3dp
+        return analyze_3dp(part, config)
     else:
         logger.error("unsupported_manufacturing_method", method=method)
         raise ValueError(f"Unsupported manufacturing method: {method}")

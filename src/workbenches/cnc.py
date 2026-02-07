@@ -41,7 +41,9 @@ def check_internal_corner_radii(
             # Check if it's vertical (|Z| close to 1.0)
             if abs(abs(tangent.Z) - 1.0) > 1e-3:
                 continue
-        except:
+        except Exception:
+            # If we can't get tangent, it might be a singularity or weird edge.
+            # Safe to skip for vertical check? Maybe.
             continue
 
         # 2. Check for sharp corners (LINE) or small fillets (CIRCLE)
@@ -60,31 +62,34 @@ def check_internal_corner_radii(
                 f1, f2 = adj_faces[0], adj_faces[1]
                 p = edge.center()
 
+                # Check for tangency - if faces are tangent, it's not a sharp corner
                 try:
-                    # Check for tangency - if faces are tangent, it's not a sharp corner
                     n1 = f1.normal_at(p)
                     n2 = f2.normal_at(p)
-                    if n1.dot(n2) > 0.99:  # Nearly tangent
-                        continue
-
-                    # Get points on each face by moving slightly from the edge toward the face center
-                    p1 = p + (f1.center() - p).normalized() * 0.1
-                    p2 = p + (f2.center() - p).normalized() * 0.1
-
-                    mid = (p1 + p2) * 0.5
-
-                    # If the midpoint is OUTSIDE the solid, it's a concave (internal) corner.
-                    if not part.is_inside(mid):
-                        if is_sharp:
-                            violations.append(
-                                f"Sharp internal vertical corner detected at {p}"
-                            )
-                        else:
-                            violations.append(
-                                f"Internal corner radius too small at {p}: {edge.radius:.2f}mm < {min_radius}mm"
-                            )
-                except:
+                except Exception:
+                    # If we can't get normals, skip checking this edge
                     continue
+
+                if n1.dot(n2) > 0.99:  # Nearly tangent
+                    continue
+
+                # Get points on each face by moving slightly from the edge toward the face center
+                p1 = p + (f1.center() - p).normalized() * 0.1
+                p2 = p + (f2.center() - p).normalized() * 0.1
+
+                mid = (p1 + p2) * 0.5
+
+                # If the midpoint is OUTSIDE the solid, it's a concave (internal) corner.
+                # is_inside check is robust enough usually
+                if not part.is_inside(mid):
+                    if is_sharp:
+                        violations.append(
+                            f"Sharp internal vertical corner detected at {p}"
+                        )
+                    else:
+                        violations.append(
+                            f"Internal corner radius too small at {p}: {edge.radius:.2f}mm < {min_radius}mm"
+                        )
 
     return list(set(violations))
 
