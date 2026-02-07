@@ -34,4 +34,4 @@ def create_agent_graph(fs_middleware: RemoteFilesystemMiddleware):
     if callbacks:
         llm = llm.with_config({"callbacks": callbacks})
 
-    return create_react_agent(llm, tools, state_modifier=system_prompt)
+    return create_react_agent(llm, tools, prompt=system_prompt)
