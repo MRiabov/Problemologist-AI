@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { fetchEpisodes, fetchSkills } from '../api/client';
+import { fetchEpisodes, fetchSkills, runAgent } from '../api/client';
 import type { Episode, Skill } from '../api/types';
 
 export default function EngineerWorkspace() {
@@ -8,6 +8,9 @@ export default function EngineerWorkspace() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [taskPrompt, setTaskPrompt] = useState('');
+  const [running, setRunning] = useState(false);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -26,6 +29,33 @@ export default function EngineerWorkspace() {
     }
     loadData();
   }, []);
+
+  const handleSelectEpisode = async (ep: Episode) => {
+    try {
+        const fullEp = await fetchEpisode(ep.id);
+        setSelectedEpisode(fullEp);
+    } catch (e) {
+        console.error("Failed to fetch episode details", e);
+        setSelectedEpisode(ep);
+    }
+  };
+
+  const handleRunAgent = async () => {
+    if (!taskPrompt) return;
+    setRunning(true);
+    try {
+        const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
+        await runAgent(taskPrompt, sessionId);
+        // Refresh episodes
+        const episodesData = await fetchEpisodes();
+        setEpisodes(episodesData);
+        setTaskPrompt('');
+    } catch (e) {
+        console.error("Failed to run agent", e);
+    } finally {
+        setRunning(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -51,25 +81,32 @@ export default function EngineerWorkspace() {
                 </nav>
             </div>
             {/* Rest of Header */}
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+            <div className="flex items-center gap-4 flex-1 justify-end">
+                <div className="flex items-center bg-panel-dark rounded-md px-2 py-1 border border-border-dark w-full max-w-sm">
+                    <input 
+                        className="bg-transparent border-none text-xs w-full text-white placeholder-text-secondary focus:ring-0 focus:outline-none" 
+                        placeholder="Describe the task for the engineer..." 
+                        type="text"
+                        value={taskPrompt}
+                        onChange={(e) => setTaskPrompt(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleRunAgent()}
+                    />
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full shrink-0">
                     <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
                     <span className="text-[10px] font-mono font-bold text-green-400 tracking-wider">SANDBOX: ISOLATED</span>
                 </div>
-                <div className="h-6 w-px bg-border-dark"></div>
-                <div className="flex items-center gap-4 mr-4">
-                    <a className="text-text-secondary hover:text-white text-sm font-medium transition-colors" href="#">Policy</a>
-                    <a className="text-text-secondary hover:text-white text-sm font-medium transition-colors" href="#">Kernel</a>
-                </div>
+                <div className="h-6 w-px bg-border-dark shrink-0"></div>
                 <button
-                    onClick={() => navigate('/ide')}
-                    className="flex items-center justify-center gap-2 rounded h-8 px-4 bg-primary hover:bg-blue-600 transition-colors text-white text-xs font-bold"
+                    onClick={handleRunAgent}
+                    disabled={running || !taskPrompt}
+                    className="flex items-center justify-center gap-2 rounded h-8 px-4 bg-primary hover:bg-blue-600 transition-colors text-white text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                     <span className="material-symbols-outlined text-base">rocket_launch</span>
-                    SOLVE
+                    {running ? 'RUNNING...' : 'SOLVE'}
                 </button>
             </div>
         </header>
@@ -93,9 +130,13 @@ export default function EngineerWorkspace() {
                              <div className="p-4 text-xs text-text-secondary">No episodes found.</div>
                         ) : (
                             episodes.map(ep => (
-                                <div key={ep.id} className="p-3 border-b border-border-dark/30 hover:bg-white/5 cursor-pointer">
+                                <div 
+                                    key={ep.id} 
+                                    onClick={() => handleSelectEpisode(ep)}
+                                    className={`p-3 border-b border-border-dark/30 hover:bg-white/5 cursor-pointer transition-colors ${selectedEpisode?.id === ep.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}
+                                >
                                     <div className="flex justify-between items-start mb-1">
-                                        <span className="text-xs font-medium text-white">{ep.task.substring(0, 20)}...</span>
+                                        <span className={`text-xs font-medium ${selectedEpisode?.id === ep.id ? 'text-white' : 'text-gray-400'}`}>{ep.task.substring(0, 24)}...</span>
                                         {ep.status === 'running' ? (
                                             <span className="text-[9px] bg-primary text-white px-1 rounded">RUNNING</span>
                                         ) : ep.status === 'completed' || ep.status === 'success' ? ( // Handle mapped status
@@ -133,9 +174,16 @@ export default function EngineerWorkspace() {
             {/* Middle Content */}
             <main className="flex-1 flex flex-col min-w-0 bg-code-bg">
                 <section className="h-[35%] flex flex-col border-b border-border-dark bg-[#0b1016]">
-                    <div className="px-4 py-2 border-b border-border-dark flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-lg">architecture</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Architect's TODO List</span>
+                    <div className="px-4 py-2 border-b border-border-dark flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-lg">architecture</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Architect's TODO List</span>
+                        </div>
+                        {selectedEpisode && (
+                            <span className="text-[10px] font-mono text-primary truncate max-w-md">
+                                {selectedEpisode.task}
+                            </span>
+                        )}
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
                         <div className="flex items-center gap-3 bg-panel-dark/50 p-2 rounded border border-border-dark/50">
@@ -223,14 +271,31 @@ export default function EngineerWorkspace() {
                         <button className="w-8 h-8 bg-black/40 rounded flex items-center justify-center border border-white/10 text-white/70 hover:text-white"><span className="material-symbols-outlined text-sm">view_in_ar</span></button>
                         <button className="w-8 h-8 bg-black/40 rounded flex items-center justify-center border border-white/10 text-white/70 hover:text-white"><span className="material-symbols-outlined text-sm">grid_on</span></button>
                     </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="relative w-48 h-48 border border-primary/20 rounded-xl flex items-center justify-center">
-                            <div className="absolute inset-0 bg-primary/5 blur-xl"></div>
-                            <div className="w-32 h-20 bg-primary/20 border-2 border-primary/40 rounded transform -rotate-12 shadow-2xl flex items-center justify-center">
-                                <span className="text-[10px] font-black tracking-tighter text-primary/60">BRKT_V4</span>
+                    <div className="flex-1 flex items-center justify-center overflow-hidden">
+                        {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                                {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
+                                    <video 
+                                        src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
+                                        controls 
+                                        className="max-w-full max-h-full rounded shadow-2xl border border-white/10"
+                                    />
+                                ) : (
+                                    <img 
+                                        src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
+                                        className="max-w-full max-h-full object-contain rounded shadow-2xl border border-white/10"
+                                    />
+                                )}
                             </div>
-                            <div className="absolute w-full h-full border border-white/5 rounded-full scale-125"></div>
-                        </div>
+                        ) : (
+                            <div className="relative w-48 h-48 border border-primary/20 rounded-xl flex items-center justify-center">
+                                <div className="absolute inset-0 bg-primary/5 blur-xl"></div>
+                                <div className="w-32 h-20 bg-primary/20 border-2 border-primary/40 rounded transform -rotate-12 shadow-2xl flex items-center justify-center">
+                                    <span className="text-[10px] font-black tracking-tighter text-primary/60">NO_ASSET</span>
+                                </div>
+                                <div className="absolute w-full h-full border border-white/5 rounded-full scale-125"></div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="flex-1 flex flex-col border-t border-border-dark overflow-hidden">
@@ -244,13 +309,30 @@ export default function EngineerWorkspace() {
                     </div>
                     <div className="flex-1 flex flex-col bg-[#0a0f14] overflow-hidden">
                         <div className="flex-1 p-3 font-mono text-[11px] overflow-y-auto space-y-1">
-                            <div className="text-gray-500">[0.00s] Initializing build123d kernel...</div>
-                            <div className="text-gray-500">[0.02s] Loading geometry policy: <span className="text-blue-400">STRICT_PHYSICS</span></div>
-                            <div className="text-blue-300">&gt;&gt;&gt; Running impl_build123d.py</div>
-                            <div className="text-green-500">[OK] BuildPart created. Vol: 12.4cm³</div>
-                            <div className="text-green-500">[OK] Vertex fillets applied. Max Curvature: 0.2</div>
-                            <div className="text-yellow-400">[WARN] Hole clearance near edge &lt; 2.0mm</div>
-                            <div className="text-gray-500 animate-pulse">_</div>
+                            {selectedEpisode?.traces && selectedEpisode.traces.length > 0 ? (
+                                selectedEpisode.traces.map(trace => (
+                                    <div key={trace.id} className="space-y-1 mb-2 border-b border-white/5 pb-2">
+                                        <div className="flex justify-between text-[9px] text-gray-500">
+                                            <span>[{new Date(trace.created_at).toLocaleTimeString()}] TRACE: {trace.langfuse_trace_id || trace.id}</span>
+                                        </div>
+                                        <div className="text-gray-300 whitespace-pre-wrap">
+                                            {typeof trace.raw_trace === 'string' 
+                                                ? trace.raw_trace 
+                                                : JSON.stringify(trace.raw_trace, null, 2)}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <>
+                                    <div className="text-gray-500">[0.00s] Initializing build123d kernel...</div>
+                                    <div className="text-gray-500">[0.02s] Loading geometry policy: <span className="text-blue-400">STRICT_PHYSICS</span></div>
+                                    <div className="text-blue-300">&gt;&gt;&gt; Running impl_build123d.py</div>
+                                    <div className="text-green-500">[OK] BuildPart created. Vol: 12.4cm³</div>
+                                    <div className="text-green-500">[OK] Vertex fillets applied. Max Curvature: 0.2</div>
+                                    <div className="text-yellow-400">[WARN] Hole clearance near edge &lt; 2.0mm</div>
+                                    <div className="text-gray-500 animate-pulse">_</div>
+                                </>
+                            )}
                         </div>
                         <div className="p-3 bg-panel-dark border-t border-border-dark">
                             <div className="flex items-center gap-3">
