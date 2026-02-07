@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import os
 import sys
@@ -44,7 +45,7 @@ def _load_component(script_path: str):
         raise FileNotFoundError(f"Script not found: {script_path}")
 
     # Add current directory to sys.path to allow local imports in the script
-    workspace_root = os.getcwd()
+    workspace_root = str(Path.cwd())
     if workspace_root not in sys.path:
         sys.path.insert(0, workspace_root)
 
@@ -187,6 +188,39 @@ async def api_submit(request: BenchmarkToolRequest):
 async def get_asset(path: str, fs_router=Depends(get_router)):
     """Serve assets from the filesystem."""
     try:
+        # Check source code if requesting a model
+        if path.endswith(".glb") or path.endswith(".stl"):
+            # Try to find the source python file
+            # Heuristic: file with same name in root, or 'main.py'
+            candidate_paths = [
+                Path(path).with_suffix(".py").name,
+                "main.py",
+                "component.py",
+                "solution.py",
+            ]
+
+            for py_path in candidate_paths:
+                if fs_router.exists(py_path):
+                    try:
+                        source_code = fs_router.read(py_path)
+                        ast.parse(source_code)
+                        break  # Found valid source, or at least one exists
+                    except SyntaxError:
+                        logger.warning(
+                            "asset_serving_refused_syntax_error",
+                            asset=path,
+                            source=py_path,
+                        )
+                        raise HTTPException(
+                            status_code=422,
+                            detail=f"Source code {py_path} has syntax errors.",
+                        )
+                    except Exception as e:
+                        logger.warning("asset_source_check_failed", error=str(e))
+                        # Don't block if we stick to heuristic, but maybe we should?
+                        # User asked for "red (linting) errors". SyntaxError is definitely red.
+                        pass
+
         content = fs_router.read(path)
         media_type = "application/octet-stream"
         if path.endswith(".glb"):
@@ -199,6 +233,8 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
         return Response(content=content, media_type=media_type)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Asset not found")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("api_asset_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
