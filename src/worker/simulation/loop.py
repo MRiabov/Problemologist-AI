@@ -28,9 +28,13 @@ class SimulationLoop:
         self.validation_report = None
 
         if self.component:
-            from src.worker.utils.validation import validate_and_price
+            from src.worker.utils.dfm import validate_and_price
+            from src.workbenches.models import ManufacturingMethod
+            from src.workbenches.config import load_config
 
-            self.validation_report = validate_and_price(self.component)
+            # Default to CNC for simulation validation
+            config = load_config()
+            self.validation_report = validate_and_price(self.component, ManufacturingMethod.CNC, config)
 
         # Cache zone IDs for forbidden zones
         self.forbidden_geoms = []
@@ -61,8 +65,9 @@ class SimulationLoop:
         self.reset_metrics()
 
         # T012: Check validation hook before starting
-        if self.validation_report and not self.validation_report.get("valid", False):
-            self.fail_reason = f"validation_failed: {self.validation_report.get('errors', 'unknown error')}"
+        if self.validation_report and not getattr(self.validation_report, "is_manufacturable", False):
+            violations = getattr(self.validation_report, "violations", ["unknown error"])
+            self.fail_reason = f"validation_failed: {', '.join(map(str, violations))}"
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
