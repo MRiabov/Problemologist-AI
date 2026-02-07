@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Agent Integration & Facade
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02, WP03]
 base_branch: 004-advanced-manufacturing-workbenches-WP03
 base_commit: 872ab04f9f4c239be6d4356d2898ae23339c05bf
@@ -49,3 +49,4 @@ Implement the `validate_and_price` function in `src/worker/utils/dfm.py` which a
 ## Activity Log
 
 - 2026-02-06T21:17:19Z – Gemini – shell_pid=128035 – lane=doing – Assigned agent via workflow command
+- 2026-02-07T06:18:39Z – Gemini – shell_pid=128035 – lane=for_review – Ready for review: Implemented unified DFM facade in src/worker/utils/dfm.py that dispatches to CNC and IM workbenches. Added comprehensive tests in tests/workbenches/test_facade.py.
