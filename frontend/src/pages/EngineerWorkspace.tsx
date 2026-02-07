@@ -105,6 +105,7 @@ export default function EngineerWorkspace() {
             <div className="col-span-3 border-r overflow-hidden">
                 <ReasoningTraces 
                   traces={selectedEpisode?.traces}
+                  task={selectedEpisode?.task}
                   isRunning={running}
                   isConnected={isConnected}
                 />

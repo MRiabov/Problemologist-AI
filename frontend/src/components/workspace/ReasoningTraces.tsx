@@ -9,12 +9,14 @@ import { useEpisodes } from "../../context/EpisodeContext";
 
 interface ReasoningTracesProps {
   traces?: TraceResponse[];
+  task?: string;
   isRunning?: boolean;
   isConnected?: boolean;
 }
 
 export default function ReasoningTraces({
   traces,
+  task,
   isRunning,
   isConnected = true
 }: ReasoningTracesProps) {
@@ -71,6 +73,21 @@ export default function ReasoningTraces({
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <ScrollArea className="flex-1 bg-black/20" ref={scrollRef}>
             <div className="p-4 font-mono text-[11px] leading-relaxed">
+                {/* Initial Task Message */}
+                {task && (
+                    <div className="mb-6 p-3 bg-primary/10 rounded-lg border border-primary/20 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-1 opacity-20 group-hover:opacity-40 transition-opacity">
+                            <Send className="h-3 w-3 text-primary" />
+                        </div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-primary/70 mb-1">
+                            Initial Objective
+                        </div>
+                        <div className="text-foreground font-medium leading-relaxed whitespace-pre-wrap">
+                            {task}
+                        </div>
+                    </div>
+                )}
+
                 {traces && traces.length > 0 ? (
                     traces.map(trace => (
                         <div key={trace.id} className="space-y-1 mb-3 border-b border-white/5 pb-2 last:border-0 hover:bg-white/5 p-1 rounded transition-colors group">

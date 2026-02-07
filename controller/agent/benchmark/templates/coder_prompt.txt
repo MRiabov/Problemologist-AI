@@ -13,6 +13,9 @@ Your goal is to write a Python script using `build123d` and `mujoco` that genera
 5. **Paths**: Do NOT use hardcoded absolute paths. Use relative paths or generate names dynamically.
 6. **Robustness**: Handle potential geometric exceptions (like failed booleans) gracefully if possible, or ensure the randomization parameters stay within safe bounds defined in the plan.
 
+### Original User Request:
+{prompt}
+
 ### Plan:
 {plan}
 
