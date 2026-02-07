@@ -1,26 +1,41 @@
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Rocket, Settings, Code, History } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useEpisodes } from "../../context/EpisodeContext";
+import { ScrollArea } from "../ui/scroll-area";
+import { Input } from "../ui/input";
+import { useState } from "react";
 
 const navigation = [
   { name: "Workspace", href: "/", icon: LayoutDashboard },
   { name: "Benchmark", href: "/benchmark", icon: Rocket },
-  { name: "IDE", href: "/ide", icon: Code },
 ];
 
 export default function Sidebar() {
+  const { episodes, selectedEpisode, selectEpisode, loading } = useEpisodes();
+  const location = useLocation();
+  const [filter, setFilter] = useState("");
+
+  const filteredEpisodes = episodes.filter(ep => 
+    ep.task.toLowerCase().includes(filter.toLowerCase()) || 
+    ep.id.toLowerCase().includes(filter.toLowerCase())
+  );
+
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-card text-card-foreground">
-      <div className="flex h-14 items-center border-b px-4">
+    <div className="flex h-full w-full flex-col border-r bg-card text-card-foreground">
+      {/* App Header */}
+      <div className="flex h-14 items-center border-b px-4 shrink-0">
         <div className="flex items-center gap-2 font-semibold">
           <div className="flex h-7 w-7 items-center justify-center rounded bg-primary text-primary-foreground">
-            <span className="material-symbols-outlined text-xl">token</span>
+            <Layers className="h-4 w-4" />
           </div>
           <span className="tracking-tight">Agentic CAD</span>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-2">
+
+      {/* Main Navigation */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <nav className="space-y-1 px-2 py-4 shrink-0">
           {navigation.map((item) => (
             <NavLink
               key={item.name}
@@ -39,9 +54,77 @@ export default function Sidebar() {
             </NavLink>
           ))}
         </nav>
+
+        {/* Context-Aware History Section */}
+        <div className="flex-1 flex flex-col min-h-0 border-t">
+            <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {location.pathname === '/' ? 'Engineer History' : 'Benchmark Runs'}
+                    </h3>
+                    <History className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input 
+                      className="h-8 pl-8 text-xs bg-muted/50" 
+                      placeholder="Filter sessions..." 
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                    />
+                </div>
+            </div>
+            <ScrollArea className="flex-1">
+                <div className="p-2 space-y-1">
+                    {loading ? (
+                         <div className="p-4 text-xs text-muted-foreground text-center italic">Loading...</div>
+                    ) : filteredEpisodes.length === 0 ? (
+                         <div className="p-4 text-xs text-muted-foreground text-center">No history found.</div>
+                    ) : (
+                        filteredEpisodes.map(ep => (
+                            <button 
+                                key={ep.id} 
+                                onClick={() => selectEpisode(ep.id)}
+                                className={cn(
+                                  "w-full text-left p-2.5 rounded-md transition-all group border border-transparent",
+                                  selectedEpisode?.id === ep.id 
+                                    ? "bg-primary/10 border-primary/20" 
+                                    : "hover:bg-muted/50"
+                                )}
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className={cn(
+                                      "text-[11px] font-semibold truncate flex-1 pr-2",
+                                      selectedEpisode?.id === ep.id ? "text-primary" : "text-foreground"
+                                    )}>
+                                      {ep.task || ep.id.substring(0,8)}
+                                    </span>
+                                    {ep.status === 'running' ? (
+                                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse mt-1" />
+                                    ) : ep.status === 'completed' ? (
+                                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                    ) : (
+                                        <XCircle className="h-3 w-3 text-destructive" />
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    <span>{new Date(ep.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span>•</span>
+                                    <span className="font-mono">{ep.id.substring(0,4)}</span>
+                                </div>
+                            </button>
+                        ))
+                    )}
+                </div>
+            </ScrollArea>
+        </div>
       </div>
-      <div className="border-t p-4">
+
+      {/* Bottom Settings Navigation */}
+      <div className="border-t p-4 shrink-0">
         <nav className="space-y-1">
+          {/* 
           <NavLink
             to="/history"
             className={({ isActive }) =>
@@ -56,6 +139,7 @@ export default function Sidebar() {
             <History className="h-4 w-4" />
             History
           </NavLink>
+          */}
           <NavLink
             to="/settings"
             className={({ isActive }) =>

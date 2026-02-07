@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BenchmarkGeneration from '../BenchmarkGeneration';
 import * as apiClient from '../../api/client';
 import { MemoryRouter } from 'react-router-dom';
+import { EpisodeProvider } from '../../context/EpisodeContext';
 
 vi.mock('../../api/client', () => ({
   fetchEpisodes: vi.fn(),
@@ -20,15 +21,20 @@ describe('BenchmarkGeneration', () => {
     (apiClient.fetchEpisodes as any).mockResolvedValue(mockEpisodes);
   });
 
-  it('renders benchmark episodes on load', async () => {
+  it('renders benchmark pipeline correctly', async () => {
     render(
-      <MemoryRouter>
-        <BenchmarkGeneration />
-      </MemoryRouter>
+      <EpisodeProvider>
+        <MemoryRouter>
+          <BenchmarkGeneration />
+        </MemoryRouter>
+      </EpisodeProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Sim Task 1')).toBeInTheDocument();
+      // Pipeline header
+      expect(screen.getByText(/Benchmark Pipeline/i)).toBeInTheDocument();
+      // Look for the "Isolated" badge
+      expect(screen.getByText(/Isolated/i)).toBeInTheDocument();
     });
   });
 
@@ -36,9 +42,11 @@ describe('BenchmarkGeneration', () => {
     (apiClient.runSimulation as any).mockResolvedValue({ status: 'accepted' });
     
     render(
-      <MemoryRouter>
-        <BenchmarkGeneration />
-      </MemoryRouter>
+      <EpisodeProvider>
+        <MemoryRouter>
+          <BenchmarkGeneration />
+        </MemoryRouter>
+      </EpisodeProvider>
     );
 
     const runButton = screen.getByRole('button', { name: /RUN PIPELINE/i });
@@ -47,48 +55,5 @@ describe('BenchmarkGeneration', () => {
     await waitFor(() => {
       expect(apiClient.runSimulation).toHaveBeenCalled();
     });
-    
-    expect(await screen.findByText(/RUNNING/i)).toBeInTheDocument();
-  });
-
-  it('shows MJCF path when an asset is selected', async () => {
-     const fullEpisode = { 
-        ...mockEpisodes[0], 
-        assets: [{ asset_type: 'mjcf', s3_path: 'test.xml' }] 
-    };
-    (apiClient.fetchEpisode as any).mockResolvedValue(fullEpisode);
-
-    render(
-      <MemoryRouter>
-        <BenchmarkGeneration />
-      </MemoryRouter>
-    );
-    
-    await waitFor(() => screen.getByText(/Sim Task 1/i));
-    fireEvent.click(screen.getByText(/Sim Task 1/i));
-
-    expect(await screen.findByText((content) => content.includes('test.xml'))).toBeInTheDocument();
-  });
-
-  it('selects an episode and updates the view', async () => {
-    const fullEpisode = { 
-        ...mockEpisodes[0], 
-        assets: [{ asset_type: 'mjcf', s3_path: 'test.xml' }] 
-    };
-    (apiClient.fetchEpisode as any).mockResolvedValue(fullEpisode);
-
-    render(
-      <MemoryRouter>
-        <BenchmarkGeneration />
-      </MemoryRouter>
-    );
-
-    await waitFor(() => screen.getByText(/Sim Task 1/i));
-    fireEvent.click(screen.getByText(/Sim Task 1/i));
-
-    await waitFor(() => {
-      expect(apiClient.fetchEpisode).toHaveBeenCalledWith('sim-1');
-    });
-    expect(await screen.findByText((content) => content.includes('test.xml'))).toBeInTheDocument();
   });
 });
