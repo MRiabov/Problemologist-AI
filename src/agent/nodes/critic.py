@@ -9,6 +9,7 @@ from ..prompt_manager import PromptManager
 from ..state import AgentState, AgentStatus
 from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from src.controller.clients.worker import WorkerClient
+from src.shared.type_checking import type_check
 
 
 class CriticDecision(str, Enum):
@@ -17,6 +18,7 @@ class CriticDecision(str, Enum):
     REJECT_CODE = "REJECT_CODE"
 
 
+@type_check
 class CriticNode:
     """
     Critic node: Evaluates the Engineer's output based on simulation and workbench reports.
@@ -107,6 +109,7 @@ from ..config import settings
 
 
 # Factory function for LangGraph
+@type_check
 async def critic_node(state: AgentState) -> Dict[str, Any]:
     node = CriticNode(
         worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
