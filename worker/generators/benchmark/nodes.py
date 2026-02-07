@@ -71,52 +71,55 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Generates build123d script based on plan and feedback.
+    Generates build123d script based on plan and feedback using deepagents.
     """
+    from deepagents import create_deep_agent
+    from worker.filesystem.backend import SandboxFilesystemBackend
+
     logger.info("coder_node_start", session_id=state["session"].session_id)
 
     # 1. Load template
     template_path = Path(__file__).parent / "templates" / "coder_prompt.txt"
     template = template_path.read_text()
 
-    # 2. Format prompt
+    # 2. Format prompt context
     validation_logs = "\n".join(state["session"].validation_logs)
     if state.get("simulation_result") and not state["simulation_result"]["valid"]:
         validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
 
-    prompt = template.format(
+    system_prompt = template.format(
         plan=json.dumps(state.get("plan"), indent=2),
         review_feedback=state.get("review_feedback", "No feedback provided."),
         validation_logs=validation_logs,
     )
 
-    # 3. Call LLM
+    # 3. Setup Agent with deepagents
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    backend = SandboxFilesystemBackend.create(state["session"].session_id)
+    
+    agent = create_deep_agent(
+        model=llm,
+        backend=backend,
+        system_prompt=system_prompt,
+        name="CAD Coder Agent"
+    )
 
-    messages = [
-        SystemMessage(content="You are a CAD scripting assistant."),
-        HumanMessage(content=prompt),
-    ]
+    # 4. Invoke Agent
+    result = await agent.ainvoke({"messages": [HumanMessage(content=f"Implement the benchmark script for: {state['session'].prompt}")]})
+    
+    # 5. Update state
+    try:
+        # read_raw to avoid line numbers
+        s3_path = backend._resolve_path("script.py")
+        if backend._fs.exists(s3_path):
+            with backend._fs.open(s3_path, "rb") as f:
+                state["current_script"] = f.read().decode("utf-8")
+    except Exception as e:
+        logger.warning("coder_agent_failed_to_read_script", error=str(e))
 
-    response = await llm.ainvoke(messages)
-    content = response.content
+    state["messages"].extend(result["messages"])
 
-    # 4. Parse output
-    script = extract_python_code(content)
-
-    # 5. Verify syntax
-    is_valid, error = verify_syntax(script)
-    if not is_valid:
-        logger.warning("syntax_error_detected", error=error)
-        state["session"].validation_logs.append(
-            f"Syntax Error in generated script: {error}"
-        )
-
-    # 6. Update state
-    state["current_script"] = script
-    state["messages"].append(HumanMessage(content=content))
-
-    logger.info("coder_node_complete", script_length=len(script))
+    logger.info("coder_node_complete", script_length=len(state.get("current_script", "")))
     return state
 
 
@@ -209,80 +212,23 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
 
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Agentic review of the generated benchmark.
-    Uses vision to inspect renders and writes a persistent review file.
+    Agentic review of the generated benchmark using deepagents.
+    Uses vision to inspect renders and verifies that only the review file is edited.
     """
     import base64
-    from langgraph.prebuilt import create_react_agent
-    from langchain_core.tools import tool
+    import yaml
+    from deepagents import create_deep_agent
+    from deepagents.backends.protocol import BackendProtocol
+    from worker.filesystem.backend import SandboxFilesystemBackend
 
     logger.info("reviewer_node_start", round=state.get("review_round", 0))
 
-    # Increment round
+    # 1. Setup round and review path
     state["review_round"] = state.get("review_round", 0) + 1
     current_round = state["review_round"]
-    review_dir = Path(f"worker/reviews/review-round-{current_round}")
-    review_dir.mkdir(parents=True, exist_ok=True)
-
-    # Define restricted filesystem tools for the reviewer
-    @tool
-    def list_workspace(path: str = "."):
-        """List files in the workspace. Use this to see what's available."""
-        # Read-only access to most things
-        try:
-            p = Path(path)
-            return [f.name for f in p.iterdir()]
-        except Exception as e:
-            return str(e)
-
-    @tool
-    def read_workspace_file(path: str):
-        """Read a file from the workspace (read-only)."""
-        try:
-            return Path(path).read_text()
-        except Exception as e:
-            return str(e)
-
-    @tool
-    def write_review(content: str):
-        """
-        Write the final review file.
-        MUST include YAML frontmatter with 'decision' (approved/rejected) and 'comments' (list).
-        Save to the designated review folder for this round.
-        """
-        try:
-            review_path = review_dir / "review.md"
-            review_path.write_text(content)
-            return f"Review saved to {review_path}"
-        except Exception as e:
-            return str(e)
-
-    tools = [list_workspace, read_workspace_file, write_review]
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
-
-    # Prepare system prompt
-    template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
-    base_prompt = template_path.read_text()
-
-    system_message = f"""{base_prompt}
-
-You are an agentic reviewer. You have access to the filesystem to inspect code and renders.
-You MUST:
-1. Inspect the renders provided in the message.
-2. Use the 'write_review' tool to persist your findings to '{review_dir}/review.md'.
-3. The review file MUST start with a YAML frontmatter:
----
-decision: approved  # or rejected
-comments:
-  - "Comment 1"
-  - "Comment 2"
----
-
-4. If you approve, you MUST include 'STATUS: APPROVE' in your final response.
-5. If you reject, you MUST include 'STATUS: REJECT' and provide feedback.
-"""
-
-    # Load and encode images for vision model to be passed in the initial message
+    review_filename = f"reviews/review-round-{current_round}/review.md"
+    
+    # 2. Vision: Load and encode images
     renders = state.get("simulation_result", {}).get("render_paths", [])
     image_contents = []
     for path_str in renders[:8]:
@@ -291,37 +237,120 @@ comments:
             if path.exists():
                 with open(path, "rb") as f:
                     encoded = base64.b64encode(f.read()).decode("utf-8")
-                    image_contents.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{encoded}"},
-                        }
-                    )
+                    image_contents.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{encoded}"}
+                    })
         except Exception as e:
-            logger.warning(
-                "failed_to_load_render_for_vision", path=path_str, error=str(e)
-            )
+            logger.warning("failed_to_load_render_for_vision", path=path_str, error=str(e))
 
+    # 3. Backend Wrapper for validation (implementing BackendProtocol)
+    class GuardedBackend(BackendProtocol):
+        def __init__(self, inner, allowed_file: str):
+            self.inner = inner
+            self.allowed_file = allowed_file.lstrip("/")
+            self.violations = []
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+
+        def _check(self, file_path: str, op: str):
+            p = file_path.lstrip("/")
+            if p != self.allowed_file:
+                self.violations.append(f"Attempted to {op} unauthorized path: {file_path}")
+
+        def write(self, file_path, content):
+            self._check(file_path, "write")
+            return self.inner.write(file_path, content)
+
+        async def awrite(self, file_path, content):
+            self._check(file_path, "write")
+            return await self.inner.awrite(file_path, content)
+
+        def edit(self, file_path, old, new, replace_all=False):
+            self._check(file_path, "edit")
+            return self.inner.edit(file_path, old, new, replace_all)
+
+        async def aedit(self, file_path, old, new, replace_all=False):
+            self._check(file_path, "edit")
+            return await self.inner.aedit(file_path, old, new, replace_all)
+
+        def delete(self, file_path):
+            self.violations.append(f"Attempted to delete path: {file_path}")
+            return self.inner.delete(file_path)
+
+        async def adelete(self, file_path):
+            self.violations.append(f"Attempted to delete path: {file_path}")
+            return await self.inner.adelete(file_path)
+
+    base_backend = SandboxFilesystemBackend.create(state["session"].session_id)
+    guarded_backend = GuardedBackend(base_backend, review_filename)
+
+    # 4. Prepare system prompt
+    template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
+    base_prompt = template_path.read_text()
+    
+    system_prompt = f"""{base_prompt}
+
+You are an agentic reviewer with access to the CAD workspace.
+YOU MUST:
+1. Inspect the renders provided in the vision message.
+2. Inspect the generated code ('script.py') and MJCF.
+3. Use the 'write_file' tool to persist your review ONLY to '{review_filename}'.
+4. The review file MUST start with a YAML frontmatter:
+---
+decision: approved  # or rejected
+comments:
+  - "Comment 1"
+  - "Comment 2"
+---
+
+YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
+"""
+
+    # 5. Setup Agent
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    agent = create_deep_agent(
+        model=llm,
+        backend=guarded_backend,
+        system_prompt=system_prompt,
+        name="Benchmark Reviewer Agent"
+    )
+
+    # 6. Invoke Agent with Vision
     user_content = [
-        {
-            "type": "text",
-            "text": f"Please review the benchmark for theme: {state.get('plan', {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}",
-        }
+        {"type": "text", "text": f"Please review the benchmark for theme: {state.get('plan', {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}"}
     ]
     user_content.extend(image_contents)
 
-    # Create and run the react agent
-    agent = create_react_agent(llm, tools, prompt=system_message)
-
     result = await agent.ainvoke({"messages": [HumanMessage(content=user_content)]})
+    
+    # 7. Check violations and parse results
+    if guarded_backend.violations:
+        logger.error("reviewer_security_violations", violations=guarded_backend.violations)
+        state["review_feedback"] = f"Reviewer security violation: {', '.join(guarded_backend.violations)}"
+        return state
 
-    final_response = str(result["messages"][-1].content)
-
-    # Extract status from the agent's reasoning/response
-    if "APPROVE" in final_response.upper():
-        state["review_feedback"] = "Approved"
-    else:
-        state["review_feedback"] = final_response
+    # Parse review from backend
+    try:
+        s3_path = base_backend._resolve_path(review_filename)
+        if base_backend._fs.exists(s3_path):
+            with base_backend._fs.open(s3_path, "rb") as f:
+                content = f.read().decode("utf-8")
+                
+            frontmatter_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+            if frontmatter_match:
+                frontmatter = yaml.safe_load(frontmatter_match.group(1))
+                if frontmatter.get("decision") == "approved":
+                    state["review_feedback"] = "Approved"
+                else:
+                    state["review_feedback"] = "\n".join(frontmatter.get("comments", ["Rejected"]))
+            else:
+                state["review_feedback"] = "Error: Missing YAML frontmatter in review file."
+        else:
+            state["review_feedback"] = "Error: Review file not created by agent."
+    except Exception as e:
+        state["review_feedback"] = f"Error reading review file: {e!s}"
 
     logger.info("reviewer_node_complete", feedback=state["review_feedback"])
     return state
