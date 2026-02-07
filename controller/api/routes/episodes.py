@@ -59,9 +59,19 @@ class EpisodeResponse(BaseModel):
 @router.get("/", response_model=list[EpisodeResponse])
 async def list_episodes(db: AsyncSession = Depends(get_db)):
     """List all agent episodes."""
-    result = await db.execute(select(Episode).order_by(Episode.created_at.desc()))
-    episodes = result.scalars().all()
-    return episodes
+    try:
+        result = await db.execute(
+            select(Episode)
+            .order_by(Episode.created_at.desc())
+            .options(selectinload(Episode.traces), selectinload(Episode.assets))
+        )
+        episodes = result.scalars().all()
+        return episodes
+    except Exception as e:
+        import structlog
+        logger = structlog.get_logger(__name__)
+        logger.error("list_episodes_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.get("/{episode_id}", response_model=EpisodeResponse)

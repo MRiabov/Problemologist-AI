@@ -82,17 +82,17 @@ class RemoteFilesystemMiddleware:
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:
         return await self.run_command(code, timeout=timeout)
 
-    async def simulate(self, script_path: str = "script.py") -> dict[str, Any]:
+    async def simulate(self, script_path: str) -> dict[str, Any]:
         """Trigger physics simulation via worker client."""
         result = await self.client.simulate(script_path)
         return result.model_dump()
 
-    async def validate(self, script_path: str = "script.py") -> dict[str, Any]:
+    async def validate(self, script_path: str) -> dict[str, Any]:
         """Trigger geometric validation via worker client."""
         result = await self.client.validate(script_path)
         return result.model_dump()
 
-    async def submit(self, script_path: str = "script.py") -> dict[str, Any]:
+    async def submit(self, script_path: str) -> dict[str, Any]:
         """Trigger handover to review via worker client."""
         result = await self.client.submit(script_path)
         return result.model_dump()
