@@ -1,9 +1,13 @@
 ---
 work_package_id: WP04
 title: API & Temporal Integration
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: d5ae98a6d82ec36ca7c8e4cfbd4b763649d500c9
+created_at: '2026-02-07T06:52:31.397071+00:00'
 subtasks: [T020, T021, T022, T023, T024, T025]
+shell_pid: "176405"
 ---
 
 # WP04: API & Temporal Integration
