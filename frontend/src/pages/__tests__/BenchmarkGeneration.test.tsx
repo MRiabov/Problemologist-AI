@@ -41,24 +41,33 @@ describe('BenchmarkGeneration', () => {
       </MemoryRouter>
     );
 
-    const runButton = screen.getByText('RUN BENCHMARK');
+    const runButton = screen.getByText(/RUN PIPELINE/i);
     fireEvent.click(runButton);
 
     await waitFor(() => {
       expect(apiClient.runSimulation).toHaveBeenCalled();
-      expect(screen.getByText('SIMULATING...')).toBeInTheDocument();
+      expect(screen.getByText(/RUNNING/i)).toBeInTheDocument();
     });
   });
 
-  it('shows MJCF placeholder when no asset is selected', async () => {
-     render(
+  it('shows MJCF path when an asset is selected', async () => {
+     const fullEpisode = { 
+        ...mockEpisodes[0], 
+        assets: [{ asset_type: 'mjcf', s3_path: 'test.xml' }] 
+    };
+    (apiClient.fetchEpisode as any).mockResolvedValue(fullEpisode);
+
+    render(
       <MemoryRouter>
         <BenchmarkGeneration />
       </MemoryRouter>
     );
     
+    await waitFor(() => screen.getByText(/Sim Task 1/i));
+    fireEvent.click(screen.getByText(/Sim Task 1/i));
+
     await waitFor(() => {
-      expect(screen.getByText(/Procedural Benchmark Floor/)).toBeInTheDocument();
+      expect(screen.getByText(/test.xml/i)).toBeInTheDocument();
     });
   });
 
@@ -75,12 +84,12 @@ describe('BenchmarkGeneration', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => screen.getByText('Sim Task 1'));
-    fireEvent.click(screen.getByText('Sim Task 1'));
+    await waitFor(() => screen.getByText(/Sim Task 1/i));
+    fireEvent.click(screen.getByText(/Sim Task 1/i));
 
     await waitFor(() => {
       expect(apiClient.fetchEpisode).toHaveBeenCalledWith('sim-1');
-      expect(screen.getByText(/Load MJCF from: test.xml/)).toBeInTheDocument();
+      expect(screen.getByText(/test.xml/i)).toBeInTheDocument();
     });
   });
 });

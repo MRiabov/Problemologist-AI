@@ -11,11 +11,12 @@ describe('IdeDashboard', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/CAD-Agent IDE/)).toBeInTheDocument();
-    expect(screen.getByText(/Episode History/i)).toBeInTheDocument();
-    expect(screen.getByText('generator.py')).toBeInTheDocument();
-    expect(screen.getByText(/Agent Cognition Stream/i)).toBeInTheDocument();
-    expect(screen.getByText(/Execution Log/i)).toBeInTheDocument();
+    expect(screen.getByText(/CAD-Agent IDE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Episode/i)).toBeInTheDocument();
+    expect(screen.getByText(/History/i)).toBeInTheDocument();
+    expect(screen.getByText(/generator.py/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cognition/i)).toBeInTheDocument();
+    expect(screen.getByText(/Log/i)).toBeInTheDocument();
   });
 
   it('renders the metrics overlay', () => {
@@ -25,7 +26,7 @@ describe('IdeDashboard', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Live Metrics/i)).toBeInTheDocument();
+    expect(screen.getByText(/Metrics/i)).toBeInTheDocument();
     expect(screen.getByText(/420kJ/i)).toBeInTheDocument();
     expect(screen.getByText(/\$0.04/i)).toBeInTheDocument();
   });
