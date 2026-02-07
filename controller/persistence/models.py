@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,6 +9,40 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from shared.enums import AssetType, EpisodeStatus
 
 from .db import Base
+
+
+class BenchmarkAsset(Base):
+    __tablename__ = "benchmark_assets"
+
+    benchmark_id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, default=uuid.uuid4, index=True
+    )
+    mjcf_url: Mapped[str] = mapped_column(String)
+    build123d_url: Mapped[str] = mapped_column(String)
+    preview_bundle_url: Mapped[str] = mapped_column(String)
+    random_variants: Mapped[dict | None] = mapped_column(JSON)
+    difficulty_score: Mapped[float | None] = mapped_column(sa.Float)
+    benchmark_metadata: Mapped[dict | None] = mapped_column("metadata", JSON)
+
+
+class GenerationSession(Base):
+    __tablename__ = "generation_sessions"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, default=uuid.uuid4, index=True
+    )
+    prompt: Mapped[str] = mapped_column(String)
+    status: Mapped[str | None] = mapped_column(
+        sa.Enum(
+            "planning",
+            "executing",
+            "validating",
+            "accepted",
+            "rejected",
+            name="sessionstatus",
+        )
+    )
+    validation_logs: Mapped[dict | None] = mapped_column(JSON)
 
 
 class Episode(Base):

@@ -12,6 +12,10 @@ TEST_XML = """
       <joint type="free"/>
       <geom type="box" size=".05 .05 .05" rgba="1 0 0 1" mass="1"/>
     </body>
+    <body name="actuated_body" pos="0 0 1">
+      <joint name="test_joint" type="hinge" axis="0 0 1"/>
+      <geom type="box" size=".05 .05 .05" mass="1"/>
+    </body>
     <body name="zone_goal_body" pos="0.5 0 0">
          <geom name="zone_goal" type="box" size="0.1 0.1 0.1" rgba="0 1 0 0.3" group="1"/>
     </body>
@@ -19,6 +23,9 @@ TEST_XML = """
          <geom name="zone_forbid_1" type="box" size="0.1 0.1 0.1" rgba="1 0 0 0.3" group="1"/>
     </body>
   </worldbody>
+  <actuator>
+    <motor name="test_actuator" joint="test_joint" gear="1"/>
+  </actuator>
 </mujoco>
 """
 
@@ -46,10 +53,22 @@ def test_step_simulation(sim_loop):
     # Check time advanced
     assert metrics.total_time > 0
     # Check gravity worked (box fell)
-    # Note: reset is needed if step modifies state. step() does NOT reset state, only metrics.
-    # Current loop implementation does not reset state.
     assert sim_loop.data.qpos[2] < z_start
     assert metrics.success is False  # Not reached goal yet
+
+
+def test_metrics_collection(sim_loop):
+    # Apply control to actuator
+    # Gear is 1, so control 1.0 should apply 1.0 torque
+    metrics = sim_loop.step({"test_actuator": 1.0}, duration=0.5)
+    
+    assert metrics.total_energy > 0
+    assert metrics.max_velocity >= 0 # Target box might not move much but hinges will
+    
+    # Check velocity of target box specifically
+    sim_loop.data.qvel[0] = 5.0 # Set x-velocity of target box
+    metrics = sim_loop.step({}, duration=0.01)
+    assert metrics.max_velocity >= 5.0
 
 
 def test_goal_zone_trigger(sim_loop):

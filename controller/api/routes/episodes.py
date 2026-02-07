@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from controller.api.manager import manager
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
 from shared.enums import AssetType, EpisodeStatus
@@ -79,7 +80,7 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 @router.websocket("/{episode_id}/ws")
 async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
-    await websocket.accept()
+    await manager.connect(episode_id, websocket)
     try:
         # Initial message
         await websocket.send_json(
@@ -90,20 +91,12 @@ async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
             }
         )
 
-        # Placeholder for real-time updates.
-        # In a real implementation, we would use a Pub/Sub system (like Redis or Postgres NOTIFY)
-        # to push updates from the background workers to this websocket.
+        # Keep connection alive
         while True:
-            # Just keep connection alive for now
-            await asyncio.sleep(10)
-            await websocket.send_json(
-                {
-                    "type": "log",
-                    "data": "Heartbeat...",
-                    "timestamp": datetime.utcnow().isoformat(),
-                }
-            )
+            await asyncio.sleep(30)
+            await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
-        pass
+        manager.disconnect(episode_id, websocket)
     except Exception as e:
         print(f"WebSocket error: {e}")
+        manager.disconnect(episode_id, websocket)

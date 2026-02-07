@@ -1,8 +1,24 @@
-import { useRef, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows } from '@react-three/drei'
+import { useRef, useEffect, useState } from 'react'
+import { Canvas, useFrame, useLoader } from '@react-three/fiber'
+import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center } from '@react-three/drei'
 import * as THREE from 'three'
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import ConnectionError from '../shared/ConnectionError'
+
+function StlModel({ url }: { url: string }) {
+  const geom = useLoader(STLLoader, url)
+  const meshRef = useRef<THREE.Mesh>(null!)
+
+  return (
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <Center>
+        <mesh ref={meshRef} geometry={geom} castShadow receiveShadow>
+          <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.8} />
+        </mesh>
+      </Center>
+    </Float>
+  )
+}
 
 function PlaceholderModel() {
   const meshRef = useRef<THREE.Mesh>(null!)
@@ -67,12 +83,7 @@ export default function ModelViewer({ className, assetUrl, isConnected = true, r
         
         {/* Scene Objects */}
         {assetUrl ? (
-            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-                <mesh castShadow receiveShadow>
-                    <torusKnotGeometry args={[0.5, 0.2, 128, 32]} />
-                    <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.8} />
-                </mesh>
-            </Float>
+            <StlModel url={assetUrl} />
         ) : (
             <PlaceholderModel />
         )}

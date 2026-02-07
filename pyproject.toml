@@ -42,6 +42,7 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
     "scipy>=1.13.0",
     "beartype>=0.22.9",
+    "watchdog>=4.0.0",
 ]
 
 [dependency-groups]
