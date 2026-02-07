@@ -66,7 +66,7 @@ describe('EngineerWorkspace', () => {
       </MemoryRouter>
     );
 
-    const input = screen.getByPlaceholderText(/Describe the task/);
+    const input = screen.getByPlaceholderText(/Describe a mechanical task/);
     fireEvent.change(input, { target: { value: 'New Test Task' } });
     
     const solveButton = screen.getByText('SOLVE');

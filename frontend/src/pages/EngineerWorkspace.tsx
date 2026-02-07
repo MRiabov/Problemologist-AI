@@ -8,14 +8,15 @@ import {
   Clock, 
   Code2, 
   GraduationCap, 
-  Architecture, 
+  Binary as Architecture, 
   Terminal, 
   MessageSquare,
-  View3d,
+  BoxSelect as View3d,
   Box,
   Cpu,
   Zap,
-  Play
+  Play,
+  History
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";

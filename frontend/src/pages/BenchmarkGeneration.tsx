@@ -4,7 +4,7 @@ import {
   Play, 
   Database, 
   Check, 
-  Schema, 
+  FileJson as Schema, 
   ShieldCheck, 
   Settings2, 
   History, 
@@ -17,7 +17,8 @@ import {
   MonitorPlay,
   Box,
   BrainCircuit,
-  DatabaseZap
+  DatabaseZap,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ScrollArea } from "../components/ui/scroll-area";
