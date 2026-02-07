@@ -8,6 +8,7 @@ base_commit: d5ae98a6d82ec36ca7c8e4cfbd4b763649d500c9
 created_at: '2026-02-07T06:52:31.397071+00:00'
 subtasks: [T020, T021, T022, T023, T024, T025]
 shell_pid: "176405"
+agent: "Gemini"
 ---
 
 # WP04: API & Temporal Integration
@@ -95,3 +96,7 @@ The simulation itself should be "fire and forget" from the physics loop perspect
 - **Pickling Errors**: Passing complex `build123d` objects to Temporal activities often fails serialization.
   - *Mitigation*: Pass **Source Code** or **Serialized Geometry** (STEP/STL bytes) to the activity, NOT Python objects.
   - **Decision**: The `SimulationRequest` should probably take a *reference* (S3 URI of CAD file) or raw bytes, or simple parameters. If passing source code, execute it inside the activity.
+
+## Activity Log
+
+- 2026-02-07T06:52:31Z – Gemini – shell_pid=176405 – lane=doing – Assigned agent via workflow command
