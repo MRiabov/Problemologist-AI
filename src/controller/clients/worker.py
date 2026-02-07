@@ -1,6 +1,7 @@
 import httpx
 from typing import List, Optional, Dict, Any, Union
-from src.worker.api.schema import ExecuteResponse, EditOp
+from src.worker.api.schema import ExecuteResponse, EditOp, BenchmarkToolResponse
+from src.worker.filesystem.backend import FileInfo
 
 
 class WorkerClient:
@@ -18,14 +19,7 @@ class WorkerClient:
         self.headers = {"X-Session-ID": session_id}
 
     async def list_files(self, path: str = "/") -> List[FileInfo]:
-        """List contents of a directory.
-
-        Args:
-            path: Virtual directory path.
-
-        Returns:
-            List of FileInfo objects.
-        """
+        """List contents of a directory."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/ls",
@@ -37,14 +31,7 @@ class WorkerClient:
             return [FileInfo.model_validate(item) for item in response.json()]
 
     async def read_file(self, path: str) -> str:
-        """Read file contents.
-
-        Args:
-            path: Virtual file path.
-
-        Returns:
-            File content as string.
-        """
+        """Read file contents."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/read",
@@ -56,15 +43,7 @@ class WorkerClient:
             return response.json()["content"]
 
     async def write_file(self, path: str, content: str) -> bool:
-        """Write content to a file.
-
-        Args:
-            path: Virtual file path.
-            content: Content to write.
-
-        Returns:
-            True if successful.
-        """
+        """Write content to a file."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/write",
@@ -98,18 +77,8 @@ class WorkerClient:
             return response.json()["status"] == "success"
 
     async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
-        """Execute Python code in the sandboxed runtime.
-
-        Args:
-            code: Python code to execute.
-            timeout: Execution timeout in seconds.
-
-        Returns:
-            ExecuteResponse model with stdout, stderr, exit_code, and timed_out.
-        """
+        """Execute Python code in the sandboxed runtime."""
         async with httpx.AsyncClient() as client:
-            # We add some buffer to the HTTP timeout to allow the runtime
-            # to finish and return the result even if it timed out internally.
             http_timeout = float(timeout) + 5.0
             response = await client.post(
                 f"{self.base_url}/runtime/execute",
@@ -119,6 +88,42 @@ class WorkerClient:
             )
             response.raise_for_status()
             return ExecuteResponse.model_validate(response.json())
+
+    async def simulate(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+        """Trigger physics simulation via worker."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/benchmark/simulate",
+                json={"script_path": script_path},
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return BenchmarkToolResponse.model_validate(response.json())
+
+    async def validate(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+        """Trigger geometric validation via worker."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/benchmark/validate",
+                json={"script_path": script_path},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return BenchmarkToolResponse.model_validate(response.json())
+
+    async def submit(self, script_path: str = "script.py") -> BenchmarkToolResponse:
+        """Trigger handover to review via worker."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/benchmark/submit",
+                json={"script_path": script_path},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return BenchmarkToolResponse.model_validate(response.json())
 
     async def get_health(self) -> Dict[str, str]:
         """Check the health of the worker service."""

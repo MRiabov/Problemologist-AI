@@ -1,12 +1,14 @@
 import hashlib
+from typing import Any
 
 from build123d import Part
 
+from src.shared.type_checking import type_check
+from src.workbenches.base import Workbench
 from src.workbenches.models import CostBreakdown
 
-from .base import Workbench
 
-
+@type_check
 class Print3DWorkbench(Workbench):
     """
     Workbench for 3D Printing (FDM/SLA).
@@ -60,7 +62,10 @@ class Print3DWorkbench(Workbench):
         return violations
 
     def calculate_cost(
-        self, part: Part, quantity: int = 1, context: dict | None = None
+        self,
+        part: Part,
+        quantity: int = 1,
+        context: dict[str, Any] | None = None,
     ) -> CostBreakdown:
         """
         Calculates cost based on part volume and quantity.

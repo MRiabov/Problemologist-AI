@@ -1,33 +1,38 @@
 import structlog
-from typing import Union, List, Dict, Any, Optional
-from build123d import Part, Compound
+from typing import Any, Optional
 
-from src.workbenches.models import (
-    WorkbenchResult, 
-    ManufacturingConfig, 
-    CostBreakdown,
-    ManufacturingMethod
-)
+from build123d import Compound, Part
+
+from src.shared.type_checking import type_check
 from src.workbenches.analysis_utils import (
     check_undercuts,
     compute_part_hash,
     part_to_trimesh,
 )
 from src.workbenches.base import Workbench
+from src.workbenches.models import (
+    CostBreakdown,
+    ManufacturingConfig,
+    WorkbenchResult,
+)
 
 logger = structlog.get_logger()
 
-def check_internal_corner_radii(part: Union[Part, Compound], min_radius: float = 1.0) -> List[str]:
+
+@type_check
+def check_internal_corner_radii(
+    part: Part | Compound, min_radius: float = 1.0
+) -> list[str]:
     """
     Checks for internal corners that have a radius smaller than the minimum tool radius.
     In 3-axis CNC, sharp internal vertical corners are impossible to machine.
     """
     violations = []
     logger.debug("checking_internal_corner_radii", min_radius=min_radius)
-    
+
     # Identify all edges
     all_edges = part.edges()
-    
+
     for edge in all_edges:
         # 1. Identify vertical edges (parallel to Z axis)
         try:
@@ -43,49 +48,53 @@ def check_internal_corner_radii(part: Union[Part, Compound], min_radius: float =
         geom_str = str(edge.geom_type)
         is_sharp = "LINE" in geom_str
         is_small_fillet = "CIRCLE" in geom_str and edge.radius < min_radius
-        
+
         if is_sharp or is_small_fillet:
             # Find adjacent faces to determine if it's an internal (concave) corner
             adj_faces = []
             for f in part.faces():
                 if any(e.is_same(edge) for e in f.edges()):
                     adj_faces.append(f)
-            
+
             if len(adj_faces) == 2:
                 f1, f2 = adj_faces[0], adj_faces[1]
                 p = edge.center()
-                
+
                 try:
                     # Check for tangency - if faces are tangent, it's not a sharp corner
                     n1 = f1.normal_at(p)
                     n2 = f2.normal_at(p)
-                    if n1.dot(n2) > 0.99: # Nearly tangent
+                    if n1.dot(n2) > 0.99:  # Nearly tangent
                         continue
-                        
+
                     # Get points on each face by moving slightly from the edge toward the face center
                     p1 = p + (f1.center() - p).normalized() * 0.1
                     p2 = p + (f2.center() - p).normalized() * 0.1
-                    
+
                     mid = (p1 + p2) * 0.5
-                    
+
                     # If the midpoint is OUTSIDE the solid, it's a concave (internal) corner.
                     if not part.is_inside(mid):
                         if is_sharp:
-                            violations.append(f"Sharp internal vertical corner detected at {p}")
+                            violations.append(
+                                f"Sharp internal vertical corner detected at {p}"
+                            )
                         else:
                             violations.append(
                                 f"Internal corner radius too small at {p}: {edge.radius:.2f}mm < {min_radius}mm"
                             )
                 except:
                     continue
-    
+
     return list(set(violations))
 
+
+@type_check
 def calculate_cnc_cost(
-    part: Union[Part, Compound], 
+    part: Part | Compound,
     config: ManufacturingConfig,
-    quantity: int = 1, 
-    context: Optional[Dict[str, Any]] = None
+    quantity: int = 1,
+    context: dict[str, Any] | None = None,
 ) -> CostBreakdown:
     """
     Calculates CNC cost: Setup + (Material + Run) * Quantity.
@@ -93,15 +102,15 @@ def calculate_cnc_cost(
     cnc_cfg = config.cnc
     if not cnc_cfg:
         raise ValueError("CNC configuration missing")
-        
+
     # Default to aluminum_6061 for now
     material_name = config.defaults.get("material", "aluminum_6061")
     if material_name not in cnc_cfg.materials:
         material_name = list(cnc_cfg.materials.keys())[0]
-        
+
     material_cfg = cnc_cfg.materials[material_name]
     mrr = cnc_cfg.constraints.get("mrr_mm3_per_min", 1000.0)
-    
+
     logger.info("calculating_cnc_cost", material=material_name, quantity=quantity)
 
     # 0. Stock / Material Analysis
@@ -120,14 +129,14 @@ def calculate_cnc_cost(
     # 2. Run Cost
     # Machining time driven by removed volume + finishing
     roughing_time_min = (removed_volume_cm3 * 1000.0) / mrr
-    
+
     params = cnc_cfg.parameters
     finishing_feed_rate = params.get("finishing_feed_rate_mm_min", 500.0)
     finishing_stepover = params.get("finishing_stepover_mm", 0.5)
-    
+
     surface_area_mm2 = part.area
     finishing_time_min = surface_area_mm2 / (finishing_feed_rate * finishing_stepover)
-    
+
     machining_time_min = roughing_time_min + finishing_time_min
     hourly_rate = material_cfg.get("machine_hourly_rate", 80.0)
     run_cost_per_part = (machining_time_min / 60.0) * hourly_rate
@@ -166,17 +175,19 @@ def calculate_cnc_cost(
             f"Material: {material_name} (${material_cost_per_part:.2f}/unit). "
             f"Machining time: {machining_time_min:.2f} min. "
             f"Setup fee: ${setup_cost:.2f}."
-        )
+        ),
     )
 
-def analyze_cnc(part: Union[Part, Compound], config: ManufacturingConfig) -> WorkbenchResult:
+
+@type_check
+def analyze_cnc(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
     """
     Functional entry point for CNC analysis.
     """
     logger.info("starting_cnc_analysis")
-    
+
     violations = []
-    
+
     # 1. Undercut Check
     mesh = part_to_trimesh(part)
     undercuts = check_undercuts(mesh, (0, 0, 1))
@@ -184,43 +195,55 @@ def analyze_cnc(part: Union[Part, Compound], config: ManufacturingConfig) -> Wor
         msg = f"CNC Machining Violation: {len(undercuts)} undercut faces detected."
         logger.warning("cnc_undercuts_detected", count=len(undercuts))
         violations.append(msg)
-        
+
     # 2. Internal Corner Check
-    min_radius = config.cnc.constraints.get("min_tool_radius_mm", 1.0) if config.cnc else 1.0
+    min_radius = (
+        config.cnc.constraints.get("min_tool_radius_mm", 1.0) if config.cnc else 1.0
+    )
     corner_violations = check_internal_corner_radii(part, min_radius)
     violations.extend(corner_violations)
-    
+
     # 3. Cost Calculation (single unit for analysis)
     cost_breakdown = calculate_cnc_cost(part, config, quantity=1)
-    
+
     is_manufacturable = len(violations) == 0
-    
-    logger.info("cnc_analysis_complete", is_manufacturable=is_manufacturable, violations=len(violations))
-    
+
+    logger.info(
+        "cnc_analysis_complete",
+        is_manufacturable=is_manufacturable,
+        violations=len(violations),
+    )
+
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=cost_breakdown.unit_cost,
         violations=violations,
         metadata={
             "cost_breakdown": cost_breakdown.model_dump(),
-            "undercut_count": len(undercuts)
-        }
+            "undercut_count": len(undercuts),
+        },
     )
 
+
+@type_check
 class CNCWorkbench(Workbench):
     """
     CNC Milling Workbench for 3-axis machining (Workbench Class wrapper).
     """
 
-    def __init__(self, config: Optional[ManufacturingConfig] = None):
+    def __init__(self, config: ManufacturingConfig | None = None):
         from src.workbenches.config import load_config
+
         self.config = config or load_config()
 
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         result = analyze_cnc(part, self.config)
         return result.violations
 
     def calculate_cost(
-        self, part: Part, quantity: int = 1, context: Optional[Dict[str, Any]] = None
+        self,
+        part: Part,
+        quantity: int = 1,
+        context: dict[str, Any] | None = None,
     ) -> CostBreakdown:
         return calculate_cnc_cost(part, self.config, quantity, context)
