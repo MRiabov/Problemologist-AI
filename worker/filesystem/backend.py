@@ -10,9 +10,10 @@ from typing import Protocol, runtime_checkable
 
 import s3fs
 import structlog
-from pydantic import BaseModel, StrictStr, StrictBool, StrictInt
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
 
 from shared.type_checking import type_check
+
 from .db import S3Config, get_s3_filesystem
 
 logger = structlog.get_logger(__name__)

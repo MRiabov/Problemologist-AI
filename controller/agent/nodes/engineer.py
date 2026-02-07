@@ -1,15 +1,14 @@
 import logging
-from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.type_checking import type_check
+
 from ..prompt_manager import PromptManager
 from ..state import AgentState
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.clients.worker import WorkerClient
-
-from shared.type_checking import type_check
 
 logger = logging.getLogger(__name__)
 
@@ -77,12 +76,11 @@ class EngineerNode:
                             "current_step": current_step,
                         }
                     )
-                else:
-                    last_error = stderr or stdout or "Unknown error"
-                    journal_entry += (
-                        f"\nExecution failed (Attempt {retry_count + 1}): {last_error}"
-                    )
-                    retry_count += 1
+                last_error = stderr or stdout or "Unknown error"
+                journal_entry += (
+                    f"\nExecution failed (Attempt {retry_count + 1}): {last_error}"
+                )
+                retry_count += 1
             except Exception as e:
                 last_error = str(e)
                 journal_entry += f"\nSystem error during execution: {last_error}"
@@ -95,7 +93,6 @@ class EngineerNode:
                 "iteration": state.iteration + 1,
             }
         )
-
 
     def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list."""

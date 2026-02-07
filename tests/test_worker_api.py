@@ -1,17 +1,20 @@
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
+
+from fastapi.testclient import TestClient
+
 from worker.app import app
-from worker.filesystem.router import FilesystemRouter
 from worker.filesystem.backend import FileInfo
+from worker.filesystem.router import FilesystemRouter
 
 client = TestClient(app)
+
 
 def test_health():
     """Test the health check endpoint."""
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
+
 
 @patch("worker.api.routes.create_filesystem_router")
 def test_fs_ls(mock_create_router):
@@ -21,17 +24,16 @@ def test_fs_ls(mock_create_router):
         FileInfo(path="/test.txt", name="test.txt", is_dir=False, size=10)
     ]
     mock_create_router.return_value = mock_router
-    
+
     response = client.post(
-        "/fs/ls", 
-        json={"path": "/"}, 
-        headers={"X-Session-ID": "test-session"}
+        "/fs/ls", json={"path": "/"}, headers={"X-Session-ID": "test-session"}
     )
-    
+
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["name"] == "test.txt"
     mock_router.ls.assert_called_with("/")
+
 
 @patch("worker.api.routes.create_filesystem_router")
 def test_fs_read(mock_create_router):
@@ -39,32 +41,32 @@ def test_fs_read(mock_create_router):
     mock_router = MagicMock(spec=FilesystemRouter)
     mock_router.read.return_value = b"hello world"
     mock_create_router.return_value = mock_router
-    
+
     response = client.post(
-        "/fs/read", 
-        json={"path": "/test.txt"}, 
-        headers={"X-Session-ID": "test-session"}
+        "/fs/read", json={"path": "/test.txt"}, headers={"X-Session-ID": "test-session"}
     )
-    
+
     assert response.status_code == 200
     assert response.json()["content"] == "hello world"
     mock_router.read.assert_called_with("/test.txt")
+
 
 @patch("worker.api.routes.create_filesystem_router")
 def test_fs_write(mock_create_router):
     """Test writing a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
     mock_create_router.return_value = mock_router
-    
+
     response = client.post(
-        "/fs/write", 
-        json={"path": "/test.txt", "content": "new content"}, 
-        headers={"X-Session-ID": "test-session"}
+        "/fs/write",
+        json={"path": "/test.txt", "content": "new content"},
+        headers={"X-Session-ID": "test-session"},
     )
-    
+
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     mock_router.write.assert_called_with("/test.txt", "new content")
+
 
 @patch("worker.api.routes.create_filesystem_router")
 def test_fs_edit(mock_create_router):
@@ -73,25 +75,25 @@ def test_fs_edit(mock_create_router):
     mock_router.exists.return_value = True
     mock_router.edit.return_value = True
     mock_create_router.return_value = mock_router
-    
+
     response = client.post(
-        "/fs/edit", 
+        "/fs/edit",
         json={
-            "path": "/test.txt", 
-            "edits": [{"old_string": "old", "new_string": "new"}]
-        }, 
-        headers={"X-Session-ID": "test-session"}
+            "path": "/test.txt",
+            "edits": [{"old_string": "old", "new_string": "new"}],
+        },
+        headers={"X-Session-ID": "test-session"},
     )
-    
+
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     mock_router.edit.assert_called_with("/test.txt", "old", "new")
 
+
 def test_execute_runtime():
     """Test executing Python code via API."""
     response = client.post(
-        "/runtime/execute",
-        json={"code": "print('hello from api')", "timeout": 5}
+        "/runtime/execute", json={"code": "print('hello from api')", "timeout": 5}
     )
     assert response.status_code == 200
     data = response.json()
@@ -99,11 +101,11 @@ def test_execute_runtime():
     assert data["exit_code"] == 0
     assert data["timed_out"] is False
 
+
 def test_execute_runtime_timeout():
     """Test runtime execution timeout via API."""
     response = client.post(
-        "/runtime/execute",
-        json={"code": "import time; time.sleep(2)", "timeout": 1}
+        "/runtime/execute", json={"code": "import time; time.sleep(2)", "timeout": 1}
     )
     assert response.status_code == 200
     data = response.json()

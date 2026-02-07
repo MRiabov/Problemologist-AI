@@ -1,19 +1,21 @@
 import pathlib
-from typing import Optional
-import yaml
+
 import structlog
+import yaml
+
 from worker.workbenches.models import ManufacturingConfig
 
 logger = structlog.get_logger()
 
-def load_config(config_path: Optional[str] = None) -> ManufacturingConfig:
+
+def load_config(config_path: str | None = None) -> ManufacturingConfig:
     """
     Loads and validates the manufacturing configuration from a YAML file.
-    
+
     Args:
         config_path: Path to the YAML config file. Defaults to manufacturing_config.yaml
                      in the same directory.
-                     
+
     Returns:
         A validated ManufacturingConfig Pydantic model.
     """
@@ -30,7 +32,7 @@ def load_config(config_path: Optional[str] = None) -> ManufacturingConfig:
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     try:
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             data = yaml.safe_load(f)
     except Exception as e:
         logger.error("config_load_failed", error=str(e))
@@ -38,7 +40,11 @@ def load_config(config_path: Optional[str] = None) -> ManufacturingConfig:
 
     try:
         config = ManufacturingConfig(**data)
-        methods = [m for m in ["cnc", "injection_molding", "three_dp"] if getattr(config, m) is not None]
+        methods = [
+            m
+            for m in ["cnc", "injection_molding", "three_dp"]
+            if getattr(config, m) is not None
+        ]
         logger.info("manufacturing_config_loaded", methods=methods)
         return config
     except Exception as e:

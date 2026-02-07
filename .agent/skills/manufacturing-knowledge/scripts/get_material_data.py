@@ -1,6 +1,8 @@
-import yaml
-from pathlib import Path
 import json
+from pathlib import Path
+
+import yaml
+
 
 def get_data():
     config_path = Path("config/manufacturing_config.yaml")
@@ -12,6 +14,7 @@ def get_data():
         data = yaml.safe_load(f)
         # Output as JSON for easy parsing if needed, or just pretty print
         print(json.dumps(data, indent=2))
+
 
 if __name__ == "__main__":
     get_data()

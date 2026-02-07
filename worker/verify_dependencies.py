@@ -44,9 +44,8 @@ def main() -> int:
     if all(results):
         print("All dependencies verified successfully!")
         return 0
-    else:
-        print("Some dependencies failed verification.")
-        return 1
+    print("Some dependencies failed verification.")
+    return 1
 
 
 if __name__ == "__main__":

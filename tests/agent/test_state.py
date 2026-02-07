@@ -1,5 +1,7 @@
-from controller.agent.state import AgentState
 from langchain_core.messages import HumanMessage
+
+from controller.agent.state import AgentState
+
 
 def test_agent_state_keys():
     """Verify that AgentState has the expected fields."""
@@ -10,14 +12,15 @@ def test_agent_state_keys():
         todo="A todo list",
         current_step="Step 1",
         journal="Log entry",
-        iteration=1
+        iteration=1,
     )
-    
+
     assert state.task == "Do something"
     assert state.iteration == 1
     assert isinstance(state.messages, list)
     assert len(state.messages) == 1
     assert state.messages[0].content == "Hello"
+
 
 def test_agent_state_defaults():
     """Verify default values for AgentState."""

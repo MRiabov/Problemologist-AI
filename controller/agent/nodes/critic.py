@@ -1,17 +1,18 @@
-from enum import Enum, StrEnum
 import json
 import re
-import yaml
-from typing import Any, Dict, Optional
+from enum import StrEnum
+from typing import Any
 
+import yaml
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.type_checking import type_check
+
 from ..prompt_manager import PromptManager
 from ..state import AgentState, AgentStatus
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.clients.worker import WorkerClient
-from shared.type_checking import type_check
 
 
 class CriticDecision(StrEnum):
@@ -68,12 +69,14 @@ class CriticNode:
 
         try:
             # Flexible match for frontmatter (start of string or after whitespace)
-            match = re.search(r"^---\n(.*?)\n---\n(.*)", content, re.DOTALL | re.MULTILINE)
+            match = re.search(
+                r"^---\n(.*?)\n---\n(.*)", content, re.DOTALL | re.MULTILINE
+            )
             if match:
                 yaml_block = match.group(1)
                 body = match.group(2)
                 data = yaml.safe_load(yaml_block)
-                
+
                 decision_str = data.get("decision", "").upper()
                 if decision_str == "APPROVE":
                     decision = CriticDecision.APPROVE
@@ -81,7 +84,7 @@ class CriticNode:
                     decision = CriticDecision.REJECT_PLAN
                 elif decision_str == "REJECT_CODE":
                     decision = CriticDecision.REJECT_CODE
-                
+
                 required_fixes = data.get("required_fixes", [])
                 if required_fixes:
                     fixes_text = "\n".join([f"- {fix}" for fix in required_fixes])
@@ -89,7 +92,7 @@ class CriticNode:
                 else:
                     feedback = body.strip()
             else:
-                 feedback = f"Critic failed to produce valid frontmatter. Raw output:\n{content}"
+                feedback = f"Critic failed to produce valid frontmatter. Raw output:\n{content}"
         except Exception as e:
             feedback = f"Error parsing critic output: {e}\nRaw output:\n{content}"
 

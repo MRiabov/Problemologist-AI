@@ -1,8 +1,9 @@
 import os
-from langfuse.langchain import CallbackHandler
-from typing import Optional
 
-def get_langfuse_callback() -> Optional[CallbackHandler]:
+from langfuse.langchain import CallbackHandler
+
+
+def get_langfuse_callback() -> CallbackHandler | None:
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     """
@@ -11,9 +12,5 @@ def get_langfuse_callback() -> Optional[CallbackHandler]:
     host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
     if public_key and secret_key:
-        return CallbackHandler(
-            public_key=public_key,
-            secret_key=secret_key,
-            host=host
-        )
+        return CallbackHandler(public_key=public_key, secret_key=secret_key, host=host)
     return None

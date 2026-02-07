@@ -1,10 +1,12 @@
 from datetime import timedelta
-from temporalio import workflow
-from shared.type_checking import type_check
 from typing import TYPE_CHECKING
 
+from temporalio import workflow
+
+from shared.type_checking import type_check
+
 if TYPE_CHECKING:
-    from controller.activities.execution import execute_script_activity
+    pass
 
 
 @type_check

@@ -9,20 +9,20 @@ from psycopg_pool import AsyncConnectionPool
 def get_db_url() -> str:
     """
     Returns the database URL from the DATABASE_URL environment variable.
-    
+
     Expected format: postgresql://user:password@host:port/dbname
     """
     url = os.getenv("DATABASE_URL")
     if not url:
         # We raise an error if the database URL is missing as persistence is critical.
         raise ValueError("DATABASE_URL environment variable is not set")
-    
+
     # Ensure the URL is in a format psycopg can understand (no asyncpg+ prefix)
     if "postgresql+asyncpg://" in url:
         url = url.replace("postgresql+asyncpg://", "postgresql://")
     elif "postgresql+psycopg://" in url:
         url = url.replace("postgresql+psycopg://", "postgresql://")
-        
+
     return url
 
 
@@ -31,7 +31,7 @@ class ControllerCheckpointSaver:
     Persistence layer for LangGraph using Postgres.
     Utilizes langgraph.checkpoint.postgres.PostgresSaver.
     """
-    
+
     @staticmethod
     @asynccontextmanager
     async def create_saver() -> AsyncIterator[PostgresSaver]:

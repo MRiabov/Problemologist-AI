@@ -1,18 +1,25 @@
+import zipfile
+from pathlib import Path
+
+import ffmpeg
 import mujoco
 import numpy as np
-import ffmpeg
-import os
-from pathlib import Path
-from PIL import Image
-import zipfile
 import structlog
+from PIL import Image
 
 logger = structlog.get_logger(__name__)
+
 
 class Renderer:
     """Handles offscreen rendering and artifact generation for MuJoCo simulations."""
 
-    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, width: int = 640, height: int = 480):
+    def __init__(
+        self,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        width: int = 640,
+        height: int = 480,
+    ):
         self.model = model
         self.data = data
         self.width = width
@@ -35,21 +42,25 @@ class Renderer:
         # Create a camera object
         cam = mujoco.MjvCamera()
         mujoco.mjv_defaultCamera(cam)
-        
+
         # Center of the scene
         cam.lookat = np.array([0, 0, 0.5])
         cam.distance = 2.0
-        
-        elevations = [-15, -45, -75]  # MuJoCo elevation is usually negative for "top-down"
+
+        elevations = [
+            -15,
+            -45,
+            -75,
+        ]  # MuJoCo elevation is usually negative for "top-down"
         azimuths = [0, 45, 90, 135, 180, 225, 270, 315]
-        
+
         for elev in elevations:
             for azim in azimuths:
                 cam.elevation = elev
                 cam.azimuth = azim
                 self.renderer.update_scene(self.data, camera=cam)
                 views.append(self.renderer.render())
-        
+
         return views
 
     def save_artifacts(self, output_dir: Path, fps: int = 30):
@@ -85,11 +96,16 @@ class Renderer:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         height, width, _ = self.frames[0].shape
-        
+
         process = (
-            ffmpeg
-            .input('pipe:', format='rawvideo', pix_fmt='rgb24', s=f'{width}x{height}', r=fps)
-            .output(str(path), vcodec='libx264', pix_fmt='yuv420p')
+            ffmpeg.input(
+                "pipe:",
+                format="rawvideo",
+                pix_fmt="rgb24",
+                s=f"{width}x{height}",
+                r=fps,
+            )
+            .output(str(path), vcodec="libx264", pix_fmt="yuv420p")
             .overwrite_output()
             .run_async(pipe_stdin=True, pipe_stderr=True)
         )
@@ -97,19 +113,19 @@ class Renderer:
         try:
             for frame in self.frames:
                 process.stdin.write(frame.tobytes())
-            
+
             process.stdin.close()
             process.wait()
         except BrokenPipeError:
             _, stderr = process.communicate()
-            logger.error("ffmpeg_failed", stderr=stderr.decode() if stderr else "No stderr")
+            logger.error(
+                "ffmpeg_failed", stderr=stderr.decode() if stderr else "No stderr"
+            )
             raise
-
-
 
     def _create_preview_bundle(self, path: Path, views: list[np.ndarray]):
         """Saves views as JPEGs and zips them."""
-        with zipfile.ZipFile(path, 'w') as zipf:
+        with zipfile.ZipFile(path, "w") as zipf:
             for i, view in enumerate(views):
                 img = Image.fromarray(view)
                 img_name = f"view_{i:02d}.jpg"

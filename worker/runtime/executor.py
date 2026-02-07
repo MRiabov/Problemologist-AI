@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 import structlog
-from pydantic import BaseModel, StrictStr, StrictInt, StrictBool
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
 
 from shared.type_checking import type_check
 
@@ -64,16 +64,17 @@ def run_python_code(
 
     # Set up PYTHONPATH to include src/worker for utils import
     import os
+
     actual_env = os.environ.copy()
     if env:
         actual_env.update(env)
 
     current_pythonpath = actual_env.get("PYTHONPATH", "")
-    
+
     # Get absolute path to src/worker
     project_root = Path(__file__).parent.parent.parent.parent
     worker_path = str(project_root / "src" / "worker")
-    
+
     if current_pythonpath:
         actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
     else:
@@ -166,16 +167,17 @@ async def run_python_code_async(
 
     # Set up PYTHONPATH to include src/worker for utils import
     import os
+
     actual_env = os.environ.copy()
     if env:
         actual_env.update(env)
 
     current_pythonpath = actual_env.get("PYTHONPATH", "")
-    
+
     # Get absolute path to src/worker
     project_root = Path(__file__).parent.parent.parent.parent
     worker_path = str(project_root / "src" / "worker")
-    
+
     if current_pythonpath:
         actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
     else:

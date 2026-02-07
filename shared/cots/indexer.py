@@ -1,9 +1,7 @@
 import logging
-from typing import Any, Type
+from typing import Any
 
-from bd_warehouse.bearing import Bearing as BearingBase
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
-from bd_warehouse.fastener import BasePartObject as FastenerBase
 from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -34,7 +32,7 @@ class Indexer:
         self.db_path = db_path
         self.engine = create_engine(f"sqlite:///{db_path}")
 
-    def get_part_classes(self) -> list[Type]:
+    def get_part_classes(self) -> list[type]:
         """MVP: Hardcoded list of useful classes to index."""
         return [
             HexNut,
@@ -43,7 +41,7 @@ class Indexer:
             SingleRowDeepGrooveBallBearing,
         ]
 
-    def extract_metadata(self, part_class: Type, size: str) -> dict[str, Any] | None:
+    def extract_metadata(self, part_class: type, size: str) -> dict[str, Any] | None:
         """Instantiate part and extract metadata."""
         try:
             # Class-specific instantiation arguments
@@ -99,7 +97,7 @@ class Indexer:
             )
             return None
 
-    def generate_recipe(self, part_class: Type, params: dict[str, Any]) -> str:
+    def generate_recipe(self, part_class: type, params: dict[str, Any]) -> str:
         """Generate Python code to recreate the part."""
         module = part_class.__module__
         class_name = part_class.__name__

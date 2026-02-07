@@ -1,21 +1,21 @@
 import logging
 import os
 import sys
-from typing import Any
 
 import structlog
 from structlog.types import Processor
 
+
 def configure_logging(service_name: str):
     """
     Configure structlog for the given service.
-    
+
     In production (LOG_FORMAT=json), it outputs JSON.
     Otherwise, it outputs colored text for development.
     """
     log_format = os.getenv("LOG_FORMAT", "console").lower()
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    
+
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
@@ -33,7 +33,7 @@ def configure_logging(service_name: str):
 
     # Add trace_id and span_id if they exist in contextvars
     # These are usually added via middleware or explicitly
-    
+
     if log_format == "json":
         processors.append(structlog.processors.dict_tracebacks)
         processors.append(structlog.processors.JSONRenderer())
@@ -49,7 +49,7 @@ def configure_logging(service_name: str):
     # Root logger configuration for standard library logging
     handler = logging.StreamHandler(sys.stdout)
     if log_format == "json":
-        # In production, we might want standard logs to be JSON too, 
+        # In production, we might want standard logs to be JSON too,
         # but structlog usually handles that via its standard library integration if configured.
         pass
 
@@ -59,8 +59,10 @@ def configure_logging(service_name: str):
         level=getattr(logging, log_level, logging.INFO),
     )
 
+
 def get_logger(name: str) -> structlog.BoundLogger:
     return structlog.get_logger(name)
+
 
 def set_trace_context(trace_id: str, span_id: str | None = None):
     """Set trace information in the current context."""

@@ -1,7 +1,6 @@
-import os
 from pathlib import Path
+
 from fastapi import APIRouter
-from typing import List
 from pydantic import BaseModel, StrictStr
 
 # In a real scenario, we might fetch this from the Worker via FS or DB.
@@ -10,11 +9,13 @@ from pydantic import BaseModel, StrictStr
 
 router = APIRouter(prefix="/skills", tags=["skills"])
 
+
 class Skill(BaseModel):
     name: StrictStr
     description: StrictStr
 
-@router.get("/", response_model=List[Skill])
+
+@router.get("/", response_model=list[Skill])
 async def list_skills():
     """List available skills."""
     skills_dir = Path(".agent/skills")
@@ -23,6 +24,8 @@ async def list_skills():
     if skills_dir.exists():
         for item in skills_dir.iterdir():
             if item.is_dir():
-                found_skills.append(Skill(name=item.name, description=f"Skill from {item.name}"))
+                found_skills.append(
+                    Skill(name=item.name, description=f"Skill from {item.name}")
+                )
 
     return found_skills

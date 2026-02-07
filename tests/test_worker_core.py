@@ -7,9 +7,8 @@ These tests verify:
 - Dependency verification
 """
 
-
-from worker.runtime.executor import RuntimeConfig, run_python_code
 from shared.type_checking import type_check
+from worker.runtime.executor import RuntimeConfig, run_python_code
 
 
 @type_check
@@ -88,13 +87,19 @@ class TestDependencyVerification:
     def test_build123d_import(self):
         """Test that build123d can be imported."""
         import sys
+
         config = RuntimeConfig(python_executable=sys.executable)
-        result = run_python_code("import build123d; print(build123d.__version__)", config=config)
+        result = run_python_code(
+            "import build123d; print(build123d.__version__)", config=config
+        )
         assert result.exit_code == 0, f"build123d import failed: {result.stderr}"
 
     def test_mujoco_import(self):
         """Test that mujoco can be imported."""
         import sys
+
         config = RuntimeConfig(python_executable=sys.executable)
-        result = run_python_code("import mujoco; print(mujoco.__version__)", config=config)
+        result = run_python_code(
+            "import mujoco; print(mujoco.__version__)", config=config
+        )
         assert result.exit_code == 0, f"mujoco import failed: {result.stderr}"

@@ -1,18 +1,19 @@
 import os
 import uuid
-from fastapi import FastAPI, BackgroundTasks
+
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
-from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Episode, Trace, Asset
+from controller.api.routes import episodes, skills
 from controller.clients.worker import WorkerClient
 from controller.graph.agent import create_agent_graph
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.workflows.simulation import SimulationWorkflow
-from controller.api.routes import episodes, skills
 from controller.observability.database import DatabaseCallbackHandler
-from shared.enums import ResponseStatus, EpisodeStatus, AssetType
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset, Episode, Trace
+from controller.workflows.simulation import SimulationWorkflow
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger
 
 # Configure logging
@@ -74,15 +75,17 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
 
             # Run the agent with tracing
             result = await agent.ainvoke(
-                {"messages": [("user", task)]},
-                config={"callbacks": [db_callback]}
+                {"messages": [("user", task)]}, config={"callbacks": [db_callback]}
             )
-            
+
             # Final trace
             final_output = result["messages"][-1].content
             final_trace = Trace(
                 episode_id=episode_id,
-                raw_trace={"message": "Agent finished execution", "output": final_output}
+                raw_trace={
+                    "message": "Agent finished execution",
+                    "output": final_output,
+                },
             )
             db.add(final_trace)
 
@@ -97,7 +100,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                             asset_type = AssetType.PYTHON
                         elif path.endswith(".xml") or path.endswith(".mjcf"):
                             asset_type = AssetType.MJCF
-                        
+
                         # Read content for small files
                         content = None
                         try:
@@ -109,7 +112,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                             episode_id=episode_id,
                             asset_type=asset_type,
                             s3_path=path,
-                            content=content
+                            content=content,
                         )
                         db.add(asset)
             except Exception as e:
@@ -118,9 +121,11 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             # Update episode
             episode = await db.get(Episode, episode_id)
             episode.status = EpisodeStatus.COMPLETED
-            
+
             # Simple summary as plan
-            episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
+            episode.plan = (
+                f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
+            )
 
             await db.commit()
             logger.info("agent_run_completed", episode_id=episode_id)
@@ -173,12 +178,11 @@ async def run_agent(request: AgentRunRequest, background_tasks: BackgroundTasks)
         db.add(episode)
         await db.commit()
         await db.refresh(episode)
-        
+
         episode_id = episode.id
 
-    background_tasks.add_task(execute_agent_task, episode_id, request.task, request.session_id)
+    background_tasks.add_task(
+        execute_agent_task, episode_id, request.task, request.session_id
+    )
 
-    return {
-        "status": ResponseStatus.ACCEPTED,
-        "episode_id": episode_id
-    }
+    return {"status": ResponseStatus.ACCEPTED, "episode_id": episode_id}

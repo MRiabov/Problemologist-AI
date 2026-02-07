@@ -1,6 +1,6 @@
-import structlog
-from typing import Any, Optional
+from typing import Any
 
+import structlog
 from build123d import Compound, Part
 
 from shared.type_checking import type_check

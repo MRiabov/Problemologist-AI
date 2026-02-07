@@ -1,5 +1,7 @@
-from typing import Any, Optional
+from typing import Any
+
 from temporalio.client import Client
+
 from controller.clients.worker import WorkerClient
 from controller.workflows.execution import ScriptExecutionWorkflow
 
@@ -7,7 +9,7 @@ from controller.workflows.execution import ScriptExecutionWorkflow
 class RemoteFilesystemMiddleware:
     """Middleware that proxies filesystem operations to a remote Worker, with durable execution via Temporal."""
 
-    def __init__(self, client: WorkerClient, temporal_client: Optional[Client] = None):
+    def __init__(self, client: WorkerClient, temporal_client: Client | None = None):
         self.client = client
         self.temporal_client = temporal_client
         self.read_only_paths = ["skills/", "utils/", "reviews/"]
@@ -46,10 +48,9 @@ class RemoteFilesystemMiddleware:
                 task_queue="simulation-task-queue",
             )
             return result
-        else:
-            # Fallback to direct client call if Temporal is not available
-            result = await self.client.execute_python(code, timeout=timeout)
-            return result.model_dump()
+        # Fallback to direct client call if Temporal is not available
+        result = await self.client.execute_python(code, timeout=timeout)
+        return result.model_dump()
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:

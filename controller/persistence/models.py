@@ -1,11 +1,13 @@
-from datetime import datetime
-from typing import List, Optional
-from sqlalchemy import String, DateTime, JSON, ForeignKey, Integer, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .db import Base
 import uuid
+from datetime import datetime
 
-from shared.enums import EpisodeStatus, AssetType
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from shared.enums import AssetType, EpisodeStatus
+
+from .db import Base
 
 
 class Episode(Base):
@@ -24,19 +26,19 @@ class Episode(Base):
     )
 
     # Reproducibility metadata
-    skill_git_hash: Mapped[Optional[str]] = mapped_column(String)
-    template_versions: Mapped[Optional[dict]] = mapped_column(JSON)
-    metadata_vars: Mapped[Optional[dict]] = mapped_column(JSON)
-    
-    # Agent state
-    todo_list: Mapped[Optional[dict]] = mapped_column(JSON)
-    journal: Mapped[Optional[str]] = mapped_column(String)
-    plan: Mapped[Optional[str]] = mapped_column(String)
+    skill_git_hash: Mapped[str | None] = mapped_column(String)
+    template_versions: Mapped[dict | None] = mapped_column(JSON)
+    metadata_vars: Mapped[dict | None] = mapped_column(JSON)
 
-    traces: Mapped[List["Trace"]] = relationship(
+    # Agent state
+    todo_list: Mapped[dict | None] = mapped_column(JSON)
+    journal: Mapped[str | None] = mapped_column(String)
+    plan: Mapped[str | None] = mapped_column(String)
+
+    traces: Mapped[list["Trace"]] = relationship(
         back_populates="episode", cascade="all, delete-orphan"
     )
-    assets: Mapped[List["Asset"]] = relationship(
+    assets: Mapped[list["Asset"]] = relationship(
         back_populates="episode", cascade="all, delete-orphan"
     )
 
@@ -46,8 +48,8 @@ class Trace(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
-    langfuse_trace_id: Mapped[Optional[str]] = mapped_column(String)
-    raw_trace: Mapped[Optional[dict]] = mapped_column(JSON)
+    langfuse_trace_id: Mapped[str | None] = mapped_column(String)
+    raw_trace: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     episode: Mapped["Episode"] = relationship(back_populates="traces")
@@ -60,7 +62,7 @@ class Asset(Base):
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     asset_type: Mapped[AssetType] = mapped_column(SQLEnum(AssetType))
     s3_path: Mapped[str] = mapped_column(String)
-    content: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    content: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     episode: Mapped["Episode"] = relationship(back_populates="assets")
