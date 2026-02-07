@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { FileCode, FileText, FileJson, BadgeCheck, Code2, FolderTree, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
+import ConnectionError from "../shared/ConnectionError";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -9,6 +10,7 @@ interface ArtifactViewProps {
   mjcf?: string; // Benchmark XML
   validationResults?: any; // Validation results object
   activeFile?: string; // Allows parent to control active file context
+  isConnected?: boolean;
 }
 
 export default function ArtifactView({
@@ -16,6 +18,7 @@ export default function ArtifactView({
   code,
   mjcf,
   validationResults,
+  isConnected = true
 }: ArtifactViewProps) {
   const [activeTab, setActiveTab] = useState("code");
   const [isTreeOpen, setIsTreeOpen] = useState(true);
@@ -101,7 +104,8 @@ export default function ArtifactView({
   };
 
   return (
-    <div className="flex h-full bg-[#0d1116] border-t border-border overflow-hidden">
+    <div className="flex h-full bg-[#0d1116] border-t border-border overflow-hidden relative">
+        {!isConnected && <ConnectionError className="absolute inset-0 z-[100]" />}
         {/* Artifact Sidebar (File Tree) */}
         <div className="w-48 border-r border-white/5 flex flex-col bg-muted/5">
             <div className="h-9 px-3 flex items-center border-b border-white/5 bg-white/5">

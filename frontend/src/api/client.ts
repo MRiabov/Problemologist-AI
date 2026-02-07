@@ -32,3 +32,12 @@ export async function runSimulation(sessionId: string, compoundJson: string = '{
         compound_json: compoundJson
     });
 }
+
+export async function checkConnection(): Promise<boolean> {
+    try {
+        await DefaultService.healthHealthGet();
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
