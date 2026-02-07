@@ -31,13 +31,13 @@
 **Priority**: High
 **Dependencies**: WP01
 
-- [ ] T007: Implement `SimulationLoop` class in `src/worker/simulation/loop.py`. <!-- id: 6 -->
-- [ ] T008: Implement physics stepping loop (500Hz) and control interface. <!-- id: 7 -->
-- [ ] T009: Implement collision detection for `zone_forbid_*`. <!-- id: 8 -->
-- [ ] T010: Implement goal detection for `zone_goal_*`. <!-- id: 9 -->
-- [ ] T011: Implement `MetricCollector` for energy, time, and damage tracking (using Pydantic models). <!-- id: 10 -->
-- [ ] T012: Add validation hook: ensure `validate_and_price` is called before simulation starts. <!-- id: 11 -->
-- [ ] T013: Add tests for physics steps and collision triggers. <!-- id: 29 -->
+- [x] T007: Implement `SimulationLoop` class in `src/worker/simulation/loop.py`. <!-- id: 6 -->
+- [x] T008: Implement physics stepping loop (500Hz) and control interface. <!-- id: 7 -->
+- [x] T009: Implement collision detection for `zone_forbid_*`. <!-- id: 8 -->
+- [x] T010: Implement goal detection for `zone_goal_*`. <!-- id: 9 -->
+- [x] T011: Implement `MetricCollector` for energy, time, and damage tracking (using Pydantic models). <!-- id: 10 -->
+- [x] T012: Add validation hook: ensure `validate_and_price` is called before simulation starts. <!-- id: 11 -->
+- [x] T013: Add tests for physics steps and collision triggers. <!-- id: 29 -->
 
 **Implementation Logic**:
 
