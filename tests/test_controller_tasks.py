@@ -10,11 +10,16 @@ from shared.enums import EpisodeStatus
 
 @pytest.mark.asyncio
 @patch("controller.api.main.get_sessionmaker")
+@patch("controller.observability.database.get_sessionmaker")
 @patch("controller.api.main.get_worker_client")
 @patch("controller.api.main.create_agent_graph")
 @patch("controller.api.main.RemoteFilesystemMiddleware")
 async def test_execute_agent_task_success(
-    mock_middleware_cls, mock_create_graph, mock_get_worker, mock_get_sessionmaker
+    mock_middleware_cls,
+    mock_create_graph,
+    mock_get_worker,
+    mock_db_sessionmaker,
+    mock_get_sessionmaker,
 ):
     # Setup mocks
     episode_id = uuid.uuid4()
@@ -28,10 +33,20 @@ async def test_execute_agent_task_success(
     mock_session_factory = MagicMock()
     mock_session_factory.return_value.__aenter__.return_value = mock_session
     mock_get_sessionmaker.return_value = mock_session_factory
+    mock_db_sessionmaker.return_value = mock_session_factory
 
     mock_episode = Episode(id=episode_id, task=task, status=EpisodeStatus.RUNNING)
     # Mock db.get to return our episode
     mock_session.get.return_value = mock_episode
+
+    mock_middleware = mock_middleware_cls.return_value
+    mock_middleware.list_files = AsyncMock(
+        return_value=[
+            {"type": "file", "path": "script.py"},
+            {"type": "file", "path": "output.mjcf"},
+        ]
+    )
+    mock_middleware.read_file = AsyncMock(return_value="print('hello')")
 
     mock_agent = AsyncMock()
     mock_agent.ainvoke.return_value = {

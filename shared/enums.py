@@ -25,6 +25,7 @@ class AssetType(StrEnum):
     STEP = "step"
     STL = "stl"
     PYTHON = "python"
+    OTHER = "other"
 
 
 class ResponseStatus(StrEnum):
