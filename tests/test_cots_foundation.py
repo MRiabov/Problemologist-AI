@@ -1,9 +1,9 @@
 import os
 import sqlite3
 import pytest
-from src.cots.models import COTSItem
-from src.cots.database.init import init_db
-from src.shared.type_checking import type_check
+from shared.cots.models import COTSItem
+from shared.cots.database.init import init_db
+from shared.type_checking import type_check
 
 
 @type_check

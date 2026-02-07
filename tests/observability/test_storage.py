@@ -2,7 +2,7 @@ import os
 import pytest
 import boto3
 from moto import mock_aws
-from src.observability.storage import S3Client, S3Config
+from shared.observability.storage import S3Client, S3Config
 
 @pytest.fixture
 def s3_config():

@@ -3,7 +3,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from build123d import Box, Compound
-from src.worker.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
+from worker.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
 
 def test_mesh_processor(tmp_path):
     processor = MeshProcessor()

@@ -1,7 +1,7 @@
 import pytest
 from build123d import Box, Part, Compound, Location
-from src.workbenches.injection_molding import analyze_im
-from src.workbenches.config import load_config
+from worker.workbenches.injection_molding import analyze_im
+from worker.workbenches.config import load_config
 import trimesh
 import numpy as np
 
@@ -79,7 +79,7 @@ def test_im_cost_calculation():
     assert result1.unit_cost > 5000.0
     
     # Test with context for reuse
-    from src.workbenches.injection_molding import _calculate_im_cost
+    from worker.workbenches.injection_molding import _calculate_im_cost
     context = {}
     cost1 = _calculate_im_cost(box, config, quantity=1, context=context)
     cost2 = _calculate_im_cost(box, config, quantity=1, context=context)

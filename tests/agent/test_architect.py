@@ -2,12 +2,12 @@ import os
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from src.agent.nodes.architect import architect_node
-from src.agent.state import AgentState
+from controller.agent.nodes.architect import architect_node
+from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("src.agent.nodes.architect.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.architect.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.invoke.return_value = MagicMock(content="""# PLAN
 Test Plan

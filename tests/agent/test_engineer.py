@@ -1,21 +1,21 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from src.agent.nodes.engineer import EngineerNode
-from src.agent.state import AgentState
+from controller.agent.nodes.engineer import EngineerNode
+from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("src.agent.nodes.engineer.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.engineer.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(content="```python\nprint('hello')\n```")
         yield instance
 
-from src.worker.api.schema import ExecuteResponse
+from worker.api.schema import ExecuteResponse
 
 @pytest.fixture
 def mock_worker():
-    with patch("src.agent.nodes.engineer.WorkerClient") as mock:
+    with patch("controller.agent.nodes.engineer.WorkerClient") as mock:
         instance = mock.return_value
         instance.execute_python = AsyncMock()
         instance.execute_python.return_value = ExecuteResponse(stdout="hello", stderr="", exit_code=0)

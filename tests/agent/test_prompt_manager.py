@@ -1,5 +1,5 @@
 import pytest
-from src.agent.prompt_manager import PromptManager
+from controller.agent.prompt_manager import PromptManager
 
 def test_prompt_manager_render():
     pm = PromptManager()

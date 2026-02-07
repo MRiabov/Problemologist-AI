@@ -2,9 +2,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.cots.database.models import Base, COTSItemORM
-from src.cots.models import SearchQuery
-from src.cots.runtime import search_parts
+from shared.cots.database.models import Base, COTSItemORM
+from shared.cots.models import SearchQuery
+from shared.cots.runtime import search_parts
 
 
 @pytest.fixture

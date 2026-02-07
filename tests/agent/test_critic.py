@@ -1,12 +1,12 @@
 import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from src.agent.nodes.critic import CriticNode
-from src.agent.state import AgentState
+from controller.agent.nodes.critic import CriticNode
+from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("src.agent.nodes.critic.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.critic.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(content="""DECISION: APPROVE
@@ -15,7 +15,7 @@ FEEDBACK: Looks good.""")
 
 @pytest.fixture
 def mock_worker():
-    with patch("src.agent.nodes.critic.WorkerClient") as mock:
+    with patch("controller.agent.nodes.critic.WorkerClient") as mock:
         instance = mock.return_value
         instance.read_file = AsyncMock()
         yield instance

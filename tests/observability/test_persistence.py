@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.observability.persistence import get_db_url, setup_persistence
+from shared.observability.persistence import get_db_url, setup_persistence
 
 
 def test_get_db_url_standard():
@@ -34,8 +34,8 @@ def test_get_db_url_missing():
 @pytest.mark.asyncio
 async def test_setup_persistence():
     """Test that setup_persistence calls setup on the saver."""
-    with patch("src.observability.persistence.AsyncConnectionPool") as mock_pool_cls:
-        with patch("src.observability.persistence.PostgresSaver") as mock_saver_cls:
+    with patch("shared.observability.persistence.AsyncConnectionPool") as mock_pool_cls:
+        with patch("shared.observability.persistence.PostgresSaver") as mock_saver_cls:
             # Mock the async context manager of the pool
             mock_pool = MagicMock()
             mock_pool_cls.return_value.__aenter__.return_value = mock_pool

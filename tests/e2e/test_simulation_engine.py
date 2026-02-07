@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from build123d import Compound, Box, Location
 
-from src.worker.utils.simulation import simulate_local
+from worker.utils.simulation import simulate_local
 from src.common.models.simulation import SimulationRequest, SimulationResult
 from tests.worker.simulation.cases.pusher_bot import get_pusher_bot
 

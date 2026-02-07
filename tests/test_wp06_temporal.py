@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
-from src.controller.api.main import app, temporal_client_instance
+from controller.api.main import app, temporal_client_instance
 
 @pytest.fixture
 def mock_temporal_client():
-    with patch("src.controller.api.main.temporal_client_instance", new_callable=AsyncMock) as mock:
+    with patch("controller.api.main.temporal_client_instance", new_callable=AsyncMock) as mock:
         yield mock
 
 def test_simulation_run_endpoint(mock_temporal_client):
@@ -28,7 +28,7 @@ def test_simulation_run_endpoint(mock_temporal_client):
 
 @pytest.mark.asyncio
 async def test_remote_fs_middleware_temporal():
-    from src.controller.middleware.remote_fs import RemoteFilesystemMiddleware
+    from controller.middleware.remote_fs import RemoteFilesystemMiddleware
     
     mock_worker_client = MagicMock()
     mock_worker_client.session_id = "test-session"

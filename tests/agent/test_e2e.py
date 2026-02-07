@@ -1,14 +1,14 @@
 import pytest
 import importlib
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.agent.state import AgentState
-import src.agent.graph
+from controller.agent.state import AgentState
+import controller.agent.graph
 
 @pytest.fixture
 def fresh_graph():
     def _reload():
-        importlib.reload(src.agent.graph)
-        return src.agent.graph.graph
+        importlib.reload(controller.agent.graph)
+        return controller.agent.graph.graph
     return _reload
 
 @pytest.mark.asyncio
@@ -35,10 +35,10 @@ async def test_smoke_e2e(fresh_graph):
     
     mock_sidecar = AsyncMock(return_value={"journal": "Learned about cubes."})
 
-    with patch("src.agent.nodes.architect.architect_node", mock_architect), \
-         patch("src.agent.nodes.engineer.engineer_node", mock_engineer), \
-         patch("src.agent.nodes.critic.critic_node", mock_critic), \
-         patch("src.agent.nodes.sidecar.sidecar_node", mock_sidecar):
+    with patch("controller.agent.nodes.architect.architect_node", mock_architect), \
+         patch("controller.agent.nodes.engineer.engineer_node", mock_engineer), \
+         patch("controller.agent.nodes.critic.critic_node", mock_critic), \
+         patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar):
         
         graph = fresh_graph()
         

@@ -3,13 +3,13 @@ import shutil
 from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from src.agent.nodes.sidecar import SidecarNode
-from src.agent.state import AgentState
-from src.shared.type_checking import type_check
+from controller.agent.nodes.sidecar import SidecarNode
+from controller.agent.state import AgentState
+from shared.type_checking import type_check
 
 @pytest.fixture
 def mock_llm():
-    with patch("src.agent.nodes.sidecar.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.sidecar.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(content="""SKILL: Build123D Import Trick

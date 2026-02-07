@@ -9,7 +9,7 @@ These tests verify:
 
 
 from worker.runtime.executor import RuntimeConfig, run_python_code
-from src.shared.type_checking import type_check
+from shared.type_checking import type_check
 
 
 @type_check

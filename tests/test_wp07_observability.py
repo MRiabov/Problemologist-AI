@@ -1,7 +1,7 @@
 import os
 import pytest
-from src.shared.logging import configure_logging, get_logger
-from src.controller.persistence.models import Episode, Trace, Asset
+from shared.logging import configure_logging, get_logger
+from controller.persistence.models import Episode, Trace, Asset
 from sqlalchemy import create_mock_engine
 
 def test_logging_configuration():
@@ -24,7 +24,7 @@ def test_models_instantiation():
 
 @pytest.mark.asyncio
 async def test_db_setup():
-    from src.controller.persistence.db import Base
+    from controller.persistence.db import Base
     # We just check if we can get the metadata
     assert Base.metadata is not None
     assert "episodes" in Base.metadata.tables

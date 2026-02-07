@@ -1,5 +1,5 @@
 from build123d import Box, Compound, BuildPart
-from src.worker.utils.validation import validate, simulate
+from worker.utils.validation import validate, simulate
 import os
 from pathlib import Path
 
@@ -31,7 +31,7 @@ def test_simulation():
     assert res.success == True
 
 def test_handover():
-    from src.worker.utils.handover import submit_for_review
+    from worker.utils.handover import submit_for_review
     with BuildPart() as p:
         Box(10, 10, 10)
     

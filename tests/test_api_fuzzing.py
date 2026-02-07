@@ -1,8 +1,8 @@
 import schemathesis
 from fastapi.testclient import TestClient
-from src.worker.app import app
-from src.worker.api.routes import get_router
-from src.worker.filesystem.router import FilesystemRouter
+from worker.app import app
+from worker.api.routes import get_router
+from worker.filesystem.router import FilesystemRouter
 from unittest.mock import MagicMock
 import pytest
 
