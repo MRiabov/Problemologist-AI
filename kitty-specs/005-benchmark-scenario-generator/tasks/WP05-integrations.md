@@ -1,13 +1,13 @@
 ---
 work_package_id: WP05
 title: Persistence & Integration
-lane: "for_review"
+lane: "doing"
 dependencies: [WP04]
 base_branch: 005-benchmark-scenario-generator-WP04
 base_commit: 945ec66510a2e3541b30e87040f26f0e831e12c0
 created_at: '2026-02-07T08:55:48.149728+00:00'
 subtasks: [T017, T018, T019, T020]
-shell_pid: "293221"
+shell_pid: "294437"
 agent: "gemini-cli"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
@@ -84,3 +84,4 @@ reviewed_by: "MRiabov"
 - 2026-02-07T09:08:51Z – gemini-cli – shell_pid=292387 – lane=planned – Changes requested regarding MJCF state management, DB field naming consistency, and Pathlib usage.
 - 2026-02-07T09:08:58Z – gemini-cli – shell_pid=293221 – lane=doing – Started implementation via workflow command
 - 2026-02-07T09:11:33Z – gemini-cli – shell_pid=293221 – lane=for_review – Implemented persistence and integration. Fixed MJCF state management, resolved SQLAlchemy naming collision for metadata field, and standardized image reading with Pathlib. Updated documentation.
+- 2026-02-07T09:11:39Z – gemini-cli – shell_pid=294437 – lane=doing – Started review via workflow command
