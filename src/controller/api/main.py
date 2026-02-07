@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
@@ -53,6 +53,37 @@ def get_worker_client(session_id: str) -> WorkerClient:
     return WorkerClient(base_url=WORKER_URL, session_id=session_id)
 
 
+async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, episode_id)
+        if not episode:
+            logger.error("episode_not_found_for_background_task", episode_id=episode_id)
+            return
+
+        try:
+            client = get_worker_client(session_id)
+            fs_middleware = RemoteFilesystemMiddleware(
+                client, temporal_client=temporal_client_instance
+            )
+            agent = create_agent_graph(fs_middleware)
+
+            # Run the agent
+            result = await agent.ainvoke({"messages": [("user", task)]})
+            
+            # Re-fetch episode to avoid detached session issues
+            episode = await db.get(Episode, episode_id)
+            episode.status = EpisodeStatus.COMPLETED
+            # We could also save result["messages"] here if we had a place for it
+            await db.commit()
+            logger.info("agent_run_completed", episode_id=episode_id)
+        except Exception as e:
+            episode = await db.get(Episode, episode_id)
+            episode.status = EpisodeStatus.FAILED
+            await db.commit()
+            logger.error("agent_run_failed", error=str(e), episode_id=episode_id)
+
+
 @app.get("/")
 async def read_root():
     return {"status": ResponseStatus.OK, "service": "controller"}
@@ -81,7 +112,7 @@ async def run_simulation(request: SimulationRequest):
 
 
 @app.post("/agent/run")
-async def run_agent(request: AgentRunRequest):
+async def run_agent(request: AgentRunRequest, background_tasks: BackgroundTasks):
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         episode = Episode(
@@ -92,32 +123,13 @@ async def run_agent(request: AgentRunRequest):
         db.add(episode)
         await db.commit()
         await db.refresh(episode)
+        
+        episode_id = episode.id
 
-        try:
-            client = get_worker_client(request.session_id)
-            # Pass temporal_client to middleware for durable execution
-            fs_middleware = RemoteFilesystemMiddleware(
-                client, temporal_client=temporal_client_instance
-            )
-            agent = create_agent_graph(fs_middleware)
+    background_tasks.add_task(execute_agent_task, episode_id, request.task, request.session_id)
 
-            # Run the agent
-            result = await agent.ainvoke({"messages": [("user", request.task)]})
-            
-            episode.status = EpisodeStatus.COMPLETED
-            await db.commit()
+    return {
+        "status": ResponseStatus.ACCEPTED,
+        "episode_id": episode_id
+    }
 
-            return {
-                "status": ResponseStatus.COMPLETED,
-                "output": result["messages"][-1].content,
-                "episode_id": episode.id
-            }
-        except Exception as e:
-            episode.status = EpisodeStatus.FAILED
-            await db.commit()
-            logger.error("agent_run_failed", error=str(e), episode_id=episode.id)
-            return {
-                "status": ResponseStatus.ERROR,
-                "message": str(e),
-                "episode_id": episode.id
-            }

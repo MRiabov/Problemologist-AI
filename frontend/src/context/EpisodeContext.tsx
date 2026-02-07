@@ -47,15 +47,26 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     try {
       const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
       const response = await runAgent(task, sessionId);
-      await refreshEpisodes();
+      
       if (response.episode_id) {
-        await selectEpisode(response.episode_id);
+        // Create a minimal episode object to start polling
+        const newEpisode: Episode = {
+          id: response.episode_id,
+          task: task,
+          status: 'running',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          traces: [],
+          assets: []
+        };
+        setSelectedEpisode(newEpisode);
+        await refreshEpisodes();
       }
     } catch (e) {
       console.error("Failed to run agent", e);
       setRunning(false);
     }
-  }, [refreshEpisodes, selectEpisode]);
+  }, [refreshEpisodes]);
 
   useEffect(() => {
     refreshEpisodes();

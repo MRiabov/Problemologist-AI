@@ -24,17 +24,18 @@ function PlaceholderModel() {
 }
 
 interface ModelViewerProps {
-  className?: string
+  className?: string;
+  assetUrl?: string | null;
 }
 
-export default function ModelViewer({ className }: ModelViewerProps) {
+export default function ModelViewer({ className, assetUrl }: ModelViewerProps) {
   return (
     <div className={className}>
       <Canvas shadows dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
         <OrbitControls 
           enableDamping 
-          dampingFactor={0.05}
+          dampingFactor={0.2}
           minDistance={2}
           maxDistance={10}
           makeDefault
@@ -47,7 +48,16 @@ export default function ModelViewer({ className }: ModelViewerProps) {
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
         {/* Scene Objects */}
-        <PlaceholderModel />
+        {assetUrl ? (
+            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                <mesh castShadow receiveShadow>
+                    <torusKnotGeometry args={[0.5, 0.2, 128, 32]} />
+                    <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.8} />
+                </mesh>
+            </Float>
+        ) : (
+            <PlaceholderModel />
+        )}
         
         {/* Visual Aids */}
         <Grid 
