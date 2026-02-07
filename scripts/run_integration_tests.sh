@@ -38,7 +38,7 @@ if [ $COUNT -eq $MAX_RETRIES ]; then
 fi
 
 echo "Running integration tests..."
-if uv run pytest tests/test_integration_docker.py -v; then
+if uv run pytest tests/test_integration_docker.py -v -m integration; then
   echo "Integration tests PASSED!"
   SUCCESS=1
 else

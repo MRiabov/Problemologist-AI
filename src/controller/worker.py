@@ -3,18 +3,16 @@ import os
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from src.controller.workflows.simulation import (
-    SimulationWorkflow,
+from src.controller.workflows.simulation import SimulationWorkflow
+from src.controller.workflows.execution import ScriptExecutionWorkflow
+from src.controller.activities.simulation import (
     compile_mjcf_activity,
     run_simulation_activity,
     render_video_activity,
     upload_to_s3_activity,
     update_trace_activity,
 )
-from src.controller.workflows.execution import (
-    ScriptExecutionWorkflow,
-    execute_script_activity,
-)
+from src.controller.activities.execution import execute_script_activity
 
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
 
