@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Protocol, Union, List, Any, Optional, Dict
-from build123d import Part, Compound
-from src.workbenches.models import WorkbenchResult, ManufacturingConfig, CostBreakdown
+from collections.abc import Callable
+from typing import Any, Protocol
+
+from build123d import Compound, Part
 
 from src.shared.type_checking import type_check
+from src.workbenches.models import CostBreakdown, ManufacturingConfig, WorkbenchResult
+
 
 # Functional interface for workbench analysis
-AnalyzeFunction = Callable[
-    [Union[Part, Compound], ManufacturingConfig], WorkbenchResult
-]
+AnalyzeFunction = Callable[[Part | Compound, ManufacturingConfig], WorkbenchResult]
 
 
 class WorkbenchAnalyzer(Protocol):
@@ -17,7 +18,7 @@ class WorkbenchAnalyzer(Protocol):
     """
 
     def __call__(
-        self, part: Union[Part, Compound], config: ManufacturingConfig
+        self, part: Part | Compound, config: ManufacturingConfig
     ) -> WorkbenchResult: ...
 
 
@@ -30,7 +31,7 @@ class Workbench(ABC):
     """
 
     @abstractmethod
-    def validate(self, part: Part) -> List[Union[Exception, str]]:
+    def validate(self, part: Part) -> list[Exception | str]:
         """
         Validates the part against the workbench constraints.
 
@@ -42,7 +43,7 @@ class Workbench(ABC):
         """
         pass
 
-    def validate_geometry(self, part: Part) -> List[Union[Exception, str]]:
+    def validate_geometry(self, part: Part) -> list[Exception | str]:
         """
         Alias for validate, as per spec requirements.
         """
@@ -50,7 +51,10 @@ class Workbench(ABC):
 
     @abstractmethod
     def calculate_cost(
-        self, part: Part, quantity: int = 1, context: Optional[Dict[str, Any]] = None
+        self,
+        part: Part,
+        quantity: int = 1,
+        context: dict[str, Any] | None = None,
     ) -> CostBreakdown:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
