@@ -41,7 +41,6 @@ dependencies = [
     "boto3>=1.36.0",
     "ffmpeg-python>=0.2.0",
     "scipy>=1.13.0",
-    "beartype>=0.22.9",
 ]
 
 [dependency-groups]

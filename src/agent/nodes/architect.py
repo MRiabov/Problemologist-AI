@@ -6,8 +6,10 @@ from langchain_core.messages import HumanMessage
 
 from ..prompt_manager import PromptManager
 from ..state import AgentState
+from src.shared.type_checking import type_check
 
 
+@type_check
 def architect_node(state: AgentState) -> Dict[str, Any]:
     """
     Architect node: Analyzes the task and creates plan.md and todo.md.
@@ -28,10 +30,10 @@ def architect_node(state: AgentState) -> Dict[str, Any]:
 
     # T005: Invoke LLM
     prompt_text = pm.render("architect", task=state.task, skills=skills_context)
-    
+
     # Using a standard LLM configuration for the agent
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    
+
     # We pass the prompt as a human message for simplicity in this skeleton
     response = llm.invoke([HumanMessage(content=prompt_text)])
     content = str(response.content)
@@ -42,10 +44,10 @@ def architect_node(state: AgentState) -> Dict[str, Any]:
     # ...
     # # TODO
     # ...
-    
+
     plan_content = ""
     todo_content = ""
-    
+
     if "# PLAN" in content and "# TODO" in content:
         parts = content.split("# TODO")
         plan_content = parts[0].replace("# PLAN", "").strip()
@@ -58,7 +60,7 @@ def architect_node(state: AgentState) -> Dict[str, Any]:
     # Write files to the workspace root
     with open("plan.md", "w") as f:
         f.write(plan_content)
-    
+
     with open("todo.md", "w") as f:
         f.write(todo_content)
 
