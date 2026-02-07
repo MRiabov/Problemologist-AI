@@ -1,6 +1,7 @@
 from build123d import Box, Compound, BuildPart
 from src.worker.utils.validation import validate, simulate
 import os
+from pathlib import Path
 
 def test_geometric_validation():
     # 1. Valid box
@@ -38,9 +39,9 @@ def test_handover():
     res = submit_for_review(p.part)
     assert res == True
     
-    renders_dir = os.getenv("RENDERS_DIR", "./renders")
-    manifest_path = os.path.join(renders_dir, "review_manifest.json")
-    assert os.path.exists(manifest_path)
+    renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
+    manifest_path = renders_dir / "review_manifest.json"
+    assert manifest_path.exists()
     
     with open(manifest_path, "r") as f:
         import json
@@ -52,7 +53,7 @@ def test_handover():
 if __name__ == "__main__":
     # Use local renders dir
     os.environ["RENDERS_DIR"] = "./renders"
-    os.makedirs("./renders", exist_ok=True)
+    Path("./renders").mkdir(parents=True, exist_ok=True)
     test_geometric_validation()
     test_simulation()
     test_handover()

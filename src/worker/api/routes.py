@@ -4,6 +4,7 @@ import structlog
 import importlib.util
 import os
 import sys
+from pathlib import Path
 
 from src.shared.enums import ResponseStatus
 
@@ -39,7 +40,7 @@ async def get_router(x_session_id: str = Header(...)):
 
 def _load_component(script_path: str):
     """Utility to load the component from the agent's script."""
-    if not os.path.exists(script_path):
+    if not Path(script_path).exists():
         raise FileNotFoundError(f"Script not found: {script_path}")
     
     # Add current directory to sys.path to allow local imports in the script

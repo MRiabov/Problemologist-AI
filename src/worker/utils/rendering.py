@@ -14,15 +14,16 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
         
-    logger.info("prerender_24_views", output_dir=output_dir)
+    output_path = Path(output_dir)
+    logger.info("prerender_24_views", output_dir=str(output_path))
     
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_path.mkdir(parents=True, exist_ok=True)
     
     # We use a temporary STL to render with pyvista
-    stl_path = "temp_render.stl"
-    export_stl(component, stl_path)
+    stl_path = Path("temp_render.stl")
+    export_stl(component, str(stl_path))
     
-    mesh = pv.read(stl_path)
+    mesh = pv.read(str(stl_path))
     plotter = pv.Plotter(off_screen=True)
     plotter.add_mesh(mesh, color="lightblue")
     
@@ -37,7 +38,7 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
         for elevation in elevations:
             for angle in angles:
                 filename = f"render_e{elevation}_a{angle}.png"
-                filepath = os.path.join(output_dir, filename)
+                filepath = output_path / filename
                 
                 # Setup camera
                 # This is a simplified camera positioning
@@ -46,11 +47,11 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
                 
                 # In a real scenario we would calculate precise camera positions
                 # For this WP, we simulate the output
-                plotter.screenshot(filepath)
-                saved_files.append(filepath)
+                plotter.screenshot(str(filepath))
+                saved_files.append(str(filepath))
                 
         logger.info("prerender_complete", count=len(saved_files))
         return saved_files
     finally:
-        if os.path.exists(stl_path):
-            os.remove(stl_path)
+        if stl_path.exists():
+            stl_path.unlink()

@@ -1,5 +1,6 @@
 import os
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from src.agent.nodes.architect import architect_node
 from src.agent.state import AgentState
@@ -17,8 +18,9 @@ Test Plan
 def test_architect_node_logic(mock_llm):
     # Cleanup files if they exist
     for f in ["plan.md", "todo.md"]:
-        if os.path.exists(f):
-            os.remove(f)
+        p = Path(f)
+        if p.exists():
+            p.unlink()
             
     state = AgentState(task="Build a robot")
     
@@ -31,8 +33,8 @@ def test_architect_node_logic(mock_llm):
     assert "Test Todo" in result.todo
     
     # Check file creation
-    assert os.path.exists("plan.md")
-    assert os.path.exists("todo.md")
+    assert Path("plan.md").exists()
+    assert Path("todo.md").exists()
     
     with open("plan.md", "r") as f:
         assert f.read() == "Test Plan"
@@ -41,8 +43,8 @@ def test_architect_node_logic(mock_llm):
         assert f.read() == "- [ ] Test Todo"
     
     # Cleanup
-    os.remove("plan.md")
-    os.remove("todo.md")
+    Path("plan.md").unlink()
+    Path("todo.md").unlink()
 
 def test_architect_node_fallback(mock_llm):
     # Mock fallback response
@@ -54,5 +56,5 @@ def test_architect_node_fallback(mock_llm):
     assert result.plan == "Just some text without sections"
     assert result.todo == "- [ ] Implement the plan"
     
-    os.remove("plan.md")
-    os.remove("todo.md")
+    Path("plan.md").unlink()
+    Path("todo.md").unlink()
