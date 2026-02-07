@@ -1,13 +1,13 @@
 ---
 work_package_id: WP02
 title: API Integration & Data Layer
-lane: "planned"
+lane: "doing"
 dependencies: [WP01]
 base_branch: 007-agentic-cad-dashboard-WP01
 base_commit: b0b7bf77614a0fb87a464a2c2a457b04904e4222
 created_at: '2026-02-07T07:35:09.440759+00:00'
 subtasks: [T006, T007, T008, T009, T010]
-shell_pid: "251987"
+shell_pid: "308653"
 agent: "Gemini"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
@@ -100,3 +100,4 @@ Establish a robust, type-safe data fetching layer and implement the "Runs List" 
 - 2026-02-07T07:53:40Z – gemini-cli – shell_pid=229530 – lane=for_review – Ready for review: Implemented API integration with generated client, React Query setup, RunsList component, and RunContext.
 - 2026-02-07T07:54:50Z – Gemini – shell_pid=251987 – lane=doing – Started review via workflow command
 - 2026-02-07T07:58:30Z – Gemini – shell_pid=251987 – lane=planned – Moved to planned
+- 2026-02-07T09:39:32Z – Gemini – shell_pid=308653 – lane=doing – Started implementation via workflow command
