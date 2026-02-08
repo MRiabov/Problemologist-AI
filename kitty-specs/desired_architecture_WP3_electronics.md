@@ -44,8 +44,16 @@ We use **KiCad 8+** as the core technology.
 
 * **Why**: Open source, scriptable via Python, huge community, standard file formats (`.kicad_pcb`, `.kicad_sch`).
 * **Pipeline**:
-    1. **SKiDL**: We use `skidl` (Python library) to define the Netlist programmatically. This avoids the need for the agent to use a GUI schematic editor.
-    2. **KiCad PCBNew**: We use the Python API of `pcbnew` to place components and route traces (or use an auto-router like `Freerouting`).
+    1. **SKiDL**: We use `skidl` (Python library) to define the Netlist programmatically.
+    2. **KiCad PCBNew**: We use the Python API of `pcbnew` to place components and route traces.
+
+### The Headless EDA Service (Microservice)
+
+To avoid installing 2GB of KiCad binaries in the main agent container:
+
+* **Service**: `eda-worker` container.
+* **API**: `POST /render-pcb` accepts a Netlist/Layout script and returns a `.kicad_pcb` + `.step` file.
+* **Isolation**: Runs a virtual X server (`Xvfb`) internally if any GUI tools (like `freerouting`) need a display handle.
 
 ### Component Library (The "Parts Database")
 
@@ -63,9 +71,17 @@ CREATE TABLE components (
     symbol TEXT, -- 'Device:R'
     price_usd REAL,
     datasheet_url TEXT,
-    step_file_path TEXT -- Path to 3D model for collision check
+    step_file_path TEXT, -- Path to 3D model for collision check
+    snapshot_version INT DEFAULT 1 -- Increment on update
 );
 ```
+
+### Reproducibility (Library Snapshotting)
+
+Component availability changes (prices change, parts go EOL).
+
+* **Snapshotting**: When a design is finalized, we freeze the `component` rows used.
+* **Cache**: The `eda-worker` caches the specific `step_file_path` version used at design time, so a re-render 1 year later doesn't break because a model file changed.
 
 #### Tool: `query_library(params)`
 

@@ -13,9 +13,16 @@ We are to create a self-improving system that optimizes agent prompts and logic 
 
 ## The Optimizer Agent
 
-We introduce a new agent, the **Optimizer**, which operates asynchronously from the main execution loop. It is not triggered by a user request but by a simplified cron scheduler (or Temporal workflow) that runs nightly or on-demand.
+We introduce a new agent, the **Optimizer**, which operates asynchronously from### 1. The Optimizer Service (Microservice)
 
-### Capabilities
+We deploy the Optimizer as a standalone container `optimizer-worker`.
+
+* **Infrastructure**: Python service running `DEAP` in a loop.
+* **Isolation**: Separated from the API Server to allow long-running blocking genetic algorithm (GA) generations.
+* **Trigger**: A **Temporal Workflow** signals the service to start a new generation.
+* **State**: It reads/writes to the `prompts` and `experiments` tables in Postgres.
+
+### 2. The Execution Pipeline ("The Plumbing")
 
 The Optimizer is a "Meta-Agent". It does not solve physics problems. It solves "Agent Performance Problems".
 It has access to:
@@ -57,13 +64,19 @@ We seek to maximize all components.
 
 ### The Algorithm (NSGA-II adaptation)
 
-1. **Population**: We maintain a pool of 10-20 active prompt variations per Agent Type.
-2. **Selection**: We select parents using binary tournament selection based on non-domination rank (Pareto front) and crowding distance.
-3. **Crossover**: (Experimental) We combine instructions from two successful prompts.
+1. **Population**: We maintain a pool of 10-20 active### Reproducibility & CPU Performance
+
+To ensure every optimization run yielded the exact same result given the same inputs:
+
+1. **Global Seeding**: The GA loop initializes `random.seed(CONFIG.global_seed)` at the start of every generation.
+2. **Immutable Prompts**: Once a prompt row is saved, it is never updated. New generations create new rows.
+3. **CPU Optimization**: The Genetic Algorithm is CPU-bound (string manipulation). We use `multiprocessing` to evaluate the fitness of individuals in parallel if the evaluation step is local (though here it's remote).
+4. **Traceability**: Every generated prompt links back to its `parent_ids` and the `experiment_id` that validated it.
+
     * *Parent A*: "Always check collisions."
     * *Parent B*: "Think step-by-step about cost."
     * *Child*: "Always check collisions and think step-by-step about cost."
-4. **Mutation**: Randomly modifying a section of the prompt.
+5. **Mutation**: Randomly modifying a section of the prompt.
     * *Operations*: Add instruction, Remove instruction, Rephrase instruction, Change few-shot examples.
 
 <!-- note: We reference the fictional/future paper "Generic Pareto optimization <https://arxiv.org/abs/2507.19457>" from the roadmap. -->

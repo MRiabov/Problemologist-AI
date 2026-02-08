@@ -52,17 +52,40 @@ problem = {
 * **Density Field**: A 3D array of floats (0.0 to 1.0) representing material density.
 * **Compliance Trace**: Graph of stiffness optimization over iterations.
 
-## Infrastructure & Compute
+## Infrastructure & Compute (Microservice Architecture)
 
-TO is extremely compute-heavy (solving FEM matrices thousands of times).
+Topology optimization is computationally intensive. We decouple it from the main Agent Service to ensure responsiveness and scalability.
 
-* **Offloading strategy**: TO jobs are **never** run on the standard worker queue.
-* **Dedicated Nodes**: We dispatch these to high-CPU/Memory nodes (likely AWS Spot Instances or a dedicated HPC queue).
-* **Asynchronous Pattern**:
-    1. Agent calls `submit_topology_job(config)`.
-    2. System returns `job_id`.
-    3. Agent goes to sleep (suspend workflow).
-    4. Temporal wakes up the workflow when the job completes (hours later).
+### The Solver Microservice
+
+We define a dedicated `solver-worker` service in `docker-compose.yml`.
+
+* **Role**: Listens to a dedicated `topology-jobs` queue.
+* **Hardware**: Optimized for CPU (high core count). GPUs are *not* required (FEniCS on CPU is sufficient for MVP).
+* **Isolation**: Runs in a separate container to prevent Python GIL contention with the main agent.
+
+### Asynchronous Workflow
+
+1. **Submit**: Agent POSTs a job to `http://solver-service/jobs`. Payload: `ToPyConfig`.
+2. **Ack**: Service returns `job_id`.
+3. **Process**: Service runs `to_py.solve()` in a background process (using `multiprocessing`).
+4. **Callback**: Service POSTs result to `http://controller/webhook/topology-result`.
+
+## Reproducibility & CPU Performance
+
+### Deterministic Execution
+
+Topology optimization can be sensitive to floating-point noise.
+
+* **Seeding**: We enforce a global seed for the random initialization of the density field (`np.random.seed(42)`).
+* **Version Pinning**: The `solver-worker` Docker image pins `numpy`, `scipy`, and `to_py` to exact hashes.
+
+### CPU Optimization
+
+Since we are targeting CPU execution:
+
+* **Parallelism**: We use `OpenMP` (via environment variables `OMP_NUM_THREADS`) to parallelize the FEM solver across available cores.
+* **Vectorization**: We rely on `numpy` linked against `OpenBLAS` or `MKL` for efficient matrix operations.
 
 ## Post-Processing (The "Smoothing" Step)
 

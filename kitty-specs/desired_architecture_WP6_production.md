@@ -8,8 +8,7 @@ To transform the experimental "Problemologist" into a robust, enterprise-grade e
 
 1. **Reliability Engineering**: Move beyond deterministic "It works once" to probabilistic "It works 99.9% of the time" (Six Sigma mindset).
 2. **Thermal Analysis**: Ensure designs don't overheat under continuous load.
-3. **Code on Chip**: Compile agent logic into microcontroller firmware (C/C++) for deployment.
-4. **Security**: Protect IP and ensure safe execution of generated code via signing.
+3. **Code on Chip**: The agent would be able to write code for microchip deployment.
 
 ## Reliability Analysis (Monte Carlo Simulation)
 
@@ -49,7 +48,7 @@ We introduce a **Thermal Solver** (Heat Transfer FEM).
 
 ## Code on Chip (Firmware generation)
 
-The ultimate goal involves not just simulating, but *deploying* the logic to hardware.
+We are to add code execution onto the chip.
 
 ### The Pipeline
 
@@ -61,6 +60,34 @@ The ultimate goal involves not just simulating, but *deploying* the logic to har
     * `pio run -e stm32f4`
 5. **Artifact**: The system produces a `.bin` or `.hex` file.
 6. **Simulation**: We load this binary into **Renode** (an emulator) to verify it boots and toggles pins.
+
+### Reproducible Builds (The "Containerized Toolchain")
+
+To ensure that `firmware.bin` is bit-for-bit identical regardless of who compiles it (Developer Laptop vs CI Server):
+
+1. **Dockerized Compiler**: We do *not* rely on host-installed tools.
+    * Image: `problemologist/embedded-toolchain:v1.2` containing `platformio`, `arm-none-eabi-gcc`.
+2. **Command**:
+
+    ```bash
+    docker run --rm -v $(pwd):/src problemologist/embedded-toolchain \
+        pio run -e stm32f4
+    ```
+
+3. **Dependency Locking**: `platformio.ini` must lock library versions:
+
+    ```ini
+    lib_deps =
+        bblanchon/ArduinoJson @ 6.19.4
+    ```
+
+## Microservice Architecture: The Build Farm
+
+Compiling C++ is CPU intensive. We offload this to a `build-worker` service.
+
+* **Queue**: `build-jobs` (RabbitMQ/Redis).
+* **Concurrency**: limited to `CPU_CORES / 2` to avoid choking the node.
+* **Caching**: We mount a shared volume for `.pio/build` cache to speed up incremental builds, keyed by project hash.
 
 ## Security & IP
 
