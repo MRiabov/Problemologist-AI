@@ -13,11 +13,11 @@ from shared.enums import EpisodeStatus
 @patch("controller.observability.database.get_sessionmaker")
 @patch("controller.api.main.get_worker_client")
 @patch("controller.api.main.create_agent_graph")
-@patch("controller.api.main.RemoteFilesystemMiddleware")
+@patch("controller.api.main.RemoteFilesystemBackend")
 async def test_execute_agent_task_success(
-    mock_middleware_cls,
+    mock_backend_cls,
     mock_create_graph,
-    mock_get_worker,
+    _mock_get_worker,
     mock_db_sessionmaker,
     mock_get_sessionmaker,
 ):
@@ -39,14 +39,14 @@ async def test_execute_agent_task_success(
     # Mock db.get to return our episode
     mock_session.get.return_value = mock_episode
 
-    mock_middleware = mock_middleware_cls.return_value
-    mock_middleware.list_files = AsyncMock(
+    mock_backend = mock_backend_cls.return_value
+    mock_backend.als_info = AsyncMock(
         return_value=[
-            {"type": "file", "path": "script.py"},
-            {"type": "file", "path": "output.mjcf"},
+            {"path": "script.py", "is_dir": False},
+            {"path": "output.mjcf", "is_dir": False},
         ]
     )
-    mock_middleware.read_file = AsyncMock(return_value="print('hello')")
+    mock_backend.aread = AsyncMock(return_value="print('hello')")
 
     mock_agent = AsyncMock()
     mock_agent.ainvoke.return_value = {

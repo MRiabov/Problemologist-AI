@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -11,16 +11,21 @@ from controller.agent.state import AgentState
 def mock_llm():
     with patch("controller.agent.nodes.architect.ChatOpenAI") as mock:
         instance = mock.return_value
-        instance.invoke.return_value = MagicMock(
-            content="""# PLAN
+        instance.ainvoke = AsyncMock(
+            return_value=MagicMock(
+                content="""# PLAN
 Test Plan
 # TODO
 - [ ] Test Todo"""
+            )
         )
         yield instance
 
 
-def test_architect_node_logic(mock_llm):
+@pytest.mark.asyncio
+@patch("controller.agent.nodes.architect.WorkerClient")
+@patch("controller.agent.nodes.architect.RemoteFilesystemMiddleware")
+async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
     # Cleanup files if they exist
     for f in ["plan.md", "todo.md"]:
         p = Path(f)
@@ -29,7 +34,7 @@ def test_architect_node_logic(mock_llm):
 
     state = AgentState(task="Build a robot")
 
-    result = architect_node(state)
+    result = await architect_node(state)
 
     # Check return value
     assert result.plan
@@ -52,12 +57,15 @@ def test_architect_node_logic(mock_llm):
     Path("todo.md").unlink()
 
 
-def test_architect_node_fallback(mock_llm):
+@pytest.mark.asyncio
+@patch("controller.agent.nodes.architect.WorkerClient")
+@patch("controller.agent.nodes.architect.RemoteFilesystemMiddleware")
+async def test_architect_node_fallback(mock_fs, mock_worker, mock_llm):
     # Mock fallback response
-    mock_llm.invoke.return_value = MagicMock(content="Just some text without sections")
+    mock_llm.ainvoke.return_value = MagicMock(content="Just some text without sections")
 
     state = AgentState(task="Build a robot")
-    result = architect_node(state)
+    result = await architect_node(state)
 
     assert result.plan == "Just some text without sections"
     assert result.todo == "- [ ] Implement the plan"

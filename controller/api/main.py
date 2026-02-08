@@ -1,20 +1,19 @@
 import asyncio
-import os
 import uuid
 
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
 from controller.api.routes import episodes, skills
 from controller.api import ops
+from controller.config.settings import settings
 from controller.clients.worker import WorkerClient
+from controller.clients.backend import RemoteFilesystemBackend
 from controller.graph.agent import create_agent_graph
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
-from controller.workflows.simulation import SimulationWorkflow
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger
 
@@ -22,8 +21,8 @@ from shared.logging import configure_logging, get_logger
 configure_logging("controller")
 logger = get_logger(__name__)
 
-TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
-WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
+TEMPORAL_URL = settings.temporal_url
+WORKER_URL = settings.worker_url
 
 app = FastAPI(title="Problemologist Controller")
 
@@ -82,10 +81,8 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
 
             try:
                 client = get_worker_client(session_id)
-                fs_middleware = RemoteFilesystemMiddleware(
-                    client, temporal_client=temporal_client_instance
-                )
-                agent = create_agent_graph(fs_middleware)
+                backend = RemoteFilesystemBackend(client)
+                agent = create_agent_graph(backend)
 
                 # Add initial trace
                 initial_trace = Trace(
@@ -117,10 +114,10 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
 
                 # Sync assets from worker
                 try:
-                    files = await fs_middleware.list_files("/")
+                    files = await backend.als_info("/")
                     for file_info in files:
-                        if file_info.get("type") == "file":
-                            path = file_info.get("path")
+                        if not file_info["is_dir"]:
+                            path = file_info["path"]
                             asset_type = AssetType.OTHER
                             if path.endswith(".py"):
                                 asset_type = AssetType.PYTHON
@@ -130,7 +127,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                             # Read content for small files
                             content = None
                             try:
-                                content = await fs_middleware.read_file(path)
+                                content = await backend.aread(path)
                             except:
                                 pass
 

@@ -21,15 +21,22 @@ async def test_run_generation_session_mocked():
     mock_script = "print('hello')"
 
     with patch("controller.agent.benchmark.graph.define_graph") as mock_define:
-        # Mock the compiled graph's ainvoke method
-        mock_app = AsyncMock()
-        mock_app.ainvoke.return_value = {
-            "session": MagicMock(status=SessionStatus.accepted),
-            "plan": mock_plan,
-            "current_script": mock_script,
-            "simulation_result": {"valid": True},
-            "review_feedback": "Approved",
-        }
+        # Mock the compiled graph's astream method
+        mock_app = MagicMock()
+
+        async def mock_astream_gen(input_state, **kwargs):
+            # Yield a state chunk
+            yield {
+                "planner": {
+                    "session": MagicMock(status=SessionStatus.accepted),
+                    "plan": mock_plan,
+                    "current_script": mock_script,
+                    "simulation_result": {"valid": True},
+                    "review_feedback": "Approved",
+                }
+            }
+
+        mock_app.astream = mock_astream_gen
         mock_define.return_value = mock_app
 
         final_state = await run_generation_session(prompt)
@@ -44,14 +51,20 @@ async def test_run_generation_session_rejected():
     prompt = "A complex linkage"
 
     with patch("controller.agent.benchmark.graph.define_graph") as mock_define:
-        mock_app = AsyncMock()
-        mock_app.ainvoke.return_value = {
-            "session": MagicMock(status=SessionStatus.planning),  # Initial status
-            "plan": {},
-            "current_script": "",
-            "simulation_result": None,
-            "review_feedback": "Rejected: Too complex",
-        }
+        mock_app = MagicMock()
+
+        async def mock_astream_gen(input_state, **kwargs):
+            yield {
+                "reviewer": {
+                    "session": MagicMock(status=SessionStatus.planning),
+                    "plan": {},
+                    "current_script": "",
+                    "simulation_result": None,
+                    "review_feedback": "Rejected: Too complex",
+                }
+            }
+
+        mock_app.astream = mock_astream_gen
         mock_define.return_value = mock_app
 
         final_state = await run_generation_session(prompt)
