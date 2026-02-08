@@ -5,6 +5,8 @@ import mujoco
 import structlog
 from build123d import Compound, export_stl
 
+from worker.simulation.builder import SimulationBuilder
+from worker.simulation.interface import SimulationScene
 from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
@@ -26,49 +28,40 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
 
 
-def simulate(component: Compound, output_dir: Path | None = None) -> SimulationResult:
+def simulate(
+    component: Compound | SimulationScene, output_dir: Path | None = None
+) -> SimulationResult:
     """
     Provide a physics-backed stability check.
     Logic:
-    - Convert Compound to MJCF.
+    - Convert Compound/Scene to MJCF using SimulationBuilder.
     - Run MuJoCo for a few frames.
     - Assert no NaNs/explosions.
     - Generate standard 24-view renders in /renders/.
     - Return stability status and render paths.
     """
-    logger.info("simulate_start")
+    logger.info("simulate_start", component_type=type(component).__name__)
 
-    # 1. Export STL for MuJoCo
+    # 1. Setup paths
     if output_dir:
+        # Use provided output_dir for assets
         renders_dir = output_dir / "renders"
     else:
         renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
 
-    stl_path = renders_dir / "component.stl"
-    export_stl(component, str(stl_path))
-
-    # 2. Generate MJCF
-    mjcf_xml = """
-<mujoco model="validation_scene">
-  <asset>
-    <mesh name="component_mesh" file="component.stl"/>
-  </asset>
-  <worldbody>
-    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
-    <geom type="plane" size="10 10 .01" rgba=".9 .9 .9 1"/>
-    <body name="component_body" pos="0 0 0.5">
-      <freejoint/>
-      <geom type="mesh" mesh="component_mesh" rgba="0 0.5 1 1"/>
-    </body>
-  </worldbody>
-</mujoco>
-"""
-    mjcf_path = renders_dir / "scene.xml"
-    with open(mjcf_path, "w") as f:
-        f.write(mjcf_xml)
-
     try:
+        # 2. Generate MJCF
+        builder = SimulationBuilder(output_dir=renders_dir)
+
+        if isinstance(component, SimulationScene):
+            assembly_to_process = component.assembly
+            # Note: We currently don't use agent_joints in builder, assume builder handles basic physics
+        else:
+            assembly_to_process = component
+
+        mjcf_path = builder.build_from_assembly(assembly_to_process)
+
         # 3. Load MuJoCo and run a few frames
         # We need to be careful with paths in MJCF if they are relative
         # MuJoCo will look for component.stl relative to scene.xml
@@ -89,7 +82,8 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
                 return SimulationResult(False, "Simulation went out of bounds.")
 
         # 4. Generate renders
-        render_paths = prerender_24_views(component)
+        # For renders, we use build123d Compound
+        render_paths = prerender_24_views(assembly_to_process, str(renders_dir))
 
         # Read MJCF content
         mjcf_content = None

@@ -1,0 +1,16 @@
+Testing to_mjcf...
+Assembly children count: 2
+Labels found: ['floor', 'box_agent']
+to_mjcf passed.
+Testing simulate...
+2026-02-08 18:23:01 [info     ] simulate_start                 component_type=SimulationScene
+2026-02-08 18:23:01 [info     ] prerender_24_views             output_dir=test_output/renders
+/app/.venv/lib/python3.12/site-packages/pyvista/plotting/plotter.py:206: UserWarning:
+This system does not appear to be running an xserver.
+PyVista will likely segfault when rendering.
+
+Alternatively, an offscreen version using OSMesa libraries and ``vtk-osmesa`` is available.
+
+  warnings.warn(
+[0m[31m2026-02-08 18:23:02.184 (   7.002s) [    7F15009BFB80]vtkXOpenGLRenderWindow.:456    ERR| vtkXOpenGLRenderWindow (0x55fe78291dd0): bad X server connection. DISPLAY=[0m
+ERROR:root:bad X server connection. DISPLAY=
