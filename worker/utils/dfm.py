@@ -3,6 +3,7 @@ from build123d import Compound, Part
 
 from worker.workbenches.cnc import analyze_cnc
 from worker.workbenches.injection_molding import analyze_im
+from worker.workbenches.print_3d import analyze_3dp
 from worker.workbenches.models import (
     ManufacturingConfig,
     ManufacturingMethod,
@@ -26,21 +27,6 @@ def validate_and_price(
     if method == ManufacturingMethod.INJECTION_MOLDING:
         return analyze_im(part, config)
     if method == ManufacturingMethod.THREE_DP:
-        # For 3DP, we use the Workbench class as it doesn't have a functional entry point yet
-        from worker.workbenches.print_3d import Print3DWorkbench
-
-        wb = Print3DWorkbench()
-        violations = wb.validate(part)
-        cost = wb.calculate_cost(part)
-
-        is_manufacturable = len(violations) == 0
-        logger.info("3dp_analysis_complete", is_manufacturable=is_manufacturable)
-
-        return WorkbenchResult(
-            is_manufacturable=is_manufacturable,
-            unit_cost=cost.unit_cost,
-            violations=violations,
-            metadata={"cost_breakdown": cost.model_dump()},
-        )
+        return analyze_3dp(part, config)
     logger.error("unsupported_manufacturing_method", method=method)
     raise ValueError(f"Unsupported manufacturing method: {method}")
