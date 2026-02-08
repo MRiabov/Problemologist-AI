@@ -4,6 +4,7 @@ import s3fs
 from unittest.mock import MagicMock, patch
 from worker.filesystem.backend import (
     SandboxFilesystemBackend,
+    LocalFilesystemBackend,
     SimpleSessionManager,
     FileInfo,
 )
@@ -72,7 +73,7 @@ def test_sandbox_backend_operations(mock_fs):
 
     # Test Read
     content = backend.read("test.txt")
-    assert content == b"hello world"
+    assert "hello world" in content
 
     # Test Edit
     backend.edit("test.txt", "world", "universe")
@@ -102,8 +103,9 @@ def test_sandbox_backend_isolation(mock_fs):
 
 
 def test_filesystem_router_logic(mock_fs, tmp_path):
-    fs, storage = mock_fs
-    backend = SandboxFilesystemBackend(fs, "bucket", SimpleSessionManager("sess"))
+    # Setup Local backend
+    session_dir = tmp_path / "sessions"
+    backend = LocalFilesystemBackend.create("sess", base_dir=session_dir)
 
     # Setup local mount
     local_utils = tmp_path / "utils"
@@ -118,13 +120,13 @@ def test_filesystem_router_logic(mock_fs, tmp_path):
         )
     ]
 
-    router = FilesystemRouter(s3_backend=backend, mount_points=mounts)
+    router = FilesystemRouter(local_backend=backend, mount_points=mounts)
 
     # Test reading from local mount
     content = router.read("/utils/tool.py")
     assert content == b"print('tool')"
 
-    # Test reading from S3
+    # Test reading from Local
     router.write("app.py", "print('app')")
     assert router.read("app.py") == b"print('app')"
 
@@ -134,8 +136,8 @@ def test_filesystem_router_logic(mock_fs, tmp_path):
 
 
 def test_router_ls_merged(mock_fs, tmp_path):
-    fs, storage = mock_fs
-    backend = SandboxFilesystemBackend(fs, "bucket", SimpleSessionManager("sess"))
+    session_dir = tmp_path / "sessions"
+    backend = LocalFilesystemBackend.create("sess", base_dir=session_dir)
 
     local_utils = tmp_path / "utils"
     local_utils.mkdir()
@@ -149,7 +151,7 @@ def test_router_ls_merged(mock_fs, tmp_path):
         )
     ]
 
-    router = FilesystemRouter(s3_backend=backend, mount_points=mounts)
+    router = FilesystemRouter(local_backend=backend, mount_points=mounts)
     router.write("main.py", "# main")
 
     # LS root

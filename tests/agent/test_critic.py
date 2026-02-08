@@ -13,8 +13,10 @@ def mock_llm():
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(
-            content="""DECISION: APPROVE
-FEEDBACK: Looks good."""
+            content="""---
+decision: approve
+---
+Looks good."""
         )
         yield instance
 
@@ -48,8 +50,10 @@ async def test_critic_node_approve(mock_llm, mock_worker):
 @pytest.mark.asyncio
 async def test_critic_node_reject(mock_llm, mock_worker):
     mock_llm.ainvoke.return_value = MagicMock(
-        content="""DECISION: REJECT
-FEEDBACK: Simulation failed."""
+        content="""---
+decision: reject_code
+---
+Simulation failed."""
     )
     mock_worker.read_file.side_effect = [
         json.dumps({"status": "error", "message": "collision"}),

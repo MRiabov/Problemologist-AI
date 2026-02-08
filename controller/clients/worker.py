@@ -1,6 +1,11 @@
 import httpx
 
-from worker.api.schema import BenchmarkToolResponse, EditOp, ExecuteResponse
+from worker.api.schema import (
+    BenchmarkToolResponse,
+    EditOp,
+    ExecuteResponse,
+    GitCommitResponse,
+)
 from worker.filesystem.backend import FileInfo
 
 
@@ -94,9 +99,12 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         async with httpx.AsyncClient() as client:
+            payload = {"script_path": script_path}
+            if script_content is not None:
+                payload["script_content"] = script_content
             response = await client.post(
                 f"{self.base_url}/benchmark/simulate",
-                json={"script_path": script_path, "script_content": script_content},
+                json=payload,
                 headers=self.headers,
                 timeout=60.0,
             )
@@ -108,9 +116,12 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
         async with httpx.AsyncClient() as client:
+            payload = {"script_path": script_path}
+            if script_content is not None:
+                payload["script_content"] = script_content
             response = await client.post(
                 f"{self.base_url}/benchmark/validate",
-                json={"script_path": script_path, "script_content": script_content},
+                json=payload,
                 headers=self.headers,
                 timeout=30.0,
             )
@@ -122,9 +133,12 @@ class WorkerClient:
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         async with httpx.AsyncClient() as client:
+            payload = {"script_path": script_path}
+            if script_content is not None:
+                payload["script_content"] = script_content
             response = await client.post(
                 f"{self.base_url}/benchmark/submit",
-                json={"script_path": script_path, "script_content": script_content},
+                json=payload,
                 headers=self.headers,
                 timeout=30.0,
             )
@@ -137,3 +151,26 @@ class WorkerClient:
             response = await client.get(f"{self.base_url}/health", timeout=5.0)
             response.raise_for_status()
             return response.json()
+
+    async def git_init(self) -> bool:
+        """Initialize a git repository in the workspace."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/git/init",
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+
+    async def git_commit(self, message: str) -> GitCommitResponse:
+        """Commit changes and sync to S3."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/git/commit",
+                json={"message": message},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return GitCommitResponse.model_validate(response.json())
