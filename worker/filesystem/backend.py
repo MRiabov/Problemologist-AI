@@ -6,9 +6,10 @@ to S3 storage with session-based isolation.
 
 import asyncio
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any, Protocol, runtime_checkable
 
 import s3fs
@@ -375,3 +376,311 @@ class SandboxFilesystemBackend(BackendProtocol):
         if not self._fs.exists(s3_path):
             raise FileNotFoundError(f"Path not found: {path}")
         self._fs.rm(s3_path, recursive=True)
+
+
+@type_check
+class LocalFilesystemBackend(BackendProtocol):
+    """Local-disk backed filesystem with session-based isolation.
+
+    Uses a local directory (e.g., /tmp/sessions/{session_id}) as the root.
+    Implements BackendProtocol for compatibility with deepagents.
+    """
+
+    def __init__(
+        self,
+        root: Path,
+        session_id: str,
+        s3_backend: SandboxFilesystemBackend | None = None,
+    ) -> None:
+        """Initialize the local filesystem backend.
+
+        Args:
+            root: Local root directory for this session.
+            session_id: Session ID for isolation.
+            s3_backend: Optional S3 backend for synchronization.
+        """
+        self.root = root
+        self.session_id = session_id
+        self.s3_backend = s3_backend
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def create(
+        cls,
+        session_id: str,
+        base_dir: Path = Path("/tmp/sessions"),
+        s3_config: S3Config | None = None,
+    ) -> "LocalFilesystemBackend":
+        """Factory method to create a new local backend instance."""
+        root = base_dir / session_id
+        s3_backend = SandboxFilesystemBackend.create(session_id, s3_config)
+        return cls(root=root, session_id=session_id, s3_backend=s3_backend)
+
+    def _resolve(self, virtual_path: str) -> Path:
+        """Resolve a virtual path to a local filesystem path."""
+        # Normalize: remove leading slash
+        rel = virtual_path.lstrip("/")
+        # Using joinpath and then resolve to check for traversal
+        path = (self.root / rel).resolve()
+        if not str(path).startswith(str(self.root.resolve())):
+            raise PermissionError(f"Path traversal attempted: {virtual_path}")
+        return path
+
+    def _virtual(self, local_path: Path) -> str:
+        """Convert a local path back to a virtual path."""
+        try:
+            rel = local_path.relative_to(self.root)
+            return "/" + str(rel)
+        except ValueError:
+            return "/" + local_path.name
+
+    def sync_to_s3(self) -> None:
+        """Push all local files to S3."""
+        if not self.s3_backend:
+            logger.warning("sync_to_s3_skipped_no_backend")
+            return
+
+        s3_root = self.s3_backend._resolve_path("")
+        logger.info("sync_to_s3_start", local=str(self.root), s3=s3_root)
+        try:
+            # s3fs put: put(lpath, rpath, recursive=True)
+            # Ensure S3 root ends with / if it doesn't already? s3fs might handle it.
+            self.s3_backend._fs.put(str(self.root), s3_root, recursive=True)
+            logger.info("sync_to_s3_complete")
+        except Exception as e:
+            logger.error("sync_to_s3_failed", error=str(e))
+            raise
+
+    # --- BackendProtocol Implementation ---
+
+    def ls_info(self, path: str) -> list[ProtocolFileInfo]:
+        """List files and directories with metadata."""
+        local_path = self._resolve(path)
+        if not local_path.exists():
+            return []
+
+        results = []
+        if local_path.is_dir():
+            for entry in local_path.iterdir():
+                is_dir = entry.is_dir()
+                virt = self._virtual(entry)
+                if is_dir and not virt.endswith("/"):
+                    virt += "/"
+
+                info: ProtocolFileInfo = {
+                    "path": virt,
+                    "is_dir": is_dir,
+                    "size": entry.stat().st_size if not is_dir else 0,
+                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime).isoformat(),
+                }
+                results.append(info)
+        else:
+            # If path is a file, return its info
+            results.append({
+                "path": self._virtual(local_path),
+                "is_dir": False,
+                "size": local_path.stat().st_size,
+                "modified_at": datetime.fromtimestamp(local_path.stat().st_mtime).isoformat(),
+            })
+
+        results.sort(key=lambda x: x["path"])
+        return results
+
+    def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
+        """Read file content with line numbers."""
+        local_path = self._resolve(file_path)
+        try:
+            content = local_path.read_text(encoding="utf-8")
+
+            empty_msg = check_empty_content(content)
+            if empty_msg:
+                return empty_msg
+
+            lines = content.splitlines()
+            start_idx = offset
+            end_idx = min(start_idx + limit, len(lines))
+
+            if start_idx >= len(lines):
+                return f"Error: Line offset {offset} exceeds file length ({len(lines)} lines)"
+
+            selected_lines = lines[start_idx:end_idx]
+            return format_content_with_line_numbers(
+                selected_lines, start_line=start_idx + 1
+            )
+        except FileNotFoundError:
+            return f"Error: File '{file_path}' not found"
+        except Exception as e:
+            return f"Error reading file '{file_path}': {e!s}"
+
+    def write(self, file_path: str, content: str) -> WriteResult:
+        """Write content to a new file."""
+        local_path = self._resolve(file_path)
+        if local_path.exists():
+            return WriteResult(
+                error=f"Cannot write to {file_path} because it already exists."
+            )
+
+        try:
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            local_path.write_text(content, encoding="utf-8")
+            return WriteResult(path=file_path, files_update=None)
+        except Exception as e:
+            return WriteResult(error=f"Error writing file '{file_path}': {e!s}")
+
+    def edit(
+        self,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ) -> EditResult:
+        """Perform exact string replacements."""
+        local_path = self._resolve(file_path)
+        if not local_path.exists():
+            return EditResult(error=f"Error: File '{file_path}' not found")
+
+        try:
+            content = local_path.read_text(encoding="utf-8")
+
+            result = perform_string_replacement(
+                content, old_string, new_string, replace_all
+            )
+            if isinstance(result, str):
+                return EditResult(error=result)
+
+            new_content, occurrences = result
+            local_path.write_text(new_content, encoding="utf-8")
+
+            return EditResult(
+                path=file_path, files_update=None, occurrences=int(occurrences)
+            )
+        except Exception as e:
+            return EditResult(error=f"Error editing file '{file_path}': {e!s}")
+
+    def grep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        """Literal text search in files."""
+        base_virt = path or "/"
+        try:
+            files = self.glob_info(glob or "**/*", path=base_virt)
+        except Exception as e:
+            return f"Error during grep: {e!s}"
+
+        regex = re.compile(re.escape(pattern))
+        matches: list[GrepMatch] = []
+
+        for f_info in files:
+            if f_info["is_dir"]:
+                continue
+
+            try:
+                local_path = self._resolve(f_info["path"])
+                content = local_path.read_text(encoding="utf-8")
+
+                for line_num, line in enumerate(content.splitlines(), 1):
+                    if regex.search(line):
+                        matches.append(
+                            {"path": f_info["path"], "line": line_num, "text": line}
+                        )
+            except:
+                continue
+
+        return matches
+
+    def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
+        """Find files matching a glob pattern."""
+        local_base = self._resolve(path)
+        if not local_base.exists() or not local_base.is_dir():
+            return []
+
+        results = []
+        p = pattern.lstrip("/")
+
+        try:
+            if "**" in p:
+                matched = local_base.rglob(p.replace("**/", ""))
+            else:
+                matched = local_base.glob(p)
+
+            for entry in matched:
+                is_dir = entry.is_dir()
+                virt = self._virtual(entry)
+                if is_dir and not virt.endswith("/"):
+                    virt += "/"
+
+                results.append({
+                    "path": virt,
+                    "is_dir": is_dir,
+                    "size": entry.stat().st_size if not is_dir else 0,
+                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime).isoformat(),
+                })
+            results.sort(key=lambda x: x["path"])
+            return results
+        except Exception as e:
+            logger.error("glob_failed", error=str(e))
+            return []
+
+    def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
+        """Upload multiple files."""
+        responses = []
+        for path, content in files:
+            try:
+                local_p = self._resolve(path)
+                local_p.parent.mkdir(parents=True, exist_ok=True)
+                local_p.write_bytes(content)
+                responses.append(FileUploadResponse(path=path, error=None))
+            except Exception as e:
+                responses.append(FileUploadResponse(path=path, error=str(e)))
+        return responses
+
+    def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        """Download multiple files."""
+        responses = []
+        for path in paths:
+            try:
+                local_p = self._resolve(path)
+                content = local_p.read_bytes()
+                responses.append(
+                    FileDownloadResponse(path=path, content=content, error=None)
+                )
+            except FileNotFoundError:
+                responses.append(
+                    FileDownloadResponse(path=path, error="file_not_found")
+                )
+            except Exception as e:
+                responses.append(FileDownloadResponse(path=path, error=str(e)))
+        return responses
+
+    # --- Legacy methods ---
+
+    def ls(self, path: str = "/") -> list[FileInfo]:
+        """List contents of a directory (Legacy)."""
+        infos = self.ls_info(path)
+        return [
+            FileInfo(
+                path=i["path"],
+                name=i["path"].rstrip("/").split("/")[-1] or "/",
+                is_dir=i["is_dir"],
+                size=i["size"],
+            )
+            for i in infos
+        ]
+
+    def exists(self, path: str) -> bool:
+        """Check if a path exists."""
+        try:
+            local_path = self._resolve(path)
+            return local_path.exists()
+        except:
+            return False
+
+    def delete(self, path: str) -> None:
+        """Delete a file or directory."""
+        local_path = self._resolve(path)
+        if not local_path.exists():
+            raise FileNotFoundError(f"Path not found: {path}")
+        if local_path.is_dir():
+            shutil.rmtree(local_path)
+        else:
+            local_path.unlink()

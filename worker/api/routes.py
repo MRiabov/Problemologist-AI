@@ -13,12 +13,15 @@ from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate
+from ..utils.git import commit_all, init_workspace_repo
 from .schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    GitCommitRequest,
+    GitCommitResponse,
     ListFilesRequest,
     ReadFileRequest,
     ReadFileResponse,
@@ -39,18 +42,18 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-def _load_component(script_path: str, script_content: str | None = None):
+def _load_component(
+    fs_router, script_path: str, script_content: str | None = None
+):
     """Utility to load the component from the agent's script."""
     # 1. If content is provided, use it directly (stateless/memory execution)
     if script_content:
+        logger.warning("load_component_using_script_content_deprecated")
         local_scope = {}
-        # Mocking or providing necessary imports for exec if needed
-        # But usually built-in imports work if installed in environment
         try:
             exec(script_content, local_scope)
             build_func = local_scope.get("build")
             if not build_func:
-                # Search for alias
                 for val in local_scope.values():
                     if callable(val) and getattr(val, "__name__", "") == "build":
                         build_func = val
@@ -62,30 +65,32 @@ def _load_component(script_path: str, script_content: str | None = None):
         except Exception as e:
             raise RuntimeError(f"Failed to execute script content: {e}")
 
-    # 2. Fallback to file path loading
-    path = Path(script_path)
-    if not path.is_absolute():
-        # Heuristic: if relative, try relative to root first, then maybe check if it's currently being written
-        pass
+    # 2. Path loading from local storage
+    try:
+        local_p = fs_router.local_backend._resolve(script_path)
+    except Exception:
+        # Fallback to absolute or relative to CWD if resolve fails (e.g. traversal check)
+        local_p = Path(script_path)
 
-    if not path.exists():
-        cwd = Path.cwd()
+    if not local_p.exists():
         raise FileNotFoundError(
-            f"Script not found at {path.absolute()}. Current working directory: {cwd}. "
+            f"Script not found at {local_p.absolute()}. "
             "Ensure the agent has written the file before calling simulate/validate."
         )
 
-    # Add current directory to sys.path to allow local imports in the script
-    workspace_root = str(Path.cwd())
-    if workspace_root not in sys.path:
-        sys.path.insert(0, workspace_root)
+    # Add session root to sys.path to allow local imports in the script
+    session_root = str(fs_router.local_backend.root)
+    if session_root not in sys.path:
+        sys.path.insert(0, session_root)
 
-    spec = importlib.util.spec_from_file_location("dynamic_build", script_path)
+    spec = importlib.util.spec_from_file_location("dynamic_build", str(local_p))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load spec for {local_p}")
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
     if hasattr(module, "build"):
-        # We assume build() takes no args or uses default seed
         return module.build()
     raise AttributeError("build() function not found in script.")
 
@@ -155,6 +160,51 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/git/init", response_model=StatusResponse)
+async def git_init(fs_router=Depends(get_router)):
+    """Initialize a git repository in the workspace."""
+    try:
+        init_workspace_repo(fs_router.local_backend.root)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except Exception as e:
+        logger.error("api_git_init_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/git/commit", response_model=GitCommitResponse)
+async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
+    """Commit changes and sync to S3."""
+    try:
+        commit_hash = commit_all(fs_router.local_backend.root, request.message)
+
+        # Sync to S3
+        try:
+            fs_router.local_backend.sync_to_s3()
+        except Exception as e:
+            logger.warning("api_git_commit_sync_failed", error=str(e))
+            # We don't fail the commit if sync fails, but we note it
+            return GitCommitResponse(
+                success=True,
+                commit_hash=commit_hash,
+                message=f"Commit successful but S3 sync failed: {e}",
+            )
+
+        if commit_hash:
+            return GitCommitResponse(
+                success=True,
+                commit_hash=commit_hash,
+                message="Commit successful and synced to S3",
+            )
+        return GitCommitResponse(
+            success=True,
+            commit_hash=None,
+            message="No changes to commit, but synced to S3",
+        )
+    except Exception as e:
+        logger.error("api_git_commit_failed", error=str(e))
+        return GitCommitResponse(success=False, message=str(e))
+
+
 @router.post("/runtime/execute", response_model=ExecuteResponse)
 async def execute_code(request: ExecuteRequest):
     """Execute Python code."""
@@ -170,10 +220,14 @@ async def execute_code(request: ExecuteRequest):
 
 
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
-async def api_simulate(request: BenchmarkToolRequest):
+async def api_simulate(
+    request: BenchmarkToolRequest, fs_router=Depends(get_router)
+):
     """Physics-backed stability check."""
     try:
-        component = _load_component(request.script_path, request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
         result = simulate(component)
         return BenchmarkToolResponse(
             success=result.success,
@@ -189,10 +243,14 @@ async def api_simulate(request: BenchmarkToolRequest):
 
 
 @router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
-async def api_validate(request: BenchmarkToolRequest):
+async def api_validate(
+    request: BenchmarkToolRequest, fs_router=Depends(get_router)
+):
     """Geometric validity check."""
     try:
-        component = _load_component(request.script_path, request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
         is_valid = validate(component)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -204,10 +262,14 @@ async def api_validate(request: BenchmarkToolRequest):
 
 
 @router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
-async def api_submit(request: BenchmarkToolRequest):
+async def api_submit(
+    request: BenchmarkToolRequest, fs_router=Depends(get_router)
+):
     """Handover to reviewer."""
     try:
-        component = _load_component(request.script_path, request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
         success = submit_for_review(component)
         return BenchmarkToolResponse(
             success=success,
