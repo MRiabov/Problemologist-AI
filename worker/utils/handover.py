@@ -32,7 +32,16 @@ def submit_for_review(component: Compound):
     cad_path = renders_dir / "model.step"
     export_step(component, str(cad_path))
 
-    # 3. Create review manifest (signal for next node)
+    # 3. Copy objectives.yaml if it exists
+    objectives_path = Path("objectives.yaml")
+    target_objectives_path = renders_dir / "objectives.yaml"
+    if objectives_path.exists():
+        import shutil
+
+        shutil.copy(objectives_path, target_objectives_path)
+        logger.info("objectives_yaml_persisted")
+
+    # 4. Create review manifest (signal for next node)
     manifest_path = renders_dir / "review_manifest.json"
     manifest = {
         "status": "ready_for_review",
@@ -41,6 +50,9 @@ def submit_for_review(component: Compound):
         "renders": render_paths,
         "mjcf_path": str(renders_dir / "scene.xml"),  # Created by simulate()
         "cad_path": str(cad_path),
+        "objectives_path": str(target_objectives_path)
+        if target_objectives_path.exists()
+        else None,
     }
 
     with open(manifest_path, "w") as f:

@@ -134,6 +134,17 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     if state.get("simulation_result") and not state["simulation_result"]["valid"]:
         validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
 
+    # Read objectives.yaml from worker if it exists
+    objectives_yaml = "# No objectives.yaml found."
+    try:
+        # We use the client directly to check if file exists and read it
+        files = await client.list_files(".")
+        if any(f.path.endswith("objectives.yaml") for f in files):
+            resp = await client.read_file("objectives.yaml")
+            objectives_yaml = resp
+    except Exception as e:
+        raise ValueError("failed_to_read_objectives_yaml", error=str(e))
+
     # Appending context to the base system prompt
     system_prompt = f"""{base_prompt}
 
@@ -143,6 +154,9 @@ Original User Request:
 
 Plan:
 {json.dumps(state.get("plan"), indent=2)}
+
+### Draft Objectives (YAML):
+{objectives_yaml}
 
 Review Feedback:
 {state.get("review_feedback", "No feedback provided.")}
