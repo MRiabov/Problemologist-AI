@@ -4,7 +4,7 @@
 
 We are to create a benchmark and a training dataset for evaluating LLM models on creating and solving dynamics problems.
 
-### Outputs and end goals
+### Outputs and end project goals
 
 1. Benchmarks and problems to solve
 2. Reasoning traces trying to create benchmarks,
@@ -25,7 +25,7 @@ We have two agents (or agent graphs) - the benchmark generator and the engineer 
 
 #### Agent purpose
 
-The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need a challges to scale, data to improve against.
+The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need a challenges to scale, data to improve against.
 
 #### Agent subagents
 
@@ -109,7 +109,7 @@ There are real-life engineering problems that LLM AI agents can help overcome. T
 
 Writes CAD code to solve the problems (the benchmarks as above).
 
-Is constrained by cost and manufacturability. Also constraints such as weight.
+Is constrained by cost and manufacturability. Also constraints such as weight and where the agent can actually build their solution.
 
 Has access to all realistic CAD tools.
 
@@ -155,7 +155,7 @@ The file writes don't persist in the Controller except into the observability da
 
 To update the files, or execute other functions: the controller parses the tool call locally; then sends the request over to the worker to execute whatever is related to the tool - read file, write file, or edit file (perhaps, `deepagents` handles the network part too? I think it does, via the Filesystem...).
 
-The network latency is perfectly acceptable as LLM reasoning latency far outweights the ping time.
+The network latency is perfectly acceptable as LLM reasoning latency far outweighs the ping time.
 
 #### Utils files
 
@@ -167,7 +167,7 @@ Unlike utils files which are static (or the container restart is acceptable), sk
 
 The container will download the pull skills from a skill git repo before every run (justified? else how do we handle the updates? The file size there is minimal.)
 
-Maybe use a dedicated public git repo? I think it's sound. However this is complexity, and probaly isn't that sound. But it'll enable human readability, which is a bonus.
+Maybe use a dedicated public git repo? I think it's sound. However this is complexity, and probably isn't that sound. But it'll enable human readability, which is a bonus.
 
 *Note: the skills are to be versioned either way.*
 
@@ -202,7 +202,7 @@ We define the file structure as follows, individual agents adapt to individual n
 ├── skills/                     # [Read-Only] Learned skills and documentation
 ├── utils/                      # [Read-Only] Fixed utilities and shared code
 │   └── ...
-├── renders/                      # [Read-Only/tool-generated] (Renders of images and  from the enviornment) 
+├── renders/                      # [Read-Only/tool-generated] (Renders of images and  from the environment) 
 │   ├── images/                 # Images from 24 angles (8 images clockwise on 3 levels).
 │   └── videos/                 # Video of the simulation. (latest simulation video.)
 ├── reviews/                     # [Read-Only] Reviews of the reviewer agent.
@@ -219,25 +219,8 @@ We define the file structure as follows, individual agents adapt to individual n
 ###### Benchmark Generator - planner
 
 1. Planning skills
-2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template.):
-
-    - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
-    - The geometry of the environment:
-        - coordinates of all major shapes in the environment + randomization.
-        - Geometry and coordinates of all moving parts:
-            - motors
-            - non-fixed parts.
-    - Input objective:
-        - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too)) + how shape shape is randomized (shape of the input should be held more or less constant throughout of the run)
-        - Position + position randomization margins (e.g. X+-10, Y+-20, Z+-10)
-    - Where the input objective is located (coordinates + randomization),
-    - Objectives location:
-        - A "forbid" objectives as a set of approximate AABB coordinates,
-        - A "goal" objective as a single AABB coordinate
-The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
-3. A TODO list from the planner
-
-The agent must make sure that in the plan, no object coincides with each other.
+2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template as above)
+3. Sample objectives.yaml (validated)
 
 ###### Benchmark Generator - CAD agent
 
@@ -302,8 +285,9 @@ The Planner will build a list of TODOs for the agent to do. The critic will veri
 #### Reviews by reviewers
 
 Reviews will be written by a markdown document and stored in `/reviews/` folder, to be able to access it later.
-Notably, to keep the agents accountable and enforce stricter and more consistent typing, agents would write a yaml frontmatter on reviews - e.g. `planned`, `has_feedback`, `done`
-<!-- Note: the entire schema was not defined yet. However, I like how spec-kitty that I use in the project does it. -->
+Notably, to keep the agents accountable and enforce stricter and more consistent typing, agents would write a yaml frontmatter on reviews - with `accepted`, `rejected`, `confirm_plan_refusal`, `reject_plan_refusal` for `decision`.
+
+If the CAD agent refuses the plan, either of `confirm_plan_refusal`, `reject_plan_refusal` can be selected, but only in this case (there must be validation for these fields).
 
 ### Token compression
 
@@ -311,7 +295,7 @@ As the agent will near its token generation limits, they will compress their old
 
 ### Skills
 
-The agents will be able to create and update their skills to improve the future runs. This is vital for continous improvement, and will be used alongside prompt improvement. *Skills* are actually the information that the agent doesn't know and needs to learn - for example how to use `build123d`.
+The agents will be able to create and update their skills to improve the future runs. This is vital for continuous improvement, and will be used alongside prompt improvement. *Skills* are actually the information that the agent doesn't know and needs to learn - for example how to use `build123d`.
 
 - If the agent fails too much, after resolving a solution, they will persist it to the skill.
 
@@ -321,7 +305,7 @@ We know that agents can not use `build123d` very well despite it being one of th
 
 #### `build123d` skill and access to documentation
 
-The agents will have an access to build123d documentation throught the skill (as per the SKILL.md standard, in `/references/ folder.)
+The agents will have an access to build123d documentation through the skill (as per the SKILL.md standard, in `/references/ folder.)
 
 #### Different agents have different skills
 
@@ -337,7 +321,7 @@ The skill agent will read a `skill-creator/` skill as from Anthropic.
 
 ##### Skill agent is run async
 
-The skill agent is run asyncronous to the execution, modifying the skill folder and pushing it to a git repo. It's filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
+The skill agent is run asynchronous to the execution, modifying the skill folder and pushing it to a git repo. It's filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
 The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
 ##### Skill agent has a journal too
@@ -367,7 +351,7 @@ When writing the skill in the end, they will write a skill from the actual reaso
 
 ###### Using a sidecar agent for Journalling
 
-It was proven to be more cost-effective to use a "sidecar" agent that runs in paralel to the primary model. We will use an inexpensive model, such as DeepSeek 3.2 or small models.
+It was proven to be more cost-effective to use a "sidecar" agent that runs in parallel to the primary model. We will use an inexpensive model, such as DeepSeek 3.2 or small models.
 
 <!-- Note: it was found that YAML/Markdown are the most effective for storing model outputs structured information output. YAML, later converted to markdown programmatically is likely preferable? -->
 
@@ -382,7 +366,7 @@ The agent will go through all notes in the session and read through ones that ar
 
 ###### Example
 
-1. Observation: Mulitple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it(struggle) .
+1. Observation: Multiple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it(struggle) .
 2. The learner agent records the issue (async)
 3. The main model finally finds that `Compound` syntaxis requires `Compound(children=[Part|Compound, ...])` syntaxis (with `children` upfront)
 4. The learner agent records the found solution and the skill.
@@ -448,15 +432,42 @@ Benchmark reviewer "accepts" and passes the environment to the "lead engineer" -
 
 Lead engineer <-> CAD modelling engineer <-> Engineering Reviewer
 
-The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info).
+The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
 CAD modelling engineer can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
 In this case, the Engineering Reviewer must agree and confirm that in fact, the price or weight was set too low, and will pass the plan back to the lead engineer for replanning.
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
+#### Benchmark generator Planner and Benchmark CAD designer
+
+The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
+
+The plan will have the following bullet points. The plan will be validated for consistency, and will not be accepted until the markdown passes strict formatting criteria, and will ensure that the bullet points are there:
+
+1. `plan.md`:
+    - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
+    - The geometry of the environment:
+        - coordinates of all major shapes in the environment + randomization.
+        - Geometry and coordinates of all moving parts:
+            - motors
+            - non-fixed parts.
+    - Input objective:
+        - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too))
+            - how shape is randomized (shape of the input should be held more or less constant throughout of the run). This is a bullet point list.
+        - Central position and position randomization margins (e.g. x:50, y:80,z:20, x_variation: 20, y_variation: 20, z_variation: 10)
+    - Where the input objective is located (coordinates + randomization),
+    - Objectives location:
+        - A "forbid" objectives as a set of approximate AABB coordinates,
+        - A "goal" objective as a single AABB coordinate
+The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
+2. A `todo.md` TODO list from the planner.
+3. A draft of `objectives.yaml` with rough values filled in.
+
+The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
+
 #### Benchmark generator with engineer handover
 
-The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
+The Engineer agent(s) (for whom the first point of access is the Planner/lead engineer) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
@@ -466,13 +477,131 @@ The engineer will also receive a YAML file with:
         - Including motors.
     3. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
     4. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
+    Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize it's previous result. It would have to beat it's own solution, by, say, 15%.  -->
 
-The positions positions of objectives in a YAML file, and information on randomization of starting object positions, so as to prevent guessing in a 3d space.
+The positions of objectives (including a build zone) in a `objectives.yaml` file, and information on randomization of starting object positions (small "runtime" jitter), so as to prevent guessing in a 3d space.
+
+##### A benchmark is reused multiple times
+
+Notably, the benchmarks are randomized and reused multiple times under different variations. the Engineering agent only receieves a "runtime" randomization - (as in the list of the relevant heading) currently only a (relatively) small jitter in the environment.
+
+##### What if the benchmark agent set the price too low?
+
+For now, nothing. I'll filter it out via SQL or similar later and make a "price discussion" between agents - probably. Or human-in-the-loop.
+
+#### Engineer Planner and "Coder" interaction
+
+Engineer sends three files to the coder agent who has to implement the plan:
+
+1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
+2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
+3. A `todo.md` TODO-list.
+
+##### `plan.md` structure for the engineering plan
+
+```markdown
+# Engineering Plan
+## 1. Solution Overview
+A brief description of the approach to solve the benchmark objective (e.g., "A gravity-fed ramp with a deflector plate to redirect the ball into the goal bin").
+## 2. Parts List
+For each part:
+- **Part name**: e.g., `ramp_main`
+- **Function**: What role it plays
+- **Geometry**: An overview of geometry
+    - **Mating points** with other connectors (list)
+- **Manufacturing method**: CNC / Injection Molding / 3D Print
+- **Material**: e.g., `aluminum-6061`, `abs-plastic`
+- **Estimated dimensions**: Rough sizing
+## 3. Assembly Strategy
+- How parts connect (fasteners, etc.) <!--e.g. bearings in the future -->
+- Mounting points to environment (if any drilling/attachment is allowed)
+<!-- - Order of assembly --> 
+<!-- Order of assembly is partially unnecessary because we kind of work in CAD. However, it's a good thing to think of. -->
+## 4. Cost & Weight Budget
+- `max_unit_cost`: $X (from objectives.yaml, planner's allocation)
+- `max_weight`: Y kg
+- Preliminary breakdown per part
+## 5. Risk Assessment
+- Potential failure modes (e.g., "ball bounces off ramp edge")
+- Mitigations for each risk
+- Runtime randomization considerations (position jitter handling)
+<!-- ## 6. Build123d Strategy
+- CSG vs sketch-based approach
+- Key operations (fillets, chamfers, patterns)
+- Reference skills to consult -->
+<!-- Note: the planner explicitly doesn't specify the CAD approach. It doesn't need to think about plans, it's about the geometry. -->
+```
+
+##### `objectives.yaml`
+
+`objectives.yaml` is a central data exchange object to the system. To centralize it's structure:
+
+```yaml
+# =============================================================================
+# objectives.yaml - Benchmark Objectives and Constraints
+# =============================================================================
+
+# Exact trigger volumes for success/failure
+# Defined as Axis-Aligned Bounding Boxes (AABB) [x, y, z]
+objectives:
+  goal_zone:
+    min: [x_min, y_min, z_min]
+    max: [x_max, y_max, z_max]
+
+  forbid_zones:
+    - name: "obstacle_collision_zone"
+      min: [x1, y1, z1]
+      max: [x2, y2, z2]
+
+  # The solver's design MUST be contained entirely within these bounds
+  build_zone:
+    min: [x, y, z]
+    max: [x, y, z]
+
+# Explicit simulation boundaries to prevent "out of bounds" failures
+simulation_bounds:
+  min: [-50, -50, 0]
+  max: [50, 50, 100]
+
+# Details for the object that needs to be delivered to the goal
+moved_object:
+  label: "projectile_ball"
+  shape_description: "sphere"
+  shape_static_randomization_parameters:
+     - radius: [5, 10]
+  start_position: [x, y, z]
+  # Initial randomization to ensure solution robustness
+  runtime_jitter: [±x, ±y, ±z]
+
+# Pre-existing moving parts or motors in the environment
+moving_parts:
+  - motors:
+    - name: "feeder_motor"
+      type: "motor"
+      position: [x, y, z]
+      dof: "rotate_z"
+      description: "Rotates clockwise to push the moved_object"
+  - name: "passive_slider"
+    type: "passive"
+    dof: "slide_y"
+    description: "Moves freely when impacted"
+
+# Economic and physical limits (challenging but feasible)
+# Typically set with a ~50% safety margin by the benchmark planner
+constraints:
+  max_unit_cost: 50.00  # USD
+  max_weight: 1.2       # kg
+
+# Metadata about the randomization seed/variation used for this run
+randomization:
+  static_scale_factor: 1.0
+  runtime_jitter_enabled: true
+```
 
 #### Coder and Reviewer interaction
 
-1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), and the `objectives.yaml` file (YAML files with objectives, as specified in ). Thus the Reviewer will only have readonly on all agent files permissions.
+1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), and the `objectives.yaml` file (YAML files with objectives, as specified above). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
@@ -480,7 +609,7 @@ The goal is to persist the reviews into a persistent file which the agent can re
 The reviews will also come with the following YAML frontmatter:
 
 ```yaml
-decision: approved # [approved, rejected]
+decision: approved # [approved, rejected, confirm_plan_refusal, confirm_plan_refusal]
 comments: [
    # short commentary on issues, as a array.
    # Up to 100 chars per issue.
@@ -572,7 +701,7 @@ Temporal needs a database and we will use the Postgres database used by temporal
 
 Because tasks like simulation (with involve both simulation and uploading to the database) could be long-running we are using webhooks and callbacks to report their completion.
 
-## Simulation and "Defintions of Done"
+## Simulation and "Definitions of Done"
 
 While this platform has notable downsides for future use, we pick MuJoCo, because it's battle-tested, and requires almost no compile time.
 
@@ -739,7 +868,7 @@ We also have other notable, only possibly useful commands (as from [deepagents d
 
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
-The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as desribed below)
+The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
 
 #### The "tools" as Python functions - Utils
 
@@ -764,12 +893,12 @@ Note - used by default by
 - Goal objective with forbid objective
 - Input objective with goal or forbid objectives.
 
-Validated under all environment randomizations.
+Validated under all environment randomization.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
-<!-- Note 2: `deepagent` framework supports subagents this is what we'll use here.-->
+<!-- Note 2: `deepagents` framework supports subagents this is what we'll use here.-->
 
 #### Exact tools logic
 
@@ -782,7 +911,7 @@ Run the workbench interface to validate the part for manufacturability; if passe
 1. Check cache for if we need to reverify the solution, early exit if not.
 2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position.
 3. Validate for the manufacturability as per the Workbench interface
-4. Validate for being in bounds
+4. Validate for being in build zone bounds.
 5. Determine cost
 6. Validate for cost,
 7. Validate for weight.
@@ -846,7 +975,7 @@ The workbench validation (as well as other util infrastructure are read-only in 
 
 3D printing, CNC and injection molding are supported.
 
-<!-- In the future, it's very interesting to support topology optimization, but that's a separte project. -->
+<!-- In the future, it's very interesting to support topology optimization, but that's a separate project. -->
 
 ### Off-the-shelf parts (COTS)
 
@@ -950,7 +1079,7 @@ Batch generation will be ran from a script or a container, offloading to multipl
 
 #### Async execution
 
-For both frontend and for backend, the workers will run async, with a paralel execution requirement.
+For both frontend and for backend, the workers will run async, with a parallel execution requirement.
 
 ### Frontend and debugging infrastructure
 
@@ -976,8 +1105,8 @@ I need a place to enable "create benchmark" functionality. So go from a high-lev
 
 Here's what I suggest: add a "+ Create new" primary button instead of "history" icon next to "benchmark runs". Upon this, the data from the the current will clear (from the UI, not from the DB), and we'll go into "benchmark creation" mode. Here the "traces" section will have a textbox on top of it, prompting to create a benchmark.
 
-Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder directory. the plan file will have a "start implementation" on the top of it; with it the benchmark genration will start.
-The UI will be automatically updated with new models as the build123d genration will progress.
+Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder directory. the plan file will have a "start implementation" on the top of it; with it the benchmark generation will start.
+The UI will be automatically updated with new models as the build123d generation will progress.
 
 ##### Interrupting the worker and progress bars
 
@@ -1011,7 +1140,7 @@ The rightmost column is split vertically into:
 
 ###### CAD viewer
 
-Turns out viewing CAD is not as easy. In addition, special-purpose CAD viewing funcionality is desired - for being able to "click" on a face and prompt something to a model - we'll need it in the future.
+Turns out viewing CAD is not as easy. In addition, special-purpose CAD viewing functionality is desired - for being able to "click" on a face and prompt something to a model - we'll need it in the future.
 
 Ideally, this is solved via WASM in the browser. But I can't give two craps about debugging WASM yet, e.g. by "Yet Another CAD viewer" which runs in WASM.
 
@@ -1043,7 +1172,7 @@ The CAD drafting agent will implement, the reviewer will send back reviews or ac
 
 Upon accepting, the environment and its randomized versions will be saved to Assets.
 
-Notably, the environment will also prerender a set of pictures (e.g. 24 pictures - each from different side) so that the engineering agent does not have to request their generation.
+Notably, the environment will also pre-render a set of pictures (e.g. 24 pictures - each from different side) so that the engineering agent does not have to request their generation.
 
 We may also make a script to generate a number of short input prompts via a LLM.
 
@@ -1070,7 +1199,7 @@ The goal of the application (as stated in the very beginning of the document) is
 
 <!-- ### Production workflow
 
-Norably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows. -->
+Notably, the production workflow is not an important part *right now* (February 4). We should prioritize the development workflows. -->
 <!-- Production workflow became a priority -->
 
 ## Complexity tracking worksheet (what is more complex but necessary)
