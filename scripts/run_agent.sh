@@ -7,16 +7,16 @@ set -e
 TASK=$1
 
 if [ -z "$TASK" ]; then
-    echo "Usage: $0 "Your task here""
+    echo "Usage: $0 \"Your task here\""
     exit 1
 fi
 
 echo "📦 Building agent image..."
-docker build -t problemologist-agent -f src/worker/Dockerfile .
+docker build -t problemologist-agent -f worker/Dockerfile .
 
 echo "🏃 Running agent..."
-docker run --rm 
-  -e OPENAI_API_KEY=$OPENAI_API_KEY 
-  -e SPEC_001_API_URL=${SPEC_001_API_URL:-http://worker:8001} 
-  problemologist-agent 
-  python -m src.agent.run "$TASK"
+docker run --rm \
+  -e OPENAI_API_KEY=$OPENAI_API_KEY \
+  -e SPEC_001_API_URL=${SPEC_001_API_URL:-http://worker:8001} \
+  problemologist-agent \
+  python -m controller.agent.run "$TASK"

@@ -32,8 +32,7 @@ async def _run_agent(task: str, thread_id: str):
 
     async for event in graph.astream(initial_state, config=config):
         for node_name, output in event.items():
-            print(f"
-[Node: {node_name}]")
+            print(f"\n[Node: {node_name}]")
             
             if "status" in output and output["status"]:
                 print(f"Status: {output['status']}")
@@ -46,15 +45,13 @@ async def _run_agent(task: str, thread_id: str):
                 
             if "journal" in output:
                 # Print only the latest entry if possible
-                new_entries = output["journal"].split("
-")[-5:]
+                new_entries = output["journal"].split("\n")[-5:]
                 print("Journal (latest):")
                 for entry in new_entries:
                     if entry.strip():
                         print(f"  {entry.strip()}")
 
-    print("
----")
+    print("\n---")
     print("✅ Run complete.")
 
 if __name__ == "__main__":

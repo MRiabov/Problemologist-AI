@@ -1,16 +1,43 @@
 from typing import Any
 
 import jinja2
+from controller.prompts import get_prompt
 
 
 class PromptManager:
-    """Manager for Jinja2 templates for the agent."""
+    """Manager for Jinja2 templates for the agent, loading from prompts.yaml."""
 
     def __init__(self):
-        self.env = jinja2.Environment(
-            loader=jinja2.DictLoader(
-                {
-                    "architect": """You are the Architect. 
+        # We'll load the templates on demand or during initialization
+        self._templates = self._load_all_templates()
+        self.env = jinja2.Environment(loader=jinja2.DictLoader(self._templates))
+
+    def _load_all_templates(self) -> dict[str, str]:
+        """Loads all templates from the configuration."""
+        templates = {}
+
+        # Mapping of internal template names to YAML keys
+        mapping = {
+            "architect": "cad_agent.planner.system",
+            "engineer": "cad_agent.actor.system",
+            "critic": "cad_agent.critic.system",
+            "sidecar": "cad_agent.sidecar.system",
+        }
+
+        for name, key in mapping.items():
+            try:
+                templates[name] = get_prompt(key)
+            except (KeyError, ValueError) as e:
+                # Fallback to hardcoded defaults if not found in YAML
+                # This ensures the agent can still function if the YAML is missing some keys
+                templates[name] = self._get_default_template(name)
+
+        return templates
+
+    def _get_default_template(self, name: str) -> str:
+        """Fallback hardcoded templates."""
+        defaults = {
+            "architect": """You are the Architect.
 Your goal is to plan the following task: {{ task }}
 
 Available skills:
@@ -29,7 +56,7 @@ Output your response in two sections:
 - [ ] <step 1>
 - [ ] <step 2>
 """,
-                    "engineer": """You are the Engineer. 
+            "engineer": """You are the Engineer.
 Implement the following step: {{ current_step }}
 
 Execution Plan context:
@@ -46,7 +73,7 @@ Instructions:
 2. Use only available tools and libraries.
 3. Output ONLY the Python code inside a markdown code block.
 """,
-                    "critic": """You are the Critic. 
+            "critic": """You are the Critic.
 Evaluate the implementation of the task: {{ task }}
 
 Execution Journal:
@@ -76,7 +103,7 @@ required_fixes:
 # Review Analysis
 [Your detailed reasoning and feedback here...]
 """,
-                    "sidecar": """You are the Sidecar Learner. 
+            "sidecar": """You are the Sidecar Learner.
 Analyze the execution journal for the task: {{ task }}
 
 Journal:
@@ -100,9 +127,8 @@ CONTENT:
 <Example code>
 ```
 """,
-                }
-            )
-        )
+        }
+        return defaults.get(name, "")
 
     def render(self, template_name: str, **kwargs: Any) -> str:
         """Render a template with the given context."""

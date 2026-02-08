@@ -39,7 +39,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     from deepagents import create_deep_agent
     from worker.filesystem.backend import SandboxFilesystemBackend
     from controller.prompts import get_prompt
-    from shared.git import init_workspace_repo
+    from shared.git_utils import init_workspace_repo
 
     # ... (rest of imports)
 

@@ -4,7 +4,8 @@ from pathlib import Path
 from functools import lru_cache
 
 # Adjust path based on where this file is located relative to project root
-CONFIG_PATH = Path(__file__).parent.parent / "config" / "prompts.yaml"
+# Using resolve() to get absolute path
+CONFIG_PATH = (Path(__file__).parent.parent / "config" / "prompts.yaml").resolve()
 
 
 @lru_cache
@@ -12,7 +13,10 @@ def load_prompts():
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(f"Prompts config not found at {CONFIG_PATH}")
     with open(CONFIG_PATH, "r") as f:
-        return yaml.safe_load(f)
+        data = yaml.safe_load(f)
+        if not data:
+            raise ValueError(f"Prompts config at {CONFIG_PATH} is empty")
+        return data
 
 
 def get_prompt(key: str) -> str:

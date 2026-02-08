@@ -24,6 +24,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY controller ./controller
 COPY worker ./worker
 COPY shared ./shared
+COPY config ./config
 COPY pyproject.toml uv.lock alembic.ini ./
 
 # Install the project

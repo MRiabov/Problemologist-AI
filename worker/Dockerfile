@@ -35,7 +35,9 @@ RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
 
 # Copy source code
 COPY --chown=agent:agent worker ./worker
+COPY --chown=agent:agent controller ./controller
 COPY --chown=agent:agent shared ./shared
+COPY --chown=agent:agent config ./config
 COPY --chown=agent:agent pyproject.toml uv.lock ./
 
 # Install the project

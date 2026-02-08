@@ -7,6 +7,7 @@ from temporalio.client import Client
 
 from controller.api.routes import episodes, skills
 from controller.api import ops
+from controller.prompts import load_prompts
 from controller.clients.worker import WorkerClient
 from controller.graph.agent import create_agent_graph
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -36,6 +37,15 @@ temporal_client_instance: Client = None
 
 @app.on_event("startup")
 async def startup_event():
+    # Validate prompts are available
+    try:
+        load_prompts()
+        logger.info("prompts_loaded_successfully")
+    except Exception as e:
+        logger.error("failed_to_load_prompts_at_startup", error=str(e))
+        # Fail fast as per user request
+        raise RuntimeError(f"Application cannot start without prompts: {e}") from e
+
     global temporal_client_instance
     try:
         temporal_client_instance = await Client.connect(TEMPORAL_URL)
