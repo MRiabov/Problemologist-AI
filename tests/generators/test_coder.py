@@ -4,9 +4,9 @@ from uuid import uuid4
 
 import pytest
 
-from worker.generators.benchmark.models import GenerationSession
-from worker.generators.benchmark.nodes import coder_node, extract_python_code
-from worker.generators.benchmark.state import BenchmarkGeneratorState
+from controller.agent.benchmark.models import GenerationSession
+from controller.agent.benchmark.nodes import coder_node, extract_python_code
+from controller.agent.benchmark.state import BenchmarkGeneratorState
 
 
 @pytest.fixture
@@ -51,11 +51,17 @@ async def test_coder_node_success(mock_state):
     mock_response = MagicMock()
     mock_response.content = f"```python\n{valid_script}\n```"
 
-    with patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
-        mock_llm = mock_llm_class.return_value
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
+        with patch("controller.agent.benchmark.nodes.create_deep_agent") as mock_create_agent:
+            mock_agent = mock_create_agent.return_value
+            mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
 
-        updated_state = await coder_node(mock_state)
+            with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+                mock_client = mock_client_class.return_value
+                mock_client.read_file = AsyncMock(return_value=valid_script)
+
+                with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
+                    updated_state = await coder_node(mock_state)
 
         assert updated_state["current_script"] == valid_script
         assert len(updated_state["messages"]) == 1
@@ -82,25 +88,28 @@ async def test_coder_node_with_feedback(mock_state):
     mock_response = MagicMock()
     mock_response.content = "```python\n# refined script\n```"
 
-    with patch("worker.generators.benchmark.nodes.ChatOpenAI") as mock_llm_class:
-        mock_llm = mock_llm_class.return_value
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
+        with patch("controller.agent.benchmark.nodes.create_deep_agent") as mock_create_agent:
+            mock_agent = mock_create_agent.return_value
+            mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
 
-        with patch("worker.generators.benchmark.nodes.Path.read_text") as mock_read:
-            mock_read.return_value = "{plan} {review_feedback} {validation_logs}"
+            with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+                mock_client = mock_client_class.return_value
+                mock_client.read_file = AsyncMock(return_value="# refined script")
 
-            await coder_node(mock_state)
+                with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
+                    await coder_node(mock_state)
 
-            # Verify the prompt contained the feedback and logs
-            args, _ = mock_llm.ainvoke.call_args
-            prompt_message = args[0][1].content
-            assert "Make it larger" in prompt_message
-            assert "Intersections found" in prompt_message
+            # Verify create_deep_agent was called with correct system prompt
+            args, kwargs = mock_create_agent.call_args
+            system_prompt = kwargs.get("system_prompt", "")
+            assert "Make it larger" in system_prompt
+            assert "Intersections found" in system_prompt
 
 
 @pytest.mark.asyncio
 async def test_validator_node_success(mock_state):
-    from worker.generators.benchmark.nodes import validator_node
+    from controller.agent.benchmark.nodes import validator_node
 
     mock_state["current_script"] = textwrap.dedent("""
         import build123d as bd
@@ -110,23 +119,29 @@ async def test_validator_node_success(mock_state):
             return p.part, "<mujoco/>"
     """)
 
-    with patch("worker.utils.validation.simulate") as mock_sim:
-        with patch("worker.utils.validation.validate") as mock_val:
-            mock_sim.return_value.success = True
-            mock_val.return_value = True
+    with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+        mock_client = mock_client_class.return_value
+        mock_client.git_commit = AsyncMock(return_value=MagicMock(success=True, commit_hash="hash"))
+        mock_client.validate = AsyncMock(return_value=MagicMock(success=True))
+        mock_client.simulate = AsyncMock(return_value=MagicMock(success=True, artifacts={"render_paths": []}))
 
-            updated_state = await validator_node(mock_state)
+        updated_state = await validator_node(mock_state)
 
-            assert updated_state["simulation_result"]["valid"] is True
-            assert mock_sim.call_count == 2  # for seeds 0 and 42
+        assert updated_state["simulation_result"]["valid"] is True
+        assert mock_client.simulate.call_count == 1
 
 
 @pytest.mark.asyncio
 async def test_validator_node_failure(mock_state):
-    from worker.generators.benchmark.nodes import validator_node
+    from controller.agent.benchmark.nodes import validator_node
 
     mock_state["current_script"] = "invalid code"
 
-    updated_state = await validator_node(mock_state)
-    assert updated_state["simulation_result"]["valid"] is False
-    assert "Validation error" in updated_state["simulation_result"]["logs"][0]
+    with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+        mock_client = mock_client_class.return_value
+        mock_client.git_commit = AsyncMock(return_value=MagicMock(success=True))
+        mock_client.validate = AsyncMock(return_value=MagicMock(success=False, message="Validation error"))
+
+        updated_state = await validator_node(mock_state)
+        assert updated_state["simulation_result"]["valid"] is False
+        assert "Validation error" in updated_state["simulation_result"]["logs"][0]

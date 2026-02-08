@@ -25,13 +25,18 @@ async def test_planner_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "deepagents.create_deep_agent"
+            "controller.agent.benchmark.nodes.create_deep_agent"
         ) as mock_create_agent,
         patch(
-            "worker.filesystem.backend.SandboxFilesystemBackend"
+            "controller.agent.benchmark.nodes.RemoteFilesystemBackend"
         ) as mock_backend,
         patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
     ):
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
         # Mock agent response
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {
@@ -51,7 +56,10 @@ async def test_planner_node_prompt_construction():
         assert (
             "You are a mechanical engineering architect" not in system_prompt
         )  # Should utilize the new template
-        assert "You are the first stage in a generation pipeline" in system_prompt
+        assert (
+            "You are an expert designer of spatial and geometric puzzles"
+            in system_prompt
+        )
 
 
 @pytest.mark.asyncio
@@ -75,13 +83,18 @@ async def test_coder_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "deepagents.create_deep_agent"
+            "controller.agent.benchmark.nodes.create_deep_agent"
         ) as mock_create_agent,
         patch(
-            "worker.filesystem.backend.SandboxFilesystemBackend"
+            "controller.agent.benchmark.nodes.RemoteFilesystemBackend"
         ) as mock_backend,
         patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
     ):
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client_cls.return_value = mock_client
+
         # Mock agent response
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Done")]}

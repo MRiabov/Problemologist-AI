@@ -1,10 +1,16 @@
 import json
+import os
 import re
 from pathlib import Path
 
 import structlog
+from deepagents import create_deep_agent
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
+
+from controller.clients.backend import RemoteFilesystemBackend
+from controller.clients.worker import WorkerClient
+from controller.prompts import get_prompt
 
 from .state import BenchmarkGeneratorState
 
@@ -36,14 +42,11 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     """
     Breaks down the user prompt into a concrete randomization strategy using a Deep Agent.
     """
-    from deepagents import create_deep_agent
-    from worker.filesystem.backend import SandboxFilesystemBackend
-    from controller.prompts import get_prompt
-    from shared.git import init_workspace_repo
+    session_id = str(state["session"].session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    client = WorkerClient(base_url=worker_url, session_id=session_id)
 
-    # ... (rest of imports)
-
-    logger.info("planner_node_start", session_id=state["session"].session_id)
+    logger.info("planner_node_start", session_id=session_id)
 
     # Load prompt from YAML config
     try:
@@ -59,13 +62,11 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
-    # Use a sandbox backend, though Planner mostly just thinks and outputs JSON
-    backend = SandboxFilesystemBackend.create(state["session"].session_id)
+    # Use a remote backend
+    backend = RemoteFilesystemBackend(client)
 
-    # Initialize Git Repo for this session
-    local_repo_path = Path("/tmp/workspaces") / state["session"].session_id
-    local_repo_path.mkdir(parents=True, exist_ok=True)
-    init_workspace_repo(local_repo_path)
+    # Initialize Git Repo on Worker
+    await client.git_init()
 
     agent = create_deep_agent(
         model=llm,
@@ -112,11 +113,11 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Generates build123d script based on plan and feedback using deepagents.
     """
-    from deepagents import create_deep_agent
-    from worker.filesystem.backend import SandboxFilesystemBackend
-    from controller.prompts import get_prompt
+    session_id = str(state["session"].session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    client = WorkerClient(base_url=worker_url, session_id=session_id)
 
-    logger.info("coder_node_start", session_id=state["session"].session_id)
+    logger.info("coder_node_start", session_id=session_id)
 
     # 1. Load prompt from YAML
     try:
@@ -152,7 +153,7 @@ Validation Logs:
 
     # 3. Setup Agent with deepagents
     llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    backend = SandboxFilesystemBackend.create(state["session"].session_id)
+    backend = RemoteFilesystemBackend(client)
 
     agent = create_deep_agent(
         model=llm, backend=backend, system_prompt=system_prompt, name="CAD Coder Agent"
@@ -171,12 +172,8 @@ Validation Logs:
 
     # 5. Update state
     try:
-        # read_raw to avoid line numbers
-        s3_path = backend._resolve_path("script.py")
-
-        if backend._fs.exists(s3_path):
-            with backend._fs.open(s3_path, "rb") as f:
-                state["current_script"] = f.read().decode("utf-8")
+        # read raw content from worker
+        state["current_script"] = await client.read_file("script.py")
     except Exception as e:
         logger.warning("coder_agent_failed_to_read_script", error=str(e))
 
@@ -192,12 +189,7 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
     """
     Validates the generated script using physics simulation and geometric checks via Worker API.
     """
-    import os
     import httpx
-    from pathlib import Path
-    from controller.clients.worker import WorkerClient
-    from worker.filesystem.backend import SandboxFilesystemBackend
-    from worker.utils.git import commit_all, init_workspace_repo
 
     script = state.get("current_script")
     if not script:
@@ -210,46 +202,18 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
     logger.info("validator_node_start", session_id=session_id)
 
     try:
-        # 0. Sync functionality for write is needed if we want worker to have the file
-        # But actually, the previous nodes (planner/coder) used SandboxFilesystemBackend.
-        # If that backend is configured to use S3/MinIO *directly* (which it is),
-        # then the worker (also connected to S3) *already sees the files*.
-        # We just need to make sure the file is written.
-        # coder_node uses backend.write/open.
-
-        # Git Integration: Sync S3 to Local and Commit
-        # We need to access backend to get S3 details
-        backend = SandboxFilesystemBackend.create(session_id)
-        local_repo_path = Path("/tmp/workspaces") / session_id
-        local_repo_path.mkdir(parents=True, exist_ok=True)
-        # Ensure it is initialized (in case planner didn't run or this is a retry)
-        init_workspace_repo(local_repo_path)
-
-        # Sync from S3 to local path
+        # 0. Git Integration: Commit on Worker
         try:
-            # Resolve root path in S3
-            s3_root = backend._resolve_path("")
-            if not s3_root.endswith("/"):
-                s3_root += "/"
-
-            # Download all files
-            # s3fs get: get(rpath, lpath, recursive=True)
-            # We assume backend._fs is s3fs compatible
-            backend._fs.get(s3_root, str(local_repo_path), recursive=True)
-            logger.info("git_sync_complete", local_path=str(local_repo_path))
-
-            # Commit
-            commit_hash = commit_all(
-                local_repo_path,
-                f"Checkpoint before validation. Script length: {len(script)}",
+            commit_res = await client.git_commit(
+                f"Checkpoint before validation. Script length: {len(script)}"
             )
-            if commit_hash:
-                logger.info("git_commit_success", commit_hash=commit_hash)
+            if commit_res.success and commit_res.commit_hash:
+                logger.info("git_commit_success", commit_hash=commit_res.commit_hash)
         except Exception as e:
-            logger.warning("git_sync_commit_failed", error=str(e))
+            logger.warning("git_commit_failed", error=str(e))
 
         # 1. Geometric Validation
-        val_res = await client.validate(script_path="script.py", script_content=script)
+        val_res = await client.validate(script_path="script.py")
         if not val_res.success:
             state["simulation_result"] = {
                 "valid": False,
@@ -261,7 +225,7 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
             return state
 
         # 2. Physics Simulation
-        sim_res = await client.simulate(script_path="script.py", script_content=script)
+        sim_res = await client.simulate(script_path="script.py")
         if not sim_res.success:
             state["simulation_result"] = {
                 "valid": False,
@@ -329,10 +293,13 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     Uses vision to inspect renders and verifies that only the review file is edited.
     """
     import base64
+
     import yaml
-    from deepagents import create_deep_agent
     from deepagents.backends.protocol import BackendProtocol
-    from worker.filesystem.backend import SandboxFilesystemBackend
+
+    session_id = str(state["session"].session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    client = WorkerClient(base_url=worker_url, session_id=session_id)
 
     logger.info("reviewer_node_start", round=state.get("review_round", 0))
 
@@ -400,7 +367,7 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
             self.violations.append(f"Attempted to delete path: {file_path}")
             return await self.inner.adelete(file_path)
 
-    base_backend = SandboxFilesystemBackend.create(state["session"].session_id)
+    base_backend = RemoteFilesystemBackend(client)
     guarded_backend = GuardedBackend(base_backend, review_filename)
 
     # 4. Prepare system prompt
@@ -457,10 +424,12 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
 
     # Parse review from backend
     try:
-        s3_path = base_backend._resolve_path(review_filename)
-        if base_backend._fs.exists(s3_path):
-            with base_backend._fs.open(s3_path, "rb") as f:
-                content = f.read().decode("utf-8")
+        # Check if review file exists
+        files = await client.list_files(os.path.dirname(review_filename))
+        exists = any(f.path.endswith(os.path.basename(review_filename)) for f in files)
+
+        if exists:
+            content = await client.read_file(review_filename)
 
             frontmatter_match = re.search(
                 r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL
