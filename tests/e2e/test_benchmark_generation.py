@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from worker.generators.benchmark.graph import run_generation_session
-from worker.generators.benchmark.models import SessionStatus
+from controller.agent.benchmark.graph import run_generation_session
+from controller.agent.benchmark.models import SessionStatus
 
 
 @pytest.mark.asyncio
@@ -59,11 +59,11 @@ async def test_benchmark_generation_e2e():
     # Patch dependencies
     # Note: We patch where they are IMPORTED in graph.py and storage.py
     with (
-        patch("worker.generators.benchmark.graph.get_db", side_effect=mock_get_db_gen),
-        patch("worker.generators.benchmark.storage.boto3", mock_boto),
-        patch("worker.generators.benchmark.graph.define_graph", return_value=mock_app),
+        patch("controller.agent.benchmark.graph.get_db", side_effect=mock_get_db_gen),
+        patch("controller.agent.benchmark.storage.boto3", mock_boto),
+        patch("controller.agent.benchmark.graph.define_graph", return_value=mock_app),
         patch(
-            "worker.generators.benchmark.graph.Path.read_bytes",
+            "controller.agent.benchmark.graph.Path.read_bytes",
             return_value=b"fake_bytes",
         ),
     ):

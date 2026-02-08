@@ -3,18 +3,19 @@ import pytest
 from pathlib import Path
 from worker.simulation.loop import SimulationLoop
 from worker.utils.validation import simulate, validate
-from worker.generators.benchmark.nodes import verify_syntax
+from controller.agent.benchmark.nodes import verify_syntax
+
 
 def test_model_produced_script_integration(tmp_path):
     """
-    Integration Test: 
+    Integration Test:
     Verifies that a script typically produced by the model:
     1. Passes syntax verification.
     2. Can be executed to produce a build123d Compound and MJCF string.
     3. The produced geometry can be validated.
     4. The produced geometry can be simulated without crashing.
     """
-    
+
     # This is a representative script that CAD Coder agent might produce
     model_script = textwrap.dedent("""
         from build123d import *
@@ -58,10 +59,10 @@ def test_model_produced_script_integration(tmp_path):
         exec(model_script, local_scope)
     except Exception as e:
         pytest.fail(f"Execution of model script failed: {e}")
-    
+
     assert "build" in local_scope
     build_func = local_scope["build"]
-    
+
     component, mjcf = build_func(seed=42)
     assert component is not None
     assert isinstance(mjcf, str)
@@ -76,7 +77,7 @@ def test_model_produced_script_integration(tmp_path):
     # This uses worker.utils.validation.simulate which runs MuJoCo for a few frames
     # and generates renders.
     sim_result = simulate(component)
-    
+
     assert sim_result.success is True
     assert "Simulation stable" in sim_result.summary
     # verify it actually did something (e.g., render paths populated)
