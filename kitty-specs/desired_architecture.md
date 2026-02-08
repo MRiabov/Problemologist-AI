@@ -29,7 +29,12 @@ The agent is to generate problems for an engineer to solve. This is important, a
 
 #### Agent subagents
 
-1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, how
+1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, friction, dynamic objects, motors, etc.
+2. A CAD engineer/coder that implements the benchmark from the plan
+3. A reviewer that reviews the environment for
+    - Feasibility of solution
+    - Lack of violation of environment constraints (no significant, etc.)
+    - Proper randomization.
 
 #### Output requirements
 
@@ -96,6 +101,12 @@ Problems with motors and moving parts are verified more consistently because the
 
 ### Engineer (problem solver)
 
+#### Purpose
+
+There are real-life engineering problems that LLM AI agents can help overcome. This agent is an engineer that should be capable of solving problems, given their visuals/CAD designs, and produce solutions as to how to solve a given problem; constrained on physics. The agent should operate in the most closely real-life environment. The agent shouldn't even understand it works in a "fake" environment.
+
+#### Description
+
 Writes CAD code to solve the problems (the benchmarks as above).
 
 Is constrained by cost and manufacturability. Also constraints such as weight.
@@ -123,12 +134,12 @@ The architect will create and persist a TODO list. The engineer must implement. 
 The Engineer agent will verify its work by:
 
 1. Checking the manufacturability of its solution, on
-  a. Individual part scale (this part can be machined)
-  b. Assembly scale - this assembly has no interference of parts and has valid part constraints.
+    1. Individual part scale (this part can be machined)
+    2. Assembly scale - this assembly has no interference of parts and has valid part constraints.
 2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
 3. Checking the weight of its solution.
 4. Simulating - did the model achieve the goal as per the benchmark?
-5. The critic will assess whether the simulation is stable or not - will it be allowed to work in a real scenario? Is it flaky?
+5. The critic will assess whether the simulation is stable or not - will it be functional to work in a real scenario? Is it flaky?
 
 ### Agentic framework
 
@@ -427,17 +438,41 @@ The agent will receive feedback from cost and manufacturability constraints (bas
 
 ### Agent handovers
 
+#### All handovers that happen
+
+User prompt ->
+benchmark planner agent <-> Benchmark CAD agent <-> benchmark reviewer (If plan is not valid - e.g. it specifies a conflicting geometry, the CAD agent will refuse; and send back to benchmark planner agent. However, the benchmark CAD agent can not refuse because it fails to do CAD, it can only refuse if the model is in fact invalid.)
+(Benchmark reviewer to CAD agent - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve , the benchmark reviewer agent can refuse)
+
+Benchmark reviewer "accepts" and passes the environment to the "lead engineer" - the Engineering Planner model. (indirect contact - no actual "communication")
+
+Lead engineer <-> CAD modelling engineer <-> Engineering Reviewer
+
+The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info).
+CAD modelling engineer can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
+In this case, the Engineering Reviewer must agree and confirm that in fact, the price or weight was set too low, and will pass the plan back to the lead engineer for replanning.
+
+The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
+
 #### Benchmark generator with engineer handover
 
 The Engineer agent(s) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
-The engineer will receive exact positions of objectives in a YAML file, and information on randomization of starting object positions, so as to prevent guessing.
+The engineer will also receive a YAML file with:
+    1. Exact positions (boundaries) of objectives.
+    2. All moving parts (it's impossible to guess from pictures what is moving and in which direction from pictures only), with their DOFs that are programmatically calculated, with a small text description of how they can move.
+        - Including motors.
+    3. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
+    4. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
+    <!-- (in future work) Later on, we will challenge the agent to optimize it's previous result. It would have to beat it's own solution, by, say, 15%.  -->
+
+The positions positions of objectives in a YAML file, and information on randomization of starting object positions, so as to prevent guessing in a 3d space.
 
 #### Coder and Reviewer interaction
 
-1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it). Thus the Reviewer will only have readonly on all agent files permissions.
+1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), and the `objectives.yaml` file (YAML files with objectives, as specified in ). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
@@ -614,11 +649,20 @@ Additionally, the simulation is constrained by the bounds of the simulation, i.e
 <!-- LLM-generated from my other spec. -->
 The benchmarks are randomized to enable a wider data distribution with less generation effort.
 
+"Static" randomization is stronger than the "runtime" randomization. Static randomization are complete variations of the environment - stretching the entire space, stretching objectives, etc. Whereas runtime randomization - meant to make the engineer less prone to "overfitting" their CAD to the exact environment - is smaller.
+
+##### Static randomization
+
 - The benchmark volume size can vary 2x in all sides, and will be rescaled to random values, e.g. 1.68\*0.8\*1.3; the benchmark generator agent can narrow the scaling down if somehing is expected to break; however it is undesirable as we want to keep randomization higher.
-  - The environment - ojectives (goals, forbids, build zones) are rescaled respectively.
+  - The environment - objectives (goals, forbids, build zones) are rescaled respectively.
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
-- The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
 - The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
+
+##### Runtime randomization
+
+Notably, the engineer is informed about runtime randomization to prevent unexpected issues.
+
+- The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
 
 #### Failure
 
@@ -709,6 +753,8 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 <!-- should it contain its environment model or only the generated model?  -->
 - `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
 <!-- Same: what's in the compound? -->
+- `preview_design` - a way to render the CAD files. Used for the engineer to get a visual inspection of its work. Probably doesn't need to render all 24 pictures (maybe, allow a `pitch=180, yaw = 45` parameter to look from a specific side.)
+Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 ##### Benchmark generator (CAD editor) tools
