@@ -1,11 +1,158 @@
-import hashlib
 from typing import Any
 
-from build123d import Part
+import structlog
+from build123d import Compound, Part
 
 from shared.type_checking import type_check
+from worker.workbenches.analysis_utils import compute_part_hash
 from worker.workbenches.base import Workbench
-from worker.workbenches.models import CostBreakdown
+from worker.workbenches.models import (
+    CostBreakdown,
+    ManufacturingConfig,
+    WorkbenchResult,
+)
+
+logger = structlog.get_logger()
+
+
+@type_check
+def calculate_3dp_cost(
+    part: Part | Compound,
+    config: ManufacturingConfig,
+    quantity: int = 1,
+    context: dict[str, Any] | None = None,
+) -> CostBreakdown:
+    """
+    Calculates 3D Printing cost: Setup + (Material + Run) * Quantity.
+    """
+    three_dp_cfg = config.three_dp
+    if not three_dp_cfg:
+        raise ValueError("3D Printing configuration missing")
+
+    # Default to abs for now
+    material_name = config.defaults.get("material", "abs")
+    if material_name not in three_dp_cfg.materials:
+        material_name = list(three_dp_cfg.materials.keys())[0]
+
+    material_cfg = three_dp_cfg.materials[material_name]
+
+    logger.info("calculating_3dp_cost", material=material_name, quantity=quantity)
+
+    # 1. Material Cost
+    # Volume in cm3 (build123d volume is in mm3)
+    volume_cm3 = part.volume / 1000.0
+    density = material_cfg.get("density_g_cm3", 1.04)
+    cost_per_kg = material_cfg.get("cost_per_kg", 20.0)
+
+    mass_kg = (volume_cm3 * density) / 1000.0
+    material_cost_per_part = mass_kg * cost_per_kg
+
+    # 2. Run Cost (Machine Time)
+    # Estimate printing time based on volume and deposition rate
+    # Default deposition rate: 15 cm3/hr if not specified
+    deposition_rate_cm3_hr = three_dp_cfg.parameters.get("deposition_rate_cm3_hr", 15.0)
+    printing_time_hr = volume_cm3 / deposition_rate_cm3_hr
+
+    machine_hourly_rate = material_cfg.get("machine_hourly_rate", 20.0)
+    run_cost_per_part = printing_time_hr * machine_hourly_rate
+
+    # 3. Setup Cost
+    setup_cost = three_dp_cfg.costs.get("setup_fee", 10.0)
+
+    # Apply reuse discount if part hash is in context
+    is_reused = False
+    if context is not None:
+        part_hash = compute_part_hash(part)
+        if part_hash in context:
+            setup_cost *= 0.5 # 50% discount on setup for repeated parts
+            is_reused = True
+        context[part_hash] = context.get(part_hash, 0) + quantity
+
+    unit_cost = material_cost_per_part + run_cost_per_part
+    total_cost = setup_cost + (unit_cost * quantity)
+
+    return CostBreakdown(
+        process="print_3d",
+        total_cost=total_cost,
+        unit_cost=total_cost / quantity if quantity > 0 else 0.0,
+        material_cost_per_unit=round(material_cost_per_part, 4),
+        setup_cost=round(setup_cost, 2),
+        is_reused=is_reused,
+        details={
+            "part_volume_cm3": round(volume_cm3, 2),
+            "printing_time_hr": round(printing_time_hr, 2),
+            "run_cost_per_unit": round(run_cost_per_part, 4),
+        },
+        pricing_explanation=(
+            f"3DP cost (${total_cost:.2f}) for {quantity} units. "
+            f"Material: {material_name} (${material_cost_per_part:.4f}/unit). "
+            f"Print time: {printing_time_hr:.2f} hr. "
+            f"Setup fee: ${setup_cost:.2f}."
+        ),
+    )
+
+
+@type_check
+def analyze_3dp(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+    """
+    Functional entry point for 3D Printing analysis.
+    """
+    logger.info("starting_3dp_analysis")
+
+    violations = []
+
+    # 1. Geometric Validity Check
+    if not part.is_valid:
+        violations.append(
+            "Geometry is not valid (non-manifold or self-intersecting)"
+        )
+
+    # 2. Closed Geometry Check
+    solids = part.solids()
+    if not solids:
+        violations.append("Geometry contains no solids")
+    else:
+        for i, solid in enumerate(solids):
+            # Check for watertightness
+            if hasattr(solid, "is_closed") and not solid.is_closed:
+                violations.append(f"Solid {i} is not closed (not watertight)")
+
+    # 3. Single Body Check
+    if len(solids) > 1:
+        violations.append(
+            f"Geometry must be a single body, found {len(solids)} solids"
+        )
+
+    # 4. Cost Calculation (single unit)
+    # We proceed with cost calculation even if there are violations, unless critical?
+    # Usually cost is only valid if manufacturable, but giving an estimate is sometimes useful.
+    # However, if it's not a valid solid, volume might be wrong.
+    try:
+        cost_breakdown = calculate_3dp_cost(part, config, quantity=1)
+        unit_cost = cost_breakdown.unit_cost
+    except Exception as e:
+        logger.error("3dp_cost_calculation_failed", error=str(e))
+        unit_cost = 0.0
+        cost_breakdown = None
+
+    is_manufacturable = len(violations) == 0
+
+    logger.info(
+        "3dp_analysis_complete",
+        is_manufacturable=is_manufacturable,
+        violations=len(violations),
+    )
+
+    metadata = {}
+    if cost_breakdown:
+        metadata["cost_breakdown"] = cost_breakdown.model_dump()
+
+    return WorkbenchResult(
+        is_manufacturable=is_manufacturable,
+        unit_cost=unit_cost,
+        violations=violations,
+        metadata=metadata,
+    )
 
 
 @type_check
@@ -13,53 +160,16 @@ class Print3DWorkbench(Workbench):
     """
     Workbench for 3D Printing (FDM/SLA).
     Enforces manifold geometry and single-body parts.
-    Cost is proportional to the volume of the part.
     """
 
-    def __init__(self, material_cost: float = 0.05):
-        """
-        Initializes the 3D Print Workbench.
+    def __init__(self, config: ManufacturingConfig | None = None):
+        from worker.workbenches.config import load_config
 
-        Args:
-            material_cost: Cost per unit volume.
-        """
-        self.material_cost = material_cost
+        self.config = config or load_config()
 
     def validate(self, part: Part) -> list[Exception | str]:
-        """
-        Validates the part for 3D printing.
-        Checks for:
-        - Geometric validity (manifold, no self-intersections).
-        - Closed geometry (watertight).
-        - Single body (exactly one solid).
-        """
-        violations = []
-
-        # Check geometric validity via OpenCASCADE
-        if not part.is_valid:
-            violations.append(
-                "Geometry is not valid (non-manifold or self-intersecting)"
-            )
-
-        # Check if geometry is closed/watertight
-        # In build123d, we can check if it's a solid or if it has any open shells.
-        # For simplicity in MVP, we check if it has solids and if those solids are closed.
-        solids = part.solids()
-        if not solids:
-            violations.append("Geometry contains no solids")
-        else:
-            for i, solid in enumerate(solids):
-                # Shape.is_closed check
-                if hasattr(solid, "is_closed") and not solid.is_closed:
-                    violations.append(f"Solid {i} is not closed (not watertight)")
-
-        # Enforce single body
-        if len(solids) > 1:
-            violations.append(
-                f"Geometry must be a single body, found {len(solids)} solids"
-            )
-
-        return violations
+        result = analyze_3dp(part, self.config)
+        return result.violations
 
     def calculate_cost(
         self,
@@ -67,31 +177,4 @@ class Print3DWorkbench(Workbench):
         quantity: int = 1,
         context: dict[str, Any] | None = None,
     ) -> CostBreakdown:
-        """
-        Calculates cost based on part volume and quantity.
-        """
-        is_reused = False
-        if context is not None:
-            part_hash = hashlib.md5(
-                str(part.center()).encode() + str(part.volume).encode()
-            ).hexdigest()
-            if part_hash in context:
-                is_reused = True
-            context[part_hash] = context.get(part_hash, 0) + quantity
-
-        unit_cost = part.volume * self.material_cost
-        total_cost = unit_cost * quantity
-
-        return CostBreakdown(
-            process="print_3d",
-            total_cost=total_cost,
-            unit_cost=unit_cost,
-            material_cost_per_unit=unit_cost,
-            setup_cost=0.0,
-            is_reused=is_reused,
-            details={
-                "part_volume": part.volume,
-                "material_cost_rate": self.material_cost,
-            },
-            pricing_explanation=f"Cost is purely volume-based (${self.material_cost}/mm3).",
-        )
+        return calculate_3dp_cost(part, self.config, quantity, context)
