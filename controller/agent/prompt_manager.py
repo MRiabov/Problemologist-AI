@@ -100,6 +100,18 @@ CONTENT:
 <Example code>
 ```
 """,
+                    "git_resolve": """You are an expert Software Engineer.
+Resolve the git merge conflict in the following file.
+
+File Content (with conflict markers):
+{{ file_content }}
+
+Instructions:
+1. Analyze the conflicting changes (HEAD vs incoming).
+2. Intelligent merge: Try to combine both changes if they are additive (e.g., different skills).
+3. If they conflict directly, prefer the HEAD version (your new skill) but ensure the file remains valid.
+4. Output ONLY the resolved file content. Do not include markdown code blocks (```) unless they are part of the file content.
+""",
                 }
             )
         )
