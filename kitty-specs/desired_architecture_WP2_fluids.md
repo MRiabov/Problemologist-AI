@@ -105,17 +105,23 @@ Simulation success is now defined by more complex states than "AABB containment"
 
 ## Infrastructure Impact
 
-### GPU Requirement
+### Infrastructure & Compute (Microservice Architecture)
 
-Fluid (MPM) and Soft-body (FEM) simulations are significantly more compute-intensive than rigid body. CPU execution is non-viable (minutes to hours). GPU execution brings this down to seconds/minutes.
+#### The Simulation Microservice
 
-* **Hardware**: Workers running WP2 tasks **must** have GPU acceleration (NVIDIA CUDA). 8GB VRAM minimum.
-* **Task Routing**: The Controller's `TaskQueue` must be split:
-  * `queue_cpu`: Rigid body tasks (MuJoCo).
-  * `queue_gpu`: Fluid/Soft tasks (Genesis).
-* **Docker Configuration**:
-  * The `worker` container image must include `nvidia-container-toolkit`.
-  * Base image changes from `python:3.12-slim` to `nvidia/cuda:12.x-runtime-ubuntu22.04`.
+We split the monolithic worker into specific capabilities to optimize resource usage.
+
+* **`sim-worker-gpu`**: Runs Genesis/MPM. Requires Nvidia Runtime.
+* **`sim-worker-cpu`**: Runs MuJoCo (Rigid Body) and a **CPU Fallback** for simple Genesis tasks.
+
+#### CPU Fallback Strategy
+
+While MPM is slow on CPU, we want to allow users without GPUs to run tests (e.g., CI/CD).
+
+1. **Detection**: Worker checks `torch.cuda.is_available()`.
+2. **Configuration**: If no GPU, we configure Genesis backend to `cpu`.
+3. **Limitations**: We cap the particle count to 5000 (vs 100k on GPU) to keep runtimes under 1 minute.
+4. **Docker**: We provide a `Dockerfile.cpu` that skips CUDA dependencies for a smaller image size.
 
 ### Data Storage
 

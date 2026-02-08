@@ -15,12 +15,17 @@ To enable the agent to **modify existing designs** based on new requirements or 
 
 We introduce a **Stateful Interaction** model. In standard generation, the conversation is stateless (Request -> Result). Here, we maintain a **Session Context**.
 
-### Session Context
+### Session Context (Microservice State)
 
-* **Current Script**: `design_v1.py`
-* **Current Model**: `design_v1.step`
-* **Semantic Map**: A mapping of Feature IDs to Human-readable Tags.
-* **Change History**: List of requested changes and their statuses.
+We do not store session state in the Agent's memory. We use a **Redis-backed Session Store**.
+
+* **Key**: `session:{session_id}`
+* **Value**: JSON blob containing:
+  * `current_script_path`: `/tmp/sessions/{id}/design_v1.py`
+  * `semantic_map`: `{"face_42": "top_lid"}`
+  * `history`: `["Created box", "Moved hole"]`
+
+### The Workflow
 
 ### The Workflow
 
@@ -66,9 +71,11 @@ def analyze_topology(compound):
 When the user says "Chamfer the top edge", the agent needs to select it in `build123d`.
 Instead of hardcoding IDs (which change!), we inject **Semantic Selectors**:
 
+<!-- FIXME: the former should never occur in the first place. -->
 ```python
 # OLD (Fragile)
 edges = part.edges()[14] 
+
 
 # NEW (Robust)
 edges = part.edges().filter_by(Axis.Z).sort_by(Axis.Z)[-1] # Top-most edges
@@ -78,15 +85,10 @@ The Adaptability Agent is trained to write *Selectors*, not hard indices.
 
 ### Frontend Integration (Human-in-the-loop)
 
-The Three.js / React Fiber viewer plays a crucial role.
+We will need a dedicated CAD viewer, e.g. Yet Another Cad Viewer, which allows to select faces, groups of faces, etc.
 
-1. **Raycasting**: User clicks on a face in the 3D viewer.
-2. **Identification**: The viewer sends the `FaceID` (or `FaceIndex`) to the backend.
-3. **Reverse Lookup**: The backend asks the Agent: "What part of the code created Face #42?"
-    * *(Note: This is hard. We might need source-mapping or simply heuristics).*
-4. **Prompt Context**: The chat prompt is updated:
-    * `User selected: Face #42 (Top Surface of Box).`
-    * `User Message: "Add a hole here."`
+It would send the face IDs or other metadata to the backend as augmented fro the propmt. Alternatively, it would send a number of images to the LLM to choose
+<!-- TODO: I don't know hwich -->
 
 ## Visualization of Changes (Diffing)
 
@@ -108,11 +110,15 @@ Standard Git-style diff of the generated Python script.
 
 * "Mass: 50g -> 55g (+10%)"
 * "Cost: $2.00 -> $2.10 (+5%)"
+<!-- good idea. -->
 
-## Tech Stack
+## Tech Stack & Reproducibility
 
 * **Build123d**: Specifically its robust **Selector API** (`faces().sort_by()`, `edges().filter_by()`). This is the backbone of robust editing.
-* **Git**: Every "Edit Step" generates a git commit in the session's temporary repo. This allows "Undo/Redo".
+* **Git (Reproducibility)**: implementation of "Undo/Redo" is **Git**.
+  * Every "Edit Step" creates a commit in a bare repo at `/var/data/sessions/{id}.git`.
+  * To "Undo", we `git reset --hard HEAD~1`.
+  * To "Reproduce", we can replay the git log on a fresh container.
 * **Three.js**: For the frontend viewer with raycasting support.
 * **Difftastic**: For syntax-aware code diffing (if we want to show nice diffs to the user).
 * **WebSockets**: For real-time updates during the edit session.
