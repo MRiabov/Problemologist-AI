@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from pathlib import Path
 
 from git import GitCommandError, Repo
@@ -79,21 +80,82 @@ class SidecarNode:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
                 logger.warning("Rebase conflict during pull. Attempting to resolve...")
-                # Simple resolution: ours (agent's new skill) wins for now,
-                # or we could just abort.
-                # Ideally, we'd use the LLM to merge, but for now let's try to abort rebase and just push?
-                # No, if rebase fails, we are in a detached head or intermediate state.
-                self.repo.git.rebase("--abort")
-                logger.error("Rebase failed and aborted. Skills might be out of sync.")
-                # TODO unhandled! should use the llm to resolve it. it can.
-                # I think the sidecar has in fact the tools, so it can.
-                return
+                try:
+                    self._resolve_conflicts()
+                    self.repo.git.rebase("--continue")
+                    logger.info("Rebase resolved and continued.")
+                except Exception as e:
+                    logger.error(f"Rebase failed after resolution attempt: {e}. Aborted.")
+                    self.repo.git.rebase("--abort")
+                    return
 
             self.repo.git.push()
             logger.info("Skills synced to git successfully.")
 
         except GitCommandError as e:
             logger.error(f"Git sync failed: {e}")
+
+    def _resolve_conflicts(self):
+        """Resolve git conflicts using LLM."""
+        try:
+            status = self.repo.git.status(porcelain=True)
+            # Find unmerged files (code 'U' in first or second column)
+            conflicted_files = []
+            for line in status.splitlines():
+                # Format is typically 'XY PATH'
+                # Unmerged entries have U in X or Y
+                code = line[:2]
+                path = line[3:]
+                # Handle quoted paths
+                if path.startswith('"') and path.endswith('"'):
+                    path = path[1:-1]
+
+                if "U" in code:
+                    conflicted_files.append(path)
+
+            for file_path in conflicted_files:
+                full_path = self.suggested_skills_dir / file_path
+                if not full_path.exists():
+                    continue
+
+                content = full_path.read_text(encoding="utf-8")
+
+                # Check for conflict markers just in case
+                if "<<<<<<<" not in content:
+                    continue
+
+                prompt = (
+                    "You are an expert software engineer resolving a git merge conflict.\n"
+                    "The following file content contains conflict markers (<<<<<<<, =======, >>>>>>>).\n"
+                    "Please resolve the conflict by keeping the most relevant and complete information from both sides.\n"
+                    "Do not include any explanation, just the resolved code/markdown.\n\n"
+                    f"File Content:\n{content}"
+                )
+
+                response = self.llm.invoke([HumanMessage(content=prompt)])
+                resolved_content = str(response.content)
+
+                # Strip markdown code blocks if present
+                # Use regex to robustly extract content within ``` ... ```
+                code_block_match = re.search(r"```(?:\w+)?\n(.*?)```", resolved_content, re.DOTALL)
+                if code_block_match:
+                    resolved_content = code_block_match.group(1).strip()
+                elif resolved_content.strip().startswith("```"):
+                    # Fallback for simple fence stripping if regex fails (e.g. no newline after first fence)
+                    lines = resolved_content.strip().splitlines()
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    resolved_content = "\n".join(lines).strip()
+
+                full_path.write_text(resolved_content, encoding="utf-8")
+                self.repo.git.add(file_path)
+                logger.info(f"Resolved conflict in {file_path}")
+
+        except Exception as e:
+            logger.error(f"Error resolving conflicts: {e}")
+            raise e
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the sidecar node logic."""
