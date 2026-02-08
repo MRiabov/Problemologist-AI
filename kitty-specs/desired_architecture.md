@@ -23,6 +23,16 @@ We have two agents (or agent graphs) - the benchmark generator and the engineer 
 
 ### Benchmark generator agent (or graph)
 
+#### Agent purpose
+
+The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need a challges to scale, data to improve against.
+
+#### Agent subagents
+
+1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, how
+
+#### Output requirements
+
 The benchmark generator writes code for the and gets internal reviews by the reviewer inside of the generator.
 
 The benchmarks are randomized to ensure data distribution.
@@ -45,6 +55,44 @@ Motors require power to run, however, we don't bother with "wiring" yet.
 Problems with motors and moving parts are verified more consistently because they are more prone to error.
 
 <!-- note: it would be useful to persist an "expected solution" from the planner during task generator. It'll help guide exploration and maybe improve LLM optimization (prompt reflection/RL) with more data. -->
+
+#### Subagents output requirements
+
+#### Sample output
+
+(input: Test benchmark: drop a ball into a funnel)
+
+```markdown
+1. **Learning Objective**: This benchmark tests the agent's ability to perform **spatial redirection** and **slope calculation**. The agent must design a geometry that intercepts a dynamic object (falling ball) and uses gravity/inclination to guide it to a target while avoiding a forbidden area directly beneath the release point; and also avoiding the bounds of the simulation.
+
+2. **Static Geometry**:
+    - **Support Wall**: A vertical plate at the back (Y=-20) to provide a mounting surface for the agent's part.
+    - **Goal Bin**: A small open-topped box or designated area where the ball must land.
+
+3. **Input object**:
+    - **The Projectile**: A high-density sphere (ball) spawned at a high Z-coordinate. It is subject to gravity and will fall immediately upon simulation start.
+
+3. **Objective entities**:
+    - **Forbid zones**:
+        - A block located directly under the ball's release point to penalize a simple vertical drop.
+    - **Goal zone**:
+        - An objective located inside the funnel.
+
+4. **Success Criteria**: The ball's center of mass must enter the `zone_goal` (an axis-aligned bounding box defining the interior of the Goal Bin).
+
+5. **Rescale Limits**: [0.8, 1.2] for X, Y, and Z to maintain the functional relationship between the drop point and the target.
+
+6. **Randomization**:
+    - `ball_start_x`: Small horizontal offset to the release point.
+    - `goal_offset_x`: The distance the ball needs to be redirected horizontally.
+    - `obstacle_height`: The height of the forbidden zone, forcing the agent to adjust the steepness of its ramp.
+
+7. **Python Script Structure**:
+    - Define the environment (Wall, Obstacle, Goal Zone).
+    - Define the dynamic ball as part of the environment (but with mass/physics).
+    - Define the agent's part (the ramp/bridge).
+    - Use `to_mjcf` to export the scene.
+```
 
 ### Engineer (problem solver)
 
@@ -169,11 +217,30 @@ Utils (read-only):
 1. Refuse plan (a script that sends a request to the endpoint)
 2. Utils necessary for functioning (as described in other parts of the document)
 
-##### Planner (with different templates for engineer planner and benchmark planner)
+##### Starting files for planner
 
 1. Planning skills
-2. A markdown plan template (auto-validated, refuses pass if doesn't match template.)
+2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template.):
+
+    - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
+    - The geometry of the environment:
+        - coordinates of all major shapes in the environment + randomization.
+        - Geometry and coordinates of all moving parts:
+            - motors
+            - non-fixed parts.
+    - Input objective:
+        - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too)) + how shape shape is randomized (shape of the input should be held more or less constant throughout of the run)
+        - Position + position randomization margins (e.g. X+-10, Y+-20, Z+-10)
+    - Where the input objective is located (coordinates + randomization),
+    - Objectives location:
+        - A "forbid" objectives as a set of approximate AABB coordinates,
+        - A "goal" objective as a single AABB coordinate
+The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 3. A TODO list from the planner
+
+The agent must make sure that in the plan, no object coincides with each other.
+
+##### Planner - benchmark generator
 
 ### Agent artifacts
 
@@ -467,6 +534,45 @@ While this platform has notable downsides for future use, we pick MuJoCo, becaus
 
 But for an MVP this is fine. -->
 <!-- The corollary of not being able to run FEM is that the model can produce physically inadequate parts and still succeed. But I can't do much about it yet. -->
+
+### Simulation constants and assumptions
+
+We operate in a real-world-like scenario, with rigid bodies, gravity,  real-world materials - with all standard properties like friction, restitution (bounciness), etc.
+
+In environments, some objects are fixed, whereas others can be freely hanging or partially constrained at will to other objects - the input environment is not "bound" by physics too much. Whereas, the engineer-created objects can *never* be fixed unless they are properly constrained (in near future, we want to add "bolting" mechanism to the environment - i.e. the model would drill a hole in an environment and constrain it's object to the hole or multiple holes); and all constraints must be physically-realistic.
+
+#### Physically-realistic constraints
+
+For engineers, constraints must be physically realistic. Meaning: if an engineer tries to constrain two parts together, they need to use fasteners or make a mechanism which would fit two parts together. However, the engineer can't constrain two parts by just assigning them a CAD constraint.
+We can perhaps verify it by simply adding realistic fastener logic.
+
+Similarly, while you can constrain a ball to a plane in CAD, you can't do so in real life. In real life, a ball needs to have a special holder. Two flat planes can't be constrained to each other, you need to either add them, make a real constraint that would hold them together.
+
+##### Creating
+
+####
+
+##### Allowed components in simulation
+
+The simulation would have only a set number of components that both benchmark designer and engineer can use. The following list is acceptable:
+
+1. 3d CAD parts:
+    - Environment (unmodifiable, or modifiable with minor changes, e.g. drilling);
+        - Objectives (goal, forbid zones)
+        - Parts (any obstacle/standard CAD object) <!-- probably needs for a better name-->
+        - Input objectes (e.g. - a ball that needs to be delivered somewhere.)
+    - Engineer parts:
+       - 3d CAD parts representing real-life objects that engineers would normally create; bound by all physics.
+2. Motors (and simple scripts/functions that run the motors, e.g. in sinusoidal wave, or start/stop every few seconds). Accessible by both engineer and benchmark generator.
+3. Fasteners - Accessible by both engineer and benchmark generator, however likely environment doesn't really need them.
+
+<!-- Future:
+Bearings.
+Gears,
+PCBs
+Wires
+Fluid vessels, e.g. pipes, hoses, or tanks that supply each. 
+Fluid pumps.-->
 
 ### Definition of "success" and failure in the simulation
 

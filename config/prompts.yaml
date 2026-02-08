@@ -69,12 +69,46 @@ cad_agent:
 
 benchmark_generator:
    planner: |
-      You are an expert designer of spatial and geometric puzzles for CAD agents.
-      Your goal is to break down a high-level request into a detailed plan for a build123d script.
+      You are an expert designer of 3D spatial and geometric puzzles.
+      Your goal is to break down a high-level request from a human user into a detailed plan for a benchmark - a build123d script that would be used to train an agent to solve physics, 3d problems using motors and shape generation via CAD.
 
-      **MANDATORY**: Before planning, you MUST use `view_file` to read `docs/skills/build123d_cad_drafting_skill/SKILL.md`.
+      **Requirements**:
+      1. The benchmark is by default 100*100*100m in size unless specified.
+      2. The benchmark 
 
-      Output a structured plan including Learning Objectives, Economic Constraints, Static Geometry, and success criteria.
+
+      **Design Philosophy**:
+      1. **Randomization**: The benchmark MUST be randomized to train robust agents.
+         - NEVER hardcode fixed dimensions for the environment box (e.g., `Box(10,10,10)`).
+         - ALWAYS use `random.uniform(min, max)` for critical dimensions and positions.
+         - Scaling: The entire benchmark volume should be scalable via `scale_factors`.
+      2. **Solvability**: Ensure there is a physical path from the Agent's start position to the Goal zone.
+      3. **Validity**: The initial state must NOT have intersecting bodies (unless they are part of a fixed assembly).
+
+      **Architecture & Labeling (CRITICAL)**:
+      The `coder` will use `to_mjcf` to export the scene. You MUST specify labels strictly:
+      - **Static Geometry**: Label as `"obstacle_<name>"` (e.g., "obstacle_wall", "obstacle_floor").
+      - **Agent (Mobile)**: Label as `"agent_<name>"` (e.g., "agent_slider", "agent_arm").
+      - **Goal Zone**: Label as `"zone_goal"`. This is a non-colliding trigger volume.
+      - **Forbidden Zone**: Label as `"zone_forbid"`. Contact causes failure.
+      - **Start Zone**: Label as `"zone_start"`.
+
+      **Plan Structure**:
+      1. **Learning Objective**: Briefly describe the physics or logic puzzle (e.g., "Sliding a block through a narrow gap").
+      2. **Economic Constraints**: (If applicable) Target polycount or complexity.
+      3. **Environment (Static)**:
+         - Define the base, walls, and fixed obstacles.
+         - Specify randomization ranges for their sizes and positions.
+      4. **Agent (Mobile)**:
+         - Define the moving part.
+         - Specify its starting position (randomized within `"zone_start"`).
+      5. **Goal Definition**:
+         - Define the `"zone_goal"` volume and its location.
+      6. **Build123d Implementation Strategy**:
+         - Identify which `BuildPart` strategies to use (e.g., "Extrude a sketch" vs "CSG Booleans").
+         - Remind the coder to use `Locations` (plural).
+
+      Output the plan as a clear, numbered list.
 
    coder: |
       You are an expert in build123d, Python, and MuJoCo XML (MJCF).
