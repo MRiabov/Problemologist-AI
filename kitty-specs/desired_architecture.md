@@ -170,6 +170,18 @@ Default logic: git commit & git push. If push fails due to merge conflict, do gi
 
 *note*: Ideally, we'd do this logic in controller since controller is the place where we manage all secrets, but... it's not that scary, and we trust our compute nodes, for now.
 
+#### Automatic validation of files
+
+Many files - TODO lists, plans, would be automatically verified, with descriptive, markdown-like errors submitted to the agent. (e.g. in plan files, all sections must be submitted).
+
+##### Validating markdown files
+
+Markdown is validated statically to ensure a structure - e.g. bullet points, subheadings or others is met.
+
+##### Validating python files
+
+Files are linted and don't pass execution/submission if they have red errors. Refer to "linting" section.
+
 #### Starting folder structure for various agents
 
 We define the file structure as follows, individual agents adapt to individual needs:
@@ -191,33 +203,9 @@ We define the file structure as follows, individual agents adapt to individual n
 <!-- The agent can create more than one .py file. -->
 ```
 <!-- Important note: some of these are always fetched from the s3 and are only "fake" for the agent. The "fake" is done by FilesystemMiddleware. -->
-##### Benchmark generator (CAD agent)
+##### Benchmark generator
 
-1. Skills (read-only)
-2. A template for creating benchmark generator files (read-write)
-3. A TODO list (read-write, validated (validated how?))
-4. A plan from the planner (read-only)
-5. A journal (read-write)
-
-Utils (read-only):
-
-1. Refuse plan (a script that sends a request to the endpoint) (shouldn't happen, realistically.)
-2. Utils necessary for functioning (as described in other parts of the document)
-
-##### Engineer
-
-1. Skills (read-only)
-2. A template for an engineer files solutions (read-write)
-3. A TODO list from the planner (read-write)
-4. A plan from the planner (read-only)
-5. A Journal (read-write)
-
-Utils (read-only):
-
-1. Refuse plan (a script that sends a request to the endpoint)
-2. Utils necessary for functioning (as described in other parts of the document)
-
-##### Starting files for planner
+###### Benchmark Generator - planner
 
 1. Planning skills
 2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template.):
@@ -239,6 +227,32 @@ The agents' file must correspond to roughly the structure detailed above, with a
 3. A TODO list from the planner
 
 The agent must make sure that in the plan, no object coincides with each other.
+
+###### Benchmark Generator - CAD agent
+
+1. Build123d and implementation skills (read-only)
+2. A template for creating benchmark generator files (read-write) (e.g. `output.py`)
+3. A TODO list (read-write, validated automatically via a on-edit hook (watchdog, or maybe an implicit trigger via ))
+4. A plan from the planner (read-only)
+5. A journal (read-write)
+
+Utils (read-only):
+
+1. Refuse plan (a script that sends a request to the endpoint) (shouldn't happen, realistically.)
+2. Utils necessary for functioning (as described in other parts of the document)
+
+##### Engineer
+
+1. Skills (read-only)
+2. A template for an engineer files solutions (read-write)
+3. A TODO list from the planner (read-write)
+4. A plan from the planner (read-only)
+5. A Journal (read-write)
+
+Utils (read-only):
+
+1. Refuse plan (a script that sends a request to the endpoint)
+2. Utils necessary for functioning (as described in other parts of the document)
 
 ##### Planner - benchmark generator
 
@@ -543,14 +557,16 @@ In environments, some objects are fixed, whereas others can be freely hanging or
 
 #### Physically-realistic constraints
 
-For engineers, constraints must be physically realistic. Meaning: if an engineer tries to constrain two parts together, they need to use fasteners or make a mechanism which would fit two parts together. However, the engineer can't constrain two parts by just assigning them a CAD constraint.
+In the end, our systems should be transferrable to the real world.
+
+For engineers, constraints must be physically realistic. Meaning: if an engineer agent tries to constrain two parts together, they need to use fasteners or make a mechanism which would fit two parts together. However, the engineer can't constrain two parts by just assigning them a CAD constraint.
+This is because it fits how physics works is in the real world, transferring to which is ultimately the goal of this project.
+
 We can perhaps verify it by simply adding realistic fastener logic.
 
 Similarly, while you can constrain a ball to a plane in CAD, you can't do so in real life. In real life, a ball needs to have a special holder. Two flat planes can't be constrained to each other, you need to either add them, make a real constraint that would hold them together.
 
 ##### Creating
-
-####
 
 ##### Allowed components in simulation
 
