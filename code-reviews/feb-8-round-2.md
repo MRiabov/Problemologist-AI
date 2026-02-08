@@ -12,6 +12,7 @@ The `desired_architecture.md` document received significant clarifications acros
 
 ---
 
+<!--
 ## 1. Agent Purpose & Subagent Structure *(NEW)*
 
 ### 1.1 Benchmark Generator Agent
@@ -25,6 +26,9 @@ The `desired_architecture.md` document received significant clarifications acros
 | **Reviewer** | Reviews for feasibility, constraint violations, proper randomization |
 
 **Sample output**: A complete example benchmark plan showing all required sections (learning objective, static geometry, input object, forbid zones, goal zone, rescale limits, randomization, python script structure).
+-->
+
+<!-- note: pretty sure build zones weren't implemented -->
 
 ### 1.2 Engineer Agent
 
@@ -53,6 +57,7 @@ User prompt →
 - Engineering CAD agent can **refuse plan** if price/weight is too low
 - Engineering Reviewer must **confirm refusal** before replanning
 
+<!--
 ### 2.2 Benchmark Planner → CAD Agent Files
 
 | File | Contents |
@@ -60,6 +65,7 @@ User prompt →
 | `plan.md` | Learning objective, geometry coordinates, moving parts, input/goal/forbid objectives |
 | `todo.md` | TODO list from planner |
 | `objectives.yaml` | **Draft** with rough values filled in |
+-->
 
 ### 2.3 Engineer Planner → CAD Agent Files
 
@@ -74,6 +80,8 @@ User prompt →
 ---
 
 ## 3. `objectives.yaml` Structure *(NEW - COMPREHENSIVE)*
+
+*MISSING: Programmatic validation against this schema.*
 
 Full schema now specified:
 
@@ -114,6 +122,8 @@ moving_parts:
 
 ## 4. `plan.md` Structure for Engineering *(NEW)*
 
+*MISSING: `plan.md` is not in the `engineer/` template repo.*
+
 ```markdown
 # Engineering Plan
 ## 1. Solution Overview
@@ -127,9 +137,10 @@ moving_parts:
 ## 5. Risk Assessment
   - Failure modes, mitigations, runtime randomization considerations
 ```
-
+<!-- note: also validation for markdown! -->
 ---
 
+<!--
 ## 5. Review Structure Hardened *(NEW)*
 
 Reviews require **YAML frontmatter**:
@@ -140,6 +151,7 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 - `confirm_plan_refusal` / `reject_plan_refusal` ONLY valid if CAD agent refused the plan
 - Reviews stored in `/reviews/` folder
+-->
 
 ---
 
@@ -147,10 +159,14 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 ### 6.1 Markdown Files
 
+*MISSING: No static validation of markdown structure.*
+
 - Statically validated for structure (bullet points, subheadings)
 - Plans refuse submission if they don't match template
 
 ### 6.2 Python Files
+
+*PARTIAL: Syntax check is implemented, but full linting (Ruff/Pyright) is missing in routes.*
 
 - Linted, won't pass execution if red errors exist
 
@@ -160,11 +176,15 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 ### 7.1 New Tool: `preview_design`
 
+*MISSING: Tool not implemented in worker.*
+
 **Purpose**: Render CAD files for visual inspection by Engineer agent  
 **Parameters**: `pitch`, `yaw` to look from specific side  
 **Note**: Doesn't need to render all 24 pictures
 
 ### 7.2 `validate_and_price` Clarification
+
+*MISSING: Build zone bounds check.*
 
 Step 4 changed: "Validate for being in **build zone bounds**" (not just generically "in bounds")
 
@@ -173,6 +193,8 @@ Step 4 changed: "Validate for being in **build zone bounds**" (not just generica
 ## 8. Skill Management *(NEW)*
 
 ### 8.1 Git-based Skill Versioning
+
+*PARTIAL: Uses GitPython instead of git2. No merge conflict resolution logic.*
 
 Skills versioned via **public git repo**. Workers handle git operations:
 
@@ -185,6 +207,8 @@ Skills versioned via **public git repo**. Workers handle git operations:
 
 ### 8.2 Skill Agent Details
 
+*MISSING: No Skill Agent implementation.*
+
 - Runs **asynchronous** to main execution
 - Filesystem stored on Railway bucket
 - Has endpoint to update skills without container restart
@@ -194,6 +218,7 @@ Skills versioned via **public git repo**. Workers handle git operations:
 
 ## 9. Infrastructure Clarifications
 
+<!--
 ### 9.1 Controller vs Worker Responsibilities *(CLARIFIED)*
 
 | Node | Responsibilities |
@@ -203,6 +228,8 @@ Skills versioned via **public git repo**. Workers handle git operations:
 
 ### 9.2 Repo Code Structure *(NEW)*
 
+*PARTIAL: Directory structure exists, but separate `pyproject.toml` files are missing.*
+
 ```
 frontend/
 worker/
@@ -211,21 +238,28 @@ controller/
 
 - OpenAPI schema shared
 - Worker and controller have **separate** `pyproject.toml` and `uv` locks
+-->
 
+<!--
 ### 9.3 Container Communication *(NEW)*
 
 - Frontend → Controller only
 - Worker → Controller only
 - Frontend does NOT communicate with Worker **EXCEPT**: GET requests for GLB files from CAD viewer
+-->
 
+<!--
 ### 9.4 Multiple Agents per Machine *(NEW)*
 
 - 4 agents per machine recommended
 - Only 1 simulation at a time (prevent OOM/CPU overload)
 - Agents write to different `/tmp/` directories
 - Cleanup required after finish
+-->
 
 ### 9.5 Type Safety *(NEW)*
+
+*PARTIAL: Pydantic is used, Beartype is available but usage is sparse.*
 
 - Use **Pydantic** for data models
 - Use **Beartype** for hard type checking
@@ -235,6 +269,8 @@ controller/
 ## 10. Frontend Specifications *(NEW - DETAILED)*
 
 ### 10.1 Benchmark Generation Workflow
+
+*MISSING: "+ Create new" button and clearing UI logic.*
 
 1. Add **"+ Create new"** button (replaces history icon) next to "benchmark runs"
 2. Clicking clears current UI data (not DB)
@@ -255,25 +291,21 @@ Both benchmark generator and engineer viewers should show:
 
 Plus: implementation history
 
+<!--
 ### 10.3 Component Layout
 
-3-column layout with ratio **3:3:6**:
+- 3-column layout with ratio **3:3:6**:
+-->
 
-| Column 1 (3) | Column 2 (3) | Column 3 (6) |
-|--------------|--------------|--------------|
-| Sidebar | Reasoning traces | Split: 3D view (top) + Artifact viewer (bottom) |
-
-Artifact viewer: file tree (collapsible) + card tabs
-
+<!--
 ### 10.4 CAD Viewer *(NEW)*
-
-**Current implementation**:
 
 - Use "Yet Another CAD Viewer" **server-side rendering**
 - Integrate into worker
 - File format: **GLB** (not STL) - smaller volume
 
 **Frontend exception**: Frontend queries worker directly for GLB files (GET only)
+-->
 
 **Future**: WASM + build123d viewer in browser
 
@@ -284,6 +316,8 @@ Artifact viewer: file tree (collapsible) + card tabs
 ---
 
 ## 11. Typo/Wording Fixes (Minor)
+
+*MOSTLY DONE*
 
 | Before | After |
 |--------|-------|
