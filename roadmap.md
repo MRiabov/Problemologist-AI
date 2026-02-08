@@ -128,3 +128,7 @@ What can we make to make the actual engineers use this?
     Etc.
 
 At this point we'll the state of the art by a great margin.
+
+### Work package 6 - Real-life scans
+
+Take a set of real-life 3d scans, e.g. via NeRF, and instead of agent-generated environments, make the agents build small robots to move something to something in the real world.
