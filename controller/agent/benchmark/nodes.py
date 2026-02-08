@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from pathlib import Path
+
 
 import structlog
 from deepagents import create_deep_agent
@@ -50,7 +50,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
     # Load prompt from YAML config
     try:
-        base_prompt = get_prompt("benchmark_generator.planner")
+        base_prompt = get_prompt("benchmark_generator.planner.system")
     except Exception as e:
         logger.error("planner_prompt_load_failed", error=str(e))
         state["plan"] = {"error": f"Failed to load planner prompt: {e}"}
@@ -121,7 +121,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
     # 1. Load prompt from YAML
     try:
-        base_prompt = get_prompt("benchmark_generator.coder")
+        base_prompt = get_prompt("benchmark_generator.coder.system")
     except Exception as e:
         logger.error("coder_prompt_load_failed", error=str(e))
         # If we can't load the prompt, we can't really proceed effectively.
@@ -385,8 +385,11 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     guarded_backend = GuardedBackend(base_backend, review_filename)
 
     # 4. Prepare system prompt
-    template_path = Path(__file__).parent / "templates" / "reviewer_prompt.txt"
-    base_prompt = template_path.read_text()
+    try:
+        base_prompt = get_prompt("benchmark_generator.reviewer.system")
+    except Exception as e:
+        logger.error("reviewer_prompt_load_failed", error=str(e))
+        base_prompt = "You are an agentic reviewer."
 
     system_prompt = f"""{base_prompt}
 

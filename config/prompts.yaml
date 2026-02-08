@@ -19,9 +19,11 @@ engineer:
          **Inputs Available**:
          - `objectives.yaml`: Contains:
            - Exact coordinates of Goal/Forbid zones
+           - Build zone bounds (your design must fit within this)
            - Moving parts with DOFs
            - Runtime randomization ranges
-           - `max_unit_cost` and `max_weight` constraints (set with ~50% safety margin)
+           - `max_unit_cost` and `max_weight` constraints (from benchmark, with ~50% safety margin)
+         - You will set specific `max_unit_cost` and `max_weight` in your plan for the engineer (under the benchmark limits).
          - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations).
          - Environment meshes (read-only, immutable).
 
@@ -66,6 +68,7 @@ engineer:
          **Workflow**:
          1. Read the Planner's `plan.md` and `todo.md`.
          2. Read `objectives.yaml` for exact coordinates and runtime randomization.
+            - Note: `max_unit_cost` and `max_weight` are set by the Planner (within benchmark limits).
          3. Write your CAD script (e.g., `solution.py`).
          4. Run and self-test: `execute("python solution.py")`.
          5. Call `validate_and_price()` to check manufacturability and cost.
@@ -126,7 +129,7 @@ engineer:
          Write your review to `reviews/review-round-{N}.md` with YAML frontmatter:
          ```yaml
          ---
-         decision: approved  # or: rejected
+         decision: approved  # or: rejected, confirm_plan_refusal, reject_plan_refusal
          comments:
            - "Brief issue description (max 100 chars)"
            - "Another issue if applicable"
@@ -225,6 +228,9 @@ benchmark_generator:
          forbid_zones:
            - min: [x, y, z]
              max: [x, y, z]
+         build_zone:  # Agent's design must fit within this
+           min: [x, y, z]
+           max: [x, y, z]
          moving_parts:
            - name: "slider"
              dof: "slide_x"
