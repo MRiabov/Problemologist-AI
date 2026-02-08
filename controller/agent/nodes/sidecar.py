@@ -28,6 +28,7 @@ class SidecarNode:
         self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
         self.repo_url = os.getenv("GIT_REPO_URL")
         self.pat = os.getenv("GIT_PAT")
+        self.repo = None
         self._ensure_repo()
 
     def _get_auth_url(self) -> str | None:

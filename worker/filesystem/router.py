@@ -10,7 +10,7 @@ from pathlib import Path
 
 import structlog
 
-from .backend import FileInfo, SandboxFilesystemBackend
+from .backend import FileInfo, LocalFilesystemBackend
 
 logger = structlog.get_logger(__name__)
 
@@ -42,11 +42,11 @@ class FilesystemRouter:
     """Routes filesystem operations to appropriate backends.
 
     Provides a unified view of:
-    - files/ (workspace) -> S3 (Read/Write)
+    - files/ (workspace) -> Local Disk (Read/Write)
     - utils/, skills/, reviews/ -> Local container disk (Read Only)
     """
 
-    s3_backend: SandboxFilesystemBackend
+    local_backend: LocalFilesystemBackend
     mount_points: list[MountPoint] = field(default_factory=list)
 
     # Paths that are always read-only
@@ -120,7 +120,7 @@ class FilesystemRouter:
     def ls(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory.
 
-        For root ("/"), merges S3 contents with mounted directories.
+        For root ("/"), merges local contents with mounted directories.
 
         Args:
             path: Virtual directory path.
@@ -137,15 +137,15 @@ class FilesystemRouter:
         if mount:
             return self._ls_local(normalized, mount)
 
-        # For root or S3 paths, get S3 contents and merge with mounts
-        s3_contents = self.s3_backend.ls(path)
+        # For root or local paths, get local contents and merge with mounts
+        local_contents = self.local_backend.ls(path)
 
         # If at root, add mount points that exist
         if normalized == "/" or normalized == "":
             for mount in self.mount_points:
                 if mount.local_path.exists():
                     name = mount.virtual_prefix.strip("/")
-                    s3_contents.append(
+                    local_contents.append(
                         FileInfo(
                             path=mount.virtual_prefix,
                             name=name,
@@ -154,7 +154,7 @@ class FilesystemRouter:
                         )
                     )
 
-        return s3_contents
+        return local_contents
 
     def _ls_local(self, path: str, mount: MountPoint) -> list[FileInfo]:
         """List contents of a local mounted directory.
@@ -209,8 +209,11 @@ class FilesystemRouter:
                 raise FileNotFoundError(f"File not found: {path}")
             return local_path.read_bytes()
 
-        # Otherwise read from S3
-        return self.s3_backend.read(path)
+        # Otherwise read from local storage
+        local_p = self.local_backend._resolve(path)
+        if not local_p.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+        return local_p.read_bytes()
 
     def write(self, path: str, content: bytes | str) -> None:
         """Write content to a file.
@@ -228,7 +231,9 @@ class FilesystemRouter:
             logger.warning("router_write_blocked", path=path)
             raise WritePermissionError(f"Cannot write to read-only path: {path}")
 
-        self.s3_backend.write(path, content)
+        if isinstance(content, bytes):
+            content = content.decode("utf-8")
+        self.local_backend.write(path, content)
 
     def edit(self, path: str, old_content: str, new_content: str) -> bool:
         """Edit file by replacing content.
@@ -251,7 +256,8 @@ class FilesystemRouter:
             logger.warning("router_edit_blocked", path=path)
             raise WritePermissionError(f"Cannot edit read-only path: {path}")
 
-        return self.s3_backend.edit(path, old_content, new_content)
+        res = self.local_backend.edit(path, old_content, new_content)
+        return not res.error and res.occurrences > 0
 
     def exists(self, path: str) -> bool:
         """Check if a path exists.
@@ -270,8 +276,8 @@ class FilesystemRouter:
             local_path = self._resolve_local_path(normalized, mount)
             return local_path.exists()
 
-        # Check S3
-        return self.s3_backend.exists(path)
+        # Check local
+        return self.local_backend.exists(path)
 
     def delete(self, path: str) -> None:
         """Delete a file or directory.
@@ -289,7 +295,7 @@ class FilesystemRouter:
             logger.warning("router_delete_blocked", path=path)
             raise WritePermissionError(f"Cannot delete read-only path: {path}")
 
-        self.s3_backend.delete(path)
+        self.local_backend.delete(path)
 
 
 def create_filesystem_router(
@@ -299,17 +305,17 @@ def create_filesystem_router(
     """Create a filesystem router with standard configuration.
 
     Args:
-        session_id: Session ID for S3 path isolation.
+        session_id: Session ID for local path isolation.
         custom_mounts: Optional custom mount points.
 
     Returns:
         Configured FilesystemRouter instance.
     """
-    from .backend import SandboxFilesystemBackend
+    from .backend import LocalFilesystemBackend
 
-    s3_backend = SandboxFilesystemBackend.create(session_id)
+    local_backend = LocalFilesystemBackend.create(session_id)
 
     if custom_mounts:
-        return FilesystemRouter(s3_backend=s3_backend, mount_points=custom_mounts)
+        return FilesystemRouter(local_backend=local_backend, mount_points=custom_mounts)
 
-    return FilesystemRouter(s3_backend=s3_backend)
+    return FilesystemRouter(local_backend=local_backend)

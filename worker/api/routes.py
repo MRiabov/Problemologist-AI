@@ -13,12 +13,15 @@ from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate
+from ..utils.git import commit_all, init_workspace_repo
 from .schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    GitCommitRequest,
+    GitCommitResponse,
     ListFilesRequest,
     ReadFileRequest,
     ReadFileResponse,
@@ -39,42 +42,11 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-def _get_session_dir(session_id: str) -> Path:
-    """Get or create a local temporary directory for the session."""
-    base_dir = Path("/tmp/problemologist/sessions")
-    session_dir = base_dir / session_id
-    session_dir.mkdir(parents=True, exist_ok=True)
-    return session_dir
-
-
-async def _sync_to_local(fs_router, session_dir: Path):
-    """Synchronize files from S3/FS_ROUTER to the local session directory."""
-    try:
-        files = fs_router.ls("/")
-        for file_info in files:
-            if not file_info.is_dir:
-                try:
-                    content = fs_router.read(file_info.path)
-
-                    rel_path = file_info.path.lstrip("/")
-                    local_file_path = session_dir / rel_path
-                    local_file_path.parent.mkdir(parents=True, exist_ok=True)
-
-                    mode = "wb" if isinstance(content, bytes) else "w"
-                    with open(local_file_path, mode) as f:
-                        f.write(content)
-                except Exception as e:
-                    logger.warning(
-                        "session_sync_file_failed", path=file_info.path, error=str(e)
-                    )
-    except Exception as e:
-        logger.error("session_sync_failed", error=str(e))
-
-
-def _load_component(script_path: str, script_content: str | None = None):
+def _load_component(fs_router, script_path: str, script_content: str | None = None):
     """Utility to load the component from the agent's script."""
     # 1. If content is provided, use it directly (stateless/memory execution)
     if script_content:
+        logger.warning("load_component_using_script_content_deprecated")
         local_scope = {}
         try:
             exec(script_content, local_scope)
@@ -91,28 +63,27 @@ def _load_component(script_path: str, script_content: str | None = None):
         except Exception as e:
             raise RuntimeError(f"Failed to execute script content: {e}")
 
-    # 2. Fallback to file path loading
-    path = Path(script_path)
+    # 2. Path loading from local storage
+    try:
+        local_p = fs_router.local_backend._resolve(script_path)
+    except Exception:
+        # Fallback to absolute or relative to CWD if resolve fails (e.g. traversal check)
+        local_p = Path(script_path)
 
-    # We expect the caller to provide an absolute path (mapped to session dir)
-    # But if not, we fallback to CWD for backward compatibility
-    if not path.is_absolute():
-        path = Path.cwd() / script_path
-
-    if not path.exists():
+    if not local_p.exists():
         raise FileNotFoundError(
-            f"Script not found at {path}. "
+            f"Script not found at {local_p.absolute()}. "
             "Ensure the agent has written the file before calling simulate/validate."
         )
 
-    # Add script's directory to sys.path
-    script_dir = str(path.parent)
-    if script_dir not in sys.path:
-        sys.path.insert(0, script_dir)
+    # Add session root to sys.path to allow local imports in the script
+    session_root = str(fs_router.local_backend.root)
+    if session_root not in sys.path:
+        sys.path.insert(0, session_root)
 
-    spec = importlib.util.spec_from_file_location("dynamic_build", str(path))
+    spec = importlib.util.spec_from_file_location("dynamic_build", str(local_p))
     if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load spec from {path}")
+        raise RuntimeError(f"Could not load spec for {local_p}")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -187,15 +158,58 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/git/init", response_model=StatusResponse)
+async def git_init(fs_router=Depends(get_router)):
+    """Initialize a git repository in the workspace."""
+    try:
+        init_workspace_repo(fs_router.local_backend.root)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except Exception as e:
+        logger.error("api_git_init_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/git/commit", response_model=GitCommitResponse)
+async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
+    """Commit changes and sync to S3."""
+    try:
+        commit_hash = commit_all(fs_router.local_backend.root, request.message)
+
+        # Sync to S3
+        try:
+            fs_router.local_backend.sync_to_s3()
+        except Exception as e:
+            logger.warning("api_git_commit_sync_failed", error=str(e))
+            # We don't fail the commit if sync fails, but we note it
+            return GitCommitResponse(
+                success=True,
+                commit_hash=commit_hash,
+                message=f"Commit successful but S3 sync failed: {e}",
+            )
+
+        if commit_hash:
+            return GitCommitResponse(
+                success=True,
+                commit_hash=commit_hash,
+                message="Commit successful and synced to S3",
+            )
+        return GitCommitResponse(
+            success=True,
+            commit_hash=None,
+            message="No changes to commit, but synced to S3",
+        )
+    except Exception as e:
+        logger.error("api_git_commit_failed", error=str(e))
+        return GitCommitResponse(success=False, message=str(e))
+
+
 @router.post("/runtime/execute", response_model=ExecuteResponse)
 async def execute_code(
     request: ExecuteRequest,
     fs_router=Depends(get_router),
-    x_session_id: str = Header(...),
 ):
     """Execute Python code in session-isolated environment."""
-    session_dir = _get_session_dir(x_session_id)
-    await _sync_to_local(fs_router, session_dir)
+    session_dir = fs_router.local_backend.root
 
     config = RuntimeConfig(
         timeout_seconds=request.timeout,
@@ -222,31 +236,18 @@ SIMULATION_SEMAPHORE = asyncio.Semaphore(1)
 async def api_simulate(
     request: BenchmarkToolRequest,
     fs_router=Depends(get_router),
-    x_session_id: str = Header(...),
 ):
     """Physics-backed stability check in isolated session."""
     try:
-        session_dir = _get_session_dir(x_session_id)
-        await _sync_to_local(fs_router, session_dir)
-
-        script_path = Path(request.script_path)
-        if not script_path.is_absolute():
-            script_path = session_dir / script_path
-
-        component = _load_component(str(script_path), request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
 
         # Enforce single concurrent simulation
         async with SIMULATION_SEMAPHORE:
-            # We run simulate (sync) in a threadpool, but the semaphore prevents conflicting
-            # concurrent runs. Ideally we'd wrap simulate in run_in_executor but FastAPI does it.
-            # However, holding an async lock while running blocking code in the *simultaneous*
-            # handling is tricky if not awaiting.
-            # Since `simulate` is blocking, we should ideally run it in a thread and await it.
-            # But the semaphore is async.
             result = await asyncio.to_thread(
-                simulate, component, output_dir=session_dir
+                simulate, component, output_dir=fs_router.local_backend.root
             )
-
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
@@ -264,18 +265,12 @@ async def api_simulate(
 async def api_validate(
     request: BenchmarkToolRequest,
     fs_router=Depends(get_router),
-    x_session_id: str = Header(...),
 ):
     """Geometric validity check in isolated session."""
     try:
-        session_dir = _get_session_dir(x_session_id)
-        await _sync_to_local(fs_router, session_dir)
-
-        script_path = Path(request.script_path)
-        if not script_path.is_absolute():
-            script_path = session_dir / script_path
-
-        component = _load_component(str(script_path), request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
         is_valid = validate(component)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -290,18 +285,12 @@ async def api_validate(
 async def api_submit(
     request: BenchmarkToolRequest,
     fs_router=Depends(get_router),
-    x_session_id: str = Header(...),
 ):
     """Handover to reviewer in isolated session."""
     try:
-        session_dir = _get_session_dir(x_session_id)
-        await _sync_to_local(fs_router, session_dir)
-
-        script_path = Path(request.script_path)
-        if not script_path.is_absolute():
-            script_path = session_dir / script_path
-
-        component = _load_component(str(script_path), request.script_content)
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
         success = submit_for_review(component)
         return BenchmarkToolResponse(
             success=success,

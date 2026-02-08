@@ -85,3 +85,17 @@ class BenchmarkToolResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     artifacts: dict[StrictStr, Any] | None = None
+
+
+class GitCommitRequest(BaseModel):
+    """Request to commit changes in the session workspace."""
+
+    message: StrictStr = Field(..., min_length=1)
+
+
+class GitCommitResponse(BaseModel):
+    """Response from a git commit operation."""
+
+    success: StrictBool
+    commit_hash: StrictStr | None = None
+    message: StrictStr

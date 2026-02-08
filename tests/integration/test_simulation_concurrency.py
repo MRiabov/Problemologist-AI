@@ -54,6 +54,9 @@ async def test_simulation_concurrency():
     durations = []
     for i, (resp, start, end) in enumerate(results):
         assert resp.status_code == 200, f"Sim {i} failed: {resp.text}"
+        assert resp.json()["success"], (
+            f"Sim {i} returned success=False: {resp.json().get('message')}"
+        )
         duration = end - start
         durations.append(duration)
         print(
