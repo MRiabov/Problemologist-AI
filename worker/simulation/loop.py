@@ -39,11 +39,11 @@ class SimulationLoop:
             )
 
         # Cache zone IDs for forbidden zones
-        self.forbidden_geoms = []
+        self.forbidden_geoms = set()
         for i in range(self.model.ngeom):
             name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
             if name and name.startswith("zone_forbid"):
-                self.forbidden_geoms.append(name)
+                self.forbidden_geoms.add(i)
 
         # Reset metrics
         self.reset_metrics()
@@ -163,15 +163,9 @@ class SimulationLoop:
         """
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            geom1_name = mujoco.mj_id2name(
-                self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1
-            )
-            geom2_name = mujoco.mj_id2name(
-                self.model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
-            )
-
-            if (geom1_name and geom1_name.startswith("zone_forbid")) or (
-                geom2_name and geom2_name.startswith("zone_forbid")
+            if (
+                contact.geom1 in self.forbidden_geoms
+                or contact.geom2 in self.forbidden_geoms
             ):
                 return True
         return False
