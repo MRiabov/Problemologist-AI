@@ -50,7 +50,12 @@ class FilesystemRouter:
     mount_points: list[MountPoint] = field(default_factory=list)
 
     # Paths that are always read-only
-    READ_ONLY_PREFIXES: tuple[str, ...] = ("/utils/", "/skills/", "/reviews/")
+    READ_ONLY_PREFIXES: tuple[str, ...] = (
+        "/utils/",
+        "/skills/",
+        "/reviews/",
+        "/config/",
+    )
 
     def __post_init__(self) -> None:
         """Initialize default mount points if none provided."""
@@ -58,6 +63,7 @@ class FilesystemRouter:
             # Set up default read-only mounts
             # These point to the worker's local directories
             base = Path(__file__).parent.parent
+            root_dir = base.parent
             self.mount_points = [
                 MountPoint(
                     virtual_prefix="/utils",
@@ -72,6 +78,11 @@ class FilesystemRouter:
                 MountPoint(
                     virtual_prefix="/reviews",
                     local_path=base / "reviews",
+                    access_mode=AccessMode.READ_ONLY,
+                ),
+                MountPoint(
+                    virtual_prefix="/config",
+                    local_path=root_dir / "config",
                     access_mode=AccessMode.READ_ONLY,
                 ),
             ]
