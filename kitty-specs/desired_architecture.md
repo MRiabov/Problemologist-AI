@@ -804,15 +804,22 @@ How to create constraints in CAD and map it onto MuJoCo cleanly is not very logi
 1. Per each fastener hole, define a alphanumeric "connection_id" (in function definition)
 2. The fastener would have a connection_id as well (unique fastener per connection)
 3. The fastener would be inserted into the connection automatically.
+4. All three objects (two parts, fastener) would have `weld` constraints afterwards.
 
-Fasteners could be placed into holes automatically by setting insert_fastener=True. The fastener would have automatically picked up the length and the diameter of the hole.
+Fasteners could be placed into holes automatically by setting `fastner_hole(..., insert_fastener=True)` parameter. The fastener would have automatically picked up the length and the diameter of the hole.
 
 Note: fasteners could be placed into holes.
 
 ###### Fastener automatic insertion
 
-To make the above logic work, fastener_hole would automatically create a build123d Joint; another Joint at the hole, and mate them together.
-<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics will get complex. -->
+To make the above logic work, fastener_hole would automatically create a build123d Joint; another Joint at the receiving hole, and mate them together.
+<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics get unusual in there. -->
+
+If the hole is not through, the fastener can't hold a part after it, Thus, we can only connect a through hole to another hole.
+
+I did it in another project; it was overcomplicated and for a little more functionality, but essentially, see `/docs/fastener_math.md` file.
+
+Why the complex logic: I want the agent to be able to insert fasteners relatively as easy as possible.
 
 ##### Allowed components in simulation
 
