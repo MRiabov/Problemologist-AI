@@ -452,12 +452,32 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
                 r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL
             )
             if frontmatter_match:
-                frontmatter = yaml.safe_load(frontmatter_match.group(1))
-                if frontmatter.get("decision") == "approved":
-                    state["review_feedback"] = "Approved"
-                else:
-                    state["review_feedback"] = "\n".join(
-                        frontmatter.get("comments", ["Rejected"])
+                from pydantic import ValidationError
+
+                from shared.models.schemas import ReviewFrontmatter
+
+                try:
+                    raw_frontmatter = yaml.safe_load(frontmatter_match.group(1))
+                    frontmatter = ReviewFrontmatter(**raw_frontmatter)
+
+                    if frontmatter.decision == "approved":
+                        state["review_feedback"] = "Approved"
+                    elif frontmatter.decision in (
+                        "confirm_plan_refusal",
+                        "reject_plan_refusal",
+                    ):
+                        state["review_feedback"] = (
+                            f"Plan refusal {frontmatter.decision}: "
+                            + "\n".join(frontmatter.comments)
+                        )
+                    else:
+                        state["review_feedback"] = "\n".join(
+                            frontmatter.comments or ["Rejected"]
+                        )
+                except ValidationError as e:
+                    errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
+                    state["review_feedback"] = (
+                        f"Invalid review frontmatter: {'; '.join(errors)}"
                     )
             else:
                 state["review_feedback"] = (
