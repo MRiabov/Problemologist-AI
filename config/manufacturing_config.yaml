@@ -1,31 +1,58 @@
 defaults:
   currency: "USD"
 
-cnc:
-  materials:
-    aluminum_6061:
-      density_g_cm3: 2.7
-      cost_per_kg: 6.00
-      machine_hourly_rate: 80.00
-  constraints:
-    min_tool_radius_mm: 3.0
-    default_axis: "Z"
-    mrr_mm3_per_min: 1000.0  # Material Removal Rate for standard aluminum milling
-  parameters:
-    finishing_feed_rate_mm_min: 500.0
-    finishing_stepover_mm: 0.5
+manufacturing_processes:
+  cnc:
+    # Setup costs and process-specific pricing (from desired_architecture.md spec)
+    setup_price: 50.00
+    machine_hourly_rate: 80.00
 
-injection_molding:
-  materials:
-    abs:
-      density_g_cm3: 1.04
-      cost_per_kg: 2.50
-  constraints:
-    min_draft_angle_deg: 2.0
-    min_wall_thickness_mm: 1.0
-    max_wall_thickness_mm: 4.0
-  costs:
+    # Process limitations and constraints
+    constraints:
+      min_tool_radius_mm: 3.0
+      default_axis: "Z"
+      mrr_mm3_per_min: 1000.0 # Material Removal Rate for standard aluminum milling
+
+    # Process parameters
+    parameters:
+      finishing_feed_rate_mm_min: 500.0
+      finishing_stepover_mm: 0.5
+
+  injection_molding:
+    # Setup costs and process-specific pricing
     base_mold_cost: 5000.00
     mold_cost_per_surface_area_cm2: 0.50
-    injection_rate_cm3_s: 10.0
     machine_hourly_rate: 60.00
+
+    # Process limitations and constraints
+    constraints:
+      min_draft_angle_deg: 2.0
+      min_wall_thickness_mm: 1.0
+      max_wall_thickness_mm: 4.0
+
+    # Process parameters
+    parameters:
+      injection_rate_cm3_s: 10.0
+
+materials:
+  aluminum_6061:
+    # Physical properties (for simulation and randomization)
+    density_g_cm3: 2.7
+    color: "#C0C0C0"
+    elongation_stress_mpa: 276.0 # Yield strength
+    restitution: 0.5 # Coefficient of restitution (bounciness)
+    friction_coef: 0.61 # Approximate static friction against steel
+
+    # Material costs
+    cost_per_kg: 6.00
+
+  abs:
+    # Physical properties
+    density_g_cm3: 1.04
+    color: "#FFFFFF"
+    elongation_stress_mpa: 40.0
+    restitution: 0.6
+    friction_coef: 0.5
+
+    # Material costs
+    cost_per_kg: 2.50
