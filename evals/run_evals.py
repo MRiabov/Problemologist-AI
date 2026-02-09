@@ -47,11 +47,13 @@ async def run_single_eval(item: Dict[str, Any], langfuse: Langfuse, agent_name: 
         if agent_name == "planner":
             # For now, using the default graph as placeholder.
             # In real implementation, we would instantiation the specific subagent.
-            agent = create_agent_graph(backend)
+            agent = create_agent_graph(backend, agent_name="Planner Agent")
         elif agent_name == "engineer":
-            agent = create_agent_graph(backend)
+            agent = create_agent_graph(backend, agent_name="Engineer Agent")
         else:
-            agent = create_agent_graph(backend)
+            agent = create_agent_graph(
+                backend, agent_name=f"{agent_name.capitalize()} Agent"
+            )
 
         result = await agent.ainvoke(
             {"messages": [("user", task_description)], "session_id": session_id},

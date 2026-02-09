@@ -10,7 +10,7 @@ from shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-def create_agent_graph(backend: RemoteFilesystemBackend):
+def create_agent_graph(backend: RemoteFilesystemBackend, agent_name: str = "CAD Agent"):
     """Create a Deep Agent graph with remote filesystem backend."""
 
     llm = ChatOpenAI(
@@ -24,6 +24,7 @@ def create_agent_graph(backend: RemoteFilesystemBackend):
     callbacks = [langfuse_callback] if langfuse_callback else []
 
     # System prompt from config (Strict, will raise if missing)
+    # TODO: Map agent_name to specific system prompts
     system_prompt = get_prompt("engineer.planner.system")
 
     if callbacks:
@@ -33,5 +34,5 @@ def create_agent_graph(backend: RemoteFilesystemBackend):
         model=llm,
         backend=backend,
         system_prompt=system_prompt,
-        name="CAD Agent",
+        name=agent_name,
     )
