@@ -591,7 +591,7 @@ moved_object:
   start_position: [x, y, z]
   # Runtime jitter: small position variation per simulation run
   # Your solution must handle ALL positions within this range
-  runtime_jitter: [±2, ±2, ±1]  # [±x, ±y, ±z] units
+  runtime_jitter: [±2, ±2, ±1]  # [±x, ±y, ±z] mm
 
 # -----------------------------------------------------------------------------
 # ENVIRONMENT MOVING PARTS (READ-ONLY)
@@ -629,6 +629,8 @@ randomization:
   static_variation_id: "v1.2"  # Which static variant this is
   runtime_jitter_enabled: true
 ```
+
+<!-- Note: we are using metric units and degrees. -->
 
 #### Coder and Reviewer interaction
 
@@ -817,6 +819,25 @@ Wires
 Fluid vessels, e.g. pipes, hoses, or tanks that supply each. 
 Fluid pumps.-->
 
+#### Constants
+
+- Simulation timestep of the rigid-body simulation -  0.002s (default mujoco)
+- Max simulation time - 30 seconds (configurable globally)
+- Max speed - >1000m/s
+- Default benchmark size - 1\*1\*1m
+- Default stretch - 0.5\*0.5\*0.5 to 2*2*2, disproportionally
+- Collision:
+  - How often is the simulation checked for collision with goals - every 0.05s.
+  - Number of vertices needed for collision - 1 (maybe more in the future)
+- Units: Metric.
+- Safety factor (for motors and parts breaking) 20%.
+
+### Convex decomposition
+
+We don't have convex decomposition logic in MuJoCo (we do in Genesis, but we'll approach it later). We'll need a V-HACD logic on worker.
+
+<!-- Note: I have no clue about how V-HACD works. Assume good defaults. -->
+
 ### Motors
 
 We use standard MuJoCo actuators. They need to be controller by the controller functions.
@@ -827,12 +848,18 @@ We need to define how motors will behave, abd we'll use a controller. For this, 
 
 ##### Time-based functions (take in `t` as time)
 
-1. Constant - constant(power:float)
-1. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
-1. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
-1. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
+1. Constant - `constant(power:float) -> float` <!-- as far as I understand, a standard MuJoCo <motor> -->
+2. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
+3. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
+4. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
 
 Note: I'm not a pro in these functions - maybe they need renaming. but that's the idea.
+
+Note: they will need to be importable utils, just as tools like `simulate` are.
+
+##### Implementation for time-based controller functions
+
+One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. On the other hand, the `objectives.yaml` will contain which functions the motors are referecing. the moving parts.
 
 ##### Position-based functions
 
@@ -842,15 +869,48 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 
 <!-- In the future work, I presume, full inverse kinematics pipelines are desired. I know they are trivial in Genesis, it seems not so much in MuJoCo. -->
 
-Note: they will need to be importable utils, just as tools like `simulate` are.
-
-##### Implementation for controller functions
-
-One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. On the other hand, the `objectives.yaml` will contain which functions the motors are referecing. the moving parts.
-
 <!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
 
 <!-- Warning to self: objectives.yaml gets bloated with moving parts definition, which doesn't explicitly belong in there. -->
+
+###### Position-based controllers implementation
+
+""" AI-generated, I'm not a in the MuJoCo motors.
+For position-based control (servos, steppers), we use **MuJoCo's native `<position>` actuator**:
+
+```xml
+<actuator>
+  <position name="servo1" joint="arm_hinge" kp="{kp_from_COTS_config}" kv="kv_from_COTS_config"/>
+</actuator>
+```
+
+**Key differences from `<motor>`**:
+
+- **`ctrl[i]` meaning**: Target position (radians for hinge, meters for slide) – *not* torque
+- **Internal PD control**: MuJoCo applies `torque = kp * (target - pos) - kv * vel`
+- **Physics-based tracking**: The joint "seeks" the target position naturally (no teleportation)
+
+**PD gain tuning** (critical for stability):
+
+- Gains must be tuned relative to body inertia
+- Low inertia + high kp = numerical explosion
+- Safe starting point: `kp=5`, `kv=0.5` with `mass=1`, `diaginertia=0.01`
+- Add joint `damping` to improve stability further
+
+**Available position controllers** (`worker.utils.controllers`):
+
+- `waypoint(schedule: list[tuple[float, float]])`: Move to target positions at scheduled times
+- `hold_position(target: float)`: Hold a fixed target position  
+- `oscillate(center, amplitude, frequency, phase)`: Sinusoidal position oscillation
+
+"""
+
+Notably, we have a set of COTS motors in COTS section below. We need to assume/research COTS actuator strength and parameters.
+
+#### No overload
+
+We don't want motors to break; set the maximum load on motors in COTS data. If the motors overload, the simulation fails.
+This also forces the agents to pick the right motors.
 
 ### Definition of "success" and failure in the simulation
 
@@ -889,15 +949,15 @@ The benchmarks are randomized to enable a wider data distribution with less gene
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
 - The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
 
-###### Visual static randomization
-
-To allow for better visual generalization and more realistic environments, environment parts will randomly (?) change their materials color to one of defined in materials config.
-
 ###### Material static randomization
 
 If a part is moving, (has degrees of freedom), let us randomly switch its material for a more randomly generated environment - e.g., a part would be heavier, lighter, more/less stiff, have more/less restitution, have more/less friction coefficient; the material would be from predetermined files.
 The engineer would be informed about materials of various parts ahead of time.
 (notably, the benchmark generator should probably allow constraining some materials but only optionally so - e.g. if something is translated by the motor, in probably isn't ABS plastic, it's at least a metal. Allow the "minimum strength" or similar material selection.)
+
+###### Visual static randomization
+
+To allow for better visual generalization and more realistic environments, environment parts will change their colors to alongside of the material change, defined in materials config.
 
 ##### Runtime randomization
 
@@ -918,6 +978,10 @@ Failure is achieved via either of:
 2. Any of components going out of bounds of the workspace
 3. Instability in simulation (e.g. NaNs, parts interference)
 4. Any part going into forbid zones.
+5. Any part is broken:
+
+    - With "passive/static" parts: break upon stress which is higher than max stress - safety factor(note: not applicable for now as we are simulating rigid-body only).
+    - Some parts have custom breaking logic - e.g. motors can be overloaded on shaft.
 
 ### Conversion of CAD to mesh and to MuJoCo
 
@@ -927,11 +991,43 @@ The conversion pipeline is - putting every part into mesh;
 
 When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
 
+<!-- Note: Genesis if we'll migrate to it, supports GLB. -->
+
+#### Mesh limits
+
+The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. That said, the mesh should be simplified where *safe* to do so; however the higher quality is desired.
+
+Watertightness is required.
+
 ### Materials
 
 We have a set of materials defined in `manufacturing_config.yaml`, which defines: `materials` section, and which materials can be used for the simulation - their weight, price, and cost per KG. The config is auto-validated with unit tests (e.g., can't reference and inexisting material).
 
-`manufacturing_config` can be read-only for the agents to gauge the pricing ahead of time.
+`manufacturing_config.yaml` can be read-only for the agents to gauge the pricing ahead of time. It is also used during programmatic validation of manufacturability.
+
+`manufacturing_config.yaml` sample schema:
+
+```yaml
+manufacturing_processes:
+  cnc:
+    setup_price: [...]
+    price_per_X: [...]
+    price_per_Y: [...]
+
+  injection_molding:
+  # [...]
+
+materials:
+  alu-6061:
+    color: #
+    elongation_stress:
+    restitution: 
+    friction_coef: 
+    # and others
+  ... 
+```
+
+The materials are only ever chosen from the config.
 
 ## Observability
 
