@@ -130,3 +130,35 @@ def test_validation_hook_failure(tmp_path):
         assert "Part too large" in metrics.fail_reason
         # Check that it didn't step (total_time should be 0.0)
         assert metrics.total_time == 0.0
+
+
+def test_timeout_configurable(tmp_path):
+    """Test that configurable timeout works."""
+    xml_path = tmp_path / "test.xml"
+    xml_path.write_text(TEST_XML)
+
+    # Set a very short timeout (0.05s = 50ms)
+    loop = SimulationLoop(str(xml_path), max_simulation_time=0.05)
+
+    # Run for longer than timeout
+    metrics = loop.step({}, duration=1.0)
+
+    # Should timeout before reaching goal
+    assert metrics.success is False
+    assert metrics.fail_reason == "timeout_exceeded"
+    assert metrics.total_time >= 0.05  # At least ran until timeout
+
+
+def test_timeout_capped_at_30s(tmp_path):
+    """Test that timeout cannot exceed 30 seconds (hard cap)."""
+    from worker.simulation.loop import MAX_SIMULATION_TIME_SECONDS
+
+    xml_path = tmp_path / "test.xml"
+    xml_path.write_text(TEST_XML)
+
+    # Try to set a timeout longer than 30s
+    loop = SimulationLoop(str(xml_path), max_simulation_time=60.0)
+
+    # Should be capped at 30s
+    assert loop.max_simulation_time == MAX_SIMULATION_TIME_SECONDS
+    assert loop.max_simulation_time == 30.0
