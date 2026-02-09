@@ -177,7 +177,7 @@ Maybe use a dedicated public git repo? I think it's sound. However this is compl
 
 Yes, skills are versioned via a public git repo. Because of filesystem edits and more complex logic, I propose to send git commits and pushes directly from workers.
 
-Default logic: git commit & git push. If push fails due to merge conflict, do git merge. If merge fails, have the skill creator LLM handle it and push it. I suggest using `git2` as a library since it's more robust than using shell
+Default logic: git commit & git push. If push fails due to merge conflict, do git merge. If merge fails, have the skill creator LLM handle it and push it. I suggest using `GitPython` or `git2` (note: we stuck with git2 for the moment) as a library since it's more robust than using shell.
 
 *note*: Ideally, we'd do this logic in controller since controller is the place where we manage all secrets, but... it's not that scary, and we trust our compute nodes, for now.
 
@@ -760,7 +760,24 @@ We can perhaps verify it by simply adding realistic fastener logic.
 
 Similarly, while you can constrain a ball to a plane in CAD, you can't do so in real life. In real life, a ball needs to have a special holder. Two flat planes can't be constrained to each other, you need to either add them, make a real constraint that would hold them together.
 
-##### Creating
+##### Creating realistic constraints
+
+Constraints done by the engineer should be enforced for validity. E.g.: two parts should be actually close together
+
+###### Fixed parts for the simulation definition
+
+Some parts will need to be "fixed" despite physics, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
+
+###### Fasteners definition
+
+<!-- I propose to make a utility method like "fastener_hole(part_1:Part)" which would take in an enum (or a string, but enums are easier to work with for everyone), of fastener size and a float of depth (metric by default) and would drill a hole. Conveniently, build123d offers a `Hole` class with various simplifications like Counterbore. -->
+<!-- Note: I don't doubt we should use bd-warehoue for this. However, I doubt how this will be constrained. I'm not sure. -->
+
+Notably, `bd-warehouse` package for build123d offers all nuts, bolts and screws, and we almost definitely should reuse it. With however logic it offers.
+
+It would: make a hole in one part and in another part (undefined - how to make holes in another part and be robust? Normally in something like Autodesk Inventor the "Adaptive constraints" and "adaptive sketches" were a mess.)
+
+<!-- bd-warehouse docs on fasteners and holes. I'll have to add this info to the `skills/` - https://bd-warehouse.readthedocs.io/en/latest/fastener.html -->
 
 ##### Allowed components in simulation
 
@@ -783,6 +800,33 @@ PCBs
 Wires
 Fluid vessels, e.g. pipes, hoses, or tanks that supply each. 
 Fluid pumps.-->
+
+### Motors
+
+We use standard MuJoCo actuators. They need to be controller by the controller functions.
+
+#### Controller functions
+
+We need to define how motors will behave, abd we'll use a controller. For this, create a util package like `controllers`, which would have time and position-based controllers.
+
+#### Time-based functions (take in `t` as time)
+
+1. Constant - constant(power:float)
+1. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
+1. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
+1. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
+
+Note: I'm not a pro in these functions - maybe they need renaming. but that's the idea.
+
+#### Position-based functions
+
+Oftentimes of the time we'll want to control motors through positions, e.g. servos or stepper motors. Define a set of functions that would do inverse kinematics (rotate the motor to a given position, at least)
+
+We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10 seconds, rotate to 0, and at 15 seconds rotate back to 45 deg." This will also involve Python functions (probably pre-determined). At least a basic set of these (time-based, constant).
+
+<!-- In the future work, I presume, full inverse kinematics pipelines are desired. I know they are trivial in Genesis, it seems not so much in MuJoCo. -->
+
+Note: they will need to be importable utils, just as tools like `simulate` are.
 
 ### Definition of "success" and failure in the simulation
 
