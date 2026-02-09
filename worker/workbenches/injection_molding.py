@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import structlog
 import trimesh
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
@@ -88,7 +88,7 @@ def _check_wall_thickness(
     origins = centers + normals * 1e-4
 
     intersector = trimesh.ray.ray_triangle.RayMeshIntersector(mesh)
-    locations, index_ray, index_tri = intersector.intersects_location(
+    locations, index_ray, _ = intersector.intersects_location(
         origins, normals, multiple_hits=False
     )
 
@@ -120,7 +120,7 @@ def _check_wall_thickness(
 
 @type_check
 def _calculate_im_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -158,8 +158,8 @@ def _calculate_im_cost(
 
     # 2. Material Cost per Unit
     volume_cm3 = part.volume / 1000.0
-    density = material_cfg.get("density_g_cm3", 1.04)
-    cost_per_kg = material_cfg.get("cost_per_kg", 2.5)
+    density = material_cfg.density_g_cm3
+    cost_per_kg = material_cfg.cost_per_kg
     mass_kg = (volume_cm3 * density) / 1000.0
     material_cost_per_part = mass_kg * cost_per_kg
 
@@ -174,7 +174,7 @@ def _calculate_im_cost(
     cooling_time_s = max_dim * 0.5  # Simple heuristic for MVP
 
     cycle_time_s = max(injection_time_s, cooling_time_s)
-    machine_rate_hr = material_cfg.get("machine_hourly_rate", 60.0)
+    machine_rate_hr = material_cfg.machine_hourly_rate
     cycle_cost_per_part = (cycle_time_s / 3600.0) * machine_rate_hr
 
     unit_cost = material_cost_per_part + cycle_cost_per_part
@@ -205,7 +205,9 @@ def _calculate_im_cost(
 
 
 @type_check
-def analyze_im(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_im(
+    part: Part | Compound | Solid, config: ManufacturingConfig
+) -> WorkbenchResult:
     """
     Functional entry point for Injection Molding analysis.
     """

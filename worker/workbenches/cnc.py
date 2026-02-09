@@ -1,7 +1,7 @@
 from typing import Any
 
 import structlog
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
@@ -21,7 +21,7 @@ logger = structlog.get_logger()
 
 @type_check
 def check_internal_corner_radii(
-    part: Part | Compound, min_radius: float = 1.0
+    part: Part | Compound | Solid, min_radius: float = 1.0
 ) -> list[str]:
     """
     Checks for internal corners that have a radius smaller than the minimum tool radius.
@@ -96,7 +96,7 @@ def check_internal_corner_radii(
 
 @type_check
 def calculate_cnc_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -126,8 +126,8 @@ def calculate_cnc_cost(
     removed_volume_cm3 = max(0, stock_volume_cm3 - part_volume_cm3)
 
     # 1. Material Cost
-    density = material_cfg.get("density_g_cm3", 2.7)
-    cost_per_kg = material_cfg.get("cost_per_kg", 6.0)
+    density = material_cfg.density_g_cm3
+    cost_per_kg = material_cfg.cost_per_kg
     stock_mass_kg = (stock_volume_cm3 * density) / 1000.0
     material_cost_per_part = stock_mass_kg * cost_per_kg
 
@@ -143,7 +143,7 @@ def calculate_cnc_cost(
     finishing_time_min = surface_area_mm2 / (finishing_feed_rate * finishing_stepover)
 
     machining_time_min = roughing_time_min + finishing_time_min
-    hourly_rate = material_cfg.get("machine_hourly_rate", 80.0)
+    hourly_rate = material_cfg.machine_hourly_rate
     run_cost_per_part = (machining_time_min / 60.0) * hourly_rate
 
     # 3. Setup Cost
@@ -185,7 +185,9 @@ def calculate_cnc_cost(
 
 
 @type_check
-def analyze_cnc(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_cnc(
+    part: Part | Compound | Solid, config: ManufacturingConfig
+) -> WorkbenchResult:
     """
     Functional entry point for CNC analysis.
     """
