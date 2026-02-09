@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, UploadFile, File, Form
 
 from shared.enums import ResponseStatus
 
@@ -128,6 +128,30 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_write_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/upload_file", response_model=StatusResponse)
+async def upload_file_endpoint(
+    path: str = Form(...),
+    file: UploadFile = File(...),
+    fs_router=Depends(get_router),
+):
+    """Upload a file (binary supported)."""
+    try:
+        # Check read-only access (manually since we bypass fs_router.write)
+        if fs_router._is_read_only(path):
+            raise WritePermissionError(f"Cannot write to read-only path: {path}")
+
+        content = await file.read()
+        # fs_router.write converts bytes to str which fails for binary
+        # so we use local_backend.upload_files which handles bytes
+        fs_router.local_backend.upload_files([(path, content)])
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        logger.error("api_upload_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

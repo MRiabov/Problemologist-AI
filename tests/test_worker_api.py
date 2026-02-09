@@ -93,7 +93,9 @@ def test_fs_edit(mock_create_router):
 def test_execute_runtime():
     """Test executing Python code via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "print('hello from api')", "timeout": 5}
+        "/runtime/execute",
+        json={"code": "print('hello from api')", "timeout": 5},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -105,7 +107,9 @@ def test_execute_runtime():
 def test_execute_runtime_timeout():
     """Test runtime execution timeout via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "import time; time.sleep(2)", "timeout": 1}
+        "/runtime/execute",
+        json={"code": "import time; time.sleep(2)", "timeout": 1},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()

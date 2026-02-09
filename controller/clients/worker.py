@@ -59,6 +59,33 @@ class WorkerClient:
             response.raise_for_status()
             return response.json()["status"] == "success"
 
+    async def download_file(self, path: str) -> bytes:
+        """Download a file (binary) from the worker."""
+        clean_path = path.lstrip("/")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/assets/{clean_path}",
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.content
+
+    async def upload_file(self, path: str, content: bytes) -> bool:
+        """Upload a file (binary) to the worker."""
+        async with httpx.AsyncClient() as client:
+            files = {"file": ("uploaded_file", content)}
+            data = {"path": path}
+            response = await client.post(
+                f"{self.base_url}/fs/upload_file",
+                data=data,
+                files=files,
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+
     async def edit_file(self, path: str, edits: list[EditOp]) -> bool:
         """Edit a file with one or more operations.
 
