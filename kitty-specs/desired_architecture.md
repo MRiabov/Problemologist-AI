@@ -813,13 +813,29 @@ Note: fasteners could be placed into holes.
 ###### Fastener automatic insertion
 
 To make the above logic work, fastener_hole would automatically create a build123d Joint; another Joint at the receiving hole, and mate them together.
-<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics get unusual in there. -->
+<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics and conditionals get unusual in there. -->
 
 If the hole is not through, the fastener can't hold a part after it, Thus, we can only connect a through hole to another hole.
 
 I did it in another project; it was overcomplicated and for a little more functionality, but essentially, see `/docs/fastener_math.md` file.
 
 Why the complex logic: I want the agent to be able to insert fasteners relatively as easy as possible.
+
+###### Detailed fasteners math/logic
+
+<!-- Here -->
+
+Where do holes store connection ID? Well, I suppose we may iterate over all of children in each assembly recursively and get build123d part definitions from it.
+
+###### Final workflow
+
+In both parts, create a fastener_hole(depth=10, diameter=5, connection_id=10); in the top hole add "add_fastener=True".
+
+The top hole would automatically insert a fastener, and pull the bottom part to its' own self via a build123d Joint (note: the joint may be unnecessary?)
+
+Both of the parts now look constrained.
+
+During translation, all three parts will be welded together.
 
 ##### Allowed components in simulation
 
