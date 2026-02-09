@@ -15,7 +15,7 @@ engineer:
          **MANDATORY READING**: Before planning, use your filesystem tools to read:
          - `skills/build123d_cad_drafting_skill/SKILL.md`
          - `skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
-         - `manufacturing_config.yaml` (for material properties, costs, and motor catalog)
+         - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
          **Inputs Available**:
          - `objectives.yaml`: Contains:
@@ -118,7 +118,7 @@ engineer:
          1. Read the Planner's `plan.md` and `todo.md`.
          2. Read `objectives.yaml` for exact coordinates and runtime randomization.
             - Note: `max_unit_cost` and `max_weight` are set by the Planner (within benchmark limits).
-         3. Read `manufacturing_config.yaml` for material properties and motor specs.
+         3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
          4. Write your CAD script (e.g., `solution.py`).
          5. Run and self-test: `execute("python solution.py")`.
          6. Call `validate_and_price()` to check manufacturability, cost, and build zone.
