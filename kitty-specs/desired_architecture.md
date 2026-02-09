@@ -1219,7 +1219,7 @@ We can reuse the same approach for debugging.  A LLM that explicitly checks wher
 
 <https://jules.google/docs/api/reference/>)
 
-Create another sidecar model running async (maybe batch) that would read the prompt
+Create another sidecar model running async (maybe batch) that would read reasoning traces of the agent and populate the issues. Basically an agent that debugs. It saves me, a developer, a pain in the of debugging.
 
 ### Backups
 
