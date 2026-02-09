@@ -1,10 +1,20 @@
+import pytest
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
+from worker.api.routes import get_router
 from worker.app import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def mock_get_router():
+    mock = MagicMock()
+    app.dependency_overrides[get_router] = lambda: mock
+    yield mock
+    app.dependency_overrides.clear()
 
 
 @patch("worker.api.routes._load_component")
