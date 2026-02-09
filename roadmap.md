@@ -132,3 +132,19 @@ At this point we'll the state of the art by a great margin.
 ### Work package 6 - Real-life scans
 
 Take a set of real-life 3d scans, e.g. via NeRF, and instead of agent-generated environments, make the agents build small robots to move something to something in the real world.
+
+## Extras
+
+Below define extras. I do think they are still important, but because I'm coming up with more and more work for myself, I can't do all of this. Or I'll need to sacrifice, e.g., fluids.
+
+### Work package 7 - Sensors
+
+Add sensors to the simulation and make triggers based on the sensors.
+Probably requires Genesis sim because sensors are natively supported there.
+
+### Work package 8 - Design Unit Tests
+
+Models can cover their designs with "unit tests", especially relying on sensors.
+In essense, make "Unit tests" that assert functionality of a design - something was moved here at this time, a sensors detected something, something was staying above a given level, etc.
+
+Allows for more constrained work, but also allows to strictly define and enforce "functional requirements", and allows to validate more randomization easily (e.g., not challenging to evaluate 15 random samples from the environment.)
