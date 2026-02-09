@@ -786,56 +786,82 @@ Constraints done by the engineer should be enforced for validity. E.g.: two part
 
 Some parts will need to be "fixed" despite physics, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
 
-###### Fasteners definition
+###### Fasteners
 
-<!-- I propose to make a utility method like "fastener_hole(fastener_depth, fastener_diameter, fastener_type)), of fastener size and a float of depth (metric by default) and would drill a hole. Conveniently, build123d offers a `Hole` class with various simplifications like Counterbore. -->
-<!-- Note: I don't doubt we should use bd-warehoue for this. However, I doubt how this will be constrained. I'm not sure. -->
+We use **build123d's native `RigidJoint` system** for mating parts. This avoids custom positioning math — build123d handles transforms automatically via `connect_to()`. Fastener geometry (bolts, screws, nuts) comes from the [`bd-warehouse`](https://bd-warehouse.readthedocs.io/en/latest/fastener.html) package.
 
-Notably, `bd-warehouse` package for build123d offers all nuts, bolts and screws, and we almost definitely should reuse it. With however logic it offers.
+**Helper function**: `fastener_hole(part, pos, depth, diameter, hole_id: str, hole_type: HoleType = HoleType.FlatHeadHole, add_fastener=False)`
 
-It would: make a hole in one part and in another part (undefined - how to make holes in another part and be robust? Normally in something like Autodesk Inventor the "Adaptive constraints" and "adaptive sketches" were a mess.)
+1. Cuts a hole at `pos` using build123d `Hole` (or `CounterBoreHole`)
+2. Creates a `RigidJoint` at the hole location with a parameter `rigid_joint.hole_id=hole_id`
+3. If `add_fastener=True`, inserts appropriate fastener from bd-warehouse catalog
+4. Returns the modified part
 
-<!-- bd-warehouse docs on fasteners and holes. I'll have to add this info to the `skills/` - https://bd-warehouse.readthedocs.io/en/latest/fastener.html -->
+The type of Hole is determined by an enum - HoleType: `FlatHeadHole`, `CounterBoreHole`, `CounterSinkHole` for according types of holes.
 
-###### Fasteners constraints
+###### Agent workflow for fasteners
 
-How to create constraints in CAD and map it onto MuJoCo cleanly is not very logical. What I suggest is:
+```python
+from utils.fasteners import fastener_hole
 
-1. Per each fastener hole, define a alphanumeric "connection_id" (in function definition)
-2. The fastener would have a connection_id as well (unique fastener per connection)
-3. The fastener would be inserted into the connection automatically.
-4. All three objects (two parts, fastener) would have `weld` constraints afterwards.
+# Create bracket (anchor part) - explicitly positioned
+bracket = Box(100, 50, 10)
+bracket = fastener_hole(bracket, pos=(20, 25), depth=10, diameter=5, hole_id="mount_1")
+bracket = fastener_hole(bracket, pos=(80, 25), depth=10, diameter=5, hole_id="mount_2")
+bracket.position = (0, 0, 100)  # world position
 
-Fasteners could be placed into holes automatically by setting `fastner_hole(..., insert_fastener=True)` parameter. The fastener would have automatically picked up the length and the diameter of the hole.
+# Create arm - will be positioned via joint mating
+arm = Box(200, 30, 8)
+arm = fastener_hole(arm, pos=(10, 15), depth=8, diameter=5, hole_id="arm_1", add_fastener=True)
+arm = fastener_hole(arm, pos=(50, 15), depth=8, diameter=5, hole_id="arm_2", add_fastener=True)
 
-Note: fasteners could be placed into holes.
+# Mate parts - build123d computes transform automatically
+arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
+arm.joints["arm_2"].connect_to(bracket.joints["mount_2"])
+```
 
-###### Fastener automatic insertion
+After `connect_to()`, the arm is automatically positioned so holes align. **No manual rotation/translation math needed.**
 
-To make the above logic work, fastener_hole would automatically create a build123d Joint; another Joint at the receiving hole, and mate them together.
-<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics and conditionals get unusual in there. -->
+Note: hole names are given readable names, e.g. explicit names like "front_mount" or "pivot_hole" for easier identification. In fact, the hole name serves as a local label for the joint. So that we can reference the build123d joint with its hole name.
 
-If the hole is not through, the fastener can't hold a part after it, Thus, we can only connect a through hole to another hole.
+"""
+Without hole_id:
 
-I did it in another project; it was overcomplicated and for a little more functionality, but essentially, see `/docs/fastener_math.md` file.
+```python
+# How would you reference the joint?
+arm.joints[???].connect_to(bracket.joints[???])
+```
 
-Why the complex logic: I want the agent to be able to insert fasteners relatively as easy as possible.
+With hole_id:
 
-###### Detailed fasteners math/logic
+```python
+arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
+```
 
-<!-- Here -->
+"""
+**Validation rules**:
 
-Where do holes store connection ID? Well, I suppose we may iterate over all of children in each assembly recursively and get build123d part definitions from it.
+- Single-fastener connections are **rejected** (underconstrained — allows rotation around bolt axis)
+- Minimum 2 fasteners required for rigid connection between parts <!-- Note: this is not true, actually. You can design such inserts that only 1 will be sufficient. But, let it be.>
+- Hole diameters must match between mated pairs
 
-###### Final workflow
+**MJCF translation**:
 
-In both parts, create a fastener_hole(depth=10, diameter=5, connection_id=10); in the top hole add "add_fastener=True".
+1. Walk assembly, find all `RigidJoint` pairs that are connected
+2. For each connected pair: emit `<weld body1="..." body2="..."/>` constraint
+3. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at it's last position in CAD. But still.) -->
 
-The top hole would automatically insert a fastener, and pull the bottom part to its' own self via a build123d Joint (note: the joint may be unnecessary?)
+###### Edge case: multiple holes
 
-Both of the parts now look constrained.
+The `hole_id` is **local to each Part**, not a global identifier. When one central part connects to multiple identical parts, each child part can have the same `hole_id` (e.g., `"attach"`) — the matching happens via explicit `connect_to()` calls:
 
-During translation, all three parts will be welded together.
+```python
+# 4 identical legs with same local hole_id
+for i, leg in enumerate(legs):
+    leg.joints["attach"].connect_to(bracket.joints[f"mount_{i+1}"])
+```
+
+This avoids the need for global ID management or dict-based hole matching.
 
 ##### Allowed components in simulation
 
@@ -1059,6 +1085,10 @@ The conversion pipeline is - putting every part into mesh;
 When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
 
 <!-- Note: Genesis if we'll migrate to it, supports GLB. -->
+
+### Preview/visualization
+
+We want the agent to be able to preview their own CAD models (likely done more often). We will render CAD images, not MuJoCo for it. The materials will have their colors.
 
 #### Mesh limits
 
