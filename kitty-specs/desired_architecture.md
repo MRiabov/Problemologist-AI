@@ -880,7 +880,9 @@ For position-based control (servos, steppers), we use **MuJoCo's native `<positi
 
 ```xml
 <actuator>
-  <position name="servo1" joint="arm_hinge" kp="{kp_from_COTS_config}" kv="kv_from_COTS_config"/>
+  <position name="servo1" joint="arm_hinge" 
+            kp="{kp_from_COTS}" kv="{kv_from_COTS}"
+            forcerange="-{max_torque_nm} {max_torque_nm}"/>
 </actuator>
 ```
 
@@ -889,6 +891,7 @@ For position-based control (servos, steppers), we use **MuJoCo's native `<positi
 - **`ctrl[i]` meaning**: Target position (radians for hinge, meters for slide) – *not* torque
 - **Internal PD control**: MuJoCo applies `torque = kp * (target - pos) - kv * vel`
 - **Physics-based tracking**: The joint "seeks" the target position naturally (no teleportation)
+- **`forcerange`**: Clamps output torque to realistic motor limits (prevents infinite force)
 
 **PD gain tuning** (critical for stability):
 
@@ -907,10 +910,34 @@ For position-based control (servos, steppers), we use **MuJoCo's native `<positi
 
 Notably, we have a set of COTS motors in COTS section below. We need to assume/research COTS actuator strength and parameters.
 
-#### No overload
+#### Actuator force limits (forcerange)
 
-We don't want motors to break; set the maximum load on motors in COTS data. If the motors overload, the simulation fails.
-This also forces the agents to pick the right motors.
+MuJoCo's `forcerange` attribute clamps the actuator output to realistic torque limits:
+
+```xml
+<!-- Example: MG996R hobby servo with ~1.1 N·m max torque -->
+<position name="servo" joint="arm" kp="15" kv="0.8" forcerange="-1.1 1.1"/>
+```
+
+**Behavior**:
+
+- If PD control computes torque > `forcerange`, it's clamped to the limit
+- Motor "struggles" realistically when overloaded (can't reach target)
+- Simulation does NOT fail from clamping alone (see below for failure logic)
+
+**Source of values**: `forcerange` comes from COTS servo catalog (`max_torque_nm` field).
+
+#### Motor overload failure
+
+We don't want motors to break; set the maximum *sustained* load threshold above the servo's rated torque.
+If a motor is clamped at `forcerange` for more than **2 seconds continuous**, the simulation fails with `motor_overload`.
+
+This forces agents to:
+
+1. Pick appropriately-sized motors for the load
+2. Design mechanisms that don't exceed torque limits
+"""
+Note: AI-written, I'm not a pro in MuJoCo motors.
 
 ### Definition of "success" and failure in the simulation
 
