@@ -15,15 +15,24 @@ def test_load_config():
     assert config.cnc is not None
     assert "aluminum_6061" in config.cnc.materials
 
+    # Verify new fields for simulation
+    al_mat = config.cnc.materials["aluminum_6061"]
+    assert al_mat.color == "#D1D5DB"
+    assert al_mat.elongation_stress_mpa == 240.0
+    assert al_mat.restitution == 0.5
+    assert al_mat.friction_coef == 0.6
+
     # Check dict-like access for backward compatibility
     cnc_dict = config["cnc"]
     assert isinstance(cnc_dict, dict)
     assert "aluminum_6061" in cnc_dict["materials"]
     assert cnc_dict["materials"]["aluminum_6061"]["density_g_cm3"] == 2.7
+    assert cnc_dict["materials"]["aluminum_6061"]["color"] == "#D1D5DB"
 
     # Check rates in injection molding
     im_dict = config["injection_molding"]
     assert im_dict["materials"]["abs"]["machine_hourly_rate"] == 60.0
+    assert im_dict["materials"]["abs"]["restitution"] == 0.4
 
 
 def test_config_file_not_found():

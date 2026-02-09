@@ -8,6 +8,10 @@ cnc:
       density_g_cm3: 2.7
       cost_per_kg: 6.0
       machine_hourly_rate: 80.0
+      color: "#D1D5DB"
+      elongation_stress_mpa: 240.0
+      restitution: 0.5
+      friction_coef: 0.6
   constraints:
     mrr_mm3_per_min: 1000.0
   parameters:
@@ -23,6 +27,10 @@ injection_molding:
       density_g_cm3: 1.04
       cost_per_kg: 2.5
       machine_hourly_rate: 60.0
+      color: "#3B82F6"
+      elongation_stress_mpa: 40.0
+      restitution: 0.4
+      friction_coef: 0.5
   constraints:
     min_draft_angle_deg: 2.0
     min_wall_thickness_mm: 1.0
@@ -39,5 +47,9 @@ three_dp:
       density_g_cm3: 1.04
       cost_per_kg: 20.0
       machine_hourly_rate: 20.0
+      color: "#1E293B"
+      elongation_stress_mpa: 30.0
+      restitution: 0.3
+      friction_coef: 0.4
   costs:
     setup_fee: 10.0
