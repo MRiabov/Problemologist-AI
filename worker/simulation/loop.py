@@ -136,6 +136,17 @@ class SimulationLoop:
         )
         # We rely on self.goal_sites populated in init
 
+        # 0. Check for pre-existing instability
+        if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
+            self.fail_reason = "instability_detected"
+            return SimulationMetrics(
+                total_time=0.0,
+                total_energy=0.0,
+                max_velocity=0.0,
+                success=False,
+                fail_reason=self.fail_reason,
+            )
+
         for _ in range(steps):
             # Apply dynamic controllers
             if dynamic_controllers:
@@ -143,9 +154,14 @@ class SimulationLoop:
                     if name in actuator_map:
                         self.data.ctrl[actuator_map[name]] = controller(self.data.time)
 
+            # 1. Check for instability BEFORE step (catch injected NaNs)
+            if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
+                self.fail_reason = "instability_detected"
+                break
+
             mujoco.mj_step(self.model, self.data)
 
-            # 1. Update Metrics
+            # 2. Update Metrics
             # Energy proxy: abs(ctrl) * abs(velocity) is power. Energy is integral of power * dt.
             # But here we just sum power? T011 says "sum of ctrl * velocity".
             # We add it per step.
@@ -174,13 +190,13 @@ class SimulationLoop:
                     logger.info("Simulation FAIL: Target fell off world")
                     break
 
-            # 2. Check Forbidden Zones
+            # 3. Check Forbidden Zones
             if self._check_forbidden_collision():
                 self.fail_reason = "collision_with_forbidden_zone"
                 logger.info("Simulation FAIL: Collision with forbidden zone")
                 break
 
-            # 3. Check Goal Zone
+            # 4. Check Goal Zone
             # Vertex-based check against goal SITES
             goal_hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
             if goal_hit:
@@ -188,7 +204,7 @@ class SimulationLoop:
                 logger.info("Simulation SUCCESS: Goal reached")
                 break
 
-            # 4. Check Timeout (hard cap at 30 seconds)
+            # 5. Check Timeout (hard cap at 30 seconds)
             elapsed = self.data.time - start_time
             if elapsed >= self.max_simulation_time:
                 self.fail_reason = "timeout_exceeded"
@@ -198,14 +214,14 @@ class SimulationLoop:
                 )
                 break
 
-            # 5. Check Motor Overload
+            # 6. Check Motor Overload
             overloaded = self._check_motor_overload()
             if overloaded:
                 self.fail_reason = f"motor_overload:{overloaded}"
                 logger.info(f"Simulation FAIL: Motor overload on {overloaded}")
                 break
 
-            # 6. Check Numerical Stability (NaNs)
+            # 7. Check Numerical Stability (NaNs)
             if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
                 self.fail_reason = "instability_detected"
                 logger.info("Simulation FAIL: Numerical instability (NaNs) detected")
