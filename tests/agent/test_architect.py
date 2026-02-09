@@ -34,6 +34,10 @@ async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
 
     state = AgentState(task="Build a robot")
 
+    # Configure mock_fs instance to support async context manager or async methods
+    fs_instance = mock_fs.return_value
+    fs_instance.write_file = AsyncMock()
+
     result = await architect_node(state)
 
     # Check return value
@@ -65,6 +69,11 @@ async def test_architect_node_fallback(mock_fs, mock_worker, mock_llm):
     mock_llm.ainvoke.return_value = MagicMock(content="Just some text without sections")
 
     state = AgentState(task="Build a robot")
+
+    # Configure mock_fs instance to support async context manager or async methods
+    fs_instance = mock_fs.return_value
+    fs_instance.write_file = AsyncMock()
+
     result = await architect_node(state)
 
     assert result.plan == "Just some text without sections"
