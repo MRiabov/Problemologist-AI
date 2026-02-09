@@ -58,6 +58,7 @@ class SimulationLoop:
         self,
         control_inputs: dict[str, float],
         duration: float = 10.0,
+        dynamic_controllers: dict[str, callable] | None = None,
         render_callback=None,
     ) -> SimulationMetrics:
         """
@@ -73,7 +74,8 @@ class SimulationLoop:
             violations = getattr(
                 self.validation_report, "violations", ["unknown error"]
             )
-            self.fail_reason = f"validation_failed: {', '.join(map(str, violations))}"
+            msg = f"validation_failed: {', '.join(map(str, violations))}"
+            self.fail_reason = msg
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
@@ -82,9 +84,8 @@ class SimulationLoop:
                 fail_reason=self.fail_reason,
             )
 
-        # Apply static controls (if any)
+        # Apply initial static controls
         for name, value in control_inputs.items():
-            # Find actuator by name
             actuator_id = mujoco.mj_name2id(
                 self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
             )
@@ -94,12 +95,21 @@ class SimulationLoop:
                 logger.warning(f"Actuator {name} not found")
 
         start_time = self.data.time
-        # Use a safe epsilon for max steps to avoid floating point issues
         steps = (
             int(duration / self.model.opt.timestep)
             if self.model.opt.timestep > 0
             else 0
         )
+
+        # Cache actuator IDs for dynamic control
+        actuator_map = {}
+        if dynamic_controllers:
+            for name in dynamic_controllers:
+                act_id = mujoco.mj_name2id(
+                    self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
+                )
+                if act_id != -1:
+                    actuator_map[name] = act_id
 
         # Find critical bodies once
         target_body_id = mujoco.mj_name2id(
@@ -110,6 +120,12 @@ class SimulationLoop:
         )
 
         for _ in range(steps):
+            # Apply dynamic controllers
+            if dynamic_controllers:
+                for name, controller in dynamic_controllers.items():
+                    if name in actuator_map:
+                        self.data.ctrl[actuator_map[name]] = controller(self.data.time)
+
             mujoco.mj_step(self.model, self.data)
 
             # 1. Update Metrics
@@ -184,11 +200,12 @@ class SimulationLoop:
         diff = np.abs(target_pos - goal_global_pos)
 
         geom_type = self.model.geom_type[goal_geom_id]
-        if geom_type == mujoco.mjtGeom.mjGEOM_BOX:
-            if np.all(diff < goal_size[:3]):
-                return True
-        elif geom_type == mujoco.mjtGeom.mjGEOM_SPHERE:
-            if np.linalg.norm(diff) < goal_size[0]:
-                return True
+        if geom_type == mujoco.mjtGeom.mjGEOM_BOX and np.all(diff < goal_size[:3]):
+            return True
+        elif (
+            geom_type == mujoco.mjtGeom.mjGEOM_SPHERE
+            and np.linalg.norm(diff) < goal_size[0]
+        ):
+            return True
 
         return False
