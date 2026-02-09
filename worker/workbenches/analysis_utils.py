@@ -4,12 +4,12 @@ import tempfile
 
 import numpy as np
 import trimesh
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 
-def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
+def part_to_trimesh(part: Part | Compound | Solid) -> trimesh.Trimesh:
     """
-    Converts a build123d Part or Compound to a trimesh.Trimesh object.
+    Converts a build123d Part, Solid, or Compound to a trimesh.Trimesh object.
     """
     with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
         tmp_path = tmp.name
@@ -54,14 +54,27 @@ def check_undercuts(
     min_z = mesh.vertices[:, 2].min()
     pointing_away = np.where(dots < -0.01)[0]
 
-    undercut_indices = []
-    for idx in pointing_away:
-        face_vertices = mesh.vertices[mesh.faces[idx]]
-        face_z = face_vertices[:, 2]
-        # If the face is at min_z and normal is nearly (0,0,-1), it's the base, not an undercut
-        if np.all(np.abs(face_z - min_z) < 0.01) and dots[idx] < -0.99:
-            continue
-        undercut_indices.append(idx)
+    if len(pointing_away) > 0:
+        # Optimize: vectorized check for base faces
+        # Get Z coordinates of all vertices in candidate faces
+        # mesh.vertices is (V, 3), so we take Z column first -> (V,)
+        # mesh.faces[pointing_away] is (N, 3) indices
+        # Result is (N, 3) array of Z coordinates
+        face_z = mesh.vertices[:, 2][mesh.faces[pointing_away]]
+
+        # Check if all vertices of a face are at min_z
+        is_at_bottom = np.all(np.abs(face_z - min_z) < 0.01, axis=1)
+
+        # Check if normal is pointing straight down (nearly -1 dot product)
+        is_pointing_down = dots[pointing_away] < -0.99
+
+        # Base faces are those at the bottom AND pointing down
+        is_base = is_at_bottom & is_pointing_down
+
+        # Keep faces that are NOT base faces
+        undercut_indices = pointing_away[~is_base].tolist()
+    else:
+        undercut_indices = []
 
     # 2. Occlusion check using raycasting
     # Faces that point TOWARDS the tool but are blocked by other geometry
@@ -82,9 +95,9 @@ def check_undercuts(
     return list(set(undercut_indices))
 
 
-def compute_part_hash(part: Part | Compound) -> str:
+def compute_part_hash(part: Part | Compound | Solid) -> str:
     """
-    Computes a stable hash for a build123d Part or Compound.
+    Computes a stable hash for a build123d Part, Solid, or Compound.
     Uses STL export as a proxy for geometry.
     """
     with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:

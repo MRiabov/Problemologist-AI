@@ -1,7 +1,7 @@
 from typing import Any
 
 import structlog
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import compute_part_hash
@@ -17,7 +17,7 @@ logger = structlog.get_logger()
 
 @type_check
 def calculate_3dp_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -93,7 +93,7 @@ def calculate_3dp_cost(
 
 
 @type_check
-def analyze_3dp(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_3dp(part: Part | Compound | Solid, config: ManufacturingConfig) -> WorkbenchResult:
     """
     Functional entry point for 3D Printing analysis.
     """
@@ -167,13 +167,13 @@ class Print3DWorkbench(Workbench):
 
         self.config = config or load_config()
 
-    def validate(self, part: Part) -> list[Exception | str]:
+    def validate(self, part: Part | Compound | Solid) -> list[Exception | str]:
         result = analyze_3dp(part, self.config)
         return result.violations
 
     def calculate_cost(
         self,
-        part: Part,
+        part: Part | Compound | Solid,
         quantity: int = 1,
         context: dict[str, Any] | None = None,
     ) -> CostBreakdown:

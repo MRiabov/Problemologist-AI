@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import structlog
 import trimesh
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
@@ -120,7 +120,7 @@ def _check_wall_thickness(
 
 @type_check
 def _calculate_im_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -205,7 +205,7 @@ def _calculate_im_cost(
 
 
 @type_check
-def analyze_im(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_im(part: Part | Compound | Solid, config: ManufacturingConfig) -> WorkbenchResult:
     """
     Functional entry point for Injection Molding analysis.
     """
@@ -270,13 +270,13 @@ class InjectionMoldingWorkbench(Workbench):
 
         self.config = config or load_config()
 
-    def validate(self, part: Part) -> list[Exception | str]:
+    def validate(self, part: Part | Compound | Solid) -> list[Exception | str]:
         result = analyze_im(part, self.config)
         return result.violations
 
     def calculate_cost(
         self,
-        part: Part,
+        part: Part | Compound | Solid,
         quantity: int = 1,
         context: dict[str, Any] | None = None,
     ) -> CostBreakdown:

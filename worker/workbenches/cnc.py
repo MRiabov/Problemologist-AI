@@ -1,7 +1,7 @@
 from typing import Any
 
 import structlog
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
@@ -21,7 +21,7 @@ logger = structlog.get_logger()
 
 @type_check
 def check_internal_corner_radii(
-    part: Part | Compound, min_radius: float = 1.0
+    part: Part | Compound | Solid, min_radius: float = 1.0
 ) -> list[str]:
     """
     Checks for internal corners that have a radius smaller than the minimum tool radius.
@@ -96,7 +96,7 @@ def check_internal_corner_radii(
 
 @type_check
 def calculate_cnc_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -185,7 +185,7 @@ def calculate_cnc_cost(
 
 
 @type_check
-def analyze_cnc(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_cnc(part: Part | Compound | Solid, config: ManufacturingConfig) -> WorkbenchResult:
     """
     Functional entry point for CNC analysis.
     """
@@ -241,13 +241,13 @@ class CNCWorkbench(Workbench):
 
         self.config = config or load_config()
 
-    def validate(self, part: Part) -> list[Exception | str]:
+    def validate(self, part: Part | Compound | Solid) -> list[Exception | str]:
         result = analyze_cnc(part, self.config)
         return result.violations
 
     def calculate_cost(
         self,
-        part: Part,
+        part: Part | Compound | Solid,
         quantity: int = 1,
         context: dict[str, Any] | None = None,
     ) -> CostBreakdown:
