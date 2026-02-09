@@ -194,7 +194,7 @@ Step 4 changed: "Validate for being in **build zone bounds**" (not just generica
 
 ### 8.1 Git-based Skill Versioning
 
-*PARTIAL: Uses GitPython instead of git2. No merge conflict resolution logic.*
+*PARTIAL: Uses GitPython. (Note: git2 transition is cancelled, GitPython is fine).*
 
 Skills versioned via **public git repo**. Workers handle git operations:
 
@@ -202,7 +202,7 @@ Skills versioned via **public git repo**. Workers handle git operations:
 2. If push fails (merge conflict) → `git merge`
 3. If merge fails → skill creator LLM handles it
 
-**Library**: Use `git2` instead of shell commands  
+**Library**: GitPython (Standard)
 **Security note**: Workers have GitHub PAT (exception to controller-holds-secrets rule)
 
 ### 8.2 Skill Agent Details
@@ -268,7 +268,7 @@ controller/
 
 ## 10. Frontend Specifications *(NEW - DETAILED)*
 
-### 10.1 Benchmark Generation Workflow
+<!-- ### 10.1 Benchmark Generation Workflow
 
 *MISSING: "+ Create new" button and clearing UI logic.*
 
@@ -276,8 +276,10 @@ controller/
 2. Clicking clears current UI data (not DB)
 3. Enter "benchmark creation" mode
 4. Traces section shows textbox for prompting
-5. `plan.md` created with **"Start implementation"** button at top
-6. UI auto-updates with new models as build123d progresses
+5. `plan.md` created with **"Start implementation"** button at top -->
+<!-- all above is done -->
+
+1. UI auto-updates with new models as build123d progresses
 
 ### 10.2 Viewing Code, Plans, Reviews, Simulation
 
@@ -347,10 +349,12 @@ Based on the scope of changes, suggested implementation order:
 
 ### P1 - Frontend
 
-1. Benchmark creation workflow UI
-2. 3-column layout with reasoning traces
-3. Artifact viewer with file tree
-4. CAD viewer integration (GLB via worker)
+<!-- 1. Benchmark creation workflow UI
+2. 3-column layout with reasoning traces-->
+1. Artifact viewer with file tree
+1. CAD viewer integration (GLB via worker)
+
+<!-- note: frontend *design* is done well, don't touch it.-->
 
 ### P2 - Infrastructure
 
