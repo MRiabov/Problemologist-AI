@@ -48,6 +48,14 @@ export default function ReasoningTraces({
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (prompt.trim()) {
+      startAgent(prompt);
+      setPrompt("");
+    }
+  };
+
   // Auto-scroll to bottom when new traces arrive
   useEffect(() => {
     if (traces && traces.length > 0) {
