@@ -33,6 +33,11 @@ class MaterialDefinition(BaseModel):
     name: StrictStr
     density_g_cm3: StrictFloat
     cost_per_kg: StrictFloat
+    color: StrictStr = "#FFFFFF"
+    elongation_stress_mpa: StrictFloat = 0.0
+    restitution: StrictFloat = 0.5
+    friction_coef: StrictFloat = 0.5
+    machine_hourly_rate: StrictFloat = 0.0
     compatibility: list[ManufacturingMethod] = Field(default_factory=list)
 
 
@@ -48,7 +53,7 @@ class CostBreakdown(BaseModel):
 
 
 class MethodConfig(BaseModel):
-    materials: dict[StrictStr, dict[StrictStr, Any]]
+    materials: dict[StrictStr, MaterialDefinition]
     constraints: dict[StrictStr, Any] = Field(default_factory=dict)
     parameters: dict[StrictStr, Any] = Field(default_factory=dict)
     costs: dict[StrictStr, Any] = Field(default_factory=dict)

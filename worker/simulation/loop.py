@@ -205,6 +205,12 @@ class SimulationLoop:
                 logger.info(f"Simulation FAIL: Motor overload on {overloaded}")
                 break
 
+            # 6. Check Numerical Stability (NaNs)
+            if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
+                self.fail_reason = "instability_detected"
+                logger.info("Simulation FAIL: Numerical instability (NaNs) detected")
+                break
+
             if render_callback:
                 render_callback(self.model, self.data)
 

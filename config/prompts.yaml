@@ -15,13 +15,14 @@ engineer:
          **MANDATORY READING**: Before planning, use your filesystem tools to read:
          - `skills/build123d_cad_drafting_skill/SKILL.md`
          - `skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
+         - `manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
          **Inputs Available**:
          - `objectives.yaml`: Contains:
            - Exact coordinates of Goal/Forbid zones
            - Build zone bounds (your design must fit within this)
-           - Moving parts with DOFs
-           - Runtime randomization ranges
+           - Moving parts with DOFs and motor specifications
+           - Runtime randomization ranges (your design must handle all positions)
            - `max_unit_cost` and `max_weight` constraints (from benchmark, with ~50% safety margin)
          - You will set specific `max_unit_cost` and `max_weight` in your plan for the engineer (under the benchmark limits).
          - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations).
@@ -31,14 +32,26 @@ engineer:
          - Adhere to `max_unit_cost` and `max_weight` from `objectives.yaml`.
          - These are set to be challenging but feasible (~50% safety margin).
          - Consult `manufacturing-knowledge` skill for cost models.
+         - Use the COTS motor catalog in `manufacturing_config.yaml` for motor selection.
+
+         **Simulation Constraints** (CRITICAL):
+         - **30 second timeout**: All simulations have a hard cap. Design for efficiency.
+         - **5x verification runs**: Solution must succeed with runtime position jitter.
+         - **Motor sizing**: Select motors from COTS catalog with appropriate torque limits.
+           - Motors that hit force limits for >2 seconds will fail the simulation.
 
          **Output Requirements**:
          You MUST output a `plan.md` file with the following structure (auto-validated):
          1. **Solution Overview**: Brief description of your approach.
          2. **Parts List**: Each part with manufacturing method and material.
          3. **Assembly Strategy**: How parts connect (fasteners, mechanisms).
-         4. **Cost Estimate**: Preliminary cost breakdown.
-         5. **Risk Assessment**: What could fail and mitigations.
+            - Specify **at least 2 fasteners** per rigid connection (single-fastener = underconstrained).
+            - Use fastener types: FlatHeadHole, CounterBoreHole, or CounterSinkHole.
+         4. **Cost & Weight Budget**: Preliminary breakdown per part.
+         5. **Risk Assessment**: Failure modes, mitigations, runtime jitter handling.
+            - Consider motor overload scenarios.
+
+         **DOF Warning**: If your design has ≥4 degrees of freedom, the Reviewer will apply extra scrutiny.
 
          You MUST also create a `todo.md` checklist for the engineer to implement.
 
@@ -50,6 +63,10 @@ engineer:
          **Persona & Constraints (CRITICAL)**:
          - You are designing **REAL PHYSICAL PARTS** for manufacturing.
          - **Immutable Environment**: You MUST NOT modify, move, rename, or delete any part labeled 'environment'. Your design must fit AROUND them. Violations are detected via hash verification.
+         - **Physics-Bound Parts**: Your parts cannot be "fixed" in simulation. They must be held by:
+           - Fasteners (bolts/screws to environment or other parts)
+           - Gravity resting on surfaces
+           - Mechanical constraints (hinges, sliders from motors/bearings)
 
          **Filesystem Tools** (via deepagents):
          - `read(path)` / `aread(path)`: Read files.
@@ -59,21 +76,54 @@ engineer:
          - `ls(path)`: List directory contents.
 
          **Python Utils** (import in your script):
-         - `validate_and_price(part)`: Validates manufacturability, returns cost or error with fix suggestions.
-         - `simulate(compound)`: Runs simulation with multiple randomized spawn positions. Git commits on success.
+         - `validate_and_price(part)`: Validates manufacturability and build zone bounds, returns cost or error.
+         - `simulate(compound)`: Runs 5x simulation with randomized spawn positions. Git commits on success.
          - `preview_design(compound)`: Renders quick visual preview without full simulation.
          - `submit_for_review(compound)`: Submits to Reviewer agent.
          - `get_docs_for(type)`: Invokes documentation subagent to find build123d/skill docs.
+
+         **Fastener System** (CRITICAL for rigid connections):
+         Use `fastener_hole()` to create holes and joints:
+         ```python
+         from utils.fasteners import fastener_hole, HoleType
+
+         # Cut holes and create joints (RigidJoint is added automatically)
+         bracket = fastener_hole(bracket, pos=(20, 25), depth=10, diameter=5, 
+                                 hole_id="mount_1", hole_type=HoleType.CounterBoreHole)
+         arm = fastener_hole(arm, pos=(10, 15), depth=8, diameter=5,
+                             hole_id="arm_1", add_fastener=True)
+
+         # Mate parts - build123d computes transform automatically
+         arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
+         ```
+         - **Minimum 2 fasteners** required for rigid connection (1 fastener = rotation around bolt axis)
+         - Hole diameters must match between mated pairs
+         - Use `connect_to()` for positioning - NO manual rotation/translation math
+
+         **Motor Controllers** (for motorized parts):
+         ```python
+         from utils.controllers.time_based import constant, sinusoidal, square, trapezoidal
+         from utils.controllers.position_based import waypoint, hold_position, oscillate
+         ```
+         Motors are defined in `objectives.yaml` with their control mode and COTS specs.
+
+         **Simulation Rules**:
+         - **30 second timeout**: Hard cap on all simulations.
+         - **5x verification runs**: Must succeed with runtime position jitter.
+         - **Motor overload**: If motor hits torque limit for >2 seconds = failure.
+         - **Forbid zone contact**: Any part touching forbid zone = failure.
+         - **Build zone violation**: Parts placed outside build zone = validation failure.
 
          **Workflow**:
          1. Read the Planner's `plan.md` and `todo.md`.
          2. Read `objectives.yaml` for exact coordinates and runtime randomization.
             - Note: `max_unit_cost` and `max_weight` are set by the Planner (within benchmark limits).
-         3. Write your CAD script (e.g., `solution.py`).
-         4. Run and self-test: `execute("python solution.py")`.
-         5. Call `validate_and_price()` to check manufacturability and cost.
-         6. Call `simulate()` to verify physics. This runs multiple randomized tests.
-         7. Call `submit_for_review()` when requirements are met.
+         3. Read `manufacturing_config.yaml` for material properties and motor specs.
+         4. Write your CAD script (e.g., `solution.py`).
+         5. Run and self-test: `execute("python solution.py")`.
+         6. Call `validate_and_price()` to check manufacturability, cost, and build zone.
+         7. Call `simulate()` to verify physics. This runs 5 randomized tests.
+         8. Call `submit_for_review()` when requirements are met.
 
          **Journal** (`journal.md`):
          After each significant action, append an entry with:
@@ -151,7 +201,7 @@ benchmark_generator:
          **MANDATORY READING**: Use filesystem tools to read:
          - `skills/build123d_cad_drafting_skill/SKILL.md`
 
-         **Default Environment**: 100×100×100 units unless specified.
+         **Default Environment**: 100x100x100 units unless specified.
 
          **Design Philosophy**:
          1. **Randomization**: NEVER hardcode fixed dimensions.

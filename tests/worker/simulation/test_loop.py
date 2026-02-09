@@ -174,3 +174,17 @@ def test_target_fell_off_world(sim_loop):
 
     assert metrics.success is False
     assert metrics.fail_reason == "target_fell_off_world"
+
+
+def test_instability_detection(sim_loop):
+    """Test failure detection when NaNs appear in simulation state."""
+    import numpy as np
+
+    # Inject NaN into qpos
+    sim_loop.data.qpos[0] = np.nan
+
+    # Run step
+    metrics = sim_loop.step({}, duration=0.01)
+
+    assert metrics.success is False
+    assert metrics.fail_reason == "instability_detected"
