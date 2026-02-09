@@ -100,6 +100,25 @@ CONTENT:
 <Example code>
 ```
 """,
+                    "git_resolver": """You are the Git Conflict Resolver.
+Your goal is to resolve a git merge conflict in a file.
+
+The file has conflicts marked with:
+<<<<<<< HEAD
+...
+=======
+...
+>>>>>>> <incoming_branch>
+
+Instructions:
+1. Analyze the conflicting sections.
+2. Combine the changes intelligently, preserving the intent of both sides if possible, or favoring the most logical content.
+3. Output the FULL resolved file content.
+4. Do NOT include any markdown code blocks (like ```python or ```markdown) or preambles. Just the raw file content.
+
+Conflicted File Content:
+{{ file_content }}
+""",
                 }
             )
         )

@@ -65,7 +65,61 @@ class SidecarNode:
             logger.error(f"Failed to initialize git repo: {e}")
             self.repo = None
 
-    def _sync_git(self, commit_message: str):
+    def _clean_llm_response(self, content: str) -> str:
+        """Remove markdown code blocks from LLM response."""
+        content = content.strip()
+        if content.startswith("```"):
+            lines = content.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            return "\n".join(lines).strip()
+        return content
+
+    async def _resolve_conflicts(self) -> bool:
+        """Resolve git conflicts using LLM."""
+        try:
+            # Check for conflicted files
+            status = self.repo.git.status("--porcelain")
+            conflicted_files = []
+            for line in status.splitlines():
+                if line.startswith("UU "):
+                    conflicted_files.append(line[3:].strip())
+
+            if not conflicted_files:
+                logger.warning("No conflicted files found despite merge conflict.")
+                self.repo.git.rebase("--abort")
+                return False
+
+            for file_path in conflicted_files:
+                full_path = self.suggested_skills_dir / file_path
+                if not full_path.exists():
+                    continue
+
+                content = full_path.read_text()
+                prompt = self.pm.render("git_resolver", file_content=content)
+
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                resolved_content = self._clean_llm_response(str(response.content))
+
+                full_path.write_text(resolved_content)
+                self.repo.git.add(file_path)
+                logger.info(f"Resolved conflict in {file_path}")
+
+            self.repo.git.rebase("--continue")
+            logger.info("Rebase continued successfully.")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to resolve conflicts: {e}")
+            try:
+                self.repo.git.rebase("--abort")
+            except:
+                pass
+            return False
+
+    async def _sync_git(self, commit_message: str):
         """Commit and push changes with rebase strategy."""
         if not self.repo:
             return
@@ -79,15 +133,9 @@ class SidecarNode:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
                 logger.warning("Rebase conflict during pull. Attempting to resolve...")
-                # Simple resolution: ours (agent's new skill) wins for now,
-                # or we could just abort.
-                # Ideally, we'd use the LLM to merge, but for now let's try to abort rebase and just push?
-                # No, if rebase fails, we are in a detached head or intermediate state.
-                self.repo.git.rebase("--abort")
-                logger.error("Rebase failed and aborted. Skills might be out of sync.")
-                # TODO unhandled! should use the llm to resolve it. it can.
-                # I think the sidecar has in fact the tools, so it can.
-                return
+                if not await self._resolve_conflicts():
+                    logger.warning("Conflict resolution failed. Aborting sync.")
+                    return
 
             self.repo.git.push()
             logger.info("Skills synced to git successfully.")
@@ -121,7 +169,7 @@ class SidecarNode:
             logger.info(f"Suggested new skill: {title}")
 
             # Sync to Git
-            self._sync_git(f"Add skill: {title}")
+            await self._sync_git(f"Add skill: {title}")
 
         journal_entry = f"\nSidecar Learner: {'Suggested skill ' + suggested_skill if suggested_skill else 'No new skills identified.'}"
 
