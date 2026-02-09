@@ -17,6 +17,13 @@ class WorkbenchResult(BaseModel):
     metadata: dict[StrictStr, Any] = Field(default_factory=dict)
 
 
+class BuildZone(BaseModel):
+    """Defines the spatial bounds within which a design must fit."""
+
+    min: tuple[float, float, float]  # (x, y, z) minimum coordinates
+    max: tuple[float, float, float]  # (x, y, z) maximum coordinates
+
+
 class DFMReport(BaseModel):
     overall_status: StrictBool
     results: dict[StrictStr, WorkbenchResult]

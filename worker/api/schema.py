@@ -99,3 +99,53 @@ class GitCommitResponse(BaseModel):
     success: StrictBool
     commit_hash: StrictStr | None = None
     message: StrictStr
+
+
+class PreviewDesignRequest(BaseModel):
+    """Request to preview a CAD design from specific angles."""
+
+    script_path: StrictStr = Field(
+        default="script.py",
+        description="Path to the script containing the build() function.",
+    )
+    pitch: float = Field(
+        default=-45.0,
+        ge=-90.0,
+        le=90.0,
+        description="Camera elevation angle in degrees (negative = looking down).",
+    )
+    yaw: float = Field(
+        default=45.0,
+        ge=0.0,
+        lt=360.0,
+        description="Camera azimuth angle in degrees (clockwise from front).",
+    )
+
+
+class PreviewDesignResponse(BaseModel):
+    """Response from preview design endpoint."""
+
+    success: StrictBool
+    message: StrictStr
+    image_path: StrictStr | None = None
+
+
+class LintRequest(BaseModel):
+    """Request to lint Python code."""
+
+    path: StrictStr | None = Field(
+        default=None,
+        description="Path to file to lint (if in filesystem).",
+    )
+    content: StrictStr | None = Field(
+        default=None,
+        description="Direct content to lint.",
+    )
+
+
+class LintResponse(BaseModel):
+    """Response from linting Python code."""
+
+    success: StrictBool
+    errors: list[dict[StrictStr, Any]] = Field(default_factory=list)
+    warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
