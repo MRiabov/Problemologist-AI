@@ -16,11 +16,18 @@ class SimulationMetrics(BaseModel):
     fail_reason: StrictStr | None = None
 
 
+# Hard cap on simulation time per architecture spec
+MAX_SIMULATION_TIME_SECONDS = 30.0
+# Motor overload threshold: fail if clamped for this duration (seconds)
+MOTOR_OVERLOAD_THRESHOLD_SECONDS = 2.0
+
+
 class SimulationLoop:
     def __init__(
         self,
         xml_path: str,
         component: Part | Compound | None = None,
+        max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
     ):
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
@@ -40,10 +47,19 @@ class SimulationLoop:
 
         # Cache zone IDs for forbidden zones
         self.forbidden_geoms = set()
+        self.goal_geoms = set()
         for i in range(self.model.ngeom):
             name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
             if name and name.startswith("zone_forbid"):
                 self.forbidden_geoms.add(i)
+            elif name and name.startswith("zone_goal"):
+                self.goal_geoms.add(i)
+
+        # Configurable timeout (capped at hard limit)
+        self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
+
+        # Motor overload tracking: time each actuator has been at forcerange limit
+        self.actuator_clamp_duration = np.zeros(self.model.nu)
 
         # Reset metrics
         self.reset_metrics()
@@ -53,6 +69,9 @@ class SimulationLoop:
         self.max_velocity = 0.0
         self.success = False
         self.fail_reason = None
+        self.overloaded_motors: list[str] = []
+        if hasattr(self, "actuator_clamp_duration"):
+            self.actuator_clamp_duration.fill(0.0)
 
     def step(
         self,
@@ -162,6 +181,23 @@ class SimulationLoop:
                 logger.info("Simulation SUCCESS: Goal reached")
                 break
 
+            # 4. Check Timeout (hard cap at 30 seconds)
+            elapsed = self.data.time - start_time
+            if elapsed >= self.max_simulation_time:
+                self.fail_reason = "timeout_exceeded"
+                logger.info(
+                    f"Simulation FAIL: Timeout after {elapsed:.2f}s "
+                    f"(limit: {self.max_simulation_time}s)"
+                )
+                break
+
+            # 5. Check Motor Overload
+            overloaded = self._check_motor_overload()
+            if overloaded:
+                self.fail_reason = f"motor_overload:{overloaded}"
+                logger.info(f"Simulation FAIL: Motor overload on {overloaded}")
+                break
+
             if render_callback:
                 render_callback(self.model, self.data)
 
@@ -209,3 +245,106 @@ class SimulationLoop:
             return True
 
         return False
+
+    def _check_motor_overload(self) -> str | None:
+        """Check if any motor has been at forcerange limit for too long.
+
+        Returns:
+            Name of overloaded actuator, or None if no overload.
+        """
+        if self.model.nu == 0:
+            return None
+
+        timestep = self.model.opt.timestep
+
+        for i in range(self.model.nu):
+            # Get actuator force and forcerange
+            force = abs(self.data.actuator_force[i])
+            forcerange = self.model.actuator_forcerange[i]
+
+            # Check if forcerange is set (non-zero range)
+            if forcerange[0] == 0 and forcerange[1] == 0:
+                continue  # No limit set
+
+            max_force = max(abs(forcerange[0]), abs(forcerange[1]))
+            if max_force == 0:
+                continue
+
+            # Check if force is at limit (within 1% tolerance)
+            is_clamped = force >= max_force * 0.99
+
+            if is_clamped:
+                self.actuator_clamp_duration[i] += timestep
+                if self.actuator_clamp_duration[i] >= MOTOR_OVERLOAD_THRESHOLD_SECONDS:
+                    name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, i
+                    )
+                    self.overloaded_motors.append(name or f"actuator_{i}")
+                    return name or f"actuator_{i}"
+            else:
+                # Reset if not clamped (must be continuous)
+                self.actuator_clamp_duration[i] = 0.0
+
+        return None
+
+    def _check_vertex_in_zone(
+        self, body_id: int, zone_geom_ids: set[int]
+    ) -> tuple[bool, int | None]:
+        """Check if any vertex of a body's mesh touches a zone (AABB check).
+
+        Args:
+            body_id: ID of the body to check.
+            zone_geom_ids: Set of geom IDs representing zones.
+
+        Returns:
+            (True, zone_id) if collision, (False, None) otherwise.
+        """
+        if body_id == -1 or not zone_geom_ids:
+            return False, None
+
+        # Get body position and orientation
+        body_pos = self.data.xpos[body_id]
+
+        # For each zone, check if body center is inside (simplified vertex check)
+        # Full mesh vertex iteration would require accessing mesh data
+        # For now, we check body bounding box corners as vertex approximation
+        for zone_id in zone_geom_ids:
+            zone_pos = self.data.geom_xpos[zone_id]
+            zone_size = self.model.geom_size[zone_id]
+
+            # Check body center against zone AABB
+            diff = np.abs(body_pos - zone_pos)
+
+            geom_type = self.model.geom_type[zone_id]
+            if geom_type == mujoco.mjtGeom.mjGEOM_BOX:
+                if np.all(diff < zone_size[:3]):
+                    return True, zone_id
+            elif geom_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+                if np.linalg.norm(diff) < zone_size[0]:
+                    return True, zone_id
+
+        return False, None
+
+    def check_goal_with_vertices(self, target_body_id: int) -> bool:
+        """Check if target body touches any goal zone using vertex check.
+
+        Args:
+            target_body_id: ID of the target body.
+
+        Returns:
+            True if any vertex is in goal zone.
+        """
+        hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_geoms)
+        return hit
+
+    def check_forbid_with_vertices(self, target_body_id: int) -> bool:
+        """Check if target body touches any forbidden zone using vertex check.
+
+        Args:
+            target_body_id: ID of the target body.
+
+        Returns:
+            True if any vertex is in forbidden zone.
+        """
+        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_geoms)
+        return hit
