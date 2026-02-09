@@ -844,6 +844,7 @@ arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
 - Single-fastener connections are **rejected** (underconstrained — allows rotation around bolt axis)
 - Minimum 2 fasteners required for rigid connection between parts <!-- Note: this is not true, actually. You can design such inserts that only 1 will be sufficient. But, let it be.>
 - Hole diameters must match between mated pairs
+- Can't connect holes with both `add_fastener=True`. <!--Note: not a hard constraint - if it's difficult to do, skip.-->
 
 **MJCF translation**:
 
@@ -862,6 +863,44 @@ for i, leg in enumerate(legs):
 ```
 
 This avoids the need for global ID management or dict-based hole matching.
+
+###### Mechanisms and Moving Parts
+
+MuJoCo constraints will only ever be spawned from predefined components. Meaning, a "revolute constraint" will only ever be spawned if there is either a:
+
+1. Bearing (ideally),
+2. Motor,
+3. Through hole intentionally created for two parts.
+
+For each, the internal/external diameters must match, and there will be special commands on how to define these. In addition, the critic will be prompted to specifically scrutinize if the constraint is valid. In addition, parts will have to be close to each other physically - distance between both must be nearing <1 mm or so.
+
+This is to prevent the CAD designers from creating impossible constraints.
+
+To support moving parts (hinges, sliders, motors), we force build123d Joints from *to be created from predefined CAD components* almost always - e.g., again, revolute joints from bearings, rigid joints/weld constraints via fasteners.
+
+Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
+
+Map of joints to MuJoCo constraints and their uses:
+
+1. RigidJoint to `<weld>` constraint:
+    - Used for fasteners and fixed connections.
+    - Connects two bodies rigidly at the joint location.
+2. **RevoluteJoint** to `<joint type="hinge">`:
+    - Used for axles, pivots, and motors.
+    - The joint axis in build123d becomes the hinge axis in MuJoCo.
+    - If the joint is motorized, we add an `<actuator>` targeting this joint.
+3. **PrismaticJoint** -> `<joint type="slide">`:
+    - Used for linear sliders and rails.
+    - The joint axis defines the slide direction.
+    - Can be motorized with a `<position>` or `<motor>` actuator.
+
+###### Implementation Logic for constraints
+
+- Walk the `build123d` assembly and inspect `part.joints`.
+- If a joint is connected (via `connect_to`), identify the two parts involved.
+- Assert the joint is valid programmatically (distance, not conflicting with other constraints, etc.)
+- Generate the appropriate MuJoCo XML element connecting the two bodies.
+- Assign stable names to identifying joints so controllers can reference them (e.g. "motor_joint").
 
 ##### Allowed components in simulation
 
@@ -1090,11 +1129,30 @@ When I implemented a similar pipeline some time ago, it was helpful to: recenter
 
 We want the agent to be able to preview their own CAD models (likely done more often). We will render CAD images, not MuJoCo for it. The materials will have their colors.
 
-#### Mesh limits
+#### Mesh limits and Simplification
 
 The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. That said, the mesh should be simplified where *safe* to do so; however the higher quality is desired.
 
-Watertightness is required.
+<!-- For rigid mesh only - not for deformable materials(!), we do this:
+The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. However, to ensure **simulation stability** and **performance**, we use a dual-mesh strategy:
+
+1. **Visual Mesh**: High-quality, high-poly mesh (e.g., `angular_deflection=0.1`).
+    - Used for rendering and visual inspection.
+    - Preserves cosmetic details.
+2. **Collision Mesh**: Simplified, decimated mesh (e.g., `angular_deflection=0.5` or `trimesh.decimate`).
+    - Used for physics calculation and V-HACD decomposition.
+    - **Loss**: Curved surfaces become faceted (spheres look like polyhedrons). Small features (threads, text) are smoothed over.
+    - **Gain**: 10x-100x faster collision detection, fewer "thin triangle" artifacts, more stable contacts.
+
+**Implementation**:
+
+- `builder.py` exports two OBJ files per part: `part_visual.obj` and `part_collision.obj`.
+- V-HACD is run ONLY on the collision mesh.
+- MuJoCo XML references the collision mesh for `<geom class="collision">` and visual mesh for `<geom class="visual">`.
+
+Watertightness is required for both. -->
+
+<!-- Note: when implementing this logic, don't overcomplicate it. We'll migrate to native logic in Genesis relatively soon (which simplifies it without any extra config at all, including mesh decomposition). I don't care too -->
 
 ### Materials
 
