@@ -4,7 +4,11 @@ import structlog
 from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
-from worker.workbenches.analysis_utils import compute_part_hash
+from worker.workbenches.analysis_utils import (
+    check_wall_thickness,
+    compute_part_hash,
+    part_to_trimesh,
+)
 from worker.workbenches.base import Workbench
 from worker.workbenches.models import (
     CostBreakdown,
@@ -121,7 +125,17 @@ def analyze_3dp(
     if len(solids) > 1:
         violations.append(f"Geometry must be a single body, found {len(solids)} solids")
 
-    # 4. Cost Calculation (single unit)
+    # 4. Wall Thickness Check
+    three_dp_cfg = config.three_dp
+    if three_dp_cfg:
+        min_wall = three_dp_cfg.constraints.get("min_wall_thickness_mm", 0.8)
+        try:
+            mesh = part_to_trimesh(part)
+            violations.extend(check_wall_thickness(mesh, min_mm=min_wall))
+        except Exception as e:
+            logger.warning("3dp_wall_thickness_check_failed", error=str(e))
+
+    # 5. Cost Calculation (single unit)
     # We proceed with cost calculation even if there are violations, unless critical?
     # Usually cost is only valid if manufacturable, but giving an estimate is sometimes useful.
     # However, if it's not a valid solid, volume might be wrong.
