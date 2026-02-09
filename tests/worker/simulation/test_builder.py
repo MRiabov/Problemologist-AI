@@ -5,15 +5,21 @@ from build123d import Box, Compound
 from worker.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
 
 
-def test_mesh_processor(tmp_path):
+def test_mesh_processor_obj_export(tmp_path):
+    """Test that mesh processor exports OBJ format (per architecture spec)."""
     processor = MeshProcessor()
     box = Box(1, 1, 1)
-    stl_path = tmp_path / "test_box.stl"
+    # Even if we pass .stl, it should convert to .obj
+    input_path = tmp_path / "test_box.stl"
 
-    processor.process_geometry(box, stl_path)
+    result_paths = processor.process_geometry(box, input_path)
 
-    assert stl_path.exists()
-    assert stl_path.stat().st_size > 0
+    # Should output as .obj
+    assert len(result_paths) == 1
+    obj_path = result_paths[0]
+    assert obj_path.suffix == ".obj"
+    assert obj_path.exists()
+    assert obj_path.stat().st_size > 0
 
 
 def test_scene_compiler(tmp_path):
@@ -45,7 +51,8 @@ def test_simulation_builder(tmp_path):
     scene_path = builder.build_from_assembly(assembly)
 
     assert scene_path.exists()
-    assert (tmp_path / "assets" / "part_1.stl").exists()
+    # Now exports as .obj instead of .stl
+    assert (tmp_path / "assets" / "part_1.obj").exists()
 
     # Try loading with MuJoCo
     model = mujoco.MjModel.from_xml_path(str(scene_path))
@@ -76,13 +83,13 @@ def test_vhacd_decomposition(tmp_path):
     scene_path = builder.build_from_assembly(assembly)
 
     assert scene_path.exists()
-    # Check if meshes were created
+    # Check if meshes were created (now exports as .obj per architecture spec)
     assets_dir = tmp_path / "assets"
-    stl_files = list(assets_dir.glob("concave_part*.stl"))
+    obj_files = list(assets_dir.glob("concave_part*.obj"))
 
     # If VHACD is working, we should have multiple parts
     # Even if it fails, it should at least have one (the fallback)
-    assert len(stl_files) >= 1
+    assert len(obj_files) >= 1
 
     model = mujoco.MjModel.from_xml_path(str(scene_path))
     assert model.nmesh >= 1
