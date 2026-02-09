@@ -15,7 +15,7 @@ from controller.graph.agent import create_agent_graph
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
 from shared.logging import configure_logging, get_logger
 
 # Configure logging
@@ -88,7 +88,9 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 # Add initial trace
                 initial_trace = Trace(
                     episode_id=episode_id,
-                    raw_trace={"message": "Agent starting execution", "task": task},
+                    trace_type=TraceType.LOG,
+                    content=f"Agent starting execution for task: {task}",
+                    metadata_vars={"task": task},
                 )
                 db.add(initial_trace)
                 await db.commit()
@@ -106,10 +108,9 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 final_output = result["messages"][-1].content
                 final_trace = Trace(
                     episode_id=episode_id,
-                    raw_trace={
-                        "message": "Agent finished execution",
-                        "output": final_output,
-                    },
+                    trace_type=TraceType.LOG,
+                    content=f"Agent finished execution: {final_output[:200]}...",
+                    metadata_vars={"output": final_output},
                 )
                 db.add(final_trace)
 
@@ -159,7 +160,8 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                     episode.status = EpisodeStatus.CANCELLED
                     final_trace = Trace(
                         episode_id=episode_id,
-                        raw_trace={"message": "Episode cancelled by user"},
+                        trace_type=TraceType.LOG,
+                        content="Episode cancelled by user",
                     )
                     db.add(final_trace)
                     await db.commit()

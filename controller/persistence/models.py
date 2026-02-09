@@ -6,7 +6,7 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from shared.enums import AssetType, EpisodeStatus
+from shared.enums import AssetType, EpisodeStatus, TraceType
 
 from .db import Base
 
@@ -84,7 +84,18 @@ class Trace(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     langfuse_trace_id: Mapped[str | None] = mapped_column(String)
-    raw_trace: Mapped[dict | None] = mapped_column(JSON)
+
+    trace_type: Mapped[TraceType] = mapped_column(SQLEnum(TraceType))
+    name: Mapped[str | None] = mapped_column(String)  # Tool name or stage
+    content: Mapped[str | None] = mapped_column(
+        String
+    )  # Tool input/output or LLM content
+    metadata_vars: Mapped[dict | None] = mapped_column(
+        "metadata", JSON
+    )  # Additional data
+    feedback_score: Mapped[int | None] = mapped_column(Integer)  # 1 for up, 0 for down
+    feedback_comment: Mapped[str | None] = mapped_column(String)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     episode: Mapped["Episode"] = relationship(back_populates="traces")

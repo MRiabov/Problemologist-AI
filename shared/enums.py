@@ -37,3 +37,14 @@ class ResponseStatus(StrEnum):
     COMPLETED = "completed"
     SUCCESS = "success"
     ERROR = "error"
+
+
+class TraceType(StrEnum):
+    """Type of observability trace."""
+
+    TOOL_START = "tool_start"
+    TOOL_END = "tool_end"
+    LLM_START = "llm_start"
+    LLM_END = "llm_end"
+    LOG = "log"
+    ERROR = "error"

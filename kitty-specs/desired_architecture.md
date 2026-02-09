@@ -255,6 +255,13 @@ Utils (read-only):
 
 The important part of managing agents are their artifacts.
 
+#### Prompts and environment
+
+An agents must know what it is capable to work with. Have a "capabilies.md" document that shows
+
+<!-- Issue found: I tried giving the planner a standard prompt - to move a ball of a diameter 500mm sideways. It created a plan which used Neosprene drive belts, conveyors, aluminum frames - none of which we have. -->
+<!-- I didn't have a good LLM to write the propmt. Currently relied on "tricking" the model with a "manufacturing-capability-like" document that shows what it can use.-->
+
 #### Journal
 
 The Journal is the agent's **Episodic Memory**. It is a structured log (a constrained Markdown) where the agent records a high-level narrative of its execution.
@@ -1193,6 +1200,7 @@ To track all agent movements and to persist data, we encode the following:
 3. All agent thoughts.
 4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
 5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using a scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
+6. Feedback from the user.
 
 These will be later used for querying, preproc and model training.
 
@@ -1206,6 +1214,25 @@ In prod we will backup the database(s) daily.
 <!-- Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up. -->
 
 One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
+
+### User Reviews
+
+I want to track successful/failed reasoning via user thumbs up/down during:
+
+1. Benchmark generation planning
+2. Benchmark Generation implementation; specifically voting on individual file outputs and voting on the output "as a whole". Ideally, the users would also be able to input their feedbacks on individual subassembly parts, as defined by the assembly view in the frontend, by selecting them and pressing thumbs up/down and inserting a comment.
+3. Implementation Planning
+4. Implementation Generation.
+
+We are using LangFuse and it has those capabilities natively
+
+#### Training on user reviews
+
+When user stores the review, first of all, store it in the observability DB, and then we'll also need to incorporate an automatic prompt improvement with powerful models like Claude 4.6 Opus with human review that will be merged/skipped.
+
+We temporarily won't do auto-improvement through a model, though I bet we'll need it in the near future.
+
+<!-- Note: I don't know why, but the Gemini models are good at coding but horrible at making prompts/interpreting desired prompt behavior; don't use them for this purpose. -->
 
 ## Strict schema
 

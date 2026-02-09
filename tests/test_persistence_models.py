@@ -1,6 +1,7 @@
 import pytest
 
 from controller.persistence.models import Asset, Episode, Trace
+from shared.enums import TraceType
 from shared.logging import configure_logging, get_logger
 
 
@@ -16,7 +17,9 @@ def test_models_instantiation():
     assert episode.task == "test task"
     assert episode.status == "running"
 
-    trace = Trace(episode=episode, langfuse_trace_id="trace_123")
+    trace = Trace(
+        episode=episode, langfuse_trace_id="trace_123", trace_type=TraceType.LOG
+    )
     assert trace.episode == episode
 
     asset = Asset(episode=episode, asset_type="video", s3_path="s3://bucket/path")
