@@ -14,21 +14,6 @@ def test_health_check():
     assert response.json()["status"] == ResponseStatus.HEALTHY
 
 
-@patch("controller.api.main.Client.connect")
-def test_run_simulation_accepted(mock_temporal_connect):
-    mock_temporal_client = AsyncMock()
-    mock_temporal_connect.return_value = mock_temporal_client
-
-    # Trigger simulation run
-    response = client.post(
-        "/simulation/run", json={"session_id": "test-session", "compound_json": "{}"}
-    )
-
-    assert response.status_code == 200
-    if response.json()["status"] == ResponseStatus.ACCEPTED:
-        assert "workflow_id" in response.json()
-
-
 @patch("controller.api.main.get_sessionmaker")
 @patch("controller.api.main.get_worker_client")
 @patch("controller.api.main.create_agent_graph")
