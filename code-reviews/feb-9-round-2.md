@@ -114,14 +114,16 @@ New pipeline specification for build123d → MuJoCo.
 
 | Component | Description | Status |
 |-----------|-------------|--------|
-| **Realistic constraint validation** | Two parts must be actually close together | **MISSING** |
-| **Fixed parts metadata** | `fixed=True` parameter for simulation-fixed parts | **MISSING** |
-| **bd-warehouse integration** | Use for nuts, bolts, screws (reuse existing library) | **MISSING** |
-| **Fastener hole drilling** | `Hole` class with `Counterbore` support from build123d | **MISSING** |
-| **Cross-part hole alignment** | Drill matching holes in mating parts (noted as challenging) | **MISSING** |
+| **Realistic constraint validation** | Parts must be mechanically held (fasteners/gravity); "sticky" CAD constraints forbidden | **MISSING** |
+| **Fixed parts metadata** | `fixed=True` allowed *only* for specific environment parts, not engineer parts | **MISSING** |
+| **bd-warehouse integration** | Integration for standard nuts, bolts, screws geometry/props | **MISSING** |
+| **Fastener Helper** | `fastener_hole(part, pos, hole_id, type, add_fastener)`: cuts hole + creates `RigidJoint` | **MISSING** |
+| **RigidJoint System** | Use `RigidJoint` and `connect_to()` for mating (avoids manual transforms) | **MISSING** |
+| **Hole Types** | Enum `HoleType`: `FlatHeadHole`, `CounterBoreHole`, `CounterSinkHole` | **MISSING** |
+| **Simulation Physics** | Engineer parts cannot be static; they obey physics (gravity, friction, restitution) | **MISSING** |
 
 > [!NOTE]
-> Spec notes the "adaptive holes in another part" problem is undefined - similar to Autodesk Inventor's adaptive constraints difficulties. Needs design decision.
+> The spec now explicitly mandates using `build123d`'s `RigidJoint` system to handle mating transforms automatically. The `fastener_hole` helper is the primary interface for this.
 
 ---
 
