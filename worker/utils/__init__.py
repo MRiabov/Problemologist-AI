@@ -1,15 +1,22 @@
-from .docs import get_docs_for
-from .validation import validate, simulate
-from .handover import submit_for_review
-
-# validate_and_price is in dfm.py, but circular imports might be tricky if dfm imports from here.
-# dfm imports workbenches which shouldn't import from utils root, so it should be fine.
 from .dfm import validate_and_price
+from .docs import get_docs_for
+from .handover import submit_for_review
+from .markdown_validator import (
+    ValidationResult,
+    validate_markdown_file,
+    validate_plan_md,
+    validate_todo_md,
+)
+from .validation import simulate, validate
 
 __all__ = [
+    "ValidationResult",
     "get_docs_for",
-    "validate",
     "simulate",
     "submit_for_review",
+    "validate",
     "validate_and_price",
+    "validate_markdown_file",
+    "validate_plan_md",
+    "validate_todo_md",
 ]
