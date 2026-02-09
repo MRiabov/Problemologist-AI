@@ -14,6 +14,7 @@ from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate
 from ..utils.git import commit_all, init_workspace_repo
+from ..utils.preview import preview_design
 from .schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
@@ -22,7 +23,11 @@ from .schema import (
     ExecuteResponse,
     GitCommitRequest,
     GitCommitResponse,
+    LintRequest,
+    LintResponse,
     ListFilesRequest,
+    PreviewDesignRequest,
+    PreviewDesignResponse,
     ReadFileRequest,
     ReadFileResponse,
     StatusResponse,
@@ -355,3 +360,104 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
     except Exception as e:
         logger.error("api_asset_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/benchmark/preview", response_model=PreviewDesignResponse)
+async def api_preview(
+    request: PreviewDesignRequest,
+    fs_router=Depends(get_router),
+):
+    """Render a preview of the CAD design from specified camera angles."""
+    try:
+        component = _load_component(fs_router, request.script_path)
+
+        image_path = preview_design(
+            component,
+            pitch=request.pitch,
+            yaw=request.yaw,
+            output_dir=fs_router.local_backend.root / "renders",
+        )
+
+        return PreviewDesignResponse(
+            success=True,
+            message="Preview generated successfully",
+            image_path=str(image_path.relative_to(fs_router.local_backend.root)),
+        )
+    except Exception as e:
+        logger.error("api_benchmark_preview_failed", error=str(e))
+        return PreviewDesignResponse(success=False, message=str(e))
+
+
+@router.post("/lint", response_model=LintResponse)
+async def api_lint(
+    request: LintRequest,
+    fs_router=Depends(get_router),
+):
+    """Lint Python code using ruff."""
+    import json
+    import subprocess
+    import tempfile
+
+    try:
+        # Get content either from path or direct content
+        if request.path:
+            content = fs_router.read(request.path).decode("utf-8")
+        elif request.content:
+            content = request.content
+        else:
+            return LintResponse(
+                success=False,
+                errors=[{"message": "Either path or content must be provided"}],
+            )
+
+        # Write to temp file for ruff
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        try:
+            # Run ruff check with JSON output
+            result = subprocess.run(
+                ["ruff", "check", "--output-format", "json", tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            errors = []
+            warnings = []
+
+            if result.stdout:
+                lint_results = json.loads(result.stdout)
+                for item in lint_results:
+                    issue = {
+                        "code": item.get("code", ""),
+                        "message": item.get("message", ""),
+                        "line": item.get("location", {}).get("row", 0),
+                        "column": item.get("location", {}).get("column", 0),
+                    }
+                    # Errors are typically E* codes, warnings are W* codes
+                    if item.get("code", "").startswith(("E", "F")):
+                        errors.append(issue)
+                    else:
+                        warnings.append(issue)
+
+            return LintResponse(
+                success=len(errors) == 0,
+                errors=errors,
+                warnings=warnings,
+            )
+        finally:
+            os.unlink(tmp_path)
+
+    except FileNotFoundError:
+        return LintResponse(
+            success=False,
+            errors=[{"message": f"File not found: {request.path}"}],
+        )
+    except Exception as e:
+        logger.error("api_lint_failed", error=str(e))
+        return LintResponse(
+            success=False,
+            errors=[{"message": str(e)}],
+        )
