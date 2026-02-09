@@ -147,23 +147,36 @@ services:
       retries: 5
 
   langfuse-server:
-    image: langfuse/langfuse:3.152.0
+    image: langfuse/langfuse:3.100.0
     depends_on:
       postgres:
         condition: service_healthy
       clickhouse:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://langfuse:langfuse@postgres:5432/langfuse
       - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
       - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=
-      - NEXTAUTH_SECRET=mysecret
-      - SALT=mysalt
+      - CLICKHOUSE_PASSWORD=langfuse
+      - NEXTAUTH_SECRET=72b85aabc32ba5777874db9607b729ddb9e1b037032d22f413b26000e622280c
+      - SALT=70ef3ae3dc9c34207bfe85230456297d8b0aafdf4fab1d545c239acbb63d89c2
+      - LANGFUSE_ENCRYPTION_KEY=a6e03f31f617d113cf7391dc2ff6dcaf608d8c11f74d992cf98117209c01aa28
       - NEXTAUTH_URL=http://localhost:3000
-      - TELEMETRY_ENABLED=false
+      - LANGFUSE_S3_EVENT_LOG_BUCKET=langfuse-events
+      - LANGFUSE_S3_MEDIA_UPLOAD_BUCKET=langfuse-media
+      - LANGFUSE_S3_REGION=us-east-1
+      - LANGFUSE_S3_ACCESS_KEY_ID=minioadmin
+      - LANGFUSE_S3_SECRET_ACCESS_KEY=minioadmin
+      - LANGFUSE_S3_ENDPOINT=http://minio:9000
+      - LANGFUSE_S3_FORCE_PATH_STYLE=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=langfuse
       - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=true
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
@@ -179,9 +192,36 @@ services:
     environment:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=langfuse
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - ./config/clickhouse/zookeeper.xml:/etc/clickhouse-server/config.d/zookeeper.xml
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  zookeeper:
+    image: zookeeper:3.9
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: echo ruok | nc 127.0.0.1 2181
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2
+    command: redis-server --requirepass langfuse
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "langfuse", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -223,5 +263,7 @@ services:
       /bin/sh -c "
       until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do echo 'Waiting for Minio...'; sleep 1; done;
       /usr/bin/mc mb myminio/problemologist || true;
+      /usr/bin/mc mb myminio/langfuse-events || true;
+      /usr/bin/mc mb myminio/langfuse-media || true;
       exit 0;
       "
