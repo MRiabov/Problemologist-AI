@@ -51,8 +51,12 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             await db.refresh(trace)
             await self._broadcast_trace(trace.id, trace.raw_trace)
 
-    async def on_tool_end(self, output: str, **_kwargs: Any) -> None:
+    async def on_tool_end(self, output: Any, **_kwargs: Any) -> None:
         async with self.session_factory() as db:
+            # Ensure output is serializable (ToolMessage is not)
+            if not isinstance(output, (str, dict, list, int, float, bool, type(None))):
+                output = str(output)
+
             trace = Trace(
                 episode_id=self.episode_id,
                 raw_trace={"type": "tool_end", "output": output},
