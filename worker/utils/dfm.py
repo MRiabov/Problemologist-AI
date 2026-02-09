@@ -58,6 +58,38 @@ def _is_within_bounds(
     return True, ""
 
 
+def _count_dofs(part: Part | Compound) -> int:
+    """
+    Count degrees of freedom in a compound assembly.
+
+    Per architecture spec: Warn if DOF >= 4 as it's unusual in engineering.
+    This is a simplified heuristic based on child count of compounds.
+
+    Returns:
+        Estimated DOF count based on assembly structure
+    """
+    if isinstance(part, Part):
+        # Single parts typically have 0 internal DOFs
+        return 0
+
+    # For compounds, each child that could move independently adds DOFs
+    # A simple heuristic: count children that are not zones or fixed
+    dof_count = 0
+    for child in part.children:
+        label = getattr(child, "label", "")
+        # Skip zones (they don't contribute to mechanical DOF)
+        if label.startswith("zone_"):
+            continue
+        # Check if part is marked as fixed
+        if getattr(child, "fixed", False):
+            continue
+        # Each free part could add up to 6 DOFs (3 translation + 3 rotation)
+        # But we count conservatively as 1 DOF per movable part
+        dof_count += 1
+
+    return dof_count
+
+
 def validate_and_price(
     part: Part | Compound,
     method: ManufacturingMethod,
@@ -87,6 +119,16 @@ def validate_and_price(
             build_zone_violations = [f"Build zone violation: {error_msg}"]
             logger.warning("build_zone_violations", violations=build_zone_violations)
 
+    # Check for excessive DOFs (per architecture spec Item 8)
+    dof_count = _count_dofs(part)
+    dof_warning = dof_count >= 4
+    if dof_warning:
+        logger.warning(
+            "dof_warning",
+            dof_count=dof_count,
+            message=f"Compound has {dof_count} DOFs - unusual in engineering",
+        )
+
     # Dispatch to appropriate workbench
     if method == ManufacturingMethod.CNC:
         result = analyze_cnc(part, config)
@@ -98,6 +140,11 @@ def validate_and_price(
         logger.error("unsupported_manufacturing_method", method=method)
         raise ValueError(f"Unsupported manufacturing method: {method}")
 
+    # Add DOF warning to metadata (for reviewer notification)
+    result_metadata = dict(result.metadata)
+    result_metadata["dof_count"] = dof_count
+    result_metadata["dof_warning"] = dof_warning
+
     # Combine build zone violations with workbench violations
     if build_zone_violations:
         all_violations = list(result.violations) + build_zone_violations
@@ -105,7 +152,12 @@ def validate_and_price(
             is_manufacturable=False,  # Not manufacturable if outside build zone
             unit_cost=result.unit_cost,
             violations=all_violations,
-            metadata=result.metadata,
+            metadata=result_metadata,
         )
 
-    return result
+    return WorkbenchResult(
+        is_manufacturable=result.is_manufacturable,
+        unit_cost=result.unit_cost,
+        violations=result.violations,
+        metadata=result_metadata,
+    )
