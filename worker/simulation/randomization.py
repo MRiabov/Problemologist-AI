@@ -130,5 +130,52 @@ def apply_material_to_mjcf_geom(
     return {
         "rgba": f"{r:.3f} {g:.3f} {b:.3f} 1",
         "friction": f"{material_assignment.friction_coef} 0.005 0.0001",
-        # Density is applied to body inertial, not geom
+        "density": str(
+            material_assignment.density_g_cm3 * 1000
+        ),  # Convert g/cm3 to kg/m3
     }
+
+
+def apply_randomization_to_xml(
+    xml_path: str,
+    assignments: dict[str, MaterialAssignment],
+    output_path: str | None = None,
+) -> str:
+    """Applies material assignments to an MJCF XML file.
+
+    Args:
+        xml_path: Path to input XML.
+        assignments: Map of body name -> MaterialAssignment.
+        output_path: Path to save modified XML. If None, overwrites input.
+
+    Returns:
+        Path to the modified XML.
+    """
+    import xml.etree.ElementTree as ET
+
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+    worldbody = root.find("worldbody")
+    if worldbody is None:
+        raise ValueError("Invalid MJCF: no worldbody found")
+
+    for body in worldbody.findall("body"):
+        name = body.get("name")
+        if name in assignments:
+            assignment = assignments[name]
+            attribs = apply_material_to_mjcf_geom(assignment)
+
+            # Apply to all geoms in this body
+            # Note: This overrides existing attributes
+            geoms = body.findall("geom")
+            if not geoms:
+                # If no geoms (e.g. dummy body), nothing to do
+                continue
+
+            for geom in geoms:
+                for k, v in attribs.items():
+                    geom.set(k, v)
+
+    out = output_path if output_path else xml_path
+    tree.write(out, encoding="utf-8")
+    return out

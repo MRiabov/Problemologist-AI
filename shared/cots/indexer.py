@@ -3,6 +3,7 @@ from typing import Any
 
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
 from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
+from shared.cots.parts.motors import ServoMotor
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -39,6 +40,7 @@ class Indexer:
             SocketHeadCapScrew,
             PlainWasher,
             SingleRowDeepGrooveBallBearing,
+            ServoMotor,
         ]
 
     def extract_metadata(self, part_class: type, size: str) -> dict[str, Any] | None:
@@ -56,19 +58,25 @@ class Indexer:
             part = part_class(**kwargs)
 
             bb = part.bounding_box()
+            bb = part.bounding_box()
             volume = part.volume
-            weight = volume * STEEL_DENSITY_G_MM3
+
+            if class_name == "ServoMotor":
+                # Use provided weight
+                weight = part.metadata.get("weight_g", volume * STEEL_DENSITY_G_MM3)
+                unit_cost = part.metadata.get("price", 0.0)
+            else:
+                weight = volume * STEEL_DENSITY_G_MM3
+                unit_cost = DEFAULT_COSTS.get(class_name, 0.10)
 
             # Category mapping
             category = "fastener"
             if "Bearing" in class_name:
                 category = "bearing"
-            elif "Motor" in class_name:
+            elif "Motor" in class_name or class_name == "ServoMotor":
                 category = "motor"
             elif "Gear" in class_name:
                 category = "gear"
-
-            unit_cost = DEFAULT_COSTS.get(class_name, 0.10)
 
             # part_id should include extra parameters if they exist
             param_suffix = ""
@@ -123,6 +131,8 @@ class Indexer:
                     sizes = list(part_class.fastener_data.keys())
                 elif hasattr(part_class, "bearing_data"):
                     sizes = list(part_class.bearing_data.keys())
+                elif hasattr(part_class, "motor_data"):
+                    sizes = list(part_class.motor_data.keys())
                 else:
                     logger.warning(f"No size data found for {class_name}, skipping.")
                     continue
