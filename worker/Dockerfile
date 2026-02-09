@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig1 \
     libx11-6 \
     git \
+    curl \
+    dnsutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
