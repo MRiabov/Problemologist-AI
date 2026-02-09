@@ -12,6 +12,8 @@ services:
       - S3_SECRET_KEY=minioadmin
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
+    networks:
+      - default
     command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "controller", "--reload-dir", "shared"]
     env_file:
       - .env
@@ -90,7 +92,9 @@ services:
       - "8001:8001"
     environment:
       - S3_ENDPOINT=http://minio:9000
-    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001", "--reload", "--reload-dir", "worker", "--reload-dir", "shared"]
+    networks:
+      - default
+    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]
     env_file:
       - .env
     depends_on:
