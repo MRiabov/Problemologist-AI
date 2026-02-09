@@ -90,3 +90,18 @@ def oscillate(
         return center + amplitude * math.sin(2 * math.pi * frequency * t + phase)
 
     return controller
+
+
+def rotate_to(current: float, target: float, kp: float = 1.0) -> float:
+    """
+    Calculate a control signal (e.g. torque) based on position error.
+
+    Args:
+        current: Current position (e.g. from sensor).
+        target: Target position.
+        kp: Proportional gain.
+
+    Returns:
+        Control signal (kp * (target - current)).
+    """
+    return kp * (target - current)
