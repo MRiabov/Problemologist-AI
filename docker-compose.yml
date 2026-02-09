@@ -129,7 +129,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
+    volumes:
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
   minio:
     image: minio/minio
     ports:
@@ -144,6 +145,50 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  langfuse-server:
+    image: langfuse/langfuse:3.152.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://langfuse:langfuse@postgres:5432/langfuse
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - NEXTAUTH_SECRET=mysecret
+      - SALT=mysalt
+      - NEXTAUTH_URL=http://localhost:3000
+      - TELEMETRY_ENABLED=false
+      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.4
+    ports:
+      - "8123:8123"
+      - "9009:9009"
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # ulimits:
+    #   nofile:
+    #     soft: 262144
+    #     hard: 262144
 
   temporal:
     image: temporalio/auto-setup:1.22.0

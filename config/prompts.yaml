@@ -399,6 +399,8 @@ subagents:
 # COMMON TEMPLATES
 # -----------------------------------------------------------------------------
 common:
+   llm_complaint: ...
+
    tool_error: |
       The previous tool execution failed:
       {error}

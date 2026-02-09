@@ -1204,9 +1204,22 @@ To track all agent movements and to persist data, we encode the following:
 
 These will be later used for querying, preproc and model training.
 
-### Langfuse
+### LangFuse for observability
 
 We use LangFuse for LLM observability. We will use a Railway template / deploy a separate container to the langfuse. This will require a Postgres DB.
+
+Langfuse is deployed locally/on Railway.
+
+### Best practice: Give LLMs a way to complain
+
+We have a "sidecar" model that checks where the agent was confused and updates skills.
+
+We can reuse the same approach for debugging.  A LLM that explicitly checks where the model got confused and sends a tool call if something was really wrong. The developer gets that into a DB/observability DB. **The developer can use the LLM output to debug.**
+(ideally, we would also heap those and send them to Google Jules which will fix bugs/propose functionality/ etc.
+
+<https://jules.google/docs/api/reference/>)
+
+Create another sidecar model running async (maybe batch) that would read the prompt
 
 ### Backups
 
@@ -1224,7 +1237,7 @@ I want to track successful/failed reasoning via user thumbs up/down during:
 3. Implementation Planning
 4. Implementation Generation.
 
-We are using LangFuse and it has those capabilities natively
+We are using LangFuse and it has those capabilities natively.
 
 #### Training on user reviews
 

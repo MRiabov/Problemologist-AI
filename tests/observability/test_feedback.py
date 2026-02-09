@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 from controller.api.routes.episodes import report_trace_feedback, FeedbackRequest
 from controller.persistence.models import Trace
@@ -14,7 +14,7 @@ async def test_report_trace_feedback_success():
     langfuse_trace_id = "langfuse-123"
 
     # Mock DB session
-    db = MagicMock()
+    db = AsyncMock()
     trace = Trace(
         id=trace_id,
         episode_id=episode_id,
@@ -36,6 +36,7 @@ async def test_report_trace_feedback_success():
         response = await report_trace_feedback(episode_id, trace_id, feedback, db)
 
         assert response["status"] == ResponseStatus.ACCEPTED
+        print(f"DEBUG: calls={mock_langfuse.mock_calls}")
         mock_langfuse.score.assert_called_once_with(
             trace_id=langfuse_trace_id,
             name="user-feedback",
@@ -43,13 +44,18 @@ async def test_report_trace_feedback_success():
             comment="Good work!",
         )
 
+        # Verify local persistence
+        assert trace.feedback_score == 1
+        assert trace.feedback_comment == "Good work!"
+        db.commit.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_report_trace_feedback_no_langfuse_id():
     episode_id = uuid.uuid4()
     trace_id = 1
 
-    db = MagicMock()
+    db = AsyncMock()
     trace = Trace(
         id=trace_id,
         episode_id=episode_id,
