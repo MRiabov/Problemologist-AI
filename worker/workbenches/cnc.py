@@ -33,6 +33,14 @@ def check_internal_corner_radii(
     # Identify all edges
     all_edges = part.edges()
 
+    # Pre-compute edge to faces map
+    edge_to_faces = {}
+    for face in part.faces():
+        for edge in face.edges():
+            if edge not in edge_to_faces:
+                edge_to_faces[edge] = []
+            edge_to_faces[edge].append(face)
+
     for edge in all_edges:
         # 1. Identify vertical edges (parallel to Z axis)
         try:
@@ -51,10 +59,7 @@ def check_internal_corner_radii(
 
         if is_sharp or is_small_fillet:
             # Find adjacent faces to determine if it's an internal (concave) corner
-            adj_faces = []
-            for f in part.faces():
-                if any(e.is_same(edge) for e in f.edges()):
-                    adj_faces.append(f)
+            adj_faces = edge_to_faces.get(edge, [])
 
             if len(adj_faces) == 2:
                 f1, f2 = adj_faces[0], adj_faces[1]
