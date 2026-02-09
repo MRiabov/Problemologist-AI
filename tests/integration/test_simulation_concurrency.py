@@ -29,6 +29,7 @@ async def run_simulation(session_id: str):
         return resp, start_time, end_time
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_simulation_concurrency():
     # We want to verify that simulations are serialized.

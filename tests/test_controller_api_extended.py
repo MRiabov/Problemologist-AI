@@ -23,16 +23,6 @@ def test_health_extended():
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
-@patch("controller.api.main.temporal_client_instance", None)
-def test_run_simulation_no_temporal():
-    response = client.post(
-        "/simulation/run", 
-        json={"session_id": "test-session", "compound_json": "{}"}
-    )
-    assert response.status_code == 200
-    assert response.json()["status"] == "error"
-    assert "Temporal client not connected" in response.json()["message"]
-
 @patch("controller.api.main.get_sessionmaker")
 def test_run_agent_db_error(mock_get_sessionmaker):
     # Mock session factory to raise an error

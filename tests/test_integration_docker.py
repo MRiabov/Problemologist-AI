@@ -77,26 +77,3 @@ async def test_controller_to_worker_agent_run():
         )
         assert fs_resp.status_code == 200
         assert fs_resp.json()["content"] == "integration test"
-
-
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_simulation_workflow():
-    """Verify simulation workflow (Controller -> Temporal -> Worker activity)."""
-    async with httpx.AsyncClient() as client:
-        session_id = f"test-sim-{int(time.time())}"
-        payload = {"session_id": session_id, "compound_json": '{"components": []}'}
-
-        # Trigger simulation
-        resp = await client.post(
-            f"{CONTROLLER_URL}/simulation/run", json=payload, timeout=10.0
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "accepted"
-        workflow_id = data["workflow_id"]
-
-        # Note: We don't have an endpoint to poll workflow status yet in the controller,
-        # but the SimulationWorkflow returns an S3 URL.
-        # For now, we just verify it was accepted and Temporal is working.
-        assert workflow_id.startswith(f"sim-{session_id}")

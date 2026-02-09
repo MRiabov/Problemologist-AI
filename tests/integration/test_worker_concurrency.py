@@ -45,6 +45,7 @@ with open("{filename}", "r") as f:
         return data["stdout"]
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_worker_concurrency():
     session_a = f"session-{uuid.uuid4()}"
