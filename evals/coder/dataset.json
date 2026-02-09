@@ -1,0 +1,7 @@
+[
+    {
+        "id": "coder-001",
+        "task": "Write a python function to calculate the volume of a cylinder.",
+        "expected_criteria": "The function should take radius and height as arguments."
+    }
+]

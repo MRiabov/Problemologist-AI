@@ -1,0 +1,12 @@
+[
+    {
+        "id": "eval-001",
+        "task": "Design a mechanism to lift a 1kg ball 10cm vertically.",
+        "expected_criteria": "The plan should include a motor and a lifting mechanism (e.g. pulley or linear actuator)."
+    },
+    {
+        "id": "eval-002",
+        "task": "Create a simple box with dimensions 10x10x10cm.",
+        "expected_criteria": "The plan should describe a box of requested dimensions."
+    }
+]

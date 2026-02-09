@@ -46,12 +46,12 @@ async def report_trace_feedback(
     if not langfuse:
         raise HTTPException(status_code=503, detail="Langfuse client not configured")
 
-        langfuse.score(
-            trace_id=trace.langfuse_trace_id,
-            name="user-feedback",
-            value=feedback.score,
-            comment=feedback.comment,
-        )
+    langfuse.score(
+        trace_id=trace.langfuse_trace_id,
+        name="user-feedback",
+        value=feedback.score,
+        comment=feedback.comment,
+    )
 
     # Store locally anyway (spec requirement)
     trace.feedback_score = feedback.score
