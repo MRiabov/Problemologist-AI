@@ -17,7 +17,7 @@ class SimulationResult:
         self,
         success: bool,
         summary: str,
-        render_paths: list[str] = None,
+        render_paths: list[str] | None = None,
         mjcf_content: str | None = None,
     ):
         self.success = success
@@ -65,8 +65,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
 </mujoco>
 """
     mjcf_path = renders_dir / "scene.xml"
-    with open(mjcf_path, "w") as f:
-        f.write(mjcf_xml)
+    mjcf_path.write_text(mjcf_xml)
 
     try:
         # 3. Load MuJoCo and run a few frames
@@ -94,8 +93,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
         # Read MJCF content
         mjcf_content = None
         if mjcf_path.exists():
-            with open(mjcf_path, "r") as f:
-                mjcf_content = f.read()
+            mjcf_content = mjcf_path.read_text()
 
         return SimulationResult(True, "Simulation stable.", render_paths, mjcf_content)
 
@@ -104,7 +102,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
         return SimulationResult(False, f"Simulation error: {e!s}")
 
 
-def validate(component: Compound) -> bool:
+def validate(component: Compound, build_zone: dict | None = None) -> bool:
     """
     Verify geometric validity and randomization robustness.
     Logic:
@@ -115,15 +113,12 @@ def validate(component: Compound) -> bool:
     logger.info("validate_start")
 
     # 1. Intersection check
-    # Check if any solids of the compound overlap
     solids = component.solids()
-
     if len(solids) > 1:
         for i in range(len(solids)):
             for j in range(i + 1, len(solids)):
-                # This is a bit slow but correct for small number of parts
                 intersection = solids[i].intersect(solids[j])
-                if intersection and intersection.volume > 0.1:  # 0.1 mm^3 threshold
+                if intersection and intersection.volume > 0.1:
                     logger.warning(
                         "geometric_intersection_detected", volume=intersection.volume
                     )
@@ -131,9 +126,25 @@ def validate(component: Compound) -> bool:
 
     # 2. Boundary check (AABB)
     bbox = component.bounding_box()
-    MAX_SIZE = 1000.0  # 1 meter
-    if bbox.size.X > MAX_SIZE or bbox.size.Y > MAX_SIZE or bbox.size.Z > MAX_SIZE:
-        logger.warning("boundary_constraint_violation", size=bbox.size)
-        return False
+    if build_zone:
+        # Check against build_zone: {"min": [x,y,z], "max": [x,y,z]}
+        b_min = build_zone.get("min", [-1000, -1000, -1000])
+        b_max = build_zone.get("max", [1000, 1000, 1000])
+
+        if (
+            b_min[0] > bbox.min.X
+            or b_min[1] > bbox.min.Y
+            or b_min[2] > bbox.min.Z
+            or b_max[0] < bbox.max.X
+            or b_max[1] < bbox.max.Y
+            or b_max[2] < bbox.max.Z
+        ):
+            logger.warning("build_zone_violation", bbox=bbox, build_zone=build_zone)
+            return False
+    else:
+        max_size = 1000.0  # 1 meter fallback
+        if bbox.size.X > max_size or bbox.size.Y > max_size or bbox.size.Z > max_size:
+            logger.warning("boundary_constraint_violation", size=bbox.size)
+            return False
 
     return True

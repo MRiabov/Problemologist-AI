@@ -1,3 +1,4 @@
+from . import controllers
 from .dfm import validate_and_price
 from .docs import get_docs_for
 from .handover import submit_for_review
@@ -11,6 +12,7 @@ from .validation import simulate, validate
 
 __all__ = [
     "ValidationResult",
+    "controllers",
     "get_docs_for",
     "simulate",
     "submit_for_review",
