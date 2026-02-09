@@ -24,7 +24,7 @@ def create_agent_graph(backend: RemoteFilesystemBackend):
     callbacks = [langfuse_callback] if langfuse_callback else []
 
     # System prompt from config (Strict, will raise if missing)
-    system_prompt = get_prompt("cad_agent.planner.system")
+    system_prompt = get_prompt("engineer.planner.system")
 
     if callbacks:
         llm = llm.with_config({"callbacks": callbacks})

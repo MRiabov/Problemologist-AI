@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, StrictStr
@@ -24,7 +25,25 @@ logger = get_logger(__name__)
 TEMPORAL_URL = settings.temporal_url
 WORKER_URL = settings.worker_url
 
-app = FastAPI(title="Problemologist Controller")
+# Temporal client
+temporal_client_instance: Client = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global temporal_client_instance
+    try:
+        temporal_client_instance = await Client.connect(TEMPORAL_URL)
+        app.state.temporal_client = temporal_client_instance
+        logger.info("connected_to_temporal", url=TEMPORAL_URL)
+    except Exception as e:
+        logger.error("failed_to_connect_to_temporal", error=str(e))
+    
+    yield
+    
+    # Clean up if needed
+    pass
+
+app = FastAPI(title="Problemologist Controller", lifespan=lifespan)
 
 app.include_router(episodes.router)
 app.include_router(skills.router)
@@ -37,27 +56,9 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# Temporal client
-temporal_client_instance: Client = None
-
-
-@app.on_event("startup")
-async def startup_event():
-    global temporal_client_instance
-    try:
-        temporal_client_instance = await Client.connect(TEMPORAL_URL)
-    except Exception as e:
-        logger.error("failed_to_connect_to_temporal", error=str(e))
-
-
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
-
-
-class SimulationRequest(BaseModel):
-    session_id: StrictStr = Field(..., description="Session ID for the worker.")
-    compound_json: StrictStr = Field(default="{}", description="Component data.")
 
 
 def get_worker_client(session_id: str) -> WorkerClient:
