@@ -17,10 +17,10 @@ TEST_XML = """
       <geom type="box" size=".05 .05 .05" mass="1"/>
     </body>
     <body name="zone_goal_body" pos="0.5 0 0">
-         <geom name="zone_goal" type="box" size="0.1 0.1 0.1" rgba="0 1 0 0.3" group="1"/>
+         <site name="zone_goal" type="box" size="0.1 0.1 0.1" rgba="0 1 0 0.3" group="1"/>
     </body>
     <body name="zone_forbid_body" pos="-0.5 0 0">
-         <geom name="zone_forbid_1" type="box" size="0.1 0.1 0.1" rgba="1 0 0 0.3" group="1"/>
+         <site name="zone_forbid_1" type="box" size="0.1 0.1 0.1" rgba="1 0 0 0.3" group="1"/>
     </body>
   </worldbody>
   <actuator>
@@ -44,10 +44,10 @@ def test_initialization(sim_loop):
     assert sim_loop.model is not None
     assert sim_loop.data is not None
     # Check if ID of forbidden zone is in the set
-    geom_id = mujoco.mj_name2id(
-        sim_loop.model, mujoco.mjtObj.mjOBJ_GEOM, "zone_forbid_1"
+    site_id = mujoco.mj_name2id(
+        sim_loop.model, mujoco.mjtObj.mjOBJ_SITE, "zone_forbid_1"
     )
-    assert geom_id in sim_loop.forbidden_geoms
+    assert site_id in sim_loop.forbidden_sites
 
 
 def test_step_simulation(sim_loop):
@@ -162,3 +162,15 @@ def test_timeout_capped_at_30s(tmp_path):
     # Should be capped at 30s
     assert loop.max_simulation_time == MAX_SIMULATION_TIME_SECONDS
     assert loop.max_simulation_time == 30.0
+
+
+def test_target_fell_off_world(sim_loop):
+    """Test failure detection when target falls below Z threshold."""
+    # Set target Z to -3.0 (below -2.0 threshold)
+    sim_loop.data.qpos[2] = -3.0
+
+    # Run step
+    metrics = sim_loop.step({}, duration=0.01)
+
+    assert metrics.success is False
+    assert metrics.fail_reason == "target_fell_off_world"

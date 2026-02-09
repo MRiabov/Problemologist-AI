@@ -1,9 +1,13 @@
+import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from xml.dom import minidom
 
 import trimesh
 from build123d import Compound, Solid, export_stl
+from shared.cots.parts.motors import ServoMotor
+
+logger = logging.getLogger(__name__)
 
 
 class MeshProcessor:
@@ -164,12 +168,16 @@ class SceneCompiler:
             material="grid",
         )
 
-        # Actuator element for motors/servos
-        self.actuators = ET.SubElement(self.root, "actuator")
+        # Equality constraints
+        self.equality = ET.SubElement(self.root, "equality")
 
     def add_mesh_asset(self, name: str, file_name: str):
         """Registers a mesh file in the MJCF assets."""
         ET.SubElement(self.assets, "mesh", name=name, file=file_name)
+
+    def add_weld(self, body1: str, body2: str):
+        """Adds a weld constraint between two bodies."""
+        ET.SubElement(self.equality, "weld", body1=body1, body2=body2)
 
     def add_body(
         self,
@@ -216,14 +224,19 @@ class SceneCompiler:
                     ET.SubElement(body, "geom", type="mesh", mesh=mesh_name)
             # Add a free joint so the body can move (unless fixed)
             if not is_fixed:
+                logger.warning(
+                    f"Adding free joint to body '{name}'. "
+                    "This part will fall if not supported. "
+                    "Use 'fixed=True' or 'constraint' attribute to secure it."
+                )
                 ET.SubElement(body, "joint", type="free")
 
     def add_actuator(
         self,
         name: str,
         joint: str,
-        kp: float = 10.0,
-        kv: float = 1.0,
+        kp: float | None = None,
+        kv: float | None = None,
         forcerange: tuple[float, float] | None = None,
         actuator_type: str = "position",
     ):
@@ -237,14 +250,45 @@ class SceneCompiler:
             forcerange: (min, max) torque limits in N·m. From COTS servo specs.
             actuator_type: "position" for servos, "motor" for direct torque.
         """
+        # Default gains if not derived
+        final_kp = kp if kp is not None else 10.0
+        final_kv = kv if kv is not None else 1.0
+        final_forcerange = forcerange
+
+        # Try to derive from COTS if missing parameters
+        if kp is None or forcerange is None:
+            # Attempt to extract COTS model name from actuator name
+            # Assuming format "name" or "Servo_SG90_..."
+            # Simple heuristic: check if any COTS model name is in the string
+            found_model = None
+            for model_name, data in ServoMotor.motor_data.items():
+                if model_name in name or model_name in joint:
+                    found_model = model_name
+                    # Parse data
+                    torque = data["torque_nm"]
+
+                    if forcerange is None:
+                        final_forcerange = (-torque, torque)
+
+                    if kp is None:
+                        # Heuristic: kp = torque / saturation_error (rad)
+                        # Assume saturation at ~0.2 rad (~11 deg)
+                        saturation_error = 0.2
+                        final_kp = torque / saturation_error
+
+                        if kv is None:
+                            # Critical damping approx or small damping
+                            final_kv = final_kp * 0.1
+                    break
+
         attrs = {
             "name": name,
             "joint": joint,
-            "kp": str(kp),
-            "kv": str(kv),
+            "kp": str(final_kp),
+            "kv": str(final_kv),
         }
-        if forcerange is not None:
-            attrs["forcerange"] = f"{forcerange[0]} {forcerange[1]}"
+        if final_forcerange is not None:
+            attrs["forcerange"] = f"{final_forcerange[0]} {final_forcerange[1]}"
 
         ET.SubElement(self.actuators, actuator_type, **attrs)
 
@@ -271,9 +315,18 @@ class SimulationBuilder:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
+        weld_constraints = []
+
         for i, child in enumerate(assembly.children):
             # Try to get label, fallback to indexed name
             label = getattr(child, "label", None) or f"part_{i}"
+
+            # Check for constraints metadata
+            constraint = getattr(child, "constraint", None)
+            if constraint and isinstance(constraint, str):
+                if constraint.startswith("weld:"):
+                    target = constraint.split(":", 1)[1]
+                    weld_constraints.append((label, target))
 
             # Position from build123d object
             pos = [
@@ -329,6 +382,10 @@ class SimulationBuilder:
                     euler=euler,
                     is_fixed=is_fixed,
                 )
+
+        # Apply collected constraints
+        for body1, body2 in weld_constraints:
+            self.compiler.add_weld(body1, body2)
 
         scene_path = self.output_dir / "scene.xml"
         self.compiler.save(scene_path)

@@ -46,14 +46,14 @@ class SimulationLoop:
             )
 
         # Cache zone IDs for forbidden zones
-        self.forbidden_geoms = set()
-        self.goal_geoms = set()
-        for i in range(self.model.ngeom):
-            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, i)
+        self.forbidden_sites = set()
+        self.goal_sites = set()
+        for i in range(self.model.nsite):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_SITE, i)
             if name and name.startswith("zone_forbid"):
-                self.forbidden_geoms.add(i)
+                self.forbidden_sites.add(i)
             elif name and name.startswith("zone_goal"):
-                self.goal_geoms.add(i)
+                self.goal_sites.add(i)
 
         # Configurable timeout (capped at hard limit)
         self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
@@ -134,9 +134,7 @@ class SimulationLoop:
         target_body_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
         )
-        goal_geom_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, "zone_goal"
-        )
+        # We rely on self.goal_sites populated in init
 
         for _ in range(steps):
             # Apply dynamic controllers
@@ -169,6 +167,13 @@ class SimulationLoop:
                 if vel > self.max_velocity:
                     self.max_velocity = vel
 
+                # F002: Check if target fell off the world
+                target_pos = self.data.xpos[target_body_id]
+                if target_pos[2] < -2.0:
+                    self.fail_reason = "target_fell_off_world"
+                    logger.info("Simulation FAIL: Target fell off world")
+                    break
+
             # 2. Check Forbidden Zones
             if self._check_forbidden_collision():
                 self.fail_reason = "collision_with_forbidden_zone"
@@ -176,7 +181,9 @@ class SimulationLoop:
                 break
 
             # 3. Check Goal Zone
-            if self._check_goal_reached(target_body_id, goal_geom_id):
+            # Vertex-based check against goal SITES
+            goal_hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
+            if goal_hit:
                 self.success = True
                 logger.info("Simulation SUCCESS: Goal reached")
                 break
@@ -209,42 +216,71 @@ class SimulationLoop:
             fail_reason=self.fail_reason,
         )
 
-    def _check_forbidden_collision(self) -> bool:
+    def _check_vertex_in_zone(
+        self, body_id: int, zone_site_ids: set[int]
+    ) -> tuple[bool, int | None]:
+        """Check if any vertex of a body's mesh touches a zone (Site AABB check).
+
+        Args:
+            body_id: ID of the body to check.
+            zone_site_ids: Set of SITE IDs representing zones.
+
+        Returns:
+            (True, zone_id) if collision, (False, None) otherwise.
         """
-        Iterate contacts. If any contact involves a forbidden geom, return True.
-        """
-        for i in range(self.data.ncon):
-            contact = self.data.contact[i]
-            if (
-                contact.geom1 in self.forbidden_geoms
-                or contact.geom2 in self.forbidden_geoms
-            ):
-                return True
-        return False
+        if body_id == -1 or not zone_site_ids:
+            return False, None
 
-    def _check_goal_reached(self, target_body_id: int, goal_geom_id: int) -> bool:
-        """
-        Check if target is in goal zone.
-        """
-        if goal_geom_id == -1 or target_body_id == -1:
-            return False
+        geom_start = self.model.body_geomadr[body_id]
+        geom_num = self.model.body_geomnum[body_id]
+        if geom_start == -1:
+            return False, None
 
-        goal_global_pos = self.data.geom_xpos[goal_geom_id]
-        target_pos = self.data.xpos[target_body_id]
-        goal_size = self.model.geom_size[goal_geom_id]
+        for i in range(geom_num):
+            geom_id = geom_start + i
+            geom_type = self.model.geom_type[geom_id]
 
-        diff = np.abs(target_pos - goal_global_pos)
+            # Get global transform and vertices
+            geom_pos = self.data.geom_xpos[geom_id]
+            geom_mat = self.data.geom_xmat[geom_id].reshape(3, 3)
 
-        geom_type = self.model.geom_type[goal_geom_id]
-        if geom_type == mujoco.mjtGeom.mjGEOM_BOX and np.all(diff < goal_size[:3]):
-            return True
-        elif (
-            geom_type == mujoco.mjtGeom.mjGEOM_SPHERE
-            and np.linalg.norm(diff) < goal_size[0]
-        ):
-            return True
+            vertices = []
+            if geom_type == mujoco.mjtGeom.mjGEOM_MESH:
+                mesh_id = self.model.geom_dataid[geom_id]
+                vert_adr = self.model.mesh_vertadr[mesh_id]
+                vert_num = self.model.mesh_vertnum[mesh_id]
+                raw_verts = self.model.mesh_vert[vert_adr : vert_adr + vert_num]
+                vertices = geom_pos + raw_verts @ geom_mat.T
+            else:
+                # Minimal fallback: check geom position
+                vertices = np.array([geom_pos])
 
-        return False
+            # Check vertices against all zones
+            for zone_id in zone_site_ids:
+                zone_pos = self.data.site_xpos[zone_id]
+                zone_size = self.model.site_size[zone_id]
+                zone_type = self.model.site_type[zone_id]
+
+                # Assume Box or Sphere for zones
+                if zone_type == mujoco.mjtGeom.mjGEOM_BOX:
+                    # Box check (axis aligned for now, assuming site rotation is identity or simple)
+                    site_mat = self.data.site_xmat[zone_id].reshape(3, 3)
+                    diff = vertices - zone_pos
+                    # Transform to site local frame
+                    v_local = diff @ site_mat
+
+                    # Check against half-extents (zone_size)
+                    in_box = np.all(np.abs(v_local) < zone_size[:3], axis=1)
+                    if np.any(in_box):
+                        return True, zone_id
+
+                elif zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+                    # Sphere check
+                    dists = np.linalg.norm(vertices - zone_pos, axis=1)
+                    if np.any(dists < zone_size[0]):
+                        return True, zone_id
+
+        return False, None
 
     def _check_motor_overload(self) -> str | None:
         """Check if any motor has been at forcerange limit for too long.
@@ -287,64 +323,27 @@ class SimulationLoop:
 
         return None
 
-    def _check_vertex_in_zone(
-        self, body_id: int, zone_geom_ids: set[int]
-    ) -> tuple[bool, int | None]:
-        """Check if any vertex of a body's mesh touches a zone (AABB check).
-
-        Args:
-            body_id: ID of the body to check.
-            zone_geom_ids: Set of geom IDs representing zones.
-
-        Returns:
-            (True, zone_id) if collision, (False, None) otherwise.
+    def _check_forbidden_collision(self) -> bool:
         """
-        if body_id == -1 or not zone_geom_ids:
-            return False, None
+        Iterate contacts for physics collision.
+        AND check vertex overlap with forbidden SITES.
+        """
+        # MVP: check target body (usually the ball/object).
+        target_body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
+        )
+        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_sites)
+        if hit:
+            return True
 
-        # Get body position and orientation
-        body_pos = self.data.xpos[body_id]
-
-        # For each zone, check if body center is inside (simplified vertex check)
-        # Full mesh vertex iteration would require accessing mesh data
-        # For now, we check body bounding box corners as vertex approximation
-        for zone_id in zone_geom_ids:
-            zone_pos = self.data.geom_xpos[zone_id]
-            zone_size = self.model.geom_size[zone_id]
-
-            # Check body center against zone AABB
-            diff = np.abs(body_pos - zone_pos)
-
-            geom_type = self.model.geom_type[zone_id]
-            if geom_type == mujoco.mjtGeom.mjGEOM_BOX:
-                if np.all(diff < zone_size[:3]):
-                    return True, zone_id
-            elif geom_type == mujoco.mjtGeom.mjGEOM_SPHERE:
-                if np.linalg.norm(diff) < zone_size[0]:
-                    return True, zone_id
-
-        return False, None
+        return False
 
     def check_goal_with_vertices(self, target_body_id: int) -> bool:
-        """Check if target body touches any goal zone using vertex check.
-
-        Args:
-            target_body_id: ID of the target body.
-
-        Returns:
-            True if any vertex is in goal zone.
-        """
-        hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_geoms)
+        """Check if target body touches any goal zone using vertex check."""
+        hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
         return hit
 
     def check_forbid_with_vertices(self, target_body_id: int) -> bool:
-        """Check if target body touches any forbidden zone using vertex check.
-
-        Args:
-            target_body_id: ID of the target body.
-
-        Returns:
-            True if any vertex is in forbidden zone.
-        """
-        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_geoms)
+        """Check if target body touches any forbidden zone using vertex check."""
+        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_sites)
         return hit
