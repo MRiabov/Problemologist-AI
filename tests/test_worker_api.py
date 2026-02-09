@@ -90,10 +90,35 @@ def test_fs_edit(mock_create_router):
     mock_router.edit.assert_called_with("/test.txt", "old", "new")
 
 
+@patch("worker.api.routes.create_filesystem_router")
+def test_fs_upload_file(mock_create_router):
+    """Test uploading a file via API."""
+    mock_router = MagicMock(spec=FilesystemRouter)
+    mock_router.READ_ONLY_PREFIXES = ("/utils",)
+    mock_create_router.return_value = mock_router
+
+    # Need to verify local_backend.upload_files is called
+    mock_backend = MagicMock()
+    mock_router.local_backend = mock_backend
+
+    response = client.post(
+        "/fs/upload_file",
+        data={"path": "/test.bin"},
+        files={"file": ("filename", b"binary content")},
+        headers={"X-Session-ID": "test-session"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    mock_backend.upload_files.assert_called_with([("/test.bin", b"binary content")])
+
+
 def test_execute_runtime():
     """Test executing Python code via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "print('hello from api')", "timeout": 5}
+        "/runtime/execute",
+        json={"code": "print('hello from api')", "timeout": 5},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -105,7 +130,9 @@ def test_execute_runtime():
 def test_execute_runtime_timeout():
     """Test runtime execution timeout via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "import time; time.sleep(2)", "timeout": 1}
+        "/runtime/execute",
+        json={"code": "import time; time.sleep(2)", "timeout": 1},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()

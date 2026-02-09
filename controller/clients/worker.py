@@ -174,3 +174,30 @@ class WorkerClient:
             )
             response.raise_for_status()
             return GitCommitResponse.model_validate(response.json())
+
+    async def upload_file(self, path: str, content: bytes) -> bool:
+        """Upload a file to the filesystem."""
+        async with httpx.AsyncClient() as client:
+            files = {"file": ("filename", content)}
+            data = {"path": path}
+            response = await client.post(
+                f"{self.base_url}/fs/upload_file",
+                data=data,
+                files=files,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+
+    async def get_asset(self, path: str) -> bytes:
+        """Retrieve an asset (file) as raw bytes."""
+        async with httpx.AsyncClient() as client:
+            normalized_path = path.lstrip("/")
+            response = await client.get(
+                f"{self.base_url}/assets/{normalized_path}",
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.content

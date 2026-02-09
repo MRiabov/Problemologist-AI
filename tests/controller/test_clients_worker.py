@@ -228,3 +228,44 @@ async def test_submit(mock_httpx_client):
         headers={"X-Session-ID": "test-session"},
         timeout=30.0,
     )
+
+
+@pytest.mark.asyncio
+async def test_upload_file(mock_httpx_client):
+    client = WorkerClient("http://worker:8000", "test-session")
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "success"}
+    mock_httpx_client.post.return_value = mock_response
+
+    result = await client.upload_file("test.bin", b"binary content")
+
+    assert result is True
+    # mock_httpx_client.post.assert_called_once() would be good, but we need to check args
+    # checking file upload args is tricky with mocks because they might be streams
+    # but we can check url and basic args
+    args, kwargs = mock_httpx_client.post.call_args
+    assert args[0] == "http://worker:8000/fs/upload_file"
+    assert kwargs["data"] == {"path": "test.bin"}
+    assert "file" in kwargs["files"]
+    assert kwargs["files"]["file"] == ("filename", b"binary content")
+
+
+@pytest.mark.asyncio
+async def test_get_asset(mock_httpx_client):
+    client = WorkerClient("http://worker:8000", "test-session")
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"binary content"
+    mock_httpx_client.get.return_value = mock_response
+
+    content = await client.get_asset("test.bin")
+
+    assert content == b"binary content"
+    mock_httpx_client.get.assert_called_once_with(
+        "http://worker:8000/assets/test.bin",
+        headers={"X-Session-ID": "test-session"},
+        timeout=60.0,
+    )

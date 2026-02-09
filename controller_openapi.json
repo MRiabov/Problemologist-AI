@@ -75,6 +75,48 @@
         }
       }
     },
+    "/episodes/{episode_id}/interrupt": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Interrupt Episode",
+        "description": "Interrupt a running episode.",
+        "operationId": "interrupt_episode_episodes__episode_id__interrupt_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/skills/": {
       "get": {
         "tags": [
@@ -101,54 +143,27 @@
         }
       }
     },
-    "/": {
-      "get": {
-        "summary": "Read Root",
-        "operationId": "read_root__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health": {
-      "get": {
-        "summary": "Health",
-        "operationId": "health_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/simulation/run": {
+    "/ops/backup": {
       "post": {
-        "summary": "Run Simulation",
-        "operationId": "run_simulation_simulation_run_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SimulationRequest"
-              }
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Trigger Backup",
+        "description": "Trigger the automated backup workflow.",
+        "operationId": "trigger_backup_ops_backup_post",
+        "parameters": [
+          {
+            "name": "x-backup-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Backup-Secret"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -163,6 +178,23 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -275,7 +307,8 @@
           "image",
           "step",
           "stl",
-          "python"
+          "python",
+          "other"
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."
@@ -423,26 +456,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "SimulationRequest": {
-        "properties": {
-          "session_id": {
-            "type": "string",
-            "title": "Session Id",
-            "description": "Session ID for the worker."
-          },
-          "compound_json": {
-            "type": "string",
-            "title": "Compound Json",
-            "description": "Component data.",
-            "default": "{}"
-          }
-        },
-        "type": "object",
-        "required": [
-          "session_id"
-        ],
-        "title": "SimulationRequest"
       },
       "Skill": {
         "properties": {

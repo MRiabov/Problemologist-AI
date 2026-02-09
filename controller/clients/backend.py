@@ -110,7 +110,7 @@ class RemoteFilesystemBackend(BackendProtocol):
         responses = []
         for path, content in files:
             try:
-                success = await self.client.write_file(path, content.decode("utf-8"))
+                success = await self.client.upload_file(path, content)
                 responses.append(FileUploadResponse(path=path, error=None if success else "failed"))
             except Exception as e:
                 responses.append(FileUploadResponse(path=path, error=str(e)))
@@ -120,9 +120,9 @@ class RemoteFilesystemBackend(BackendProtocol):
         responses = []
         for path in paths:
             try:
-                content = await self.client.read_file(path)
+                content = await self.client.get_asset(path)
                 responses.append(
-                    FileDownloadResponse(path=path, content=content.encode("utf-8"), error=None)
+                    FileDownloadResponse(path=path, content=content, error=None)
                 )
             except Exception as e:
                 responses.append(FileDownloadResponse(path=path, error=str(e)))

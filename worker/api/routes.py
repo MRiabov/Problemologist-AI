@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, UploadFile, File, Form
 
 from shared.enums import ResponseStatus
 
@@ -160,6 +160,30 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise
     except Exception as e:
         logger.error("api_edit_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/upload_file", response_model=StatusResponse)
+async def upload_file(
+    path: str = Form(...),
+    file: UploadFile = File(...),
+    fs_router=Depends(get_router),
+):
+    """Upload a file to the filesystem."""
+    try:
+        # Check for read-only violation - replicate logic from fs_router.write
+        normalized = path if path.startswith("/") else f"/{path}"
+        if any(normalized.startswith(prefix) for prefix in fs_router.READ_ONLY_PREFIXES):
+            raise WritePermissionError(f"Cannot write to read-only path: {path}")
+
+        content = await file.read()
+        # upload_files takes list of (path, content)
+        fs_router.local_backend.upload_files([(path, content)])
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        logger.error("api_upload_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
