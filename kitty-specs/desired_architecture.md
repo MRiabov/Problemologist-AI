@@ -35,6 +35,7 @@ The agent is to generate problems for an engineer to solve. This is important, a
     - Feasibility of solution
     - Lack of violation of environment constraints (no significant, etc.)
     - Proper randomization.
+    - No excessive degrees of freedom; all parts are fixed as they should be.
 
 #### Output requirements
 
@@ -49,7 +50,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
   - Validity means no intersections and other problems; It also means that the code will compile in the first place.
   - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
 - MJCF is created programmatically, not by a LLM.
-<!-- I will need to experiment, but I don't think the LLM should be able to edit it.->
+<!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
 
 #### Benchmarks
 
@@ -465,7 +466,7 @@ The agents' file must correspond to roughly the structure detailed above, with a
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
 
-#### Benchmark generator with engineer handover
+#### Benchmark Generator with Engineer handover
 
 The Engineer agent(s) (for whom the first point of access is the Planner/lead engineer) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
@@ -636,6 +637,15 @@ The reviewer will also have `write` and `edit` tool with permissions of editing 
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
 
+The reviewer will validate for the following:
+
+1. The solution looks stable, i.e. #2
+2. No excessive DOFs which will hijack the reliable work of the solution.
+3. The solution is as optimal it should be.
+
+Notably the Engineer will at this point already have passed the manufacturability constraint, cost constraint, and others.
+<!-- and others - I need to ideate/remember what else it should review for.  -->
+
 The reviews will also come with the following YAML frontmatter:
 
 ```yaml
@@ -647,6 +657,12 @@ comments: [
 ```
 
 As usual, the reviews will be strictly typed.
+
+### Clarification - definition of constraints in planning
+
+1. Constraints are set first at the application level; e.g. the timeout of simulation is always 30 seconds
+2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
+3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
 
 ## Distributed execution
 
@@ -809,7 +825,7 @@ We use standard MuJoCo actuators. They need to be controller by the controller f
 
 We need to define how motors will behave, abd we'll use a controller. For this, create a util package like `controllers`, which would have time and position-based controllers.
 
-#### Time-based functions (take in `t` as time)
+##### Time-based functions (take in `t` as time)
 
 1. Constant - constant(power:float)
 1. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
@@ -818,7 +834,7 @@ We need to define how motors will behave, abd we'll use a controller. For this, 
 
 Note: I'm not a pro in these functions - maybe they need renaming. but that's the idea.
 
-#### Position-based functions
+##### Position-based functions
 
 Oftentimes of the time we'll want to control motors through positions, e.g. servos or stepper motors. Define a set of functions that would do inverse kinematics (rotate the motor to a given position, at least)
 
@@ -827,6 +843,14 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 <!-- In the future work, I presume, full inverse kinematics pipelines are desired. I know they are trivial in Genesis, it seems not so much in MuJoCo. -->
 
 Note: they will need to be importable utils, just as tools like `simulate` are.
+
+##### Implementation for controller functions
+
+One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. On the other hand, the `objectives.yaml` will contain which functions the motors are referecing. the moving parts.
+
+<!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
+
+<!-- Warning to self: objectives.yaml gets bloated with moving parts definition, which doesn't explicitly belong in there. -->
 
 ### Definition of "success" and failure in the simulation
 
@@ -847,6 +871,10 @@ The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The
 
 Additionally, the simulation is constrained by the bounds of the simulation, i.e. the space which the simulation can not leave.
 
+##### Checking for objective interaction
+
+As above, "The forbid or goal zone is triggered if the agent touches it even slightly". This means that if any vertex (let's limit to vertices for simplicity/speed) touches the simulation, it fails.
+
 #### Randomization
 
 <!-- LLM-generated from my other spec. -->
@@ -861,18 +889,49 @@ The benchmarks are randomized to enable a wider data distribution with less gene
 - Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
 - The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
 
+###### Visual static randomization
+
+To allow for better visual generalization and more realistic environments, environment parts will randomly (?) change their materials color to one of defined in materials config.
+
+###### Material static randomization
+
+If a part is moving, (has degrees of freedom), let us randomly switch its material for a more randomly generated environment - e.g., a part would be heavier, lighter, more/less stiff, have more/less restitution, have more/less friction coefficient; the material would be from predetermined files.
+The engineer would be informed about materials of various parts ahead of time.
+(notably, the benchmark generator should probably allow constraining some materials but only optionally so - e.g. if something is translated by the motor, in probably isn't ABS plastic, it's at least a metal. Allow the "minimum strength" or similar material selection.)
+
 ##### Runtime randomization
 
 Notably, the engineer is informed about runtime randomization to prevent unexpected issues.
 
 - The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
 
+###### Runtime randomization verification
+
+The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as MuJoCo is made for paralel simulations with slightly varying input positions.
+
 #### Failure
 
 Failure is achieved via either of:
 
-1. timeout of the simulation
-2. Any of components going out of bounds of the workspace.OR goign out of bounds OR instability in simulation
+1. Timeout of the simulation
+    - How to define timeout of the simulation? that's a question. I suggest putting a hard cap of 30 seconds on all simulations and letting the benchmark planner decide how quickly a given goal should be achieved (with leeway); no more than 30 seconds though.
+2. Any of components going out of bounds of the workspace
+3. Instability in simulation (e.g. NaNs, parts interference)
+4. Any part going into forbid zones.
+
+### Conversion of CAD to mesh and to MuJoCo
+
+We will convert `build123d` CAD files into `obj` format (not STL, because the it is very bulky), and then put the obj into mesh. I think build123d allows a `export_obj(Compound|Part)` function.
+
+The conversion pipeline is - putting every part into mesh;
+
+When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
+
+### Materials
+
+We have a set of materials defined in `manufacturing_config.yaml`, which defines: `materials` section, and which materials can be used for the simulation - their weight, price, and cost per KG. The config is auto-validated with unit tests (e.g., can't reference and inexisting material).
+
+`manufacturing_config` can be read-only for the agents to gauge the pricing ahead of time.
 
 ## Observability
 
@@ -951,6 +1010,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 ##### Engineer tools
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
+  - If validating a compound, it will also check for unusal DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
 - `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Should run multiple simulations with slightly perturbed object spawn position; to make sure the engineer agents generate robust solutions.
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
 <!-- should it contain its environment model or only the generated model?  -->

@@ -129,6 +129,10 @@ What can we make to make the actual engineers use this?
 
 At this point we'll the state of the art by a great margin.
 
+#### Idea list for productionizing
+
+- Energy conservation - set a cap on energy (which energy?) used by motors; the agent must adapt. - shouldn't be difficult to done.
+
 ### Work package 6 - Real-life scans
 
 Take a set of real-life 3d scans, e.g. via NeRF, and instead of agent-generated environments, make the agents build small robots to move something to something in the real world.
