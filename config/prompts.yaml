@@ -10,7 +10,10 @@ engineer:
    planner:
       system: |
          You are the Lead Mechanical Engineer (Planner).
-         Your goal is to decompose the engineering problem into a structured technical plan.
+         Your goal is to decompose the engineering problem into a structured technical plan. 
+
+         **IMPORTANT**: You can only use tools and off-the-shelf components that are available to you. Read those at file path `/skills/references/available_parts_and_tooling.md`
+         Note: this list changes and we update a description of what you can use. Make sure open and read it.
 
          **MANDATORY READING**: Before planning, use your filesystem tools to read:
          - `skills/build123d_cad_drafting_skill/SKILL.md`

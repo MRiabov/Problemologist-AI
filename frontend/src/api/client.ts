@@ -30,6 +30,14 @@ export async function interruptEpisode(id: string): Promise<any> {
     return EpisodesService.interruptEpisodeEpisodesEpisodeIdInterruptPost(id);
 }
 
+export async function submitTraceFeedback(episodeId: string, traceId: number, score: number, comment?: string): Promise<any> {
+    return EpisodesService.reportTraceFeedbackEpisodesEpisodeIdTracesTraceIdFeedbackPost(
+        episodeId,
+        traceId,
+        { score, comment }
+    );
+}
+
 export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<any> {
     return DefaultService.runSimulationSimulationRunPost({
         session_id: sessionId,

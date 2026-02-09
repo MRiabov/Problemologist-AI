@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -7,25 +6,35 @@ from langchain_core.callbacks import BaseCallbackHandler
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
+from shared.enums import TraceType
 
 
 class DatabaseCallbackHandler(BaseCallbackHandler):
     """Callback handler that stores traces in the database."""
 
-    def __init__(self, episode_id: uuid.UUID):
+    def __init__(
+        self,
+        episode_id: uuid.UUID,
+        langfuse_callback: Any | None = None,
+    ):
         self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
+        self.langfuse_callback = langfuse_callback
 
-    async def _broadcast_trace(self, trace_id: int, raw_trace: dict) -> None:
+    async def _broadcast_trace(self, trace: Trace) -> None:
         """Helper to broadcast a new trace."""
         await self.broadcaster.broadcast(
             self.episode_id,
             {
                 "type": "new_trace",
-                "id": trace_id,
-                "created_at": datetime.utcnow().isoformat(),
-                "raw_trace": raw_trace,
+                "id": trace.id,
+                "created_at": trace.created_at.isoformat(),
+                "trace_type": trace.trace_type,
+                "name": trace.name,
+                "content": trace.content,
+                "metadata": trace.metadata_vars,
+                "langfuse_trace_id": trace.langfuse_trace_id,
             },
         )
 
@@ -34,22 +43,29 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
     ) -> None:
         pass
 
+    def _get_langfuse_id(self) -> str | None:
+        if self.langfuse_callback and hasattr(self.langfuse_callback, "get_trace_id"):
+            try:
+                return self.langfuse_callback.get_trace_id()
+            except Exception:
+                return None
+        return None
+
     async def on_tool_start(
         self, serialized: dict[str, Any], input_str: str, **_kwargs: Any
     ) -> None:
         async with self.session_factory() as db:
             trace = Trace(
                 episode_id=self.episode_id,
-                raw_trace={
-                    "type": "tool_start",
-                    "name": serialized.get("name"),
-                    "input": input_str,
-                },
+                trace_type=TraceType.TOOL_START,
+                name=serialized.get("name"),
+                content=input_str,
+                langfuse_trace_id=self._get_langfuse_id(),
             )
             db.add(trace)
             await db.commit()
             await db.refresh(trace)
-            await self._broadcast_trace(trace.id, trace.raw_trace)
+            await self._broadcast_trace(trace)
 
     async def on_tool_end(self, output: Any, **_kwargs: Any) -> None:
         async with self.session_factory() as db:
@@ -59,12 +75,14 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
 
             trace = Trace(
                 episode_id=self.episode_id,
-                raw_trace={"type": "tool_end", "output": output},
+                trace_type=TraceType.TOOL_END,
+                content=str(output),
+                langfuse_trace_id=self._get_langfuse_id(),
             )
             db.add(trace)
             await db.commit()
             await db.refresh(trace)
-            await self._broadcast_trace(trace.id, trace.raw_trace)
+            await self._broadcast_trace(trace)
 
     async def on_llm_new_token(self, token: str, **_kwargs: Any) -> None:
         # We might not want to save every token to DB, maybe just full completions
@@ -79,9 +97,11 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
 
             trace = Trace(
                 episode_id=self.episode_id,
-                raw_trace={"type": "llm_end", "content": content},
+                trace_type=TraceType.LLM_END,
+                content=content,
+                langfuse_trace_id=self._get_langfuse_id(),
             )
             db.add(trace)
             await db.commit()
             await db.refresh(trace)
-            await self._broadcast_trace(trace.id, trace.raw_trace)
+            await self._broadcast_trace(trace)

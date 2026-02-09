@@ -3,27 +3,78 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, Field, StrictStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
-from controller.persistence.models import Episode
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus
+from controller.persistence.models import Episode, Trace
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
+
+
+class FeedbackRequest(BaseModel):
+    score: int  # 1 for up, 0 for down
+    comment: str | None = None
+
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
+
+
+@router.post("/{episode_id}/traces/{trace_id}/feedback")
+async def report_trace_feedback(
+    episode_id: uuid.UUID,
+    trace_id: int,
+    feedback: FeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Report feedback for a specific trace to Langfuse."""
+    result = await db.execute(
+        select(Trace).where(Trace.id == trace_id, Trace.episode_id == episode_id)
+    )
+    trace = result.scalar_one_or_none()
+
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace not found")
+
+    if not trace.langfuse_trace_id:
+        raise HTTPException(status_code=400, detail="Trace does not have a Langfuse ID")
+
+    langfuse = get_langfuse_client()
+    if not langfuse:
+        raise HTTPException(status_code=503, detail="Langfuse client not configured")
+
+        langfuse.score(
+            trace_id=trace.langfuse_trace_id,
+            name="user-feedback",
+            value=feedback.score,
+            comment=feedback.comment,
+        )
+
+    # Store locally anyway (spec requirement)
+    trace.feedback_score = feedback.score
+    trace.feedback_comment = feedback.comment
+    await db.commit()
+
+    return {"status": ResponseStatus.ACCEPTED}
 
 
 class TraceResponse(BaseModel):
     id: int
     langfuse_trace_id: str | None
-    raw_trace: dict | None
+    trace_type: TraceType
+    name: str | None
+    content: str | None
+    metadata: dict | None = Field(None, alias="metadata_vars")
+    feedback_score: int | None = None
+    feedback_comment: str | None = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class AssetResponse(BaseModel):

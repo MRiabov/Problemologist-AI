@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { Terminal, Send, Square } from "lucide-react";
+import { Terminal, Send, Square, ThumbsUp, ThumbsDown, Check } from "lucide-react";
+import { submitTraceFeedback } from "../../api/client";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -23,12 +24,27 @@ export default function ReasoningTraces({
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isCreationMode, startAgent, interruptAgent, selectedEpisode } = useEpisodes();
   const [prompt, setPrompt] = useState("");
+  const [feedbackState, setFeedbackState] = useState<Record<number, { score: number; comment: string; isSubmitted: boolean }>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (prompt.trim()) {
-      startAgent(prompt);
-      setPrompt("");
+  const handleFeedback = async (traceId: number, score: number) => {
+    setFeedbackState(prev => ({
+      ...prev,
+      [traceId]: { ...prev[traceId], score, isSubmitted: false }
+    }));
+  };
+
+  const submitFeedback = async (traceId: number) => {
+    const state = feedbackState[traceId];
+    if (!state || !selectedEpisode) return;
+
+    try {
+      await submitTraceFeedback(selectedEpisode.id, traceId, state.score, state.comment);
+      setFeedbackState(prev => ({
+        ...prev,
+        [traceId]: { ...prev[traceId], isSubmitted: true }
+      }));
+    } catch (error) {
+      console.error("Failed to submit feedback", error);
     }
   };
 
@@ -112,43 +128,98 @@ export default function ReasoningTraces({
                             </div>
                             <div className="text-muted-foreground break-all opacity-90 whitespace-pre-wrap">
                                 {(() => {
-                                    const rt = trace.raw_trace as any;
-                                    if (typeof rt === 'string') return rt;
-                                    if (!rt) return null;
-
-                                    if (rt.type === 'tool_start') {
+                                    if (trace.trace_type === 'tool_start') {
                                         return (
                                             <div className="text-blue-400">
                                                 <span className="font-bold">Tool Call: </span>
-                                                <span className="text-blue-300">{rt.name}</span>
+                                                <span className="text-blue-300">{trace.name}</span>
                                                 <div className="mt-1 bg-blue-900/20 p-2 rounded text-[10px] text-blue-200/70 border border-blue-500/10">
-                                                    {rt.input}
+                                                    {trace.content}
                                                 </div>
                                             </div>
                                         );
                                     }
-                                    if (rt.type === 'tool_end') {
+                                    if (trace.trace_type === 'tool_end') {
                                         return (
                                             <div className="text-green-400/80">
                                                 <span className="font-bold">Output: </span>
                                                 <div className="mt-1 bg-green-900/10 p-2 rounded text-[10px] text-green-200/60 border border-green-500/5">
-                                                    {rt.output}
+                                                    {trace.content}
                                                 </div>
                                             </div>
                                         );
                                     }
-                                    if (rt.type === 'llm_end') {
+                                    if (trace.trace_type === 'llm_end') {
                                         return (
                                             <div className="text-purple-300/90 italic">
-                                                {rt.content}
+                                                {trace.content}
                                             </div>
                                         );
                                     }
-                                    if (rt.message) return rt.message;
+                                    
+                                    if (trace.trace_type === 'log') {
+                                        return <div className="text-muted-foreground">{trace.content}</div>;
+                                    }
 
-                                    return JSON.stringify(rt, null, 2);
+                                    return trace.content;
                                 })()}
                             </div>
+                            
+                            {/* Feedback UI */}
+                            {trace.langfuse_trace_id && (
+                                <div className="mt-2 flex flex-col gap-2 p-2 bg-white/5 rounded-md border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-[9px] uppercase font-bold tracking-tighter opacity-50">Was this step correct?</span>
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className={`h-6 w-6 rounded-full hover:bg-green-500/20 ${feedbackState[trace.id]?.score === 1 ? 'text-green-400 bg-green-500/10' : 'text-muted-foreground'}`}
+                                                onClick={() => handleFeedback(trace.id, 1)}
+                                                disabled={feedbackState[trace.id]?.isSubmitted}
+                                            >
+                                                <ThumbsUp className="h-3 w-3" />
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className={`h-6 w-6 rounded-full hover:bg-red-500/20 ${feedbackState[trace.id]?.score === 0 ? 'text-red-400 bg-red-500/10' : 'text-muted-foreground'}`}
+                                                onClick={() => handleFeedback(trace.id, 0)}
+                                                disabled={feedbackState[trace.id]?.isSubmitted}
+                                            >
+                                                <ThumbsDown className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    
+                                    {feedbackState[trace.id]?.score !== undefined && !feedbackState[trace.id]?.isSubmitted && (
+                                        <div className="flex gap-2 animate-in fade-in slide-in-from-top-1">
+                                            <Input 
+                                                placeholder="Provide feedback..." 
+                                                className="h-7 text-[10px] bg-black/20"
+                                                value={feedbackState[trace.id]?.comment || ""}
+                                                onChange={(e) => setFeedbackState(prev => ({
+                                                    ...prev,
+                                                    [trace.id]: { ...prev[trace.id], comment: e.target.value }
+                                                }))}
+                                            />
+                                            <Button 
+                                                size="sm" 
+                                                className="h-7 text-[9px] px-3 font-bold uppercase"
+                                                onClick={() => submitFeedback(trace.id)}
+                                            >
+                                                Submit
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {feedbackState[trace.id]?.isSubmitted && (
+                                        <div className="text-[9px] text-green-400 flex items-center gap-1 font-bold italic animate-in zoom-in-95">
+                                            <Check className="h-3 w-3" /> Feedback sent to Langfuse
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))
                 ) : (
