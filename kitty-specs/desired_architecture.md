@@ -788,7 +788,7 @@ Some parts will need to be "fixed" despite physics, specifically for the impleme
 
 ###### Fasteners definition
 
-<!-- I propose to make a utility method like "fastener_hole(part_1:Part)" which would take in an enum (or a string, but enums are easier to work with for everyone), of fastener size and a float of depth (metric by default) and would drill a hole. Conveniently, build123d offers a `Hole` class with various simplifications like Counterbore. -->
+<!-- I propose to make a utility method like "fastener_hole(fastener_depth, fastener_diameter, fastener_type)), of fastener size and a float of depth (metric by default) and would drill a hole. Conveniently, build123d offers a `Hole` class with various simplifications like Counterbore. -->
 <!-- Note: I don't doubt we should use bd-warehoue for this. However, I doubt how this will be constrained. I'm not sure. -->
 
 Notably, `bd-warehouse` package for build123d offers all nuts, bolts and screws, and we almost definitely should reuse it. With however logic it offers.
@@ -796,6 +796,23 @@ Notably, `bd-warehouse` package for build123d offers all nuts, bolts and screws,
 It would: make a hole in one part and in another part (undefined - how to make holes in another part and be robust? Normally in something like Autodesk Inventor the "Adaptive constraints" and "adaptive sketches" were a mess.)
 
 <!-- bd-warehouse docs on fasteners and holes. I'll have to add this info to the `skills/` - https://bd-warehouse.readthedocs.io/en/latest/fastener.html -->
+
+###### Fasteners constraints
+
+How to create constraints in CAD and map it onto MuJoCo cleanly is not very logical. What I suggest is:
+
+1. Per each fastener hole, define a alphanumeric "connection_id" (in function definition)
+2. The fastener would have a connection_id as well (unique fastener per connection)
+3. The fastener would be inserted into the connection automatically.
+
+Fasteners could be placed into holes automatically by setting insert_fastener=True. The fastener would have automatically picked up the length and the diameter of the hole.
+
+Note: fasteners could be placed into holes.
+
+###### Fastener automatic insertion
+
+To make the above logic work, fastener_hole would automatically create a build123d Joint; another Joint at the hole, and mate them together.
+<!--For simplicity/robustness of assembly, the fastener can have another constraint on it, constraining it to another body. But if it is a good idea, I don't know. The mathematics will get complex. -->
 
 ##### Allowed components in simulation
 
