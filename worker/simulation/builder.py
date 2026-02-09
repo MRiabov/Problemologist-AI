@@ -122,6 +122,7 @@ class SceneCompiler:
             self.root, "compiler", angle="degree", coordinate="local", assetdir="assets"
         )
         ET.SubElement(self.root, "option", integrator="RK4", timestep="0.002")
+        self.actuators = ET.SubElement(self.root, "actuator")
 
         # Visual assets and lighting
         visual = ET.SubElement(self.root, "visual")

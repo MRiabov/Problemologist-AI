@@ -1,7 +1,7 @@
 from typing import Any
 
 import structlog
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import compute_part_hash
@@ -17,7 +17,7 @@ logger = structlog.get_logger()
 
 @type_check
 def calculate_3dp_cost(
-    part: Part | Compound,
+    part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
@@ -41,8 +41,8 @@ def calculate_3dp_cost(
     # 1. Material Cost
     # Volume in cm3 (build123d volume is in mm3)
     volume_cm3 = part.volume / 1000.0
-    density = material_cfg.get("density_g_cm3", 1.04)
-    cost_per_kg = material_cfg.get("cost_per_kg", 20.0)
+    density = material_cfg.density_g_cm3
+    cost_per_kg = material_cfg.cost_per_kg
 
     mass_kg = (volume_cm3 * density) / 1000.0
     material_cost_per_part = mass_kg * cost_per_kg
@@ -53,7 +53,7 @@ def calculate_3dp_cost(
     deposition_rate_cm3_hr = three_dp_cfg.parameters.get("deposition_rate_cm3_hr", 15.0)
     printing_time_hr = volume_cm3 / deposition_rate_cm3_hr
 
-    machine_hourly_rate = material_cfg.get("machine_hourly_rate", 20.0)
+    machine_hourly_rate = material_cfg.machine_hourly_rate
     run_cost_per_part = printing_time_hr * machine_hourly_rate
 
     # 3. Setup Cost
@@ -64,7 +64,7 @@ def calculate_3dp_cost(
     if context is not None:
         part_hash = compute_part_hash(part)
         if part_hash in context:
-            setup_cost *= 0.5 # 50% discount on setup for repeated parts
+            setup_cost *= 0.5  # 50% discount on setup for repeated parts
             is_reused = True
         context[part_hash] = context.get(part_hash, 0) + quantity
 
@@ -93,7 +93,9 @@ def calculate_3dp_cost(
 
 
 @type_check
-def analyze_3dp(part: Part | Compound, config: ManufacturingConfig) -> WorkbenchResult:
+def analyze_3dp(
+    part: Part | Compound | Solid, config: ManufacturingConfig
+) -> WorkbenchResult:
     """
     Functional entry point for 3D Printing analysis.
     """
@@ -103,9 +105,7 @@ def analyze_3dp(part: Part | Compound, config: ManufacturingConfig) -> Workbench
 
     # 1. Geometric Validity Check
     if not part.is_valid:
-        violations.append(
-            "Geometry is not valid (non-manifold or self-intersecting)"
-        )
+        violations.append("Geometry is not valid (non-manifold or self-intersecting)")
 
     # 2. Closed Geometry Check
     solids = part.solids()
@@ -119,9 +119,7 @@ def analyze_3dp(part: Part | Compound, config: ManufacturingConfig) -> Workbench
 
     # 3. Single Body Check
     if len(solids) > 1:
-        violations.append(
-            f"Geometry must be a single body, found {len(solids)} solids"
-        )
+        violations.append(f"Geometry must be a single body, found {len(solids)} solids")
 
     # 4. Cost Calculation (single unit)
     # We proceed with cost calculation even if there are violations, unless critical?
