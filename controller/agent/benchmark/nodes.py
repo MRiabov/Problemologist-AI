@@ -143,7 +143,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
             resp = await client.read_file("objectives.yaml")
             objectives_yaml = resp
     except Exception as e:
-        raise ValueError("failed_to_read_objectives_yaml", error=str(e))
+        raise ValueError(f"failed_to_read_objectives_yaml: {e}")
 
     # Appending context to the base system prompt
     system_prompt = f"""{base_prompt}

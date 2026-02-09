@@ -66,7 +66,7 @@ class FilesystemRouter:
                 ),
                 MountPoint(
                     virtual_prefix="/skills",
-                    local_path=Path("/app/skills"),
+                    local_path=base / "skills",
                     access_mode=AccessMode.READ_ONLY,
                 ),
                 MountPoint(

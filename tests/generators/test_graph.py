@@ -20,7 +20,13 @@ async def test_run_generation_session_mocked():
     mock_plan = {"theme": "gears"}
     mock_script = "print('hello')"
 
-    with patch("controller.agent.benchmark.graph.define_graph") as mock_define:
+    with (
+        patch("controller.agent.benchmark.graph.define_graph") as mock_define,
+        patch("controller.agent.benchmark.graph.get_db") as mock_get_db,
+    ):
+        # Configure mock DB context manager
+        mock_db_session = AsyncMock()
+        mock_get_db.return_value.__aenter__.return_value = mock_db_session
         # Mock the compiled graph's astream method
         mock_app = MagicMock()
 
@@ -50,7 +56,13 @@ async def test_run_generation_session_mocked():
 async def test_run_generation_session_rejected():
     prompt = "A complex linkage"
 
-    with patch("controller.agent.benchmark.graph.define_graph") as mock_define:
+    with (
+        patch("controller.agent.benchmark.graph.define_graph") as mock_define,
+        patch("controller.agent.benchmark.graph.get_db") as mock_get_db,
+    ):
+        # Configure mock DB context manager
+        mock_db_session = AsyncMock()
+        mock_get_db.return_value.__aenter__.return_value = mock_db_session
         mock_app = MagicMock()
 
         async def mock_astream_gen(input_state, **kwargs):
