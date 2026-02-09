@@ -5,6 +5,7 @@ from worker.api.schema import (
     EditOp,
     ExecuteResponse,
     GitCommitResponse,
+    GrepMatchModel,
 )
 from worker.filesystem.backend import FileInfo
 
@@ -174,3 +175,32 @@ class WorkerClient:
             )
             response.raise_for_status()
             return GitCommitResponse.model_validate(response.json())
+
+    async def grep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatchModel]:
+        """Search for pattern in files."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/fs/grep",
+                json={"pattern": pattern, "path": path, "glob": glob},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if data.get("error"):
+                raise RuntimeError(data["error"])
+            return [GrepMatchModel.model_validate(m) for m in data.get("matches", [])]
+
+    async def glob_info(self, pattern: str, path: str = "/") -> list[FileInfo]:
+        """Find files matching a glob pattern."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/fs/glob",
+                json={"pattern": pattern, "path": path},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return [FileInfo.model_validate(item) for item in response.json()]

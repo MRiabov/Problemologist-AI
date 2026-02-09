@@ -23,6 +23,9 @@ from .schema import (
     ExecuteResponse,
     GitCommitRequest,
     GitCommitResponse,
+    GlobRequest,
+    GrepRequest,
+    GrepResponse,
     LintRequest,
     LintResponse,
     ListFilesRequest,
@@ -160,6 +163,27 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise
     except Exception as e:
         logger.error("api_edit_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/grep", response_model=GrepResponse)
+async def grep_files(request: GrepRequest, fs_router=Depends(get_router)):
+    """Search for pattern in files."""
+    try:
+        matches = fs_router.grep(request.pattern, request.path, request.glob)
+        return GrepResponse(matches=matches)
+    except Exception as e:
+        logger.error("api_grep_failed", pattern=request.pattern, error=str(e))
+        return GrepResponse(matches=[], error=str(e))
+
+
+@router.post("/fs/glob", response_model=list[FileInfo])
+async def glob_files(request: GlobRequest, fs_router=Depends(get_router)):
+    """Find files matching a glob pattern."""
+    try:
+        return fs_router.glob(request.pattern, request.path)
+    except Exception as e:
+        logger.error("api_glob_failed", pattern=request.pattern, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

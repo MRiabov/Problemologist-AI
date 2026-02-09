@@ -10,6 +10,7 @@ from pathlib import Path
 
 import structlog
 
+from worker.api.schema import GrepMatchModel
 from .backend import FileInfo, LocalFilesystemBackend
 
 logger = structlog.get_logger(__name__)
@@ -297,6 +298,127 @@ class FilesystemRouter:
 
         self.local_backend.delete(path)
 
+    def grep(self, pattern: str, path: str | None = None, glob: str | None = None) -> list[GrepMatchModel]:
+        """Search for pattern in files.
+
+        Args:
+            pattern: Regex pattern to search for.
+            path: Optional path to restrict search (directory or file).
+            glob: Optional glob pattern to filter files.
+
+        Returns:
+            List of matches.
+        """
+        logger.debug("router_grep", pattern=pattern, path=path, glob=glob)
+        matches = []
+        normalized_path = path if path and path.startswith("/") else f"/{path}" if path else "/"
+
+        # Check if path falls into a mount
+        mount = self._get_mount_point(normalized_path)
+        if mount:
+            return self._grep_mount(mount, pattern, normalized_path, glob)
+
+        # Search local backend
+        if normalized_path == "/" or not mount:
+            # We pass 'path' as is (or None) to local backend, letting it handle its root
+            # If normalized_path is "/", we pass None or "/"
+            p = path if path else "/"
+            res = self.local_backend.grep_raw(pattern, p, glob)
+            if isinstance(res, list):
+                for m in res:
+                    matches.append(GrepMatchModel(path=m["path"], line=m["line"], text=m["text"]))
+
+        # If searching root, also search all mounts
+        if normalized_path == "/":
+            for mnt in self.mount_points:
+                if mnt.local_path.exists():
+                    matches.extend(self._grep_mount(mnt, pattern, mnt.virtual_prefix, glob))
+
+        return matches
+
+    def _grep_mount(self, mount: MountPoint, pattern: str, path: str, glob: str | None) -> list[GrepMatchModel]:
+        """Grep inside a mounted directory."""
+        # Use a temporary backend to leverage grep logic
+        temp_backend = LocalFilesystemBackend(root=mount.local_path, session_id="read_only")
+
+        # Calculate relative path for the backend
+        if path == mount.virtual_prefix or path == mount.virtual_prefix + "/":
+            rel_path = "/"
+        else:
+            rel_path = path[len(mount.virtual_prefix):]
+            if not rel_path.startswith("/"):
+                rel_path = "/" + rel_path
+
+        res = temp_backend.grep_raw(pattern, rel_path, glob)
+
+        matches = []
+        if isinstance(res, list):
+            for m in res:
+                # Prepend mount prefix
+                virtual = mount.virtual_prefix.rstrip("/") + m["path"]
+                matches.append(GrepMatchModel(path=virtual, line=m["line"], text=m["text"]))
+
+        return matches
+
+    def glob(self, pattern: str, path: str = "/") -> list[FileInfo]:
+        """Find files matching a glob pattern.
+
+        Args:
+            pattern: Glob pattern (e.g. "**/*.py").
+            path: Base path to search from.
+
+        Returns:
+            List of FileInfo objects.
+        """
+        logger.debug("router_glob", pattern=pattern, path=path)
+        results = []
+        normalized_path = path if path.startswith("/") else f"/{path}"
+
+        # Check if path falls into a mount
+        mount = self._get_mount_point(normalized_path)
+        if mount:
+            return self._glob_mount(mount, pattern, normalized_path)
+
+        # Search local backend
+        res = self.local_backend.glob_info(pattern, path)
+        for item in res:
+            results.append(FileInfo(
+                path=item["path"],
+                name=Path(item["path"]).name,
+                is_dir=item["is_dir"],
+                size=item["size"],
+            ))
+
+        # If searching root, also search all mounts
+        if normalized_path == "/":
+            for mnt in self.mount_points:
+                if mnt.local_path.exists():
+                    results.extend(self._glob_mount(mnt, pattern, mnt.virtual_prefix))
+
+        return results
+
+    def _glob_mount(self, mount: MountPoint, pattern: str, path: str) -> list[FileInfo]:
+        """Glob inside a mounted directory."""
+        temp_backend = LocalFilesystemBackend(root=mount.local_path, session_id="read_only")
+
+        if path == mount.virtual_prefix or path == mount.virtual_prefix + "/":
+            rel_path = "/"
+        else:
+            rel_path = path[len(mount.virtual_prefix):]
+            if not rel_path.startswith("/"):
+                rel_path = "/" + rel_path
+
+        res = temp_backend.glob_info(pattern, rel_path)
+        results = []
+        for item in res:
+            virtual = mount.virtual_prefix.rstrip("/") + item["path"]
+            results.append(FileInfo(
+                path=virtual,
+                name=Path(item["path"]).name,
+                is_dir=item["is_dir"],
+                size=item["size"],
+            ))
+        return results
 
 def create_filesystem_router(
     session_id: str,

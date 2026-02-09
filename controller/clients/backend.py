@@ -98,11 +98,34 @@ class RemoteFilesystemBackend(BackendProtocol):
     async def agrep_raw(
         self, pattern: str, path: Optional[str] = None, glob: Optional[str] = None
     ) -> Union[List[GrepMatch], str]:
-        logger.warning("agrep_raw_not_fully_implemented_on_worker")
-        return []
+        try:
+            matches = await self.client.grep_raw(pattern, path, glob)
+            # Convert GrepMatchModel (Pydantic) to GrepMatch (TypedDict)
+            return [
+                {
+                    "path": m.path,
+                    "line": m.line,
+                    "text": m.text
+                }
+                for m in matches
+            ]
+        except Exception as e:
+            return f"Error during grep: {e!s}"
 
     async def aglob_info(self, pattern: str, path: str = "/") -> List[ProtocolFileInfo]:
-        return await self.als_info(path)
+        try:
+            files = await self.client.glob_info(pattern, path)
+            return [
+                {
+                    "path": f.path,
+                    "is_dir": f.is_dir,
+                    "size": f.size or 0,
+                }
+                for f in files
+            ]
+        except Exception as e:
+            logger.error("aglob_info_failed", error=str(e))
+            return []
 
     async def aupload_files(
         self, files: List[Tuple[str, bytes]]

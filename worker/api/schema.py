@@ -149,3 +149,33 @@ class LintResponse(BaseModel):
     success: StrictBool
     errors: list[dict[StrictStr, Any]] = Field(default_factory=list)
     warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
+
+
+class GrepRequest(BaseModel):
+    """Request to search for a pattern in files."""
+
+    pattern: StrictStr = Field(..., min_length=1)
+    path: StrictStr | None = Field(default=None, description="Path to search in (file or directory).")
+    glob: StrictStr | None = Field(default=None, description="Glob pattern to filter files.")
+
+
+class GrepMatchModel(BaseModel):
+    """A single match from a grep operation."""
+
+    path: StrictStr
+    line: StrictInt
+    text: StrictStr
+
+
+class GrepResponse(BaseModel):
+    """Response from a grep operation."""
+
+    matches: list[GrepMatchModel] = Field(default_factory=list)
+    error: StrictStr | None = None
+
+
+class GlobRequest(BaseModel):
+    """Request to find files matching a pattern."""
+
+    pattern: StrictStr = Field(..., min_length=1)
+    path: StrictStr = Field(default="/", description="Base path to search from.")
