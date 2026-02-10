@@ -1,22 +1,24 @@
 import asyncio
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
-from controller.api.routes import episodes, skills
 from controller.api import ops
-from controller.config.settings import settings
-from controller.clients.worker import WorkerClient
+from controller.api.manager import task_tracker
+from controller.api.routes import episodes, skills
 from controller.clients.backend import RemoteFilesystemBackend
+from controller.clients.worker import WorkerClient
+from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
 from shared.logging import configure_logging, get_logger
+from controller.agent.initialization import initialize_agent_files
 
 # Configure logging
 configure_logging("controller")
@@ -67,9 +69,6 @@ def get_worker_client(session_id: str) -> WorkerClient:
     return WorkerClient(base_url=WORKER_URL, session_id=session_id)
 
 
-from controller.api.manager import task_tracker
-
-
 async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
     session_factory = get_sessionmaker()
 
@@ -85,13 +84,20 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             try:
                 # Use a 32-char hex trace_id for OTEL/Langfuse v3 compatibility
                 trace_id = uuid.uuid4().hex
-                
+
                 client = get_worker_client(session_id)
                 backend = RemoteFilesystemBackend(client)
+
+                # Initialize agent files (templates, directories)
+                await initialize_agent_files(
+                    backend, agent_name="engineer_coder"
+                )  # FIXME: dynamic agent name
+
                 agent, langfuse_callback = create_agent_graph(
-                    backend, 
-                    agent_name="engineer_coder",
-                    trace_id=trace_id
+                    backend,
+                    agent_name="engineer_coder",  # FIXME: dynamic agent name from task/request?
+                    # For now hardcoded in original code too.
+                    trace_id=trace_id,
                 )
 
                 # Add initial trace
@@ -149,10 +155,8 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
 
                             # Read content for small files
                             content = None
-                            try:
+                            with suppress(Exception):
                                 content = await backend.aread(path)
-                            except:
-                                pass
 
                             asset = Asset(
                                 episode_id=episode_id,
