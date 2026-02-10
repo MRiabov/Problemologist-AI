@@ -598,7 +598,7 @@ moved_object:
   start_position: [x, y, z]
   # Runtime jitter: small position variation per simulation run
   # Your solution must handle ALL positions within this range
-  runtime_jitter: [±2, ±2, ±1]  # [±x, ±y, ±z] mm
+  runtime_jitter: [2, 2, 1]  # [±x, ±y, ±z] mm
 
 # -----------------------------------------------------------------------------
 # ENVIRONMENT MOVING PARTS (READ-ONLY)
@@ -673,18 +673,110 @@ As usual, the reviews will be strictly typed.
 2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
 3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
 
-### Evaluations
+## Evaluations
 
-To build great agents, we need agent needs a great evaluation pipelines.
+Evaluations are treated as a first-class architecture in this application. In fact, 80% of our work is actually building evaluation architecture (which the rest of the simulation, linting is just a tool for execution.)
+
+<!-- To build great agents, we need agent needs a great evaluation pipelines.
 We need 10 at least test prompts for each agent (primary) agent subtype - 3 for benchmark (Planner, CAD_agent, Reviewer), 3 for engineering (Planner, CAD_agent, Reviewer).
 
-We will also need evaluations for an agent.
+We will also need evaluations for an agent. -->
+
+### Evaluations architecture
+
+We need evaluation criteria that would be not only functional, but tied to numbers and count of tool calls/reviews from LLM-as-judge.
+
+Bad example: specific as "Markdown would be valid"
+Good example: Testing of markdown for structural validity be successful in 95% of cases
+
+### Multi-level evaluations architecture
+
+We should be able to test evaluations on multiple tiers, specifically:
+
+#### Fast
+
+1. Testing of markdown validity (for planners, TODO lists, reviewers) | 95% of cases on the first prompt.
+2. Testing of code validity, ruff/pyright checks - 90% of cases on an average tool call
+    - Including, specifically, build123d code. So we would generate a valid build123d code in 95% of the cases.
+3. Testing that output YAML is valid in 95% of cases.
+    - In `objectives.yaml`, the objectives do not intersect, specified objects do not intersect
+    - In `objectives.yaml`, the objectives are in bounds of the model.
+4. Given a prompt, agents read the necessary skill documents (as instructed).
+    - For each agent.
+
+#### Medium
+
+##### Engineer evaluations
+
+###### Planner evaluations
+
+<!-- We probably want to split this into further three sections below. -->
+1. Given a prompt, an engineering planner uses appropriate components to solve a problem, and creates plans that are physically achievable, does not have intersecting models, and actually passes.
+    - Validation:
+        1. YAML
+        2. LLM-as-a-judge (plan reviewer).
+2. Given a prompt, the engineering planner uses accurate prices from the catalog and doesn't "come up" with prices.
+3. Given a prompt, an engineering planner does not generate plans for features outside of a build zone.
+4. Given a prompt, an engineering planner plans for a solution that is equal or lower to the `max_unit_cost`, `max_weight`, as well as other numeric constraints in 95% of cases.
+5. Given a prompt, the engineering planner produces plans with correct units (e.g. metric or US customary units in 95% of cases.)
+
+###### CAD Engineer
+
+1. Given a plan, the engineer will pass manufacturability checks in 70% of tool calls when expected to (during )
+2. Given a plan, the engineer will pass manufacturability checks
+
+##### Reviewer
+
+1. Given a viewed model, the review agent will correctly navigate images of the output (would check at least 3 images) before solution
+2. Given a viewed model, the review agent would be able to correctly identify the issues in the plan in at least 70% of the cases.
+    - Correctness: given a valid plan with an issue introduced by another LLM, a reviewer would be able to spot the issue in the plan (with the first LLM or other LLM validating that in fact, the described found issue matches).
+3. Given a viewed model, the reviewer would force the CAD engineer to provide a cheaper solution in at least 15% of the cases.
+
+<!-- Future: Given a prompt, the engineering planner doesn't use components that are out of stock -->
+
+<!-- FIXME: Underspec: we don't define coordinate system starting point.I.e. is the center defined as (0,0,0)? Else how do we define it?
+Proposal: normalize the simulation to the center bottom of the build zone. So the bottom center of the simulation would be 0,0,0; whatever is under it would be -z, and everything would be normalized to it. I expect it'll help agents adjust the build. -->
+
+##### Benchmark Generator
+
+###### Benchmark Generator Planner
+
+1. Given a prompt, a benchmark planner generates a plan that upon valid scrutinizing of a plan reviewer, passes in 80% of cases.
+2. Given a propmt, a benchmark generator planner generates a plan that would have unobstracted objectives by obstacles in 97% of the cases.
+
+###### Benchmark Generator CAD engineer
+
+1. Given a plan, a benchmark CAD drafting agent generates a benchmark that is physically valid, uses features that actually exist in our pipeline (does correct constraints, etc) in 95% of cases after 30 turns, and 3 submissions to reviewer.
+
+- First submission - 10 tool calls, 70% pass,
+- Second submission - 20 tool calls, 85% pass,
+- Third submission - 30 tool calls, 95% pass.
+
+#### Slow (essentially, production tasks)
+
+##### Engineer
+
+###### Engineering Planner
+
+###### CAD Engineer
+
+1. Given a plan, an Engineer builds a build123d model that is valid and reaches the goal within 30 tool calls and three simulation attempts.
+
+- First submission - 10 tool calls, 70% pass,
+- Second submission - 20 tool calls, 85% pass,
+- Third submission - 30 tool calls, 95% pass.
+
+##### Benchmark generator
+
+###### CAD Engineer
+
+1. Given a correct plan, a benchmark generator builds a benchmark that an engineer would be able to solve within 30 turns in 70% of cases.
 
 ## Distributed execution
 
 There is a controller node which runs the LLM and tool calls, and there worker node which:
 
-1. Executes the simulation
+1. Executes the simulation,
 2. Executes the python scripts.
 
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
