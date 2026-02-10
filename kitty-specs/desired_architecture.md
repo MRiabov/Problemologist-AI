@@ -142,13 +142,92 @@ The Engineer agent will verify its work by:
 4. Simulating - did the model achieve the goal as per the benchmark?
 5. The critic will assess whether the simulation is stable or not - will it be functional to work in a real scenario? Is it flaky?
 
+### COTS search subagent
+
+An engineering agent(s) can invoke a COTS (Commercial-Off-The-Shelf) search agent to delegate the search for off-the-shelf components. E.g.: search for motors.
+
+Purpose: a lightweight subagent that performs catalog lookups and returns verified part candidates.
+
+#### Model and runtime
+
+- Uses a smaller/cheaper model than the primary planner/engineer.
+- Read-only access to the COTS catalog DB and/or CLI; no writes.
+- No file edits except optional `journal.md` logging of queries + results.
+
+#### Inputs (from planner/engineer)
+
+- Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
+- Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
+
+#### Tools
+
+- Read-only SQL queries against the COTS catalog database.
+- Read-only CLI helpers/scripts (if provided) for catalog search.
+
+Outputs (structured, concise):
+
+- 3-10 candidate parts with `part_id`, `manufacturer`, `key specs`, `unit_cost`, `quantity_tier`, `source`, `why it fits`.
+- If no match, explicitly say "no match" and list which constraints were too strict.
+
+#### Invocation
+
+- Planner/engineer calls the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- The returned part IDs and prices must be used in the plan and cost estimates.
+
+Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation.
+
+#### COTS catalog database (spec 006)
+
+This system is backed by a SQL catalog built from `bd_warehouse`. The catalog is **read-only in workers** and queried only via the COTS search subagent.
+
+Database:
+- Artifact: `parts.db` (SQLite; local on worker, read-only).
+- Build-time indexer extracts metadata and usage snippets from `bd_warehouse`.
+- Store reproducibility metadata: `catalog_version`, `bd_warehouse_commit`, `generated_at`.
+
+Schema (minimum):
+- `parts`: `id`, `name`, `category`, `properties` (JSON), `usage_code` (build123d snippet).
+- **Critical note**: relying only on JSON for numeric filters is fragile. Add normalized columns for frequently-filtered fields (e.g., `size_mm`, `length_mm`, `torque_nm`, `voltage_v`, `shaft_diameter_mm`) and index them for fast exact matching.
+
+Search:
+- Subagent translates intent to parameterized SQL (read-only).
+- Returns top 3-10 exact variants; if no match, the subagent must report which constraints eliminated results.
+
+Assets:
+- Optional: pre-rendered thumbnails in S3-compatible storage for human review (not required for agent use).
+
+Performance & coverage:
+- Target: query latency <2s on local SQLite.
+- Coverage should be **measured and reported** (do not assume 100% of `bd_warehouse`; publish gaps and missing families).
+
 ### Agentic framework
 
-We use LangChain and LangGraph for the agentic infrastructure.
+We use LangChain and LangGraph for the agentic infrastructure. The `deepagents` framework from LangChain developers helps stitching them together (with filesystem utils, TODO lists, etc.)
 
 ### Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
+
+#### Templates
+
+Each agent starts with a template, roughly defined in [Starting folder structure for various agents](#starting-folder-structure-for-various-agents).  It is predefined for each agent and we will test it.
+
+##### Initial files for each agent
+
+- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read)
+- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `script.py`, `journal.md`, `renders/`
+- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`)
+- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `journal.md`
+- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `script.py`, `journal.md`, `renders/`
+- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`)
+- COTS Search: read-only COTS catalog DB/CLI, `journal.md` (queries + results)
+- Skill Creator: `skill-creator/SKILL.md` (read), `skills/` (read/write), `journal.md`, git metadata
+
+<!-- Note: each of these should be asserted per  -->
+
+##### Template auto-validation
+
+Where possible, templates would have a validation schema. E.g. (in particular) for YAML files, we would define a validation schema
 
 #### File updates
 
@@ -188,7 +267,9 @@ Many files - TODO lists, plans, would be automatically verified, with descriptiv
 
 ##### Validating markdown files
 
-Markdown is validated statically to ensure a structure - e.g. bullet points, subheadings or others is met.
+Markdown is validated statically to ensure a structure and exact match of headings, sometimes content - e.g. bullet points, exact headings or others is met.
+
+In TODO lists, we assert that either [x] or [-] is present in all checkboxes; and no checkboxes were deleted. It *is* pretty inflexible, but I guess that's what we'll do for now. This should keep the model on task longer.
 
 ##### Validating python files
 
