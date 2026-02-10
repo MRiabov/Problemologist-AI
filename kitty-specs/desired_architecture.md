@@ -181,24 +181,12 @@ Notably the benchmark planner will need it too since they are also responsible f
 This system is backed by a SQL catalog built from `bd_warehouse`. The catalog is **read-only in workers** and queried only via the COTS search subagent.
 
 Database:
+
 - Artifact: `parts.db` (SQLite; local on worker, read-only).
 - Build-time indexer extracts metadata and usage snippets from `bd_warehouse`.
 - Store reproducibility metadata: `catalog_version`, `bd_warehouse_commit`, `generated_at`.
 
-Schema (minimum):
-- `parts`: `id`, `name`, `category`, `properties` (JSON), `usage_code` (build123d snippet).
-- **Critical note**: relying only on JSON for numeric filters is fragile. Add normalized columns for frequently-filtered fields (e.g., `size_mm`, `length_mm`, `torque_nm`, `voltage_v`, `shaft_diameter_mm`) and index them for fast exact matching.
-
-Search:
-- Subagent translates intent to parameterized SQL (read-only).
-- Returns top 3-10 exact variants; if no match, the subagent must report which constraints eliminated results.
-
-Assets:
-- Optional: pre-rendered thumbnails in S3-compatible storage for human review (not required for agent use).
-
-Performance & coverage:
-- Target: query latency <2s on local SQLite.
-- Coverage should be **measured and reported** (do not assume 100% of `bd_warehouse`; publish gaps and missing families).
+<!-- TODO move details away from this section into CAD section... -->
 
 ### Agentic framework
 
