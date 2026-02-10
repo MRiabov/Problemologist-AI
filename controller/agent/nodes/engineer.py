@@ -128,6 +128,7 @@ class EngineerNode:
                             "current_step": current_step,
                             "best_cost": best_cost,
                             "best_weight_g": best_weight,
+                            "turn_count": state.turn_count + 1,
                         }
                     )
                 last_error = stderr or stdout or "Unknown error"
@@ -145,6 +146,7 @@ class EngineerNode:
             update={
                 "journal": state.journal + journal_entry,
                 "iteration": state.iteration + 1,
+                "turn_count": state.turn_count + 1,
             }
         )
 

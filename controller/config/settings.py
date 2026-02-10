@@ -6,9 +6,12 @@ class Settings(BaseSettings):
     """Configuration settings for the Problemologist Controller."""
 
     # LLM Settings
-    llm_model: StrictStr = Field(default="gpt-4o", alias="LLM_MODEL")
+    llm_model: StrictStr = Field(default="openai/gpt-5-nano", alias="LLM_MODEL")
     openai_api_base: str | None = Field(default=None, alias="OPENAI_API_BASE")
     llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
+
+    # Agent Settings
+    max_agent_turns: int = Field(default=60, alias="MAX_AGENT_TURNS")
 
     # Infrastructure Settings
     temporal_url: str = Field(default="temporal:7233", alias="TEMPORAL_URL")

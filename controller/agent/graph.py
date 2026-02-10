@@ -6,10 +6,14 @@ from .nodes.critic import critic_node
 from .nodes.engineer import engineer_node
 from .nodes.sidecar import sidecar_node
 from .state import AgentState, AgentStatus
+from controller.config.settings import settings
 
 
 def should_continue(state: AgentState) -> str:
     """Route after critic based on approval status."""
+    if state.turn_count >= settings.max_agent_turns:
+        return END
+
     if state.status == AgentStatus.APPROVED:
         return "sidecar"
 

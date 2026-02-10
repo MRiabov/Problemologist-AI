@@ -34,3 +34,4 @@ class AgentState(BaseModel):
     session_id: StrictStr = ""
     best_cost: float | None = None
     best_weight_g: float | None = None
+    turn_count: StrictInt = 0
