@@ -2,6 +2,7 @@ from abc import ABC
 from typing import Any
 from build123d import Compound
 from shared.observability.events import emit_event
+from shared.observability.schemas import ComponentUsageEvent
 
 
 class COTSPart(Compound, ABC):
@@ -47,14 +48,13 @@ class COTSPart(Compound, ABC):
 
         # Automatic observability event emitting
         emit_event(
-            event_type="component_usage",
-            data={
-                "category": self.category,
-                "part_number": self.part_number,
-                "label": self.label,
-                "price": self.price,
-                "weight_g": self.weight_g,
-            },
+            ComponentUsageEvent(
+                category=self.category,
+                part_number=self.part_number,
+                label=self.label,
+                price=self.price,
+                weight_g=self.weight_g,
+            )
         )
 
     @property
