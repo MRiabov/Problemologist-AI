@@ -13,7 +13,7 @@ def get_langfuse_callback() -> CallbackHandler | None:
     host = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
 
     if public_key and secret_key:
-        return CallbackHandler(public_key=public_key, secret_key=secret_key, host=host)
+        return CallbackHandler()
     return None
 
 

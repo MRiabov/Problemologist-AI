@@ -19,13 +19,11 @@ def get_trace_callback() -> CallbackHandler | None:
     """
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
-
     if not public_key or not secret_key:
         # Gracefully handle missing configuration
         return None
 
-    return CallbackHandler(public_key=public_key, secret_key=secret_key, host=host)
+    return CallbackHandler()
 
 
 # The @observe() decorator can be used for tracing non-LangChain functions.
