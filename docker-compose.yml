@@ -182,6 +182,8 @@ services:
       - LANGFUSE_INIT_USER_EMAIL=admin@langfuse.com
       - LANGFUSE_INIT_USER_NAME=Admin
       - LANGFUSE_INIT_USER_PASSWORD=password
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-public-key-123456789
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-secret-key-123456789
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
       interval: 5s
