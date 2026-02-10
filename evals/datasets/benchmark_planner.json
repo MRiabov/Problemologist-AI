@@ -1,0 +1,12 @@
+[
+    {
+        "id": "bp-001",
+        "task": "Create a benchmark where a ball must be guided down a ramp to a target bin.",
+        "expected_criteria": "Plan includes static geometry (ramp, walls), dynamic object (ball), goal zone, and randomization."
+    },
+    {
+        "id": "bp-002",
+        "task": "Create a benchmark involving a sorting mechanism where balls of different sizes must be separated.",
+        "expected_criteria": "Plan defines input objects (balls of radius R1, R2), and two goal zones."
+    }
+]

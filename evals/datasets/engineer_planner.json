@@ -1,0 +1,12 @@
+[
+    {
+        "id": "ep-001",
+        "task": "Plan a solution to lift a 1kg ball 10cm vertically.\n\nConstraint: max_unit_cost: $20, max_weight: 0.5kg.",
+        "expected_criteria": "Plan includes a lifting mechanism (hoist/ramp), parts list, and cost breakdown."
+    },
+    {
+        "id": "ep-002",
+        "task": "Plan a solution to launch a Projectile Ball (mass 0.1kg) across a 50cm gap.\n\nConstraint: max_unit_cost: $50.",
+        "expected_criteria": "Plan includes a catapult or spring-loaded mechanism."
+    }
+]

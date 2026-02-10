@@ -147,7 +147,6 @@ services:
       retries: 5
 
   langfuse-server:
-  langfuse-server:
     image: langfuse/langfuse:3
     depends_on:
       postgres:
@@ -166,7 +165,7 @@ services:
       - CLICKHOUSE_PASSWORD=langfuse
       - NEXTAUTH_SECRET=72b85aabc32ba5777874db9607b729ddb9e1b037032d22f413b26000e622280c
       - SALT=70ef3ae3dc9c34207bfe85230456297d8b0aafdf4fab1d545c239acbb63d89c2
-      - LANGFUSE_ENCRYPTION_KEY=a6e03f31f617d113cf7391dc2ff6dcaf608d8c11f74d992cf98117209c01aa28
+      - ENCRYPTION_KEY=a6e03f31f617d113cf7391dc2ff6dcaf608d8c11f74d992cf98117209c01aa28
       - NEXTAUTH_URL=http://localhost:3000
       - LANGFUSE_S3_EVENT_LOG_BUCKET=langfuse-events
       - LANGFUSE_S3_MEDIA_UPLOAD_BUCKET=langfuse-media
@@ -176,7 +175,13 @@ services:
       - LANGFUSE_S3_ENDPOINT=http://minio:9000
       # - LANGFUSE_S3_FORCE_PATH_STYLE=true
       - REDIS_URL=redis://:langfuse@redis:6379
-      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=true
+      - DOCKER_BUILD=1
+      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=false
+      - LANGFUSE_INIT_ORG_ID=72b85aabc32ba5777874db9607b729dd
+      - LANGFUSE_INIT_PROJECT_ID=72b85aabc32ba5777874db9607b729dd
+      - LANGFUSE_INIT_USER_EMAIL=admin@langfuse.com
+      - LANGFUSE_INIT_USER_NAME=Admin
+      - LANGFUSE_INIT_USER_PASSWORD=password
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
       interval: 5s

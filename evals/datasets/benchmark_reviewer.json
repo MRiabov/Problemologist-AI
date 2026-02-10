@@ -1,0 +1,12 @@
+[
+    {
+        "id": "br-001",
+        "task": "Review Benchmark:\n\nPlan: Ramp down to target.\nCode: Box(10,10,10) placed exactly where ball spawns (intersection).\n\nOutput a review.",
+        "expected_criteria": "Reviewer detects intersection of ball and box."
+    },
+    {
+        "id": "br-002",
+        "task": "Review Benchmark:\n\nPlan: Funnel.\nCode: Accurate funnel, valid MJCF, randomization included.\n\nOutput a review.",
+        "expected_criteria": "Reviewer approves."
+    }
+]

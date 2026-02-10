@@ -1,0 +1,52 @@
+[
+    {
+        "id": "bc-001",
+        "task": "Implement the following Benchmark Plan:\n\n# Benchmark Plan: Simple Ramp\n## Learning Objective\nTest gravity and collision.\n## Static Geometry\n- Floor: Box(100, 100, 1) at Z=0.\n- Ramp: Wedge(50, 20, 10, align=Align.CENTER) at X=0, Y=0, Z=1.\n## Input Object\n- Sphere(radius=5), spawns at top of ramp.\n## Objectives\n- Goal Zone: AABB at bottom of ramp.\n## Randomization\n- Ramp angle varies slightly.",
+        "expected_criteria": "Code creates Floor, Ramp, Sphere, sets up MJCF."
+    },
+    {
+        "id": "bc-002",
+        "task": "Implement Benchmark Plan: Tunnel\n\n## Geometry\n- Tunnel: Cylinder(radius=10, height=50) minus Cylinder(radius=8, height=52).\n## Input\n- Ball(radius=5) passes through.\n## Objective\n- Goal at exit.",
+        "expected_criteria": "Code uses CSG difference for tunnel."
+    },
+    {
+        "id": "bc-003",
+        "task": "Implement Benchmark Plan: Moving Wall\n\n## Geometry\n- Wall: Box(10, 50, 20).\n- Motor: slides wall back and forth (X axis).\n## Input\n- Block attempts to cross.\n## Objective\n- Goal on other side.",
+        "expected_criteria": "Code includes a sliding joint/motor for the wall."
+    },
+    {
+        "id": "bc-004",
+        "task": "Implement Benchmark Plan: Pulleys\n\n## Geometry\n- Base support.\n- Pulley wheel (Cylinder) on axle.\n- Rope (simulated with constraints or multiple small bodies?).\n## Input\n- Heavy weight.\n## Objective\n- Lift weight.",
+        "expected_criteria": "Code sets up pulley geometry (wheel + axle)."
+    },
+    {
+        "id": "bc-005",
+        "task": "Implement Benchmark Plan: Funnel Drop\n\n## Geometry\n- Funnel: Loft(Circle(20), Circle(5), height=30).\n## Input\n- Multiple small balls.\n## Objective\n- Balls collect at bottom.",
+        "expected_criteria": "Code uses Loft or similar for funnel shape."
+    },
+    {
+        "id": "bc-006",
+        "task": "Implement Benchmark Plan: Slalom Course\n\n## Geometry\n- Ground.\n- 5 Vertical Posts (Cylinders) arranged in zig-zag.\n## Input\n- Car/Sled (Box).\n## Objective\n- Navigate between posts.",
+        "expected_criteria": "Code places posts at specific coordinates."
+    },
+    {
+        "id": "bc-007",
+        "task": "Implement Benchmark Plan: Friction Test\n\n## Geometry\n- High Friction Ramp.\n- Low Friction Ramp.\n## Input\n- Two blocks.\n## Objective\n- Blocks behave differently.",
+        "expected_criteria": "Code sets different friction values in MJCF (though build123d handles geometry, metadata handles physics)."
+    },
+    {
+        "id": "bc-008",
+        "task": "Implement Benchmark Plan: Launch Pad\n\n## Geometry\n- Curved ramp (quarter pipe).\n## Input\n- Fast moving ball.\n## Objective\n- Ball flies into distant basket.",
+        "expected_criteria": "Code creates smooth curved ramp."
+    },
+    {
+        "id": "bc-009",
+        "task": "Implement Benchmark Plan: Gear Mesh\n\n## Geometry\n- Fixed axle 1.\n- Fixed axle 2.\n- Driver Gear (10 teeth).\n- Driven Gear (20 teeth).\n## Input\n- Driver rotates.\n## Objective\n- Driven rotates.",
+        "expected_criteria": "Code creates gear geometry (can use build123d gear tools/imports)."
+    },
+    {
+        "id": "bc-010",
+        "task": "Implement Benchmark Plan: Maze\n\n## Geometry\n- Floor.\n- Walls forming a maze path.\n## Input\n- Agent/Robot.\n## Objective\n- Reach center.",
+        "expected_criteria": "Code constructs maze walls efficiently (e.g., in a loop)."
+    }
+]
