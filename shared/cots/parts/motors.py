@@ -1,8 +1,8 @@
 from build123d import Box, Color, Compound, Location, Part
-from shared.observability.events import emit_event
+from shared.cots.base import COTSPart
 
 
-class ServoMotor(Compound):
+class ServoMotor(COTSPart):
     """
     Represents a COTS servo motor.
     Mimics bd-warehouse part structure for Indexer compatibility.
@@ -59,7 +59,9 @@ class ServoMotor(Compound):
             # Fallback or error
             self.failed = True
             # Create dummy object to avoid crash during indexing if iterated
-            super().__init__(children=[])
+            super().__init__(
+                category="motor", part_number="UNKNOWN", data={}, children=[]
+            )
             return
 
         data = self.motor_data[size]
@@ -71,23 +73,8 @@ class ServoMotor(Compound):
         # Color it black/dark
         body.color = Color("black")
 
-        super().__init__(children=[body])
-        self.label = f"Servo_{size}"
-
-        self.metadata = data.copy()
-        self.metadata["part_number"] = size
-
-        # Emit observability event for component usage
-        emit_event(
-            event_type="component_usage",
-            data={
-                "category": "motor",
-                "part_number": size,
-                "label": self.label,
-                "price": data["price"],
-                "weight_g": data["weight_g"],
-            },
-        )
+        # COTSPart handles children, metadata, label, and emission
+        super().__init__(category="motor", part_number=size, data=data, children=[body])
 
     @property
     def volume(self):
