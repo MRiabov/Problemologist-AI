@@ -1,7 +1,10 @@
 from contextlib import suppress
 from shared.cots.base import COTSPart
 from shared.cots.runtime import search_parts, SearchQuery
-from tests.observability.test_utils import assert_event_emitted, clear_emitted_events
+from tests.observability.test_observability_utils import (
+    assert_event_emitted,
+    clear_emitted_events,
+)
 
 
 class MockCOTS(COTSPart):
