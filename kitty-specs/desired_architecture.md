@@ -383,7 +383,11 @@ The agent will go through all notes in the session and read through ones that ar
 
 Skills in the `.agent/skills/` in the repo root are different from the agent skills we are learning in the database! The repo root skills are for the coding agent to write this codebase. The learned skills should be, e.g. in workspace/ folder.
 
-### Skill versioning
+#### Skill safety toggle
+
+The skill writing agent can not delete or overwrite more than 15 lines of code per session (adding is unbound). This is to prohibit a skill being overwritten by any agent completely. Using git diff, if there are more than 15 lines detected, the agent is notified. If the session times out (too many tool calls/the agent finishes despite warnings), we revert the commits.
+
+#### Skill versioning
 
 Because the application's performance is quite dependant on SKILL.md files which detail how to use `build123d` and other issues, however those are frequently updated by a "learner" agent, the skill git hashes need to be versioned and persisted to the observability database.
 
@@ -742,7 +746,14 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 ###### Benchmark Generator Planner
 
 1. Given a prompt, a benchmark planner generates a plan that upon valid scrutinizing of a plan reviewer, passes in 80% of cases.
-2. Given a propmt, a benchmark generator planner generates a plan that would have unobstracted objectives by obstacles in 97% of the cases.
+2. Given a propmt, a benchmark generator planner generates a plan that would have unimpeded objectives (objectives obstructed by obstacles by no more than 35%) in 97% of the cases.
+3. Given a propmt, the benchmark generator will produce plans for various manufacturing quantities (prototype <5, small volume <100, mass-manufacturing - 3000)
+4. Given a propmt, we will include to the solution proposed by the propmt:
+   - will include correct:
+      - Quantity
+      - Max weight,
+      - Max cost
+      - And other numerical parameters specified in objectives.yaml.
 
 ###### Benchmark Generator CAD engineer
 
@@ -751,6 +762,19 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 - First submission - 10 tool calls, 70% pass,
 - Second submission - 20 tool calls, 85% pass,
 - Third submission - 30 tool calls, 95% pass.
+
+##### Skill Learning Agent (Async)
+
+1. **Validity**: Generated skills (`SKILL.md`) are valid markdown/YAML and adhere to the skill schema in 100% of cases. (fast)
+2. **Utility**: Generated skills are referenced/used by other agents in subsequent similar tasks (requires long-term tracking). (long-term)
+3. **Non-duplication**: Generated skills do not duplicate existing skills (upon inspecting git changes after 30 turns- the skill rows aren't churned) (long-term) (not exactly an eval, but a tracking logic).
+4. No overwrite: Skills aren't overwritten from scratch in 100% of cases
+   - Skills can not be overwritten for more than 5 lines, to prevent catastrophic overwriting.
+
+##### Journaling
+
+1. Struggle detection: The agent detects and logs entries for 90% of "struggles" (failed tool calls > 4) detected in the logs.
+2. **Linkage**: 97% journal entries are correctly linked to a unique problem/observation ID.
 
 #### Slow (essentially, production tasks)
 
@@ -761,16 +785,21 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 ###### CAD Engineer
 
 1. Given a plan, an Engineer builds a build123d model that is valid and reaches the goal within 30 tool calls and three simulation attempts.
-
-- First submission - 10 tool calls, 70% pass,
-- Second submission - 20 tool calls, 85% pass,
-- Third submission - 30 tool calls, 95% pass.
+    - First submission - 10 tool calls, 70% pass,
+    - Second submission - 20 tool calls, 85% pass,
+    - Third submission - 30 tool calls, 95% pass.
+2. Robustness test: If at least 1 simulation passes, at least 70% of "runtime jitter" variations pass too (i.e. the solution is not "flaky" that only works for one specific seed, but is mechanically robust).
+3. Given a plan and `objectives.yaml`, the Engineer will not try to submit a solution that is more unit expensive or heavy than unit tests set by the planner and will:
+    - Cheaper than the max price: 80% on first attempt, 90% after the first failure, 95% after the second failure.
+    - Small error: 0-20% more expensive - In 10% on first attempt, 5% after the first error, 3% after the second failure (only small failyre, not including large error).
+    - Large error: >20% more expensive - In 10% of first failure, 5% on second failure, 3% after after the second failure.
 
 ##### Benchmark generator
 
 ###### CAD Engineer
 
 1. Given a correct plan, a benchmark generator builds a benchmark that an engineer would be able to solve within 30 turns in 70% of cases.
+2. Quality of Reasoning: The reasoning traces for benchmark generation are coherent and logically sound in >90% of cases (important for dataset quality).
 
 ## Distributed execution
 
