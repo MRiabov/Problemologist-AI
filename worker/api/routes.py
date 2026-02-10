@@ -104,7 +104,7 @@ def _load_component(fs_router, script_path: str, script_content: str | None = No
 async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     """List contents of a directory."""
     try:
-        return fs_router.ls(request.path)
+        return await fs_router.als(request.path)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Directory not found")
     except Exception as e:
@@ -116,7 +116,7 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
 async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
     """Read file contents."""
     try:
-        content = fs_router.read(request.path)
+        content = await fs_router.aread(request.path)
         return ReadFileResponse(content=content.decode("utf-8"))
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
@@ -129,7 +129,7 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
 async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     """Write content to a file."""
     try:
-        fs_router.write(request.path, request.content)
+        await fs_router.awrite(request.path, request.content)
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -143,12 +143,14 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
     """Edit a file with one or more operations."""
     try:
         # Check if file exists first
-        if not fs_router.exists(request.path):
+        if not await fs_router.aexists(request.path):
             raise HTTPException(status_code=404, detail="File not found")
 
         # Apply each edit operation
         for edit in request.edits:
-            success = fs_router.edit(request.path, edit.old_string, edit.new_string)
+            success = await fs_router.aedit(
+                request.path, edit.old_string, edit.new_string
+            )
             if not success:
                 raise HTTPException(
                     status_code=400,
@@ -169,7 +171,7 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
 async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
     """Search for a pattern in files."""
     try:
-        matches = fs_router.grep_raw(
+        matches = await fs_router.agrep_raw(
             pattern=request.pattern, path=request.path, glob=request.glob
         )
         if isinstance(matches, str):
@@ -201,7 +203,7 @@ async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
 
         # Sync to S3
         try:
-            fs_router.local_backend.sync_to_s3()
+            await fs_router.local_backend.async_sync_to_s3()
         except Exception as e:
             logger.warning("api_git_commit_sync_failed", error=str(e))
             # We don't fail the commit if sync fails, but we note it
@@ -362,7 +364,7 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
                         # User asked for "red (linting) errors". SyntaxError is definitely red.
                         pass
 
-        content = fs_router.read(path)
+        content = await fs_router.aread(path)
         media_type = "application/octet-stream"
         if path.endswith(".glb"):
             media_type = "model/gltf-binary"
@@ -420,7 +422,7 @@ async def api_lint(
     try:
         # Get content either from path or direct content
         if request.path:
-            content = fs_router.read(request.path).decode("utf-8")
+            content = (await fs_router.aread(request.path)).decode("utf-8")
         elif request.content:
             content = request.content
         else:

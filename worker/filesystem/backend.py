@@ -9,14 +9,11 @@ import re
 import shutil
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path, PurePosixPath
-from typing import Any, Protocol, runtime_checkable
+from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 import s3fs
 import structlog
-import wcmatch.glob as wcglob
-from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
-
 from deepagents.backends.protocol import (
     BackendProtocol,
     EditResult,
@@ -31,6 +28,8 @@ from deepagents.backends.utils import (
     format_content_with_line_numbers,
     perform_string_replacement,
 )
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
+
 from shared.type_checking import type_check
 
 from .db import S3Config, get_s3_filesystem
@@ -327,7 +326,7 @@ class SandboxFilesystemBackend(BackendProtocol):
                 with self._fs.open(s3_p, "wb") as f:
                     f.write(content)
                 responses.append(FileUploadResponse(path=path, error=None))
-            except Exception as e:
+            except Exception:
                 responses.append(FileUploadResponse(path=path, error="invalid_path"))
         return responses
 
@@ -376,6 +375,58 @@ class SandboxFilesystemBackend(BackendProtocol):
         if not self._fs.exists(s3_path):
             raise FileNotFoundError(f"Path not found: {path}")
         self._fs.rm(s3_path, recursive=True)
+
+    async def aread(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
+        """Async version of read."""
+        return await asyncio.to_thread(self.read, file_path, offset, limit)
+
+    async def awrite(self, file_path: str, content: str) -> WriteResult:
+        """Async version of write."""
+        return await asyncio.to_thread(self.write, file_path, content)
+
+    async def als_info(self, path: str) -> list[ProtocolFileInfo]:
+        """Async version of ls_info."""
+        return await asyncio.to_thread(self.ls_info, path)
+
+    async def aglob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
+        """Async version of glob_info."""
+        return await asyncio.to_thread(self.glob_info, pattern, path)
+
+    async def agrep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        """Async version of grep_raw."""
+        return await asyncio.to_thread(self.grep_raw, pattern, path, glob)
+
+    async def aedit(
+        self,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ) -> EditResult:
+        """Async version of edit."""
+        return await asyncio.to_thread(
+            self.edit, file_path, old_string, new_string, replace_all
+        )
+
+    async def aupload_files(
+        self, files: list[tuple[str, bytes]]
+    ) -> list[FileUploadResponse]:
+        """Async version of upload_files."""
+        return await asyncio.to_thread(self.upload_files, files)
+
+    async def adownload_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        """Async version of download_files."""
+        return await asyncio.to_thread(self.download_files, paths)
+
+    async def aexists(self, path: str) -> bool:
+        """Async version of exists."""
+        return await asyncio.to_thread(self.exists, path)
+
+    async def adelete(self, path: str) -> None:
+        """Async version of delete."""
+        return await asyncio.to_thread(self.delete, path)
 
 
 @type_check
@@ -450,6 +501,10 @@ class LocalFilesystemBackend(BackendProtocol):
         except Exception as e:
             logger.error("sync_to_s3_failed", error=str(e))
             raise
+
+    async def async_sync_to_s3(self) -> None:
+        """Push all local files to S3 asynchronously."""
+        return await asyncio.to_thread(self.sync_to_s3)
 
     # --- BackendProtocol Implementation ---
 

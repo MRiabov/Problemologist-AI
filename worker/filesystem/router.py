@@ -4,6 +4,7 @@ Provides a unified filesystem view that overlays S3-backed workspace
 with local read-only directories (utils/, skills/, reviews/).
 """
 
+import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -307,6 +308,42 @@ class FilesystemRouter:
             raise WritePermissionError(f"Cannot delete read-only path: {path}")
 
         self.local_backend.delete(path)
+
+    def grep_raw(self, pattern: str, path: str | None = None, glob: str | None = None):
+        """Search for a pattern in files."""
+        return self.local_backend.grep_raw(pattern, path, glob)
+
+    # --- Async versions ---
+
+    async def aread(self, path: str) -> bytes:
+        """Read file contents asynchronously."""
+        return await asyncio.to_thread(self.read, path)
+
+    async def awrite(self, path: str, content: bytes | str) -> None:
+        """Write content to a file asynchronously."""
+        return await asyncio.to_thread(self.write, path, content)
+
+    async def als(self, path: str = "/") -> list[FileInfo]:
+        """List contents of a directory asynchronously."""
+        return await asyncio.to_thread(self.ls, path)
+
+    async def aexists(self, path: str) -> bool:
+        """Check if a path exists asynchronously."""
+        return await asyncio.to_thread(self.exists, path)
+
+    async def adelete(self, path: str) -> None:
+        """Delete a file or directory asynchronously."""
+        return await asyncio.to_thread(self.delete, path)
+
+    async def aedit(self, path: str, old_content: str, new_content: str) -> bool:
+        """Edit file by replacing content asynchronously."""
+        return await asyncio.to_thread(self.edit, path, old_content, new_content)
+
+    async def agrep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ):
+        """Search for a pattern in files asynchronously."""
+        return await asyncio.to_thread(self.grep_raw, pattern, path, glob)
 
 
 def create_filesystem_router(
