@@ -12,31 +12,26 @@ def test_get_trace_callback_missing_env():
 
 
 def test_get_trace_callback_with_env():
-    """Test that it initializes CallbackHandler with correct arguments from env."""
+    """Test that it initializes CallbackHandler if environment variables are set."""
     env = {
         "LANGFUSE_PUBLIC_KEY": "pk-123",
         "LANGFUSE_SECRET_KEY": "sk-123",
         "LANGFUSE_HOST": "https://test.langfuse.com",
     }
-    with patch.dict(os.environ, env):
-        # Mock CallbackHandler to avoid actual initialization
-        with patch("shared.observability.tracing.CallbackHandler") as mock_handler:
-            get_trace_callback()
-            mock_handler.assert_called_once_with(
-                public_key="pk-123",
-                secret_key="sk-123",
-                host="https://test.langfuse.com",
-            )
+    with (
+        patch.dict(os.environ, env),
+        patch("shared.observability.tracing.CallbackHandler") as mock_handler,
+    ):
+        get_trace_callback()
+        mock_handler.assert_called_once_with()
 
 
 def test_get_trace_callback_default_host():
-    """Test that it uses the default host if LANGFUSE_HOST is not set."""
+    """Test that it works even if LANGFUSE_HOST is not set."""
     env = {"LANGFUSE_PUBLIC_KEY": "pk-123", "LANGFUSE_SECRET_KEY": "sk-123"}
-    with patch.dict(os.environ, env, clear=True):
-        with patch("shared.observability.tracing.CallbackHandler") as mock_handler:
-            get_trace_callback()
-            mock_handler.assert_called_once_with(
-                public_key="pk-123",
-                secret_key="sk-123",
-                host="https://cloud.langfuse.com",
-            )
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("shared.observability.tracing.CallbackHandler") as mock_handler,
+    ):
+        get_trace_callback()
+        mock_handler.assert_called_once_with()
