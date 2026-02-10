@@ -1,0 +1,63 @@
+from abc import ABC
+from typing import Any
+from build123d import Compound
+from shared.observability.events import emit_event
+
+
+class COTSPart(Compound, ABC):
+    """
+    Abstract base class for all COTS parts.
+    Automatically handles observability event emitting on initialization.
+    """
+
+    def __init__(
+        self,
+        category: str,
+        part_number: str,
+        data: dict[str, Any],
+        children=None,
+        **kwargs,
+    ):
+        """
+        Initialize the COTS part.
+
+        Args:
+            category: The category of the part (e.g., 'motor', 'fastener').
+            part_number: The specific model or Part ID.
+            data: Metadata dictionary containing at least 'price' and 'weight_g'.
+            children: build123d geometry children.
+            kwargs: extra build123d.Compound arguments.
+        """
+        super().__init__(children=children or [], **kwargs)
+
+        self.category = category
+        self.part_number = part_number
+        self.metadata = data.copy()
+        self.metadata["part_number"] = part_number
+
+        # Ensure label exists for identification
+
+        if not hasattr(self, "label") or not self.label:
+            self.label = f"{category}_{part_number}"
+
+        # Price and weight are mandatory for observability metrics
+        # but we use defaults if missing to avoid crashes.
+        self.price = data.get("price", data.get("unit_cost", 0.0))
+        self.weight_g = data.get("weight_g", 0.0)
+
+        # Automatic observability event emitting
+        emit_event(
+            event_type="component_usage",
+            data={
+                "category": self.category,
+                "part_number": self.part_number,
+                "label": self.label,
+                "price": self.price,
+                "weight_g": self.weight_g,
+            },
+        )
+
+    @property
+    def info(self):
+        """Standard property to access metadata, identical to Indexer expectations."""
+        return self.metadata
