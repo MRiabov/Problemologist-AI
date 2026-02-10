@@ -8,5 +8,45 @@
         "id": "ep-002",
         "task": "Plan a solution to launch a Projectile Ball (mass 0.1kg) across a 50cm gap.\n\nConstraint: max_unit_cost: $50.",
         "expected_criteria": "Plan includes a catapult or spring-loaded mechanism."
+    },
+    {
+        "id": "ep-003",
+        "task": "Given objectives.yaml: goal AABB at X=1000..1100,Y=-50..50,Z=0..100, forbid AABB at X=450..550,Y=-50..50,Z=0..200, ball starts at X=0,Y=0,Z=200 with jitter +/-25 in X and Y. Plan a stable solution under max_unit_cost: $80, max_weight: 2.0kg.",
+        "expected_criteria": "Plan accounts for runtime randomization, avoids the forbid zone, and includes cost/weight budgeting."
+    },
+    {
+        "id": "ep-004",
+        "task": "Environment includes a motorized rotating gate (axis Z) at X=300,Y=0,Z=50 with rotation limits +/-45 degrees. Goal AABB at X=600..650,Y=-50..50,Z=0..100. Plan a solution that uses timing to pass the gate. max_unit_cost: $120.",
+        "expected_criteria": "Plan references the moving part and its DOF, includes a risk assessment for timing, and specifies geometry to guide the ball post-gate."
+    },
+    {
+        "id": "ep-005",
+        "task": "Build zone is X=-300..300,Y=-300..300,Z=0..400. No drilling or attachment to environment is allowed. Ball starts at X=-250,Y=0,Z=50. Goal at X=250,Y=0,Z=50. max_unit_cost: $60, max_weight: 1.0kg.",
+        "expected_criteria": "Plan uses freestanding parts within build zone, includes assembly strategy without attachments, and respects cost/weight limits."
+    },
+    {
+        "id": "ep-006",
+        "task": "Two dynamic objects must be routed to two different goals. Ball A starts at X=-200,Y=-100,Z=200 and goal A at X=200,Y=-100,Z=50. Ball B starts at X=-200,Y=100,Z=200 and goal B at X=200,Y=100,Z=50. max_unit_cost: $150.",
+        "expected_criteria": "Plan includes a split-path design, addresses interference between balls, and lists parts supporting both paths."
+    },
+    {
+        "id": "ep-007",
+        "task": "Input object is a 20mm cube with low friction. Goal AABB at X=300..350,Y=-25..25,Z=0..50. AABB forbid zone at X=150..250,Y=-50..50,Z=0..80. Randomization: start X=-300..-250, Y=-25..25, Z=20. max_unit_cost: $40.",
+        "expected_criteria": "Plan specifies geometry suitable for sliding cube, avoids forbid zone, and includes randomization handling in risk assessment."
+    },
+    {
+        "id": "ep-008",
+        "task": "Environment includes a prismatic lift platform moving along Z from 0 to 200 at X=0,Y=0. Ball starts on the platform. Goal AABB at X=200..250,Y=-50..50,Z=200..260. max_unit_cost: $100, max_weight: 1.5kg.",
+        "expected_criteria": "Plan leverages the moving platform, accounts for DOF timing, and specifies a guide or ramp at the upper level."
+    },
+    {
+        "id": "ep-009",
+        "task": "Objectives include a narrow goal: AABB at X=500..520,Y=-10..10,Z=0..40. Ball starts at X=0,Y=0,Z=150 with jitter +/-10 in X and Y. max_unit_cost: $70.\nNote: high precision required.",
+        "expected_criteria": "Plan includes alignment or funneling geometry, and mentions tolerances/precision risks."
+    },
+    {
+        "id": "ep-010",
+        "task": "Goal must be reached within 5 seconds of simulation start. Ball starts at X=-400,Y=0,Z=100. Goal at X=400,Y=0,Z=50. max_unit_cost: $90.",
+        "expected_criteria": "Plan emphasizes fast transfer (steep ramp/accelerator), includes risk assessment for overshoot, and respects cost limits."
     }
 ]
