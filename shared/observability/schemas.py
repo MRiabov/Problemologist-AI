@@ -40,6 +40,17 @@ class ObservabilityEventType(StrEnum):
     LOGIC_FAILURE = "logic_failure"
     # 17. Skill edit (skill editing agent)
     SKILL_EDIT = "skill_edit"
+    # 18. Skill read (used as context)
+    SKILL_READ = "skill_read"
+    # 19. Tool-specific events for easier navigation/aggregation
+    TOOL_LS_FILES = "ls_files_tool"
+    TOOL_GREP = "grep_tool"
+    TOOL_READ_FILE = "read_file_tool"
+    TOOL_WRITE_FILE = "write_file_tool"
+    TOOL_EDIT_FILE = "edit_files_tool"
+    TOOL_RUN_COMMAND = "run_command_tool"
+    TOOL_GIT_INIT = "git_init_tool"
+    TOOL_GIT_COMMIT = "git_commit_tool"
 
 
 class SimulationFailureReason(StrEnum):
@@ -170,3 +181,52 @@ class SkillEditEvent(BaseEvent):
     skill_name: str
     action: str  # "create", "update", "delete"
     lines_changed: int
+
+
+class SkillReadEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SKILL_READ
+    skill_path: str
+    skill_name: str
+
+
+class LsFilesToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_LS_FILES
+    path: str
+
+
+class GrepToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GREP
+    pattern: str
+    path: str | None = None
+    glob: str | None = None
+
+
+class ReadFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_READ_FILE
+    path: str
+
+
+class WriteFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_WRITE_FILE
+    path: str
+    content_snippet: str | None = None  # First 100 chars or so
+
+
+class EditFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_EDIT_FILE
+    path: str
+    num_edits: int
+
+
+class RunCommandToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_RUN_COMMAND
+    command: str
+
+
+class GitInitToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GIT_INIT
+
+
+class GitCommitToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GIT_COMMIT
+    message: str

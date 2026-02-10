@@ -7,7 +7,7 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.type_checking import type_check
-from shared.observability.schemas import ToolInvocationEvent
+from shared.observability.schemas import RunCommandToolEvent
 
 
 from ..prompt_manager import PromptManager
@@ -64,11 +64,7 @@ class EngineerNode:
                 # Record tool invocation
                 await record_worker_events(
                     episode_id=state.session_id,
-                    events=[
-                        ToolInvocationEvent(
-                            tool_name="run_command", arguments={"code": code}
-                        )
-                    ],
+                    events=[RunCommandToolEvent(command=code)],
                 )
 
                 execution_result = await self.fs.run_command(code)
