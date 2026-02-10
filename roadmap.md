@@ -152,3 +152,7 @@ Models can cover their designs with "unit tests", especially relying on sensors.
 In essense, make "Unit tests" that assert functionality of a design - something was moved here at this time, a sensors detected something, something was staying above a given level, etc.
 
 Allows for more constrained work, but also allows to strictly define and enforce "functional requirements", and allows to validate more randomization easily (e.g., not challenging to evaluate 15 random samples from the environment.)
+
+### Work package 9 - Optimization of designs
+
+Models will need to be optimized after the initial design. The agents will need to improve on their design substantially, beating their previous "lowest price" by at least 10-20%.
