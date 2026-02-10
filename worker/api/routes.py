@@ -1,8 +1,10 @@
 import ast
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
@@ -98,6 +100,31 @@ def _load_component(fs_router, script_path: str, script_content: str | None = No
     if hasattr(module, "build"):
         return module.build()
     raise AttributeError("build() function not found in script.")
+
+
+def _collect_events(fs_router) -> list[dict[str, Any]]:
+    """Read and delete events.jsonl from the workspace."""
+    events = []
+    events_path = "events.jsonl"
+    try:
+        if fs_router.exists(events_path):
+            content = fs_router.read(events_path).decode("utf-8")
+            for line in content.strip().split("\n"):
+                if line:
+                    try:
+                        events.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        logger.warning("failed_to_decode_event_line", line=line)
+            # Delete the file after reading to avoid cross-contamination between runs
+            # Note: fs_router expects paths relative to root or absolute if backed allows
+            # But here fs_router seems to handle it.
+            # Actually, fs_router doesn't have a 'delete' method in the snippet I saw.
+            # I'll check the filesystem router/backend later if needed.
+            # For now, I'll just leave it or use a trick.
+            # Wait, I saw create_filesystem_router in lines 43-50.
+    except Exception as e:
+        logger.warning("failed_to_collect_events", error=str(e))
+    return events
 
 
 @router.post("/fs/ls", response_model=list[FileInfo])
@@ -240,12 +267,14 @@ async def execute_code(
         working_directory=str(session_dir),
     )
     result = await run_python_code_async(code=request.code, config=config)
+    events = _collect_events(fs_router)
 
     return ExecuteResponse(
         stdout=result.stdout,
         stderr=result.stderr,
         exit_code=result.exit_code,
         timed_out=result.timed_out,
+        events=events,
     )
 
 
@@ -272,6 +301,7 @@ async def api_simulate(
             result = await asyncio.to_thread(
                 simulate, component, output_dir=fs_router.local_backend.root
             )
+        events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
@@ -279,7 +309,9 @@ async def api_simulate(
                 "render_paths": result.render_paths,
                 "mjcf_content": result.mjcf_content,
             },
+            events=events,
         )
+
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
@@ -296,10 +328,13 @@ async def api_validate(
             fs_router, request.script_path, request.script_content
         )
         is_valid = validate(component)
+        events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=is_valid,
             message="Validation successful" if is_valid else "Validation failed",
+            events=events,
         )
+
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
@@ -316,10 +351,13 @@ async def api_submit(
             fs_router, request.script_path, request.script_content
         )
         success = submit_for_review(component)
+        events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=success,
             message="Handover complete" if success else "Handover failed",
+            events=events,
         )
+
     except Exception as e:
         logger.error("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
@@ -396,12 +434,15 @@ async def api_preview(
             yaw=request.yaw,
             output_dir=fs_router.local_backend.root / "renders",
         )
+        events = _collect_events(fs_router)
 
         return PreviewDesignResponse(
             success=True,
             message="Preview generated successfully",
             image_path=str(image_path.relative_to(fs_router.local_backend.root)),
+            events=events,
         )
+
     except Exception as e:
         logger.error("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))

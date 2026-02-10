@@ -5,7 +5,9 @@ from langchain_openai import ChatOpenAI
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.tracing import record_worker_events
 from shared.type_checking import type_check
+
 
 from ..prompt_manager import PromptManager
 from ..state import AgentState
@@ -62,6 +64,14 @@ class EngineerNode:
                 stdout = execution_result.get("stdout", "")
                 stderr = execution_result.get("stderr", "")
                 exit_code = execution_result.get("exit_code", 0)
+                events = execution_result.get("events", [])
+
+                # Record events for observability
+                if events:
+                    await record_worker_events(
+                        episode_id=state.session_id,
+                        events=events,
+                    )
 
                 if exit_code == 0:
                     journal_entry += f"\nSuccessfully executed step: {current_step}"
