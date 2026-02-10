@@ -217,7 +217,9 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 - COTS Search: read-only COTS catalog DB/CLI, `journal.md` (queries + results)
 - Skill Creator: `skill-creator/SKILL.md` (read), `skills/` (read/write), `journal.md`, git metadata
 
-<!-- Note: each of these should be asserted per  -->
+Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
+
+<!-- Note: each of these should be asserted.-->
 
 ##### Template auto-validation
 
