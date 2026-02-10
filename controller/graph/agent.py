@@ -1,19 +1,20 @@
-from langchain_openai import ChatOpenAI
 from deepagents import create_deep_agent
+from langchain_openai import ChatOpenAI
 
-from controller.config.settings import settings
 from controller.clients.backend import RemoteFilesystemBackend
+from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_callback
 from controller.prompts import get_prompt
+from shared.cots.agent import search_cots_catalog
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def create_agent_graph(
-    backend: RemoteFilesystemBackend, 
+    backend: RemoteFilesystemBackend,
     agent_name: str = "engineer_coder",
-    trace_id: str | None = None
+    trace_id: str | None = None,
 ):
     """Create a Deep Agent graph with remote filesystem backend."""
 
@@ -36,6 +37,7 @@ def create_agent_graph(
         "engineer_planner": "engineer.planner.system",
         "engineer_coder": "engineer.engineer.system",
         "engineer_reviewer": "engineer.critic.system",
+        "cots_search": "subagents.cots_search.system",
     }
 
     # Fallback or direct key usage
@@ -45,16 +47,41 @@ def create_agent_graph(
         system_prompt = get_prompt(prompt_key)
     except Exception as err:
         raise ValueError(
-            f"Could not find prompt for {agent_name} mapped to {prompt_key}, trying fallback."
+            f"Could not find prompt for {agent_name} mapped to {prompt_key}."
         ) from err
 
     if callbacks:
         llm = llm.with_config({"callbacks": callbacks})
+
+    # Define subagents
+    cots_search_subagent = {
+        "name": "cots_search",
+        "description": "Search for components (motors, fasteners, bearings).",
+        "prompt": get_prompt("subagents.cots_search.system"),
+        "tools": [search_cots_catalog],
+    }
+
+    # Map agents that have access to subagents
+    primary_agents = [
+        "engineer_planner",
+        "engineer_coder",
+        "benchmark_planner",
+    ]
+    subagents = []
+    if agent_name in primary_agents:
+        subagents = [cots_search_subagent]
+
+    # Tools for the agent itself
+    agent_tools = []
+    if agent_name == "cots_search":
+        agent_tools = [search_cots_catalog]
 
     agent = create_deep_agent(
         model=llm,
         backend=backend,
         system_prompt=system_prompt,
         name=agent_name,
+        subagents=subagents,
+        tools=agent_tools,
     )
     return agent, langfuse_callback
