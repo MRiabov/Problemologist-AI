@@ -3,7 +3,7 @@
 <!--
 For the CAD designer engineer (not lead technician/planner):
 This is your execution checklist. Update it as you work.
-Mark items [x] when complete, [/] when in progress.
+Mark items [x] when complete, [-] when skipped.
 
 WORKFLOW:
 1. Read objectives.yaml to understand the goal
