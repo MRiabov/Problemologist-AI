@@ -11,7 +11,9 @@ logger = get_logger(__name__)
 
 
 def create_agent_graph(
-    backend: RemoteFilesystemBackend, agent_name: str = "engineer_coder"
+    backend: RemoteFilesystemBackend, 
+    agent_name: str = "engineer_coder",
+    trace_id: str | None = None
 ):
     """Create a Deep Agent graph with remote filesystem backend."""
 
@@ -22,7 +24,7 @@ def create_agent_graph(
     )
 
     # Try to get Langfuse callback
-    langfuse_callback = get_langfuse_callback()
+    langfuse_callback = get_langfuse_callback(trace_id=trace_id, name=agent_name)
     callbacks = [langfuse_callback] if langfuse_callback else []
 
     # Map simple agent names to config prompt keys

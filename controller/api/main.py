@@ -83,15 +83,23 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 return
 
             try:
+                # Use a 32-char hex trace_id for OTEL/Langfuse v3 compatibility
+                trace_id = uuid.uuid4().hex
+                
                 client = get_worker_client(session_id)
                 backend = RemoteFilesystemBackend(client)
-                agent, langfuse_callback = create_agent_graph(backend)
+                agent, langfuse_callback = create_agent_graph(
+                    backend, 
+                    agent_name="engineer_coder",
+                    trace_id=trace_id
+                )
 
                 # Add initial trace
                 initial_trace = Trace(
                     episode_id=episode_id,
                     trace_type=TraceType.LOG,
                     content=f"Agent starting execution for task: {task}",
+                    langfuse_trace_id=trace_id,
                     metadata_vars={"task": task},
                 )
                 db.add(initial_trace)
@@ -104,13 +112,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
 
                 # Prepare callbacks for agent run
                 callbacks = [db_callback]
-
-                # If langfuse is enabled, create a top-level trace for the episode
                 if langfuse_callback:
-                    # langfuse_callback is a CallbackHandler, it has a 'trace' method or we can get it from client
-                    # Actually, the create_agent_graph already attaches it to ChatOpenAI.
-                    # But if we want the WHOLE agent run to be one trace, we should use the handler.
-                    # langchain_handler = langfuse_callback
                     callbacks.append(langfuse_callback)
 
                 # Run the agent with tracing
@@ -128,6 +130,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                     episode_id=episode_id,
                     trace_type=TraceType.LOG,
                     content=f"Agent finished execution: {final_output[:200]}...",
+                    langfuse_trace_id=trace_id,
                     metadata_vars={"output": final_output},
                 )
                 db.add(final_trace)
