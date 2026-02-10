@@ -219,6 +219,8 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 
 Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
+Another important note: files in e.g. Engineer CAD agent or reviewer aren't created anew - they are reused from the previous agent.
+
 <!-- Note: each of these should be asserted.-->
 
 ##### Template auto-validation
@@ -753,6 +755,10 @@ As usual, the reviews will be strictly typed.
 1. Constraints are set first at the application level; e.g. the timeout of simulation is always 30 seconds
 2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
 3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
+
+### Agents cap on execution
+
+The agents will have a max_turns=60 (for example) cap, which would control how many turns (tool call invocations/responses) the agent can do. The agent will stop on turn number max turns The user is able to have the agent continue for another number of turns.
 
 ## Agent Evaluations
 
