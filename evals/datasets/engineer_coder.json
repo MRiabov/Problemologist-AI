@@ -1,0 +1,7 @@
+[
+    {
+        "id": "ec-001",
+        "task": "Implement Engineer Plan:\n\n## 1. Solution Overview\nUse a sloped ramp to guide the ball.\n\n## 2. Parts List\n- **Ramp Base**: Aluminum, fixed to ground.\n- **Guide Rails**: Plastic, attached to Ramp.\n\n## 3. Assembly Strategy\n- Use bolt pattern for base.\n- Use snap-fit or glue (simulated rigid) for rails.\n\n## 4. Cost\n- Max $10.",
+        "expected_criteria": "Code builds Ramp Base, Guide Rails, uses specific materials."
+    }
+]

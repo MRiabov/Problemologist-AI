@@ -1,7 +1,0 @@
-[
-    {
-        "id": "engineer-001",
-        "task": "Design a bracket to hold a NEMA 17 motor.",
-        "expected_criteria": "The design should have mounting holes compatible with NEMA 17."
-    }
-]

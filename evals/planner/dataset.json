@@ -1,7 +1,0 @@
-[
-    {
-        "id": "planner-001",
-        "task": "Plan a mechanism to lift a 1kg ball 10cm vertically.",
-        "expected_criteria": "The plan should include a motor and a lifting mechanism."
-    }
-]
