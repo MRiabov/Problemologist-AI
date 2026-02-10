@@ -1380,6 +1380,39 @@ Langfuse is deployed locally/on Railway.
 
 For deeper observability, e.g. requirements like "fasteners were used in at least 70% of cases", store fastener usage in the application database.
 
+#### All collected events
+
+We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:
+
+1. Component usage,
+2. Tool invocation,
+3. Manufacturability and price check (engineer)
+    - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
+4. Scene valiation (Benchmark CAD engineer)
+5. Render request (engineer)
+6. Render request (benchmark)
+7. Simulation request (engineer)
+8. Simulation result (engineer)
+    - Failure/pass reason -
+        - Success: hit green zone
+        - Failure in [failures](#failure):
+            - Timeout,
+            - Out of bounds
+            - Forbid zone hit
+            - Part breakage
+    - Simulation time elapsed
+    - Computing time
+
+9. COTS search (engineer/planner?)
+10. Plan submission (benchmark)
+11. Plan submission (Engineer)
+12. Price/weight failure escalation request (CAD engineer)
+13. Price/weight failure escalation decision (reviewer)
+14. Lint failure - code
+15. Lint failure - Markdown/YAML
+16. Logic/constraint failure - YAML
+17. Skill edit (skill editing agent)
+
 #### Bulk uploading events
 
 <!-- This part was LLM-suggested, but is OK -->
