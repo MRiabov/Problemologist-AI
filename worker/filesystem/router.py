@@ -10,7 +10,7 @@ from pathlib import Path
 
 import structlog
 
-from .backend import FileInfo, LocalFilesystemBackend
+from .backend import FileInfo, GrepMatch, LocalFilesystemBackend
 
 logger = structlog.get_logger(__name__)
 
@@ -307,6 +307,79 @@ class FilesystemRouter:
             raise WritePermissionError(f"Cannot delete read-only path: {path}")
 
         self.local_backend.delete(path)
+
+    def grep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        """Literal text search in files across all mounts.
+
+        Args:
+            pattern: Text pattern to search for.
+            path: Virtual directory to start search from.
+            glob: Glob pattern to filter files.
+
+        Returns:
+            List of GrepMatch objects or error message.
+        """
+        import re
+        logger.debug("router_grep", pattern=pattern, path=path, glob=glob)
+
+        # 1. Search local workspace
+        results = self.local_backend.grep_raw(pattern, path, glob)
+        if isinstance(results, str):
+            # Error from local backend, but we might still want to search mounts
+            logger.error("local_grep_failed", error=results)
+            results = []
+
+        # 2. Search mounted directories
+        for mount in self.mount_points:
+            # Simple check: if search path is specified and doesn't match mount prefix, skip
+            # This is a bit naive but works for / vs /utils etc.
+            normalized_path = path if path and path.startswith("/") else f"/{path or ''}"
+            if path and not normalized_path.startswith(mount.virtual_prefix) and mount.virtual_prefix != normalized_path:
+                # Unless searching root
+                if normalized_path != "/":
+                    continue
+
+            regex = re.compile(re.escape(pattern))
+            
+            # Resolve search start for this mount
+            local_start = mount.local_path
+            if path and normalized_path.startswith(mount.virtual_prefix):
+                rel_path = normalized_path[len(mount.virtual_prefix):].lstrip("/")
+                local_start = mount.local_path / rel_path
+
+            if not local_start.exists():
+                continue
+
+            # Glob files in mount
+            try:
+                # Use a simple glob for now
+                glob_p = glob or "**/*"
+                # Path.rglob or glob
+                if "**" in glob_p:
+                    matched_files = local_start.rglob(glob_p.replace("**/", ""))
+                else:
+                    matched_files = local_start.glob(glob_p)
+
+                for f in matched_files:
+                    if f.is_file():
+                        try:
+                            content = f.read_text(encoding="utf-8")
+                            virt_f = f"{mount.virtual_prefix}/{f.relative_to(mount.local_path)}"
+                            for line_num, line in enumerate(content.splitlines(), 1):
+                                if regex.search(line):
+                                    results.append({
+                                        "path": virt_f,
+                                        "line": line_num,
+                                        "text": line
+                                    })
+                        except:
+                            continue
+            except Exception as e:
+                logger.warning("mount_grep_failed", mount=mount.virtual_prefix, error=str(e))
+
+        return results
 
 
 def create_filesystem_router(
