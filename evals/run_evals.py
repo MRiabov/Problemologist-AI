@@ -41,6 +41,11 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
         # Generate a trace_id for Langfuse (optional, controller will generate one if not passed)
         trace_id = uuid.uuid4().hex
         
+        # Test a very simple operation first
+        print(f"Testing connectivity for {agent_name}...")
+        await backend.awrite("test_connect.txt", "hello")
+        print(f"Connectivity test passed for {agent_name}")
+
         agent, _ = create_agent_graph(
             backend, 
             agent_name=agent_name, 
@@ -48,7 +53,7 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
         )
 
         await agent.ainvoke(
-            {"messages": [("user", task_description)], "session_id": session_id},
+            {"messages": [("user", "Write a file named 'hello.txt' with content 'world' and then finish.")], "session_id": session_id},
             config={"metadata": {"eval_task_id": task_id, "agent_name": agent_name}},
         )
 
