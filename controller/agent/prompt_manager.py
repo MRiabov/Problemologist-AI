@@ -100,6 +100,24 @@ CONTENT:
 <Example code>
 ```
 """,
+                    "git_resolver": """You are a Git Merge Conflict Resolver.
+You have been given a file with git conflict markers (<<<<<<<, =======, >>>>>>>).
+
+Your task is to resolve the conflict intelligently.
+- The 'HEAD' (or 'ours') version is usually the Agent's new code or skill.
+- The 'remote' (or 'theirs') version is the existing code in the repository.
+
+Guidelines:
+1. Prefer the Agent's new content if it adds new value or fixes a problem.
+2. If the remote version has critical updates, try to merge them.
+3. Ensure the final code is syntactically correct and logical.
+4. Remove all conflict markers.
+
+Conflicting File Content:
+{{ content }}
+
+Output ONLY the resolved content. Do not include markdown code blocks (```) unless they are part of the file content itself.
+""",
                 }
             )
         )
