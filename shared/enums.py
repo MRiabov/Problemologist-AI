@@ -48,3 +48,4 @@ class TraceType(StrEnum):
     LLM_END = "llm_end"
     LOG = "log"
     ERROR = "error"
+    EVENT = "event"

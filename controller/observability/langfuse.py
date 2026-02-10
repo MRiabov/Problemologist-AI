@@ -16,7 +16,19 @@ def get_langfuse_callback(trace_id: str | None = None, name: str | None = None) 
     host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
     if public_key and secret_key:
-        return CallbackHandler()
+        trace_context = {}
+        if trace_id:
+            trace_context["trace_id"] = trace_id
+        if name:
+            trace_context["name"] = name
+            
+        os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
+        os.environ["LANGFUSE_SECRET_KEY"] = secret_key
+        os.environ["LANGFUSE_HOST"] = host
+
+        return CallbackHandler(
+            trace_context=trace_context
+        )
     return None
 
 

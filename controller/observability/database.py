@@ -105,3 +105,30 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             await db.commit()
             await db.refresh(trace)
             await self._broadcast_trace(trace)
+
+    async def record_events(self, events: list[dict[str, Any]]) -> None:
+        """Record domain-specific events in the database."""
+        if not events:
+            return
+
+        async with self.session_factory() as db:
+            for event_data in events:
+                # Store the entire event in content or metadata depending on preference.
+                # Here we use content for a summary and metadata for the full data.
+                trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.EVENT,
+                    name=event_data.get("event_type", "generic_event"),
+                    content=str(event_data.get("data", {})),
+                    metadata_vars=event_data,
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace)
+
+            await db.commit()
+            # We don't necessarily need to broadcast every event individually
+            # if there are many, but for now we do it for consistency.
+            # However, _broadcast_trace expects a Trace object with an ID.
+            # Since we added many, we might need to refresh them.
+            # To keep it simple, I'll just broadcast them if it doesn't hurt.
+            # Actually, let's skip broadcasting individual events for now to avoid flooding the UI.

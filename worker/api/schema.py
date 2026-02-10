@@ -80,6 +80,7 @@ class ExecuteResponse(BaseModel):
     stderr: StrictStr
     exit_code: StrictInt
     timed_out: StrictBool = False
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class BenchmarkToolRequest(BaseModel):
@@ -101,6 +102,7 @@ class BenchmarkToolResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     artifacts: dict[StrictStr, Any] | None = None
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class GitCommitRequest(BaseModel):
@@ -144,6 +146,7 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     image_path: StrictStr | None = None
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class LintRequest(BaseModel):
