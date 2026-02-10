@@ -7,6 +7,7 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.type_checking import type_check
+from shared.observability.schemas import ToolInvocationEvent
 
 
 from ..prompt_manager import PromptManager
@@ -60,7 +61,18 @@ class EngineerNode:
             # Note: T012 mentions Temporal, but since WP06 is planned,
             # we use direct execution for now.
             try:
+                # Record tool invocation
+                await record_worker_events(
+                    episode_id=state.session_id,
+                    events=[
+                        ToolInvocationEvent(
+                            tool_name="run_command", arguments={"code": code}
+                        )
+                    ],
+                )
+
                 execution_result = await self.fs.run_command(code)
+
                 stdout = execution_result.get("stdout", "")
                 stderr = execution_result.get("stderr", "")
                 exit_code = execution_result.get("exit_code", 0)

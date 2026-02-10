@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from .database.models import COTSItemORM
 from .models import COTSItem, SearchQuery
+from shared.observability.events import emit_event
+from shared.observability.schemas import COTSSearchEvent
 
 
 def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
@@ -61,5 +63,12 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
                     metadata=item.metadata_dict,
                 )
             )
+
+    # Emit search event
+    emit_event(
+        COTSSearchEvent(
+            query=query.query or str(query.constraints), results_count=len(results)
+        )
+    )
 
     return results

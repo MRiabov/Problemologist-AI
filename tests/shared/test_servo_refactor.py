@@ -23,9 +23,9 @@ def test_servo_motor_emission():
             assert len(lines) == 1
             event = json.loads(lines[0])
             assert event["event_type"] == "component_usage"
-            assert event["data"]["category"] == "motor"
-            assert event["data"]["part_number"] == "SG90"
-            assert event["data"]["price"] == 2.50
+            assert event["category"] == "motor"
+            assert event["part_number"] == "SG90"
+            assert event["price"] == 2.50
     finally:
         if event_file.exists():
             event_file.unlink()

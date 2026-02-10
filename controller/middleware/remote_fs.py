@@ -4,6 +4,14 @@ from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
 from controller.workflows.execution import ScriptExecutionWorkflow
+from controller.observability.tracing import record_worker_events
+from shared.observability.schemas import (
+    SimulationRequestEvent,
+    SimulationResultEvent,
+    ManufacturabilityCheckEvent,
+    PlanSubmissionEvent,
+    SimulationFailureReason,
+)
 
 
 class RemoteFilesystemMiddleware:
@@ -84,15 +92,81 @@ class RemoteFilesystemMiddleware:
 
     async def simulate(self, script_path: str) -> dict[str, Any]:
         """Trigger physics simulation via worker client."""
+        # Record request
+        await record_worker_events(
+            episode_id=self.client.session_id,
+            events=[SimulationRequestEvent(script_path=script_path)],
+        )
+
         result = await self.client.simulate(script_path)
-        return result.model_dump()
+        res_dict = result.model_dump()
+
+        # Record result
+        # Map failure reason if present in metadata or result
+        failure_reason = SimulationFailureReason.NONE
+        if not res_dict.get("success", True):
+            # This is a guestimate mapping for now
+            raw_reason = res_dict.get("failure_reason", "").lower()
+            if "timeout" in raw_reason:
+                failure_reason = SimulationFailureReason.TIMEOUT
+            elif "out of bounds" in raw_reason:
+                failure_reason = SimulationFailureReason.OUT_OF_BOUNDS
+            elif "forbid" in raw_reason:
+                failure_reason = SimulationFailureReason.FORBID_ZONE_HIT
+            elif "break" in raw_reason or "stress" in raw_reason:
+                failure_reason = SimulationFailureReason.PART_BREAKAGE
+
+        await record_worker_events(
+            episode_id=self.client.session_id,
+            events=[
+                SimulationResultEvent(
+                    success=res_dict.get("success", True),
+                    failure_reason=failure_reason,
+                    time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
+                    compute_time_ms=res_dict.get("compute_time_ms", 0.0),
+                    metadata=res_dict,
+                )
+            ],
+        )
+
+        return res_dict
 
     async def validate(self, script_path: str) -> dict[str, Any]:
         """Trigger geometric validation via worker client."""
         result = await self.client.validate(script_path)
-        return result.model_dump()
+        res_dict = result.model_dump()
+
+        # Record as ManufacturabilityCheckEvent
+        await record_worker_events(
+            episode_id=self.client.session_id,
+            events=[
+                ManufacturabilityCheckEvent(
+                    part_id=script_path,  # Using script_path as part identifier if checking one
+                    method="auto_geometric",
+                    result=res_dict.get("success", False),
+                    price=res_dict.get("price"),
+                    weight_g=res_dict.get("weight_g"),
+                    metadata=res_dict,
+                )
+            ],
+        )
+
+        return res_dict
 
     async def submit(self, script_path: str) -> dict[str, Any]:
         """Trigger handover to review via worker client."""
         result = await self.client.submit(script_path)
-        return result.model_dump()
+        res_dict = result.model_dump()
+
+        # Record as PlanSubmissionEvent
+        await record_worker_events(
+            episode_id=self.client.session_id,
+            events=[
+                PlanSubmissionEvent(
+                    source="engineer",  # Default to engineer in this middleware for now
+                    plan_path=script_path,
+                )
+            ],
+        )
+
+        return res_dict
