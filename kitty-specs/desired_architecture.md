@@ -836,6 +836,7 @@ There are some episodes which can be take multiple episodes to run.
 1. Plan-to-CAD fidelity: after the CAD was successfully reconstructed into a successful solution, generate a plan, and reconstruct again. The result (volume) should be approximately the same (80%).
 <!-- That said, I'm not sure if it's necessary. -->
 1. Robustness to randomization - having solved 1 seed from a randomization batch, an engineer would be statistically 50% more likely to other episodes in the batch relative to average performance (would fail 50% less).
+2. If a reviewer said "this is acceptably the cheapest we can get" and then the model got cheaper by 50% unit cost at the same quantity (during subsequent planning) - the reviewer in fact didn't find an optimal quantity, and that shouldn't happen... (in which cases out of which?)
 
 ###
 
@@ -1378,6 +1379,11 @@ We use LangFuse for LLM observability. We will use a Railway template for deploy
 Langfuse is deployed locally/on Railway.
 
 For deeper observability, e.g. requirements like "fasteners were used in at least 70% of cases", store fastener usage in the application database.
+
+#### Bulk uploading events
+
+<!-- This part was LLM-suggested, but is OK -->
+We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance - opening DB a hundred connections is slower than opening one and batch uploading it.
 
 ### Best practice: Give LLMs a way to complain
 
