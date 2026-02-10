@@ -11,6 +11,8 @@ from ..state import AgentState
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.tracing import record_worker_events
+from shared.observability.schemas import SubmissionValidationEvent
 from ..config import settings
 
 
@@ -61,6 +63,31 @@ async def architect_node(state: AgentState) -> AgentState:
 
     await fs.write_file("plan.md", plan_content)
     await fs.write_file("todo.md", todo_content)
+
+    # Emit SubmissionValidationEvent
+    artifacts_present = []
+    errors = []
+    if plan_content.strip():
+        artifacts_present.append("plan.md")
+    else:
+        errors.append("plan.md is empty")
+
+    if todo_content.strip():
+        artifacts_present.append("todo.md")
+    else:
+        errors.append("todo.md is empty")
+
+    await record_worker_events(
+        episode_id=session_id,
+        events=[
+            SubmissionValidationEvent(
+                artifacts_present=artifacts_present,
+                verification_passed=len(errors) == 0,
+                reasoning_trace_quality=1.0,  # Placeholder
+                errors=errors,
+            )
+        ],
+    )
 
     return state.model_copy(
         update={

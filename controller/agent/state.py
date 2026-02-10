@@ -32,3 +32,5 @@ class AgentState(BaseModel):
     status: AgentStatus = AgentStatus.IDLE
     feedback: StrictStr = ""
     session_id: StrictStr = ""
+    best_cost: float | None = None
+    best_weight_g: float | None = None

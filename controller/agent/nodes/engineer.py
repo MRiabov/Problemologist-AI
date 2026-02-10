@@ -7,7 +7,7 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.type_checking import type_check
-from shared.observability.schemas import RunCommandToolEvent
+from shared.observability.schemas import RunCommandToolEvent, CostWeightDeltaEvent
 
 
 from ..prompt_manager import PromptManager
@@ -87,11 +87,47 @@ class EngineerNode:
                     new_todo = todo.replace(
                         f"- [ ] {current_step}", f"- [x] {current_step}"
                     )
+
+                    # Track best cost/weight from events
+                    best_cost = state.best_cost
+                    best_weight = state.best_weight_g
+                    current_cost = None
+                    current_weight = None
+
+                    for event in events:
+                        if hasattr(event, "price") and event.price is not None:
+                            current_cost = (current_cost or 0) + event.price
+                        if hasattr(event, "weight_g") and event.weight_g is not None:
+                            current_weight = (current_weight or 0) + event.weight_g
+
+                    if current_cost is not None:
+                        if best_cost is None or current_cost < best_cost:
+                            best_cost = current_cost
+                        if best_weight is None or current_weight < best_weight:
+                            best_weight = current_weight
+
+                        # If this wasn't the best, log a delta (simplified heuristic)
+                        if best_cost is not None and current_cost > best_cost:
+                            await record_worker_events(
+                                episode_id=state.session_id,
+                                events=[
+                                    CostWeightDeltaEvent(
+                                        best_simulated_cost=best_cost,
+                                        best_simulated_weight_g=best_weight or 0.0,
+                                        final_cost=current_cost,
+                                        final_weight_g=current_weight or 0.0,
+                                        is_worse=True,
+                                    )
+                                ],
+                            )
+
                     return state.model_copy(
                         update={
                             "todo": new_todo,
                             "journal": state.journal + journal_entry,
                             "current_step": current_step,
+                            "best_cost": best_cost,
+                            "best_weight_g": best_weight,
                         }
                     )
                 last_error = stderr or stdout or "Unknown error"
