@@ -1,4 +1,5 @@
 from build123d import Box, Color, Compound, Location, Part
+from shared.observability.events import emit_event
 
 
 class ServoMotor(Compound):
@@ -73,9 +74,20 @@ class ServoMotor(Compound):
         super().__init__(children=[body])
         self.label = f"Servo_{size}"
 
-        # Metadata storage
         self.metadata = data.copy()
         self.metadata["part_number"] = size
+
+        # Emit observability event for component usage
+        emit_event(
+            event_type="component_usage",
+            data={
+                "category": "motor",
+                "part_number": size,
+                "label": self.label,
+                "price": data["price"],
+                "weight_g": data["weight_g"],
+            },
+        )
 
     @property
     def volume(self):
