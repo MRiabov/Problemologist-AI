@@ -5,6 +5,7 @@ to S3 storage with session-based isolation.
 """
 
 import asyncio
+import concurrent.futures
 import re
 import shutil
 from dataclasses import dataclass
@@ -268,25 +269,31 @@ class SandboxFilesystemBackend(BackendProtocol):
         regex = re.compile(re.escape(pattern))
         matches: list[GrepMatch] = []
 
-        for f_info in files:
+        def _process_file(f_info: ProtocolFileInfo) -> list[GrepMatch]:
             if f_info["is_dir"]:
-                continue
-
+                return []
             try:
-                # We need a dedicated 'read_raw' or similar, but we'll use aread internal logic
                 s3_p = self._resolve_path(f_info["path"])
                 with self._fs.open(s3_p, "rb") as f:
                     content = f.read().decode("utf-8")
 
+                file_matches = []
                 for line_num, line in enumerate(content.splitlines(), 1):
                     if regex.search(line):
-                        matches.append(
+                        file_matches.append(
                             {"path": f_info["path"], "line": line_num, "text": line}
                         )
-            except:
-                continue
+                return file_matches
+            except Exception:
+                return []
 
-        return matches
+        # Use ThreadPoolExecutor to parallelize S3 reads
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            future_to_file = {executor.submit(_process_file, f): f for f in files}
+            for future in concurrent.futures.as_completed(future_to_file):
+                matches.extend(future.result())
+
+        return sorted(matches, key=lambda x: (x["path"], x["line"]))
 
     def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         """Find files matching a glob pattern."""
@@ -320,35 +327,34 @@ class SandboxFilesystemBackend(BackendProtocol):
 
     def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
         """Upload multiple files."""
-        responses = []
-        for path, content in files:
+        def _upload(item: tuple[str, bytes]) -> FileUploadResponse:
+            path, content = item
             s3_p = self._resolve_path(path)
             try:
                 with self._fs.open(s3_p, "wb") as f:
                     f.write(content)
-                responses.append(FileUploadResponse(path=path, error=None))
-            except Exception as e:
-                responses.append(FileUploadResponse(path=path, error="invalid_path"))
-        return responses
+                return FileUploadResponse(path=path, error=None)
+            except Exception:
+                return FileUploadResponse(path=path, error="invalid_path")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            return list(executor.map(_upload, files))
 
     def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
         """Download multiple files."""
-        responses = []
-        for path in paths:
+        def _download(path: str) -> FileDownloadResponse:
             s3_p = self._resolve_path(path)
             try:
                 with self._fs.open(s3_p, "rb") as f:
                     content = f.read()
-                responses.append(
-                    FileDownloadResponse(path=path, content=content, error=None)
-                )
+                return FileDownloadResponse(path=path, content=content, error=None)
             except FileNotFoundError:
-                responses.append(
-                    FileDownloadResponse(path=path, error="file_not_found")
-                )
+                return FileDownloadResponse(path=path, error="file_not_found")
             except Exception:
-                responses.append(FileDownloadResponse(path=path, error="invalid_path"))
-        return responses
+                return FileDownloadResponse(path=path, error="invalid_path")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            return list(executor.map(_download, paths))
 
     # --- Legacy methods for backward compatibility if needed ---
 
@@ -570,23 +576,28 @@ class LocalFilesystemBackend(BackendProtocol):
         regex = re.compile(re.escape(pattern))
         matches: list[GrepMatch] = []
 
-        for f_info in files:
+        def _process_file(f_info: ProtocolFileInfo) -> list[GrepMatch]:
             if f_info["is_dir"]:
-                continue
-
+                return []
             try:
                 local_path = self._resolve(f_info["path"])
                 content = local_path.read_text(encoding="utf-8")
-
+                file_matches = []
                 for line_num, line in enumerate(content.splitlines(), 1):
                     if regex.search(line):
-                        matches.append(
+                        file_matches.append(
                             {"path": f_info["path"], "line": line_num, "text": line}
                         )
-            except:
-                continue
+                return file_matches
+            except Exception:
+                return []
 
-        return matches
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            future_to_file = {executor.submit(_process_file, f): f for f in files}
+            for future in concurrent.futures.as_completed(future_to_file):
+                matches.extend(future.result())
+
+        return sorted(matches, key=lambda x: (x["path"], x["line"]))
 
     def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         """Find files matching a glob pattern."""
@@ -623,34 +634,33 @@ class LocalFilesystemBackend(BackendProtocol):
 
     def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
         """Upload multiple files."""
-        responses = []
-        for path, content in files:
+        def _upload(item: tuple[str, bytes]) -> FileUploadResponse:
+            path, content = item
             try:
                 local_p = self._resolve(path)
                 local_p.parent.mkdir(parents=True, exist_ok=True)
                 local_p.write_bytes(content)
-                responses.append(FileUploadResponse(path=path, error=None))
+                return FileUploadResponse(path=path, error=None)
             except Exception as e:
-                responses.append(FileUploadResponse(path=path, error=str(e)))
-        return responses
+                return FileUploadResponse(path=path, error=str(e))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            return list(executor.map(_upload, files))
 
     def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
         """Download multiple files."""
-        responses = []
-        for path in paths:
+        def _download(path: str) -> FileDownloadResponse:
             try:
                 local_p = self._resolve(path)
                 content = local_p.read_bytes()
-                responses.append(
-                    FileDownloadResponse(path=path, content=content, error=None)
-                )
+                return FileDownloadResponse(path=path, content=content, error=None)
             except FileNotFoundError:
-                responses.append(
-                    FileDownloadResponse(path=path, error="file_not_found")
-                )
+                return FileDownloadResponse(path=path, error="file_not_found")
             except Exception as e:
-                responses.append(FileDownloadResponse(path=path, error=str(e)))
-        return responses
+                return FileDownloadResponse(path=path, error=str(e))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            return list(executor.map(_download, paths))
 
     # --- Legacy methods ---
 
