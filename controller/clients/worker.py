@@ -8,6 +8,7 @@ from worker.api.schema import (
     GrepMatch,
 )
 from worker.filesystem.backend import FileInfo
+from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
 
 
 class WorkerClient:
@@ -145,6 +146,26 @@ class WorkerClient:
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
+
+    async def analyze(
+        self,
+        method: ManufacturingMethod,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+    ) -> WorkbenchResult:
+        """Trigger manufacturing analysis via worker."""
+        async with httpx.AsyncClient() as client:
+            payload = {"script_path": script_path, "method": method}
+            if script_content is not None:
+                payload["script_content"] = script_content
+            response = await client.post(
+                f"{self.base_url}/benchmark/analyze",
+                json=payload,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return WorkbenchResult.model_validate(response.json())
 
     async def submit(
         self, script_path: str = "script.py", script_content: str | None = None

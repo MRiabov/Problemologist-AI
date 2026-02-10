@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
+from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
 
 
 class ReadFileResponse(BaseModel):
@@ -92,6 +93,15 @@ class BenchmarkToolRequest(BaseModel):
     script_content: StrictStr | None = Field(
         default=None,
         description="Direct content of the script.",
+    )
+
+
+class AnalyzeRequest(BenchmarkToolRequest):
+    """Request to run manufacturing analysis."""
+
+    method: ManufacturingMethod = Field(
+        ...,
+        description="Manufacturing method to analyze (cnc, 3dp, im).",
     )
 
 
