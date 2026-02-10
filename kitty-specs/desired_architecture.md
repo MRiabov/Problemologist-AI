@@ -1425,6 +1425,8 @@ We track the following structured domain events to compute the evaluation metric
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
     - Why: Distinguishes between "I didn't try" and "I tried but the mechanism jammed". Crucial for debugging friction/tolerance issues -->
 
+<!-- Code quality: all events are enums and all events have models for strict schema.-->
+
 ##### Not just events, but numeric events
 
 Notably, outside of just events, we want to track crucial numbers; especially for metrics below. E.g. cost/weight estimate events from planners and actual cost/weight from validation, for error analysis. *Technically*, we don't exactly *need* an event because we have the objectives.yaml in s3, but extracting the data from `objectives.yaml` and other "numeric" files (yaml frontmatter included) will make it very handy for downstream analysis (and would save time for analysis downstream.)
@@ -1448,11 +1450,10 @@ We defive (a growing list of) (aggregate) metrics:
 8. Journal quality score: % of entries with intent/result/reflection/next-step; frequency per run; correlation with success.
 9. Optimization capture rate: % of runs where notable optimization is logged (objective #5).
 10. Skill effectiveness: performance delta before/after a new skill version.
-11. Library growth and reuse: new build123d modules added per period and reuse rate across tasks.
-12. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
-13. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
-14. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
-15. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
+11. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
+12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
+13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
+14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
@@ -1460,6 +1461,8 @@ We defive (a growing list of) (aggregate) metrics:
     - it's a metric that was more used in RL, but it's infromative... sometimes. LLM-suggested. -->
 
 <!-- LLM-suggested. -->
+
+<!-- 11. Library growth and reuse: new build123d modules added per period and reuse rate across tasks. -->
 
 #### Bulk uploading events
 

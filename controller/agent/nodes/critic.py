@@ -9,8 +9,9 @@ from langchain_openai import ChatOpenAI
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.tracing import record_worker_events
+from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
-
 from ..prompt_manager import PromptManager
 from ..state import AgentState, AgentStatus
 
@@ -103,6 +104,21 @@ class CriticNode:
             CriticDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
             CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
         }
+
+        # Emit ReviewDecisionEvent for observability
+        await record_worker_events(
+            episode_id=state.session_id,
+            events=[
+                ReviewDecisionEvent(
+                    decision=decision.value.lower(),
+                    reason=feedback,
+                    evidence_stats={
+                        "has_sim_report": sim_report is not None,
+                        "has_mfg_report": mfg_report is not None,
+                    },
+                )
+            ],
+        )
 
         return state.model_copy(
             update={

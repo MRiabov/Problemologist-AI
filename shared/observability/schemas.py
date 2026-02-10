@@ -52,12 +52,24 @@ class ObservabilityEventType(StrEnum):
     TOOL_GIT_INIT = "git_init_tool"
     TOOL_GIT_COMMIT = "git_commit_tool"
 
+    # 20. Simulation instability
+    SIMULATION_INSTABILITY = "simulation_instability"
+    # 21. Submission validation
+    SUBMISSION_VALIDATION = "submission_validation"
+    # 22. Cost/weight delta heuristic
+    COST_WEIGHT_DELTA = "cost_weight_delta"
+    # 23. Library usage
+    LIBRARY_USAGE = "library_usage"
+    # 24. Review decision (full details)
+    REVIEW_DECISION = "review_decision"
+
 
 class SimulationFailureReason(StrEnum):
     TIMEOUT = "timeout"
     OUT_OF_BOUNDS = "out_of_bounds"
     FORBID_ZONE_HIT = "forbid_zone_hit"
     PART_BREAKAGE = "part_breakage"
+    STABILITY_ISSUE = "stability_issue"
     NONE = "none"
 
 
@@ -230,3 +242,42 @@ class GitInitToolEvent(BaseEvent):
 class GitCommitToolEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GIT_COMMIT
     message: str
+
+
+class SimulationInstabilityEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SIMULATION_INSTABILITY
+    instability_type: str  # "nan", "penetration", "joint_violation"
+    part_ids: list[str] = Field(default_factory=list)
+    value: float | None = None
+    message: str | None = None
+
+
+class SubmissionValidationEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.SUBMISSION_VALIDATION
+    artifacts_present: list[str]
+    verification_passed: bool
+    reasoning_trace_quality: float = Field(..., ge=0.0, le=1.0)
+    errors: list[str] = Field(default_factory=list)
+
+
+class CostWeightDeltaEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.COST_WEIGHT_DELTA
+    best_simulated_cost: float
+    best_simulated_weight_g: float
+    final_cost: float
+    final_weight_g: float
+    is_worse: bool
+
+
+class LibraryUsageEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.LIBRARY_USAGE
+    module_name: str
+    usage_type: str  # "new", "reused"
+    path: str
+
+
+class ReviewDecisionEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
+    decision: str  # "approve", "reject_plan", "reject_code"
+    reason: str
+    evidence_stats: dict[str, Any] = Field(default_factory=dict)

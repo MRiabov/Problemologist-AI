@@ -19,6 +19,8 @@ from shared.observability.schemas import (
     RunCommandToolEvent,
     GrepToolEvent,
     SkillReadEvent,
+    SimulationInstabilityEvent,
+    LibraryUsageEvent,
 )
 
 
@@ -59,6 +61,23 @@ class RemoteFilesystemMiddleware:
             episode_id=self.client.session_id,
             events=events,
         )
+
+        # Track library usage (reused)
+        if path.lstrip("/").startswith(("skills/", "utils/")):
+            module_name = (
+                path.lstrip("/").split("/")[1]
+                if "/" in path.lstrip("/")[7:]
+                else path.lstrip("/")[7:]
+            )
+            await record_worker_events(
+                episode_id=self.client.session_id,
+                events=[
+                    LibraryUsageEvent(
+                        module_name=module_name, usage_type="reused", path=path
+                    )
+                ],
+            )
+
         return await self.client.read_file(path)
 
     async def write_file(self, path: str, content: str) -> bool:
@@ -73,6 +92,22 @@ class RemoteFilesystemMiddleware:
         success = await self.client.write_file(path, content)
 
         if success:
+            # Track library usage (new)
+            if path.lstrip("/").startswith(("skills/", "utils/")):
+                module_name = (
+                    path.lstrip("/").split("/")[1]
+                    if "/" in path.lstrip("/")[7:]
+                    else path.lstrip("/")[7:]
+                )
+                await record_worker_events(
+                    episode_id=self.client.session_id,
+                    events=[
+                        LibraryUsageEvent(
+                            module_name=module_name, usage_type="new", path=path
+                        )
+                    ],
+                )
+
             from datetime import datetime
             from controller.observability.broadcast import EpisodeBroadcaster
             import uuid
@@ -184,6 +219,32 @@ class RemoteFilesystemMiddleware:
                 )
             ],
         )
+
+        # Detect instability
+        if not res_dict.get("success", True):
+            raw_reason = res_dict.get("failure_reason", "").lower()
+            if any(
+                word in raw_reason
+                for word in ["nan", "penetration", "instability", "joint violation"]
+            ):
+                instability_type = "unknown"
+                if "nan" in raw_reason:
+                    instability_type = "nan"
+                elif "penetration" in raw_reason:
+                    instability_type = "penetration"
+                elif "joint violation" in raw_reason:
+                    instability_type = "joint_violation"
+
+                await record_worker_events(
+                    episode_id=self.client.session_id,
+                    events=[
+                        SimulationInstabilityEvent(
+                            instability_type=instability_type,
+                            part_ids=res_dict.get("offending_parts", []),
+                            message=res_dict.get("failure_reason"),
+                        )
+                    ],
+                )
 
         return res_dict
 
