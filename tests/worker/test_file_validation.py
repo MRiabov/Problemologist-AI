@@ -171,21 +171,23 @@ Test gravity
     def test_valid_engineering_plan(self):
         content = """# Engineering Plan
 
-## Solution Overview
+## 1. Solution Overview
 A ramp design
 
-## Parts List
+## 2. Parts List
 - Part A
 - Part B
 
-## Assembly Strategy
-Connect parts
+## 3. Assembly Strategy
+1. Connect parts
+2. Verify alignment
 
-## Cost & Weight Budget
-Under budget
+## 4. Cost & Weight Budget
+- Part A: $1.00
+- Part B: $2.00
 
-## Risk Assessment
-Low risk
+## 5. Risk Assessment
+- Low risk
 """
         is_valid, errors = validate_plan_md_structure(content, plan_type="engineering")
         assert is_valid is True
@@ -193,10 +195,10 @@ Low risk
     def test_missing_section_engineering(self):
         content = """# Engineering Plan
 
-## Solution Overview
+## 1. Solution Overview
 A design
 
-## Parts List
+## 2. Parts List
 - Part A
 """
         is_valid, errors = validate_plan_md_structure(content, plan_type="engineering")

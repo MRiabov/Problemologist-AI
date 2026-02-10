@@ -74,7 +74,41 @@ def test_handover():
         Box(10, 10, 10)
 
     os.environ["SESSION_ID"] = "test_session"
-    res = submit_for_review(p.part)
+    plan_path = Path("plan.md")
+    todo_path = Path("todo.md")
+    try:
+        plan_path.write_text(
+            """# Engineering Plan
+
+## 1. Solution Overview
+Simple test plan
+
+## 2. Parts List
+- Part A
+
+## 3. Assembly Strategy
+1. Assemble Part A
+
+## 4. Cost & Weight Budget
+- Part A: $1.00
+
+## 5. Risk Assessment
+- Low risk
+""",
+            encoding="utf-8",
+        )
+        todo_path.write_text(
+            """# TODO List
+
+- [x] Read objectives.yaml
+- [-] Optional task
+""",
+            encoding="utf-8",
+        )
+        res = submit_for_review(p.part)
+    finally:
+        plan_path.unlink(missing_ok=True)
+        todo_path.unlink(missing_ok=True)
     assert res == True
 
     renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))

@@ -414,7 +414,14 @@ class LocalFilesystemBackend(BackendProtocol):
         """Factory method to create a new local backend instance."""
         root = base_dir / session_id
         s3_backend = SandboxFilesystemBackend.create(session_id, s3_config)
-        return cls(root=root, session_id=session_id, s3_backend=s3_backend)
+        backend = cls(root=root, session_id=session_id, s3_backend=s3_backend)
+        try:
+            from worker.objectives_template import ensure_objectives_yaml
+
+            ensure_objectives_yaml(backend.root)
+        except Exception as e:
+            logger.warning("objectives_template_write_failed", error=str(e))
+        return backend
 
     def _resolve(self, virtual_path: str) -> Path:
         """Resolve a virtual path to a local filesystem path."""

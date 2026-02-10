@@ -138,9 +138,19 @@ def validate_plan_md_structure(
         (False, list[str]) with missing section names if invalid
     """
     if plan_type == "engineering":
-        required_sections = ENGINEERING_PLAN_REQUIRED_SECTIONS
-    else:
-        required_sections = BENCHMARK_PLAN_REQUIRED_SECTIONS
+        from worker.utils.markdown_validator import validate_plan_md
+
+        result = validate_plan_md(content)
+        if not result.is_valid:
+            logger.warning("plan_md_missing_sections", missing=result.violations)
+            for error in result.violations:
+                emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
+            return False, result.violations
+
+        logger.info("plan_md_valid", plan_type=plan_type)
+        return True, []
+
+    required_sections = BENCHMARK_PLAN_REQUIRED_SECTIONS
 
     # Extract all headings from markdown
     heading_pattern = r"^#{1,3}\s+(.+)$"

@@ -21,6 +21,29 @@ def submit_for_review(component: Compound):
 
     renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
 
+    # Validate plan and todo (strict) before submission when present
+    plan_path = Path("plan.md")
+    if plan_path.exists():
+        from .markdown_validator import validate_plan_md
+
+        plan_content = plan_path.read_text(encoding="utf-8")
+        plan_result = validate_plan_md(plan_content)
+        if not plan_result.is_valid:
+            logger.error("plan_md_invalid", violations=plan_result.violations)
+            raise ValueError(f"plan.md invalid: {plan_result.violations}")
+
+    todo_path = Path("todo.md")
+    if todo_path.exists():
+        from .markdown_validator import validate_todo_md
+
+        todo_content = todo_path.read_text(encoding="utf-8")
+        todo_result = validate_todo_md(todo_content, require_completion=True)
+        if not todo_result.is_valid:
+            logger.error("todo_md_invalid", violations=todo_result.violations)
+            raise ValueError(f"todo.md invalid: {todo_result.violations}")
+    else:
+        logger.warning("todo_md_missing")
+
     # Ensure renders_dir exists
     renders_dir.mkdir(parents=True, exist_ok=True)
 
