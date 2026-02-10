@@ -33,7 +33,7 @@ async def test_agent_run_real_llm():
 
         # Create agent
         # settings will be loaded naturally from .env
-        agent = create_agent_graph(mock_backend)
+        agent, _ = create_agent_graph(mock_backend)
 
         # Invoke agent
         # The prompt is in the state_modifier, so we just send a trigger message.

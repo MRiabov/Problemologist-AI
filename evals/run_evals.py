@@ -18,30 +18,36 @@ from controller.clients.worker import WorkerClient
 WORKER_URL = "http://localhost:8001"
 
 
-async def run_single_eval(item: dict[str, Any], langfuse: Langfuse, agent_name: str):
+from langfuse.langchain import CallbackHandler
+
+
+async def run_single_eval(item: dict[str, Any], langfuse: Any, agent_name: str):
     """
     Runs a single evaluation task for a specific agent.
     """
     task_id = item["id"]
     task_description = item["task"]
+    trace_id = uuid.uuid4().hex
 
     print(f"Running eval: {task_id} for agent: {agent_name}")
 
-    trace = langfuse.trace(
-        name=f"eval_{agent_name}_{task_id}",
-        id=str(uuid.uuid4()),
-        metadata={"task_id": task_id, "agent": agent_name, "dataset_version": "v1"},
-        input=task_description,
-    )
+    # For v3+, we use trace_context to set the ID and name
+    # We also use CallbackHandler directly
+    handler = None
+    if langfuse and hasattr(langfuse, "auth_check"):  # Real Langfuse client
+        handler = CallbackHandler(
+            trace_context={
+                "trace_id": trace_id,
+                "name": f"eval_{agent_name}_{task_id}",
+            }
+        )
 
-    handler = trace.get_langchain_handler()
     session_id = str(uuid.uuid4())
     client = WorkerClient(base_url=WORKER_URL, session_id=session_id)
     backend = RemoteFilesystemBackend(client)
 
     try:
-        # Create agent logic is now centralized in create_agent_graph with mapping
-        agent = create_agent_graph(backend, agent_name=agent_name)
+        agent, _ = create_agent_graph(backend, agent_name=agent_name)
 
         config = {}
         if handler:
@@ -52,19 +58,27 @@ async def run_single_eval(item: dict[str, Any], langfuse: Langfuse, agent_name: 
             config=config,
         )
 
-        output = result["messages"][-1].content
-        trace.update(output=output)
-
-        trace.score(
-            name="execution_success", value=1.0, comment="Agent ran without exception"
-        )
+        # Output scoring
+        if langfuse and hasattr(langfuse, "auth_check"):
+            langfuse.create_score(
+                trace_id=trace_id,
+                name="execution_success",
+                value=1.0,
+                comment="Agent ran without exception",
+            )
 
     except Exception as e:
         print(f"Eval {task_id} failed: {e}")
-        trace.update(output=f"Error: {str(e)}")
-        trace.score(name="execution_success", value=0.0, comment=f"Exception: {e}")
+        if langfuse and hasattr(langfuse, "auth_check"):
+            langfuse.create_score(
+                trace_id=trace_id,
+                name="execution_success",
+                value=0.0,
+                comment=f"Exception: {e}",
+            )
     finally:
-        langfuse.flush()
+        if langfuse and hasattr(langfuse, "flush"):
+            langfuse.flush()
 
 
 async def main():
@@ -90,6 +104,23 @@ async def main():
         "--limit", type=int, default=0, help="Limit number of eval items per agent"
     )
     args = parser.parse_args()
+
+    # Check worker health before proceeding
+    print(f"Checking worker health at {WORKER_URL}...")
+    temp_client = WorkerClient(base_url=WORKER_URL, session_id="healthcheck")
+    try:
+        health = await temp_client.get_health()
+        if health.get("status") != "healthy":
+            print(f"Error: Worker is unhealthy: {health}")
+            sys.exit(1)
+    except Exception as e:
+        print(
+            f"Error: Could not connect to worker at {WORKER_URL}.\n"
+            "Is 'docker compose up' running?"
+        )
+        print(f"Details: {e}")
+        sys.exit(1)
+    print("Worker is reachable and healthy.\n")
 
     # Load datasets
     # New structure: evals/datasets/[agent_name].json
