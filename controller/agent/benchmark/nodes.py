@@ -259,8 +259,8 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
             sim_res.artifacts.get("render_paths", []) if sim_res.artifacts else []
         )
 
-        for path in render_paths:
-            async with httpx.AsyncClient() as http_client:
+        async with httpx.AsyncClient() as http_client:
+            for path in render_paths:
                 url = f"{worker_url}/assets/{path.lstrip('/')}"
                 try:
                     resp = await http_client.get(
