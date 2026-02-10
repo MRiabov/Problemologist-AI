@@ -14,6 +14,8 @@ import yaml
 from pydantic import ValidationError
 
 from shared.models.schemas import ObjectivesYaml, ReviewFrontmatter
+from shared.observability.events import emit_event
+from shared.observability.schemas import LogicFailureEvent, LintFailureDocsEvent
 
 logger = structlog.get_logger(__name__)
 
@@ -43,6 +45,14 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
         logger.warning("objectives_yaml_validation_error", errors=errors)
+        for error in errors:
+            emit_event(
+                LogicFailureEvent(
+                    file_path="objectives.yaml",
+                    constraint_name="pydantic_validation",
+                    error_message=error,
+                )
+            )
         return False, errors
 
 
@@ -145,7 +155,10 @@ def validate_plan_md_structure(
 
     if missing:
         logger.warning("plan_md_missing_sections", missing=missing)
-        return False, [f"Missing required section: {s}" for s in missing]
+        errors = [f"Missing required section: {s}" for s in missing]
+        for error in errors:
+            emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
+        return False, errors
 
     logger.info("plan_md_valid", plan_type=plan_type)
     return True, []

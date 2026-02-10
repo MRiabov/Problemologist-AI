@@ -1,24 +1,44 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ObservabilityEventType(StrEnum):
+    # 1. Component usage
     COMPONENT_USAGE = "component_usage"
+    # 2. Tool invocation
     TOOL_INVOCATION = "tool_invocation"
+    # 3. Manufacturability and price check (engineer)
     MANUFACTURABILITY_CHECK = "manufacturability_check"
+    # 4. Scene valiation (Benchmark CAD engineer)
     SCENE_VALIDATION = "scene_validation"
-    RENDER_REQUEST = "render_request"
+    # 5. Render request (engineer)
+    RENDER_REQUEST_ENGINEER = "render_request_engineer"
+    # 6. Render request (benchmark)
+    RENDER_REQUEST_BENCHMARK = "render_request_benchmark"
+    # 7. Simulation request (engineer)
     SIMULATION_REQUEST = "simulation_request"
+    # 8. Simulation result (engineer)
     SIMULATION_RESULT = "simulation_result"
+    # 9. COTS search (engineer/planner?)
     COTS_SEARCH = "cots_search"
-    PLAN_SUBMISSION = "plan_submission"
+    # 10. Plan submission (benchmark)
+    PLAN_SUBMISSION_BENCHMARK = "plan_submission_benchmark"
+    # 11. Plan submission (Engineer)
+    PLAN_SUBMISSION_ENGINEER = "plan_submission_engineer"
+    # 12. Price/weight failure escalation request (CAD engineer)
     ESCALATION_REQUEST = "escalation_request"
+    # 13. Price/weight failure escalation decision (reviewer)
     ESCALATION_DECISION = "escalation_decision"
-    LINT_FAILURE = "lint_failure"
+    # 14. Lint failure - code
+    LINT_FAILURE_CODE = "lint_failure_code"
+    # 15. Lint failure - Markdown/YAML
+    LINT_FAILURE_DOCS = "lint_failure_docs"
+    # 16. Logic/constraint failure - YAML
     LOGIC_FAILURE = "logic_failure"
+    # 17. Skill edit (skill editing agent)
     SKILL_EDIT = "skill_edit"
 
 
@@ -71,9 +91,13 @@ class SceneValidationEvent(BaseEvent):
     errors: list[str] = Field(default_factory=list)
 
 
-class RenderRequestEvent(BaseEvent):
-    event_type: ObservabilityEventType = ObservabilityEventType.RENDER_REQUEST
-    source: str  # "engineer" or "benchmark"
+class RenderRequestEngineerEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.RENDER_REQUEST_ENGINEER
+    num_views: int = 24
+
+
+class RenderRequestBenchmarkEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.RENDER_REQUEST_BENCHMARK
     num_views: int = 24
 
 
@@ -97,9 +121,15 @@ class COTSSearchEvent(BaseEvent):
     results_count: int
 
 
-class PlanSubmissionEvent(BaseEvent):
-    event_type: ObservabilityEventType = ObservabilityEventType.PLAN_SUBMISSION
-    source: str  # "engineer" or "benchmark"
+class PlanSubmissionBenchmarkEvent(BaseEvent):
+    event_type: ObservabilityEventType = (
+        ObservabilityEventType.PLAN_SUBMISSION_BENCHMARK
+    )
+    plan_path: str
+
+
+class PlanSubmissionEngineerEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.PLAN_SUBMISSION_ENGINEER
     plan_path: str
 
 
@@ -116,9 +146,14 @@ class EscalationDecisionEvent(BaseEvent):
     comments: list[str] = Field(default_factory=list)
 
 
-class LintFailureEvent(BaseEvent):
-    event_type: ObservabilityEventType = ObservabilityEventType.LINT_FAILURE
-    file_type: str  # "code", "markdown", "yaml"
+class LintFailureCodeEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.LINT_FAILURE_CODE
+    file_path: str
+    errors: list[str]
+
+
+class LintFailureDocsEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.LINT_FAILURE_DOCS
     file_path: str
     errors: list[str]
 
