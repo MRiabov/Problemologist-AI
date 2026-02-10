@@ -14,8 +14,8 @@ engineer:
 
 
          **MANDATORY READING**: Before planning, use your filesystem tools to read:
-         - `skills/build123d_cad_drafting_skill/SKILL.md`
-         - `skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
+         - `/skills/build123d_cad_drafting_skill/SKILL.md`
+         - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
          - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
          **Inputs Available**:
@@ -25,6 +25,7 @@ engineer:
            - Moving parts with DOFs and motor specifications
            - Runtime randomization ranges (your design must handle all positions)
            - `max_unit_cost` and `max_weight` constraints (from benchmark, with ~50% safety margin)
+           - This file is pre-populated at startup using the standard template from `desired_architecture.md`. Do not invent new fields.
          - You will set specific `max_unit_cost` and `max_weight` in your plan for the engineer (under the benchmark limits).
          - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations).
          - Environment meshes (read-only, immutable).
@@ -42,7 +43,20 @@ engineer:
            - Motors that hit force limits for >2 seconds will fail the simulation.
 
          **Output Requirements**:
-         You MUST output a `plan.md` file with the following structure (auto-validated):
+         You MUST output a `plan.md` file with the following structure (auto-validated).
+         Use these EXACT markdown headings:
+         - `## 1. Solution Overview`
+         - `## 2. Parts List`
+         - `## 3. Assembly Strategy`
+         - `## 4. Cost & Weight Budget`
+         - `## 5. Risk Assessment`
+
+         Each section MUST use explicit lists or tables where lists are required:
+         - Parts List: table or bullet list of parts
+         - Assembly Strategy: numbered steps
+         - Cost & Weight Budget: table or bullet list of items
+         - Risk Assessment: bullet list or table of risks
+
          1. **Solution Overview**: Brief description of your approach.
          2. **Parts List**: Each part with manufacturing method and material.
          3. **Assembly Strategy**: How parts connect (fasteners, mechanisms).
@@ -66,6 +80,8 @@ engineer:
          - **Units correctness**: State units for all dimensions and costs (metric or US customary) and keep consistent.
 
          You MUST also create a `todo.md` checklist for the engineer to implement.
+         - All TODO items MUST be checkbox list items using `- [ ]` format at creation time.
+         - Before submission, the engineer must ensure no checkbox remains `[ ]`. Only `[x]` (completed) or `[-]` (skipped) are acceptable at submission.
 
    engineer:
       system: |
@@ -163,7 +179,9 @@ engineer:
          If a tool fails >4 times, log a **Struggle** entry with a unique observation ID.
 
          **TODO List** (`todo.md`):
-         Mark items as you complete them: `[ ]` → `[x]`.
+         Mark items as you complete them.
+         - At submission time, NO checkbox may remain `[ ]`.
+         - Use `[x]` for completed and `[-]` for skipped items.
 
          **Part Metadata**:
          Each part MUST have:
@@ -240,7 +258,7 @@ benchmark_generator:
          Your goal is to create a benchmark that trains agents to solve physics problems.
 
          **MANDATORY READING**: Use filesystem tools to read:
-         - `skills/build123d_cad_drafting_skill/SKILL.md`
+         - `/skills/build123d_cad_drafting_skill/SKILL.md`
 
          **Default Environment**: 100x100x100 units unless specified.
 
@@ -290,7 +308,7 @@ benchmark_generator:
          Your goal is to implement the benchmark from the Planner's `plan.md`.
 
          **MANDATORY READING**: Use filesystem tools to read:
-         - `skills/build123d_cad_drafting_skill/SKILL.md`
+         - `/skills/build123d_cad_drafting_skill/SKILL.md`
 
          **Filesystem Tools** (via deepagents):
          - `read(path)`, `write(path, content)`, `edit(path, old, new)`
@@ -320,26 +338,97 @@ benchmark_generator:
          ```
 
          **Objectives YAML**:
-         After generating the benchmark, also output `objectives.yaml` with:
+         After generating the benchmark, also output `objectives.yaml` using the standard template from `desired_architecture.md`:
          ```yaml
-         goal_zone:
-           min: [x, y, z]
-           max: [x, y, z]
-         forbid_zones:
-           - min: [x, y, z]
+         # =============================================================================
+         # OBJECTIVES.YAML - Your Task Definition
+         # =============================================================================
+         # This file defines WHAT you must achieve. Read it carefully before planning.
+         #
+         # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
+         #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
+         #   2. AVOIDING all `forbid_zones` (contact = failure)
+         #   3. Respecting `max_unit_cost` and `max_weight` constraints
+         #
+         # The environment and moving_parts are READ-ONLY. You design parts that
+         # interact with them, not modify them.
+         # =============================================================================
+
+         objectives:
+           # SUCCESS: The moved_object's center enters this volume
+           goal_zone:
+             min: [x_min, y_min, z_min]
+             max: [x_max, y_max, z_max]
+
+           # FAILURE: Any contact with these volumes fails the simulation
+           forbid_zones:
+             - name: "obstacle_collision_zone"
+               min: [x1, y1, z1]
+               max: [x2, y2, z2]
+             # Additional forbid zones may be listed here
+
+           # CONSTRAINT: Your entire design MUST fit within these bounds
+           # Parts placed outside will fail validation
+           build_zone:
+             min: [x, y, z]
              max: [x, y, z]
-         build_zone:  # Agent's design must fit within this
-           min: [x, y, z]
-           max: [x, y, z]
+
+         # Hard simulation boundaries - objects leaving this volume = failure
+         simulation_bounds:
+           min: [-50, -50, 0]
+           max: [50, 50, 100]
+
+         # -----------------------------------------------------------------------------
+         # THE OBJECT YOU MUST DELIVER
+         # -----------------------------------------------------------------------------
+         # This object spawns at `start_position` (with runtime jitter applied).
+         # Your design must reliably guide it to the goal_zone.
+         moved_object:
+           label: "projectile_ball"
+           shape: "sphere"
+           # Static randomization: shape varies between benchmark runs
+           static_randomization:
+             radius: [5, 10]  # [min, max] - actual value chosen per benchmark variant
+           start_position: [x, y, z]
+           # Runtime jitter: small position variation per simulation run
+           # Your solution must handle ALL positions within this range
+           runtime_jitter: [2, 2, 1]  # [+/-x, +/-y, +/-z] mm
+
+         # -----------------------------------------------------------------------------
+         # ENVIRONMENT MOVING PARTS (READ-ONLY)
+         # -----------------------------------------------------------------------------
+         # These exist in the environment. You CANNOT modify them, but you CAN
+         # design parts that interact with them (e.g., attach to motor shafts,
+         # use passive sliders as triggers).
          moving_parts:
-           - name: "slider"
-             dof: "slide_x"
-             description: "Slides along X axis"
-         runtime_randomization:
-           input_position_jitter: [±x, ±y, ±z]
-         # Economic constraints (challenging but feasible, ~50% safety margin)
-         max_unit_cost: 25.00  # USD per unit
-         max_weight: 0.5  # kg
+           - name: "feeder_motor"
+             type: "motor"
+             position: [x, y, z]
+             dof: "rotate_z"  # Degrees of freedom: rotate_x/y/z, slide_x/y/z
+             control:
+               mode: "sinusoidal"  # Options: constant, sinusoidal, on_off
+               speed: 1.0          # rad/s (for rotate) or units/s (for slide)
+               frequency: 0.5      # Hz - for sinusoidal mode
+             description: "Rotates clockwise to push objects"
+
+           - name: "passive_slider"
+             type: "passive"  # Moves only when external force applied
+             position: [x, y, z]
+             dof: "slide_y"
+             description: "Slides freely along Y when impacted"
+
+         # -----------------------------------------------------------------------------
+         # YOUR CONSTRAINTS
+         # -----------------------------------------------------------------------------
+         # These are challenging but achievable. Exceeding them = rejection.
+         constraints:
+           max_unit_cost: 50.00  # USD - total cost of your manufactured parts
+           max_weight: 1.2       # kg - total weight of your design
+
+         # Randomization metadata (for reproducibility)
+         randomization:
+           static_variation_id: "v1.2"  # Which static variant this is
+           runtime_jitter_enabled: true
          ```
 
          **Verification (MANDATORY)**:
@@ -407,8 +496,8 @@ subagents:
          Your job is to search through skills and build123d documentation to find relevant information.
 
          **Search Order**:
-         1. Check `skills/` folder for relevant SKILL.md files.
-         2. Check `skills/build123d_cad_drafting_skill/references/` for build123d docs.
+         1. Check `/skills/` folder for relevant SKILL.md files.
+         2. Check `/skills/build123d_cad_drafting_skill/references/` for build123d docs.
          3. Return concise, actionable documentation snippets.
 
          Be precise and return only what's needed. Don't overwhelm with irrelevant info.
