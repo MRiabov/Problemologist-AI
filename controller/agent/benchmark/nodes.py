@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -254,30 +255,31 @@ async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSt
         # Worker returns paths like "/tmp/.../render_0.png"? No, routes says:
         # result.render_paths. Ideally these are relative or we can fetch them via /assets/
         # api_simulate returns result.render_paths.
-        render_data = []
         render_paths = (
             sim_res.artifacts.get("render_paths", []) if sim_res.artifacts else []
         )
 
-        for path in render_paths:
-            async with httpx.AsyncClient() as http_client:
-                url = f"{worker_url}/assets/{path.lstrip('/')}"
-                try:
-                    resp = await http_client.get(
-                        url, headers={"X-Session-ID": session_id}
-                    )
-                    if resp.status_code == 200:
-                        render_data.append(resp.content)
-                    else:
-                        logger.warning(
-                            "failed_to_download_render",
-                            path=path,
-                            status=resp.status_code,
-                        )
-                except Exception as e:
-                    logger.warning(
-                        "failed_to_download_render_exception", path=path, error=str(e)
-                    )
+        async def _download_render(http_client: httpx.AsyncClient, path: str):
+            url = f"{worker_url}/assets/{path.lstrip('/')}"
+            try:
+                resp = await http_client.get(url, headers={"X-Session-ID": session_id})
+                if resp.status_code == 200:
+                    return resp.content
+                logger.warning(
+                    "failed_to_download_render",
+                    path=path,
+                    status=resp.status_code,
+                )
+            except Exception as e:
+                logger.warning(
+                    "failed_to_download_render_exception", path=path, error=str(e)
+                )
+            return None
+
+        async with httpx.AsyncClient() as http_client:
+            tasks = [_download_render(http_client, p) for p in render_paths]
+            results = await asyncio.gather(*tasks)
+            render_data = [r for r in results if r is not None]
 
         state["simulation_result"] = {
             "valid": True,
