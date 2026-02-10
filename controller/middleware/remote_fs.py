@@ -9,7 +9,7 @@ from shared.observability.schemas import (
     SimulationRequestEvent,
     SimulationResultEvent,
     ManufacturabilityCheckEvent,
-    PlanSubmissionEvent,
+    PlanSubmissionEngineerEvent,
     SimulationFailureReason,
 )
 
@@ -158,12 +158,11 @@ class RemoteFilesystemMiddleware:
         result = await self.client.submit(script_path)
         res_dict = result.model_dump()
 
-        # Record as PlanSubmissionEvent
+        # Record as PlanSubmissionEngineerEvent
         await record_worker_events(
             episode_id=self.client.session_id,
             events=[
-                PlanSubmissionEvent(
-                    source="engineer",  # Default to engineer in this middleware for now
+                PlanSubmissionEngineerEvent(
                     plan_path=script_path,
                 )
             ],
