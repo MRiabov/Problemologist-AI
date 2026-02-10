@@ -154,7 +154,7 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 - Read-only access to the COTS catalog DB and/or CLI; no writes.
 - No file edits except optional `journal.md` logging of queries + results.
 
-#### Inputs (from planner/engineer)
+#### Inputs (from planner/engineer/benchmark planner/benchmark CAD engineer)
 
 - Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
 - Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
@@ -171,10 +171,16 @@ Outputs (structured, concise):
 
 #### Invocation
 
-- Planner/engineer calls the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers calls the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
 - The returned part IDs and prices must be used in the plan and cost estimates.
 
-Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation.
+Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation
+
+##### Reasons for invocation
+
+1. Planners in benchmark and engineering invoke to check exact prices for subcomponents (both make price decisions)
+2. Engineers invoke them because they need to use them and check prices for components (they are constrained by the price)
+3. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough - can just skip!)*
 
 #### COTS catalog database (spec 006)
 
@@ -1027,7 +1033,7 @@ Constraints done by the engineer should be enforced for validity. E.g.: two part
 
 ###### Fixed parts for the simulation definition
 
-Some parts will need to be "fixed" despite physics, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
+Some parts will need to be "fixed" despite physics *during benchmark generation, not agents*, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
 
 ###### Fasteners
 
