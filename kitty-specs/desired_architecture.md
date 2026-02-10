@@ -1452,7 +1452,7 @@ We defive (a growing list of) (aggregate) metrics:
 12. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
 13. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
 14. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
-15. Cost/weight delta heuristic: if cheaper/lighter alternative was computed but final solution is worse, log event.
+15. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
