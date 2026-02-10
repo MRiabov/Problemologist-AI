@@ -45,12 +45,22 @@ def get_docs_for(entity: Union[Type, Callable, str]) -> str:
                 try:
                     content = md_file.read_text()
                     if query_name.lower() in content.lower():
-                        # Extract relevant snippet (simple approach: file path + mention)
-                        # A more sophisticated approach would be to extract the paragraph around the match
+                        # Extract relevant snippets
+                        paragraphs = content.split("\n\n")
+                        snippets = []
+                        total_chars = 0
+                        for p in paragraphs:
+                            if query_name.lower() in p.lower():
+                                snippets.append(p.strip())
+                                total_chars += len(p)
+                                if len(snippets) >= 2 or total_chars > 1000:
+                                    break
+
+                        snippet_text = "\n\n".join([f"> {s}" for s in snippets])
+
                         found_docs.append(
-                            f"### Found mention in `{md_file.name}`:\n(Path: {md_file})\n"
+                            f"### Found mention in `{md_file.name}`:\n(Path: {md_file})\n\n{snippet_text}\n"
                         )
-                        # TODO: Better snippet extraction
                 except Exception:
                     continue
 
