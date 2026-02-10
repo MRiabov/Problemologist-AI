@@ -190,6 +190,9 @@ class SceneCompiler:
         zone_type: str | None = None,
         zone_size: list[float] | None = None,
         is_fixed: bool = False,
+        joint_type: str | None = None,
+        joint_axis: list[float] | None = None,
+        joint_range: list[float] | None = None,
     ):
         """Adds a body to the worldbody. Can be a physical mesh or a logical zone.
 
@@ -202,6 +205,9 @@ class SceneCompiler:
             zone_type: "goal" or "forbid" for zones
             zone_size: Half-extents for zone box
             is_fixed: If True, part is fixed (no free joint added)
+            joint_type: Optional joint type (e.g., "hinge", "slide").
+            joint_axis: Optional joint axis [x, y, z].
+            joint_range: Optional joint limits [min, max].
         """
         if pos is None:
             pos = [0, 0, 0]
@@ -223,8 +229,21 @@ class SceneCompiler:
             if mesh_names:
                 for mesh_name in mesh_names:
                     ET.SubElement(body, "geom", type="mesh", mesh=mesh_name)
-            # Add a free joint so the body can move (unless fixed)
-            if not is_fixed:
+
+            # Handle joints
+            if is_fixed:
+                return
+
+            if joint_type:
+                # Add specific joint
+                joint_attrs = {"type": joint_type, "name": f"{name}_joint"}
+                if joint_axis:
+                    joint_attrs["axis"] = " ".join(map(str, joint_axis))
+                if joint_range:
+                    joint_attrs["range"] = " ".join(map(str, joint_range))
+                ET.SubElement(body, "joint", **joint_attrs)
+            else:
+                # Default to free joint
                 logger.warning(
                     f"Adding free joint to body '{name}'. "
                     "This part will fall if not supported. "
@@ -324,10 +343,55 @@ class SimulationBuilder:
 
             # Check for constraints metadata
             constraint = getattr(child, "constraint", None)
+            joint_type = None
+            joint_axis = None
+            joint_range = None
+
             if constraint and isinstance(constraint, str):
+                # Support multiple constraints separated by semicolon if needed,
+                # but for now assume single constraint string
                 if constraint.startswith("weld:"):
                     target = constraint.split(":", 1)[1]
                     weld_constraints.append((label, target))
+                elif constraint.startswith(("hinge", "slide")):
+                    # Parse joint constraint: type:axis:range
+                    # e.g., "hinge:z", "hinge:x:range=-45,45", "slide:0,1,0"
+                    parts = constraint.split(":")
+                    joint_type = parts[0]
+
+                    if len(parts) > 1:
+                        axis_str = parts[1]
+                        # Handle shorthand axis
+                        if axis_str == "x":
+                            joint_axis = [1, 0, 0]
+                        elif axis_str == "y":
+                            joint_axis = [0, 1, 0]
+                        elif axis_str == "z":
+                            joint_axis = [0, 0, 1]
+                        elif "," in axis_str:
+                            try:
+                                joint_axis = [float(x) for x in axis_str.split(",")]
+                            except ValueError:
+                                logger.warning(f"Invalid axis format: {axis_str}")
+                        elif " " in axis_str:
+                            try:
+                                joint_axis = [float(x) for x in axis_str.split()]
+                            except ValueError:
+                                logger.warning(f"Invalid axis format: {axis_str}")
+
+                    # Check for range
+                    for part in parts[2:]:
+                        if part.startswith("range="):
+                            range_str = part.split("=")[1]
+                            try:
+                                if "," in range_str:
+                                    joint_range = [
+                                        float(x) for x in range_str.split(",")
+                                    ]
+                                else:
+                                    joint_range = [float(x) for x in range_str.split()]
+                            except ValueError:
+                                logger.warning(f"Invalid range format: {range_str}")
 
             # Position from build123d object
             pos = [
@@ -382,6 +446,9 @@ class SimulationBuilder:
                     pos=pos,
                     euler=euler,
                     is_fixed=is_fixed,
+                    joint_type=joint_type,
+                    joint_axis=joint_axis,
+                    joint_range=joint_range,
                 )
 
         # Apply collected constraints
