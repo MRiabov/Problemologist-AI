@@ -673,6 +673,13 @@ As usual, the reviews will be strictly typed.
 2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
 3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
 
+### Evaluations
+
+To build great agents, we need agent needs a great evaluation pipelines.
+We need 10 at least test prompts for each agent (primary) agent subtype - 3 for benchmark (Planner, CAD_agent, Reviewer), 3 for engineering (Planner, CAD_agent, Reviewer).
+
+We will also need evaluations for an agent.
+
 ## Distributed execution
 
 There is a controller node which runs the LLM and tool calls, and there worker node which:
