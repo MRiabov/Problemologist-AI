@@ -23,6 +23,8 @@ from .schema import (
     ExecuteResponse,
     GitCommitRequest,
     GitCommitResponse,
+    GrepMatch,
+    GrepRequest,
     LintRequest,
     LintResponse,
     ListFilesRequest,
@@ -160,6 +162,23 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise
     except Exception as e:
         logger.error("api_edit_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/grep", response_model=list[GrepMatch])
+async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
+    """Search for a pattern in files."""
+    try:
+        matches = fs_router.grep_raw(
+            pattern=request.pattern, path=request.path, glob=request.glob
+        )
+        if isinstance(matches, str):
+            raise HTTPException(status_code=400, detail=matches)
+        return matches
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("api_grep_failed", pattern=request.pattern, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

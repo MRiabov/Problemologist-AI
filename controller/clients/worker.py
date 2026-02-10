@@ -5,6 +5,7 @@ from worker.api.schema import (
     EditOp,
     ExecuteResponse,
     GitCommitResponse,
+    GrepMatch,
 )
 from worker.filesystem.backend import FileInfo
 
@@ -25,6 +26,9 @@ class WorkerClient:
 
     async def list_files(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory."""
+        # Ensure path is not empty to avoid 422 errors from Pydantic min_length=1
+        if not path:
+            path = "/"
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/fs/ls",
@@ -34,6 +38,20 @@ class WorkerClient:
             )
             response.raise_for_status()
             return [FileInfo.model_validate(item) for item in response.json()]
+
+    async def grep(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch]:
+        """Search for a pattern in files."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/fs/grep",
+                json={"pattern": pattern, "path": path, "glob": glob},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return [GrepMatch.model_validate(item) for item in response.json()]
 
     async def read_file(self, path: str) -> str:
         """Read file contents."""

@@ -20,7 +20,7 @@ class StatusResponse(BaseModel):
 class ListFilesRequest(BaseModel):
     """Request to list files in a directory."""
 
-    path: StrictStr = Field(default="/", min_length=1)
+    path: StrictStr = Field(default="/")
 
 
 class ReadFileRequest(BaseModel):
@@ -48,6 +48,22 @@ class EditFileRequest(BaseModel):
 
     path: StrictStr = Field(..., min_length=1)
     edits: list[EditOp] = Field(..., min_length=1)
+
+
+class GrepMatch(BaseModel):
+    """A single match from a grep operation."""
+
+    path: StrictStr
+    line: StrictInt
+    text: StrictStr
+
+
+class GrepRequest(BaseModel):
+    """Request to search for a pattern in files."""
+
+    pattern: StrictStr = Field(..., min_length=1)
+    path: StrictStr | None = None
+    glob: StrictStr | None = None
 
 
 class ExecuteRequest(BaseModel):

@@ -49,9 +49,10 @@ def create_agent_graph(
     if callbacks:
         llm = llm.with_config({"callbacks": callbacks})
 
-    return create_deep_agent(
+    agent = create_deep_agent(
         model=llm,
         backend=backend,
         system_prompt=system_prompt,
         name=agent_name,
     )
+    return agent, langfuse_callback
