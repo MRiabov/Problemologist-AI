@@ -110,31 +110,34 @@ class RemoteFilesystemBackend(BackendProtocol):
         ]
 
     async def aglob_info(self, pattern: str, path: str = "/") -> List[ProtocolFileInfo]:
-        return await self.als_info(path)
+        files = await self.client.glob(pattern, path)
+        return [
+            {
+                "path": f.path,
+                "is_dir": f.is_dir,
+                "size": f.size or 0,
+            }
+            for f in files
+        ]
 
     async def aupload_files(
         self, files: List[Tuple[str, bytes]]
     ) -> List[FileUploadResponse]:
-        responses = []
-        for path, content in files:
-            try:
-                success = await self.client.write_file(path, content.decode("utf-8"))
-                responses.append(
-                    FileUploadResponse(path=path, error=None if success else "failed")
-                )
-            except Exception as e:
-                responses.append(FileUploadResponse(path=path, error=str(e)))
-        return responses
+        try:
+            success = await self.client.upload_files(files)
+            if success:
+                return [FileUploadResponse(path=p, error=None) for p, _ in files]
+            return [FileUploadResponse(path=p, error="upload_failed") for p, _ in files]
+        except Exception as e:
+            return [FileUploadResponse(path=p, error=str(e)) for p, _ in files]
 
     async def adownload_files(self, paths: List[str]) -> List[FileDownloadResponse]:
         responses = []
         for path in paths:
             try:
-                content = await self.client.read_file(path)
+                content = await self.client.download_file(path)
                 responses.append(
-                    FileDownloadResponse(
-                        path=path, content=content.encode("utf-8"), error=None
-                    )
+                    FileDownloadResponse(path=path, content=content, error=None)
                 )
             except Exception as e:
                 responses.append(FileDownloadResponse(path=path, error=str(e)))

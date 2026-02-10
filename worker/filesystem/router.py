@@ -308,6 +308,93 @@ class FilesystemRouter:
 
         self.local_backend.delete(path)
 
+    def glob(self, pattern: str, path: str = "/") -> list[FileInfo]:
+        """Find files matching a glob pattern across all mounts.
+
+        Args:
+            pattern: Glob pattern to search for.
+            path: Virtual directory to start search from.
+
+        Returns:
+            List of FileInfo objects for matched files.
+        """
+        logger.debug("router_glob", pattern=pattern, path=path)
+
+        normalized = path if path.startswith("/") else f"/{path}"
+        results = []
+
+        # 1. Search local workspace
+        try:
+            local_results = self.local_backend.glob_info(pattern, path=path)
+            for info in local_results:
+                results.append(
+                    FileInfo(
+                        path=info["path"],
+                        name=info["path"].rstrip("/").split("/")[-1] or "/",
+                        is_dir=info["is_dir"],
+                        size=info["size"],
+                    )
+                )
+        except Exception as e:
+            logger.error("local_glob_failed", error=str(e))
+
+        # 2. Search mounted directories
+        for mount in self.mount_points:
+            # Check if path is relevant to this mount
+            if (
+                path
+                and not normalized.startswith(mount.virtual_prefix)
+                and mount.virtual_prefix != normalized
+            ):
+                if normalized != "/":
+                    continue
+
+            # Determine local start path for this mount
+            local_start = mount.local_path
+            if path and normalized.startswith(mount.virtual_prefix):
+                rel_path = normalized[len(mount.virtual_prefix) :].lstrip("/")
+                local_start = mount.local_path / rel_path
+
+            if not local_start.exists():
+                continue
+
+            try:
+                # Handling recursive glob
+                p = pattern
+                if "**" in p:
+                    matched = local_start.rglob(p.replace("**/", ""))
+                else:
+                    matched = local_start.glob(p)
+
+                for entry in matched:
+                    is_dir = entry.is_dir()
+                    # Calculate virtual path relative to the mount root to preserve prefix
+                    try:
+                        rel_to_mount = entry.relative_to(mount.local_path)
+                        virtual = f"{mount.virtual_prefix}/{rel_to_mount}"
+                    except ValueError:
+                        continue
+
+                    if is_dir and not virtual.endswith("/"):
+                        virtual += "/"
+
+                    results.append(
+                        FileInfo(
+                            path=virtual,
+                            name=entry.name,
+                            is_dir=is_dir,
+                            size=entry.stat().st_size if not is_dir else 0,
+                        )
+                    )
+            except Exception as e:
+                logger.warning(
+                    "mount_glob_failed", mount=mount.virtual_prefix, error=str(e)
+                )
+
+        # Sort results by path
+        results.sort(key=lambda x: x.path)
+        return results
+
     def grep_raw(
         self, pattern: str, path: str | None = None, glob: str | None = None
     ) -> list[GrepMatch] | str:

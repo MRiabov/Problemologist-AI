@@ -3,6 +3,12 @@ from typing import Any
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
+from worker.workbenches.models import (
+    BuildZone,
+    ManufacturingConfig,
+    ManufacturingMethod,
+    WorkbenchResult,
+)
 
 
 class ReadFileResponse(BaseModel):
@@ -168,3 +174,27 @@ class LintResponse(BaseModel):
     success: StrictBool
     errors: list[dict[StrictStr, Any]] = Field(default_factory=list)
     warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
+
+
+class GlobRequest(BaseModel):
+    """Request to find files matching a glob pattern."""
+
+    pattern: StrictStr = Field(..., min_length=1)
+    path: StrictStr = Field(default="/")
+
+
+class AnalyzeRequest(BaseModel):
+    """Request to analyze manufacturability of a part."""
+
+    method: ManufacturingMethod
+    config: ManufacturingConfig
+    script_path: StrictStr = Field(default="script.py")
+    script_content: StrictStr | None = None
+    build_zone: BuildZone | None = None
+
+
+class AnalyzeResponse(BaseModel):
+    """Response from DFM analysis."""
+
+    result: WorkbenchResult
+    events: list[dict[str, Any]] = Field(default_factory=list)

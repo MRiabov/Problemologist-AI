@@ -1,10 +1,13 @@
 import httpx
 
 from worker.api.schema import (
+    AnalyzeRequest,
+    AnalyzeResponse,
     BenchmarkToolResponse,
     EditOp,
     ExecuteResponse,
     GitCommitResponse,
+    GlobRequest,
     GrepMatch,
 )
 from worker.filesystem.backend import FileInfo
@@ -53,6 +56,18 @@ class WorkerClient:
             response.raise_for_status()
             return [GrepMatch.model_validate(item) for item in response.json()]
 
+    async def glob(self, pattern: str, path: str = "/") -> list[FileInfo]:
+        """Find files matching a glob pattern."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/fs/glob",
+                json={"pattern": pattern, "path": path},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return [FileInfo.model_validate(item) for item in response.json()]
+
     async def read_file(self, path: str) -> str:
         """Read file contents."""
         async with httpx.AsyncClient() as client:
@@ -98,6 +113,36 @@ class WorkerClient:
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
+
+    async def upload_files(self, files: list[tuple[str, bytes]]) -> bool:
+        """Upload multiple files to the workspace."""
+        multipart_files = []
+        for path, content in files:
+            # Field name 'files', filename=path, content=content
+            multipart_files.append(("files", (path, content)))
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/fs/upload_file",
+                files=multipart_files,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+
+    async def download_file(self, path: str) -> bytes:
+        """Download a file as bytes."""
+        # Note: We rely on httpx handling URL encoding for the path if needed,
+        # but for clean paths, direct injection works with FastAPI's {path:path}.
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/assets/{path}",
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.content
 
     async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
         """Execute Python code in the sandboxed runtime."""
@@ -162,6 +207,19 @@ class WorkerClient:
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
+
+    async def analyze(self, request: AnalyzeRequest) -> AnalyzeResponse:
+        """Analyze manufacturability of a part."""
+        async with httpx.AsyncClient() as client:
+            json_body = request.model_dump(mode="json")
+            response = await client.post(
+                f"{self.base_url}/benchmark/analyze",
+                json=json_body,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return AnalyzeResponse.model_validate(response.json())
 
     async def get_health(self) -> dict[str, str]:
         """Check the health of the worker service."""

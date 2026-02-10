@@ -7,7 +7,15 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Response,
+    UploadFile,
+)
 
 from shared.enums import ResponseStatus
 
@@ -15,9 +23,12 @@ from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate
+from ..utils.dfm import validate_and_price
 from ..utils.git import commit_all, init_workspace_repo
 from ..utils.preview import preview_design
 from .schema import (
+    AnalyzeRequest,
+    AnalyzeResponse,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
@@ -25,6 +36,7 @@ from .schema import (
     ExecuteResponse,
     GitCommitRequest,
     GitCommitResponse,
+    GlobRequest,
     GrepMatch,
     GrepRequest,
     LintRequest,
@@ -206,6 +218,46 @@ async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
         raise
     except Exception as e:
         logger.error("api_grep_failed", pattern=request.pattern, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/glob", response_model=list[FileInfo])
+async def api_glob(request: GlobRequest, fs_router=Depends(get_router)):
+    """Find files matching a glob pattern."""
+    try:
+        return fs_router.glob(request.pattern, request.path)
+    except Exception as e:
+        logger.error("api_glob_failed", pattern=request.pattern, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/upload_file", response_model=StatusResponse)
+async def upload_file(
+    files: list[UploadFile] = File(...),
+    fs_router=Depends(get_router),
+):
+    """Upload multiple files to the workspace."""
+    try:
+        file_data = []
+        for file in files:
+            content = await file.read()
+            # Use filename as path (assumed relative to root)
+            file_data.append((file.filename, content))
+
+        responses = fs_router.local_backend.upload_files(file_data)
+
+        # Check for errors
+        errors = [r.error for r in responses if r.error]
+        if errors:
+            raise HTTPException(
+                status_code=500, detail=f"Upload failed for some files: {errors}"
+            )
+
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("api_upload_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -446,6 +498,32 @@ async def api_preview(
     except Exception as e:
         logger.error("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))
+
+
+@router.post("/benchmark/analyze", response_model=AnalyzeResponse)
+async def api_analyze(
+    request: AnalyzeRequest,
+    fs_router=Depends(get_router),
+):
+    """Analyze manufacturability of a part."""
+    try:
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
+
+        result = validate_and_price(
+            part=component,
+            method=request.method,
+            config=request.config,
+            build_zone=request.build_zone,
+        )
+
+        events = _collect_events(fs_router)
+        return AnalyzeResponse(result=result, events=events)
+
+    except Exception as e:
+        logger.error("api_analyze_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/lint", response_model=LintResponse)
