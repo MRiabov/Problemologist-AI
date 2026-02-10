@@ -4,6 +4,7 @@ from pathlib import Path
 from build123d import Box, BuildPart, Compound
 
 from worker.utils.validation import simulate, validate
+from tests.observability.test_utils import assert_event_emitted, clear_emitted_events
 
 
 def test_geometric_validation():
@@ -22,7 +23,38 @@ def test_geometric_validation():
 
     comp = Compound(label="overlapping", children=[p1.part, p2.part])
     print(f"Validating overlapping boxes: {validate(comp)}")
+
+    # We don't have automatic event emission in validate() yet, but we will test it via validate_objectives_yaml
     assert validate(comp) == False
+
+
+def test_objectives_validation_events():
+    from worker.utils.file_validation import validate_objectives_yaml
+
+    clear_emitted_events()
+
+    invalid_yaml = "invalid: { ["
+    success, errors = validate_objectives_yaml(invalid_yaml)
+    assert success is False
+    # YAML parse error doesn't emit LogicFailureEvent yet based on my reading of file_validation.py:48-55
+    # only ValidationError does.
+
+    invalid_data = "project_name: 123"  # Should be string, but depends on schema.
+    # Let's use something that definitely fails Pydantic validation
+    success, errors = validate_objectives_yaml("some_field: unexpected")
+    assert success is False
+    assert_event_emitted("logic_failure", file_path="objectives.yaml")
+
+
+def test_plan_validation_events():
+    from worker.utils.file_validation import validate_plan_md_structure
+
+    clear_emitted_events()
+
+    invalid_plan = "# Some Heading\nNo required sections."
+    success, errors = validate_plan_md_structure(invalid_plan, plan_type="benchmark")
+    assert success is False
+    assert_event_emitted("lint_failure_docs", file_path="plan.md")
 
 
 def test_simulation():

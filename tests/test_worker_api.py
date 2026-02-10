@@ -93,7 +93,9 @@ def test_fs_edit(mock_create_router):
 def test_execute_runtime():
     """Test executing Python code via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "print('hello from api')", "timeout": 5}
+        "/runtime/execute",
+        json={"code": "print('hello from api')", "timeout": 5},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -105,9 +107,69 @@ def test_execute_runtime():
 def test_execute_runtime_timeout():
     """Test runtime execution timeout via API."""
     response = client.post(
-        "/runtime/execute", json={"code": "import time; time.sleep(2)", "timeout": 1}
+        "/runtime/execute",
+        json={"code": "import time; time.sleep(2)", "timeout": 1},
+        headers={"X-Session-ID": "test-session"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["timed_out"] is True
     assert data["exit_code"] == -1
+
+
+@patch("worker.api.routes._load_component")
+@patch("worker.api.routes.simulate")
+def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
+    """Test the benchmark simulate endpoint."""
+    mock_load.return_value = MagicMock()
+    mock_simulate.return_value = MagicMock(
+        success=True, summary="stable", render_paths=[], mjcf_content="<mjcf/>"
+    )
+
+    # Create a dummy events.jsonl to test collection
+    events_file = tmp_path / "events.jsonl"
+    events_file.write_text('{"event_type": "component_usage", "category": "test"}\n')
+
+    with patch("worker.api.routes.create_filesystem_router") as mock_create_router:
+        mock_router = MagicMock()
+        mock_router.local_backend.root = tmp_path
+        mock_router.exists.return_value = True
+        mock_router.read.return_value = events_file.read_bytes()
+        mock_create_router.return_value = mock_router
+
+        response = client.post(
+            "/benchmark/simulate",
+            json={"script_path": "main.py"},
+            headers={"X-Session-ID": "test-session"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["events"]) == 1
+        assert data["events"][0]["event_type"] == "component_usage"
+
+
+@patch("worker.api.routes._load_component")
+@patch("worker.api.routes.validate")
+def test_benchmark_validate(mock_validate, mock_load, tmp_path):
+    """Test the benchmark validate endpoint."""
+    mock_load.return_value = MagicMock()
+    mock_validate.return_value = True
+
+    with patch("worker.api.routes.create_filesystem_router") as mock_create_router:
+        mock_router = MagicMock()
+        mock_router.local_backend.root = tmp_path
+        mock_router.exists.return_value = False  # No events
+        mock_create_router.return_value = mock_router
+
+        response = client.post(
+            "/benchmark/validate",
+            json={"script_path": "main.py"},
+            headers={"X-Session-ID": "test-session"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "events" in data
