@@ -85,6 +85,7 @@ class RemoteFilesystemBackend(BackendProtocol):
     ) -> EditResult:
         # Note: WorkerClient.edit_file takes a list of EditOp
         from worker.api.schema import EditOp
+
         try:
             success = await self.client.edit_file(
                 file_path, [EditOp(old_string=old_string, new_string=new_string)]
@@ -98,8 +99,15 @@ class RemoteFilesystemBackend(BackendProtocol):
     async def agrep_raw(
         self, pattern: str, path: Optional[str] = None, glob: Optional[str] = None
     ) -> Union[List[GrepMatch], str]:
-        logger.warning("agrep_raw_not_fully_implemented_on_worker")
-        return []
+        matches = await self.client.grep(pattern, path, glob)
+        return [
+            {
+                "path": m.path,
+                "line": m.line,
+                "text": m.text,
+            }
+            for m in matches
+        ]
 
     async def aglob_info(self, pattern: str, path: str = "/") -> List[ProtocolFileInfo]:
         return await self.als_info(path)
@@ -111,7 +119,9 @@ class RemoteFilesystemBackend(BackendProtocol):
         for path, content in files:
             try:
                 success = await self.client.write_file(path, content.decode("utf-8"))
-                responses.append(FileUploadResponse(path=path, error=None if success else "failed"))
+                responses.append(
+                    FileUploadResponse(path=path, error=None if success else "failed")
+                )
             except Exception as e:
                 responses.append(FileUploadResponse(path=path, error=str(e)))
         return responses
@@ -122,7 +132,9 @@ class RemoteFilesystemBackend(BackendProtocol):
             try:
                 content = await self.client.read_file(path)
                 responses.append(
-                    FileDownloadResponse(path=path, content=content.encode("utf-8"), error=None)
+                    FileDownloadResponse(
+                        path=path, content=content.encode("utf-8"), error=None
+                    )
                 )
             except Exception as e:
                 responses.append(FileDownloadResponse(path=path, error=str(e)))
@@ -155,7 +167,9 @@ class RemoteFilesystemBackend(BackendProtocol):
         new_string: str,
         replace_all: bool = False,
     ) -> EditResult:
-        return self._run_sync(self.aedit(file_path, old_string, new_string, replace_all))
+        return self._run_sync(
+            self.aedit(file_path, old_string, new_string, replace_all)
+        )
 
     def grep_raw(
         self, pattern: str, path: Optional[str] = None, glob: Optional[str] = None

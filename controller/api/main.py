@@ -28,6 +28,7 @@ WORKER_URL = settings.worker_url
 # Temporal client
 temporal_client_instance: Client = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global temporal_client_instance
@@ -37,11 +38,12 @@ async def lifespan(app: FastAPI):
         logger.info("connected_to_temporal", url=TEMPORAL_URL)
     except Exception as e:
         logger.error("failed_to_connect_to_temporal", error=str(e))
-    
+
     yield
-    
+
     # Clean up if needed
     pass
+
 
 app = FastAPI(title="Problemologist Controller", lifespan=lifespan)
 
@@ -83,7 +85,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
             try:
                 client = get_worker_client(session_id)
                 backend = RemoteFilesystemBackend(client)
-                agent = create_agent_graph(backend)
+                agent, langfuse_callback = create_agent_graph(backend)
 
                 # Add initial trace
                 initial_trace = Trace(
@@ -95,13 +97,29 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 db.add(initial_trace)
                 await db.commit()
 
-                # Setup real-time tracing to DB
-                db_callback = DatabaseCallbackHandler(episode_id)
+                # Setup real-time tracing to DB, pass langfuse_callback for linking
+                db_callback = DatabaseCallbackHandler(
+                    episode_id, langfuse_callback=langfuse_callback
+                )
+
+                # Prepare callbacks for agent run
+                callbacks = [db_callback]
+
+                # If langfuse is enabled, create a top-level trace for the episode
+                if langfuse_callback:
+                    # langfuse_callback is a CallbackHandler, it has a 'trace' method or we can get it from client
+                    # Actually, the create_agent_graph already attaches it to ChatOpenAI.
+                    # But if we want the WHOLE agent run to be one trace, we should use the handler.
+                    # langchain_handler = langfuse_callback
+                    callbacks.append(langfuse_callback)
 
                 # Run the agent with tracing
                 result = await agent.ainvoke(
                     {"messages": [("user", task)], "session_id": session_id},
-                    config={"callbacks": [db_callback]},
+                    config={
+                        "callbacks": callbacks,
+                        "metadata": {"episode_id": str(episode_id)},
+                    },
                 )
 
                 # Final trace
