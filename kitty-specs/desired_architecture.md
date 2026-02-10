@@ -1386,6 +1386,7 @@ We track the following structured domain events to compute the evaluation metric
 
 1. Component usage,
 2. Tool invocation,
+    - separate events for each tool call - easier to track later.
 3. Manufacturability and price check (engineer)
     - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
 4. Scene valiation (Benchmark CAD engineer)
@@ -1412,6 +1413,53 @@ We track the following structured domain events to compute the evaluation metric
 15. Lint failure - Markdown/YAML
 16. Logic/constraint failure - YAML
 17. Skill edit (skill editing agent)
+18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
+19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
+20. Submission attempt without creating all necessary files.
+    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
+21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
+22. Plan refusal events with an explicit refusal reason and proof-of-impossibility evidence (note: no agent currently for plan refusal)
+23. Forbidden joint creation/adding logic.
+
+<!-- 20. Metric for "Jamming Rate"
+    - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
+    - Why: Distinguishes between "I didn't try" and "I tried but the mechanism jammed". Crucial for debugging friction/tolerance issues -->
+
+##### Not just events, but numeric events
+
+Notably, outside of just events, we want to track crucial numbers; especially for metrics below. E.g. cost/weight estimate events from planners and actual cost/weight from validation, for error analysis. *Technically*, we don't exactly *need* an event because we have the objectives.yaml in s3, but extracting the data from `objectives.yaml` and other "numeric" files (yaml frontmatter included) will make it very handy for downstream analysis (and would save time for analysis downstream.)
+
+##### Tracking seeds
+
+In addition, we track randomization seed and variant events for every run (static variant id, runtime seed). Needed for robustness/flakiness metrics.
+
+#### Metrics
+
+We defive (a growing list of) (aggregate) metrics:
+
+<!-- All below are LLM suggested, but are good. -->
+1. Benchmark solvability rate: % of generated benchmarks solvable within constraints by the engineer (or baseline solver).
+2. Benchmark diversity coverage: distribution across physics principles (gravity, friction, motors), object types, DOF counts, moving parts, and environment templates.
+3. Robustness across seeds: success rate across runtime jitter seeds and static variants.
+4. Plan adherence rate: how often CAD output matches plan (geometry, constraints, objectives).
+5. Price/weight estimation error: planner estimated vs actual validated cost/weight, by agent and benchmark type.
+6. Time-to-solution metrics: median time/tool-calls to first valid benchmark and first valid solution.
+7. Reasoning trace capture rate: % of runs with stored traces; trace sufficiency score (presence of required sections).
+8. Journal quality score: % of entries with intent/result/reflection/next-step; frequency per run; correlation with success.
+9. Optimization capture rate: % of runs where notable optimization is logged (objective #5).
+10. Skill effectiveness: performance delta before/after a new skill version.
+11. Library growth and reuse: new build123d modules added per period and reuse rate across tasks.
+12. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
+13. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
+14. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
+15. Cost/weight delta heuristic: if cheaper/lighter alternative was computed but final solution is worse, log event.
+
+<!-- 1. Infrastructure/framework stability:
+    - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
+<!-- 2. Denser reward signal - track normalized distance to target, something like `Score = 1.0 - (min_distance_achieved / initial_distance)`. Ideally (not mandatory, probably skip for now), also measure a performance of simulation simply without any changes (what if we do nothing - how good is the result?)
+    - it's a metric that was more used in RL, but it's infromative... sometimes. LLM-suggested. -->
+
+<!-- LLM-suggested. -->
 
 #### Bulk uploading events
 
