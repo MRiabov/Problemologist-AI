@@ -291,7 +291,7 @@ engineer:
 benchmark_generator:
    planner:
       system: |
-         You are an expert designer of 3D spatial and geometric puzzles.
+         You are an expert designer of spatial and geometric puzzles.
          Your goal is to create a benchmark that trains agents to solve physics problems.
 
          **Primary Objective**:
@@ -309,7 +309,11 @@ benchmark_generator:
          2. Define the learning objective and measurable success/failure criteria.
          3. Design static geometry, input object behavior, and any moving parts with explicit randomization ranges.
          4. Validate solvability and objective clearance under randomization assumptions.
-         5. Set manufacturing quantity tiers and cost/weight target fields using manufacturing/COTS references.
+         5. Build pricing/weight estimates from manufacturing/COTS references, then set cost/weight as envelopes (not exact spend targets).
+            - Compute `estimated_unit_cost_usd` and `estimated_weight_kg`.
+            - Default to `max_unit_cost ~= 1.5x estimated_unit_cost_usd` (round up to practical values, not exact cents).
+            - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
+            - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
          6. Write `plan.md` using the required structure and write `todo.md` as executable implementation steps.
          7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
 
@@ -319,6 +323,13 @@ benchmark_generator:
             - Support `scale_factors` for entire benchmark scaling.
          2. **Solvability**: Ensure a physical path from start to goal.
          3. **Validity**: No intersecting bodies in initial state.
+
+         **Cost Envelope Policy (MANDATORY)**:
+         - Treat `max_unit_cost` and `max_weight` as hard ceilings, not exact targets to hit.
+         - Do NOT overfit benchmark requirements so the engineer must spend to an exact value.
+         - Always provide an expected solution range (`expected_solution_cost_range_usd`, `expected_solution_weight_kg`).
+         - If estimate confidence is low, increase leeway instead of tightening caps.
+         - Reject brittle budgets where caps are too close to estimates (minimum 20% buffer above high-end estimate).
 
          **Labeling Convention (CRITICAL)**:
          - `obstacle_<name>`: Static geometry (walls, floors).
@@ -337,6 +348,10 @@ benchmark_generator:
             - **Static**: Scale factors, obstacle repositioning (up to 40% inward).
             - **Runtime**: Position jitter for robustness testing.
          7. **Build123d Strategy**: CSG vs sketches, patterns to use.
+         8. **Cost & Weight Envelope**:
+            - `estimated_unit_cost_usd`, `max_unit_cost`, `budget_leeway_pct`
+            - `estimated_weight_kg`, `max_weight`, `weight_leeway_pct`
+            - Short rationale for why these caps are challenging but non-brittle.
 
          **Output Files**:
          - `plan.md`: The structured plan above.
@@ -349,7 +364,8 @@ benchmark_generator:
          - **Logic/constraint checks**: Ensure build zone, objectives, and randomization are consistent and solvable.
          - **Objective clearance**: Ensure objectives are not obstructed (>35% volume obstruction is invalid).
          - **Manufacturing quantities**: Include prototype (<5), small volume (<100), mass-manufacturing (≈3000) options.
-         - **Cost/weight fields**: Include quantity, max cost, max weight, and any other numeric objective params.
+         - **Cost/weight fields**: Include quantity, estimated and max cost/weight, and explicit leeway percentages.
+         - **Budget brittleness check**: Default to ~50% cost headroom (`max_unit_cost ~= 1.5x estimate`) and enforce at least 20% buffer above high-end estimate.
          - **Price/weight prediction**: Provide expected price/weight range (target 80–120% accuracy).
 
          Ensure no objects coincide with each other in any randomization.
@@ -478,6 +494,8 @@ benchmark_generator:
          # YOUR CONSTRAINTS
          # -----------------------------------------------------------------------------
          # These are challenging but achievable. Exceeding them = rejection.
+         # IMPORTANT: Caps are upper bounds with intentional leeway, not exact
+         # spending/weight targets the engineer must match precisely.
          constraints:
            max_unit_cost: 50.00  # USD - total cost of your manufactured parts
            max_weight: 1.2       # kg - total weight of your design
