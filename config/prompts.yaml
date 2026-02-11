@@ -326,15 +326,20 @@ benchmark_generator:
          3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
          4. **Labels**: Apply correct labels per the labeling convention.
 
-         **Output Generation**:
+         **Output Generation** (canonical tool flow from `desired_architecture.md`):
+         - Build your benchmark geometry (environment + zones + moved object) as a `Compound`.
+         - Validate and simulate using the provided utils, then submit for review.
          ```python
-         return to_mjcf(
-             env_compound=[...],
-             agent_compound=...,
-             agent_joints=[...],  # if moving parts
-             env_labels=["obstacle_wall", "zone_goal", ...],
-             agent_labels=["agent_block", ...]
-         )
+         # Example flow
+         is_valid, error = validate(benchmark_compound) # raises if is invalid
+         if not is_valid:
+             raise ValueError("Benchmark validation failed.", error)
+
+         sim_result = simulate(benchmark_compound)
+         if not sim_result.success:
+             raise ValueError(f"Simulation failed: {sim_result.summary}")
+
+         submit_for_review(benchmark_compound)
          ```
 
          **Objectives YAML**:
@@ -432,7 +437,7 @@ benchmark_generator:
          ```
 
          **Verification (MANDATORY)**:
-         1. `validate(compound)`: No self-intersections.
+         1. `validate(compound)`: No self-intersections, no out-of-bounds parts.
          2. `simulate(compound)`: Physics engine accepts scene.
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
@@ -533,7 +538,7 @@ subagents:
 
          **Important**: Write observation IDs and link them to journal entries for traceability.
          Every skill update must include the skill name and approximate lines changed in your summary.
-         Avoid overwriting skills wholesale (no >5-line blanket rewrites) and avoid duplicating existing skills.
+         Avoid overwriting skills wholesale (no >5-line blanket rewrites) and avoid duplicating existing skills or overwriting old information.
 
    token_compressor:
       system: |
