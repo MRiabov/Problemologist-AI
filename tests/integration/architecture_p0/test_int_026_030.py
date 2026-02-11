@@ -42,7 +42,11 @@ constraints:
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -111,7 +115,11 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
