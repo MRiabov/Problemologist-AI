@@ -15,9 +15,12 @@ from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate
+from ..utils.dfm import validate_and_price
 from ..utils.git import commit_all, init_workspace_repo
 from ..utils.preview import preview_design
 from .schema import (
+    AnalyzeRequest,
+    AnalyzeResponse,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
@@ -338,6 +341,32 @@ async def api_validate(
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+
+
+@router.post("/benchmark/analyze", response_model=AnalyzeResponse)
+async def api_analyze(
+    request: AnalyzeRequest,
+    fs_router=Depends(get_router),
+):
+    """Analyze design for manufacturability and cost."""
+    try:
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
+
+        result = validate_and_price(
+            part=component,
+            method=request.method,
+            config=request.config,
+            build_zone=request.build_zone,
+        )
+
+        events = _collect_events(fs_router)
+        return AnalyzeResponse(result=result, events=events)
+
+    except Exception as e:
+        logger.error("api_benchmark_analyze_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
