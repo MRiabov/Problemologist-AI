@@ -1,6 +1,8 @@
 import httpx
 
+from shared.models.schemas import BoundingBox
 from worker.api.schema import (
+    AnalyzeResponse,
     BenchmarkToolResponse,
     EditOp,
     ExecuteResponse,
@@ -8,6 +10,7 @@ from worker.api.schema import (
     GrepMatch,
 )
 from worker.filesystem.backend import FileInfo
+from worker.workbenches.models import ManufacturingConfig, ManufacturingMethod
 
 
 class WorkerClient:
@@ -145,6 +148,41 @@ class WorkerClient:
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
+
+    async def analyze(
+        self,
+        method: ManufacturingMethod,
+        config: ManufacturingConfig,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        build_zone: BoundingBox | None = None,
+    ) -> AnalyzeResponse:
+        """Trigger manufacturing analysis via worker."""
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "method": method.value if hasattr(method, "value") else method,
+                "config": config.model_dump()
+                if hasattr(config, "model_dump")
+                else config,
+                "script_path": script_path,
+            }
+            if script_content is not None:
+                payload["script_content"] = script_content
+            if build_zone is not None:
+                payload["build_zone"] = (
+                    build_zone.model_dump()
+                    if hasattr(build_zone, "model_dump")
+                    else build_zone
+                )
+
+            response = await client.post(
+                f"{self.base_url}/benchmark/analyze",
+                json=payload,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return AnalyzeResponse.model_validate(response.json())
 
     async def submit(
         self, script_path: str = "script.py", script_content: str | None = None

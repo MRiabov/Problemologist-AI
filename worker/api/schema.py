@@ -3,6 +3,12 @@ from typing import Any
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
+from shared.models.schemas import BoundingBox
+from worker.workbenches.models import (
+    ManufacturingConfig,
+    ManufacturingMethod,
+    WorkbenchResult,
+)
 
 
 class ReadFileResponse(BaseModel):
@@ -168,3 +174,26 @@ class LintResponse(BaseModel):
     success: StrictBool
     errors: list[dict[StrictStr, Any]] = Field(default_factory=list)
     warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
+
+
+class AnalyzeRequest(BaseModel):
+    """Request to analyze a part for manufacturability and cost."""
+
+    method: ManufacturingMethod
+    config: ManufacturingConfig
+    script_path: StrictStr = Field(
+        default="script.py",
+        description="Path to the script containing the build() function.",
+    )
+    script_content: StrictStr | None = Field(
+        default=None,
+        description="Direct content of the script.",
+    )
+    build_zone: BoundingBox | None = None
+
+
+class AnalyzeResponse(BaseModel):
+    """Response from analyzing a part."""
+
+    result: WorkbenchResult
+    events: list[dict[str, Any]] = Field(default_factory=list)

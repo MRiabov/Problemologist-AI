@@ -10,14 +10,17 @@ import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
 from shared.enums import ResponseStatus
+from worker.workbenches.models import WorkbenchResult
 
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import simulate, submit_for_review, validate
+from ..utils import simulate, submit_for_review, validate, validate_and_price
 from ..utils.git import commit_all, init_workspace_repo
 from ..utils.preview import preview_design
 from .schema import (
+    AnalyzeRequest,
+    AnalyzeResponse,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
@@ -283,6 +286,40 @@ import asyncio
 # Global semaphore to limit concurrent simulations
 # Spec: "only one can simulate"
 SIMULATION_SEMAPHORE = asyncio.Semaphore(1)
+
+
+@router.post("/benchmark/analyze", response_model=AnalyzeResponse)
+async def api_analyze(
+    request: AnalyzeRequest,
+    fs_router=Depends(get_router),
+):
+    """Analyze a part for manufacturability and cost."""
+    try:
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
+        result = validate_and_price(
+            part=component,
+            method=request.method,
+            config=request.config,
+            build_zone=request.build_zone,
+        )
+        events = _collect_events(fs_router)
+        return AnalyzeResponse(
+            result=result,
+            events=events,
+        )
+
+    except Exception as e:
+        logger.error("api_benchmark_analyze_failed", error=str(e))
+        return AnalyzeResponse(
+            result=WorkbenchResult(
+                is_manufacturable=False,
+                unit_cost=0.0,
+                violations=[str(e)],
+            ),
+            events=[],
+        )
 
 
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
