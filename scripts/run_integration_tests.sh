@@ -41,7 +41,7 @@ fi
 MARKER=${1:-integration_p0}
 
 echo "Running integration tests with marker: $MARKER..."
-if uv run pytest -v -m "$MARKER"; then
+if uv run pytest -v -m "$MARKER" --maxfail=3 -s -p no:xdist; then
   echo "Integration tests PASSED!"
   SUCCESS=1
 else
