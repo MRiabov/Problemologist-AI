@@ -16,7 +16,7 @@ def test_geometric_validation():
         Box(10, 10, 10)
 
     print(f"Validating single box: {validate(p.part)}")
-    assert validate(p.part) == True
+    assert validate(p.part)[0] == True
 
     # 2. Overlapping boxes
     with BuildPart() as p1:
@@ -28,7 +28,7 @@ def test_geometric_validation():
     print(f"Validating overlapping boxes: {validate(comp)}")
 
     # We don't have automatic event emission in validate() yet, but we will test it via validate_objectives_yaml
-    assert validate(comp) == False
+    assert validate(comp)[0] == False
 
 
 def test_objectives_validation_events():
@@ -79,7 +79,46 @@ def test_handover():
     os.environ["SESSION_ID"] = "test_session"
     plan_path = Path("plan.md")
     todo_path = Path("todo.md")
+    obj_path = Path("objectives.yaml")
+    cost_path = Path("preliminary_cost_estimation.yaml")
     try:
+        obj_path.write_text("""
+objectives:
+  goal_zone:
+    min: [0, 0, 0]
+    max: [10, 10, 10]
+  build_zone:
+    min: [0, 0, 0]
+    max: [100, 100, 100]
+  forbid_zones: []
+simulation_bounds:
+  min: [-100, -100, 0]
+  max: [100, 100, 100]
+moved_object:
+  label: "test_ball"
+  shape: "sphere"
+  start_position: [5, 5, 5]
+  runtime_jitter: [0, 0, 0]
+moving_parts: []
+constraints:
+  max_unit_cost: 100.0
+  max_weight: 10.0
+randomization:
+  static_variation_id: "test"
+  runtime_jitter_enabled: false
+""")
+        cost_path.write_text("""
+version: "1.0"
+constraints:
+  benchmark_max_unit_cost_usd: 100.0
+  benchmark_max_weight_kg: 10.0
+  planner_target_max_unit_cost_usd: 80.0
+  planner_target_max_weight_kg: 8.0
+totals:
+  estimated_unit_cost_usd: 10.0
+  estimated_weight_g: 100.0
+  estimate_confidence: "high"
+""")
         plan_path.write_text(
             """# Engineering Plan
 
@@ -112,6 +151,8 @@ Simple test plan
     finally:
         plan_path.unlink(missing_ok=True)
         todo_path.unlink(missing_ok=True)
+        obj_path.unlink(missing_ok=True)
+        cost_path.unlink(missing_ok=True)
     assert res == True
 
     renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))

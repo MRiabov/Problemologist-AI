@@ -155,7 +155,7 @@ def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
 def test_benchmark_validate(mock_validate, mock_load, tmp_path):
     """Test the benchmark validate endpoint."""
     mock_load.return_value = MagicMock()
-    mock_validate.return_value = True
+    mock_validate.return_value = (True, None)
 
     with patch("worker.api.routes.create_filesystem_router") as mock_create_router:
         mock_router = MagicMock()

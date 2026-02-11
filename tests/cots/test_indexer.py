@@ -17,8 +17,8 @@ def test_indexer_basic(tmp_path):
     engine = create_engine(f"sqlite:///{db_path}")
     with Session(engine) as session:
         items = session.query(COTSItemORM).all()
-        # We expect 4 classes * 1 item = 4 items
-        assert len(items) == 4
+        # We expect 5 classes * 1 item = 5 items
+        assert len(items) == 5
 
         # Check one item
         nut = session.query(COTSItemORM).filter_by(category="fastener").first()
