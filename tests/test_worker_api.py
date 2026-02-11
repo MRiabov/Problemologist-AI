@@ -65,7 +65,7 @@ def test_fs_write(mock_create_router):
 
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    mock_router.write.assert_called_with("/test.txt", "new content")
+    mock_router.write.assert_called_with("/test.txt", "new content", overwrite=False)
 
 
 @patch("worker.api.routes.create_filesystem_router")

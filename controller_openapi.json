@@ -5,6 +5,84 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/": {
+      "get": {
+        "summary": "Read Root",
+        "description": "Root endpoint for service discovery.",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/episodes/{episode_id}/traces/{trace_id}/feedback": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Report Trace Feedback",
+        "description": "Report feedback for a specific trace to Langfuse.",
+        "operationId": "report_trace_feedback_episodes__episode_id__traces__trace_id__feedback_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "trace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trace Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/episodes/": {
       "get": {
         "tags": [
@@ -75,6 +153,130 @@
         }
       }
     },
+    "/episodes/{episode_id}/interrupt": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Interrupt Episode",
+        "description": "Interrupt a running episode.",
+        "operationId": "interrupt_episode_episodes__episode_id__interrupt_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/generate": {
+      "post": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Generate Benchmark",
+        "description": "Trigger a new benchmark generation session.",
+        "operationId": "generate_benchmark_benchmark_generate_post",
+        "parameters": [
+          {
+            "name": "prompt",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Prompt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/{session_id}": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_benchmark__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/skills/": {
       "get": {
         "tags": [
@@ -101,54 +303,27 @@
         }
       }
     },
-    "/": {
-      "get": {
-        "summary": "Read Root",
-        "operationId": "read_root__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health": {
-      "get": {
-        "summary": "Health",
-        "operationId": "health_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/simulation/run": {
+    "/ops/backup": {
       "post": {
-        "summary": "Run Simulation",
-        "operationId": "run_simulation_simulation_run_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SimulationRequest"
-              }
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Trigger Backup",
+        "description": "Trigger the automated backup workflow.",
+        "operationId": "trigger_backup_ops_backup_post",
+        "parameters": [
+          {
+            "name": "x-backup-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Backup-Secret"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -163,6 +338,23 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -184,7 +376,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -219,6 +411,31 @@
             "type": "string",
             "title": "Session Id",
             "description": "Session ID for the worker."
+          },
+          "metadata_vars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Vars",
+            "description": "Additional metadata for the episode."
+          },
+          "skill_git_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Git Hash",
+            "description": "Git hash of the skills used for this run."
           }
         },
         "type": "object",
@@ -275,7 +492,8 @@
           "image",
           "step",
           "stl",
-          "python"
+          "python",
+          "other"
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."
@@ -411,6 +629,30 @@
         "title": "EpisodeStatus",
         "description": "Status of an agent episode."
       },
+      "FeedbackRequest": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "title": "FeedbackRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -423,26 +665,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "SimulationRequest": {
-        "properties": {
-          "session_id": {
-            "type": "string",
-            "title": "Session Id",
-            "description": "Session ID for the worker."
-          },
-          "compound_json": {
-            "type": "string",
-            "title": "Compound Json",
-            "description": "Component data.",
-            "default": "{}"
-          }
-        },
-        "type": "object",
-        "required": [
-          "session_id"
-        ],
-        "title": "SimulationRequest"
       },
       "Skill": {
         "properties": {
@@ -479,7 +701,32 @@
             ],
             "title": "Langfuse Trace Id"
           },
-          "raw_trace": {
+          "trace_type": {
+            "$ref": "#/components/schemas/TraceType"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "metadata_vars": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -489,7 +736,29 @@
                 "type": "null"
               }
             ],
-            "title": "Raw Trace"
+            "title": "Metadata Vars"
+          },
+          "feedback_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Score"
+          },
+          "feedback_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Comment"
           },
           "created_at": {
             "type": "string",
@@ -501,10 +770,26 @@
         "required": [
           "id",
           "langfuse_trace_id",
-          "raw_trace",
+          "trace_type",
+          "name",
+          "content",
           "created_at"
         ],
         "title": "TraceResponse"
+      },
+      "TraceType": {
+        "type": "string",
+        "enum": [
+          "tool_start",
+          "tool_end",
+          "llm_start",
+          "llm_end",
+          "log",
+          "error",
+          "event"
+        ],
+        "title": "TraceType",
+        "description": "Type of observability trace."
       },
       "ValidationError": {
         "properties": {
