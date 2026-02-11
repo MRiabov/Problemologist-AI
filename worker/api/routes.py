@@ -10,14 +10,17 @@ import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
 from shared.enums import ResponseStatus
+from worker.workbenches.config import load_config
+from worker.workbenches.models import WorkbenchResult
 
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import simulate, submit_for_review, validate
+from ..utils import simulate, submit_for_review, validate, validate_and_price
 from ..utils.git import commit_all, init_workspace_repo
 from ..utils.preview import preview_design
 from .schema import (
+    AnalyzeRequest,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     EditFileRequest,
@@ -338,6 +341,29 @@ async def api_validate(
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+
+
+@router.post("/benchmark/analyze", response_model=WorkbenchResult)
+async def api_analyze(
+    request: AnalyzeRequest,
+    fs_router=Depends(get_router),
+):
+    """Manufacturing analysis using specified workbench."""
+    try:
+        component = _load_component(
+            fs_router, request.script_path, request.script_content
+        )
+
+        # Load default configuration
+        config = load_config()
+
+        result = validate_and_price(component, request.method, config)
+        return result
+    except Exception as e:
+        logger.error("api_benchmark_analyze_failed", error=str(e))
+        # Wrap error in a failed WorkbenchResult if possible, or raise HTTP error
+        # Since WorkbenchResult has strict fields, raising HTTP exception is safer/easier
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
