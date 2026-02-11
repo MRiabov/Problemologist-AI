@@ -62,7 +62,9 @@ def _extract_sections(content: str) -> dict[str, list[str]]:
     heading_matches.sort(key=lambda x: x[0])
     sections: dict[str, list[str]] = {}
     for i, (start_idx, section) in enumerate(heading_matches):
-        end_idx = heading_matches[i + 1][0] if i + 1 < len(heading_matches) else len(lines)
+        end_idx = (
+            heading_matches[i + 1][0] if i + 1 < len(heading_matches) else len(lines)
+        )
         body_lines = lines[start_idx + 1 : end_idx]
         sections[section] = body_lines
     return sections
@@ -98,8 +100,7 @@ def validate_plan_md(content: str) -> ValidationResult:
     # Enforce list/table requirements for specific sections
     parts_lines = sections.get("## 2. Parts List", [])
     if "## 2. Parts List" in sections and not (
-        _has_table(parts_lines)
-        or BULLET_LIST_PATTERN.search("\n".join(parts_lines))
+        _has_table(parts_lines) or BULLET_LIST_PATTERN.search("\n".join(parts_lines))
     ):
         violations.append("Parts List must contain a bullet list or table of parts.")
 
@@ -111,8 +112,7 @@ def validate_plan_md(content: str) -> ValidationResult:
 
     budget_lines = sections.get("## 4. Cost & Weight Budget", [])
     if "## 4. Cost & Weight Budget" in sections and not (
-        _has_table(budget_lines)
-        or BULLET_LIST_PATTERN.search("\n".join(budget_lines))
+        _has_table(budget_lines) or BULLET_LIST_PATTERN.search("\n".join(budget_lines))
     ):
         violations.append(
             "Cost & Weight Budget must contain a bullet list or table of items."
@@ -120,15 +120,18 @@ def validate_plan_md(content: str) -> ValidationResult:
 
     risk_lines = sections.get("## 5. Risk Assessment", [])
     if "## 5. Risk Assessment" in sections and not (
-        _has_table(risk_lines)
-        or BULLET_LIST_PATTERN.search("\n".join(risk_lines))
+        _has_table(risk_lines) or BULLET_LIST_PATTERN.search("\n".join(risk_lines))
     ):
-        violations.append("Risk Assessment must contain a bullet list or table of risks.")
+        violations.append(
+            "Risk Assessment must contain a bullet list or table of risks."
+        )
 
     return ValidationResult(is_valid=len(violations) == 0, violations=violations)
 
 
-def validate_todo_md(content: str, require_completion: bool = False) -> ValidationResult:
+def validate_todo_md(
+    content: str, require_completion: bool = False
+) -> ValidationResult:
     """
     Validate todo.md structure for proper checkbox format.
 

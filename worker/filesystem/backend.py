@@ -4,33 +4,33 @@ This module provides a filesystem abstraction that maps virtual paths
 to S3 storage with session-based isolation.
 """
 
-import asyncio
 import re
 import shutil
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path, PurePosixPath
-from typing import Any, Protocol, runtime_checkable
+from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 import s3fs
 import structlog
-import wcmatch.glob as wcglob
-from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
-
 from deepagents.backends.protocol import (
     BackendProtocol,
     EditResult,
     FileDownloadResponse,
-    FileInfo as ProtocolFileInfo,
     FileUploadResponse,
     GrepMatch,
     WriteResult,
+)
+from deepagents.backends.protocol import (
+    FileInfo as ProtocolFileInfo,
 )
 from deepagents.backends.utils import (
     check_empty_content,
     format_content_with_line_numbers,
     perform_string_replacement,
 )
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
+
 from shared.type_checking import type_check
 
 from .db import S3Config, get_s3_filesystem
@@ -327,7 +327,7 @@ class SandboxFilesystemBackend(BackendProtocol):
                 with self._fs.open(s3_p, "wb") as f:
                     f.write(content)
                 responses.append(FileUploadResponse(path=path, error=None))
-            except Exception as e:
+            except Exception:
                 responses.append(FileUploadResponse(path=path, error="invalid_path"))
         return responses
 
@@ -478,17 +478,23 @@ class LocalFilesystemBackend(BackendProtocol):
                     "path": virt,
                     "is_dir": is_dir,
                     "size": entry.stat().st_size if not is_dir else 0,
-                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime).isoformat(),
+                    "modified_at": datetime.fromtimestamp(
+                        entry.stat().st_mtime
+                    ).isoformat(),
                 }
                 results.append(info)
         else:
             # If path is a file, return its info
-            results.append({
-                "path": self._virtual(local_path),
-                "is_dir": False,
-                "size": local_path.stat().st_size,
-                "modified_at": datetime.fromtimestamp(local_path.stat().st_mtime).isoformat(),
-            })
+            results.append(
+                {
+                    "path": self._virtual(local_path),
+                    "is_dir": False,
+                    "size": local_path.stat().st_size,
+                    "modified_at": datetime.fromtimestamp(
+                        local_path.stat().st_mtime
+                    ).isoformat(),
+                }
+            )
 
         results.sort(key=lambda x: x["path"])
         return results
@@ -616,12 +622,16 @@ class LocalFilesystemBackend(BackendProtocol):
                 if is_dir and not virt.endswith("/"):
                     virt += "/"
 
-                results.append({
-                    "path": virt,
-                    "is_dir": is_dir,
-                    "size": entry.stat().st_size if not is_dir else 0,
-                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime).isoformat(),
-                })
+                results.append(
+                    {
+                        "path": virt,
+                        "is_dir": is_dir,
+                        "size": entry.stat().st_size if not is_dir else 0,
+                        "modified_at": datetime.fromtimestamp(
+                            entry.stat().st_mtime
+                        ).isoformat(),
+                    }
+                )
             results.sort(key=lambda x: x["path"])
             return results
         except Exception as e:

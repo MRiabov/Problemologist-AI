@@ -5,10 +5,7 @@ from pydantic import ValidationError
 
 from shared.models.schemas import (
     BoundingBox,
-    Constraints,
-    MovedObject,
     MovingPart,
-    ObjectivesSection,
     ObjectivesYaml,
     ReviewFrontmatter,
 )

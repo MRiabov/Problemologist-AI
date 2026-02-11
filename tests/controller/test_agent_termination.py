@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from controller.agent.state import AgentState, AgentStatus
-from controller.agent.graph import should_continue
 from langgraph.graph import END
+
+from controller.agent.graph import should_continue
+from controller.agent.state import AgentState, AgentStatus
 
 
 def test_should_continue_termination():

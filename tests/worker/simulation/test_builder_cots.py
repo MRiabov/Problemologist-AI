@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
-import pytest
-from worker.simulation.builder import SceneCompiler
+
 from shared.cots.parts.motors import ServoMotor
+from worker.simulation.builder import SceneCompiler
 
 
 def test_add_actuator_cots_derivation():

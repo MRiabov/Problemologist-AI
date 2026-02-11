@@ -3,25 +3,25 @@ from typing import Any
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
-from worker.api.schema import EditOp
-from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.observability.tracing import record_worker_events
+from controller.workflows.execution import ScriptExecutionWorkflow
 from shared.observability.schemas import (
-    SimulationRequestEvent,
-    SimulationResultEvent,
+    EditFileToolEvent,
+    GrepToolEvent,
+    LibraryUsageEvent,
+    LsFilesToolEvent,
     ManufacturabilityCheckEvent,
     PlanSubmissionEngineerEvent,
-    SimulationFailureReason,
-    LsFilesToolEvent,
     ReadFileToolEvent,
-    WriteFileToolEvent,
-    EditFileToolEvent,
     RunCommandToolEvent,
-    GrepToolEvent,
-    SkillReadEvent,
+    SimulationFailureReason,
     SimulationInstabilityEvent,
-    LibraryUsageEvent,
+    SimulationRequestEvent,
+    SimulationResultEvent,
+    SkillReadEvent,
+    WriteFileToolEvent,
 )
+from worker.api.schema import EditOp
 
 
 class RemoteFilesystemMiddleware:
@@ -108,9 +108,10 @@ class RemoteFilesystemMiddleware:
                     ],
                 )
 
-            from datetime import datetime
-            from controller.observability.broadcast import EpisodeBroadcaster
             import uuid
+            from datetime import datetime
+
+            from controller.observability.broadcast import EpisodeBroadcaster
 
             # Broadcast update to frontend via unified event hub
             try:
@@ -126,7 +127,7 @@ class RemoteFilesystemMiddleware:
             except ValueError:
                 # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
                 pass
-            except Exception as e:
+            except Exception:
                 # Don't fail the write operation if broadcast fails
                 pass
 

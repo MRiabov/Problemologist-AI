@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+
 from worker.simulation.randomization import (
     MaterialAssignment,
     apply_randomization_to_xml,

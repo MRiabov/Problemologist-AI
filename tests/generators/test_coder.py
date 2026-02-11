@@ -52,11 +52,15 @@ async def test_coder_node_success(mock_state):
     mock_response.content = f"```python\n{valid_script}\n```"
 
     with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
-        with patch("controller.agent.benchmark.nodes.create_deep_agent") as mock_create_agent:
+        with patch(
+            "controller.agent.benchmark.nodes.create_deep_agent"
+        ) as mock_create_agent:
             mock_agent = mock_create_agent.return_value
             mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
 
-            with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+            with patch(
+                "controller.agent.benchmark.nodes.WorkerClient"
+            ) as mock_client_class:
                 mock_client = mock_client_class.return_value
                 mock_client.read_file = AsyncMock(return_value=valid_script)
 
@@ -89,11 +93,15 @@ async def test_coder_node_with_feedback(mock_state):
     mock_response.content = "```python\n# refined script\n```"
 
     with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
-        with patch("controller.agent.benchmark.nodes.create_deep_agent") as mock_create_agent:
+        with patch(
+            "controller.agent.benchmark.nodes.create_deep_agent"
+        ) as mock_create_agent:
             mock_agent = mock_create_agent.return_value
             mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
 
-            with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+            with patch(
+                "controller.agent.benchmark.nodes.WorkerClient"
+            ) as mock_client_class:
                 mock_client = mock_client_class.return_value
                 mock_client.read_file = AsyncMock(return_value="# refined script")
 
@@ -121,9 +129,13 @@ async def test_validator_node_success(mock_state):
 
     with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
         mock_client = mock_client_class.return_value
-        mock_client.git_commit = AsyncMock(return_value=MagicMock(success=True, commit_hash="hash"))
+        mock_client.git_commit = AsyncMock(
+            return_value=MagicMock(success=True, commit_hash="hash")
+        )
         mock_client.validate = AsyncMock(return_value=MagicMock(success=True))
-        mock_client.simulate = AsyncMock(return_value=MagicMock(success=True, artifacts={"render_paths": []}))
+        mock_client.simulate = AsyncMock(
+            return_value=MagicMock(success=True, artifacts={"render_paths": []})
+        )
 
         updated_state = await validator_node(mock_state)
 
@@ -140,7 +152,9 @@ async def test_validator_node_failure(mock_state):
     with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
         mock_client = mock_client_class.return_value
         mock_client.git_commit = AsyncMock(return_value=MagicMock(success=True))
-        mock_client.validate = AsyncMock(return_value=MagicMock(success=False, message="Validation error"))
+        mock_client.validate = AsyncMock(
+            return_value=MagicMock(success=False, message="Validation error")
+        )
 
         updated_state = await validator_node(mock_state)
         assert updated_state["simulation_result"]["valid"] is False

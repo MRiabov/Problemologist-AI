@@ -1,12 +1,13 @@
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from controller.config.settings import settings
+
 from .nodes.architect import architect_node
 from .nodes.critic import critic_node
 from .nodes.engineer import engineer_node
 from .nodes.sidecar import sidecar_node
 from .state import AgentState, AgentStatus
-from controller.config.settings import settings
 
 
 def should_continue(state: AgentState) -> str:

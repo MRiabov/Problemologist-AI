@@ -322,6 +322,7 @@ class FilesystemRouter:
             List of GrepMatch objects or error message.
         """
         import re
+
         logger.debug("router_grep", pattern=pattern, path=path, glob=glob)
 
         # 1. Search local workspace
@@ -335,18 +336,24 @@ class FilesystemRouter:
         for mount in self.mount_points:
             # Simple check: if search path is specified and doesn't match mount prefix, skip
             # This is a bit naive but works for / vs /utils etc.
-            normalized_path = path if path and path.startswith("/") else f"/{path or ''}"
-            if path and not normalized_path.startswith(mount.virtual_prefix) and mount.virtual_prefix != normalized_path:
+            normalized_path = (
+                path if path and path.startswith("/") else f"/{path or ''}"
+            )
+            if (
+                path
+                and not normalized_path.startswith(mount.virtual_prefix)
+                and mount.virtual_prefix != normalized_path
+            ):
                 # Unless searching root
                 if normalized_path != "/":
                     continue
 
             regex = re.compile(re.escape(pattern))
-            
+
             # Resolve search start for this mount
             local_start = mount.local_path
             if path and normalized_path.startswith(mount.virtual_prefix):
-                rel_path = normalized_path[len(mount.virtual_prefix):].lstrip("/")
+                rel_path = normalized_path[len(mount.virtual_prefix) :].lstrip("/")
                 local_start = mount.local_path / rel_path
 
             if not local_start.exists():
@@ -369,15 +376,15 @@ class FilesystemRouter:
                             virt_f = f"{mount.virtual_prefix}/{f.relative_to(mount.local_path)}"
                             for line_num, line in enumerate(content.splitlines(), 1):
                                 if regex.search(line):
-                                    results.append({
-                                        "path": virt_f,
-                                        "line": line_num,
-                                        "text": line
-                                    })
+                                    results.append(
+                                        {"path": virt_f, "line": line_num, "text": line}
+                                    )
                         except:
                             continue
             except Exception as e:
-                logger.warning("mount_grep_failed", mount=mount.virtual_prefix, error=str(e))
+                logger.warning(
+                    "mount_grep_failed", mount=mount.virtual_prefix, error=str(e)
+                )
 
         return results
 

@@ -12,6 +12,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
+
 from ..prompt_manager import PromptManager
 from ..state import AgentState, AgentStatus
 

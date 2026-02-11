@@ -37,7 +37,7 @@ def test_3dp_invalid_part_multi_body(config):
 
 
 def test_3dp_cost_calculation(config):
-    part = Box(10, 10, 10) # 1000 mm3 = 1 cm3
+    part = Box(10, 10, 10)  # 1000 mm3 = 1 cm3
 
     cost1 = calculate_3dp_cost(part, config, quantity=1)
     cost10 = calculate_3dp_cost(part, config, quantity=10)

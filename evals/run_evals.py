@@ -1,5 +1,5 @@
-import asyncio
 import argparse
+import asyncio
 import json
 import sys
 import uuid
@@ -10,18 +10,15 @@ from typing import Any
 sys.path.append(str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from langfuse import Langfuse
 
-from controller.graph.agent import create_agent_graph
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
+from controller.graph.agent import create_agent_graph
 
 WORKER_URL = "http://localhost:8001"
-
-
-from langfuse.langchain import CallbackHandler
 
 
 async def run_single_eval(item: dict[str, Any], agent_name: str):
@@ -30,7 +27,7 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
     """
     task_id = item["id"]
     task_description = item["task"]
-    
+
     print(f"Running eval: {task_id} for agent: {agent_name}")
 
     session_id = str(uuid.uuid4())
@@ -40,20 +37,24 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
     try:
         # Generate a trace_id for Langfuse (optional, controller will generate one if not passed)
         trace_id = uuid.uuid4().hex
-        
+
         # Test a very simple operation first
         print(f"Testing connectivity for {agent_name}...")
         await backend.awrite("test_connect.txt", "hello")
         print(f"Connectivity test passed for {agent_name}")
 
-        agent, _ = create_agent_graph(
-            backend, 
-            agent_name=agent_name, 
-            trace_id=trace_id
-        )
+        agent, _ = create_agent_graph(backend, agent_name=agent_name, trace_id=trace_id)
 
         await agent.ainvoke(
-            {"messages": [("user", "Write a file named 'hello.txt' with content 'world' and then finish.")], "session_id": session_id},
+            {
+                "messages": [
+                    (
+                        "user",
+                        "Write a file named 'hello.txt' with content 'world' and then finish.",
+                    )
+                ],
+                "session_id": session_id,
+            },
             config={"metadata": {"eval_task_id": task_id, "agent_name": agent_name}},
         )
 
@@ -112,7 +113,7 @@ async def main():
     for agent in agents_to_run:
         json_path = evals_root / f"{agent}.json"
         if json_path.exists():
-            with open(json_path, "r") as f:
+            with open(json_path) as f:
                 try:
                     data = json.load(f)
                     if args.limit > 0:

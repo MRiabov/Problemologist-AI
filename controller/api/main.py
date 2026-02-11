@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field, StrictStr
 from temporalio.client import Client
 
+from controller.agent.initialization import initialize_agent_files
 from controller.api import ops
 from controller.api.manager import task_tracker
 from controller.api.routes import episodes, skills
@@ -18,7 +19,6 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
 from shared.logging import configure_logging, get_logger
-from controller.agent.initialization import initialize_agent_files
 
 # Configure logging
 configure_logging("controller")

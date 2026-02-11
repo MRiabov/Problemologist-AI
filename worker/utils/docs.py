@@ -1,11 +1,9 @@
-import glob
-import os
 import inspect
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Type, Union
 
 
-def get_docs_for(entity: Union[Type, Callable, str]) -> str:
+def get_docs_for(entity: type | Callable | str) -> str:
     """
     Search for documentation and usage examples for a given entity (Type, Function, or name string).
     Searches in the `skills` directory (if available) for relevant markdown files.

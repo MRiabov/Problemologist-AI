@@ -1,10 +1,12 @@
-import pytest
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from fastapi import HTTPException
-from controller.api.routes.episodes import report_trace_feedback, FeedbackRequest
+
+from controller.api.routes.episodes import FeedbackRequest, report_trace_feedback
 from controller.persistence.models import Trace
-from shared.enums import TraceType, ResponseStatus
+from shared.enums import ResponseStatus, TraceType
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,5 @@
 import pytest
-import mujoco
-import numpy as np
+
 from worker.simulation.loop import SimulationLoop
 from worker.utils.controllers.time_based import constant
 

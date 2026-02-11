@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+
 from controller.clients.worker import WorkerClient
-from worker.api.schema import ExecuteResponse, EditOp
+from worker.api.schema import EditOp, ExecuteResponse
 from worker.filesystem.backend import FileInfo
 
 

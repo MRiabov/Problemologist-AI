@@ -1,10 +1,11 @@
 from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import Session
 
-from .database.models import COTSItemORM
-from .models import COTSItem, SearchQuery
 from shared.observability.events import emit_event
 from shared.observability.schemas import COTSSearchEvent
+
+from .database.models import COTSItemORM
+from .models import COTSItem, SearchQuery
 
 
 def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:

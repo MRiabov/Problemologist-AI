@@ -1,16 +1,16 @@
 import asyncio
-import re
-from typing import Any, List, Optional, Tuple, Union
 
 import structlog
 from deepagents.backends.protocol import (
     BackendProtocol,
     EditResult,
     FileDownloadResponse,
-    FileInfo as ProtocolFileInfo,
     FileUploadResponse,
     GrepMatch,
     WriteResult,
+)
+from deepagents.backends.protocol import (
+    FileInfo as ProtocolFileInfo,
 )
 from deepagents.backends.utils import (
     check_empty_content,
@@ -35,7 +35,7 @@ class RemoteFilesystemBackend(BackendProtocol):
 
     # --- Async BackendProtocol Implementation ---
 
-    async def als_info(self, path: str) -> List[ProtocolFileInfo]:
+    async def als_info(self, path: str) -> list[ProtocolFileInfo]:
         files = await self.client.list_files(path)
         return [
             {
@@ -97,8 +97,8 @@ class RemoteFilesystemBackend(BackendProtocol):
             return EditResult(error=str(e))
 
     async def agrep_raw(
-        self, pattern: str, path: Optional[str] = None, glob: Optional[str] = None
-    ) -> Union[List[GrepMatch], str]:
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
         matches = await self.client.grep(pattern, path, glob)
         return [
             {
@@ -109,12 +109,12 @@ class RemoteFilesystemBackend(BackendProtocol):
             for m in matches
         ]
 
-    async def aglob_info(self, pattern: str, path: str = "/") -> List[ProtocolFileInfo]:
+    async def aglob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         return await self.als_info(path)
 
     async def aupload_files(
-        self, files: List[Tuple[str, bytes]]
-    ) -> List[FileUploadResponse]:
+        self, files: list[tuple[str, bytes]]
+    ) -> list[FileUploadResponse]:
         responses = []
         for path, content in files:
             try:
@@ -126,7 +126,7 @@ class RemoteFilesystemBackend(BackendProtocol):
                 responses.append(FileUploadResponse(path=path, error=str(e)))
         return responses
 
-    async def adownload_files(self, paths: List[str]) -> List[FileDownloadResponse]:
+    async def adownload_files(self, paths: list[str]) -> list[FileDownloadResponse]:
         responses = []
         for path in paths:
             try:
@@ -151,7 +151,7 @@ class RemoteFilesystemBackend(BackendProtocol):
         except RuntimeError:
             return asyncio.run(coro)
 
-    def ls_info(self, path: str) -> List[ProtocolFileInfo]:
+    def ls_info(self, path: str) -> list[ProtocolFileInfo]:
         return self._run_sync(self.als_info(path))
 
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
@@ -172,15 +172,15 @@ class RemoteFilesystemBackend(BackendProtocol):
         )
 
     def grep_raw(
-        self, pattern: str, path: Optional[str] = None, glob: Optional[str] = None
-    ) -> Union[List[GrepMatch], str]:
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
         return self._run_sync(self.agrep_raw(pattern, path, glob))
 
-    def glob_info(self, pattern: str, path: str = "/") -> List[ProtocolFileInfo]:
+    def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         return self._run_sync(self.aglob_info(pattern, path))
 
-    def upload_files(self, files: List[Tuple[str, bytes]]) -> List[FileUploadResponse]:
+    def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
         return self._run_sync(self.aupload_files(files))
 
-    def download_files(self, paths: List[str]) -> List[FileDownloadResponse]:
+    def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
         return self._run_sync(self.adownload_files(paths))

@@ -7,6 +7,7 @@ import yaml
 from build123d import Compound, export_stl
 
 from shared.models.schemas import ObjectivesYaml
+
 from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
@@ -187,19 +188,19 @@ def validate(
         b_max = build_zone.get("max", [1000, 1000, 1000])
 
         if (
-            bbox.min.X < b_min[0]
-            or bbox.min.Y < b_min[1]
-            or bbox.min.Z < b_min[2]
-            or bbox.max.X > b_max[0]
-            or bbox.max.Y > b_max[1]
-            or bbox.max.Z > b_max[2]
+            b_min[0] > bbox.min.X
+            or b_min[1] > bbox.min.Y
+            or b_min[2] > bbox.min.Z
+            or b_max[0] < bbox.max.X
+            or b_max[1] < bbox.max.Y
+            or b_max[2] < bbox.max.Z
         ):
             msg = f"Build zone violation: bbox {bbox} outside build_zone {build_zone}"
             logger.warning("build_zone_violation", bbox=bbox, build_zone=build_zone)
             return False, msg
     else:
         max_size = 1000.0  # 1 meter fallback
-        if bbox.size.X > max_size or bbox.size.Y > max_size or bbox.size.Z > max_size:
+        if max_size < bbox.size.X or max_size < bbox.size.Y or max_size < bbox.size.Z:
             msg = f"Boundary constraint violation: size {bbox.size} exceeds {max_size}"
             logger.warning("boundary_constraint_violation", size=bbox.size)
             return False, msg

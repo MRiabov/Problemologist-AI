@@ -32,11 +32,11 @@ def test_get_db_url_psycopg_conversion():
 
 def test_get_db_url_missing():
     """Test that it raises ValueError when DATABASE_URL is missing."""
-    with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(
-            ValueError, match="DATABASE_URL environment variable is not set"
-        ):
-            get_db_url()
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        pytest.raises(ValueError, match="DATABASE_URL environment variable is not set"),
+    ):
+        get_db_url()
 
 
 @pytest.mark.asyncio

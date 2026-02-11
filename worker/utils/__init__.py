@@ -1,3 +1,4 @@
+from ..workbenches.models import ManufacturingConfig, ManufacturingMethod
 from . import cad, controllers
 from .cad import HoleType, fastener_hole
 from .dfm import validate_and_price
@@ -10,7 +11,6 @@ from .markdown_validator import (
     validate_todo_md,
 )
 from .validation import simulate, validate
-from .workbenches.models import ManufacturingConfig, ManufacturingMethod
 
 __all__ = [
     "HoleType",

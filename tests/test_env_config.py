@@ -1,6 +1,5 @@
 import os
 from unittest.mock import patch
-import pytest
 
 
 def test_env_var_loading():

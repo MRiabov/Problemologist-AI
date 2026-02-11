@@ -1,5 +1,6 @@
-import structlog
 from pathlib import Path
+
+import structlog
 from git import Repo
 
 logger = structlog.get_logger(__name__)

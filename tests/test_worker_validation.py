@@ -3,11 +3,11 @@ from pathlib import Path
 
 from build123d import Box, BuildPart, Compound
 
-from worker.utils.validation import simulate, validate
 from tests.observability.test_observability_utils import (
     assert_event_emitted,
     clear_emitted_events,
 )
+from worker.utils.validation import simulate, validate
 
 
 def test_geometric_validation():

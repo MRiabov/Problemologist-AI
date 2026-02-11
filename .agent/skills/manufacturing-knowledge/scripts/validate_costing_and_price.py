@@ -1,13 +1,14 @@
 import sys
 from pathlib import Path
+
 import yaml
 from pydantic import ValidationError
 
 # Add project root to sys.path to import shared models
 sys.path.append(str(Path(__file__).resolve().parents[4]))
 
-from shared.models.schemas import PreliminaryCostEstimation
 from shared.logging import get_logger
+from shared.models.schemas import PreliminaryCostEstimation
 
 logger = get_logger(__name__)
 
@@ -42,14 +43,14 @@ def calculate_part_cost(part, materials_data):
         unit_cost = (setup_cost / part.quantity) + material_cost + run_cost
         return unit_cost, mass_g
 
-    elif method == "INJECTION_MOLDING" or method == "IM":
+    if method == "INJECTION_MOLDING" or method == "IM":
         # IM Formula: Tooling + (Material + Cycle) * Quantity
         tooling_cost = 2000.0
         cycle_cost = 0.5
         unit_cost = (tooling_cost / part.quantity) + material_cost + cycle_cost
         return unit_cost, mass_g
 
-    elif method in ["3D_PRINTING", "3DP"]:
+    if method in ["3D_PRINTING", "3DP"]:
         # 3DP: Material + Machine Time
         machine_cost = (part.part_volume_mm3 / 1000.0) * 0.5
         unit_cost = material_cost + machine_cost
@@ -67,7 +68,7 @@ def main():
         sys.exit(1)
 
     try:
-        with open(cost_file, "r") as f:
+        with open(cost_file) as f:
             data = yaml.safe_load(f)
 
         # Load material data
@@ -112,7 +113,7 @@ def main():
 
         # Update objectives.yaml if it exists
         if objectives_file.exists():
-            with open(objectives_file, "r") as f:
+            with open(objectives_file) as f:
                 obj_data = yaml.safe_load(f)
 
             # Sync totals to objectives.yaml

@@ -1,6 +1,5 @@
 """Tests for motor overload detection."""
 
-import mujoco
 import pytest
 
 from worker.simulation.loop import (

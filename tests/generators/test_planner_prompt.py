@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from controller.agent.benchmark.nodes import planner_node, coder_node
-from controller.agent.benchmark.state import BenchmarkGeneratorState
+
+import pytest
+
 from controller.agent.benchmark.models import GenerationSession
+from controller.agent.benchmark.nodes import coder_node, planner_node
+from controller.agent.benchmark.state import BenchmarkGeneratorState
 
 
 @pytest.mark.asyncio

@@ -1,13 +1,11 @@
-import json
-from datetime import UTC, datetime
 from shared.observability.schemas import (
-    ObservabilityEventType,
-    SimulationInstabilityEvent,
-    SubmissionValidationEvent,
     CostWeightDeltaEvent,
     LibraryUsageEvent,
+    ObservabilityEventType,
     ReviewDecisionEvent,
     SimulationFailureReason,
+    SimulationInstabilityEvent,
+    SubmissionValidationEvent,
 )
 
 
