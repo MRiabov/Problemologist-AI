@@ -149,8 +149,9 @@ The Engineering Planner workflow is:
      `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
    - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
    - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
+   - Create `preliminary_cost_estimation.yaml` with one entry per planned part/component and the pricing-relevant fields.
 
-At this point, the planner can handoff the documents to the CAD engineering agent. The planner's documents will be autovalidated, and if the validation fails, the handoff (submission) will be refused, and the planner will need to fix them. (the validation is currently implemented as Pydantic validation.)
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/` (new script) to populate geometry-driven values in `preliminary_cost_estimation.yaml` (part volume, stock/blank size, stock volume, removed volume for CNC). The planner's documents will be autovalidated, and if the validation fails, the handoff (submission) will be refused, and the planner will need to fix them. (the validation is currently implemented as Pydantic validation.)
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -243,9 +244,9 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 
 ##### Initial files for each agent
 
-- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read)
-- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `script.py`, `journal.md`, `renders/`
-- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`)
+- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml`
+- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml` (read), `script.py`, `journal.md`, `renders/`
+- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`)
 - Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `journal.md`
 - Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `script.py`, `journal.md`, `renders/`
 - Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`)
@@ -620,11 +621,12 @@ For now, nothing. I'll filter it out via SQL or similar later and make a "price 
 
 #### Engineer Planner and "Coder" interaction
 
-Engineer sends three files to the coder agent who has to implement the plan:
+Engineer sends four files to the coder agent who has to implement the plan:
 
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
+4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs and preliminary totals.
 
 ##### `plan.md` structure for the engineering plan
 
