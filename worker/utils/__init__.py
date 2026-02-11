@@ -1,4 +1,5 @@
-from . import controllers
+from . import cad, controllers
+from .cad import HoleType, fastener_hole
 from .dfm import validate_and_price
 from .docs import get_docs_for
 from .handover import submit_for_review
@@ -9,10 +10,16 @@ from .markdown_validator import (
     validate_todo_md,
 )
 from .validation import simulate, validate
+from .workbenches.models import ManufacturingConfig, ManufacturingMethod
 
 __all__ = [
+    "HoleType",
+    "ManufacturingConfig",
+    "ManufacturingMethod",
     "ValidationResult",
+    "cad",
     "controllers",
+    "fastener_hole",
     "get_docs_for",
     "simulate",
     "submit_for_review",
