@@ -36,7 +36,6 @@ dependencies = [
     "structlog>=25.5.0",
     "s3fs>=2026.1.0",
     "temporalio>=1.22.0",
-    "langfuse>=3.14.1",
     "asyncpg>=0.31.0",
     "boto3>=1.42",
     "ffmpeg-python>=0.2.0",
@@ -80,5 +79,8 @@ filterwarnings = [
 ]
 markers = [
     "integration: marks tests as integration tests (may use real LLM)",
+    "integration_p0: PR gate integration tests",
+    "integration_p1: Nightly integration tests",
+    "integration_p2: Weekly/manual integration tests",
     "benchmark: marks tests related to the benchmark generator",
 ]

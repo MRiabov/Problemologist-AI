@@ -8,7 +8,7 @@ These models define the contracts for:
 
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 # =============================================================================
 # Common Types
@@ -264,3 +264,24 @@ class PreliminaryCostEstimation(BaseModel):
     cots_parts: list[CotsPartEstimate] = []
     final_assembly: list[SubassemblyEstimate] = []
     totals: CostTotals
+
+    @model_validator(mode="after")
+    def validate_caps(self) -> "PreliminaryCostEstimation":
+        """Enforce INT-011: Planner target caps must be <= benchmark caps."""
+        if (
+            self.constraints.planner_target_max_unit_cost_usd
+            > self.constraints.benchmark_max_unit_cost_usd
+        ):
+            raise ValueError(
+                f"Planner target cost ({self.constraints.planner_target_max_unit_cost_usd}) "
+                f"must be less than or equal to benchmark max cost ({self.constraints.benchmark_max_unit_cost_usd})"
+            )
+        if (
+            self.constraints.planner_target_max_weight_kg
+            > self.constraints.benchmark_max_weight_kg
+        ):
+            raise ValueError(
+                f"Planner target weight ({self.constraints.planner_target_max_weight_kg}) "
+                f"must be less than or equal to benchmark max weight ({self.constraints.benchmark_max_weight_kg})"
+            )
+        return self
