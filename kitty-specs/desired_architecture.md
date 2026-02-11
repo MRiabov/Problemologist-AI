@@ -122,13 +122,48 @@ Again, the execution runs in isolated containers to prevent accidental harmful c
 
 #### Engineer agent details
 
-Engineer has a planner, which is responsible for architecting the solution, the engineer which actually implements the solution, and the critic.
+Engineer has a Planner, which is responsible for architecting the solution, the engineer which actually implements the solution, and the critic.
 
 The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
 
 - The engineer, after *proving* the TODO list is impossible, can refuse the plan.
 
 <!-- Standard best practices will be used. No point in making anything weird in this application. -->
+
+##### Planner workflow
+
+The Engineering Planner workflow is:
+
+1. **Intake and mandatory context read**
+   - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, moving parts + DOFs, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
+   - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
+   - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
+
+2. **Plan the mechanism and budgets**
+   - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter; and fit
+   - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
+   - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
+
+3. **Write required planner artifacts**
+   - Create `plan.md` using the strict engineering structure:
+     `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
+   - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
+   - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
+
+At this point, the planner can handoff the documents to the CAD engineering agent. The planner's documents will be autovalidated, and if the validation fails, the handoff (submission) will be refused, and the planner will need to fix them. (the validation is currently implemented as Pydantic validation.)
+<!-- 
+4. **Pre-handover validation gate**
+   - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
+   - Verify constraints/logic consistency: units, build-zone fit, cost/weight bounds, and no invented catalog pricing.
+   - Planner submission is treated as invalid if required files are missing or malformed.
+
+5. **Handover and iteration loop**
+   - Handover `plan.md` + planner-constrained objectives + `todo.md` to the CAD engineer.
+   - CAD engineer implements and may request refusal only with proof that planner constraints/approach are infeasible.
+   - Reviewer either confirms refusal (`confirm_plan_refusal`) and routes back to Planner for re-plan, or rejects refusal (`reject_plan_refusal`) and routes back to CAD implementation.
+
+6. **Observability**
+   - Emit structured events for plan submission, COTS search usage, markdown/YAML failures, logic/constraint failures, and plan-refusal decisions for downstream evaluation. -->
 
 #### Verification
 
@@ -220,6 +255,8 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
 Another important note: files in e.g. Engineer CAD agent or reviewer aren't created anew - they are reused from the previous agent.
+
+<!-- Note: the filesystem is not in repo root, but in docker containers. -->
 
 <!-- Note: each of these should be asserted.-->
 
