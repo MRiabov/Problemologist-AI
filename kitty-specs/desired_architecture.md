@@ -25,7 +25,7 @@ We have two agents (or agent graphs) - the benchmark generator and the engineer 
 
 #### Agent purpose
 
-The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need a challenges to scale, data to improve against.
+The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need challenges to scale, data to improve against.
 
 #### Agent subagents
 
@@ -47,7 +47,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
 
 - The execution runs in isolated containers to prevent accidental harmful code execution in the main system.
 - The benchmarks are verified for being creatable in MuJoCo. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
-  - Validity means no intersections and other problems; It also means that the code will compile in the first place.
+  - Validity means no intersections and other problems; it also means that the code will compile in the first place.
   - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
 - MJCF is created programmatically, not by a LLM.
 <!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
@@ -78,22 +78,22 @@ Problems with motors and moving parts are verified more consistently because the
 3. **Input object**:
     - **The Projectile**: A high-density sphere (ball) spawned at a high Z-coordinate. It is subject to gravity and will fall immediately upon simulation start.
 
-3. **Objective entities**:
+4. **Objective entities**:
     - **Forbid zones**:
         - A block located directly under the ball's release point to penalize a simple vertical drop.
     - **Goal zone**:
         - An objective located inside the funnel.
 
-4. **Success Criteria**: The ball's center of mass must enter the `zone_goal` (an axis-aligned bounding box defining the interior of the Goal Bin).
+5. **Success Criteria**: The ball's center of mass must enter the `zone_goal` (an axis-aligned bounding box defining the interior of the Goal Bin).
 
-5. **Rescale Limits**: [0.8, 1.2] for X, Y, and Z to maintain the functional relationship between the drop point and the target.
+6. **Rescale Limits**: [0.8, 1.2] for X, Y, and Z to maintain the functional relationship between the drop point and the target.
 
-6. **Randomization**:
+7. **Randomization**:
     - `ball_start_x`: Small horizontal offset to the release point.
     - `goal_offset_x`: The distance the ball needs to be redirected horizontally.
     - `obstacle_height`: The height of the forbidden zone, forcing the agent to adjust the steepness of its ramp.
 
-7. **Python Script Structure**:
+8. **Python Script Structure**:
     - Define the environment (Wall, Obstacle, Goal Zone).
     - Define the dynamic ball as part of the environment (but with mass/physics).
     - Define the agent's part (the ramp/bridge).
@@ -140,7 +140,7 @@ The Engineering Planner workflow is:
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
 2. **Plan the mechanism and budgets**
-   - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter; and fit
+   - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
    - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
 
@@ -250,16 +250,16 @@ Outputs (structured, concise):
 
 #### Invocation
 
-- Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers calls the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
 - The returned part IDs and prices must be used in the plan and cost estimates.
 
-Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation
+Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation.
 
 ##### Reasons for invocation
 
 1. Planners in benchmark and engineering invoke to check exact prices for subcomponents (both make price decisions)
 2. Engineers invoke them because they need to use them and check prices for components (they are constrained by the price)
-3. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough - can just skip!)*
+3. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough—can just skip!)*
 
 #### COTS catalog database (spec 006)
 
@@ -275,7 +275,7 @@ Database:
 
 ### Agentic framework
 
-We use LangChain and LangGraph for the agentic infrastructure. The `deepagents` framework from LangChain developers helps stitching them together (with filesystem utils, TODO lists, etc.)
+We use LangChain and LangGraph for the agentic infrastructure. The `deepagents` framework from LangChain developers help stitching them together (with filesystem utils, TODO lists, etc.)
 
 ### Filesystem
 
@@ -318,7 +318,7 @@ The network latency is perfectly acceptable as LLM reasoning latency far outweig
 
 #### Utils files
 
-The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` `FilesystemMiddleware` (which can force certain files to be unwritable by the in agents) the filesystem.
+The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` `FilesystemMiddleware` (which can force certain files to be unwritable by the agents) the filesystem.
 
 #### Skills files
 
@@ -348,7 +348,7 @@ Many files - TODO lists, plans, would be automatically verified, with descriptiv
 
 Markdown is validated statically to ensure a structure and exact match of headings, sometimes content - e.g. bullet points, exact headings or others is met.
 
-In TODO lists, we assert that either [x] or [-] is present in all checkboxes; and no checkboxes were deleted. It *is* pretty inflexible, but I guess that's what we'll do for now. This should keep the model on task longer.
+In TODO lists, we assert that either [x] or [-] is present in all checkboxes, and no checkboxes were deleted. It *is* pretty inflexible, but I guess that's what we'll do for now. This should keep the model on task longer.
 
 ##### Validating python files
 
@@ -431,7 +431,7 @@ The Journal is the agent's **Episodic Memory**. It is a structured log (a constr
 1. To help the agent remember what it did: what it tried and what didn't work:
   a. Intent,
   b. Result,
-  c. Reflection
+  c. Reflection,
   d. Next step.
 2. To help maintain context amongst task solving retries, and with user conversations.
 3. (implicitly, a non-functional requirement) to help debug the agent.
@@ -489,7 +489,7 @@ The skill agent will read a `skill-creator/` skill as from Anthropic.
 
 ##### Skill agent is run async
 
-The skill agent is run asynchronous to the execution, modifying the skill folder and pushing it to a git repo. It's filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
+The skill agent is run asynchronous to the execution, modifying the skill folder and pushing it to a git repo. Its filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
 The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
 ##### Skill agent has a journal too
@@ -525,7 +525,7 @@ It was proven to be more cost-effective to use a "sidecar" agent that runs in pa
 
 ###### When to write in a journal?
 
-As above - when the agent has spent >4 tool calls in a single conversation trying to figure out an issue or syntaxis, or
+As above - when the agent has spent >4 tool calls in a single conversation trying to figure out an issue or syntax, or
 This also applies to refactors. If the agent has taken an approach, spent 5 tool calls doing a roundtrip and decided against it in the end, note the architectural issue.
 In both cases, if the agent found the solution
 
@@ -534,9 +534,9 @@ The agent will go through all notes in the session and read through ones that ar
 
 ###### Example
 
-1. Observation: Multiple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it(struggle) .
+1. Observation: Multiple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it (struggle).
 2. The learner agent records the issue (async)
-3. The main model finally finds that `Compound` syntaxis requires `Compound(children=[Part|Compound, ...])` syntaxis (with `children` upfront)
+3. The main model finally finds that `Compound` syntax requires `Compound(children=[Part|Compound, ...])` syntax (with `children` upfront)
 4. The learner agent records the found solution and the skill.
 
 #### Worker skills are persisted and are separate from the repository-level skills
@@ -598,7 +598,7 @@ The agent will receive feedback from cost and manufacturability constraints (bas
 
 User prompt ->
 benchmark planner agent <-> Benchmark CAD agent <-> benchmark reviewer (If plan is not valid - e.g. it specifies a conflicting geometry, the CAD agent will refuse; and send back to benchmark planner agent. However, the benchmark CAD agent can not refuse because it fails to do CAD, it can only refuse if the model is in fact invalid.)
-(Benchmark reviewer to CAD agent - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve , the benchmark reviewer agent can refuse)
+(Benchmark reviewer to CAD agent - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve, the benchmark reviewer agent can refuse)
 
 Benchmark reviewer "accepts" and passes the environment to the "lead engineer" - the Engineering Planner model. (indirect contact - no actual "communication")
 
@@ -625,8 +625,8 @@ The plan will have the following bullet points. The plan will be validated for c
             - non-fixed parts.
     - Input objective:
         - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too))
-            - how shape is randomized (shape of the input should be held more or less constant throughout of the run). This is a bullet point list.
-        - Central position and position randomization margins (e.g. x:50, y:80,z:20, x_variation: 20, y_variation: 20, z_variation: 10)
+            - how shape is randomized (shape of the input should be held more or less constant throughout the run). This is a bullet point list.
+        - Central position and position randomization margins (e.g. x:50, y:80, z:20, x_variation: 20, y_variation: 20, z_variation: 10)
     - Where the input objective is located (coordinates + randomization),
     - Objectives location:
         - A "forbid" objectives as a set of approximate AABB coordinates,
@@ -639,7 +639,7 @@ The agent must make sure that the geometric plan is valid, the input objective d
 
 #### Benchmark Generator with Engineer handover
 
-The Engineer agent(s) (for whom the first point of access is the Planner/lead engineer) have can access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
+The Engineer agent(s) (for whom the first point of access is the Planner/lead engineer) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
@@ -650,13 +650,13 @@ The engineer will also receive a YAML file with:
     3. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
     4. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
-    <!-- (in future work) Later on, we will challenge the agent to optimize it's previous result. It would have to beat it's own solution, by, say, 15%.  -->
+    <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
 The positions of objectives (including a build zone) in a `objectives.yaml` file, and information on randomization of starting object positions (small "runtime" jitter), so as to prevent guessing in a 3d space.
 
 ##### A benchmark is reused multiple times
 
-Notably, the benchmarks are randomized and reused multiple times under different variations. the Engineering agent only receieves a "runtime" randomization - (as in the list of the relevant heading) currently only a (relatively) small jitter in the environment.
+Notably, the benchmarks are randomized and reused multiple times under different variations. The Engineering agent only receives a "runtime" randomization - (as in the list of the relevant heading) currently only a (relatively) small jitter in the environment.
 
 ##### What if the benchmark agent set the price too low?
 
@@ -708,7 +708,7 @@ For each part:
 
 ##### `objectives.yaml`
 
-`objectives.yaml` is a central data exchange object to the system. To centralize it's structure:
+`objectives.yaml` is a central data exchange object to the system. To centralize its structure:
 
 ```yaml
 # =============================================================================
@@ -816,7 +816,7 @@ Expected flow:
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
     - The script validates schema consistency and computes preliminary totals.
-    - The script auto-populates the unit cost and weight to the the objectives.yaml file (unless the file is corrupted).
+    - The script auto-populates the unit cost and weight to the objectives.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
 5. Planner writes planner-owned constraints in `objectives.yaml` using validated preliminary totals, under benchmark/customer caps.
 
@@ -834,7 +834,7 @@ Minimum per-COTS-part fields:
 
 - `part_id`, `manufacturer`, `unit_cost_usd`, `source`
 
-Note: I will restate: any field that can be autopopulated is autopopulated. E.g. here the mandatory fields are only `part_id`,`manufacturer`,`source`, the `price` can be pulled from DB (errors are not triggered during validation too, however if it mismatches, the fields must be overwritten and the right price used.)
+Note: I will restate: any field that can be autopopulated is autopopulated. E.g. here the mandatory fields are only `part_id`, `manufacturer`, `source`, the `price` can be pulled from DB (errors are not triggered during validation too, however if it mismatches, the fields must be overwritten and the right price used.)
 
 Required assembly fields:
 
@@ -935,7 +935,7 @@ As usual, the reviews will be strictly typed.
 
 ### Agents cap on execution
 
-The agents will have a max_turns=60 (for example) cap, which would control how many turns (tool call invocations/responses) the agent can do. The agent will stop on turn number max turns The user is able to have the agent continue for another number of turns.
+The agents will have a max_turns=60 (for example) cap, which would control how many turns (tool call invocations/responses) the agent can do. The agent will stop on turn number max turns. The user is able to have the agent continue for another number of turns.
 
 ## Agent Evaluations
 
@@ -950,7 +950,7 @@ We will also need evaluations for an agent. -->
 
 We need evaluation criteria that would be not only functional, but tied to numbers and count of tool calls/reviews from LLM-as-judge.
 
-Bad example: specific as "Markdown would be valid"
+Bad example: specific as "Markdown would be valid."
 Good example: Testing of markdown for structural validity be successful in 95% of cases.
 
 ### Multi-level evaluations architecture
@@ -982,14 +982,14 @@ We should be able to test evaluations on multiple tiers, specifically:
 2. Given a prompt, the engineering planner uses accurate prices from the catalog and doesn't "come up" with prices.
 3. Given a prompt, an engineering planner does not generate plans for features outside of a build zone.
 4. Given a prompt, an engineering planner plans for a solution that is equal or lower to the `max_unit_cost`, `max_weight`, as well as other numeric constraints in 95% of cases.
-5. Given a prompt, the engineering planner produces plans with correct units (e.g. metric or US customary units in 95% of cases.)
+5. Given a prompt, the engineering planner produces plans with correct units (e.g. metric or US customary units in 95% of cases).
 
 ###### Medium evals - CAD Engineer
 
 1. Given a plan, the engineer will pass manufacturability checks in 70% during validation and pricing tool call. (note: lower than during submission because this is explicitly not submitting but validating the tool call).
 2. Given a plan, the engineer will pass manufacturability checks in 90% of tool calls when expected during simulation or submission (when they *expect* that it will definitely pass). On second and third attempts this will improve to 95% and 97% respectively.
 3. The engineer would adhere to requests of the user (passed indirectly to plan) about availability or forbid of drilling of the surrounding environment (note: it should be per-surface, not globally. E.g. one may drill into the floor but may not drill into another machine; but that will come later)
-4. The engineer, after simulation, would interpret the simulation results correctly [...] (how to enforce it? they wouldn't always need to view the resuts, they can use final positions table that should be output or text too.)
+4. The engineer, after simulation, would interpret the simulation results correctly [...] (how to enforce it? they wouldn't always need to view the results, they can use final positions table that should be output or text too.)
 5. The engineer will prefer CSG over sketches in 70% of the cases (soft requirement, but it makes it actually easier to build with code).
 
 ###### Medium evals - Engineer Reviewer
@@ -1021,9 +1021,9 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 ###### Medium evals - Benchmark Generator Planner
 
 1. Given a prompt, a benchmark planner generates a plan that upon valid scrutinizing of a plan reviewer, passes in 80% of cases.
-2. Given a propmt, a benchmark generator planner generates a plan that would have unimpeded objectives (objectives obstructed by obstacles by no more than 35%) in 97% of the cases (calculated by volume - shouldn't be obstructed.)
-3. Given a propmt, the benchmark generator will produce plans for various manufacturing quantities (prototype <5, small volume <100, mass-manufacturing - 3000)
-4. Given a propmt, we will include to the solution proposed by the propmt:
+2. Given a prompt, a benchmark generator planner generates a plan that would have unimpeded objectives (objectives obstructed by obstacles by no more than 35%) in 97% of the cases (calculated by volume - shouldn't be obstructed.)
+3. Given a prompt, the benchmark generator will produce plans for various manufacturing quantities (prototype <5, small volume <100, mass-manufacturing - 3000)
+4. Given a prompt, we will include to the solution proposed by the prompt:
    - will include correct:
       - Quantity
       - Max weight,
@@ -1102,14 +1102,14 @@ There are some episodes which can be take multiple episodes to run.
 
 ## Distributed execution
 
-There is a controller node which runs the LLM and tool calls, and there worker node which:
+There is a controller node which runs the LLM and tool calls, and the worker node which:
 
 1. Executes the simulation,
 2. Executes the python scripts.
 
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
 
-In the future we may well refactor to run on distributed notes, perhaps even IPv6.
+In the future we may well refactor to run on distributed nodes, perhaps even IPv6.
 
 ### Persistent state and durable execution
 
@@ -1121,7 +1121,7 @@ We are deploying to Railway. (In production, we may deploy workers to inexpensiv
 
 #### Deployment specifics
 
-Railway supports docker-compose import and we will start with the docker-compose. This is the easiest choise and I have familiarity with it (k8s too bloated for this purpose)
+Railway supports docker-compose import and we will start with the docker-compose. This is the easiest choice and I have familiarity with it (k8s too bloated for this purpose)
 
 #### Podman containers
 
@@ -1141,7 +1141,7 @@ The "main app" essentially serves as a business logic layer that also forwards r
 
 #### Workers' filesystem
 
-`deepagents` `FilesystemMiddleware` supports a "sandbox" filesystem backend. This is handy, and we will expose the workers' filesystem as sandbox - something that can easily be removed..
+`deepagents` `FilesystemMiddleware` supports a "sandbox" filesystem backend. This is handy, and we will expose the workers' filesystem as sandbox - something that can easily be removed.
 
 Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
@@ -1185,7 +1185,7 @@ Because tasks like simulation (with involve both simulation and uploading to the
 
 ## Simulation and "Definitions of Done"
 
-While this platform has notable downsides for future use, we pick MuJoCo, because it's battle-tested, and requires almost no compile time.
+While this platform has notable downsides for future use, we pick MuJoCo because it's battle-tested, and requires almost no compile time.
 
 <!-- Downsides of MuJoCo?
 
@@ -1206,7 +1206,7 @@ In environments, some objects are fixed, whereas others can be freely hanging or
 In the end, our systems should be transferrable to the real world.
 
 For engineers, constraints must be physically realistic. Meaning: if an engineer agent tries to constrain two parts together, they need to use fasteners or make a mechanism which would fit two parts together. However, the engineer can't constrain two parts by just assigning them a CAD constraint.
-This is because it fits how physics works is in the real world, transferring to which is ultimately the goal of this project.
+This is because it fits how physics works in the real world, transferring to which is ultimately the goal of this project.
 
 We can perhaps verify it by simply adding realistic fastener logic.
 
@@ -1214,7 +1214,7 @@ Similarly, while you can constrain a ball to a plane in CAD, you can't do so in 
 
 ##### Creating realistic constraints
 
-Constraints done by the engineer should be enforced for validity. E.g.: two parts should be actually close together
+Constraints done by the engineer should be enforced for validity. E.g.: two parts should be actually close together.
 
 ###### Fixed parts for the simulation definition
 
@@ -1284,7 +1284,7 @@ arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
 
 1. Walk assembly, find all `RigidJoint` pairs that are connected
 2. For each connected pair: emit `<weld body1="..." body2="..."/>` constraint
-3. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at it's last position in CAD. But still.) -->
+3. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at its last position in CAD. But still.) -->
 
 ###### Edge case: multiple holes
 
@@ -1344,7 +1344,7 @@ The simulation would have only a set number of components that both benchmark de
     - Environment (unmodifiable, or modifiable with minor changes, e.g. drilling);
         - Objectives (goal, forbid zones)
         - Parts (any obstacle/standard CAD object) <!-- probably needs for a better name-->
-        - Input objectes (e.g. - a ball that needs to be delivered somewhere.)
+        - Input objects (e.g. - a ball that needs to be delivered somewhere.)
     - Engineer parts:
        - 3d CAD parts representing real-life objects that engineers would normally create; bound by all physics.
 2. Motors (and simple scripts/functions that run the motors, e.g. in sinusoidal wave, or start/stop every few seconds). Accessible by both engineer and benchmark generator.
@@ -1383,7 +1383,7 @@ We use standard MuJoCo actuators. They need to be controller by the controller f
 
 #### Controller functions
 
-We need to define how motors will behave, abd we'll use a controller. For this, create a util package like `controllers`, which would have time and position-based controllers.
+We need to define how motors will behave, and we'll use a controller. For this, create a util package like `controllers`, which would have time and position-based controllers.
 
 ##### Time-based functions (take in `t` as time)
 
@@ -1402,7 +1402,7 @@ One easy way to implement it is to define a dict of control functions, then pass
 
 ##### Position-based functions
 
-Oftentimes of the time we'll want to control motors through positions, e.g. servos or stepper motors. Define a set of functions that would do inverse kinematics (rotate the motor to a given position, at least)
+Oftentimes we'll want to control motors through positions, e.g. servos or stepper motors. Define a set of functions that would do inverse kinematics (rotate the motor to a given position, at least).
 
 We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10 seconds, rotate to 0, and at 15 seconds rotate back to 45 deg." This will also involve Python functions (probably pre-determined). At least a basic set of these (time-based, constant).
 
@@ -1414,7 +1414,7 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 
 ###### Position-based controllers implementation
 
-""" AI-generated, I'm not a in the MuJoCo motors.
+""" AI-generated, I'm not a pro in the MuJoCo motors.
 For position-based control (servos, steppers), we use **MuJoCo's native `<position>` actuator**:
 
 ```xml
@@ -1480,7 +1480,7 @@ Note: AI-written, I'm not a pro in MuJoCo motors.
 
 ### Definition of "success" and failure in the simulation
 
-We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones and staying in simulation bounds.
+We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones, and staying in simulation bounds.
 
 <!-- another use-case could be: given a severe constraint in positioning, design a system which would support a given load. However, the issue is that it's not  -->
 
@@ -1491,7 +1491,7 @@ We define the "simulation objective" from four components:
 1. A "build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone),
 2. A "goal zone" - the area to which the goal object needs to move to,
 3. The moved object - the object which is spawned to be moved into the goal
-4. A "forbid" zone - an area none of the simulation objects agent may not go into.
+4. A "forbid" zone - an area none of the simulation objects the agent may not go into.
 
 The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
 
@@ -1517,9 +1517,9 @@ The benchmarks are randomized to enable a wider data distribution with less gene
 
 ###### Material static randomization
 
-If a part is moving, (has degrees of freedom), let us randomly switch its material for a more randomly generated environment - e.g., a part would be heavier, lighter, more/less stiff, have more/less restitution, have more/less friction coefficient; the material would be from predetermined files.
+If a part is moving (has degrees of freedom), let us randomly switch its material for a more randomly generated environment - e.g., a part would be heavier, lighter, more/less stiff, have more/less restitution, have more/less friction coefficient; the material would be from predetermined files.
 The engineer would be informed about materials of various parts ahead of time.
-(notably, the benchmark generator should probably allow constraining some materials but only optionally so - e.g. if something is translated by the motor, in probably isn't ABS plastic, it's at least a metal. Allow the "minimum strength" or similar material selection.)
+(Notably, the benchmark generator should probably allow constraining some materials but only optionally so - e.g. if something is translated by the motor, it probably isn't ABS plastic, it's at least a metal. Allow the "minimum strength" or similar material selection.)
 
 ###### Visual static randomization
 
@@ -1533,7 +1533,7 @@ Notably, the engineer is informed about runtime randomization to prevent unexpec
 
 ###### Runtime randomization verification
 
-The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as MuJoCo is made for paralel simulations with slightly varying input positions.
+The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as MuJoCo is made for parallel simulations with slightly varying input positions.
 
 #### Failure
 
@@ -1626,7 +1626,7 @@ To track all agent movements and to persist data, we encode the following:
 2. Error messages from script execution, linting,
 3. All agent thoughts.
 4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
-5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using a scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
+5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
 6. Feedback from the user.
 7. All detailed metadata as required by "Evaluation" database, and more. All bits of data on what called when should be extracted.
 
@@ -1634,7 +1634,7 @@ These will be later used for querying, preproc and model training.
 
 ### LangFuse for observability, DB for deeper logs
 
-We use LangFuse for LLM observability. We will use a Railway template for deployment / deploy a separate container on docker compose locally.
+We use LangFuse for LLM observability. We will use a Railway template for deployment / deploy a separate container on docker-compose locally.
 
 Langfuse is deployed locally/on Railway.
 
@@ -1649,7 +1649,7 @@ We track the following structured domain events to compute the evaluation metric
     - separate events for each tool call - easier to track later.
 3. Manufacturability and price check (engineer)
     - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
-4. Scene valiation (Benchmark CAD engineer)
+4. Scene validation (Benchmark CAD engineer)
 5. Render request (engineer)
 6. Render request (benchmark)
 7. Simulation request (engineer)
@@ -1697,7 +1697,7 @@ In addition, we track randomization seed and variant events for every run (stati
 
 #### Metrics
 
-We defive (a growing list of) (aggregate) metrics:
+We define (a growing list of) (aggregate) metrics:
 
 <!-- All below are LLM suggested, but are good. -->
 1. Benchmark solvability rate: % of generated benchmarks solvable within constraints by the engineer (or baseline solver).
@@ -1727,7 +1727,7 @@ We defive (a growing list of) (aggregate) metrics:
 #### Bulk uploading events
 
 <!-- This part was LLM-suggested, but is OK -->
-We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance - opening DB a hundred connections is slower than opening one and batch uploading it.
+We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance: opening DB a hundred connections is slower than opening one and batch uploading it.
 
 ### Best practice: Give LLMs a way to complain
 
@@ -1820,7 +1820,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 ##### Engineer tools
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
-  - If validating a compound, it will also check for unusal DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
+  - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
 - `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Should run multiple simulations with slightly perturbed object spawn position; to make sure the engineer agents generate robust solutions.
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
 <!-- should it contain its environment model or only the generated model?  -->
@@ -1880,7 +1880,7 @@ So:
 3. Start simulation, locally.
 4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a "submit for review.
     - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
-    the simulation will produce video. The issue is, it's expensive to
+    The simulation will produce video. The issue is, it's expensive to
 5. If doesn't, retry the simulation.
 
 ##### submit_for_review(compound: Compound)
@@ -1943,7 +1943,7 @@ Both planner agent and engineer can only prompt the searching agent for searchin
 We are building open-source, and we trust our compute nodes, so no complex "zero-trust" architecture is necessary.
 
 All the code that runs in the controller app will be in the controller node directory, and all the worker node will be packaged into the controller node.
-<!-- note: the above was failed. -->
+<!-- Note: the above failed. -->
 
 Both controller and worker will have their own container files.
 
@@ -2130,7 +2130,7 @@ The CAD drafting agent will implement, the reviewer will send back reviews or ac
 
 Upon accepting, the environment and its randomized versions will be saved to Assets.
 
-Notably, the environment will also pre-render a set of pictures (e.g. 24 pictures - each from different side) so that the engineering agent does not have to request their generation.
+Notably, the environment will also pre-render a set of pictures (e.g., 24 pictures—each from different side) so that the engineering agent does not have to request their generation.
 
 We may also make a script to generate a number of short input prompts via a LLM.
 
@@ -2151,7 +2151,7 @@ The goal of the application (as stated in the very beginning of the document) is
 ## Other notes
 
 1. There is no need to reinvent the wheel here. The codebase is to use the best practices. I don't want "innovative" code that is hard to work with and demands 2x of my time.
-2. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues to everybody. Need to refactor something? confirm it with me and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
+2. "Fallbacks" lead to bad code. Early termination is preferred. When we are making 3-4 fallbacks which lead to more logic and outdated codebases, it leads to issues for everybody. Need to refactor something? confirm it with me and stay lean. Fail fast if the application fails, because the "happy path" isn't met.
 3. Because the application is open-source and asks for reproducibility, use open-source frameworks.
 4. Because the application is for a scientific use-case (and should be presented in such a light), detailed statistics should be gathered.
 
