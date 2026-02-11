@@ -226,12 +226,13 @@ class FilesystemRouter:
             raise FileNotFoundError(f"File not found: {path}")
         return local_p.read_bytes()
 
-    def write(self, path: str, content: bytes | str) -> None:
+    def write(self, path: str, content: bytes | str, overwrite: bool = False) -> None:
         """Write content to a file.
 
         Args:
             path: Virtual file path.
             content: Content to write.
+            overwrite: Whether to overwrite existing file.
 
         Raises:
             PermissionError: If path is in a read-only directory.
@@ -244,7 +245,12 @@ class FilesystemRouter:
 
         if isinstance(content, bytes):
             content = content.decode("utf-8")
-        self.local_backend.write(path, content)
+        res = self.local_backend.write(path, content, overwrite=overwrite)
+        if res.error:
+            # If backend reports error (e.g. file exists), we raise it.
+            # This allows the API to return 500 (or we could map to 409 if we distinguished).
+            # For "file exists", backend says "Cannot write to ... because it already exists."
+            raise OSError(res.error)
 
     def edit(self, path: str, old_content: str, new_content: str) -> bool:
         """Edit file by replacing content.

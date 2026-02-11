@@ -86,7 +86,8 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 # Prepare callbacks for agent run
                 callbacks = [db_callback]
                 if langfuse_callback:
-                    callbacks.append(langfuse_callback)
+                    # callbacks.append(langfuse_callback)
+                    pass
 
                 # Run the agent with tracing
                 result = await agent.ainvoke(

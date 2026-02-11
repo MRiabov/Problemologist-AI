@@ -49,12 +49,15 @@ constraints:
         # 2. Write a script that manually emits an event to verify collection
         script = """
 import os
+import sys
 from build123d import *
 from shared.observability.events import emit_event
 
 def build():
-    # Ensure event is written to the file worker expects
-    os.environ["EVENTS_FILE"] = "events.jsonl" 
+    # Ensure event is written to the file worker expects in the session root
+    # _load_component adds session_root to sys.path[0]
+    session_root = sys.path[0]
+    os.environ["EVENTS_FILE"] = os.path.join(session_root, "events.jsonl") 
     emit_event({"event_type": "simulation_result", "data": {"status": "success"}})
     return Box(1, 1, 1)
 """
@@ -114,11 +117,13 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 
         script = """
 import os
+import sys
 from build123d import *
 from shared.observability.events import emit_event
 def build(): 
-    # Ensure event is written to the file worker expects
-    os.environ["EVENTS_FILE"] = "events.jsonl"
+    # Ensure event is written to the file worker expects in the session root
+    session_root = sys.path[0]
+    os.environ["EVENTS_FILE"] = os.path.join(session_root, "events.jsonl")
     emit_event({"event_type": "simulation_result", "data": {"seed": 1234}})
     return Box(1,1,1)
 """
