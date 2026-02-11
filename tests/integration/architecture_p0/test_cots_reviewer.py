@@ -11,7 +11,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
 
 @pytest.fixture
 def session_id():
-    return f"test-cots-{uuid.uuid4().hex[:8]}"
+    return str(uuid.uuid4())
 
 
 @pytest.fixture
@@ -70,6 +70,14 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
 async def test_int_016_reviewer_decision_schema_gate(session_id, base_headers):
     """INT-016: Verify reviewer rejects malformed frontmatter decisions."""
     async with httpx.AsyncClient(timeout=30.0) as client:
+        # Create a real episode first
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/agent/run",
+            json={"task": "Test Review Schema", "session_id": session_id},
+        )
+        assert run_resp.status_code == 202
+        episode_id = run_resp.json()["episode_id"]
+
         # Scenario: Post a review with invalid 'decision' value
         malformed_review = """---
 decision: MOCK_DECISION
@@ -79,9 +87,8 @@ evidence:
 This should be rejected.
 """
         # Reviewer output usually goes to a specific path or endpoint
-        # If we have a /episodes/{id}/review endpoint:
         resp = await client.post(
-            f"{CONTROLLER_URL}/episodes/{session_id}/review",  # Just a guess on path
+            f"{CONTROLLER_URL}/episodes/{episode_id}/review",
             json={"review_content": malformed_review},
         )
 
@@ -95,7 +102,6 @@ This should be rejected.
 
         assert resp.status_code in [400, 422]
         assert "decision" in resp.text.lower()
-
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio

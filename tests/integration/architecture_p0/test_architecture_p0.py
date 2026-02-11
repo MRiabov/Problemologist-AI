@@ -129,26 +129,26 @@ async def test_int_020_simulation_failure_taxonomy():
         objectives_content = """
 objectives:
   goal_zone:
-    min: [10, 10, 10]
-    max: [12, 12, 12]
+    min: [10.5, 10.5, 10.5]
+    max: [12.5, 12.5, 12.5]
   forbid_zones:
     - name: "test_forbid"
-      min: [2, 2, 2]
-      max: [4, 4, 4]
+      min: [2.5, 2.5, 2.5]
+      max: [4.5, 4.5, 4.5]
   build_zone:
-    min: [0, 0, 0]
-    max: [100, 100, 100]
+    min: [0.5, 0.5, 0.5]
+    max: [100.5, 100.5, 100.5]
 simulation_bounds:
-    min: [-100, -100, -100]
-    max: [100, 100, 100]
+    min: [-100.5, -100.5, -100.5]
+    max: [100.5, 100.5, 100.5]
 moved_object:
     label: "test_obj"
     shape: "sphere"
-    start_position: [0, 0, 5]
-    runtime_jitter: [0, 0, 0]
+    start_position: [0.5, 0.5, 5.5]
+    runtime_jitter: [0.5, 0.5, 0.5]
 constraints:
-    max_unit_cost: 100
-    max_weight: 10
+    max_unit_cost: 100.5
+    max_weight: 10.5
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
@@ -161,9 +161,10 @@ constraints:
 from build123d import *
 def build():
     with BuildPart() as p:
-        Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    # Move to forbid zone
-    p.part.move(Location((3, 3, 3)))
+        Box(2, 2, 2, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    # Move to forbid zone center (3.5, 3.5, 3.5)
+    p.part.move(Location((3.5, 3.5, 3.5)))
+    p.part.label = "target_box"
     return p.part
 """
         await client.post(

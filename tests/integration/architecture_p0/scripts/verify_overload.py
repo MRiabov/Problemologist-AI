@@ -47,6 +47,9 @@ async def run(_ctx=None):
             f"SIMULATION_RESULT: success={metrics.success}, "
             f"fail_reason={metrics.fail_reason}"
         )
+        if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason:
+            raise RuntimeError(f"Expected motor_overload failure, but got: {metrics.fail_reason}")
+        
         return metrics.dict()
     except Exception as e:
         import traceback
