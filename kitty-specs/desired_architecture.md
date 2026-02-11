@@ -144,14 +144,57 @@ The Engineering Planner workflow is:
    - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
 
-3. **Write required planner artifacts**
-   - Create `plan.md` using the strict engineering structure:
-     `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
-   - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
-   - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
-   - Create `preliminary_cost_estimation.yaml` with one entry per planned part/component and the pricing-relevant fields.
+3. **Calculate the costs per part**:
 
-At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/` (new script) to populate geometry-driven values in `preliminary_cost_estimation.yaml` (part volume, stock/blank size, stock volume, removed volume for CNC). The planner's documents will be autovalidated, and if the validation fails, the handoff (submission) will be refused, and the planner will need to fix them. (the validation is currently implemented as Pydantic validation.)
+  We want to estimate a rough, but detailed prices and architecture of the solution.
+
+  Create a file like `preliminary_cost_estimation.yaml` containing:
+
+  For each part:
+      1. A name of the part
+      2. a description of the part,
+      3. costing information each part in the simulation, e.g. for CNC, blank size, and final volume of the part (and calculate how much to be removed). The inputs are auto-validated, per manufacturing method
+
+  Then: create an assembly structure, like:
+
+  ```yaml
+  final_assembly:
+    - subassembly_1: 
+        parts:
+          - part_1 
+          - part_2
+          - part_3
+        joints: 
+        - joint_1: 
+            parts:
+              - part_1
+              - part_2
+            type: fastener_joint 
+    - subassembly_2:
+        parts:
+        - part_4
+        - part_1 # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
+        joints:
+          parts:  #note: maybe we want to inline it.
+            - part_4
+            - part_1
+          type: fastener_joint
+    - part_5 
+  ```
+
+  Then: Run a script like `validate_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
+
+  Notably, if the plan is higher than the max_unit_cost, it can't proceed and needs to adapt the plan.
+
+1. **Write required planner artifacts**
+
+- Create `plan.md` using the strict engineering structure:
+     `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
+- In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
+- Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
+- Create `preliminary_cost_estimation.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
+
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_and_price.py` to validate `preliminary_cost_estimation.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -626,7 +669,7 @@ Engineer sends four files to the coder agent who has to implement the plan:
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
-4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs and preliminary totals.
+4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_and_price.py`.
 
 ##### `plan.md` structure for the engineering plan
 
@@ -760,6 +803,99 @@ randomization:
 ```
 
 <!-- Note: we are using metric units and degrees. -->
+
+##### `preliminary_cost_estimation.yaml`
+
+To reduce cost guessing, the Engineering Planner outputs a machine-readable estimate file that captures all pricing inputs per part and the assembly structure used to derive quantities and part reuse.
+
+Expected flow:
+
+1. Planner drafts entries for all planned manufactured parts and COTS components.
+2. Planner defines `final_assembly` (subassemblies, part membership, and joints); under the hood we:
+    - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
+    - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
+3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
+    - The script validates schema consistency and computes preliminary totals.
+    - The script auto-populates the unit cost and weight from the objectives.yaml file (unless the file is corrupted).
+4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
+5. Planner writes planner-owned constraints in `objectives.yaml` using validated preliminary totals, under benchmark/customer caps.
+
+Minimum per-manufactured-part fields:
+
+- `part_name`, `part_id`, `description`, `manufacturing_method`, `material_id`
+- `part_volume_mm3`
+- method-specific costing inputs:
+  - CNC: `stock_bbox_mm`, `stock_volume_mm3`, `removed_volume_mm3`
+  - Injection molding / 3D print: required process-specific volume/thickness/time fields per validator contract
+<!-- - `estimated_unit_cost_usd` - auto-calculated. The planner does not need to calculate each. However, it may be populated automatically by the script if it runs successfully? Again, the goal is to offload agent work and guessing (for performance reasons). -->
+- `pricing_notes <!-- User review - maybe. Maybe for "confidence" scores or similar.>
+
+Minimum per-COTS-part fields:
+
+- `part_id`, `manufacturer`, `unit_cost_usd`, `source`
+
+Required assembly fields:
+
+- `final_assembly` containing subassemblies/parts/joints
+- repeated part references are allowed and used by pricing logic to compute quantity effects
+
+```yaml
+version: "1.0"
+units: #pre-populated in template.
+  length: "mm"
+  volume: "mm3"
+  mass: "g"
+  currency: "USD"
+# constraints: # user review - no, unit constraints are written in objectives.yaml. 
+#   benchmark_max_unit_cost_usd: 50.0
+#   benchmark_max_weight_kg: 1.2
+#   planner_target_max_unit_cost_usd: 34.0
+#   planner_target_max_weight_kg: 0.9
+manufactured_parts:
+  - part_name: "ramp_main"
+    part_id: "ramp_main_v1"
+    description: "Primary sloped ramp for ball redirection"
+    manufacturing_method: "CNC"
+    material_id: "aluminum-6061"
+    part_volume_mm3: 182340.0
+    stock_bbox_mm: {x: 220.0, y: 120.0, z: 12.0}
+    stock_volume_mm3: 316800.0
+    # removed_volume_mm3: 134460.0 # no need to calculate, have script calculate it.
+    estimated_unit_cost_usd: 18.70 # estimated automatically
+    pricing_notes: "3-axis; no undercuts"
+  - part_name: "guide_clip"
+    part_id: "guide_clip_v1"
+    description: "Guide clip holding edge trajectory"
+    manufacturing_method: "INJECTION_MOLDING"
+    material_id: "abs-plastic"
+    part_volume_mm3: 24100.0
+    wall_thickness_mm: 2.0
+    cooling_time_s_estimate: 11.0
+    estimated_unit_cost_usd: 0.82
+    pricing_notes: "tooling amortized at target quantity"
+cots_parts:
+  - part_id: "M5x16-912-A2"
+    manufacturer: "ISO"
+    unit_cost_usd: 0.09 # auto-calculated.
+    source: "parts.db"
+  # user note: cots parts must be enforced to exist in the subassemblies, at least 1. Else why would it be here?
+  # user note 2: reminder: search for COTS parts is performed by a subagent
+final_assembly:
+  - subassembly_id: "frame_and_ramp"
+    parts: ["ramp_main_v1", "guide_clip_v1", "guide_clip_v1"]
+    joints:
+      - joint_id: "j1"
+        parts: ["ramp_main_v1", "guide_clip_v1"]
+        type: "fastener_joint"
+totals:
+  estimated_unit_cost_usd: 31.46
+  estimated_weight_g: 742.0
+  estimate_confidence: "medium"
+```
+
+Validation requirement:
+
+- Submission is blocked if `preliminary_cost_estimation.yaml` is missing, malformed, still template-like, fails `validate_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
 
 #### Coder and Reviewer interaction
 
@@ -1538,7 +1674,7 @@ We track the following structured domain events to compute the evaluation metric
 18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
-    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
+    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
 21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with an explicit refusal reason and proof-of-impossibility evidence (note: no agent currently for plan refusal)
 23. Forbidden joint creation/adding logic.
@@ -1706,6 +1842,10 @@ Validated under all environment randomization.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: `deepagents` framework supports subagents this is what we'll use here.-->
 
+#### Planner tools
+
+`validate_and_price` except for manufacturability.
+
 #### Exact tools logic
 
 I will define exact tool (function) logic to avoid confusion.
@@ -1826,13 +1966,18 @@ The assets will be stored on S3 as discussed above. The Postgres database will t
 <!--failed -->
 The repository should be in a monorepo structure and as follows:
 
-```
+```text
+config/
+evals/
 frontend/
 worker/
 controller/
+<!-- optionally, workspace, to store agent output during testing to not have them appear in the file. It is basically a tempdir.(perhaps, should be moved to `/tmp/`.)-->
+/workspace/ 
 ```
 
-and a schema with a OpenAPI schema. The worker and controller have separate `pyproject.toml` and `uv` locks.
+and a schema with a OpenAPI schema.
+<!-- Ideally, The worker and controller have separate `pyproject.toml` and `uv` locks. But it's fine to ignore for now as they have shared tests.-->
 
 ### Logging
 
