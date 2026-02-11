@@ -1,0 +1,53 @@
+name: Controller CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "controller/**"
+      - "shared/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+jobs:
+  check-cooldown:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check cooldown
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LAST_RUN=$(gh run list --workflow "${{ github.workflow }}" --status completed --limit 1 --json updatedAt -q '.[0].updatedAt' || echo "")
+          if [ -z "$LAST_RUN" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            LAST_RUN_EPOCH=$(date -d "$LAST_RUN" +%s)
+            NOW_EPOCH=$(date +%s)
+            DIFF=$(( NOW_EPOCH - LAST_RUN_EPOCH ))
+            if [ $DIFF -ge 3600 ]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  controller-tests:
+    needs: check-cooldown
+    if: needs.check-cooldown.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-path: uv.lock
+      - name: Install dependencies
+        run: uv sync
+      - name: Run controller tests
+        run: uv run pytest tests/controller

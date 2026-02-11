@@ -1,0 +1,53 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+
+jobs:
+  check-cooldown:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check cooldown
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LAST_RUN=$(gh run list --workflow "${{ github.workflow }}" --status completed --limit 1 --json updatedAt -q '.[0].updatedAt' || echo "")
+          if [ -z "$LAST_RUN" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            LAST_RUN_EPOCH=$(date -d "$LAST_RUN" +%s)
+            NOW_EPOCH=$(date +%s)
+            DIFF=$(( NOW_EPOCH - LAST_RUN_EPOCH ))
+            if [ $DIFF -ge 3600 ]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  frontend-tests:
+    needs: check-cooldown
+    if: needs.check-cooldown.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
