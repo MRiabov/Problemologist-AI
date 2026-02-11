@@ -1,10 +1,7 @@
 from enum import Enum
-from typing import Literal
 
 from bd_warehouse.fastener import (
-    ButtonHeadSocketCapScrew,
     CounterSunkScrew,
-    HexNut,
     SocketHeadCapScrew,
 )
 from build123d import (
@@ -13,7 +10,6 @@ from build123d import (
     Location,
     Part,
     RigidJoint,
-    Solid,
 )
 
 # Standard metric coarse pitches for common sizes
@@ -54,10 +50,9 @@ def _get_fastener_instance(hole_type: HoleType, size: str, length: float):
 
     if hole_type == HoleType.FlatHeadHole:
         return CounterSunkScrew(size=size_with_pitch, length=length)
-    elif hole_type == HoleType.CounterBoreHole:
+    if hole_type == HoleType.CounterBoreHole:
         return SocketHeadCapScrew(size=size_with_pitch, length=length)
-    else:
-        return SocketHeadCapScrew(size=size_with_pitch, length=length)
+    return SocketHeadCapScrew(size=size_with_pitch, length=length)
 
 
 def fastener_hole(

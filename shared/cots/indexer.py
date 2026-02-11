@@ -3,10 +3,10 @@ from typing import Any
 
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
 from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
-from shared.cots.parts.motors import ServoMotor
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from shared.cots.parts.motors import ServoMotor
 from shared.type_checking import type_check
 
 from .database.init import init_db

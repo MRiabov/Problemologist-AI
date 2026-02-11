@@ -119,7 +119,7 @@ This is the most critical step for the Problemologist.
 
     ```python
     from skidl import *
-    from my_lib import *
+    from my_lib import *,
 
     mcu = Part("my_lib", "ATTINY85")
     led = Part("my_lib", "LED-5mm-Red")

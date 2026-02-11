@@ -1,20 +1,20 @@
-import pytest
 import io
+from unittest.mock import MagicMock
+
+import pytest
 import s3fs
-from unittest.mock import MagicMock, patch
+
 from worker.filesystem.backend import (
-    SandboxFilesystemBackend,
     LocalFilesystemBackend,
+    SandboxFilesystemBackend,
     SimpleSessionManager,
-    FileInfo,
 )
 from worker.filesystem.router import (
+    AccessMode,
     FilesystemRouter,
     MountPoint,
-    AccessMode,
     WritePermissionError,
 )
-from pathlib import Path
 
 
 @pytest.fixture

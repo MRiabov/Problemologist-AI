@@ -1,5 +1,7 @@
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
+
 from shared.cots.agent import search_cots_catalog
 from shared.cots.models import COTSItem
 

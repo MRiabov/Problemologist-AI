@@ -1,4 +1,5 @@
-from build123d import Box, Color, Compound, Location, Part
+from build123d import Box, Color
+
 from shared.cots.base import COTSPart
 
 

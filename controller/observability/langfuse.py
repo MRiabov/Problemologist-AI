@@ -1,12 +1,12 @@
 import os
-import uuid
-from typing import Any
 
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
 
 
-def get_langfuse_callback(trace_id: str | None = None, name: str | None = None) -> CallbackHandler | None:
+def get_langfuse_callback(
+    trace_id: str | None = None, name: str | None = None
+) -> CallbackHandler | None:
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     Compatible with Langfuse v3+ using trace_context.
@@ -21,14 +21,12 @@ def get_langfuse_callback(trace_id: str | None = None, name: str | None = None) 
             trace_context["trace_id"] = trace_id
         if name:
             trace_context["name"] = name
-            
+
         os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
         os.environ["LANGFUSE_SECRET_KEY"] = secret_key
         os.environ["LANGFUSE_HOST"] = host
 
-        return CallbackHandler(
-            trace_context=trace_context
-        )
+        return CallbackHandler(trace_context=trace_context)
     return None
 
 

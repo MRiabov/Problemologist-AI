@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Any
+
 from build123d import Compound
+
 from shared.observability.events import emit_event
 from shared.observability.schemas import ComponentUsageEvent
 

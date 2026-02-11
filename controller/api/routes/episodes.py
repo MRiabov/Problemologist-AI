@@ -123,7 +123,7 @@ async def list_episodes(db: AsyncSession = Depends(get_db)):
 
         logger = structlog.get_logger(__name__)
         logger.error("list_episodes_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e!s}")
 
 
 @router.get("/{episode_id}", response_model=EpisodeResponse)

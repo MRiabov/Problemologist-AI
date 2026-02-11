@@ -1,10 +1,10 @@
 import json
 import os
-import shutil
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 import pytest
-from build123d import Compound, Box
+from build123d import Box
+
 from worker.utils.handover import submit_for_review
 
 
@@ -50,7 +50,7 @@ def test_submit_for_review_includes_objectives(temp_dir):
         # Check manifest
         manifest_path = temp_dir / "renders" / "review_manifest.json"
         assert manifest_path.exists()
-        with open(manifest_path, "r") as f:
+        with open(manifest_path) as f:
             manifest = json.load(f)
 
         assert manifest["objectives_path"] == str(target_obj)

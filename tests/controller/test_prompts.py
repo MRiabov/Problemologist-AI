@@ -1,4 +1,5 @@
 import pytest
+
 from controller.prompts import get_prompt
 
 

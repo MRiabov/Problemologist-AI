@@ -1,6 +1,5 @@
-from contextlib import suppress
 from shared.cots.base import COTSPart
-from shared.cots.runtime import search_parts, SearchQuery
+from shared.cots.runtime import SearchQuery, search_parts
 from tests.observability.test_observability_utils import (
     assert_event_emitted,
     clear_emitted_events,

@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 from build123d import Box, Compound, Part
+
 from worker.simulation.builder import SimulationBuilder
 
 

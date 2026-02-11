@@ -1,9 +1,5 @@
 from build123d import *
-from worker.utils.dfm import validate_and_price
-from worker.utils.validation import simulate
-from worker.utils.handover import submit_for_review
-from worker.utils.docs import get_docs_for
-from worker.workbenches.models import ManufacturingMethod, ManufacturingConfig
+
 
 # Define your solution part/assembly
 # ... your code here ...

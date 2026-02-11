@@ -1,12 +1,11 @@
 import asyncio
-import sys
 import uuid
-import typer
-from typing import Optional
 
+import typer
+
+from .config import settings
 from .graph import graph
 from .state import AgentState
-from .config import settings
 
 app = typer.Typer()
 
@@ -14,7 +13,7 @@ app = typer.Typer()
 @app.command()
 def run(
     task: str = typer.Argument(..., help="The task for the agent to perform."),
-    thread_id: Optional[str] = typer.Option(
+    thread_id: str | None = typer.Option(
         None, help="Optional thread ID for checkpointing."
     ),
 ):
@@ -55,7 +54,7 @@ async def _run_agent(task: str, thread_id: str):
             inputs = None
     else:
         # New session
-        print(f"🆕 Starting new session...")
+        print("🆕 Starting new session...")
         inputs = AgentState(task=task)
 
     print(f"🚀 Starting Agent with thread_id: {thread_id}")
@@ -69,13 +68,13 @@ async def _run_agent(task: str, thread_id: str):
         for node_name, output in event.items():
             print(f"\n[Node: {node_name}]")
 
-            if "status" in output and output["status"]:
+            if output.get("status"):
                 print(f"Status: {output['status']}")
 
-            if "current_step" in output and output["current_step"]:
+            if output.get("current_step"):
                 print(f"Step: {output['current_step']}")
 
-            if "feedback" in output and output["feedback"]:
+            if output.get("feedback"):
                 print(f"Feedback: {output['feedback']}")
 
             if "journal" in output:

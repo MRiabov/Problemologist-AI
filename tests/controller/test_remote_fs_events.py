@@ -1,20 +1,22 @@
-import pytest
 import uuid
-from unittest.mock import MagicMock, AsyncMock, patch
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.observability.schemas import (
-    SimulationRequestEvent,
-    SimulationResultEvent,
+    EditFileToolEvent,
+    GrepToolEvent,
+    LsFilesToolEvent,
     ManufacturabilityCheckEvent,
     PlanSubmissionEngineerEvent,
-    LsFilesToolEvent,
     ReadFileToolEvent,
-    WriteFileToolEvent,
-    EditFileToolEvent,
     RunCommandToolEvent,
-    GrepToolEvent,
+    SimulationRequestEvent,
+    SimulationResultEvent,
     SkillReadEvent,
+    WriteFileToolEvent,
 )
 from worker.api.schema import EditOp
 

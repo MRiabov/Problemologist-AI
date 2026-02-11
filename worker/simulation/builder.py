@@ -5,6 +5,7 @@ from xml.dom import minidom
 
 import trimesh
 from build123d import Compound, Solid, export_stl
+
 from shared.cots.parts.motors import ServoMotor
 
 logger = logging.getLogger(__name__)

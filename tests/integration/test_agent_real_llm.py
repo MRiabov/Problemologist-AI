@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from dotenv import load_dotenv
 
-from controller.graph.agent import create_agent_graph
 from controller.clients.backend import RemoteFilesystemBackend
+from controller.graph.agent import create_agent_graph
 
 # Load environment variables from .env
 load_dotenv()

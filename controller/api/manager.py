@@ -1,8 +1,8 @@
 import asyncio
 import uuid
 
-from fastapi import WebSocket
 import structlog
+from fastapi import WebSocket
 
 logger = structlog.get_logger(__name__)
 

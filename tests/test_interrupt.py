@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from controller.api.main import app, execute_agent_task
-from controller.api.routes.episodes import get_db, task_tracker
+from controller.api.routes.episodes import get_db
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus
 

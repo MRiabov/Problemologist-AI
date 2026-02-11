@@ -1,6 +1,6 @@
 import json
-import os
 from pathlib import Path
+
 from shared.observability.events import emit_event
 
 

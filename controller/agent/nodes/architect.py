@@ -3,17 +3,15 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
-from shared.type_checking import type_check
-
-from ..prompt_manager import PromptManager
-from ..state import AgentState
-
-
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
+from shared.type_checking import type_check
+
 from ..config import settings
+from ..prompt_manager import PromptManager
+from ..state import AgentState
 
 
 @type_check

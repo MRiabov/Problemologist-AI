@@ -1,9 +1,9 @@
 import textwrap
+
 import pytest
-from pathlib import Path
-from worker.simulation.loop import SimulationLoop
-from worker.utils.validation import simulate, validate
+
 from controller.agent.benchmark.nodes import verify_syntax
+from worker.utils.validation import simulate, validate
 
 
 def test_model_produced_script_integration(tmp_path):

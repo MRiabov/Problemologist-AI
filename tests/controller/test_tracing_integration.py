@@ -1,9 +1,10 @@
 import asyncio
 import uuid
+
 from controller.observability.tracing import record_worker_events
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Trace, Episode
-from shared.enums import TraceType, EpisodeStatus
+from controller.persistence.models import Episode, Trace
+from shared.enums import EpisodeStatus, TraceType
 
 
 async def test_record_worker_events():

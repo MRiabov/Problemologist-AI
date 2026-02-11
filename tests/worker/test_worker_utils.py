@@ -2,7 +2,6 @@ import json
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import pytest
 
 # We need to mock build123d before importing modules that use it
 # or use patch on the module level.
@@ -32,7 +31,7 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     manifest_path = tmp_path / "review_manifest.json"
     assert manifest_path.exists()
 
-    with open(manifest_path, "r") as f:
+    with open(manifest_path) as f:
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test-session"
