@@ -69,35 +69,79 @@ Problems with motors and moving parts are verified more consistently because the
 (input: Test benchmark: drop a ball into a funnel)
 
 ```markdown
-1. **Learning Objective**: This benchmark tests the agent's ability to perform **spatial redirection** and **slope calculation**. The agent must design a geometry that intercepts a dynamic object (falling ball) and uses gravity/inclination to guide it to a target while avoiding a forbidden area directly beneath the release point; and also avoiding the bounds of the simulation.
+`plan.md` (benchmark planner excerpt)
 
-2. **Static Geometry**:
-    - **Support Wall**: A vertical plate at the back (Y=-20) to provide a mounting surface for the agent's part.
-    - **Goal Bin**: A small open-topped box or designated area where the ball must land.
+1. **Learning objective**
+   - Test spatial redirection with gravity: the engineer must route a falling ball into a goal while avoiding a forbidden vertical-drop path.
 
-3. **Input object**:
-    - **The Projectile**: A high-density sphere (ball) spawned at a high Z-coordinate. It is subject to gravity and will fall immediately upon simulation start.
+2. **Environment geometry (with static randomization)**
+   - `support_wall`: center `[0, -35, 40]`, size `[120, 6, 80]`, static scale range `[0.9, 1.15]`.
+   - `funnel_body`: center `[32, 10, 18]`, top radius `20`, bottom radius `7`, height `26`, static scale range `[0.9, 1.1]`.
+   - `goal_bin`: AABB min `[26, 4, 0]`, max `[42, 20, 10]`.
+   - No moving parts in this benchmark (`moving_parts: []`).
 
-4. **Objective entities**:
-    - **Forbid zones**:
-        - A block located directly under the ball's release point to penalize a simple vertical drop.
-    - **Goal zone**:
-        - An objective located inside the funnel.
+3. **Input objective (moved object)**
+   - Shape: `sphere`.
+   - Static randomization: radius in `[5, 7]`.
+   - Nominal spawn position: `[0, 0, 70]`.
+   - Runtime jitter: `[2, 2, 1]` (must be solved robustly across seeds).
 
-5. **Success Criteria**: The ball's center of mass must enter the `zone_goal` (an axis-aligned bounding box defining the interior of the Goal Bin).
+4. **Objective locations**
+   - `build_zone`: min `[-40, -30, 0]`, max `[40, 30, 70]`.
+   - `forbid_zones`:
+     - `vertical_drop_trap`: min `[-8, -8, 0]`, max `[8, 8, 20]`.
+   - `goal_zone`: min `[28, 6, 1]`, max `[40, 18, 9]`.
 
-6. **Rescale Limits**: [0.8, 1.2] for X, Y, and Z to maintain the functional relationship between the drop point and the target.
+5. **Simulation bounds**
+   - min `[-60, -60, 0]`, max `[60, 60, 90]`.
 
-7. **Randomization**:
-    - `ball_start_x`: Small horizontal offset to the release point.
-    - `goal_offset_x`: The distance the ball needs to be redirected horizontally.
-    - `obstacle_height`: The height of the forbidden zone, forcing the agent to adjust the steepness of its ramp.
+6. **Constraints handed to engineering**
+   - Benchmark/customer caps: `max_unit_cost <= 45.0 USD`, `max_weight <= 1.1 kg`.
 
-8. **Python Script Structure**:
-    - Define the environment (Wall, Obstacle, Goal Zone).
-    - Define the dynamic ball as part of the environment (but with mass/physics).
-    - Define the agent's part (the ramp/bridge).
-    - Use `to_mjcf` to export the scene.
+7. **Success criteria**
+   - Success if the moved object's center enters `goal_zone` without touching any forbid zone.
+   - Fail if object exits `simulation_bounds`.
+
+8. **Planner artifacts**
+   - Write `todo.md` implementation checklist.
+   - Write draft `objectives.yaml` matching this geometry/constraint data.
+```
+
+```yaml
+# objectives.yaml (draft from benchmark planner)
+objectives:
+  goal_zone:
+    min: [28, 6, 1]
+    max: [40, 18, 9]
+  forbid_zones:
+    - name: "vertical_drop_trap"
+      min: [-8, -8, 0]
+      max: [8, 8, 20]
+  build_zone:
+    min: [-40, -30, 0]
+    max: [40, 30, 70]
+
+simulation_bounds:
+  min: [-60, -60, 0]
+  max: [60, 60, 90]
+
+moved_object:
+  label: "projectile_ball"
+  shape: "sphere"
+  static_randomization:
+    radius: [5, 7]
+  start_position: [0, 0, 70]
+  runtime_jitter: [2, 2, 1]
+
+moving_parts: []
+
+constraints:
+  max_unit_cost: 45.0
+  max_weight: 1.1
+
+randomization:
+  static_variation_id: "drop_ball_funnel_v2"
+  runtime_jitter_enabled: true
 ```
 
 ### Engineer (problem solver)
@@ -307,6 +351,10 @@ Another important note: files in e.g. Engineer CAD agent or reviewer aren't crea
 ##### Template auto-validation
 
 Where possible, templates would have a validation schema. E.g. (in particular) for YAML files, we would define a validation schema
+
+#### Immutability validation
+
+We assert that files (especially "control" files like `objectives.yaml`) are not validated by the agent. We use git-based hash assertions for such files where they must be immutable.
 
 #### File updates
 
@@ -1917,7 +1965,6 @@ So suppose the agent's code is as follows:
 from build123d import *
 from utils import ManufacturingMethod, submit # mock
 from src.workbenches import validate_and_price
-from 
 
 with BuildPart() as part_builder:
     Box(10,10,10)
