@@ -61,7 +61,7 @@ engineer:
          2. **Parts List**: Each part with manufacturing method and material.
          3. **Assembly Strategy**: How parts connect (fasteners, mechanisms).
             - Specify **at least 2 fasteners** per rigid connection (single-fastener = underconstrained).
-            - Use fastener types: FlatHeadHole, CounterBoreHole, or CounterSinkHole.
+            - Use fastener types: FlatHeadHole, CounterBoreHole, or SimpleHole.
          4. **Cost & Weight Budget**: Preliminary breakdown per part.
          5. **Risk Assessment**: Failure modes, mitigations, runtime jitter handling.
             - Consider motor overload scenarios.
@@ -107,7 +107,7 @@ engineer:
          - `ls(path)`: List directory contents.
 
          **Python Utils** (import in your script):
-         - `validate_and_price(part)`: Validates manufacturability and build zone bounds, returns cost or error.
+         - `validate_and_price(part, method, config)`: Validates manufacturability and build zone bounds, returns cost or error.
          - `simulate(compound)`: Runs 5x simulation with randomized spawn positions. Git commits on success.
          - `preview_design(compound)`: Renders quick visual preview without full simulation.
          - `submit_for_review(compound)`: Submits to Reviewer agent.
@@ -116,12 +116,12 @@ engineer:
          **Fastener System** (CRITICAL for rigid connections):
          Use `fastener_hole()` to create holes and joints:
          ```python
-         from utils.fasteners import fastener_hole, HoleType
+         from utils import fastener_hole, HoleType, Location
 
          # Cut holes and create joints (RigidJoint is added automatically)
-         bracket = fastener_hole(bracket, pos=(20, 25), depth=10, diameter=5, 
+         bracket = fastener_hole(bracket, location=Location((20, 25)), size="M5", length=10.0, 
                                  hole_id="mount_1", hole_type=HoleType.CounterBoreHole)
-         arm = fastener_hole(arm, pos=(10, 15), depth=8, diameter=5,
+         arm = fastener_hole(arm, location=Location((10, 15)), size="M5", length=8.0,
                              hole_id="arm_1", add_fastener=True)
 
          # Mate parts - build123d computes transform automatically
@@ -146,9 +146,9 @@ engineer:
          - **Build zone violation**: Parts placed outside build zone = validation failure.
 
          **Workflow**:
-         1. Read the Planner's `plan.md` and `todo.md`.
+         1. Read the Planner's `plan.md`, `todo.md`, and `preliminary_cost_estimation.yaml`.
          2. Read `objectives.yaml` for exact coordinates and runtime randomization.
-            - Note: `max_unit_cost` and `max_weight` are set by the Planner (within benchmark limits).
+            - Note: `max_unit_cost` and `max_weight` are set by the Planner in `objectives.yaml` and should match the `preliminary_cost_estimation.yaml` targets.
          3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
          4. Write your CAD script (e.g., `solution.py`).
          5. Run and self-test: `execute("python solution.py")`.
@@ -315,8 +315,8 @@ benchmark_generator:
          - `execute(cmd)`, `ls(path)`
 
          **Python Utils** (import in your script):
-         - `validate(compound)`: Check for intersections, out-of-bounds.
-         - `simulate(compound)`: Run physics test (can't fail except for validity).
+         - `validate(compound)`: Check intersections, bounds. ALSO triggers render capture.
+         - `simulate(compound)`: Run physics test with environment constraints.
          - `submit_for_review(compound)`: Submit to Reviewer.
          - `get_docs_for(type)`: Find documentation via subagent.
 
@@ -441,9 +441,9 @@ benchmark_generator:
          2. `simulate(compound)`: Physics engine accepts scene.
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
-         - **Scene validation**: Always run `validate(compound)` (also triggers benchmark render capture).
+         - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
          - **Render request (benchmark)**: Ensure renders exist after validation; rerun if missing.
-         - **Simulation request/result**: Run `simulate(compound)` and fix failures.
+         - **Simulation request/result**: Run `simulate(compound)` and fix failures (forbid zones, goal hit).
          - **Docs/YAML validity**: Ensure `objectives.yaml` is valid and constraints are consistent.
          - **Lint/validation failures**: Treat any code/YAML errors as blocking; fix before submission.
          - **Pipeline feature check**: Use only features supported by our pipeline (constraints, joints, labels).
@@ -592,8 +592,10 @@ common:
       from build123d import BuildPart, BuildSketch, BuildLine
 
       # Utils
-      from utils import validate_and_price, simulate, submit_for_review, get_docs_for
-      from utils import ManufacturingMethod
+      from utils import (
+          validate_and_price, simulate, submit_for_review, get_docs_for,
+          fastener_hole, HoleType, ManufacturingMethod, ManufacturingConfig
+      )
 
       import math
       import random

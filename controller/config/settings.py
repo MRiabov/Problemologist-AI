@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     """Configuration settings for the Problemologist Controller."""
 
     # LLM Settings
-    llm_model: StrictStr = Field(default="openai/gpt-5-nano", alias="LLM_MODEL")
+    llm_model: StrictStr = Field(default="openai/gpt-5.2-nano", alias="LLM_MODEL")
     openai_api_base: str | None = Field(default=None, alias="OPENAI_API_BASE")
     llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
 

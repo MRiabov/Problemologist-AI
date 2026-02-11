@@ -44,6 +44,33 @@ def submit_for_review(component: Compound):
     else:
         logger.warning("todo_md_missing")
 
+    # Validate objectives.yaml (Item 1, 2 of review)
+    objectives_path = Path("objectives.yaml")
+    if objectives_path.exists():
+        from .file_validation import validate_objectives_yaml
+
+        objectives_content = objectives_path.read_text(encoding="utf-8")
+        is_valid, result = validate_objectives_yaml(objectives_content)
+        if not is_valid:
+            logger.error("objectives_yaml_invalid", errors=result)
+            raise ValueError(f"objectives.yaml invalid: {result}")
+    else:
+        logger.warning("objectives_yaml_missing")
+
+    # Validate preliminary_cost_estimation.yaml (if present or required)
+    cost_path = Path("preliminary_cost_estimation.yaml")
+    if cost_path.exists():
+        from .file_validation import validate_preliminary_cost_estimation_yaml
+
+        cost_content = cost_path.read_text(encoding="utf-8")
+        is_valid, result = validate_preliminary_cost_estimation_yaml(cost_content)
+        if not is_valid:
+            logger.error("cost_estimation_yaml_invalid", errors=result)
+            raise ValueError(f"preliminary_cost_estimation.yaml invalid: {result}")
+    else:
+        # Note: architecture says it's required for Planner handover
+        logger.warning("preliminary_cost_estimation_yaml_missing")
+
     # Ensure renders_dir exists
     renders_dir.mkdir(parents=True, exist_ok=True)
 
@@ -64,6 +91,12 @@ def submit_for_review(component: Compound):
         shutil.copy(objectives_path, target_objectives_path)
         logger.info("objectives_yaml_persisted")
 
+    # 4. Copy preliminary_cost_estimation.yaml if it exists
+    target_cost_path = renders_dir / "preliminary_cost_estimation.yaml"
+    if cost_path.exists():
+        shutil.copy(cost_path, target_cost_path)
+        logger.info("cost_estimation_yaml_persisted")
+
     # 4. Create review manifest (signal for next node)
     manifest_path = renders_dir / "review_manifest.json"
     manifest = {
@@ -76,9 +109,12 @@ def submit_for_review(component: Compound):
         "objectives_path": str(target_objectives_path)
         if target_objectives_path.exists()
         else None,
+        "preliminary_cost_estimation_path": str(target_cost_path)
+        if target_cost_path.exists()
+        else None,
     }
 
-    with open(manifest_path, "w") as f:
+    with manifest_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f)
 
     logger.info("handover_complete", manifest=str(manifest_path))

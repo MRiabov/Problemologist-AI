@@ -3,6 +3,7 @@ File validation utilities for agent handover files.
 
 Validates the structure and content of:
 - objectives.yaml: Central data exchange object
+- preliminary_cost_estimation.yaml: Cost risk management
 - plan.md: Structured planning documents
 - Review files: YAML frontmatter with decision field
 """
@@ -13,9 +14,13 @@ import structlog
 import yaml
 from pydantic import ValidationError
 
-from shared.models.schemas import ObjectivesYaml, ReviewFrontmatter
+from shared.models.schemas import (
+    ObjectivesYaml,
+    PreliminaryCostEstimation,
+    ReviewFrontmatter,
+)
 from shared.observability.events import emit_event
-from shared.observability.schemas import LogicFailureEvent, LintFailureDocsEvent
+from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 
 logger = structlog.get_logger(__name__)
 
@@ -36,6 +41,12 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
         if data is None:
             return False, ["Empty or invalid YAML content"]
 
+        # 1. Enforce that file is not the template
+        if "x_min" in content or "x_max" in content or "goal_zone: [x_min" in content:
+            return False, [
+                "objectives.yaml still contains template placeholders (x_min, etc.)"
+            ]
+
         objectives = ObjectivesYaml(**data)
         logger.info("objectives_yaml_valid")
         return True, objectives
@@ -49,6 +60,44 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
             emit_event(
                 LogicFailureEvent(
                     file_path="objectives.yaml",
+                    constraint_name="pydantic_validation",
+                    error_message=error,
+                )
+            )
+        return False, errors
+
+
+def validate_preliminary_cost_estimation_yaml(
+    content: str,
+) -> tuple[bool, PreliminaryCostEstimation | list[str]]:
+    """
+    Parse and validate preliminary_cost_estimation.yaml content.
+
+    Args:
+        content: Raw YAML string content
+
+    Returns:
+        (True, PreliminaryCostEstimation) if valid
+        (False, list[str]) with error messages if invalid
+    """
+    try:
+        data = yaml.safe_load(content)
+        if data is None:
+            return False, ["Empty or invalid YAML content"]
+
+        estimation = PreliminaryCostEstimation(**data)
+        logger.info("cost_estimation_yaml_valid")
+        return True, estimation
+    except yaml.YAMLError as e:
+        logger.warning("cost_estimation_yaml_parse_error", error=str(e))
+        return False, [f"YAML parse error: {e}"]
+    except ValidationError as e:
+        errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
+        logger.warning("cost_estimation_yaml_validation_error", errors=errors)
+        for error in errors:
+            emit_event(
+                LogicFailureEvent(
+                    file_path="preliminary_cost_estimation.yaml",
                     constraint_name="pydantic_validation",
                     error_message=error,
                 )

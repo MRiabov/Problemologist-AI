@@ -175,3 +175,74 @@ class ReviewFrontmatter(BaseModel):
         # Note: Context validation (whether CAD agent actually refused)
         # must be done at the call site, not in the schema
         return v
+
+
+# =============================================================================
+# preliminary_cost_estimation.yaml Schema
+# =============================================================================
+
+
+class ManufacturedPartEstimate(BaseModel):
+    """Preliminary estimate for a manufactured part."""
+
+    part_name: str
+    part_id: str
+    manufacturing_method: str
+    material_id: str
+    quantity: int
+    part_volume_mm3: float
+    stock_bbox_mm: dict[str, float]  # {x: float, y: float, z: float}
+    stock_volume_mm3: float
+    removed_volume_mm3: float
+    estimated_unit_cost_usd: float
+    pricing_notes: str | None = None
+
+
+class CotsPartEstimate(BaseModel):
+    """Preliminary estimate for a COTS part."""
+
+    part_id: str
+    manufacturer: str
+    unit_cost_usd: float
+    quantity: int
+    source: str
+
+
+class CostTotals(BaseModel):
+    """Total estimation for the design."""
+
+    estimated_unit_cost_usd: float
+    estimated_weight_g: float
+    estimate_confidence: Literal["low", "medium", "high"]
+
+
+class CostEstimationUnits(BaseModel):
+    """Units used in the estimation file."""
+
+    length: str = "mm"
+    volume: str = "mm3"
+    mass: str = "g"
+    currency: str = "USD"
+
+
+class CostEstimationConstraints(BaseModel):
+    """Cap values from benchmark vs planner targets."""
+
+    benchmark_max_unit_cost_usd: float
+    benchmark_max_weight_kg: float
+    planner_target_max_unit_cost_usd: float
+    planner_target_max_weight_kg: float
+
+
+class PreliminaryCostEstimation(BaseModel):
+    """
+    Schema for preliminary_cost_estimation.yaml.
+    Output by the Engineering Planner to track cost risks.
+    """
+
+    version: str = "1.0"
+    units: CostEstimationUnits = CostEstimationUnits()
+    constraints: CostEstimationConstraints
+    manufactured_parts: list[ManufacturedPartEstimate] = []
+    cots_parts: list[CotsPartEstimate] = []
+    totals: CostTotals
