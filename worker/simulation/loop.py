@@ -55,6 +55,13 @@ class SimulationLoop:
             elif name and name.startswith("zone_goal"):
                 self.goal_sites.add(i)
 
+        logger.info(
+            "SimulationLoop_init",
+            goal_sites=list(self.goal_sites),
+            forbidden_sites=list(self.forbidden_sites),
+            nsite=self.model.nsite,
+        )
+
         # Configurable timeout (capped at hard limit)
         self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
 
@@ -134,6 +141,7 @@ class SimulationLoop:
         target_body_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
         )
+        logger.info("SimulationLoop_step_start", target_body_id=target_body_id)
         # We rely on self.goal_sites populated in init
 
         # 0. Check for pre-existing instability
@@ -201,7 +209,7 @@ class SimulationLoop:
             goal_hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
             if goal_hit:
                 self.success = True
-                logger.info("Simulation SUCCESS: Goal reached")
+                logger.info("Simulation_SUCCESS", goal_hit=True)
                 break
 
             # 5. Check Timeout (hard cap at 30 seconds)

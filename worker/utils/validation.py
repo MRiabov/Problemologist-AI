@@ -27,154 +27,97 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
 
 
+from worker.simulation.builder import SimulationBuilder
+from worker.simulation.loop import SimulationLoop, SimulationMetrics
+
+
 def to_mjcf(
     component: Compound, model_name: str = "scene", renders_dir: Path | None = None
 ) -> str:
     """
-    Convert a build123d Compound to a MuJoCo XML (MJCF) string.
-    Note: Currently uses a simplified template with an STL mesh.
+    Convert a build123d Compound to a MuJoCo XML (MJCF) string using SimulationBuilder.
     """
-    # 1. Export STL (MuJoCo needs it)
     if not renders_dir:
         renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
-    stl_path = renders_dir / f"{model_name}.stl"
-    export_stl(component, str(stl_path))
 
-    # 2. Return MJCF string
-    # Use absolute path to avoid ambiguity in MuJoCo loading
-    stl_abs_path = stl_path.absolute()
-    return f"""
-<mujoco model="{model_name}">
-  <asset>
-    <mesh name="{model_name}_mesh" file="{stl_abs_path}"/>
-  </asset>
-  <worldbody>
-    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
-    <geom type="plane" size="10 10 .01" rgba=".9 .9 .9 1"/>
-    <body name="{model_name}_body" pos="0 0 0.5">
-      <freejoint/>
-      <geom type="mesh" mesh="{model_name}_mesh" rgba="0 0.5 1 1"/>
-    </body>
-  </worldbody>
-</mujoco>
-"""
+    builder = SimulationBuilder(output_dir=renders_dir)
+    scene_path = builder.build_from_assembly(component)
+    return scene_path.read_text()
 
 
 def simulate(component: Compound, output_dir: Path | None = None) -> SimulationResult:
     """
     Provide a physics-backed stability and objective check.
-    Logic:
-    - Load objectives.yaml for goal/forbid zones.
-    - Convert Compound to MJCF.
-    - Run MuJoCo for 30s or until goal hit.
-    - Monitor for forbid zone contact or out-of-bounds.
-    - Generate standard 24-view renders and latest sim video.
+    Uses SimulationBuilder and SimulationLoop for high-fidelity physics.
     """
     logger.info("simulate_start")
 
     # 1. Setup workspace
     if output_dir:
-        renders_dir = output_dir / "renders"
+        working_dir = output_dir
     else:
-        renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
+        working_dir = Path(os.getenv("RENDERS_DIR", "./renders")).parent
+
+    renders_dir = working_dir / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2. Try loading objectives
-    objectives = None
-    objectives_path = Path("objectives.yaml")
-    # If output_dir is provided, likely running in session?
-    # But current working directory might be different if called from API vs from runtime?
-    # api_simulate is called in worker process. CWD is project root.
-    # objectives.yaml is sent via fs/write to session root (which is output_dir).
-    # So we should look for objectives.yaml in output_dir if provided!
-    if output_dir:
-        objectives_path = output_dir / "objectives.yaml"
+    # 2. Build MJCF
+    builder = SimulationBuilder(output_dir=working_dir)
+    scene_path = builder.build_from_assembly(component)
 
+    # 3. Initialize Simulation Loop
+    loop = SimulationLoop(str(scene_path), component=component)
+
+    # 4. Load Controllers (if specified in objectives.yaml)
+    dynamic_controllers = {}
+    control_inputs = {}
+
+    objectives_path = working_dir / "objectives.yaml"
     if objectives_path.exists():
         try:
             content = objectives_path.read_text(encoding="utf-8")
             data = yaml.safe_load(content)
             objectives = ObjectivesYaml(**data)
-            logger.info("objectives_loaded_for_simulation")
+
+            from worker.utils.controllers import sinusoidal, square, constant
+
+            for part in objectives.moving_parts:
+                if part.control:
+                    if part.control.mode == "sinusoidal":
+                        dynamic_controllers[part.name] = (
+                            lambda t, p=part.control: sinusoidal(
+                                t, p.speed, p.frequency or 1.0
+                            )
+                        )
+                    elif part.control.mode == "constant":
+                        control_inputs[part.name] = part.control.speed
+                    # Add more mappings as needed
         except Exception as e:
-            logger.warning("failed_to_load_objectives_for_sim", error=str(e))
+            logger.warning("failed_to_load_controllers", error=str(e))
 
-    # 3. Generate MJCF
-    mjcf_xml = to_mjcf(
-        component, model_name="validation_scene", renders_dir=renders_dir
-    )
-    mjcf_path = renders_dir / "scene.xml"
-    mjcf_path.write_text(mjcf_xml)
-
-    # DEBUG: Check if files exist
+    # 5. Run Simulation
     try:
-        files = list(renders_dir.glob("*"))
-        logger.info("files_in_renders_dir", files=[str(f) for f in files])
-        if (renders_dir / "validation_scene.stl").exists():
-            logger.info("stl_exists")
-        else:
-            logger.info("stl_missing")
-    except Exception as e:
-        logger.error("debug_ls_failed", error=str(e))
+        metrics = loop.step(
+            control_inputs=control_inputs,
+            duration=30.0,
+            dynamic_controllers=dynamic_controllers,
+        )
 
-    try:
-        # 4. Load MuJoCo
-        model = mujoco.MjModel.from_xml_path(str(mjcf_path))
-        data = mujoco.MjData(model)
+        # 6. Final assessment
+        status_msg = metrics.fail_reason or "Simulation stable."
+        if metrics.success:
+            status_msg = "Goal achieved."
 
-        # Run for up to 30 seconds
-        duration = 30.0
-        max_steps = int(duration / model.opt.timestep)
-
-        goal_hit = False
-        for _ in range(max_steps):
-            mujoco.mj_step(model, data)
-
-            # A. Explosion/Sanity check
-            if any(abs(v) > 200.0 for v in data.qvel):
-                return SimulationResult(
-                    False, "Simulation exploded - unstable geometry."
-                )
-            if any(abs(p) > 500.0 for p in data.qpos):
-                return SimulationResult(
-                    False, "Object went significantly out of bounds."
-                )
-
-            # B. Objective checks (if objectives loaded)
-            if objectives and model.nbody > 1:
-                # body 0 is world, body 1 is the part
-                pos = data.xpos[1]
-
-                # Goal zone check
-                gz = objectives.objectives.goal_zone
-                if (
-                    gz.min[0] <= pos[0] <= gz.max[0]
-                    and gz.min[1] <= pos[1] <= gz.max[1]
-                    and gz.min[2] <= pos[2] <= gz.max[2]
-                ):
-                    goal_hit = True
-                    break
-
-                # Forbid zone check
-                for fz in objectives.objectives.forbid_zones:
-                    if (
-                        fz.min[0] <= pos[0] <= fz.max[0]
-                        and fz.min[1] <= pos[1] <= fz.max[1]
-                        and fz.min[2] <= pos[2] <= fz.max[2]
-                    ):
-                        return SimulationResult(False, f"Forbid zone hit: {fz.name}")
-
-        # 5. Final assessment
-        status_msg = "Simulation stable."
-        if objectives and not goal_hit:
-            status_msg = "Simulation completed but goal not achieved."
-
-        # 6. Generate renders
+        # 7. Generate renders
         render_paths = prerender_24_views(component)
-        mjcf_content = mjcf_path.read_text() if mjcf_path.exists() else None
+        mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
-        return SimulationResult(True, status_msg, render_paths, mjcf_content)
+        return SimulationResult(metrics.success, status_msg, render_paths, mjcf_content)
+
+    except Exception as e:
+        logger.error("simulation_error", error=str(e))
+        return SimulationResult(False, f"Simulation error: {e!s}")
 
     except Exception as e:
         logger.error("simulation_error", error=str(e))

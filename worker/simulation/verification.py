@@ -112,6 +112,11 @@ def verify_with_jitter(
         )
 
         results.append(metrics)
+        logger.info(
+            f"Verification run {run_idx} finished",
+            success=metrics.success,
+            fail_reason=metrics.fail_reason,
+        )
         logger.debug(
             f"Run {run_idx + 1}/{num_runs}: "
             f"success={metrics.success}, fail_reason={metrics.fail_reason}"

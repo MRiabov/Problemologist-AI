@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,8 @@ def emit_event(
             event_dict["agent_id"] = agent_id
 
     try:
-        events_file = Path("events.jsonl")
+        events_file_path = os.getenv("EVENTS_FILE", "events.jsonl")
+        events_file = Path(events_file_path)
         with events_file.open("a") as f:
             f.write(json.dumps(event_dict) + "\n")
     except Exception as e:
