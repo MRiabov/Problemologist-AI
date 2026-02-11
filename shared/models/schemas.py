@@ -145,6 +145,7 @@ class ObjectivesYaml(BaseModel):
     moving_parts: list[MovingPart] = []
     constraints: Constraints
     randomization: RandomizationMeta = RandomizationMeta()
+    preliminary_totals: dict[str, float] | None = None
 
 
 # =============================================================================
@@ -208,6 +209,22 @@ class CotsPartEstimate(BaseModel):
     source: str
 
 
+class JointEstimate(BaseModel):
+    """Estimate for a joint in the assembly."""
+
+    joint_id: str
+    parts: list[str]
+    type: str
+
+
+class SubassemblyEstimate(BaseModel):
+    """Estimate for a subassembly within the final assembly."""
+
+    subassembly_id: str
+    parts: list[str]
+    joints: list[JointEstimate] = []
+
+
 class CostTotals(BaseModel):
     """Total estimation for the design."""
 
@@ -245,4 +262,5 @@ class PreliminaryCostEstimation(BaseModel):
     constraints: CostEstimationConstraints
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
+    final_assembly: list[SubassemblyEstimate] = []
     totals: CostTotals
