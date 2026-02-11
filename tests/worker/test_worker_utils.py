@@ -13,7 +13,9 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     from worker.utils.handover import submit_for_review
 
     # Setup
-    os.environ["RENDERS_DIR"] = str(tmp_path)
+    renders_dir = tmp_path / "renders"
+    renders_dir.mkdir()
+    os.environ["RENDERS_DIR"] = str(renders_dir)
     os.environ["SESSION_ID"] = "test-session"
     os.environ["TIMESTAMP"] = "2026-02-07"
 
@@ -85,7 +87,7 @@ totals:
     mock_prerender.assert_called_once_with(mock_component)
     mock_export_step.assert_called_once()
 
-    manifest_path = tmp_path / "review_manifest.json"
+    manifest_path = renders_dir / "review_manifest.json"
     assert manifest_path.exists()
 
     with manifest_path.open() as f:
