@@ -359,16 +359,17 @@ class SimulationLoop:
 
     def _check_forbidden_collision(self) -> bool:
         """
-        Iterate contacts for physics collision.
-        AND check vertex overlap with forbidden SITES.
+        Iterate all bodies and check vertex overlap with forbidden SITES.
         """
-        # MVP: check target body (usually the ball/object).
-        target_body_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
-        )
-        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_sites)
-        if hit:
-            return True
+        # Check all bodies in the model
+        for body_id in range(self.model.nbody):
+            # Skip the world body (id 0)
+            if body_id == 0:
+                continue
+            
+            hit, _ = self._check_vertex_in_zone(body_id, self.forbidden_sites)
+            if hit:
+                return True
 
         return False
 

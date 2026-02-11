@@ -6,6 +6,7 @@ to S3 storage with session-based isolation.
 
 import re
 import shutil
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -378,11 +379,28 @@ class SandboxFilesystemBackend(BackendProtocol):
         self._fs.rm(s3_path, recursive=True)
 
 
+# Global registry to keep TemporaryDirectory objects alive for the duration of the worker process.
+# This ensures that session directories persist across multiple requests but are cleaned up on exit.
+_SESSION_DIR_REGISTRY: dict[str, tempfile.TemporaryDirectory] = {}
+
+
+def get_session_root(session_id: str) -> Path:
+    """Get or create a temporary directory for a session."""
+    if session_id not in _SESSION_DIR_REGISTRY:
+        # Create a new unique temporary directory. 
+        # The prefix helps identify the session during debugging.
+        td = tempfile.TemporaryDirectory(prefix=f"pb-sess-{session_id}-")
+        _SESSION_DIR_REGISTRY[session_id] = td
+        logger.info("session_directory_created", session_id=session_id, path=td.name)
+    
+    return Path(_SESSION_DIR_REGISTRY[session_id].name)
+
+
 @type_check
 class LocalFilesystemBackend(BackendProtocol):
     """Local-disk backed filesystem with session-based isolation.
 
-    Uses a local directory (e.g., /tmp/sessions/{session_id}) as the root.
+    Uses a temporary directory as the root for each session.
     Implements BackendProtocol for compatibility with deepagents.
     """
 
@@ -408,11 +426,15 @@ class LocalFilesystemBackend(BackendProtocol):
     def create(
         cls,
         session_id: str,
-        base_dir: Path = Path("/tmp/sessions"),
+        base_dir: Path | None = None,
         s3_config: S3Config | None = None,
     ) -> "LocalFilesystemBackend":
         """Factory method to create a new local backend instance."""
-        root = base_dir / session_id
+        if base_dir is not None:
+            root = base_dir / session_id
+        else:
+            root = get_session_root(session_id)
+        
         s3_backend = SandboxFilesystemBackend.create(session_id, s3_config)
         backend = cls(root=root, session_id=session_id, s3_backend=s3_backend)
         try:

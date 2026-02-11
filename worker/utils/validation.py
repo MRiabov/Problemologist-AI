@@ -62,24 +62,31 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
     renders_dir = working_dir / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2. Build MJCF
-    builder = SimulationBuilder(output_dir=working_dir)
-    scene_path = builder.build_from_assembly(component)
-
-    # 3. Initialize Simulation Loop
-    loop = SimulationLoop(str(scene_path), component=component)
-
-    # 4. Load Controllers (if specified in objectives.yaml)
-    dynamic_controllers = {}
-    control_inputs = {}
-
+    # 2. Load Objectives (if specified in objectives.yaml)
+    objectives = None
     objectives_path = working_dir / "objectives.yaml"
     if objectives_path.exists():
         try:
             content = objectives_path.read_text(encoding="utf-8")
             data = yaml.safe_load(content)
             objectives = ObjectivesYaml(**data)
+        except Exception as e:
+            logger.warning("failed_to_load_objectives", error=str(e))
 
+    # 3. Build MJCF
+    builder = SimulationBuilder(output_dir=working_dir)
+    # Pass objectives to builder if available
+    scene_path = builder.build_from_assembly(component, objectives=objectives)
+
+    # 4. Initialize Simulation Loop
+    loop = SimulationLoop(str(scene_path), component=component)
+
+    # 5. Load Controllers
+    dynamic_controllers = {}
+    control_inputs = {}
+
+    if objectives:
+        try:
             from worker.utils.controllers import sinusoidal, square, constant
 
             for part in objectives.moving_parts:
@@ -96,7 +103,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
-    # 5. Run Simulation
+    # 6. Run Simulation
     try:
         metrics = loop.step(
             control_inputs=control_inputs,
