@@ -63,6 +63,7 @@ async def test_coder_node_success(mock_state):
             ) as mock_client_class:
                 mock_client = mock_client_class.return_value
                 mock_client.read_file = AsyncMock(return_value=valid_script)
+                mock_client.list_files = AsyncMock(return_value=[])
 
                 with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
                     updated_state = await coder_node(mock_state)
@@ -104,6 +105,7 @@ async def test_coder_node_with_feedback(mock_state):
             ) as mock_client_class:
                 mock_client = mock_client_class.return_value
                 mock_client.read_file = AsyncMock(return_value="# refined script")
+                mock_client.list_files = AsyncMock(return_value=[])
 
                 with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
                     await coder_node(mock_state)
