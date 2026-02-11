@@ -64,6 +64,27 @@ Train the model to do electrical engineering in 3d.
 
 At this point we'll almost definitely need a subagent. Although, it's actually easy to do (in fact, the MVP has multiple subagents) because of LangGraph.
 
+As said in a task description I've given to somebody:
+
+```markdown
+Stuff like this is already done, where LLMs is used to design circuit schematics, pick components, and design circuit boards. In the end, the goal is to make the LLM that can design both the mechanics and the electronics for it, at least on the basic level.
+
+Goal: make a system that can: 
+1. Wire up electronics for motors
+2. Wire up wires in 3d space
+3. Basic electronics,
+4. Design such systems that electronics don't break (wires don't get torn, etc)
+5. Ideally, code that can run on Arduino (saying Arduino because you likely know / heard of what Arduino is)
+End result: 
+The system will be able to use electronic motors, linear actuators, fluid pumps and other electromechanical with realistic wiring
+
+Optional:
+1. Lighting for end-user experience (if the user demands lighting, do lighting)
+2. Buttons and other sensors. (easily implemented if we'll migrate to Genesis-world solver (a very modern simulator for robotics). That said, your implementation should be independent of the mechanics solver)
+
+Again, this is already done (done, but fragmeneted. Nobody has "unified" all of this into electronics + mechanics). Read research papers on PCB generation, component selection, wire routing; and other stuff, you'll figure it out.
+```
+
 #### Technology stack
 
 1. A custom electronics solver! probably. I didn't find one that would suit 6-12 months ago. It's not a very complex thing - but needs to be done.
