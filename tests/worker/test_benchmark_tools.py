@@ -40,7 +40,7 @@ def test_benchmark_simulate_success(mock_simulate, mock_load):
 @patch("worker.api.routes.validate")
 def test_benchmark_validate_success(mock_validate, mock_load):
     mock_load.return_value = MagicMock()
-    mock_validate.return_value = True
+    mock_validate.return_value = (True, None)
 
     response = client.post("/benchmark/validate", json={"script_path": "impl.py"})
 
