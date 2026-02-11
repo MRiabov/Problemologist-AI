@@ -182,7 +182,7 @@ The Engineering Planner workflow is:
     - part_5 
   ```
 
-  Then: Run a script like `validate_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
+  Then: Run a script like `validate_costing_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
 
   Notably, if the plan is higher than the max_unit_cost, it can't proceed and needs to adapt the plan.
 
@@ -194,7 +194,7 @@ The Engineering Planner workflow is:
 - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
 - Create `preliminary_cost_estimation.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 
-At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_and_price.py` to validate `preliminary_cost_estimation.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `preliminary_cost_estimation.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -669,7 +669,7 @@ Engineer sends four files to the coder agent who has to implement the plan:
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
-4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_and_price.py`.
+4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_costing_and_price.py`.
 
 ##### `plan.md` structure for the engineering plan
 
@@ -828,7 +828,7 @@ Minimum per-manufactured-part fields:
   - CNC: `stock_bbox_mm`, `stock_volume_mm3`, `removed_volume_mm3`
   - Injection molding / 3D print: required process-specific volume/thickness/time fields per validator contract
 <!-- - `estimated_unit_cost_usd` - auto-calculated. The planner does not need to calculate each. However, it may be populated automatically by the script if it runs successfully? Again, the goal is to offload agent work and guessing (for performance reasons). -->
-- `pricing_notes <!-- User review - maybe. Maybe for "confidence" scores or similar.>
+- `pricing_notes <!-- User review - maybe. Maybe for "confidence" scores or similar. -->
 
 Minimum per-COTS-part fields:
 
