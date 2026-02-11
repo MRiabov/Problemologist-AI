@@ -64,7 +64,7 @@ async def health_check():
 from controller.api.tasks import AgentRunRequest, execute_agent_task
 
 
-@app.post("/agent/run")
+@app.post("/agent/run", status_code=202)
 async def run_agent(request: AgentRunRequest):
     # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()
@@ -73,6 +73,8 @@ async def run_agent(request: AgentRunRequest):
             id=uuid.uuid4(),
             task=request.task,
             status=EpisodeStatus.RUNNING,
+            metadata_vars=request.metadata_vars,
+            skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)
         await db.commit()

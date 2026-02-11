@@ -238,6 +238,34 @@ async def test_int_021_runtime_randomization_robustness():
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-021-{int(time.time())}"
 
+        # Write objectives.yaml so simulation can check goals
+        objectives_content = """
+objectives:
+  goal_zone:
+    min: [-10, -10, -10]
+    max: [10, 10, 10]
+  forbid_zones: []
+  build_zone:
+    min: [-100, -100, -100]
+    max: [100, 100, 100]
+simulation_bounds:
+    min: [-100, -100, -100]
+    max: [100, 100, 100]
+moved_object:
+    label: "target_box"
+    shape: "sphere"
+    start_position: [0, 0, 0.5]
+    runtime_jitter: [0.1, 0.1, 0]
+constraints:
+    max_unit_cost: 100
+    max_weight: 10
+"""
+        await client.post(
+            f"{WORKER_URL}/fs/write",
+            json={"path": "objectives.yaml", "content": objectives_content},
+            headers={"X-Session-ID": session_id},
+        )
+
         script_path = "tests/integration/architecture_p0/scripts/verify_jitter.py"
         with open(script_path, "r") as f:
             script_content = f.read()
@@ -366,4 +394,8 @@ def build():
         )
         assert resp.status_code == 200, resp.text
         data = resp.json()
+
+        if not data["success"]:
+            print(f"INT-023 DEBUG FAILURE: {data.get('message')}")
+
         assert data["success"]
