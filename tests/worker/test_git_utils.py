@@ -1,0 +1,84 @@
+import pytest
+from worker.utils.git import (
+    init_workspace_repo,
+    commit_all,
+    get_repo_status,
+    resolve_conflict_ours,
+    resolve_conflict_theirs,
+    complete_merge,
+    has_merge_conflicts,
+    abort_merge
+)
+from pathlib import Path
+from git import Repo
+
+def test_git_conflict_resolution(tmp_path):
+    # 1. Setup repo
+    repo = init_workspace_repo(tmp_path)
+    file_path = tmp_path / "conflict.txt"
+    file_path.write_text("Base content")
+    commit_all(tmp_path, "Initial commit")
+
+    # 2. Create a branch 'feature'
+    repo.git.checkout("-b", "feature")
+    file_path.write_text("Feature content")
+    commit_all(tmp_path, "Feature commit")
+
+    # 3. Go back to master and change file
+    repo.git.checkout("master")
+    file_path.write_text("Master content")
+    commit_all(tmp_path, "Master commit")
+
+    # 4. Merge feature into master -> Conflict
+    try:
+        repo.git.merge("feature")
+    except Exception:
+        pass  # Conflict expected
+
+    status = get_repo_status(tmp_path)
+    assert status["is_merging"] is True
+    assert "conflict.txt" in status["conflicts"]
+
+    # 5. Resolve conflict (Ours)
+    resolved = resolve_conflict_ours(tmp_path, "conflict.txt")
+    assert resolved is True
+
+    status = get_repo_status(tmp_path)
+    assert "conflict.txt" not in status["conflicts"]
+
+    # 6. Complete merge
+    commit = complete_merge(tmp_path, "Merge resolved")
+    assert commit is not None
+
+    status = get_repo_status(tmp_path)
+    assert status["is_merging"] is False
+    assert file_path.read_text() == "Master content"
+
+def test_git_abort_merge(tmp_path):
+    # 1. Setup repo
+    repo = init_workspace_repo(tmp_path)
+    file_path = tmp_path / "conflict.txt"
+    file_path.write_text("Base content")
+    commit_all(tmp_path, "Initial commit")
+
+    repo.git.checkout("-b", "feature")
+    file_path.write_text("Feature content")
+    commit_all(tmp_path, "Feature commit")
+
+    repo.git.checkout("master")
+    file_path.write_text("Master content")
+    commit_all(tmp_path, "Master commit")
+
+    try:
+        repo.git.merge("feature")
+    except Exception:
+        pass
+
+    assert has_merge_conflicts(tmp_path) is True
+
+    # Abort
+    aborted = abort_merge(tmp_path)
+    assert aborted is True
+    assert has_merge_conflicts(tmp_path) is False
+    assert (tmp_path / ".git" / "MERGE_HEAD").exists() is False
+    assert file_path.read_text() == "Master content"
