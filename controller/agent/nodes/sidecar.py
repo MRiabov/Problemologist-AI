@@ -65,7 +65,38 @@ class SidecarNode:
             logger.error(f"Failed to initialize git repo: {e}")
             self.repo = None
 
-    def _sync_git(self, commit_message: str):
+    async def _resolve_conflicts(self):
+        """Resolve git conflicts using LLM."""
+        # Get list of unmerged files
+        unmerged = self.repo.git.diff("--name-only", "--diff-filter=U").splitlines()
+
+        for file_path in unmerged:
+            full_path = self.suggested_skills_dir / file_path
+            if not full_path.exists():
+                continue
+
+            content = full_path.read_text()
+            prompt = self.pm.render("git_resolver", content=content)
+
+            logger.info(f"Resolving conflict in {file_path}...")
+            response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            resolved_content = str(response.content)
+
+            # Strip potential markdown blocks if LLM wraps it
+            if "```" in resolved_content:
+                lines = resolved_content.splitlines()
+                # Remove starting block
+                if lines and lines[0].strip().startswith("```"):
+                    lines = lines[1:]
+                # Remove ending block
+                if lines and lines[-1].strip().startswith("```"):
+                    lines = lines[:-1]
+                resolved_content = "\n".join(lines)
+
+            full_path.write_text(resolved_content)
+            self.repo.git.add(file_path)
+
+    async def _sync_git(self, commit_message: str):
         """Commit and push changes with rebase strategy."""
         if not self.repo:
             return
@@ -79,15 +110,15 @@ class SidecarNode:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
                 logger.warning("Rebase conflict during pull. Attempting to resolve...")
-                # Simple resolution: ours (agent's new skill) wins for now,
-                # or we could just abort.
-                # Ideally, we'd use the LLM to merge, but for now let's try to abort rebase and just push?
-                # No, if rebase fails, we are in a detached head or intermediate state.
-                self.repo.git.rebase("--abort")
-                logger.error("Rebase failed and aborted. Skills might be out of sync.")
-                # TODO unhandled! should use the llm to resolve it. it can.
-                # I think the sidecar has in fact the tools, so it can.
-                return
+                try:
+                    await self._resolve_conflicts()
+                    self.repo.git.rebase("--continue")
+                    logger.info("Conflict resolved and rebase continued.")
+                except Exception as ex:
+                    logger.error(f"Resolution failed: {ex}")
+                    self.repo.git.rebase("--abort")
+                    logger.error("Rebase aborted. Skills might be out of sync.")
+                    return
 
             self.repo.git.push()
             logger.info("Skills synced to git successfully.")
@@ -121,7 +152,7 @@ class SidecarNode:
             logger.info(f"Suggested new skill: {title}")
 
             # Sync to Git
-            self._sync_git(f"Add skill: {title}")
+            await self._sync_git(f"Add skill: {title}")
 
         journal_entry = f"\nSidecar Learner: {'Suggested skill ' + suggested_skill if suggested_skill else 'No new skills identified.'}"
 
