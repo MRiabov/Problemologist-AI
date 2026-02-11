@@ -189,7 +189,7 @@ def _calculate_im_cost(
         total_cost=total_cost,
         unit_cost=total_cost / quantity if quantity > 0 else 0.0,
         material_cost_per_unit=round(material_cost_per_part, 4),
-        setup_cost=0.0,
+        setup_cost=round(tooling_cost, 2),
         is_reused=is_reused,
         details={
             "tooling_cost": round(tooling_cost, 2),
