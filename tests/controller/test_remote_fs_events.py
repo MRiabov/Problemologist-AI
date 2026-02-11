@@ -8,6 +8,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
+    LibraryUsageEvent,
     LsFilesToolEvent,
     ManufacturabilityCheckEvent,
     PlanSubmissionEngineerEvent,
@@ -139,12 +140,21 @@ async def test_read_file_emits_events(mock_worker_client):
         "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.read_file("skills/my_skill/SKILL.md")
-        assert mock_record.call_once
-        events = mock_record.call_args.kwargs["events"]
-        assert len(events) == 2
-        assert isinstance(events[0], ReadFileToolEvent)
-        assert isinstance(events[1], SkillReadEvent)
-        assert events[1].skill_name == "my_skill"
+
+        # Should be called twice: once for Read/Skill events, once for LibraryUsage
+        assert mock_record.call_count == 2
+
+        # First call: ReadFile and SkillRead
+        first_call_events = mock_record.call_args_list[0].kwargs["events"]
+        assert len(first_call_events) == 2
+        assert isinstance(first_call_events[0], ReadFileToolEvent)
+        assert isinstance(first_call_events[1], SkillReadEvent)
+        assert first_call_events[1].skill_name == "my_skill"
+
+        # Second call: LibraryUsage
+        second_call_events = mock_record.call_args_list[1].kwargs["events"]
+        assert len(second_call_events) == 1
+        assert isinstance(second_call_events[0], LibraryUsageEvent)
 
 
 @pytest.mark.asyncio

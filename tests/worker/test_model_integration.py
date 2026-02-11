@@ -71,7 +71,7 @@ def test_model_produced_script_integration(tmp_path):
     # 3. Validate Geometry
     # This uses our worker.utils.validation.validate which checks for intersections/bounds
     is_geom_valid = validate(component)
-    assert is_geom_valid is True
+    assert is_geom_valid[0] is True
 
     # 4. Simulate without crashing
     # This uses worker.utils.validation.simulate which runs MuJoCo for a few frames

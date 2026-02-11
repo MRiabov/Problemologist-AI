@@ -31,8 +31,23 @@ def mock_worker():
         yield instance
 
 
+@pytest.fixture
+def mock_record_events():
+    with (
+        patch(
+            "controller.agent.nodes.engineer.record_worker_events",
+            new_callable=AsyncMock,
+        ) as mock1,
+        patch(
+            "controller.middleware.remote_fs.record_worker_events",
+            new_callable=AsyncMock,
+        ) as mock2,
+    ):
+        yield mock1
+
+
 @pytest.mark.asyncio
-async def test_engineer_node_success(mock_llm, mock_worker):
+async def test_engineer_node_success(mock_llm, mock_worker, mock_record_events):
     node = EngineerNode()
     state = AgentState(
         todo="- [ ] Step 1\n- [ ] Step 2", plan="The plan", journal="Old logs"
@@ -47,7 +62,9 @@ async def test_engineer_node_success(mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-async def test_engineer_node_retry_then_success(mock_llm, mock_worker):
+async def test_engineer_node_retry_then_success(
+    mock_llm, mock_worker, mock_record_events
+):
     # Mock failure then success
     mock_worker.execute_python.side_effect = [
         ExecuteResponse(stdout="", stderr="SyntaxError", exit_code=1),
@@ -66,7 +83,7 @@ async def test_engineer_node_retry_then_success(mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-async def test_engineer_node_all_fail(mock_llm, mock_worker):
+async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events):
     mock_worker.execute_python.return_value = ExecuteResponse(
         stdout="", stderr="Persistent Error", exit_code=1
     )

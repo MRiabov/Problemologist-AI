@@ -20,8 +20,65 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     mock_component = MagicMock()
     mock_prerender.return_value = ["/path/to/render1.png"]
 
-    # Execute
-    result = submit_for_review(mock_component)
+    # Create valid objectives.yaml in tmp_path
+    objectives_content = """
+objectives:
+  goal_zone:
+    min: [0, 0, 0]
+    max: [10, 10, 10]
+  build_zone:
+    min: [0, 0, 0]
+    max: [100, 100, 100]
+  forbid_zones: []
+simulation_bounds:
+  min: [-100, -100, 0]
+  max: [100, 100, 100]
+moved_object:
+  label: "test_ball"
+  shape: "sphere"
+  start_position: [5, 5, 5]
+  runtime_jitter: [0, 0, 0]
+moving_parts: []
+constraints:
+  max_unit_cost: 100.0
+  max_weight: 10.0
+randomization:
+  static_variation_id: "test"
+  runtime_jitter_enabled: false
+"""
+    (tmp_path / "objectives.yaml").write_text(objectives_content)
+
+    # Create valid preliminary_cost_estimation.yaml in tmp_path
+    cost_content = """
+version: "1.0"
+units:
+  length: "mm"
+  volume: "mm3"
+  mass: "g"
+  currency: "USD"
+constraints:
+  benchmark_max_unit_cost_usd: 100.0
+  benchmark_max_weight_kg: 10.0
+  planner_target_max_unit_cost_usd: 80.0
+  planner_target_max_weight_kg: 8.0
+manufactured_parts: []
+cots_parts: []
+final_assembly: []
+totals:
+  estimated_unit_cost_usd: 10.0
+  estimated_weight_g: 100.0
+  estimate_confidence: "high"
+"""
+    (tmp_path / "preliminary_cost_estimation.yaml").write_text(cost_content)
+
+    # Change to tmp_path so submit_for_review finds the file
+    old_cwd = Path.cwd()
+    os.chdir(tmp_path)
+    try:
+        # Execute
+        result = submit_for_review(mock_component)
+    finally:
+        os.chdir(old_cwd)
 
     # Assert
     assert result is True
@@ -31,7 +88,7 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     manifest_path = tmp_path / "review_manifest.json"
     assert manifest_path.exists()
 
-    with open(manifest_path) as f:
+    with manifest_path.open() as f:
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test-session"
