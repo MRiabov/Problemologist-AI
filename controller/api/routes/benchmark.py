@@ -1,7 +1,8 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlmodel import select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.agent.benchmark.schema import GenerationSessionModel
@@ -38,15 +39,14 @@ async def generate_benchmark(prompt: str, background_tasks: BackgroundTasks):
 
 
 @router.get("/{session_id}")
-async def get_benchmark_session(session_id: uuid.UUID):
-    async with get_db() as db:
-        stmt = select(GenerationSessionModel).where(
-            GenerationSessionModel.session_id == session_id
-        )
-        result = await db.execute(stmt)
-        session = result.scalar_one_or_none()
+async def get_session(session_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    stmt = select(GenerationSessionModel).where(
+        GenerationSessionModel.session_id == session_id
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
 
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-        return session
+    return session

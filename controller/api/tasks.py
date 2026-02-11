@@ -22,6 +22,12 @@ WORKER_URL = settings.worker_url
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
+    metadata_vars: dict | None = Field(
+        None, description="Additional metadata for the episode."
+    )
+    skill_git_hash: str | None = Field(
+        None, description="Git hash of the skills used for this run."
+    )
 
 
 def get_worker_client(session_id: str):
@@ -154,7 +160,14 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 raise  # Re-raise to ensure proper task cancellation
             except Exception as e:
                 # We reuse the existing session if possible, or handle generic error
-                logger.error("agent_run_failed", error=str(e), episode_id=episode_id)
+                import traceback
+
+                logger.error(
+                    "agent_run_failed",
+                    error=str(e),
+                    traceback=traceback.format_exc(),
+                    episode_id=episode_id,
+                )
                 episode = await db.get(Episode, episode_id)
                 if episode:
                     episode.status = EpisodeStatus.FAILED

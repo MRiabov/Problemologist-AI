@@ -27,22 +27,27 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
 
 
-def to_mjcf(component: Compound, model_name: str = "scene") -> str:
+def to_mjcf(
+    component: Compound, model_name: str = "scene", renders_dir: Path | None = None
+) -> str:
     """
     Convert a build123d Compound to a MuJoCo XML (MJCF) string.
     Note: Currently uses a simplified template with an STL mesh.
     """
     # 1. Export STL (MuJoCo needs it)
-    renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
+    if not renders_dir:
+        renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
     stl_path = renders_dir / f"{model_name}.stl"
     export_stl(component, str(stl_path))
 
     # 2. Return MJCF string
+    # Use absolute path to avoid ambiguity in MuJoCo loading
+    stl_abs_path = stl_path.absolute()
     return f"""
 <mujoco model="{model_name}">
   <asset>
-    <mesh name="{model_name}_mesh" file="{model_name}.stl"/>
+    <mesh name="{model_name}_mesh" file="{stl_abs_path}"/>
   </asset>
   <worldbody>
     <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
@@ -78,6 +83,14 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
     # 2. Try loading objectives
     objectives = None
     objectives_path = Path("objectives.yaml")
+    # If output_dir is provided, likely running in session?
+    # But current working directory might be different if called from API vs from runtime?
+    # api_simulate is called in worker process. CWD is project root.
+    # objectives.yaml is sent via fs/write to session root (which is output_dir).
+    # So we should look for objectives.yaml in output_dir if provided!
+    if output_dir:
+        objectives_path = output_dir / "objectives.yaml"
+
     if objectives_path.exists():
         try:
             content = objectives_path.read_text(encoding="utf-8")
@@ -88,9 +101,22 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
             logger.warning("failed_to_load_objectives_for_sim", error=str(e))
 
     # 3. Generate MJCF
-    mjcf_xml = to_mjcf(component, model_name="validation_scene")
+    mjcf_xml = to_mjcf(
+        component, model_name="validation_scene", renders_dir=renders_dir
+    )
     mjcf_path = renders_dir / "scene.xml"
     mjcf_path.write_text(mjcf_xml)
+
+    # DEBUG: Check if files exist
+    try:
+        files = list(renders_dir.glob("*"))
+        logger.info("files_in_renders_dir", files=[str(f) for f in files])
+        if (renders_dir / "validation_scene.stl").exists():
+            logger.info("stl_exists")
+        else:
+            logger.info("stl_missing")
+    except Exception as e:
+        logger.error("debug_ls_failed", error=str(e))
 
     try:
         # 4. Load MuJoCo

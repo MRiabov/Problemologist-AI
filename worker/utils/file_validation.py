@@ -22,6 +22,12 @@ from shared.models.schemas import (
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 
+# T015: Hashing for immutability checks
+import hashlib
+from pathlib import Path
+import subprocess
+
+
 logger = structlog.get_logger(__name__)
 
 
@@ -229,3 +235,90 @@ def validate_plan_md_structure(
 
     logger.info("plan_md_valid", plan_type=plan_type)
     return True, []
+
+
+def calculate_file_hash(path: Path) -> str:
+    """Calculate SHA-256 hash of a file."""
+    if not path.exists():
+        return ""
+    sha256_hash = hashlib.sha256()
+    with open(path, "rb") as f:
+        # Read and update hash string value in blocks of 4K
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def validate_immutability(path: Path) -> tuple[bool, str | None]:
+    """
+    Verify that a file has not changed since the initial commit (or baseline).
+
+    Strategy:
+    1. Check if git is available and repo is initialized.
+    2. Get the hash of the file from the *first* commit (benchmark baseline).
+    3. Compare with current hash.
+
+    Returns:
+        (True, None) if immutable or cannot verify.
+        (False, error_message) if changed.
+    """
+    if not path.exists():
+        return True, None
+
+    try:
+        # Check if inside a git repo
+        subprocess.check_output(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=path.parent,
+            stderr=subprocess.DEVNULL,
+        )
+
+        # Get the first commit hash (root commit where benchmark was generated)
+        # We assume the benchmark generator commits the initial state.
+        root_commit = subprocess.check_output(
+            ["git", "rev-list", "--max-parents=0", "HEAD"], cwd=path.parent, text=True
+        ).strip()
+
+        if not root_commit:
+            # No commits yet, can't verify against baseline
+            return True, None
+
+        # Get the hash of the file at the root commit
+        # git show <commit>:<path>
+        try:
+            original_content = subprocess.check_output(
+                ["git", "show", f"{root_commit}:{path.name}"],
+                cwd=path.parent,
+                stderr=subprocess.DEVNULL,
+            )
+            original_hash = hashlib.sha256(original_content).hexdigest()
+            current_hash = calculate_file_hash(path)
+
+            if original_hash != current_hash:
+                msg = (
+                    f"Immutability violation: {path.name} has been modified "
+                    "from the benchmark baseline."
+                )
+                logger.warning("immutability_violation", path=str(path))
+                emit_event(
+                    LogicFailureEvent(
+                        file_path=path.name,
+                        constraint_name="immutability_check",
+                        error_message=msg,
+                    )
+                )
+                return False, msg
+
+        except subprocess.CalledProcessError:
+            # File might not have existed in root commit (e.g. created later)
+            # In that case, immutability check might not apply or is ambiguous.
+            # Ideally objectives.yaml SHOULD exist in root commit.
+            pass
+
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Git not installed or not a repo, skip check
+        pass
+    except Exception as e:
+        logger.warning("immutability_check_failed_internal", error=str(e))
+
+    return True, None
