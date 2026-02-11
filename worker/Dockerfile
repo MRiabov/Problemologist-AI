@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     curl \
     dnsutils \
+    xvfb \
+    xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -55,4 +57,4 @@ ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Entrypoint
-CMD ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["xvfb-run", "-a", "uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]
