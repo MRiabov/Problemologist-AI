@@ -897,7 +897,7 @@ totals:
 
 Validation requirement:
 
-- Submission is blocked if `preliminary_cost_estimation.yaml` is missing, malformed, still template-like, fails `validate_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
+- Submission is blocked if `preliminary_cost_estimation.yaml` is missing, malformed, still template-like, fails `validate_costing_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
 
 #### Coder and Reviewer interaction
 
@@ -1846,14 +1846,12 @@ Validated under all environment randomization.
 
 #### Planner tools
 
-`validate_and_price` except this is the planner's version of it. Will:
+`validate_costing_and_price`. Will:
 
-1. Validate pricing YAML file
-2. Output a price in the terminal and warn if the file
+1. Validate pricing YAML file,
+2. Output a price in the terminal and warn if the file,
 3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the engineering planner.)
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
-
-<!-- (note: maybe I want to resolve naming conflicts) -->
 
 #### Exact tools logic
 
