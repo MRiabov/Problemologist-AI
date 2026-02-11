@@ -1336,6 +1336,19 @@ Map of joints to MuJoCo constraints and their uses:
 - Generate the appropriate MuJoCo XML element connecting the two bodies.
 - Assign stable names to identifying joints so controllers can reference them (e.g. "motor_joint").
 
+##### Constraining to the environment
+
+Oftentimes engineers will need to constrain machinery to the environment, e.g. to the floor. However, not all things can be constrained to, e.g. you don't want to drill a motor some other machine.
+
+The benchmark generator agent (and planner) will thus produce parts and compounds will `drillable=True` or False, by the semantic meaning of the file.
+
+The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and will have a YAML file describing what can be drilled and what can't be
+<!-- ouch: I'm starting to be uncertain on how to actually pass it to the engineer -->
+
+###### Specifics
+
+If the compound is `drillable=False` so are all of it's children.
+
 ##### Allowed components in simulation
 
 The simulation would have only a set number of components that both benchmark designer and engineer can use. The following list is acceptable:
