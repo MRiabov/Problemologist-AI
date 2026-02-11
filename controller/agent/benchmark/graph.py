@@ -6,7 +6,7 @@ import structlog
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy import update
 
-from controller.persistence.db import get_db
+from controller.persistence.db import get_sessionmaker
 
 from .models import GenerationSession, SessionStatus
 from .nodes import coder_node, planner_node, reviewer_node, validator_node
@@ -68,7 +68,9 @@ async def run_generation_session(
     logger.info("running_generation_session", session_id=session_id, prompt=prompt)
 
     # 1. Create DB entry
-    async with get_db() as db:
+    # 1. Create DB entry
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
         db_session = GenerationSessionModel(
             session_id=session_id, prompt=prompt, status=SessionStatus.planning
         )
@@ -125,7 +127,8 @@ async def run_generation_session(
                     )  # Temporarily rejected, will retry
 
             # Update DB
-            async with get_db() as db:
+            # Update DB
+            async with session_factory() as db:
                 stmt = (
                     update(GenerationSessionModel)
                     .where(GenerationSessionModel.session_id == session_id)
@@ -140,7 +143,7 @@ async def run_generation_session(
     # 4. Final Asset Persistence
     if final_state["session"].status == SessionStatus.accepted:
         try:
-            async with get_db() as db:
+            async with session_factory() as db:
                 storage = BenchmarkStorage()
 
                 sim_result = final_state.get("simulation_result", {})

@@ -350,7 +350,7 @@ async def api_submit(
         component = _load_component(
             fs_router, request.script_path, request.script_content
         )
-        success = submit_for_review(component)
+        success = submit_for_review(component, cwd=fs_router.local_backend.root)
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=success,
@@ -508,7 +508,7 @@ async def api_lint(
                 warnings=warnings,
             )
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     except FileNotFoundError:
         return LintResponse(
