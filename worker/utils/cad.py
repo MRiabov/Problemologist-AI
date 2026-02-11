@@ -130,7 +130,7 @@ def fastener_hole(
         # Wait, Counterbore means head is IN the material.
         # So top of head is at Z=0.
 
-        tool = shank + head
+        tool = shank.fuse(head)
         # However, boolean union of touching solids might be tricky? defaults to Fuse.
 
     elif hole_type == HoleType.FlatHeadHole:
@@ -149,7 +149,7 @@ def fastener_hole(
         cone = cone.move(Location((0, 0, -cone_height / 2)))
         # Cone top is at Z=0.
 
-        tool = shank + cone
+        tool = shank.fuse(cone)
 
     else:
         # Simple hole
@@ -161,7 +161,7 @@ def fastener_hole(
     tool = tool.moved(location)
 
     # Boolean cut
-    new_part = part - tool
+    new_part = part.cut(tool)
 
     # Assign RigidJoint
     # We must ensure to copy existing joints if any

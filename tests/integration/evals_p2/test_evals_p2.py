@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 import pytest
 from httpx import AsyncClient
@@ -11,7 +10,7 @@ CONTROLLER_URL = "http://localhost:8000"
 async def test_cross_seed_transfer_uplift_int_047():
     """
     INT-047: Cross-seed transfer improvement eval
-    Assertion: Solving one seed in a batch improves success over related seeds relative to baseline.
+    Assertion: Solving one seed in a batch improves success over related seeds.
     Implementation: Execute related variants and verify trace metadata shows propagation.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
@@ -61,7 +60,8 @@ async def test_cross_seed_transfer_uplift_int_047():
 async def test_reviewer_optimality_regression_int_048():
     """
     INT-048: Reviewer optimality regression
-    Assertion: Cases where reviewer marked "optimal" are later checked against materially cheaper alternatives.
+    Assertion: Cases where reviewer marked "optimal" are later checked against
+    materially cheaper alternatives.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Start an episode
@@ -128,8 +128,7 @@ async def test_dataset_readiness_completeness_int_050():
             assert ep["plan"] is not None
             assert ep["todo_list"] is not None
             # Assets mapping (S3 links)
-            asset_types = [a["asset_type"] for a in ep["assets"]]
-            # At minimum, a completed dataset entry should have a rendering or video for visual-language training
+            # At minimum, a completed dataset entry should have a rendering or video
             # assert "video" in asset_types or "image" in asset_types
 
 
