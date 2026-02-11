@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import TYPE_CHECKING
 from xml.dom import minidom
 
 import trimesh
 from build123d import Compound, Solid, export_stl
 
 from shared.cots.parts.motors import ServoMotor
+
+if TYPE_CHECKING:
+    from shared.models.schemas import ObjectivesYaml
 
 logger = logging.getLogger(__name__)
 
@@ -313,12 +319,58 @@ class SimulationBuilder:
         self.compiler = SceneCompiler()
         self.use_vhacd = use_vhacd
 
-    def build_from_assembly(self, assembly: Compound) -> Path:
+    def build_from_assembly(
+        self, assembly: Compound, objectives: "ObjectivesYaml" | None = None
+    ) -> Path:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
         weld_constraints = []
 
+        # 1. Add zones from objectives if provided
+        if objectives:
+            # Add Goal Zone
+            gz = objectives.objectives.goal_zone
+            # Calculate center and half-extents
+            gz_pos = [
+                (gz.min[0] + gz.max[0]) / 2,
+                (gz.min[1] + gz.max[1]) / 2,
+                (gz.min[2] + gz.max[2]) / 2,
+            ]
+            gz_size = [
+                (gz.max[0] - gz.min[0]) / 2,
+                (gz.max[1] - gz.min[1]) / 2,
+                (gz.max[2] - gz.min[2]) / 2,
+            ]
+            self.compiler.add_body(
+                name="zone_goal",
+                is_zone=True,
+                zone_type="goal",
+                zone_size=gz_size,
+                pos=gz_pos,
+            )
+
+            # Add Forbid Zones
+            for i, fz in enumerate(objectives.objectives.forbid_zones):
+                fz_pos = [
+                    (fz.min[0] + fz.max[0]) / 2,
+                    (fz.min[1] + fz.max[1]) / 2,
+                    (fz.min[2] + fz.max[2]) / 2,
+                ]
+                fz_size = [
+                    (fz.max[0] - fz.min[0]) / 2,
+                    (fz.max[1] - fz.min[1]) / 2,
+                    (fz.max[2] - fz.min[2]) / 2,
+                ]
+                self.compiler.add_body(
+                    name=f"zone_forbid_{i}_{fz.name}",
+                    is_zone=True,
+                    zone_type="forbid",
+                    zone_size=fz_size,
+                    pos=fz_pos,
+                )
+
+        # 2. Add parts from assembly
         for i, child in enumerate(assembly.children):
             # Try to get label, fallback to indexed name
             label = getattr(child, "label", None) or f"part_{i}"
