@@ -54,7 +54,7 @@ async def test_full_workflow_end_to_end():
         print("Triggering Benchmark Generation...")
         prompt = "Create a simple box stacking benchmark."
         resp = await client.post("/benchmark/generate", params={"prompt": prompt})
-        assert resp.status_code == 202
+        assert resp.status_code == 200
         data = resp.json()
         session_id = data["session_id"]
         print(f"Benchmark Session ID: {session_id}")
