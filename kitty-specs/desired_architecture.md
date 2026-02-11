@@ -1978,6 +1978,18 @@ part_builder.part.metadata = {
 validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit price at XYZ pcs is ...)
 ```
 
+### Rendering
+
+The project needs to render the models in images (for preview) and for rendering.
+
+#### Rendering CAD
+
+To simplify matters *(actually, I couldn't debug pyvista, so I'm doing this)*, the CAD will be rendered by porting to MuJoCo and rendering in there. It'll also provide a unified view for the model.
+
+#### Rendering views
+
+I presume the model will need to render a view or a set of views to get an understanding of what's happening during the simulation. Allow an extra `view_angles` parameter on `simulate` to trigger simulation from different sides, which would essentially reposition a camera (or a multiple) to render.
+
 ### Workbench technical details
 
 Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here; however manufacturability is determined by deterministic algorithms.)
