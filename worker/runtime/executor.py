@@ -71,14 +71,15 @@ def run_python_code(
 
     current_pythonpath = actual_env.get("PYTHONPATH", "")
 
-    # Get absolute path to src/worker
-    project_root = Path(__file__).parent.parent.parent.parent
-    worker_path = str(project_root / "src" / "worker")
+    # Get the directory containing the 'worker' package
+    # worker/runtime/executor.py -> parents[2] is the project root (e.g. /app or src)
+    project_root = Path(__file__).resolve().parents[2]
+    worker_package_parent = str(project_root)
 
     if current_pythonpath:
-        actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
+        actual_env["PYTHONPATH"] = f"{worker_package_parent}:{current_pythonpath}"
     else:
-        actual_env["PYTHONPATH"] = worker_path
+        actual_env["PYTHONPATH"] = worker_package_parent
 
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
@@ -174,14 +175,15 @@ async def run_python_code_async(
 
     current_pythonpath = actual_env.get("PYTHONPATH", "")
 
-    # Get absolute path to src/worker
-    project_root = Path(__file__).parent.parent.parent.parent
-    worker_path = str(project_root / "src" / "worker")
+    # Get the directory containing the 'worker' package
+    # worker/runtime/executor.py -> parents[2] is the project root (e.g. /app or src)
+    project_root = Path(__file__).resolve().parents[2]
+    worker_package_parent = str(project_root)
 
     if current_pythonpath:
-        actual_env["PYTHONPATH"] = f"{worker_path}:{current_pythonpath}"
+        actual_env["PYTHONPATH"] = f"{worker_package_parent}:{current_pythonpath}"
     else:
-        actual_env["PYTHONPATH"] = worker_path
+        actual_env["PYTHONPATH"] = worker_package_parent
 
     # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
