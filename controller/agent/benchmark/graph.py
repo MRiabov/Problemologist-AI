@@ -1,4 +1,5 @@
 from typing import Literal
+import uuid
 from uuid import uuid4
 
 import structlog
@@ -57,11 +58,13 @@ def define_graph():
     return workflow.compile()
 
 
-async def run_generation_session(prompt: str) -> BenchmarkGeneratorState:
+async def run_generation_session(
+    prompt: str, session_id: uuid.UUID | None = None
+) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
     """
-    session_id = uuid4()
+    session_id = session_id or uuid4()
     logger.info("running_generation_session", session_id=session_id, prompt=prompt)
 
     # 1. Create DB entry
