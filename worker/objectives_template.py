@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-OBJECTIVES_YAML_TEMPLATE = """# =============================================================================
+OBJECTIVES_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
+# =============================================================================
 # OBJECTIVES.YAML - Your Task Definition
 # =============================================================================
 # This file defines WHAT you must achieve. Read it carefully before planning.

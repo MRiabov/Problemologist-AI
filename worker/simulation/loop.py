@@ -141,6 +141,14 @@ class SimulationLoop:
         target_body_id = mujoco.mj_name2id(
             self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
         )
+        if target_body_id == -1:
+            # Fallback: search manually
+            for i in range(self.model.nbody):
+                name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, i)
+                if name == "target_box":
+                    target_body_id = i
+                    break
+        
         logger.info("SimulationLoop_step_start", target_body_id=target_body_id)
         # We rely on self.goal_sites populated in init
 
@@ -304,7 +312,7 @@ class SimulationLoop:
                     v_local = diff @ site_mat
 
                     # Check against half-extents (zone_size)
-                    in_box = np.all(np.abs(v_local) < zone_size[:3], axis=1)
+                    in_box = np.all(np.abs(v_local) <= zone_size[:3], axis=1)
                     if np.any(in_box):
                         return True, zone_id
 
@@ -367,6 +375,11 @@ class SimulationLoop:
             if body_id == 0:
                 continue
             
+            # Skip forbidden zone bodies themselves to avoid false self-collision
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id)
+            if name and name.startswith("zone_forbid"):
+                continue
+
             hit, _ = self._check_vertex_in_zone(body_id, self.forbidden_sites)
             if hit:
                 return True

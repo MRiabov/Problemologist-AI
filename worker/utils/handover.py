@@ -65,10 +65,6 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
         if not is_valid:
             logger.error("objectives_yaml_invalid", errors=result)
             raise ValueError(f"objectives.yaml invalid: {result}")
-            raise ValueError(f"objectives.yaml invalid: {result}")
-        if not is_valid:
-            logger.error("objectives_yaml_invalid", errors=result)
-            raise ValueError(f"objectives.yaml invalid: {result}")
 
     else:
         # INT-005: objectives.yaml is mandatory

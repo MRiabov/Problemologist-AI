@@ -71,7 +71,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
             data = yaml.safe_load(content)
             objectives = ObjectivesYaml(**data)
         except Exception as e:
-            logger.warning("failed_to_load_objectives", error=str(e))
+            logger.warning("failed_to_load_objectives", error=str(e), working_dir=str(working_dir), path=str(objectives_path))
 
     # 3. Build MJCF
     builder = SimulationBuilder(output_dir=working_dir)

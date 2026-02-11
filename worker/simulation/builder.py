@@ -371,7 +371,13 @@ class SimulationBuilder:
                 )
 
         # 2. Add parts from assembly
-        for i, child in enumerate(assembly.children):
+        # Handle both Compound (with children) and single Solid
+        children = getattr(assembly, "children", [])
+        if not children:
+            # If it's a single shape without children, treat it as the only child
+            children = [assembly]
+
+        for i, child in enumerate(children):
             # Try to get label, fallback to indexed name
             label = getattr(child, "label", None) or f"part_{i}"
 

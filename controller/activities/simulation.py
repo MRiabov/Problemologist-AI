@@ -45,10 +45,10 @@ async def render_video_activity(sim_results: str) -> str:
 async def upload_to_s3_activity(video_path: str) -> str:
     """Upload video to S3 using S3Client."""
     config = S3Config(
-        endpoint_url=os.getenv("S3_ENDPOINT_URL"),
-        access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        bucket_name=os.getenv("ASSET_S3_BUCKET", "assets"),
+        endpoint_url=os.getenv("S3_ENDPOINT"),
+        access_key_id=os.getenv("S3_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID")),
+        secret_access_key=os.getenv("S3_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY")),
+        bucket_name=os.getenv("ASSET_S3_BUCKET", "problemologist"),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
     )
     client = S3Client(config)
