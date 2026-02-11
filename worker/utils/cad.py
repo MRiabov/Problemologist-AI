@@ -151,6 +151,8 @@ def fastener_hole(
 
         tool = shank.fuse(cone)
 
+        # HUMAN DEVELOPER REVIEW: why this? it should be a Build123d holes or bd-warehouse fasteners, not... custom code. It could be, but why bother?
+
     else:
         # Simple hole
         tool = Cylinder(radius=radius, height=100)

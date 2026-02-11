@@ -13,8 +13,8 @@ TEST_SUCCESS_XML = """
       <joint type="free"/>
       <geom name="ball" type="sphere" size="0.05"/>
     </body>
-    <geom name="zone_goal" type="box" pos="0 0 -0.5" size="0.5 0.5 0.6"/>
-    <site name="zone_goal" type="box" pos="0 0 -0.5" size="0.5 0.5 0.6" rgba="0 1 0 0.3"/>
+    <geom name="floor" type="plane" pos="0 0 0" size="10 10 0.1"/>
+    <site name="zone_goal" type="box" pos="0 0 0.05" size="0.5 0.5 0.1" rgba="0 1 0 0.3"/>
   </worldbody>
 </mujoco>
 """

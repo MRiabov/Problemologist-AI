@@ -1,8 +1,13 @@
 import os
+import uuid
 
 from temporalio import activity
 
 from controller.clients.worker import WorkerClient
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset, Episode
+from shared.enums import AssetType, EpisodeStatus
+from shared.observability.storage import S3Client, S3Config
 from shared.type_checking import type_check
 
 # Configuration for activities
@@ -38,12 +43,47 @@ async def render_video_activity(sim_results: str) -> str:
 @type_check
 @activity.defn
 async def upload_to_s3_activity(video_path: str) -> str:
-    """Mock activity to upload video to S3."""
-    return "https://s3.railway.app/backups/sim_video_latest.mp4"
+    """Upload video to S3 using S3Client."""
+    config = S3Config(
+        endpoint_url=os.getenv("S3_ENDPOINT_URL"),
+        access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        bucket_name=os.getenv("ASSET_S3_BUCKET", "assets"),
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
+    )
+    client = S3Client(config)
+
+    # Use Path for modern path handling
+    from pathlib import Path
+
+    object_key = f"videos/{uuid.uuid4()}_{Path(video_path).name}"
+
+    await client.aupload_file(video_path, object_key)
+    return object_key
 
 
 @type_check
 @activity.defn
-async def update_trace_activity(s3_url: str) -> bool:
-    """Mock activity to update postgres trace."""
+async def update_trace_activity(params: dict) -> bool:
+    """Update postgres episode status and add asset record."""
+    episode_id = params["episode_id"]
+    s3_path = params["s3_path"]
+    asset_type = params.get("asset_type", AssetType.VIDEO)
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, uuid.UUID(episode_id))
+        if not episode:
+            raise ValueError(f"Episode {episode_id} not found in database")
+
+        episode.status = EpisodeStatus.COMPLETED
+
+        asset = Asset(
+            episode_id=uuid.UUID(episode_id),
+            asset_type=asset_type,
+            s3_path=s3_path,
+        )
+        db.add(asset)
+        await db.commit()
+
     return True

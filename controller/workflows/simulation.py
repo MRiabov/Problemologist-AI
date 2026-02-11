@@ -14,7 +14,10 @@ if TYPE_CHECKING:
 @workflow.defn
 class SimulationWorkflow:
     @workflow.run
-    async def run(self, compound_json: str) -> str:
+    async def run(self, params: dict) -> str:
+        compound_json = params["compound_json"]
+        episode_id = params["episode_id"]
+
         mjcf_data = await workflow.execute_activity(
             "compile_mjcf_activity",
             compound_json,
@@ -33,7 +36,7 @@ class SimulationWorkflow:
             start_to_close_timeout=timedelta(minutes=2),
         )
 
-        s3_url = await workflow.execute_activity(
+        s3_path = await workflow.execute_activity(
             "upload_to_s3_activity",
             video_path,
             start_to_close_timeout=timedelta(minutes=2),
@@ -41,8 +44,12 @@ class SimulationWorkflow:
 
         await workflow.execute_activity(
             "update_trace_activity",
-            s3_url,
+            {
+                "episode_id": episode_id,
+                "s3_path": s3_path,
+                "asset_type": "VIDEO",
+            },
             start_to_close_timeout=timedelta(seconds=30),
         )
 
-        return s3_url
+        return s3_path
