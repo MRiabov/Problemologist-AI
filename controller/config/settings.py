@@ -5,9 +5,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Configuration settings for the Problemologist Controller."""
 
+    is_integration_test: bool = Field(default=False, alias="IS_INTEGRATION_TEST")
+
     # LLM Settings
     llm_model: StrictStr = Field(default="openai/gpt-5.2-nano", alias="LLM_MODEL")
     openai_api_base: str | None = Field(default=None, alias="OPENAI_API_BASE")
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
 
     # Agent Settings

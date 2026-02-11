@@ -10,6 +10,8 @@ services:
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - IS_INTEGRATION_TEST=true
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-server:3000
@@ -67,7 +69,14 @@ services:
     command: ["python", "controller/temporal_worker.py"]
     environment:
       - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - ASSET_S3_BUCKET=problemologist
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - IS_INTEGRATION_TEST=true
       - TEMPORAL_URL=temporal:7233
+      - WORKER_URL=http://worker:8001
+      - LANGFUSE_HOST=http://langfuse-server:3000
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-server:3000
     env_file:
