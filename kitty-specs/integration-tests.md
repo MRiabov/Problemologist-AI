@@ -37,6 +37,9 @@ Additionally:
 7. Any unavoidable mock must be isolated to external third-party instability only, and must not mock project modules.
 8. A test that imports app internals (`controller.*`, `worker.*`) to invoke business logic directly is **not** integration coverage.
 
+*Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
+Commonly, these models and enums would be in `shared/` folder.
+
 ## Audit snapshot
 
 - Integration runner last updated: `ec6f964` on **2026-02-09 18:44:47 +0000** (`scripts/run_integration_tests.sh`).
@@ -130,6 +133,8 @@ Priorities:
 | INT-045 | Skills sync lifecycle | Worker pulls expected skills at run start; skill read events captured; skill version metadata recorded. |
 | INT-057 | Backup-to-S3 logging flow | Backup endpoint writes expected snapshot/object(s) to S3 and persists backup status metadata (size, duration, key). |
 | INT-058 | Cross-system correlation IDs | A single episode/trace can be correlated across controller logs/events, Temporal records, and S3 asset metadata. |
+| INT-059 | Langfuse trace linkage in live runs | With valid `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`, live episode execution emits trace records linked by non-empty `langfuse_trace_id`; tool/LLM/event traces are correlated to the same run-level trace identity. |
+| INT-060 | Langfuse feedback forwarding contract | `POST /episodes/{episode_id}/traces/{trace_id}/feedback` forwards score/comment to Langfuse and persists local feedback fields; missing Langfuse client returns `503`, missing `langfuse_trace_id` returns `400`. |
 
 ### P2: Multi-episode and evaluation architecture tests
 
@@ -207,19 +212,21 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-056 | Force real S3/MinIO upload failure and assert retry + terminal logging behavior. | Mocked upload error branch only. |
 | INT-057 | Call backup endpoint against live stack and verify object creation + backup metadata logs. | Unit test of backup serializer only. |
 | INT-058 | For one episode, correlate IDs across events, Temporal records, and S3 metadata from real persistence. | Asserting hardcoded correlation IDs in fixtures. |
+| INT-059 | Run live episode with Langfuse configured and assert persisted trace linkage (`langfuse_trace_id`) across emitted traces. | Unit-testing callback wiring or mocking Langfuse handler calls only. |
+| INT-060 | Call live feedback endpoint and assert both remote Langfuse scoring effect and local DB feedback persistence + error-path status codes. | Directly invoking feedback route function with mocked DB/Langfuse client only. |
 
 ## Coverage map: current vs required
 
 - Covered partially today:
   - INT-001, INT-002, INT-003, INT-004 (basic smoke/plumbing/concurrency).
 - Not covered or only weakly covered:
-  - INT-005 through INT-058 (planner gating, COTS, artifact validation, observability completeness, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).
+  - INT-005 through INT-060 (planner gating, COTS, artifact validation, observability completeness, Langfuse logging guarantees, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).
 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056.
-- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-058.
+- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060.
 - `tests/integration/evals_p2/`: INT-046..INT-052.
 
 Marker recommendation:
