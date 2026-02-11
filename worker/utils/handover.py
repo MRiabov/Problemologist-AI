@@ -69,7 +69,10 @@ def submit_for_review(component: Compound):
             raise ValueError(f"preliminary_cost_estimation.yaml invalid: {result}")
     else:
         # Note: architecture says it's required for Planner handover
-        logger.warning("preliminary_cost_estimation_yaml_missing")
+        logger.error("preliminary_cost_estimation_yaml_missing")
+        raise ValueError(
+            "preliminary_cost_estimation.yaml is missing (required for submission)"
+        )
 
     # Ensure renders_dir exists
     renders_dir.mkdir(parents=True, exist_ok=True)

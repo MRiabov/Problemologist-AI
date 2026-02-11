@@ -42,10 +42,9 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
             return False, ["Empty or invalid YAML content"]
 
         # 1. Enforce that file is not the template
-        if "x_min" in content or "x_max" in content or "goal_zone: [x_min" in content:
-            return False, [
-                "objectives.yaml still contains template placeholders (x_min, etc.)"
-            ]
+        placeholders = ["x_min", "x_max", "[x_min", "[x, y, z]", "y_min", "z_min"]
+        if any(p in content for p in placeholders):
+            return False, ["objectives.yaml still contains template placeholders"]
 
         objectives = ObjectivesYaml(**data)
         logger.info("objectives_yaml_valid")
@@ -86,6 +85,15 @@ def validate_preliminary_cost_estimation_yaml(
             return False, ["Empty or invalid YAML content"]
 
         estimation = PreliminaryCostEstimation(**data)
+
+        # 1. Check for template placeholders in cost estimation too
+        placeholders = ["ramp_main", "guide_clip"]
+        # Only check if it looks EXACTLY like the template example
+        if any(p in content for p in placeholders):
+            return False, [
+                "preliminary_cost_estimation.yaml still contains template placeholders"
+            ]
+
         logger.info("cost_estimation_yaml_valid")
         return True, estimation
     except yaml.YAMLError as e:
