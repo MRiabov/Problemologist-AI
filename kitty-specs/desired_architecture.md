@@ -816,7 +816,7 @@ Expected flow:
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
     - The script validates schema consistency and computes preliminary totals.
-    - The script auto-populates the unit cost and weight from the objectives.yaml file (unless the file is corrupted).
+    - The script auto-populates the unit cost and weight to the the objectives.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
 5. Planner writes planner-owned constraints in `objectives.yaml` using validated preliminary totals, under benchmark/customer caps.
 
@@ -833,6 +833,8 @@ Minimum per-manufactured-part fields:
 Minimum per-COTS-part fields:
 
 - `part_id`, `manufacturer`, `unit_cost_usd`, `source`
+
+Note: I will restate: any field that can be autopopulated is autopopulated. E.g. here the mandatory fields are only `part_id`,`manufacturer`,`source`, the `price` can be pulled from DB (errors are not triggered during validation too, however if it mismatches, the fields must be overwritten and the right price used.)
 
 Required assembly fields:
 
@@ -1844,7 +1846,14 @@ Validated under all environment randomization.
 
 #### Planner tools
 
-`validate_and_price` except for manufacturability.
+`validate_and_price` except this is the planner's version of it. Will:
+
+1. Validate pricing YAML file
+2. Output a price in the terminal and warn if the file
+3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the engineering planner.)
+<!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
+
+<!-- (note: maybe I want to resolve naming conflicts) -->
 
 #### Exact tools logic
 
