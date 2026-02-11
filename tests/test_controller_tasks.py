@@ -3,18 +3,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from controller.api.main import execute_agent_task
+from controller.api.tasks import execute_agent_task
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus
 
 
 @pytest.mark.asyncio
-@patch("controller.api.main.get_sessionmaker")
+@patch("controller.api.tasks.get_sessionmaker")
 @patch("controller.observability.database.get_sessionmaker")
-@patch("controller.api.main.get_worker_client")
-@patch("controller.api.main.create_agent_graph")
-@patch("controller.api.main.RemoteFilesystemBackend")
+@patch("controller.api.tasks.get_worker_client")
+@patch("controller.api.tasks.create_agent_graph")
+@patch("controller.api.tasks.RemoteFilesystemBackend")
+@patch("controller.api.tasks.initialize_agent_files")
 async def test_execute_agent_task_success(
+    mock_init_files,
     mock_backend_cls,
     mock_create_graph,
     _mock_get_worker,
@@ -52,7 +54,7 @@ async def test_execute_agent_task_success(
     mock_agent.ainvoke.return_value = {
         "messages": [MagicMock(content="agent finished")]
     }
-    mock_create_graph.return_value = mock_agent
+    mock_create_graph.return_value = (mock_agent, MagicMock())
 
     # Execute the task
     await execute_agent_task(episode_id, task, session_id)
@@ -70,7 +72,7 @@ async def test_execute_agent_task_success(
 
 
 @pytest.mark.asyncio
-@patch("controller.api.main.get_sessionmaker")
+@patch("controller.api.tasks.get_sessionmaker")
 async def test_execute_agent_task_not_found(mock_get_sessionmaker):
     episode_id = uuid.uuid4()
 
@@ -91,11 +93,12 @@ async def test_execute_agent_task_not_found(mock_get_sessionmaker):
 
 
 @pytest.mark.asyncio
-@patch("controller.api.main.get_sessionmaker")
-@patch("controller.api.main.get_worker_client")
-@patch("controller.api.main.create_agent_graph")
+@patch("controller.api.tasks.get_sessionmaker")
+@patch("controller.api.tasks.get_worker_client")
+@patch("controller.api.tasks.create_agent_graph")
+@patch("controller.api.tasks.initialize_agent_files")
 async def test_execute_agent_task_failure(
-    mock_create_graph, mock_get_worker, mock_get_sessionmaker
+    mock_init_files, mock_create_graph, mock_get_worker, mock_get_sessionmaker
 ):
     episode_id = uuid.uuid4()
 
@@ -113,7 +116,7 @@ async def test_execute_agent_task_failure(
     # Make agent raise an exception
     mock_agent = AsyncMock()
     mock_agent.ainvoke.side_effect = Exception("Agent crashed")
-    mock_create_graph.return_value = mock_agent
+    mock_create_graph.return_value = (mock_agent, MagicMock())
 
     await execute_agent_task(episode_id, "task", "session")
 
