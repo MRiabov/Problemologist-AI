@@ -1,9 +1,17 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.tools.fs import create_fs_tools
+
+
+@pytest.fixture(autouse=True)
+def mock_record_events():
+    with patch(
+        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+    ) as mock:
+        yield mock
 
 
 @pytest.mark.asyncio

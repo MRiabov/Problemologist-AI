@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import schemathesis
@@ -12,17 +12,28 @@ schema = schemathesis.openapi.from_asgi("/openapi.json", app)
 
 
 @pytest.fixture(autouse=True)
-def mock_fs_router():
-    """Override the get_router dependency with a mock."""
-    mock = MagicMock(spec=FilesystemRouter)
-    # Default behaviors to prevent crashes during fuzzing
-    mock.ls.return_value = []
-    mock.read.return_value = b""
-    mock.exists.return_value = True
-    mock.edit.return_value = True
+def mock_dependencies():
+    """Mock external dependencies to prevent side effects."""
+    # Mock FilesystemRouter
+    router_mock = MagicMock(spec=FilesystemRouter)
+    router_mock.ls.return_value = []
+    router_mock.read.return_value = b""
+    router_mock.exists.return_value = True
+    router_mock.edit.return_value = True
+    router_mock.local_backend = MagicMock()
 
-    app.dependency_overrides[get_router] = lambda: mock
-    yield mock
+    app.dependency_overrides[get_router] = lambda: router_mock
+
+    # Mock sync_skills and watchdog to avoid side effects during startup
+    # Also mock git operations exposed via API
+    with (
+        patch("worker.app.sync_skills"),
+        patch("worker.app.start_watchdog"),
+        patch("worker.api.routes.init_workspace_repo"),
+        patch("worker.api.routes.commit_all", return_value="deadbeef"),
+    ):
+        yield
+
     app.dependency_overrides.clear()
 
 

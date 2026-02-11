@@ -23,7 +23,10 @@ def test_create_agent_graph_uses_config_prompt(
     _agent, _callback = create_agent_graph(mock_backend)
 
     # Assert
-    mock_get_prompt.assert_called_once_with("engineer.engineer.system")
+    # Assert
+    # It might be called multiple times (for agent + subagents), so we just check it was called.
+    assert mock_get_prompt.call_count >= 1
+    mock_get_prompt.assert_any_call("engineer.engineer.system")
     mock_create_deep_agent.assert_called_once()
     _args, kwargs = mock_create_deep_agent.call_args
     assert kwargs["system_prompt"] == "Mocked System Prompt"
