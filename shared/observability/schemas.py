@@ -281,3 +281,11 @@ class ReviewDecisionEvent(BaseEvent):
     decision: str  # "approve", "reject_plan", "reject_code"
     reason: str
     evidence_stats: dict[str, Any] = Field(default_factory=dict)
+
+
+class ReviewEvent(BaseEvent):
+    """Event emitted when a review is submitted."""
+    event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
+    episode_id: str
+    decision: str
+    comments: list[str] = Field(default_factory=list)

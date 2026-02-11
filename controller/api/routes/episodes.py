@@ -61,6 +61,52 @@ async def report_trace_feedback(
     return {"status": ResponseStatus.ACCEPTED}
 
 
+class ReviewRequest(BaseModel):
+    review_content: str
+
+
+@router.post("/{episode_id}/review")
+async def review_episode(
+    episode_id: uuid.UUID,
+    request: ReviewRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit a review for an episode."""
+    from worker.utils.file_validation import validate_review_frontmatter
+    from shared.observability.events import emit_event
+    from shared.observability.schemas import ReviewEvent
+
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    # Validate the review frontmatter
+    is_valid, review_data = validate_review_frontmatter(request.review_content)
+    if not is_valid:
+        raise HTTPException(status_code=422, detail=f"Invalid review: {review_data}")
+
+    # Update episode based on decision
+    decision = review_data.decision
+    if decision == "approved":
+        episode.status = EpisodeStatus.COMPLETED
+    elif decision == "rejected":
+        episode.status = EpisodeStatus.FAILED
+    
+    # Emit review event
+    emit_event(
+        ReviewEvent(
+            episode_id=str(episode_id),
+            decision=decision,
+            comments=review_data.comments,
+        )
+    )
+
+    await db.commit()
+    return {"status": ResponseStatus.SUCCESS, "decision": decision}
+
+
 class TraceResponse(BaseModel):
     id: int
     langfuse_trace_id: str | None
