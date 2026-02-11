@@ -37,8 +37,11 @@ if [ $COUNT -eq $MAX_RETRIES ]; then
   exit 1
 fi
 
-echo "Running integration tests..."
-if uv run pytest -v -m integration; then
+# Default marker to run
+MARKER=${1:-integration_p0}
+
+echo "Running integration tests with marker: $MARKER..."
+if uv run pytest -v -m "$MARKER"; then
   echo "Integration tests PASSED!"
   SUCCESS=1
 else
