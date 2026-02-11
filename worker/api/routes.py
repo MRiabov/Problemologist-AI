@@ -330,7 +330,7 @@ async def api_validate(
         component = _load_component(
             fs_router, request.script_path, request.script_content
         )
-        is_valid, message = validate(component)
+        is_valid, message = validate(component, output_dir=fs_router.local_backend.root)
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=is_valid,

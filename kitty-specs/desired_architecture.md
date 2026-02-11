@@ -2050,6 +2050,7 @@ and a schema with a OpenAPI schema.
 
 Structlog.
 <!-- Looks nicer. -->
+For utils used in agent, a simple `logging` is acceptable too.
 
 ### Testing
 

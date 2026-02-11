@@ -13,6 +13,9 @@ services:
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-server:3000
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
+      - ASSET_S3_BUCKET=problemologist
+      - BACKUP_S3_BUCKET=problemologist-backup
     networks:
       - default
     command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "controller", "--reload-dir", "shared"]
@@ -94,6 +97,11 @@ services:
       - "8001:8001"
     environment:
       - S3_ENDPOINT=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MUJOCO_GL=osmesa
+      - PYVISTA_OFF_SCREEN=true
+      - VTK_DEFAULT_OPENGL_RENDERER=OSMesa
     networks:
       - default
     command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]
@@ -273,5 +281,6 @@ services:
       /usr/bin/mc mb myminio/problemologist || true;
       /usr/bin/mc mb myminio/langfuse-events || true;
       /usr/bin/mc mb myminio/langfuse-media || true;
+      /usr/bin/mc mb myminio/problemologist-backup || true;
       exit 0;
       "

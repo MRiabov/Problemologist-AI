@@ -13,9 +13,11 @@ class StorageClient:
 
     def __init__(self):
         self.endpoint = os.getenv("S3_ENDPOINT")
-        self.access_key = os.getenv("S3_ACCESS_KEY")
-        self.secret_key = os.getenv("S3_SECRET_KEY")
-        self.bucket = os.getenv("S3_BUCKET", "simulation-artifacts")
+        self.access_key = os.getenv("S3_ACCESS_KEY") or os.getenv("AWS_ACCESS_KEY_ID")
+        self.secret_key = os.getenv("S3_SECRET_KEY") or os.getenv(
+            "AWS_SECRET_ACCESS_KEY"
+        )  # fixme: I don't actually use AWS?
+        self.bucket = os.getenv("S3_BUCKET", "problemologist")
         self.region = os.getenv("S3_REGION", "us-east-1")
 
         self.client = boto3.client(

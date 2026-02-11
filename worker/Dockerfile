@@ -2,13 +2,17 @@ FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libgl1 \
     libglu1-mesa \
     libxrender1 \
     libxext6 \
     libfontconfig1 \
     libx11-6 \
-    git \
+    libegl1 \
+    libosmesa6 \
+    libglib2.0-0 \
+    libsm6 \
     curl \
     dnsutils \
     && rm -rf /var/lib/apt/lists/*

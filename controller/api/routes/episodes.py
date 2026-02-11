@@ -23,7 +23,7 @@ class FeedbackRequest(BaseModel):
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
 
-@router.post("/{episode_id}/traces/{trace_id}/feedback")
+@router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
     trace_id: int,
@@ -46,7 +46,7 @@ async def report_trace_feedback(
     if not langfuse:
         raise HTTPException(status_code=503, detail="Langfuse client not configured")
 
-    langfuse.score(
+    langfuse.create_score(
         trace_id=trace.langfuse_trace_id,
         name="user-feedback",
         value=feedback.score,

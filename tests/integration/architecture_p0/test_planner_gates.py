@@ -6,7 +6,7 @@ import pytest
 import httpx
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8001")
+WORKER_URL = os.getenv("WORKER_URL", "http://127.0.0.1:8001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
 
 
@@ -497,3 +497,99 @@ def build():
             "Build zone violation" in data.get("message", "")
             or "out of bounds" in data.get("message", "").lower()
         )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_010_planner_pricing_script_integration(
+    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
+):
+    """INT-010: Verify validate_costing_and_price block when over caps."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Create cost estimation where totals > planner caps (which are valid vs benchmark)
+        invalid_cost = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_kg": 1.0,
+                "planner_target_max_unit_cost_usd": 45.0,
+                "planner_target_max_weight_kg": 0.9,
+            },
+            "totals": {
+                "estimated_unit_cost_usd": 55.0,  # OVER PLANNER CAP
+                "estimated_weight_g": 500.0,
+                "estimate_confidence": "high",
+            },
+        }
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": invalid_cost,
+            "solution.py": minimal_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert not resp.json()["success"]
+        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
+        assert "exceeds target" in resp.json()["message"].lower()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_018_validate_and_price_integration_gate(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+    minimal_script,
+):
+    """INT-018: Verify simulate/submit require prior validation."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Setup workspace BUT do not call /benchmark/validate
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
+        # 2. Try to simulate without validation
+        # In our architecture, the worker might allow it if artifacts exist,
+        # but the spec says "simulate and submit_for_review require manufacturability + pricing validation first".
+        # If the worker performs validation on-the-fly, we expect it to fail if artifacts are missing.
+        # If we want to test the GATE, we should check if the server rejects it if no validation record exists.
+
+        # Actually, let's test that submission fails if validation results (artifacts) are missing.
+        # But INT-018 is about the *prior* call.
+
+        # If the backend enforces that /benchmark/validate MUST have been called (e.g. via a session flag)
+        # then we test that here.
+        # Assuming for now it's about artifact existence.
+
+        # Let's delete the cached validation results specifically if any
+        await client.post(
+            f"{WORKER_URL}/fs/delete",
+            json={"path": "validation_results.json"},
+            headers=base_headers,
+        )
+
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        # If the gate is enforced, it should fail.
+        # Based on current handover logic, it might fail because it looks for validation records.
+        assert not resp.json()["success"]
+        # Depending on implementation, it might say "validation results missing" or similar
+        assert "validation" in resp.json()["message"].lower()

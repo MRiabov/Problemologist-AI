@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-import mujoco
+# import mujoco  (Delayed import inside functions to prevent startup crashes)
 import structlog
 import yaml
 from build123d import Compound, export_stl
@@ -110,7 +110,7 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
             status_msg = "Goal achieved."
 
         # 7. Generate renders
-        render_paths = prerender_24_views(component)
+        render_paths = prerender_24_views(component, output_dir=str(renders_dir))
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
         return SimulationResult(metrics.success, status_msg, render_paths, mjcf_content)
@@ -119,13 +119,9 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
         logger.error("simulation_error", error=str(e))
         return SimulationResult(False, f"Simulation error: {e!s}")
 
-    except Exception as e:
-        logger.error("simulation_error", error=str(e))
-        return SimulationResult(False, f"Simulation error: {e!s}")
-
 
 def validate(
-    component: Compound, build_zone: dict | None = None
+    component: Compound, build_zone: dict | None = None, output_dir: Path | None = None
 ) -> tuple[bool, str | None]:
     """
     Verify geometric validity and randomization robustness.
@@ -134,6 +130,8 @@ def validate(
     - Verify boundary constraints (AABB).
     - Test validity across a few random seeds.
     """
+    import mujoco
+
     logger.info("validate_start")
 
     # 1. Intersection check
@@ -176,7 +174,11 @@ def validate(
 
     # 3. Generate renders (as expected by prompt/reviewer)
     try:
-        prerender_24_views(component)
+        renders_dir = None
+        if output_dir:
+            renders_dir = str(output_dir / "renders")
+
+        prerender_24_views(component, output_dir=renders_dir)
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))
         # Don't fail validation just because renders failed, but log it
