@@ -1,11 +1,11 @@
-import logging
+import structlog
 
 import mujoco
 import numpy as np
 from build123d import Compound, Part
 from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class SimulationMetrics(BaseModel):
@@ -118,7 +118,7 @@ class SimulationLoop:
             if actuator_id != -1:
                 self.data.ctrl[actuator_id] = value
             else:
-                logger.warning(f"Actuator {name} not found")
+                logger.warning("actuator_not_found", name=name)
 
         start_time = self.data.time
         steps = (
@@ -195,13 +195,13 @@ class SimulationLoop:
                 target_pos = self.data.xpos[target_body_id]
                 if target_pos[2] < -2.0:
                     self.fail_reason = "target_fell_off_world"
-                    logger.info("Simulation FAIL: Target fell off world")
+                    logger.info("simulation_fail", reason="target_fell_off_world")
                     break
 
             # 3. Check Forbidden Zones
             if self._check_forbidden_collision():
                 self.fail_reason = "collision_with_forbidden_zone"
-                logger.info("Simulation FAIL: Collision with forbidden zone")
+                logger.info("simulation_fail", reason="collision_with_forbidden_zone")
                 break
 
             # 4. Check Goal Zone
@@ -217,8 +217,10 @@ class SimulationLoop:
             if elapsed >= self.max_simulation_time:
                 self.fail_reason = "timeout_exceeded"
                 logger.info(
-                    f"Simulation FAIL: Timeout after {elapsed:.2f}s "
-                    f"(limit: {self.max_simulation_time}s)"
+                    "simulation_fail",
+                    reason="timeout_exceeded",
+                    elapsed=elapsed,
+                    limit=self.max_simulation_time,
                 )
                 break
 
@@ -226,13 +228,15 @@ class SimulationLoop:
             overloaded = self._check_motor_overload()
             if overloaded:
                 self.fail_reason = f"motor_overload:{overloaded}"
-                logger.info(f"Simulation FAIL: Motor overload on {overloaded}")
+                logger.info(
+                    "simulation_fail", reason="motor_overload", motor=overloaded
+                )
                 break
 
             # 7. Check Numerical Stability (NaNs)
             if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
                 self.fail_reason = "instability_detected"
-                logger.info("Simulation FAIL: Numerical instability (NaNs) detected")
+                logger.info("simulation_fail", reason="numerical_instability")
                 break
 
             if render_callback:

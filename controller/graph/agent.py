@@ -57,7 +57,7 @@ def create_agent_graph(
     cots_search_subagent = {
         "name": "cots_search",
         "description": "Search for components (motors, fasteners, bearings).",
-        "prompt": get_prompt("subagents.cots_search.system"),
+        "system_prompt": get_prompt("subagents.cots_search.system"),
         "tools": [search_cots_catalog],
     }
 

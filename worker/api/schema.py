@@ -35,6 +35,7 @@ class WriteFileRequest(BaseModel):
 
     path: StrictStr = Field(..., min_length=1)
     content: StrictStr
+    overwrite: StrictBool = False
 
 
 class EditOp(BaseModel):

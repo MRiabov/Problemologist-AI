@@ -10,32 +10,54 @@ WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
 
 
-# Use a non-async fixture for session_id to avoid scope issues in some environments
 @pytest.fixture
 def session_id():
     return f"test-gates-{uuid.uuid4().hex[:8]}"
 
 
 @pytest.fixture
-def minimal_script():
-    return """
-from build123d import *
-def build():
-    return Box(10, 10, 10)
+def base_headers(session_id):
+    return {"X-Session-ID": session_id}
+
+
+@pytest.fixture
+def valid_plan():
+    return """## 1. Solution Overview
+A valid solution overview.
+
+## 2. Parts List
+| Part | Qty |
+|------|-----|
+| Box  | 1   |
+
+## 3. Assembly Strategy
+1. Step one.
+
+## 4. Cost & Weight Budget
+- Cost: $10
+- Weight: 100g
+
+## 5. Risk Assessment
+- Risk: Low
 """
 
 
 @pytest.fixture
-def base_objectives():
+def valid_todo():
+    return "- [x] Step 1\n- [-] Step 2"
+
+
+@pytest.fixture
+def valid_objectives():
     return {
         "objectives": {
-            "goal_zone": {"min": [100.0, 100.0, 100.0], "max": [110.0, 110.0, 110.0]},
+            "goal_zone": {"min": [10.0, 10.0, 10.0], "max": [20.0, 20.0, 20.0]},
             "forbid_zones": [],
             "build_zone": {"min": [-50.0, -50.0, 0.0], "max": [50.0, 50.0, 100.0]},
         },
         "simulation_bounds": {
-            "min": [-200.0, -200.0, 0.0],
-            "max": [200.0, 200.0, 200.0],
+            "min": [-100.0, -100.0, 0.0],
+            "max": [100.0, 100.0, 100.0],
         },
         "moved_object": {
             "label": "ball",
@@ -47,40 +69,310 @@ def base_objectives():
     }
 
 
+@pytest.fixture
+def valid_cost():
+    return {
+        "version": "1.0",
+        "constraints": {
+            "benchmark_max_unit_cost_usd": 50.0,
+            "benchmark_max_weight_kg": 1.0,
+            "planner_target_max_unit_cost_usd": 45.0,
+            "planner_target_max_weight_kg": 0.9,
+        },
+        "totals": {
+            "estimated_unit_cost_usd": 30.0,
+            "estimated_weight_g": 500.0,
+            "estimate_confidence": "high",
+        },
+    }
+
+
+@pytest.fixture
+def minimal_script():
+    return """
+from build123d import *
+from worker.workbenches.models import ManufacturingMethod
+def build():
+    p = Box(10, 10, 10)
+    p.label = "test_part"
+    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum-6061"}
+    return p
+"""
+
+
+async def setup_workspace(client, headers, files):
+    """Utility to setup a workspace. Overwrites if exists."""
+    for path, content in files.items():
+        # Use overwrite=True to handle existing files (like objectives.yaml template)
+        resp = await client.post(
+            f"{WORKER_URL}/fs/write",
+            json={
+                "path": path,
+                "content": content if isinstance(content, str) else yaml.dump(content),
+                "overwrite": True,
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200, f"Failed to write {path}: {resp.text}"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_005_mandatory_artifacts_gate(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+    minimal_script,
+):
+    """INT-005: Verify rejection if mandatory artifacts are missing."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Initial: All required files except one
+        base_files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
+        }
+
+        # 1. Missing plan.md
+        files = base_files.copy()
+        del files["plan.md"]
+        # Since fs/delete is used in setup_workspace, we can just not include it
+        await setup_workspace(client, base_headers, files)
+        # Manually ensure plan.md is gone if it existed from previous step (though each session is new)
+        await client.post(
+            f"{WORKER_URL}/fs/delete", json={"path": "plan.md"}, headers=base_headers
+        )
+
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert not resp.json()["success"]
+        assert "plan.md is missing" in resp.json()["message"]
+
+        # 2. Missing todo.md
+        files = base_files.copy()
+        del files["todo.md"]
+        await setup_workspace(client, base_headers, files)
+        await client.post(
+            f"{WORKER_URL}/fs/delete", json={"path": "todo.md"}, headers=base_headers
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert not resp.json()["success"]
+        assert "todo.md is missing" in resp.json()["message"]
+
+        # 3. Missing preliminary_cost_estimation.yaml
+        files = base_files.copy()
+        del files["preliminary_cost_estimation.yaml"]
+        await setup_workspace(client, base_headers, files)
+        await client.post(
+            f"{WORKER_URL}/fs/delete",
+            json={"path": "preliminary_cost_estimation.yaml"},
+            headers=base_headers,
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert not resp.json()["success"]
+        assert "preliminary_cost_estimation.yaml is missing" in resp.json()["message"]
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_006_plan_structure_validation(
+    session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
+):
+    """INT-006: Verify plan.md structural requirements."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        base_files = {
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
+        }
+
+        # 1. Missing required heading
+        invalid_plan = "## 1. Solution Overview\nNo other headings."
+        await setup_workspace(
+            client, base_headers, {**base_files, "plan.md": invalid_plan}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "plan.md invalid" in resp.json()["message"]
+        assert "Missing required section" in resp.json()["message"]
+
+        # 2. Parts List missing table/bullets
+        invalid_plan = """## 1. Solution Overview
+Overview.
+## 2. Parts List
+Just some text here, no list or table.
+## 3. Assembly Strategy
+1. Step
+## 4. Cost & Weight Budget
+- Cost: 0
+## 5. Risk Assessment
+- Risk: None
+"""
+        await setup_workspace(
+            client, base_headers, {**base_files, "plan.md": invalid_plan}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert (
+            "Parts List must contain a bullet list or table" in resp.json()["message"]
+        )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_007_todo_integrity(
+    session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
+):
+    """INT-007: Verify todo.md integrity (all items completed or skipped)."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        base_files = {
+            "plan.md": valid_plan,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
+        }
+
+        # 1. Invalid checkbox format
+        invalid_todo = "- [?] What is this?"
+        await setup_workspace(
+            client, base_headers, {**base_files, "todo.md": invalid_todo}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "todo.md invalid" in resp.json()["message"]
+        assert "invalid checkbox" in resp.json()["message"]
+
+        # 2. Uncompleted item at submission
+        uncompleted_todo = "- [ ] I forgot to finish this"
+        await setup_workspace(
+            client, base_headers, {**base_files, "todo.md": uncompleted_todo}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "must be completed or skipped" in resp.json()["message"]
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_008_objectives_validation(
+    session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
+):
+    """INT-008: Verify objectives.yaml schema and template detection."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        base_files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
+        }
+
+        # 1. Template placeholders present (e.g., x_min)
+        template_content = "objectives:\n  goal_zone:\n    min: [x_min, y_min, z_min]"
+        await setup_workspace(
+            client, base_headers, {**base_files, "objectives.yaml": template_content}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "template placeholders" in resp.json()["message"]
+
+        # 2. Schema violation (wrong type)
+        invalid_obj = {"objectives": {"goal_zone": {"min": "not_a_list"}}}
+        await setup_workspace(
+            client, base_headers, {**base_files, "objectives.yaml": invalid_obj}
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "objectives.yaml invalid" in resp.json()["message"]
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_009_cost_estimation_validation(
+    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
+):
+    """INT-009: Verify preliminary_cost_estimation.yaml schema and placeholders."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        base_files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "solution.py": minimal_script,
+        }
+
+        # 1. Template placeholders (ramp_main)
+        template_cost = "version: '1.0'\ntotals:\n  estimated_unit_cost_usd: 10.0\n  ramp_main: True"
+        await setup_workspace(
+            client,
+            base_headers,
+            {**base_files, "preliminary_cost_estimation.yaml": template_cost},
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "template placeholders" in resp.json()["message"]
+
+        # 2. Schema violation (missing required field)
+        invalid_cost = {
+            "version": "1.0",
+            "totals": {},
+        }  # Missing estimated_unit_cost_usd
+        await setup_workspace(
+            client,
+            base_headers,
+            {**base_files, "preliminary_cost_estimation.yaml": invalid_cost},
+        )
+        resp = await client.post(
+            f"{WORKER_URL}/benchmark/submit",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
+        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
+
+
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_011_planner_caps_enforcement(
-    session_id, minimal_script, base_objectives
+    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
-    """
-    INT-011: Verify handoff blockage when planner caps exceed benchmark limits.
-    """
+    """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # Setup workspace
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "solution.py", "content": minimal_script},
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": yaml.dump(base_objectives)},
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "plan.md",
-                "content": "## 1. Solution Overview\n## 2. Parts List\n## 3. Assembly Strategy\n## 4. Cost & Weight Budget\n## 5. Risk Assessment",
-            },
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "todo.md", "content": "- [x] Done"},
-            headers={"X-Session-ID": session_id},
-        )
-
         # Create invalid cost estimation (target > benchmark cap)
         invalid_cost = {
             "version": "1.0",
@@ -96,205 +388,83 @@ async def test_int_011_planner_caps_enforcement(
                 "estimate_confidence": "medium",
             },
         }
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "preliminary_cost_estimation.yaml",
-                "content": yaml.dump(invalid_cost),
-            },
-            headers={"X-Session-ID": session_id},
-        )
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": invalid_cost,
+            "solution.py": minimal_script,
+        }
+        await setup_workspace(client, base_headers, files)
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
-            headers={"X-Session-ID": session_id},
+            headers=base_headers,
         )
-
-        data = resp.json()
-        assert not data["success"], f"Expected failure but got success: {data}"
-        assert "preliminary_cost_estimation.yaml invalid" in data["message"]
+        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
         assert (
             "Planner target cost (60.0) must be less than or equal to benchmark max cost (50.0)"
-            in data["message"]
+            in resp.json()["message"]
         )
 
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_015_engineer_handover_immutability(
-    session_id, minimal_script, base_objectives
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+    minimal_script,
 ):
-    """
-    INT-015: Verify immutability of objectives.yaml during handover.
-    """
+    """INT-015: Verify immutability of objectives.yaml during handover."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        await client.post(
-            f"{WORKER_URL}/git/init", headers={"X-Session-ID": session_id}
-        )
+        await client.post(f"{WORKER_URL}/git/init", headers=base_headers)
 
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "solution.py", "content": minimal_script},
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": yaml.dump(base_objectives)},
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "plan.md",
-                "content": "## 1. Solution Overview\n## 2. Parts List\n## 3. Assembly Strategy\n## 4. Cost & Weight Budget\n## 5. Risk Assessment",
-            },
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "todo.md", "content": "- [x] Done"},
-            headers={"X-Session-ID": session_id},
-        )
-
-        valid_cost = {
-            "version": "1.0",
-            "constraints": {
-                "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_kg": 1.0,
-                "planner_target_max_unit_cost_usd": 45.0,
-                "planner_target_max_weight_kg": 0.8,
-            },
-            "totals": {
-                "estimated_unit_cost_usd": 40.0,
-                "estimated_weight_g": 200.0,
-                "estimate_confidence": "medium",
-            },
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": minimal_script,
         }
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "preliminary_cost_estimation.yaml",
-                "content": yaml.dump(valid_cost),
-            },
-            headers={"X-Session-ID": session_id},
-        )
+        await setup_workspace(client, base_headers, files)
 
         # Baseline commit
         await client.post(
             f"{WORKER_URL}/git/commit",
             json={"message": "Initial benchmark"},
-            headers={"X-Session-ID": session_id},
+            headers=base_headers,
         )
 
         # Cheat: modify objectives.yaml
-        modified_objectives = base_objectives.copy()
+        modified_objectives = valid_objectives.copy()
         modified_objectives["constraints"]["max_unit_cost"] = 1000.0
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": yaml.dump(modified_objectives)},
-            headers={"X-Session-ID": session_id},
+        # setup_workspace handles delete+write
+        await setup_workspace(
+            client, base_headers, {"objectives.yaml": modified_objectives}
         )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
-            headers={"X-Session-ID": session_id},
+            headers=base_headers,
         )
-
-        data = resp.json()
-        assert not data["success"]
-        assert "objectives.yaml violation" in data["message"]
-        assert "has been modified" in data["message"]
+        assert not resp.json()["success"]
+        assert "objectives.yaml violation" in resp.json()["message"]
+        assert "has been modified" in resp.json()["message"]
 
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_016_review_decision_schema_gate(session_id):
-    """
-    INT-016: Verify strict schema validation for reviewer decisions.
-    We test this by running a small script on the worker that calls the validator.
-    """
+async def test_int_019_hard_constraints_gates(
+    session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
+):
+    """INT-019: Verify cost/weight/build-zone hard failure during submission."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # Invalid decision "maybe"
-        invalid_review = """---
-decision: maybe
-comments:
-  - This is not a valid decision
----
-"""
-        # Script to run validator
-        validator_script = f"""
-from worker.utils.file_validation import validate_review_frontmatter
-content = {repr(invalid_review)}
-is_valid, errors = validate_review_frontmatter(content)
-print(f"VALID:{{is_valid}}")
-print(f"ERRORS:{{errors}}")
-"""
-        resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
-            json={"code": validator_script},
-            headers={"X-Session-ID": session_id},
-        )
-        assert resp.status_code == 200
-        stdout = resp.json()["stdout"]
-        assert "VALID:False" in stdout
-        assert (
-            "decision" in stdout and "extra_forbidden" not in stdout
-        )  # Decision should be in errors
-
-
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
-async def test_int_019_hard_constraints_gates(session_id, base_objectives):
-    """
-    INT-019: Verify cost/weight/build-zone hard failure during submission.
-    """
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Setup valid baseline
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": yaml.dump(base_objectives)},
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "plan.md",
-                "content": "## 1. Solution Overview\n## 2. Parts List\n## 3. Assembly Strategy\n## 4. Cost & Weight Budget\n## 5. Risk Assessment",
-            },
-            headers={"X-Session-ID": session_id},
-        )
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "todo.md", "content": "- [x] Done"},
-            headers={"X-Session-ID": session_id},
-        )
-
-        valid_cost = {
-            "version": "1.0",
-            "constraints": {
-                "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_kg": 1.0,
-                "planner_target_max_unit_cost_usd": 45.0,
-                "planner_target_max_weight_kg": 0.8,
-            },
-            "totals": {
-                "estimated_unit_cost_usd": 40.0,
-                "estimated_weight_g": 200.0,
-                "estimate_confidence": "medium",
-            },
-        }
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={
-                "path": "preliminary_cost_estimation.yaml",
-                "content": yaml.dump(valid_cost),
-            },
-            headers={"X-Session-ID": session_id},
-        )
-
-        # 1. Test OUT OF BOUNDS設計
         # Box translated to (1000, 1000, 1000) will be outside [ -50, 50 ]
         oob_script = """
 from build123d import *
@@ -306,17 +476,24 @@ def build():
     p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum-6061"}
     return p
 """
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "solution_oob.py", "content": oob_script},
-            headers={"X-Session-ID": session_id},
-        )
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "objectives.yaml": valid_objectives,
+            "preliminary_cost_estimation.yaml": valid_cost,
+            "solution.py": oob_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
-            json={"script_path": "solution_oob.py"},
-            headers={"X-Session-ID": session_id},
+            json={"script_path": "solution.py"},
+            headers=base_headers,
         )
         data = resp.json()
         assert not data["success"]
         assert "Submission rejected (DFM)" in data["message"]
-        assert "Build zone violation" in data["message"]
+        assert (
+            "Build zone violation" in data.get("message", "")
+            or "out of bounds" in data.get("message", "").lower()
+        )

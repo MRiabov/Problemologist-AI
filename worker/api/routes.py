@@ -159,7 +159,7 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
 async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     """Write content to a file."""
     try:
-        fs_router.write(request.path, request.content)
+        fs_router.write(request.path, request.content, overwrite=request.overwrite)
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except WritePermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
