@@ -54,14 +54,25 @@ def check_undercuts(
     min_z = mesh.vertices[:, 2].min()
     pointing_away = np.where(dots < -0.01)[0]
 
-    undercut_indices = []
-    for idx in pointing_away:
-        face_vertices = mesh.vertices[mesh.faces[idx]]
-        face_z = face_vertices[:, 2]
-        # If the face is at min_z and normal is nearly (0,0,-1), it's the base, not an undercut
-        if np.all(np.abs(face_z - min_z) < 0.01) and dots[idx] < -0.99:
-            continue
-        undercut_indices.append(idx)
+    if len(pointing_away) > 0:
+        # Get vertices for these faces: (N, 3, 3)
+        faces_vertices = mesh.vertices[mesh.faces[pointing_away]]
+        # Get Z coordinates: (N, 3)
+        faces_z = faces_vertices[:, :, 2]
+
+        # Check if all vertices of a face are at min_z
+        is_at_bottom = np.all(np.abs(faces_z - min_z) < 0.01, axis=1)
+
+        # Check if normal is pointing effectively straight down (opposite to Z if approach is Z)
+        is_pointing_down = dots[pointing_away] < -0.99
+
+        # Identify base faces
+        is_base = is_at_bottom & is_pointing_down
+
+        # Keep only non-base faces
+        undercut_indices = pointing_away[~is_base].tolist()
+    else:
+        undercut_indices = []
 
     # 2. Occlusion check using raycasting
     # Faces that point TOWARDS the tool but are blocked by other geometry
