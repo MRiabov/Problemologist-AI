@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from shared.observability.events import emit_event
+from shared.observability.schemas import LogicFailureEvent
 
 
 def test_emit_event():
@@ -10,18 +11,24 @@ def test_emit_event():
         event_file.unlink()
 
     try:
-        emit_event("test_event", {"foo": "bar"}, agent_id="test_agent")
+        event = LogicFailureEvent(
+            file_path="test.py",
+            constraint_name="test_constraint",
+            error_message="test error",
+            agent_id="test_agent",
+        )
+        emit_event(event)
 
         assert event_file.exists()
         with event_file.open("r") as f:
             lines = f.readlines()
             assert len(lines) == 1
-            event = json.loads(lines[0])
-            assert event["event_type"] == "test_event"
-            assert event["data"] == {"foo": "bar"}
-            assert event["agent_id"] == "test_agent"
-            assert "timestamp" in event
-            assert "unix_timestamp" in event
+            event_data = json.loads(lines[0])
+            assert event_data["event_type"] == "logic_failure"
+            assert event_data["file_path"] == "test.py"
+            assert event_data["agent_id"] == "test_agent"
+            assert "timestamp" in event_data
+            assert "unix_timestamp" in event_data
     finally:
         if event_file.exists():
             event_file.unlink()
