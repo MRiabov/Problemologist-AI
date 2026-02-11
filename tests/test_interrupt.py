@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from controller.api.main import app, execute_agent_task
+from controller.api.main import app
+from controller.api.tasks import execute_agent_task
 from controller.api.routes.episodes import get_db
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus
@@ -23,12 +24,14 @@ client = TestClient(app)
 
 
 @pytest.mark.asyncio
-@patch("controller.api.main.get_sessionmaker")
-@patch("controller.api.main.get_worker_client")
-@patch("controller.api.main.create_agent_graph")
-@patch("controller.api.main.RemoteFilesystemMiddleware")
+@patch("controller.api.tasks.get_sessionmaker")
+@patch("controller.api.tasks.get_worker_client")
+@patch("controller.api.tasks.create_agent_graph")
+@patch("controller.api.tasks.RemoteFilesystemBackend")
+@patch("controller.api.tasks.initialize_agent_files")
 async def test_execute_agent_task_cancelled(
-    mock_middleware_cls,
+    mock_init_files,
+    mock_backend_cls,
     mock_create_graph,
     mock_get_worker,
     mock_get_sessionmaker,
@@ -50,13 +53,13 @@ async def test_execute_agent_task_cancelled(
     mock_episode = Episode(id=episode_id, task=task, status=EpisodeStatus.RUNNING)
     mock_session.get.return_value = mock_episode
 
-    mock_middleware = mock_middleware_cls.return_value
-    mock_middleware.list_files = AsyncMock(return_value=[])
+    mock_backend = mock_backend_cls.return_value
+    mock_backend.als_info = AsyncMock(return_value=[])
 
     # Mock agent to raise CancelledError
     mock_agent = AsyncMock()
     mock_agent.ainvoke.side_effect = asyncio.CancelledError()
-    mock_create_graph.return_value = mock_agent
+    mock_create_graph.return_value = (mock_agent, MagicMock())
 
     # Execute the task
     with pytest.raises(asyncio.CancelledError):
