@@ -43,7 +43,7 @@ from deepagents.backends import LocalFilesystemBackend
 # Initialize with local sandbox for rapid testing
 graph = create_engineer_graph(
     filesystem=LocalFilesystemBackend(root_dir="./sandbox"),
-    llm_provider="openai/gpt-4o"
+    llm_provider="openai/z-ai/glm-4.7-flash"
 )
 
 # Run a thread
