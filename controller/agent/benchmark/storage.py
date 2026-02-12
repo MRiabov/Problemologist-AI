@@ -35,6 +35,7 @@ class BenchmarkStorage:
         images: list[bytes],
         metadata: dict[str, Any],
         db: AsyncSession,
+        random_variants: list[uuid.UUID] | None = None,
     ) -> BenchmarkAsset:
         """
         Uploads artifacts to S3 and saves record to DB.
@@ -79,7 +80,7 @@ class BenchmarkStorage:
             preview_bundle_url=bundle_url,
             benchmark_metadata=metadata,
             difficulty_score=metadata.get("difficulty_score", 0.0),
-            random_variants=[],  # TODO: Handle variants logic if needed
+            random_variants=[str(v) for v in (random_variants or [])],
         )
 
         db.add(asset_model)
