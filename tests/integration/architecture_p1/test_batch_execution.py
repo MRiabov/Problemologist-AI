@@ -28,9 +28,10 @@ async def test_int_043_batch_execution_path():
 
         # 1. Verify all accepted
         responses = await asyncio.gather(*tasks)
-        episode_ids = []
-        for resp in responses:
-            assert resp.status_code == 200
+                    episode_ids = []
+                    for resp in responses:
+                        assert resp.status_code == 202
+        
             episode_ids.append(resp.json()["episode_id"])
 
         assert len(set(episode_ids)) == 2, "All episode IDs must be unique"
