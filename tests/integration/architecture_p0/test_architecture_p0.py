@@ -226,17 +226,6 @@ run()
         assert resp.status_code == 200
         data = resp.json()
 
-        # DEBUG: Print full response if failure is not what expected
-        if "Forbid zone hit" not in data.get("message", ""):
-            print(f"INT-020 DEBUG RESPONSE: {data}")
-            # Try to list files in renders dir
-            ls_resp = await client.post(
-                f"{WORKER_URL}/runtime/execute",
-                json={"code": "import os; print(os.listdir('renders'))"},
-                headers={"X-Session-ID": session_id},
-            )
-            print(f"INT-020 LSTDIR RENDERS: {ls_resp.json().get('stdout')}")
-
         assert not data["success"]
         # Expect "Forbid zone hit: test_forbid" or "collision_with_forbidden_zone"
         assert any(
