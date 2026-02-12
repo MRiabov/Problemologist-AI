@@ -133,7 +133,7 @@ def build():
     session_root = sys.path[0]
     os.environ["EVENTS_FILE"] = os.path.join(session_root, "events.jsonl")
     emit_event({"event_type": "simulation_result", "data": {"seed": 1234}})
-    return Box(1,1,1)
+    return Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
@@ -247,8 +247,14 @@ async def test_int_030_interrupt_propagation():
 
         # 4. Verify state in DB
         # Wait a bit for cancellation to propagate
-        await asyncio.sleep(2)
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        assert status_resp.status_code == 200
+        for _ in range(10):
+            await asyncio.sleep(1)
+            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            assert status_resp.status_code == 200
+            status = status_resp.json()["status"]
+            if status in ["cancelled", "failed"]:
+                break
+
+        print(f"INT-030 FINAL STATUS: {status}")
         # If it fails quickly, it might be 'failed'. If cancellation wins, it's 'cancelled'.
-        assert status_resp.json()["status"] in ["cancelled", "failed"]
+        assert status in ["cancelled", "failed"]

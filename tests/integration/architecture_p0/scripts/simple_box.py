@@ -1,6 +1,6 @@
 from typing import Any
 
-from build123d import Box, BuildPart, Compound
+from build123d import Align, Box, BuildPart, Compound
 
 
 def build(_params: dict[str, Any] | None = None) -> Compound:
@@ -9,5 +9,5 @@ def build(_params: dict[str, Any] | None = None) -> Compound:
     # The actual placement depends on objectives.yaml, but this script
     # just returns a simple shape.
     with BuildPart() as p:
-        Box(1, 1, 1)
+        Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
     return p.part
