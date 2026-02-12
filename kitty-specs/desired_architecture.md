@@ -78,7 +78,7 @@ Problems with motors and moving parts are verified more consistently because the
    - `support_wall`: center `[0, -35, 40]`, size `[120, 6, 80]`, static scale range `[0.9, 1.15]`.
    - `funnel_body`: center `[32, 10, 18]`, top radius `20`, bottom radius `7`, height `26`, static scale range `[0.9, 1.1]`.
    - `goal_bin`: AABB min `[26, 4, 0]`, max `[42, 20, 10]`.
-   - No moving parts in this benchmark (`moving_parts: []`).
+   - No moving parts in this benchmark (all `final_assembly.parts[*].dofs: []`).
 
 3. **Input objective (moved object)**
    - Shape: `sphere`.
@@ -105,6 +105,7 @@ Problems with motors and moving parts are verified more consistently because the
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
    - Write draft `objectives.yaml` matching this geometry/constraint data.
+   - Write draft `preliminary_cost_estimation.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
 ```
 
 ```yaml
@@ -132,8 +133,6 @@ moved_object:
     radius: [5, 7]
   start_position: [0, 0, 70]
   runtime_jitter: [2, 2, 1]
-
-moving_parts: []
 
 constraints:
   max_unit_cost: 45.0
@@ -179,7 +178,8 @@ The architect will create and persist a TODO list. The engineer must implement. 
 The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
-   - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, moving parts + DOFs, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
+   - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
+   - Do not read benchmark `preliminary_cost_estimation.yaml`; benchmark cost estimation stays local to the benchmark planner.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
@@ -205,9 +205,15 @@ The Engineering Planner workflow is:
   final_assembly:
     - subassembly_1: 
         parts:
-          - part_1 
-          - part_2
-          - part_3
+          - part_1:
+              dofs: ["dof_2", "dof_1"]
+          - part_2:
+              dofs: []
+          - motor_a:
+              dofs: ["rotate_z"]
+              control:
+                mode: sinusoidal
+                speed: 1.0
         joints: 
         - joint_1: 
             parts:
@@ -216,13 +222,16 @@ The Engineering Planner workflow is:
             type: fastener_joint 
     - subassembly_2:
         parts:
-        - part_4
-        - part_1 # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
+          - part_4:
+              dofs: []
+          - part_1: # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
+              dofs: ["dof_2", "dof_1"]
         joints:
-          parts:  #note: maybe we want to inline it.
-            - part_4
-            - part_1
-          type: fastener_joint
+          - joint_2:
+              parts:  #note: maybe we want to inline it.
+                - part_4
+                - part_1
+              type: fastener_joint
     - part_5 
   ```
 
@@ -331,12 +340,12 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 
 ##### Initial files for each agent
 
-- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml`
+- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml` (draft/write)
 - Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml` (read), `script.py`, `journal.md`, `renders/`
 - Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`)
-- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `journal.md`
-- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `script.py`, `journal.md`, `renders/`
-- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`)
+- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `preliminary_cost_estimation.yaml` (draft, local only), `journal.md`
+- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`, `script.py`, `journal.md`, `renders/`
+- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`)
 - COTS Search: read-only COTS catalog DB/CLI, `journal.md` (queries + results)
 - Skill Creator: `skill-creator/SKILL.md` (read), `skills/` (read/write), `journal.md`, git metadata
 
@@ -354,7 +363,7 @@ Where possible, templates would have a validation schema. E.g. (in particular) f
 
 #### Immutability validation
 
-We assert that files (especially "control" files like `objectives.yaml`) are not validated by the agent. We use git-based hash assertions for such files where they must be immutable.
+We assert that files (especially "control" files like `objectives.yaml` and `preliminary_cost_estimation.yaml`) are not edited by the agent. We use git-based hash assertions for such files where they must be immutable.
 
 #### File updates
 
@@ -688,6 +697,8 @@ The plan will have the following bullet points. The plan will be validated for c
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
 3. A draft of `objectives.yaml` with rough values filled in.
+4. A draft of `preliminary_cost_estimation.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+<!-- Note: it may be interesting that the implementer could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
 
@@ -697,16 +708,14 @@ The Engineer agent(s) (for whom the first point of access is the Planner/lead en
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
-The engineer will also receive a YAML file with:
+The engineer will also receive YAML files with:
     1. Exact positions (boundaries) of objectives.
-    2. All moving parts (it's impossible to guess from pictures what is moving and in which direction from pictures only), with their DOFs that are programmatically calculated, with a small text description of how they can move.
-        - Including motors.
-    3. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
-    4. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
+    2. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
+    3. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) in a `objectives.yaml` file, and information on randomization of starting object positions (small "runtime" jitter), so as to prevent guessing in a 3d space.
+The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The benchmark planner's `preliminary_cost_estimation.yaml` stays in the benchmark planner scope and is not handed over to engineering.
 
 ##### A benchmark is reused multiple times
 
@@ -775,8 +784,9 @@ For each part:
 #   2. AVOIDING all `forbid_zones` (contact = failure)
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
-# The environment and moving_parts are READ-ONLY. You design parts that
-# interact with them, not modify them.
+# The environment geometry in this file is READ-ONLY. Engineering assembly
+# motion metadata is stored under engineering preliminary_cost_estimation.yaml
+# final_assembly.parts and is also READ-ONLY once written.
 # =============================================================================
 
 objectives:
@@ -820,29 +830,6 @@ moved_object:
   runtime_jitter: [2, 2, 1]  # [±x, ±y, ±z] mm
 
 # -----------------------------------------------------------------------------
-# ENVIRONMENT MOVING PARTS (READ-ONLY)
-# -----------------------------------------------------------------------------
-# These exist in the environment. You CANNOT modify them, but you CAN
-# design parts that interact with them (e.g., attach to motor shafts,
-# use passive sliders as triggers).
-moving_parts:
-  - name: "feeder_motor"
-    type: "motor"
-    position: [x, y, z]
-    dof: "rotate_z"  # Degrees of freedom: rotate_x/y/z, slide_x/y/z
-    control:
-      mode: "sinusoidal"  # Options: constant, sinusoidal, on_off
-      speed: 1.0          # rad/s (for rotate) or units/s (for slide)
-      frequency: 0.5      # Hz - for sinusoidal mode
-    description: "Rotates clockwise to push objects"
-
-  - name: "passive_slider"
-    type: "passive"  # Moves only when external force applied
-    position: [x, y, z]
-    dof: "slide_y"
-    description: "Slides freely along Y when impacted"
-
-# -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS
 # -----------------------------------------------------------------------------
 # These are challenging but achievable. Exceeding them = rejection.
@@ -860,12 +847,12 @@ randomization:
 
 ##### `preliminary_cost_estimation.yaml`
 
-To reduce cost guessing, the Engineering Planner outputs a machine-readable estimate file that captures all pricing inputs per part and the assembly structure used to derive quantities and part reuse.
+To reduce cost guessing, the Engineering Planner outputs a machine-readable estimate file that also serves as an assembly plan: it captures all pricing inputs per part plus the assembly structure used to derive quantities, reuse, and motion metadata.
 
 Expected flow:
 
 1. Planner drafts entries for all planned manufactured parts and COTS components.
-2. Planner defines `final_assembly` (subassemblies, part membership, and joints); under the hood we:
+2. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
     - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
@@ -873,6 +860,11 @@ Expected flow:
     - The script auto-populates the unit cost and weight to the objectives.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
 5. Planner writes planner-owned constraints in `objectives.yaml` using validated preliminary totals, under benchmark/customer caps.
+
+Minimum motion metadata fields inside `final_assembly.parts` entries:
+
+- `dofs`
+- For motorized parts: `control.mode`, plus required control params (e.g. `speed`, `frequency`) per mode
 
 Minimum per-manufactured-part fields:
 
@@ -893,6 +885,7 @@ Note: I will restate: any field that can be autopopulated is autopopulated. E.g.
 Required assembly fields:
 
 - `final_assembly` containing subassemblies/parts/joints
+- each part entry in `final_assembly.parts` includes `dofs`; moving motorized entries include `control`
 - repeated part references are allowed and used by pricing logic to compute quantity effects
 
 ```yaml
@@ -938,7 +931,21 @@ cots_parts:
   # user note 2: reminder: search for COTS parts is performed by a subagent
 final_assembly:
   - subassembly_id: "frame_and_ramp"
-    parts: ["ramp_main_v1", "guide_clip_v1", "guide_clip_v1"]
+    parts:
+      - ramp_main_v1:
+          dofs: []
+      - guide_clip_v1:
+          dofs: []
+      - guide_clip_v1:
+          dofs: []
+      - feeder_motor_env_v1:
+          dofs: ["rotate_z"] # Degrees of freedom: rotate_x/y/z, slide_x/y/z
+          control:
+            mode: "sinusoidal" # Options: constant, sinusoidal, on_off
+            speed: 1.0         # rad/s (for rotate) or units/s (for slide)
+            frequency: 0.5     # Hz - for sinusoidal mode
+      - passive_slider_env_v1:
+          dofs: ["slide_y"]
     joints:
       - joint_id: "j1"
         parts: ["ramp_main_v1", "guide_clip_v1"]
@@ -955,7 +962,7 @@ Validation requirement:
 
 #### Coder and Reviewer interaction
 
-1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), and the `objectives.yaml` file (YAML files with objectives, as specified above). Thus the Reviewer will only have readonly on all agent files permissions.
+1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), plus `objectives.yaml` and `preliminary_cost_estimation.yaml` (YAML files with objectives and `final_assembly.parts` DOF/control metadata). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
@@ -1465,7 +1472,7 @@ Note: they will need to be importable utils, just as tools like `simulate` are.
 
 ##### Implementation for time-based controller functions
 
-One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. On the other hand, the `objectives.yaml` will contain which functions the motors are referecing. the moving parts.
+One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. The `preliminary_cost_estimation.yaml` `final_assembly.parts` entries will contain which controller functions the motors are referencing.
 
 ##### Position-based functions
 
@@ -1477,7 +1484,7 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 
 <!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
 
-<!-- Warning to self: objectives.yaml gets bloated with moving parts definition, which doesn't explicitly belong in there. -->
+<!-- moving-part metadata moved out of objectives.yaml into preliminary_cost_estimation.yaml final_assembly.parts to keep objectives focused on task constraints. -->
 
 ###### Position-based controllers implementation
 
