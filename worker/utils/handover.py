@@ -115,6 +115,14 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
         build_zone = None
         constraints = None
 
+    # INT-018: Verify simulate/submit require prior validation
+    validation_results_path = cwd / "validation_results.json"
+    if not validation_results_path.exists():
+        logger.error("prior_validation_missing")
+        raise ValueError(
+            "Prior validation missing. Call /benchmark/validate before submission."
+        )
+
     # Perform DFM + Geometry Checks
     # Assuming CNC for now as standard, or should infer? Architecture implies CNC/3DP.
     # We'll use CNC as the baseline metric for cost unless specified otherwise.
