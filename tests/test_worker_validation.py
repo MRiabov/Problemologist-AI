@@ -16,7 +16,7 @@ def test_geometric_validation():
         Box(10, 10, 10)
 
     print(f"Validating single box: {validate(p.part)}")
-    assert validate(p.part)[0] == True
+    assert validate(p.part)[0]
 
     # 2. Overlapping boxes
     with BuildPart() as p1:
@@ -27,8 +27,9 @@ def test_geometric_validation():
     comp = Compound(label="overlapping", children=[p1.part, p2.part])
     print(f"Validating overlapping boxes: {validate(comp)}")
 
-    # We don't have automatic event emission in validate() yet, but we will test it via validate_objectives_yaml
-    assert validate(comp)[0] == False
+    # We don't have automatic event emission in validate() yet, but
+    # we will test it via validate_objectives_yaml
+    assert not validate(comp)[0]
 
 
 def test_objectives_validation_events():
@@ -37,15 +38,14 @@ def test_objectives_validation_events():
     clear_emitted_events()
 
     invalid_yaml = "invalid: { ["
-    success, errors = validate_objectives_yaml(invalid_yaml)
+    success, _ = validate_objectives_yaml(invalid_yaml)
     assert success is False
     # YAML parse error doesn't emit LogicFailureEvent yet based on my reading of file_validation.py:48-55
     # only ValidationError does.
 
-    invalid_data = "project_name: 123"  # Should be string, but depends on schema.
     # Let's use something that definitely fails Pydantic validation
-    success, errors = validate_objectives_yaml("some_field: unexpected")
-    assert success is False
+    success, _ = validate_objectives_yaml("some_field: unexpected")
+    assert not success
     assert_event_emitted("logic_failure", file_path="objectives.yaml")
 
 
@@ -55,8 +55,8 @@ def test_plan_validation_events():
     clear_emitted_events()
 
     invalid_plan = "# Some Heading\nNo required sections."
-    success, errors = validate_plan_md_structure(invalid_plan, plan_type="benchmark")
-    assert success is False
+    success, _ = validate_plan_md_structure(invalid_plan, plan_type="benchmark")
+    assert not success
     assert_event_emitted("lint_failure_docs", file_path="plan.md")
 
 
@@ -67,7 +67,7 @@ def test_simulation():
 
     res = simulate(p.part)
     print(f"Simulation result: {res.success}, {res.summary}")
-    assert res.success == True
+    assert res.success
 
 
 def test_handover():
@@ -99,7 +99,6 @@ moved_object:
   shape: "sphere"
   start_position: [5, 5, 5]
   runtime_jitter: [0, 0, 0]
-moving_parts: []
 constraints:
   max_unit_cost: 100.0
   max_weight: 10.0
@@ -114,6 +113,9 @@ constraints:
   benchmark_max_weight_kg: 10.0
   planner_target_max_unit_cost_usd: 80.0
   planner_target_max_weight_kg: 8.0
+manufactured_parts: []
+cots_parts: []
+final_assembly: []
 totals:
   estimated_unit_cost_usd: 10.0
   estimated_weight_g: 100.0
@@ -153,15 +155,15 @@ Simple test plan
         todo_path.unlink(missing_ok=True)
         obj_path.unlink(missing_ok=True)
         cost_path.unlink(missing_ok=True)
-    assert res == True
+    assert res
 
     renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     manifest_path = renders_dir / "review_manifest.json"
     assert manifest_path.exists()
 
-    with open(manifest_path) as f:
-        import json
+    import json
 
+    with manifest_path.open() as f:
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test_session"

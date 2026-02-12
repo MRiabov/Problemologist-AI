@@ -41,7 +41,6 @@ moved_object:
   shape: "sphere"
   start_position: [5, 5, 5]
   runtime_jitter: [0, 0, 0]
-moving_parts: []
 constraints:
   max_unit_cost: 100.0
   max_weight: 10.0
@@ -98,7 +97,7 @@ totals:
         # Check manifest
         manifest_path = temp_dir / "renders" / "review_manifest.json"
         assert manifest_path.exists()
-        with open(manifest_path) as f:
+        with manifest_path.open() as f:
             manifest = json.load(f)
 
         assert manifest["objectives_path"] == str(target_obj)
