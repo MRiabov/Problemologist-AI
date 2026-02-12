@@ -81,7 +81,7 @@ class Episode(Base):
 class Trace(Base):
     __tablename__ = "traces"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     langfuse_trace_id: Mapped[str | None] = mapped_column(String)
 
@@ -104,7 +104,7 @@ class Trace(Base):
 class Asset(Base):
     __tablename__ = "assets"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     asset_type: Mapped[AssetType] = mapped_column(SQLEnum(AssetType))
     s3_path: Mapped[str] = mapped_column(String)
