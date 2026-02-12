@@ -28,6 +28,9 @@ class AgentRunRequest(BaseModel):
     skill_git_hash: str | None = Field(
         None, description="Git hash of the skills used for this run."
     )
+    agent_name: str = Field(
+        "engineer_coder", description="The name of the agent to run."
+    )
 
 
 def get_worker_client(session_id: str):
@@ -36,7 +39,12 @@ def get_worker_client(session_id: str):
     return WorkerClient(base_url=WORKER_URL, session_id=session_id)
 
 
-async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
+async def execute_agent_task(
+    episode_id: uuid.UUID,
+    task: str,
+    session_id: str,
+    agent_name: str = "engineer_coder",
+):
     session_factory = get_sessionmaker()
 
     try:
@@ -56,13 +64,11 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 backend = RemoteFilesystemBackend(client)
 
                 # Initialize agent files (templates, directories)
-                await initialize_agent_files(
-                    backend, agent_name="engineer_coder"
-                )  # FIXME: dynamic agent name
+                await initialize_agent_files(backend, agent_name=agent_name)
 
                 agent, langfuse_callback = create_agent_graph(
                     backend,
-                    agent_name="engineer_coder",  # FIXME: dynamic agent name from task/request?
+                    agent_name=agent_name,
                     # For now hardcoded in original code too.
                     trace_id=trace_id,
                 )
@@ -86,8 +92,7 @@ async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
                 # Prepare callbacks for agent run
                 callbacks = [db_callback]
                 if langfuse_callback:
-                    # callbacks.append(langfuse_callback)
-                    pass
+                    callbacks.append(langfuse_callback)
 
                 # Run the agent with tracing
                 result = await agent.ainvoke(
