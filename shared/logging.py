@@ -6,7 +6,7 @@ import structlog
 from structlog.types import Processor
 
 
-def configure_logging(service_name: str):
+def configure_logging(_service_name: str):
     """
     Configure structlog for the given service.
 
@@ -47,17 +47,28 @@ def configure_logging(service_name: str):
     )
 
     # Root logger configuration for standard library logging
-    handler = logging.StreamHandler(sys.stdout)
     if log_format == "json":
-        # In production, we might want standard logs to be JSON too,
-        # but structlog usually handles that via its standard library integration if configured.
+        # In production, we might want standard logs to be JSON too
         pass
 
+    log_level_num = getattr(logging, log_level, logging.INFO)
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=getattr(logging, log_level, logging.INFO),
+        level=log_level_num,
     )
+
+    # Denoise Uvicorn access logs
+    # If the main log level is WARNING or ERROR, move access logs to DEBUG
+    access_logger = logging.getLogger("uvicorn.access")
+    if log_level_num >= logging.WARNING:
+        access_logger.setLevel(logging.DEBUG)
+    else:
+        access_logger.setLevel(log_level_num)
+
+    # Ensure other uvicorn loggers follow the global level
+    logging.getLogger("uvicorn").setLevel(log_level_num)
+    logging.getLogger("uvicorn.error").setLevel(log_level_num)
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
