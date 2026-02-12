@@ -1,11 +1,10 @@
 import asyncio
 import uuid
 from datetime import datetime
-
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,6 +20,13 @@ class FeedbackRequest(BaseModel):
     score: int  # 1 for up, 0 for down
     comment: str | None = None
 
+    @field_validator("comment")
+    @classmethod
+    def strip_null_bytes(cls, v: str | None) -> str | None:
+        if v is not None:
+            return v.replace("\u0000", "")
+        return v
+
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
@@ -28,7 +34,7 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
-    trace_id: int,
+    trace_id: Annotated[int, Query(lt=2**63)],
     feedback: FeedbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -65,6 +71,11 @@ async def report_trace_feedback(
 
 class ReviewRequest(BaseModel):
     review_content: str
+
+    @field_validator("review_content")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
 
 
 @router.post("/{episode_id}/review")
@@ -153,7 +164,9 @@ class EpisodeResponse(BaseModel):
 
 @router.get("/", response_model=list[EpisodeResponse])
 async def list_episodes(
-    limit: int = 100, offset: int = 0, db: AsyncSession = Depends(get_db)
+    limit: Annotated[int, Query(ge=0, lt=2**63)] = 100,
+    offset: Annotated[int, Query(ge=0, lt=2**63)] = 0,
+    db: AsyncSession = Depends(get_db),
 ):
     """List all agent episodes."""
     try:

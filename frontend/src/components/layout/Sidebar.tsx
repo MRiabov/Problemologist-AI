@@ -104,9 +104,9 @@ export default function Sidebar() {
                                     : "hover:bg-muted/50"
                                 )}
                             >
-                                <div className="flex justify-between items-start mb-1">
+                                <div className="flex justify-between items-start mb-1 min-w-0">
                                     <span className={cn(
-                                      "text-[11px] font-semibold truncate flex-1 pr-2",
+                                      "text-[11px] font-semibold truncate flex-1 pr-2 min-w-0",
                                       selectedEpisode?.id === ep.id ? "text-primary" : "text-foreground"
                                     )}>
                                       {ep.task || ep.id.substring(0,8)}

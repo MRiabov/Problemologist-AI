@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,8 +13,19 @@ from shared.enums import ResponseStatus
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
 
 
+class BenchmarkGenerateRequest(BaseModel):
+    prompt: str
+
+    @field_validator("prompt")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
+
+
 @router.post("/generate")
-async def generate_benchmark(prompt: str, background_tasks: BackgroundTasks):
+async def generate_benchmark(
+    request: BenchmarkGenerateRequest, background_tasks: BackgroundTasks
+):
     """
     Trigger a new benchmark generation session.
     """
@@ -22,7 +34,9 @@ async def generate_benchmark(prompt: str, background_tasks: BackgroundTasks):
     session_id = uuid.uuid4()
 
     # Run the generation in the background
-    background_tasks.add_task(run_generation_session, prompt, session_id=session_id)
+    background_tasks.add_task(
+        run_generation_session, request.prompt, session_id=session_id
+    )
 
     return {
         "status": ResponseStatus.ACCEPTED,

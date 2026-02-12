@@ -121,7 +121,7 @@ export default function ReasoningTraces({
                         <div className="text-[9px] font-black uppercase tracking-widest text-primary/70 mb-1">
                             Initial Objective
                         </div>
-                        <div className="text-foreground font-medium leading-relaxed whitespace-pre-wrap">
+                        <div className="text-foreground font-medium leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto pr-1 scrollbar-thin">
                             {task}
                         </div>
                     </div>
