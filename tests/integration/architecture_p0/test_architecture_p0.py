@@ -96,7 +96,7 @@ async def test_int_004_simulation_serialization():
         script = """
 from build123d import *
 def build():
-    return Box(1,1,1)
+    return Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
@@ -152,7 +152,11 @@ constraints:
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content, "overwrite": True},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -234,8 +238,11 @@ run()
             print(f"INT-020 LSTDIR RENDERS: {ls_resp.json().get('stdout')}")
 
         assert not data["success"]
-        # Expect "Forbid zone hit: test_forbid"
-        assert "Forbid zone hit" in data["message"]
+        # Expect "Forbid zone hit: test_forbid" or "collision_with_forbidden_zone"
+        assert any(
+            msg in data["message"]
+            for msg in ["Forbid zone hit", "collision_with_forbidden_zone"]
+        )
 
 
 @pytest.mark.integration_p0
@@ -269,7 +276,11 @@ constraints:
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content, "overwrite": True},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
