@@ -28,9 +28,8 @@ class SafeCallbackHandler(BaseCallbackHandler):
         self.handler = handler
 
     def _safe_await(self, result: Any, method_name: str) -> Any:
-        # logger.info(f"SafeCallbackHandler: checking result of {method_name}, type: {type(result)}")
         if inspect.isawaitable(result):
-            # logger.info(f"SafeCallbackHandler: wrapping awaitable for {method_name}")
+
             async def safe_await_wrapper():
                 try:
                     return await result
@@ -49,7 +48,6 @@ class SafeCallbackHandler(BaseCallbackHandler):
 
             def safe_call(*args, **kwargs):
                 try:
-                    # logger.info(f"SafeCallbackHandler: calling {name}")
                     result = attr(*args, **kwargs)
                     return self._safe_await(result, name)
                 except Exception as e:
