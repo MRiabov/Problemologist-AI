@@ -2,10 +2,10 @@ import asyncio
 import uuid
 from contextlib import suppress
 
-from pydantic import BaseModel, Field, StrictStr
+from pydantic import BaseModel, Field, StrictStr, field_validator
 
 from controller.agent.initialization import initialize_agent_files
-from controller.api.manager import task_tracker
+from controller.api.manager import manager, task_tracker
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
@@ -31,6 +31,11 @@ class AgentRunRequest(BaseModel):
     agent_name: str = Field(
         "engineer_coder", description="The name of the agent to run."
     )
+
+    @field_validator("task", "session_id", "agent_name")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
 
 
 def get_worker_client(session_id: str):
@@ -101,7 +106,6 @@ async def execute_agent_task(
                         "callbacks": callbacks,
                         "metadata": {"episode_id": str(episode_id)},
                         "run_name": agent_name,
-                        "tags": [],
                     },
                 )
 
@@ -131,7 +135,11 @@ async def execute_agent_task(
                             # Read content for small files
                             content = None
                             with suppress(Exception):
-                                content = await backend.aread(path)
+                                raw_content = await backend.aread(path)
+                                if isinstance(raw_content, bytes):
+                                    content = raw_content.decode("utf-8", errors="replace")
+                                else:
+                                    content = str(raw_content)
 
                             asset = Asset(
                                 episode_id=episode_id,

@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
-    trace_id: Annotated[int, Query(lt=2**63)],
+    trace_id: Annotated[int, Path(lt=2**63)],
     feedback: FeedbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
