@@ -1,12 +1,13 @@
 import os
 from pathlib import Path
 
-# import mujoco  (Delayed import inside functions to prevent startup crashes)
 import structlog
 import yaml
-from build123d import Compound, export_stl
+from build123d import Compound
 
-from shared.models.schemas import ObjectivesYaml
+from shared.models.schemas import ObjectivesYaml, PreliminaryCostEstimation
+from worker.simulation.builder import SimulationBuilder
+from worker.simulation.loop import SimulationLoop
 
 from .rendering import prerender_24_views
 
@@ -27,13 +28,7 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
 
 
-from worker.simulation.builder import SimulationBuilder
-from worker.simulation.loop import SimulationLoop, SimulationMetrics
-
-
-def to_mjcf(
-    component: Compound, model_name: str = "scene", renders_dir: Path | None = None
-) -> str:
+def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
     """
     Convert a build123d Compound to a MuJoCo XML (MJCF) string using SimulationBuilder.
     """
@@ -54,16 +49,15 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
     logger.info("simulate_start")
 
     # 1. Setup workspace
-    if output_dir:
-        working_dir = output_dir
-    else:
-        working_dir = Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
 
     renders_dir = working_dir / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2. Load Objectives (if specified in objectives.yaml)
+    # 2. Load Objectives and Cost Estimation
     objectives = None
+    cost_estimation = None
+
     objectives_path = working_dir / "objectives.yaml"
     if objectives_path.exists():
         try:
@@ -71,12 +65,34 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
             data = yaml.safe_load(content)
             objectives = ObjectivesYaml(**data)
         except Exception as e:
-            logger.warning("failed_to_load_objectives", error=str(e), working_dir=str(working_dir), path=str(objectives_path))
+            logger.warning(
+                "failed_to_load_objectives",
+                error=str(e),
+                working_dir=str(working_dir),
+                path=str(objectives_path),
+            )
+
+    cost_est_path = working_dir / "preliminary_cost_estimation.yaml"
+    if cost_est_path.exists():
+        try:
+            content = cost_est_path.read_text(encoding="utf-8")
+            data = yaml.safe_load(content)
+            cost_estimation = PreliminaryCostEstimation(**data)
+        except Exception as e:
+            logger.warning(
+                "failed_to_load_cost_estimation",
+                error=str(e),
+                working_dir=str(working_dir),
+                path=str(cost_est_path),
+            )
 
     # 3. Build MJCF
     builder = SimulationBuilder(output_dir=working_dir)
-    # Pass objectives to builder if available
-    scene_path = builder.build_from_assembly(component, objectives=objectives)
+    # Pass objectives and moving_parts to builder if available
+    moving_parts = cost_estimation.moving_parts if cost_estimation else []
+    scene_path = builder.build_from_assembly(
+        component, objectives=objectives, moving_parts=moving_parts
+    )
 
     # 4. Initialize Simulation Loop
     loop = SimulationLoop(str(scene_path), component=component)
@@ -85,20 +101,20 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
     dynamic_controllers = {}
     control_inputs = {}
 
-    if objectives:
+    if cost_estimation and cost_estimation.moving_parts:
         try:
-            from worker.utils.controllers import sinusoidal, square, constant
+            from worker.utils.controllers import sinusoidal
 
-            for part in objectives.moving_parts:
+            for part in cost_estimation.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.name] = (
+                        dynamic_controllers[part.part_name] = (
                             lambda t, p=part.control: sinusoidal(
                                 t, p.speed, p.frequency or 1.0
                             )
                         )
                     elif part.control.mode == "constant":
-                        control_inputs[part.name] = part.control.speed
+                        control_inputs[part.part_name] = part.control.speed
                     # Add more mappings as needed
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
@@ -137,8 +153,6 @@ def validate(
     - Verify boundary constraints (AABB).
     - Test validity across a few random seeds.
     """
-    import mujoco
-
     logger.info("validate_start")
 
     # 1. Intersection check
@@ -148,7 +162,10 @@ def validate(
             for j in range(i + 1, len(solids)):
                 intersection = solids[i].intersect(solids[j])
                 if intersection and intersection.volume > 0.1:
-                    msg = f"Geometric intersection detected (volume: {intersection.volume:.2f})"
+                    msg = (
+                        f"Geometric intersection detected "
+                        f"(volume: {intersection.volume:.2f})"
+                    )
                     logger.warning(
                         "geometric_intersection_detected", volume=intersection.volume
                     )
