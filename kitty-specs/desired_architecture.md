@@ -2077,6 +2077,7 @@ Mandatory testing of happy and expected fail paths. Integration tests in docker-
 Github CI/CD too.
 
 We have a list of tests in `kitty-specs/integration-tests.md` - over 50 tests which forbid usage of mocking. This is the only real way to test the application properly.
+(Agents: when debugging integration tests, please follow the quality checks in the document!)
 
 ### Networking
 
