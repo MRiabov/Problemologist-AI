@@ -284,4 +284,22 @@ class PreliminaryCostEstimation(BaseModel):
                 f"Planner target weight ({self.constraints.planner_target_max_weight_kg}) "
                 f"must be less than or equal to benchmark max weight ({self.constraints.benchmark_max_weight_kg})"
             )
+
+        # Enforce INT-010: Estimated totals must be within planner target caps
+        if (
+            self.totals.estimated_unit_cost_usd
+            > self.constraints.planner_target_max_unit_cost_usd
+        ):
+            raise ValueError(
+                f"Estimated unit cost (${self.totals.estimated_unit_cost_usd}) "
+                f"exceeds target limit (${self.constraints.planner_target_max_unit_cost_usd})"
+            )
+        if (
+            self.totals.estimated_weight_g / 1000.0
+        ) > self.constraints.planner_target_max_weight_kg:
+            raise ValueError(
+                f"Estimated weight ({self.totals.estimated_weight_g}g) "
+                f"exceeds target limit ({self.constraints.planner_target_max_weight_kg}kg)"
+            )
+
         return self

@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from .schema import (
     AnalyzeRequest,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
+    DeleteFileRequest,
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
@@ -212,6 +214,21 @@ async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/fs/delete", response_model=StatusResponse)
+async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router)):
+    """Delete a file or directory."""
+    try:
+        fs_router.delete(request.path)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Path not found")
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except Exception as e:
+        logger.error("api_delete_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.post("/git/init", response_model=StatusResponse)
 async def git_init(fs_router=Depends(get_router)):
     """Initialize a git repository in the workspace."""
@@ -331,6 +348,14 @@ async def api_validate(
             fs_router, request.script_path, request.script_content
         )
         is_valid, message = validate(component, output_dir=fs_router.local_backend.root)
+
+        # INT-018: Record validation results to satisfy the handover gate
+        results_path = fs_router.local_backend.root / "validation_results.json"
+        with open(results_path, "w") as f:
+            json.dump(
+                {"success": is_valid, "message": message, "timestamp": time.time()}, f
+            )
+
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -358,6 +383,22 @@ async def api_analyze(
         config = load_config()
 
         result = validate_and_price(component, request.method, config)
+
+        # INT-018: Record validation results to satisfy the handover gate
+        results_path = fs_router.local_backend.root / "validation_results.json"
+        results_path.write_text(
+            json.dumps(
+                {
+                    "success": result.is_manufacturable,
+                    "message": "; ".join(result.violations)
+                    if result.violations
+                    else "Analysis successful",
+                    "timestamp": time.time(),
+                }
+            ),
+            encoding="utf-8",
+        )
+
         return result
     except Exception as e:
         logger.error("api_benchmark_analyze_failed", error=str(e))

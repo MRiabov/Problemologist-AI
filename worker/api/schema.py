@@ -30,6 +30,12 @@ class ReadFileRequest(BaseModel):
     path: StrictStr = Field(..., min_length=1)
 
 
+class DeleteFileRequest(BaseModel):
+    """Request to delete a file."""
+
+    path: StrictStr = Field(..., min_length=1)
+
+
 class WriteFileRequest(BaseModel):
     """Request to write a file."""
 
