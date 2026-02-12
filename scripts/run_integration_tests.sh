@@ -38,7 +38,7 @@ if [ $COUNT -eq $MAX_RETRIES ]; then
 fi
 
 # Default marker to run
-MARKER=${1:-integration_p0}
+MARKER=${1:-"integration_p0 or integration_p1 or integration_p2"}
 
 echo "Running integration tests with marker: $MARKER..."
 if uv run pytest -v -m "$MARKER" --maxfail=3 -s -p no:xdist; then

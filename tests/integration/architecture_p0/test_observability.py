@@ -179,9 +179,9 @@ async def test_int_056_s3_upload_failure_retry():
     # We can verify that the episode does NOT go to completed status quickly.
 
     async with httpx.AsyncClient() as client:
-        # Create episode
+        # Create episode via test endpoint (no agent task interference)
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/test/episodes",
             json={"task": "Test S3 Retry", "session_id": "test-s3-retry"},
         )
         episode_id = resp.json()["episode_id"]

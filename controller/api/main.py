@@ -1,7 +1,7 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from temporalio.client import Client
 
 from controller.api import ops
@@ -55,13 +55,34 @@ app.include_router(skills.router)
 app.include_router(ops.router)
 
 
+from controller.api.tasks import AgentRunRequest, execute_agent_task
+
+
+@app.post("/test/episodes", status_code=201)
+async def create_test_episode(request: AgentRunRequest):
+    """Create a dummy episode for testing purposes (no agent run)."""
+    if not settings.is_integration_test:
+        raise HTTPException(status_code=403, detail="Only allowed in integration tests")
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = Episode(
+            id=uuid.uuid4(),
+            task=request.task,
+            status=EpisodeStatus.RUNNING,
+            metadata_vars=request.metadata_vars,
+            skill_git_hash=request.skill_git_hash,
+        )
+        db.add(episode)
+        await db.commit()
+        await db.refresh(episode)
+        return {"episode_id": episode.id}
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
-
-
-from controller.api.tasks import AgentRunRequest, execute_agent_task
 
 
 @app.post("/agent/run", status_code=202)
