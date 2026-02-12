@@ -57,3 +57,4 @@ steps.id/
 # Outputs
 /renders/
 MUJOCO_LOG.TXT
+events.jsonl
