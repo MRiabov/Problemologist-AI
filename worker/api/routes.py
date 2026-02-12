@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Response, UploadFile
 
 from shared.enums import ResponseStatus
 from worker.workbenches.config import load_config
@@ -192,6 +192,43 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise
     except Exception as e:
         logger.error("api_edit_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/upload_file", response_model=StatusResponse)
+async def upload_file(
+    path: str = Form(...),
+    file: UploadFile = File(...),
+    fs_router=Depends(get_router),
+):
+    """Upload a file with binary content."""
+    try:
+        content = await file.read()
+        # fs_router.upload_files expects list of (path, content)
+        responses = fs_router.upload_files([(path, content)])
+
+        # Check if any error occurred
+        if responses and responses[0].error:
+            raise HTTPException(status_code=403, detail=responses[0].error)
+
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("api_upload_file_failed", path=path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/read_blob")
+async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
+    """Read file contents as binary blob."""
+    try:
+        content = fs_router.read(request.path)
+        return Response(content=content, media_type="application/octet-stream")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        logger.error("api_read_blob_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
