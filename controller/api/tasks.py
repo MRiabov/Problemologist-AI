@@ -101,6 +101,7 @@ async def execute_agent_task(
                         "callbacks": callbacks,
                         "metadata": {"episode_id": str(episode_id)},
                         "run_name": agent_name,
+                        "tags": [],
                     },
                 )
 

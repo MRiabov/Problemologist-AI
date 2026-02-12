@@ -170,7 +170,9 @@ class SafeCallbackHandler(BaseCallbackHandler):
             logger.warning(f"Langfuse callback error in on_tool_error suppressed: {e}")
 
 
-def get_langfuse_callback(trace_id: str | None = None) -> BaseCallbackHandler | None:
+def get_langfuse_callback(
+    trace_id: str | None = None, **kwargs
+) -> BaseCallbackHandler | None:
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     Compatible with Langfuse v3+ using trace_context.
@@ -180,9 +182,13 @@ def get_langfuse_callback(trace_id: str | None = None) -> BaseCallbackHandler | 
     host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
     if public_key and secret_key:
-        trace_context: dict = {}
+        trace_context: dict = kwargs.copy()
         if trace_id:
             trace_context["trace_id"] = trace_id
+        
+        # Ensure tags is present as an array to avoid server-side forEach error
+        if "tags" not in trace_context:
+            trace_context["tags"] = []
 
         os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
         os.environ["LANGFUSE_SECRET_KEY"] = secret_key
