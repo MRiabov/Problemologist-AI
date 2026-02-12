@@ -459,6 +459,12 @@ Utils (read-only):
 
 ##### Planner - benchmark generator
 
+#### Paralel environments for agents
+
+Notably, a few agents run at the same time on the same machine (because 97% of the time, it's just file updates, so load is tiny, etc.)
+As such, the mutliple agents are running in paralel.
+To prevent name clashes, we create tempdirs with random names to store agents' filesystems, to prevent filesystem clash and simplify management.
+
 ### Agent artifacts
 
 The important part of managing agents are their artifacts.
@@ -2069,6 +2075,8 @@ For utils used in agent, a simple `logging` is acceptable too.
 Mandatory testing of happy and expected fail paths. Integration tests in docker-compose to not fail in production.
 
 Github CI/CD too.
+
+We have a list of tests in `kitty-specs/integration-tests.md` - over 50 tests which forbid usage of mocking. This is the only real way to test the application properly.
 
 ### Networking
 
