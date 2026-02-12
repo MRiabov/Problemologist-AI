@@ -22,7 +22,11 @@ def test_get_langfuse_callback_uses_trace_context():
     ):
         get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         mock_handler.assert_called_once_with(
-            trace_context={"trace_id": "trace-123", "name": "engineer_coder"}
+            trace_context={
+                "trace_id": "trace-123",
+                "name": "engineer_coder",
+                "tags": [],
+            }
         )
 
 
