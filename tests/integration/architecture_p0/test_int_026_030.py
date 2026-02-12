@@ -189,7 +189,7 @@ async def test_int_030_interrupt_propagation():
         # We'll use agent/run for now as it's the main entry point.
         session_id = f"test-interrupt-{int(time.time())}"
         payload = {
-            "task": "Take some time to think and generate a lot of code",
+            "task": "Perform a very complex multi-step reasoning task that involves writing a large script with at least 10 different parts and complex joints, and explain each step in detail.",
             "session_id": session_id,
         }
         resp = await client.post(f"{CONTROLLER_URL}/agent/run", json=payload)
