@@ -97,22 +97,15 @@ class MotorControl(BaseModel):
 
 
 class MovingPart(BaseModel):
-    """A moving part in the environment (motor or passive)."""
+    """
+    A moving part in the environment (motor or passive).
+    Used for extraction from assembly.
+    """
 
     part_name: str
-    part_id: str
     type: Literal["motor", "passive"]
-    position_mm: tuple[float, float, float]
     dofs: list[str]
     control: MotorControl | None = None
-    description: str
-
-    @field_validator("position_mm", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
 
 
 class Constraints(BaseModel):
@@ -209,6 +202,13 @@ class CotsPartEstimate(BaseModel):
     source: str
 
 
+class AssemblyPartConfig(BaseModel):
+    """Configuration for a part in an assembly, including motion metadata."""
+
+    dofs: list[str] = []
+    control: MotorControl | None = None
+
+
 class JointEstimate(BaseModel):
     """Estimate for a joint in the assembly."""
 
@@ -221,7 +221,7 @@ class SubassemblyEstimate(BaseModel):
     """Estimate for a subassembly within the final assembly."""
 
     subassembly_id: str
-    parts: list[str]
+    parts: list[dict[str, AssemblyPartConfig]]
     joints: list[JointEstimate] = []
 
 
@@ -260,11 +260,44 @@ class PreliminaryCostEstimation(BaseModel):
     version: str = "1.0"
     units: CostEstimationUnits = CostEstimationUnits()
     constraints: CostEstimationConstraints
-    moving_parts: list[MovingPart] = []
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
-    final_assembly: list[SubassemblyEstimate] = []
+    final_assembly: list[SubassemblyEstimate | dict[str, AssemblyPartConfig]] = []
     totals: CostTotals
+
+    @property
+    def moving_parts(self) -> list[MovingPart]:
+        """Flatten final_assembly to extract all parts with DOFs."""
+        parts = []
+
+        def process_item(item):
+            if isinstance(item, SubassemblyEstimate):
+                for p_dict in item.parts:
+                    for name, config in p_dict.items():
+                        if config.dofs:
+                            parts.append(
+                                MovingPart(
+                                    part_name=name,
+                                    type="motor" if config.control else "passive",
+                                    dofs=config.dofs,
+                                    control=config.control,
+                                )
+                            )
+            elif isinstance(item, dict):
+                for name, config in item.items():
+                    if config.dofs:
+                        parts.append(
+                            MovingPart(
+                                part_name=name,
+                                type="motor" if config.control else "passive",
+                                dofs=config.dofs,
+                                control=config.control,
+                            )
+                        )
+
+        for item in self.final_assembly:
+            process_item(item)
+        return parts
 
     @model_validator(mode="after")
     def validate_caps(self) -> "PreliminaryCostEstimation":
@@ -274,16 +307,20 @@ class PreliminaryCostEstimation(BaseModel):
             > self.constraints.benchmark_max_unit_cost_usd
         ):
             raise ValueError(
-                f"Planner target cost ({self.constraints.planner_target_max_unit_cost_usd}) "
-                f"must be less than or equal to benchmark max cost ({self.constraints.benchmark_max_unit_cost_usd})"
+                f"Planner target cost "
+                f"({self.constraints.planner_target_max_unit_cost_usd}) "
+                f"must be less than or equal to benchmark max cost "
+                f"({self.constraints.benchmark_max_unit_cost_usd})"
             )
         if (
             self.constraints.planner_target_max_weight_kg
             > self.constraints.benchmark_max_weight_kg
         ):
             raise ValueError(
-                f"Planner target weight ({self.constraints.planner_target_max_weight_kg}) "
-                f"must be less than or equal to benchmark max weight ({self.constraints.benchmark_max_weight_kg})"
+                f"Planner target weight "
+                f"({self.constraints.planner_target_max_weight_kg}) "
+                f"must be less than or equal to benchmark max weight "
+                f"({self.constraints.benchmark_max_weight_kg})"
             )
 
         # Enforce INT-010: Estimated totals must be within planner target caps
@@ -292,15 +329,18 @@ class PreliminaryCostEstimation(BaseModel):
             > self.constraints.planner_target_max_unit_cost_usd
         ):
             raise ValueError(
-                f"Estimated unit cost (${self.totals.estimated_unit_cost_usd}) "
-                f"exceeds target limit (${self.constraints.planner_target_max_unit_cost_usd})"
+                f"Estimated unit cost "
+                f"(${self.totals.estimated_unit_cost_usd}) "
+                f"exceeds target limit "
+                f"(${self.constraints.planner_target_max_unit_cost_usd})"
             )
         if (
             self.totals.estimated_weight_g / 1000.0
         ) > self.constraints.planner_target_max_weight_kg:
             raise ValueError(
                 f"Estimated weight ({self.totals.estimated_weight_g}g) "
-                f"exceeds target limit ({self.constraints.planner_target_max_weight_kg}kg)"
+                f"exceeds target limit "
+                f"({self.constraints.planner_target_max_weight_kg}kg)"
             )
 
         return self

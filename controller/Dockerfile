@@ -3,6 +3,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    curl \
     libgl1 \
     libglu1-mesa \
     libxrender1 \

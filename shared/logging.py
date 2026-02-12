@@ -57,14 +57,19 @@ def configure_logging(_service_name: str):
         format="%(message)s",
         stream=sys.stdout,
         level=log_level_num,
+        force=True,
     )
 
-    # Ensure uvicorn loggers follow the global level
-    logging.getLogger("uvicorn").setLevel(log_level_num)
-    logging.getLogger("uvicorn.error").setLevel(log_level_num)
+    # Ensure uvicorn loggers follow the global level and propagate to root
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        u_logger = logging.getLogger(logger_name)
+        u_logger.handlers = []
+        u_logger.propagate = True
+        u_logger.setLevel(log_level_num)
 
     # Demote uvicorn access logs to DEBUG so they don't clutter INFO/WARNING
     access_logger = logging.getLogger("uvicorn.access")
+    # We must allow DEBUG level on the logger itself so the records are created
     access_logger.setLevel(logging.DEBUG)
 
     class AccessLogFilter(logging.Filter):
@@ -72,7 +77,8 @@ def configure_logging(_service_name: str):
             if record.levelno == logging.INFO:
                 record.levelno = logging.DEBUG
                 record.levelname = "DEBUG"
-            return True
+            # Now explicitly filter based on the global level
+            return record.levelno >= log_level_num
 
     access_logger.addFilter(AccessLogFilter())
 

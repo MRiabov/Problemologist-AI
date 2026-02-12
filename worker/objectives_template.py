@@ -13,8 +13,9 @@ OBJECTIVES_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 #   2. AVOIDING all `forbid_zones` (contact = failure)
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
-# The environment and moving_parts are READ-ONLY. You design parts that
-# interact with them, not modify them.
+# The environment geometry in this file is READ-ONLY. Engineering assembly
+# motion metadata is stored under engineering preliminary_cost_estimation.yaml
+# final_assembly.parts and is also READ-ONLY once written.
 # =============================================================================
 
 objectives:
@@ -56,29 +57,6 @@ moved_object:
   # Runtime jitter: small position variation per simulation run
   # Your solution must handle ALL positions within this range
   runtime_jitter: [2, 2, 1]  # [+/-x, +/-y, +/-z] mm
-
-# -----------------------------------------------------------------------------
-# ENVIRONMENT MOVING PARTS (READ-ONLY)
-# -----------------------------------------------------------------------------
-# These exist in the environment. You CANNOT modify them, but you CAN
-# design parts that interact with them (e.g., attach to motor shafts,
-# use passive sliders as triggers).
-moving_parts:
-  - name: "feeder_motor"
-    type: "motor"
-    position: [x, y, z]
-    dof: "rotate_z"  # Degrees of freedom: rotate_x/y/z, slide_x/y/z
-    control:
-      mode: "sinusoidal"  # Options: constant, sinusoidal, on_off
-      speed: 1.0          # rad/s (for rotate) or units/s (for slide)
-      frequency: 0.5      # Hz - for sinusoidal mode
-    description: "Rotates clockwise to push objects"
-
-  - name: "passive_slider"
-    type: "passive"  # Moves only when external force applied
-    position: [x, y, z]
-    dof: "slide_y"
-    description: "Slides freely along Y when impacted"
 
 # -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS

@@ -40,7 +40,6 @@ moved_object:
   shape: "sphere"
   start_position: [5, 5, 5]
   runtime_jitter: [0, 0, 0]
-moving_parts: []
 constraints:
   max_unit_cost: 100.0
   max_weight: 10.0

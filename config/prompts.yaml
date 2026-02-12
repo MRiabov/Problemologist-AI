@@ -26,7 +26,7 @@ engineer:
          - `objectives.yaml`: Contains:
            - Exact coordinates of Goal/Forbid zones
            - Build zone bounds (your design must fit within this)
-           - Moving parts with DOFs and motor specifications
+           - Static randomization (obstacle dimensions/positions)
            - Runtime randomization ranges (your design must handle all positions)
            - `max_unit_cost` and `max_weight` constraints (from benchmark, with ~50% safety margin)
            - This file is pre-populated at startup using the standard template from `desired_architecture.md`. Do not invent new fields.
@@ -166,7 +166,7 @@ engineer:
          from utils.controllers.time_based import constant, sinusoidal, square, trapezoidal
          from utils.controllers.position_based import waypoint, hold_position, oscillate
          ```
-         Motors are defined in `objectives.yaml` with their control mode and COTS specs.
+         Motors are defined in `preliminary_cost_estimation.yaml` under `final_assembly` with their control modes and COTS specs.
 
          **Simulation Rules**:
          - **30 second timeout**: Hard cap on all simulations.
@@ -343,7 +343,7 @@ benchmark_generator:
          2. **Static Geometry**: Base, walls, obstacles with randomization ranges.
          3. **Input Object**: Shape, position, randomization.
          4. **Objectives**: Goal zone AABB, Forbid zones AABBs.
-         5. **Motors/Moving Parts**: If any, with DOFs.
+         5. Design the final assembly, including any moving parts with DOFs and motor controllers.
          6. **Randomization**:
             - **Static**: Scale factors, obstacle repositioning (up to 40% inward).
             - **Runtime**: Position jitter for robustness testing.
@@ -423,8 +423,9 @@ benchmark_generator:
          #   2. AVOIDING all `forbid_zones` (contact = failure)
          #   3. Respecting `max_unit_cost` and `max_weight` constraints
          #
-         # The environment and moving_parts are READ-ONLY. You design parts that
-         # interact with them, not modify them.
+          # The environment geometry in this file is READ-ONLY. Engineering assembly
+          # motion metadata is stored under engineering preliminary_cost_estimation.yaml
+          # final_assembly.parts and is also READ-ONLY once written.
          # =============================================================================
 
          objectives:
@@ -468,29 +469,6 @@ benchmark_generator:
            runtime_jitter: [2, 2, 1]  # [+/-x, +/-y, +/-z] mm
 
          # -----------------------------------------------------------------------------
-         # ENVIRONMENT MOVING PARTS (READ-ONLY)
-         # -----------------------------------------------------------------------------
-         # These exist in the environment. You CANNOT modify them, but you CAN
-         # design parts that interact with them (e.g., attach to motor shafts,
-         # use passive sliders as triggers).
-         moving_parts:
-           - name: "feeder_motor"
-             type: "motor"
-             position: [x, y, z]
-             dof: "rotate_z"  # Degrees of freedom: rotate_x/y/z, slide_x/y/z
-             control:
-               mode: "sinusoidal"  # Options: constant, sinusoidal, on_off
-               speed: 1.0          # rad/s (for rotate) or units/s (for slide)
-               frequency: 0.5      # Hz - for sinusoidal mode
-             description: "Rotates clockwise to push objects"
-
-           - name: "passive_slider"
-             type: "passive"  # Moves only when external force applied
-             position: [x, y, z]
-             dof: "slide_y"
-             description: "Slides freely along Y when impacted"
-
-         # -----------------------------------------------------------------------------
          # YOUR CONSTRAINTS
          # -----------------------------------------------------------------------------
          # These are challenging but achievable. Exceeding them = rejection.
@@ -504,6 +482,29 @@ benchmark_generator:
          randomization:
            static_variation_id: "v1.2"  # Which static variant this is
            runtime_jitter_enabled: true
+         ```
+
+         **Preliminary Cost Estimation YAML**:
+         Also output `preliminary_cost_estimation.yaml` with the assembly structure:
+         ```yaml
+         version: "1.0"
+         constraints:
+           benchmark_max_unit_cost_usd: 50.0
+           benchmark_max_weight_kg: 1.2
+           planner_target_max_unit_cost_usd: 40.0
+           planner_target_max_weight_kg: 1.0
+         final_assembly:
+           - subassembly_id: "main_unit"
+             parts:
+               - feeder_motor:
+                   dofs: ["rotate_z"]
+                   control:
+                     mode: "sinusoidal"
+                     speed: 1.0
+         totals:
+           estimated_unit_cost_usd: 10.0
+           estimated_weight_g: 100.0
+           estimate_confidence: "high"
          ```
 
          **Verification (MANDATORY)**:
