@@ -11,7 +11,7 @@ def config():
 
 
 def test_3dp_valid_part(config):
-    part = Box(10, 10, 10)
+    part = Box(5, 5, 5)
     result = analyze_3dp(part, config)
     assert result.is_manufacturable is True
     assert len(result.violations) == 0
@@ -67,3 +67,10 @@ def test_3dp_reuse_discount(config):
 
     assert cost2.setup_cost < cost1.setup_cost
     assert cost2.is_reused is True
+
+
+def test_3dp_wall_thickness(config):
+    part = Box(10, 10, 10)  # 10mm > 6mm max
+    result = analyze_3dp(part, config)
+    assert result.is_manufacturable is False
+    assert any("Wall thickness too thick" in v for v in result.violations)

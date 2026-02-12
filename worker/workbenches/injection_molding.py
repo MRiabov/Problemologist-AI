@@ -8,6 +8,7 @@ from build123d import Compound, Part, Solid
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
     check_undercuts,
+    check_wall_thickness,
     compute_part_hash,
     part_to_trimesh,
 )
@@ -60,60 +61,6 @@ def _check_draft_angles(
             f"Insufficient draft angle: {len(insufficient_draft)} faces detected with < {min_angle_deg} degrees."
         )
         logger.warning("insufficient_draft_detected", count=len(insufficient_draft))
-
-    return violations
-
-
-@type_check
-def _check_wall_thickness(
-    mesh: trimesh.Trimesh, min_mm: float = 1.0, max_mm: float = 4.0
-) -> list[str]:
-    """
-    Functional check for wall thickness consistency using raycasting.
-    """
-    logger.debug("checking_wall_thickness", min_mm=min_mm, max_mm=max_mm)
-
-    violations = []
-
-    # Sample points on the mesh and cast rays along normals to find opposite wall
-    # For MVP, we sample a subset of faces to keep it fast
-    sample_size = min(len(mesh.faces), 1000)
-    face_indices = np.random.choice(len(mesh.faces), sample_size, replace=False)
-
-    centers = mesh.triangles_center[face_indices]
-    # Inward normals
-    normals = -mesh.face_normals[face_indices]
-
-    # Offset origins slightly to avoid self-intersection
-    origins = centers + normals * 1e-4
-
-    # Use mesh.ray to leverage cached BVH and potentially faster engine (pyembree)
-    locations, index_ray, _ = mesh.ray.intersects_location(
-        origins, normals, multiple_hits=False
-    )
-
-    if len(locations) > 0:
-        # Distance between origin and hit point
-        hit_origins = origins[index_ray]
-        distances = np.linalg.norm(locations - hit_origins, axis=1)
-
-        too_thin = np.where(distances < min_mm)[0]
-        too_thick = np.where(distances > max_mm)[0]
-
-        if len(too_thin) > 0:
-            violations.append(
-                f"Wall thickness too thin: {len(too_thin)} samples < {min_mm}mm"
-            )
-            logger.warning(
-                "wall_too_thin", count=len(too_thin), min_dist=float(distances.min())
-            )
-        if len(too_thick) > 0:
-            violations.append(
-                f"Wall thickness too thick: {len(too_thick)} samples > {max_mm}mm"
-            )
-            logger.warning(
-                "wall_too_thick", count=len(too_thick), max_dist=float(distances.max())
-            )
 
     return violations
 
@@ -237,7 +184,7 @@ def analyze_im(
     # 3. Wall Thickness Check
     min_wall = constraints.get("min_wall_thickness_mm", 1.0)
     max_wall = constraints.get("max_wall_thickness_mm", 4.0)
-    violations.extend(_check_wall_thickness(mesh, min_wall, max_wall))
+    violations.extend(check_wall_thickness(mesh, min_wall, max_wall))
 
     # 4. Cost Calculation (single unit)
     cost_breakdown = _calculate_im_cost(part, config, quantity=1)

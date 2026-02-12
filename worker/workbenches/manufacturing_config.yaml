@@ -51,5 +51,8 @@ three_dp:
       elongation_stress_mpa: 30.0
       restitution: 0.3
       friction_coef: 0.4
+  constraints:
+    min_wall_thickness_mm: 0.8
+    max_wall_thickness_mm: 6.0
   costs:
     setup_fee: 10.0

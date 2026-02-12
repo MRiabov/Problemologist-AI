@@ -25,7 +25,7 @@ def test_facade_im():
 
 
 def test_facade_3dp():
-    part = Box(10, 10, 10)
+    part = Box(5, 5, 5)
     config = load_config()
     result = validate_and_price(part, ManufacturingMethod.THREE_DP, config)
     assert result.is_manufacturable is True
