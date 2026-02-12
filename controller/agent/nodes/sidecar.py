@@ -8,8 +8,10 @@ from langchain_openai import ChatOpenAI
 
 from shared.type_checking import type_check
 
+from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class SidecarNode:
 
     def __init__(self, suggested_skills_dir: str = "suggested_skills"):
         self.pm = PromptManager()
-        self.llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
+        self.llm = ChatOpenAI(model=settings.llm_model, temperature=0)
         self.suggested_skills_dir = Path(suggested_skills_dir)
         self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
         self.repo_url = os.getenv("GIT_REPO_URL")
@@ -146,7 +148,7 @@ class SidecarNode:
             skill_content = parts[1].strip()
 
             file_path = self.suggested_skills_dir / f"{title}.md"
-            with open(file_path, "w") as f:
+            with file_path.open("w") as f:
                 f.write(skill_content)
             suggested_skill = title
             logger.info(f"Suggested new skill: {title}")
