@@ -275,7 +275,7 @@ def create_episode(self, problem_id: str) -> Episode:
 
 ```python
 class Config:
-    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")
+    LLM_MODEL = os.getenv("LLM_MODEL", "z-ai/glm-4.7-flash")
     TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.0"))
     ...
 ```

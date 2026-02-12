@@ -42,7 +42,7 @@ review_status: "approved"
    - Criteria: "Does this look like the requested theme?", "Is it too cluttered?", "Are pieces floating?".
 2. Implement `async def reviewer_node(state: State)`.
    - Call `render_mjcf` tool (WP02).
-   - Pass images to V-LLM (e.g. GPT-4o).
+   - Pass images to V-LLM (e.g. z-ai/glm-4.7-flash).
    - Output: `Approve` or `Reject` with feedback.
    - Update `state["review_feedback"]`.
 
