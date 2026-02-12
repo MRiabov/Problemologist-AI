@@ -96,3 +96,22 @@ async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events)
     assert result.iteration > 0
     assert "Failed to complete step after 3 retries" in result.journal
     assert mock_worker.execute_python.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_engineer_node_todo_robustness(
+    mock_llm, mock_worker, mock_record_events
+):
+    """Test that TODO parsing and updating is robust to whitespace."""
+    node = EngineerNode()
+
+    # Case with extra spaces
+    todo_with_spaces = "- [ ]   Step 1   "
+    state = AgentState(todo=todo_with_spaces, plan="The plan", journal="")
+
+    result = await node(state)
+
+    assert result.current_step == "Step 1"
+    # Ensure it was marked as done correctly
+    assert "- [x]   Step 1   " in result.todo
+    assert "Successfully executed step: Step 1" in result.journal

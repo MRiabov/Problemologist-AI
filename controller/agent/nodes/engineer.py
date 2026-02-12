@@ -82,10 +82,8 @@ class EngineerNode:
 
                 if exit_code == 0:
                     journal_entry += f"\nSuccessfully executed step: {current_step}"
-                    # Mark TODO as done (simple string replacement for prototype)
-                    new_todo = todo.replace(
-                        f"- [ ] {current_step}", f"- [x] {current_step}"
-                    )
+                    # Mark TODO as done
+                    new_todo = self._mark_step_done(todo, current_step)
 
                     # Track best cost/weight from events
                     best_cost = state.best_cost
@@ -148,6 +146,21 @@ class EngineerNode:
                 "turn_count": state.turn_count + 1,
             }
         )
+
+    def _mark_step_done(self, todo: str, step: str) -> str:
+        """Mark the specified step as done in the TODO list."""
+        lines = todo.splitlines()
+        for i, line in enumerate(lines):
+            if line.strip().startswith("- [ ]"):
+                # Check if this is the step
+                extracted = line.strip().replace("- [ ]", "").strip()
+                if extracted == step:
+                    # Found it. Replace "- [ ]" with "- [x]" preserving indentation
+                    # We replace only the first occurrence in the line
+                    lines[i] = line.replace("- [ ]", "- [x]", 1)
+                    # We only mark the first matching step as done
+                    return "\n".join(lines)
+        return todo
 
     def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list."""
