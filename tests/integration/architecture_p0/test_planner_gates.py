@@ -397,6 +397,12 @@ async def test_int_011_planner_caps_enforcement(
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
+        # Record validation
+        await client.post(
+            f"{WORKER_URL}/benchmark/validate",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
@@ -448,6 +454,12 @@ async def test_int_015_engineer_handover_immutability(
         await setup_workspace(
             client, base_headers, {"objectives.yaml": modified_objectives}
         )
+        # Record validation
+        await client.post(
+            f"{WORKER_URL}/benchmark/validate",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
@@ -485,6 +497,12 @@ def build():
             "solution.py": oob_script,
         }
         await setup_workspace(client, base_headers, files)
+        # Record validation
+        await client.post(
+            f"{WORKER_URL}/benchmark/validate",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
@@ -530,6 +548,12 @@ async def test_int_010_planner_pricing_script_integration(
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
+        # Record validation
+        await client.post(
+            f"{WORKER_URL}/benchmark/validate",
+            json={"script_path": "solution.py"},
+            headers=base_headers,
+        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
