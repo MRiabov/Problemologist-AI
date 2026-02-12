@@ -20,7 +20,19 @@ def create_agent_graph(
 
     if settings.is_integration_test:
         from langchain_core.language_models.fake_chat_models import FakeListChatModel
-        
+
+        class FakeModelWithTools(FakeListChatModel):
+            def bind_tools(self, tools, **kwargs):
+                return self
+
+            async def ainvoke(self, input, config=None, **kwargs):
+                import asyncio
+
+                await asyncio.sleep(
+                    1.0
+                )  # Simulate some processing time for interruption
+                return await super().ainvoke(input, config, **kwargs)
+
         # Responses that perform some basic tool calls to satisfy tests
         # We provide a generous sequence of tool calls and completions
         responses = [
@@ -32,9 +44,9 @@ def create_agent_graph(
             '{"action": "write_file", "action_input": {"path": "todo.md", "content": "- [x] Task"}}',
             '{"action": "write_file", "action_input": {"path": "objectives.yaml", "content": "objectives: {}"}}',
             '{"action": "submit_for_review", "action_input": {"script_path": "solution.py"}}',
-            "Handover complete."
+            "Handover complete.",
         ]
-        llm = FakeListChatModel(responses=responses)
+        llm = FakeModelWithTools(responses=responses)
     else:
         llm = ChatOpenAI(
             model=settings.llm_model,
