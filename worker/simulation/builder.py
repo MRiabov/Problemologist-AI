@@ -12,7 +12,7 @@ from build123d import Compound, Solid, export_stl
 from shared.cots.parts.motors import ServoMotor
 
 if TYPE_CHECKING:
-    from shared.models.schemas import ObjectivesYaml
+    from shared.models.schemas import MovingPart, ObjectivesYaml
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +339,10 @@ class SimulationBuilder:
         self.use_vhacd = use_vhacd
 
     def build_from_assembly(
-        self, assembly: Compound, objectives: "ObjectivesYaml" | None = None
+        self,
+        assembly: Compound,
+        objectives: "ObjectivesYaml" | None = None,
+        moving_parts: list["MovingPart"] | None = None,
     ) -> Path:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
@@ -513,6 +516,18 @@ class SimulationBuilder:
         # Apply collected constraints
         for body1, body2 in weld_constraints:
             self.compiler.add_weld(body1, body2)
+
+        # 3. Add actuators for moving parts (T011)
+        if moving_parts:
+            for mp in moving_parts:
+                if mp.type == "motor":
+                    # We assume the joint name follows the convention {part_name}_joint
+                    # which is what add_body uses.
+                    self.compiler.add_actuator(
+                        name=mp.part_name,
+                        joint=f"{mp.part_name}_joint",
+                        actuator_type="position",  # Defaulting to position for servos
+                    )
 
         scene_path = self.output_dir / "scene.xml"
         self.compiler.save(scene_path)

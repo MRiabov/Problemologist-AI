@@ -99,14 +99,15 @@ class MotorControl(BaseModel):
 class MovingPart(BaseModel):
     """A moving part in the environment (motor or passive)."""
 
-    name: str
+    part_name: str
+    part_id: str
     type: Literal["motor", "passive"]
-    position: tuple[float, float, float]
-    dof: Literal["rotate_x", "rotate_y", "rotate_z", "slide_x", "slide_y", "slide_z"]
+    position_mm: tuple[float, float, float]
+    dofs: list[str]
     control: MotorControl | None = None
     description: str
 
-    @field_validator("position", mode="before")
+    @field_validator("position_mm", mode="before")
     @classmethod
     def coerce_list_to_tuple(cls, v):
         if isinstance(v, list):
@@ -142,7 +143,6 @@ class ObjectivesYaml(BaseModel):
     objectives: ObjectivesSection
     simulation_bounds: BoundingBox
     moved_object: MovedObject
-    moving_parts: list[MovingPart] = []
     constraints: Constraints
     randomization: RandomizationMeta = RandomizationMeta()
     preliminary_totals: dict[str, float] | None = None
@@ -260,6 +260,7 @@ class PreliminaryCostEstimation(BaseModel):
     version: str = "1.0"
     units: CostEstimationUnits = CostEstimationUnits()
     constraints: CostEstimationConstraints
+    moving_parts: list[MovingPart] = []
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
     final_assembly: list[SubassemblyEstimate] = []
