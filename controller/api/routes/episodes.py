@@ -150,12 +150,16 @@ class EpisodeResponse(BaseModel):
 
 
 @router.get("/", response_model=list[EpisodeResponse])
-async def list_episodes(db: AsyncSession = Depends(get_db)):
+async def list_episodes(
+    limit: int = 100, offset: int = 0, db: AsyncSession = Depends(get_db)
+):
     """List all agent episodes."""
     try:
         result = await db.execute(
             select(Episode)
             .order_by(Episode.created_at.desc())
+            .limit(limit)
+            .offset(offset)
             .options(selectinload(Episode.traces), selectinload(Episode.assets))
         )
         episodes = result.scalars().all()
