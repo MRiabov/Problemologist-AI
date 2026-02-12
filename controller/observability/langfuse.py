@@ -4,9 +4,175 @@ from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
 
 
-def get_langfuse_callback(
-    trace_id: str | None = None, name: str | None = None
-) -> CallbackHandler | None:
+from typing import Any, Dict, List, Optional
+from uuid import UUID
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import LLMResult
+
+
+import inspect
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class SafeCallbackHandler(BaseCallbackHandler):
+    """
+    Wrapper around a CallbackHandler to suppress all errors.
+    """
+
+    def __init__(self, handler: BaseCallbackHandler):
+        self.handler = handler
+
+    def _safe_await(self, result: Any, method_name: str) -> Any:
+        # logger.info(f"SafeCallbackHandler: checking result of {method_name}, type: {type(result)}")
+        if inspect.isawaitable(result):
+            # logger.info(f"SafeCallbackHandler: wrapping awaitable for {method_name}")
+            async def safe_await_wrapper():
+                try:
+                    return await result
+                except Exception as e:
+                    logger.warning(
+                        f"Langfuse async callback error in {method_name} suppressed: {e}"
+                    )
+
+            return safe_await_wrapper()
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        # Wrap any method of the underlying handler
+        attr = getattr(self.handler, name)
+        if callable(attr):
+
+            def safe_call(*args, **kwargs):
+                try:
+                    # logger.info(f"SafeCallbackHandler: calling {name}")
+                    result = attr(*args, **kwargs)
+                    return self._safe_await(result, name)
+                except Exception as e:
+                    logger.warning(f"Langfuse callback error in {name} suppressed: {e}")
+                    return None
+
+            return safe_call
+        return attr
+
+    # Explicitly implement common methods to ensure they are wrapped if __getattr__ isn't enough for base class
+    # (BaseCallbackHandler methods are defined, so __getattr__ might not be called for them if we trace via type)
+    # However, LangChain checks attributes.
+    # To be safe, we should inherit from the specific class or just trust duck typing if we weren't using strict types.
+    # But get_langfuse_callback returns CallbackHandler? No, BaseCallbackHandler.
+
+    def on_llm_start(
+        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
+    ) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_llm_start(serialized, prompts, **kwargs), "on_llm_start"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_llm_start suppressed: {e}")
+
+    def on_chat_model_start(
+        self,
+        serialized: Dict[str, Any],
+        messages: List[List[BaseMessage]],
+        **kwargs: Any,
+    ) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_chat_model_start(serialized, messages, **kwargs),
+                "on_chat_model_start",
+            )
+        except Exception as e:
+            logger.warning(
+                f"Langfuse callback error in on_chat_model_start suppressed: {e}"
+            )
+
+    def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_llm_new_token(token, **kwargs), "on_llm_new_token"
+            )
+        except Exception as e:
+            logger.warning(
+                f"Langfuse callback error in on_llm_new_token suppressed: {e}"
+            )
+
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_llm_end(response, **kwargs), "on_llm_end"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_llm_end suppressed: {e}")
+
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_llm_error(error, **kwargs), "on_llm_error"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_llm_error suppressed: {e}")
+
+    def on_chain_start(
+        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
+    ) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_chain_start(serialized, inputs, **kwargs),
+                "on_chain_start",
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_chain_start suppressed: {e}")
+
+    def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_chain_end(outputs, **kwargs), "on_chain_end"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_chain_end suppressed: {e}")
+
+    def on_chain_error(self, error: BaseException, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_chain_error(error, **kwargs), "on_chain_error"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_chain_error suppressed: {e}")
+
+    def on_tool_start(
+        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+    ) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_tool_start(serialized, input_str, **kwargs),
+                "on_tool_start",
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_tool_start suppressed: {e}")
+
+    def on_tool_end(self, output: str, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_tool_end(output, **kwargs), "on_tool_end"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_tool_end suppressed: {e}")
+
+    def on_tool_error(self, error: BaseException, **kwargs: Any) -> Any:
+        try:
+            return self._safe_await(
+                self.handler.on_tool_error(error, **kwargs), "on_tool_error"
+            )
+        except Exception as e:
+            logger.warning(f"Langfuse callback error in on_tool_error suppressed: {e}")
+
+
+def get_langfuse_callback(trace_id: str | None = None) -> BaseCallbackHandler | None:
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     Compatible with Langfuse v3+ using trace_context.
@@ -16,17 +182,24 @@ def get_langfuse_callback(
     host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
     if public_key and secret_key:
-        trace_context = {}
+        trace_context: dict = {}
         if trace_id:
             trace_context["trace_id"] = trace_id
-        if name:
-            trace_context["name"] = name
 
         os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
         os.environ["LANGFUSE_SECRET_KEY"] = secret_key
         os.environ["LANGFUSE_HOST"] = host
 
-        return CallbackHandler(trace_context=trace_context)
+        try:
+            handler = CallbackHandler(trace_context=trace_context)
+            return SafeCallbackHandler(handler)
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).error(
+                f"Failed to initialize Langfuse CallbackHandler: {e}"
+            )
+            return None
     return None
 
 
