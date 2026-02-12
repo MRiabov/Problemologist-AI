@@ -56,7 +56,7 @@ def create_agent_graph(
         )
 
     # Try to get Langfuse callback
-    langfuse_callback = get_langfuse_callback(trace_id=trace_id, name=agent_name)
+    langfuse_callback = get_langfuse_callback(trace_id=trace_id)
     callbacks = [langfuse_callback] if langfuse_callback else []
 
     # Map simple agent names to config prompt keys

@@ -278,7 +278,7 @@ class PreliminaryCostEstimation(BaseModel):
                             parts.append(
                                 MovingPart(
                                     part_name=name,
-                                    type="motor" if config.control else "passive",
+                                    type=("motor" if config.control else "passive"),
                                     dofs=config.dofs,
                                     control=config.control,
                                 )
@@ -289,7 +289,7 @@ class PreliminaryCostEstimation(BaseModel):
                         parts.append(
                             MovingPart(
                                 part_name=name,
-                                type="motor" if config.control else "passive",
+                                type=("motor" if config.control else "passive"),
                                 dofs=config.dofs,
                                 control=config.control,
                             )
