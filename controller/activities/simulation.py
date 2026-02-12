@@ -19,16 +19,22 @@ logger = structlog.get_logger(__name__)
 
 @type_check
 @activity.defn
-async def compile_mjcf_activity(compound_json: str) -> str:
+async def compile_mjcf_activity(
+    compound_json: str, simulate_failures: dict = {}
+) -> str:
     """Mock activity to compile MJCF."""
+    if simulate_failures.get("mjcf_compilation"):
+        raise RuntimeError("Simulated MJCF compilation failure")
     # In a real scenario, this would call the worker to generate MJCF
     return "mjcf_data"
 
 
 @type_check
 @activity.defn
-async def run_simulation_activity(mjcf_data: str) -> str:
+async def run_simulation_activity(mjcf_data: str, simulate_failures: dict = {}) -> str:
     """Mock activity to run simulation on worker."""
+    if simulate_failures.get("run_simulation"):
+        raise RuntimeError("Simulated simulation failure")
     client = WorkerClient(base_url=WORKER_URL, session_id="simulation")
     # This is a placeholder for the actual simulation execution on the worker
     code = "print('Running simulation...')"
@@ -38,8 +44,10 @@ async def run_simulation_activity(mjcf_data: str) -> str:
 
 @type_check
 @activity.defn
-async def render_video_activity(sim_results: str) -> str:
+async def render_video_activity(sim_results: str, simulate_failures: dict = {}) -> str:
     """Mock activity to render simulation video."""
+    if simulate_failures.get("render_video"):
+        raise RuntimeError("Simulated render video failure")
     import tempfile
     from pathlib import Path
 
@@ -51,19 +59,17 @@ async def render_video_activity(sim_results: str) -> str:
 
 @type_check
 @activity.defn
-async def upload_to_s3_activity(video_path: str) -> str:
+async def upload_to_s3_activity(video_path: str, simulate_failures: dict = {}) -> str:
     """Upload video to S3 using S3Client."""
     from pathlib import Path
     import os
     import json
 
-    # DEBUG: Support intentional failure for test_int_056
-    # We check if there's a file called 'compound_json' in the same dir as video_path
-    # or if we can extract it from some global context.
-    # Actually, the test passes compound_json to the workflow.
-    # Let's check environment variable as a fallback or a specific file.
-    if os.getenv("SIMULATE_S3_FAILURE") == "true":
+    if simulate_failures.get("s3_upload"):
         raise RuntimeError("Simulated S3 upload failure")
+
+    if os.getenv("SIMULATE_S3_FAILURE") == "true":
+        raise RuntimeError("Simulated S3 upload failure (env)")
 
     config = S3Config(
         endpoint_url=os.getenv("S3_ENDPOINT"),
@@ -101,6 +107,8 @@ async def update_trace_activity(params: dict) -> bool:
     episode_id = params["episode_id"]
     s3_path = params["s3_path"]
     asset_type = params.get("asset_type", AssetType.VIDEO)
+    target_status = params.get("status", EpisodeStatus.COMPLETED)
+    error_msg = params.get("error")
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
@@ -109,14 +117,29 @@ async def update_trace_activity(params: dict) -> bool:
             logger.error("episode_not_found_in_db", episode_id=episode_id)
             return False
 
-        episode.status = EpisodeStatus.COMPLETED
+        episode.status = target_status
+        # If we have an error, we should probably log it as a Trace
+        if error_msg:
+            # Basic trace logging for error
+            from controller.persistence.models import Trace
+            from shared.enums import TraceType
 
-        asset = Asset(
-            episode_id=uuid.UUID(episode_id),
-            asset_type=asset_type,
-            s3_path=s3_path,
-        )
-        db.add(asset)
+            trace = Trace(
+                episode_id=uuid.UUID(episode_id),
+                trace_type=TraceType.LOG,
+                content=f"Workflow failed: {error_msg}",
+                metadata_vars={"error": error_msg},
+            )
+            db.add(trace)
+
+        if s3_path:
+            asset = Asset(
+                episode_id=uuid.UUID(episode_id),
+                asset_type=asset_type,
+                s3_path=s3_path,
+            )
+            db.add(asset)
+
         await db.commit()
 
     return True

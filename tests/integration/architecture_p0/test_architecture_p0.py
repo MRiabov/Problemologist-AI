@@ -88,34 +88,67 @@ async def test_int_003_session_filesystem_isolation():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_004_simulation_serialization():
-    """INT-004: Verify simulation serialization schema."""
+    """INT-004: Verify simulation serialization schema and concurrency."""
     async with httpx.AsyncClient() as client:
-        session_id = f"test-ser-{int(time.time())}"
+        # Create two sessions
+        session_id_1 = f"test-ser-1-{int(time.time())}"
+        session_id_2 = f"test-ser-2-{int(time.time())}"
 
-        # Simple valid script
+        # Simple valid script for both
         script = """
 from build123d import *
 def build():
     return Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
 """
-        await client.post(
-            f"{WORKER_URL}/fs/write",
-            json={"path": "box.py", "content": script},
-            headers={"X-Session-ID": session_id},
+        # Write scripts
+        await asyncio.gather(
+            client.post(
+                f"{WORKER_URL}/fs/write",
+                json={"path": "box.py", "content": script},
+                headers={"X-Session-ID": session_id_1},
+            ),
+            client.post(
+                f"{WORKER_URL}/fs/write",
+                json={"path": "box.py", "content": script},
+                headers={"X-Session-ID": session_id_2},
+            ),
         )
 
-        resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
-            json={"script_path": "box.py"},
-            headers={"X-Session-ID": session_id},
-            timeout=60.0,
+        # Launch two simulations concurrently
+        # The worker should handle them (either serializing or thread-safe parallel)
+        # We start them at roughly the same time
+        t0 = time.time()
+        res1, res2 = await asyncio.gather(
+            client.post(
+                f"{WORKER_URL}/benchmark/simulate",
+                json={"script_path": "box.py"},
+                headers={"X-Session-ID": session_id_1},
+                timeout=60.0,
+            ),
+            client.post(
+                f"{WORKER_URL}/benchmark/simulate",
+                json={"script_path": "box.py"},
+                headers={"X-Session-ID": session_id_2},
+                timeout=60.0,
+            ),
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "success" in data
-        assert "message" in data
-        assert "artifacts" in data
-        assert "mjcf_content" in data["artifacts"]
+        t1 = time.time()
+
+        # Verify both succeeded
+        assert res1.status_code == 200, f"Sim 1 failed: {res1.text}"
+        assert res2.status_code == 200, f"Sim 2 failed: {res2.text}"
+
+        data1 = res1.json()
+        data2 = res2.json()
+
+        assert data1["success"], "Sim 1 marked failure"
+        assert data2["success"], "Sim 2 marked failure"
+
+        # Check artifacts
+        assert "mjcf_content" in data1["artifacts"]
+        assert "mjcf_content" in data2["artifacts"]
+
+        print(f"Concurrent simulations took {t1 - t0:.2f}s total")
 
 
 @pytest.mark.integration_p0
