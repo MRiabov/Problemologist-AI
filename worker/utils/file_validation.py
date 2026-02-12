@@ -90,8 +90,6 @@ def validate_preliminary_cost_estimation_yaml(
         if data is None:
             return False, ["Empty or invalid YAML content"]
 
-        estimation = PreliminaryCostEstimation(**data)
-
         # 1. Check for template placeholders in cost estimation too
         placeholders = ["ramp_main", "guide_clip"]
         # Only check if it looks EXACTLY like the template example
@@ -99,6 +97,8 @@ def validate_preliminary_cost_estimation_yaml(
             return False, [
                 "preliminary_cost_estimation.yaml still contains template placeholders"
             ]
+
+        estimation = PreliminaryCostEstimation(**data)
 
         logger.info("cost_estimation_yaml_valid")
         return True, estimation
