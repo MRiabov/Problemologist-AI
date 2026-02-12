@@ -87,8 +87,8 @@ def _check_wall_thickness(
     # Offset origins slightly to avoid self-intersection
     origins = centers + normals * 1e-4
 
-    intersector = trimesh.ray.ray_triangle.RayMeshIntersector(mesh)
-    locations, index_ray, _ = intersector.intersects_location(
+    # Use mesh.ray to leverage cached BVH and potentially faster engine (pyembree)
+    locations, index_ray, _ = mesh.ray.intersects_location(
         origins, normals, multiple_hits=False
     )
 

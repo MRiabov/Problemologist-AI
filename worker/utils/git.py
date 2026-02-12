@@ -57,12 +57,7 @@ def has_merge_conflicts(path: Path) -> bool:
     """
     try:
         repo = Repo(path)
-        # Check for MERGE_HEAD which indicates an ongoing merge
-        merge_head = path / ".git" / "MERGE_HEAD"
-        if merge_head.exists():
-            return True
-
-        # Also check for conflict markers in index
+        # Check for conflict markers in index
         unmerged = repo.index.unmerged_blobs()
         return len(unmerged) > 0
 
@@ -175,9 +170,11 @@ def complete_merge(path: Path, message: str | None = None) -> str | None:
         if merge_head.exists():
             if message is None:
                 message = "Merge completed by agent"
-            commit = repo.index.commit(message)
-            logger.info("merge_completed", commit=commit.hexsha)
-            return commit.hexsha
+            # Use git command to commit, which handles MERGE_HEAD cleanup
+            repo.git.commit("-m", message)
+            commit_hash = repo.head.commit.hexsha
+            logger.info("merge_completed", commit=commit_hash)
+            return commit_hash
 
         logger.info("no_merge_in_progress")
         return None
@@ -185,3 +182,36 @@ def complete_merge(path: Path, message: str | None = None) -> str | None:
     except Exception as e:
         logger.error("complete_merge_failed", error=str(e))
         return None
+
+
+def get_repo_status(path: Path) -> dict:
+    """
+    Get current repository status.
+
+    Returns:
+        Dictionary with branch, is_dirty, is_merging, conflicts.
+    """
+    try:
+        repo = Repo(path)
+        is_merging = (path / ".git" / "MERGE_HEAD").exists()
+        conflicts = get_conflicted_files(path)
+
+        branch = "HEAD"
+        if not repo.head.is_detached:
+            branch = repo.active_branch.name
+
+        return {
+            "branch": branch,
+            "is_dirty": repo.is_dirty(untracked_files=True),
+            "is_merging": is_merging,
+            "conflicts": conflicts,
+        }
+    except Exception as e:
+        logger.error("get_repo_status_failed", error=str(e))
+        return {
+            "branch": "unknown",
+            "is_dirty": False,
+            "is_merging": False,
+            "conflicts": [],
+            "error": str(e),
+        }
