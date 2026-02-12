@@ -351,10 +351,12 @@ async def api_validate(
 
         # INT-018: Record validation results to satisfy the handover gate
         results_path = fs_router.local_backend.root / "validation_results.json"
-        with open(results_path, "w") as f:
-            json.dump(
-                {"success": is_valid, "message": message, "timestamp": time.time()}, f
-            )
+        results_path.write_text(
+            json.dumps(
+                {"success": is_valid, "message": message, "timestamp": time.time()}
+            ),
+            encoding="utf-8",
+        )
 
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
