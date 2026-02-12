@@ -19,7 +19,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
       - ASSET_S3_BUCKET=problemologist
       - BACKUP_S3_BUCKET=problemologist-backup
-      - LOG_LEVEL=WARNING
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
       - default
     command: ["uvicorn", "controller.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "controller", "--reload-dir", "shared"]
@@ -68,6 +68,7 @@ services:
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-server:3000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
     depends_on:
@@ -102,7 +103,7 @@ services:
       - MUJOCO_GL=osmesa
       - PYVISTA_OFF_SCREEN=true
       - VTK_DEFAULT_OPENGL_RENDERER=OSMesa
-      - LOG_LEVEL=WARNING
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     networks:
       - default
     command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -93,7 +93,7 @@ async def review_episode(
         episode.status = EpisodeStatus.COMPLETED
     elif decision == "rejected":
         episode.status = EpisodeStatus.FAILED
-    
+
     # Emit review event
     emit_event(
         ReviewEvent(
@@ -118,9 +118,7 @@ class TraceResponse(BaseModel):
     feedback_comment: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class AssetResponse(BaseModel):
@@ -130,8 +128,7 @@ class AssetResponse(BaseModel):
     content: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EpisodeResponse(BaseModel):
@@ -149,8 +146,7 @@ class EpisodeResponse(BaseModel):
     traces: list[TraceResponse] = []
     assets: list[AssetResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/", response_model=list[EpisodeResponse])

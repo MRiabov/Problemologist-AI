@@ -15,6 +15,7 @@ def configure_logging(_service_name: str):
     """
     log_format = os.getenv("LOG_FORMAT", "console").lower()
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level_num = getattr(logging, log_level, logging.INFO)
 
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -43,6 +44,7 @@ def configure_logging(_service_name: str):
     structlog.configure(
         processors=processors,
         logger_factory=structlog.PrintLoggerFactory(),
+        wrapper_class=structlog.make_filtering_bound_logger(log_level_num),
         cache_logger_on_first_use=True,
     )
 
@@ -51,24 +53,28 @@ def configure_logging(_service_name: str):
         # In production, we might want standard logs to be JSON too
         pass
 
-    log_level_num = getattr(logging, log_level, logging.INFO)
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
         level=log_level_num,
     )
 
-    # Denoise Uvicorn access logs
-    # If the main log level is WARNING or ERROR, move access logs to DEBUG
-    access_logger = logging.getLogger("uvicorn.access")
-    if log_level_num >= logging.WARNING:
-        access_logger.setLevel(logging.DEBUG)
-    else:
-        access_logger.setLevel(log_level_num)
-
-    # Ensure other uvicorn loggers follow the global level
+    # Ensure uvicorn loggers follow the global level
     logging.getLogger("uvicorn").setLevel(log_level_num)
     logging.getLogger("uvicorn.error").setLevel(log_level_num)
+
+    # Demote uvicorn access logs to DEBUG so they don't clutter INFO/WARNING
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.setLevel(logging.DEBUG)
+
+    class AccessLogFilter(logging.Filter):
+        def filter(self, record):
+            if record.levelno == logging.INFO:
+                record.levelno = logging.DEBUG
+                record.levelname = "DEBUG"
+            return True
+
+    access_logger.addFilter(AccessLogFilter())
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
