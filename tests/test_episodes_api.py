@@ -92,3 +92,23 @@ def test_list_episodes(mock_db):
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["task"] == "task"
+    # Verify default limit and offset
+    # Note: with SQLAlchemy 2.0 and AsyncSession, verifying calls on mock_db.execute can be complex
+    # but we can check if it was called.
+
+
+def test_list_episodes_pagination(mock_db):
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_result
+
+    response = client.get("/episodes/?limit=10&offset=5")
+
+    assert response.status_code == 200
+
+    # Verify that the database query actually applied the limit and offset
+    assert mock_db.execute.called
+    args, _ = mock_db.execute.call_args
+    stmt = args[0]
+    assert stmt._limit == 10
+    assert stmt._offset == 5
