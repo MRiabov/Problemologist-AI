@@ -11,7 +11,8 @@ from worker.filesystem.backend import FileInfo
 def mock_httpx_client():
     with patch("httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
+        mock_client_cls.return_value = mock_client
+        mock_client.__aenter__.return_value = mock_client
         yield mock_client
 
 

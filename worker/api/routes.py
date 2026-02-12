@@ -17,7 +17,15 @@ from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate, validate_and_price
-from ..utils.git import commit_all, init_workspace_repo
+from ..utils.git import (
+    abort_merge,
+    commit_all,
+    complete_merge,
+    get_repo_status,
+    init_workspace_repo,
+    resolve_conflict_ours,
+    resolve_conflict_theirs,
+)
 from ..utils.preview import preview_design
 from .schema import (
     AnalyzeRequest,
@@ -28,6 +36,9 @@ from .schema import (
     ExecuteResponse,
     GitCommitRequest,
     GitCommitResponse,
+    GitMergeRequest,
+    GitResolveRequest,
+    GitStatusResponse,
     GrepMatch,
     GrepRequest,
     LintRequest,
@@ -292,6 +303,62 @@ async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
     except Exception as e:
         logger.error("api_git_commit_failed", error=str(e))
         return GitCommitResponse(success=False, message=str(e))
+
+
+@router.get("/git/status", response_model=GitStatusResponse)
+async def git_status(fs_router=Depends(get_router)):
+    """Get repository status."""
+    return get_repo_status(fs_router.local_backend.root)
+
+
+@router.post("/git/resolve", response_model=StatusResponse)
+async def git_resolve(request: GitResolveRequest, fs_router=Depends(get_router)):
+    """Resolve a merge conflict."""
+    path = fs_router.local_backend.root
+    success = False
+    if request.strategy == "ours":
+        success = resolve_conflict_ours(path, request.file_path)
+    elif request.strategy == "theirs":
+        success = resolve_conflict_theirs(path, request.file_path)
+
+    if success:
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    raise HTTPException(status_code=500, detail="Failed to resolve conflict")
+
+
+@router.post("/git/merge/abort", response_model=StatusResponse)
+async def git_abort(fs_router=Depends(get_router)):
+    """Abort a merge."""
+    if abort_merge(fs_router.local_backend.root):
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    raise HTTPException(status_code=500, detail="Failed to abort merge")
+
+
+@router.post("/git/merge/complete", response_model=GitCommitResponse)
+async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
+    """Complete a merge."""
+    commit_hash = complete_merge(fs_router.local_backend.root, request.message)
+    if commit_hash:
+        # Sync to S3 as well? Probably yes, to keep backup.
+        try:
+            fs_router.local_backend.sync_to_s3()
+        except Exception as e:
+            logger.warning("api_git_merge_sync_failed", error=str(e))
+            return GitCommitResponse(
+                success=True,
+                commit_hash=commit_hash,
+                message=f"Merge successful but S3 sync failed: {e}",
+            )
+
+        return GitCommitResponse(
+            success=True,
+            commit_hash=commit_hash,
+            message="Merge completed successfully",
+        )
+    return GitCommitResponse(
+        success=False,
+        message="Failed to complete merge (conflicts might remain)",
+    )
 
 
 @router.post("/runtime/execute", response_model=ExecuteResponse)
