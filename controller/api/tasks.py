@@ -45,8 +45,6 @@ async def execute_agent_task(
     session_id: str,
     agent_name: str = "engineer_coder",
 ):
-    # Allow some time for interruption in tests
-    await asyncio.sleep(1)
     session_factory = get_sessionmaker()
 
     try:

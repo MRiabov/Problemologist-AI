@@ -250,9 +250,6 @@ run()
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
-        print(
-            f"DEBUG STL CHECK:\n{debug_resp.json().get('stdout')}\n{debug_resp.json().get('stderr')}"
-        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/simulate",
