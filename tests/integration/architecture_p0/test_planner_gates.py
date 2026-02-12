@@ -93,8 +93,10 @@ def minimal_script():
 from build123d import *
 from worker.workbenches.models import ManufacturingMethod
 def build():
-    # Move to Z=5 so it's within [0, 100] build zone (Box is 10x10x10 centered at origin by default)
-    p = Box(10, 10, 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    # Box 10x10x10 centered at (0,0,5) -> Z from 0 to 10.
+    # Build zone is [0, 100] in objectives.
+    p = Box(10, 10, 10)
+    p = p.move(Location((0, 0, 5)))
     p.label = "test_part"
     p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum-6061"}
     return p

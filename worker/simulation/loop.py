@@ -250,13 +250,6 @@ class SimulationLoop:
             if render_callback:
                 render_callback(self.model, self.data)
 
-        logger.info(
-            "SimulationLoop_step_complete",
-            time=self.data.time - start_time,
-            success=self.success,
-            fail_reason=self.fail_reason,
-        )
-
         return SimulationMetrics(
             total_time=self.data.time - start_time,
             total_energy=self.total_energy,

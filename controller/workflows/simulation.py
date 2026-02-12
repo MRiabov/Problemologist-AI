@@ -15,15 +15,24 @@ if TYPE_CHECKING:
 class SimulationWorkflow:
     @workflow.run
     async def run(self, params: dict) -> str:
-        compound_json = params["compound_json"]
+        import json
+        compound_json_str = params["compound_json"]
         episode_id = params["episode_id"]
         # Extract failure flags for integration testing
         simulate_failures = params.get("simulate_failures", {})
+        
+        # Also check inside compound_json if it's a JSON string
+        try:
+            cj = json.loads(compound_json_str)
+            if cj.get("fail_upload"):
+                simulate_failures["s3_upload"] = True
+        except:
+            pass
 
         try:
             mjcf_data = await workflow.execute_activity(
                 "compile_mjcf_activity",
-                args=[compound_json, simulate_failures],
+                args=[compound_json_str, simulate_failures],
                 start_to_close_timeout=timedelta(minutes=1),
             )
 
