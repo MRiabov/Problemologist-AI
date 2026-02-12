@@ -67,7 +67,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         # We append the user prompt as context
         system_prompt = f"{base_prompt}\n\nUser Request:\n{state['session'].prompt}"
 
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
 
         # Use a remote backend
         backend = RemoteFilesystemBackend(client)
@@ -178,7 +178,7 @@ Validation Logs:
 """
 
         # 3. Setup Agent with deepagents
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
         backend = RemoteFilesystemBackend(client)
 
         agent = create_deep_agent(
@@ -438,7 +438,7 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
 """
 
         # 5. Setup Agent
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
         agent = create_deep_agent(
             model=llm,
             backend=guarded_backend,

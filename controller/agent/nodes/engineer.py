@@ -27,7 +27,7 @@ class EngineerNode:
         session_id: str = "default-session",
     ):
         self.pm = PromptManager()
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
         # T011 & T012: Initialize middleware/client
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
         self.fs = RemoteFilesystemMiddleware(self.worker_client)

@@ -23,7 +23,7 @@ class SidecarNode:
 
     def __init__(self, suggested_skills_dir: str = "suggested_skills"):
         self.pm = PromptManager()
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
         self.suggested_skills_dir = Path(suggested_skills_dir)
         self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
         self.repo_url = os.getenv("GIT_REPO_URL")
