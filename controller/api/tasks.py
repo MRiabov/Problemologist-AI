@@ -37,6 +37,8 @@ def get_worker_client(session_id: str):
 
 
 async def execute_agent_task(episode_id: uuid.UUID, task: str, session_id: str):
+    # Allow some time for interruption in tests
+    await asyncio.sleep(1)
     session_factory = get_sessionmaker()
 
     try:
