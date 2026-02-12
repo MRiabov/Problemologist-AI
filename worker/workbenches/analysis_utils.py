@@ -1,4 +1,5 @@
 import hashlib
+import os
 import pathlib
 import tempfile
 
@@ -11,7 +12,11 @@ def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     """
     Converts a build123d Part or Compound to a trimesh.Trimesh object.
     """
-    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+    # Use /dev/shm if available (Linux RAM disk) for faster I/O
+    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
+    with tempfile.NamedTemporaryFile(
+        suffix=".stl", dir=temp_dir, delete=False
+    ) as tmp:
         tmp_path = tmp.name
 
     try:
@@ -84,8 +89,9 @@ def check_undercuts(
         origins = centers + normals * 1e-4
         directions = np.tile(approach_direction, (len(origins), 1))
 
-        intersector = trimesh.ray.ray_triangle.RayMeshIntersector(mesh)
-        hits = intersector.intersects_any(origins, directions)
+        # Use mesh.ray for raycasting, which automatically uses pyembree if available (faster)
+        # and caches the BVH structure on the mesh object for subsequent calls.
+        hits = mesh.ray.intersects_any(origins, directions)
 
         occluded_indices = pointing_towards[hits]
         undercut_indices.extend(occluded_indices.tolist())
@@ -98,7 +104,11 @@ def compute_part_hash(part: Part | Compound) -> str:
     Computes a stable hash for a build123d Part or Compound.
     Uses STL export as a proxy for geometry.
     """
-    with tempfile.NamedTemporaryFile(suffix=".stl", delete=False) as tmp:
+    # Use /dev/shm if available (Linux RAM disk) for faster I/O
+    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
+    with tempfile.NamedTemporaryFile(
+        suffix=".stl", dir=temp_dir, delete=False
+    ) as tmp:
         tmp_path = tmp.name
 
     try:
