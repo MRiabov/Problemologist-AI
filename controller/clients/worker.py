@@ -1,3 +1,5 @@
+from typing import Literal
+
 import httpx
 
 from worker.api.schema import (
@@ -5,6 +7,7 @@ from worker.api.schema import (
     EditOp,
     ExecuteResponse,
     GitCommitResponse,
+    GitStatusResponse,
     GrepMatch,
 )
 from worker.filesystem.backend import FileInfo
@@ -105,6 +108,40 @@ class WorkerClient:
             )
             response.raise_for_status()
             return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def upload_file(self, path: str, content: bytes) -> bool:
+        """Upload a file with binary content."""
+        client = await self._get_client()
+        try:
+            # Prepare multipart form data
+            files = {"file": ("blob", content)}
+            data = {"path": path}
+            response = await client.post(
+                f"{self.base_url}/fs/upload_file",
+                data=data,
+                files=files,
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def read_file_binary(self, path: str) -> bytes:
+        """Read file contents as binary."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/read_blob",
+                json={"path": path},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.content
         finally:
             await self._close_client(client)
 
@@ -253,6 +290,66 @@ class WorkerClient:
         try:
             response = await client.post(
                 f"{self.base_url}/git/commit",
+                json={"message": message},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return GitCommitResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
+    async def git_status(self) -> GitStatusResponse:
+        """Get repository status."""
+        client = await self._get_client()
+        try:
+            response = await client.get(
+                f"{self.base_url}/git/status",
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return GitStatusResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
+    async def git_resolve(
+        self, file_path: str, strategy: Literal["ours", "theirs"]
+    ) -> bool:
+        """Resolve a merge conflict."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/git/resolve",
+                json={"file_path": file_path, "strategy": strategy},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def git_merge_abort(self) -> bool:
+        """Abort a merge."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/git/merge/abort",
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def git_merge_complete(self, message: str | None = None) -> GitCommitResponse:
+        """Complete a merge."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/git/merge/complete",
                 json={"message": message},
                 headers=self.headers,
                 timeout=30.0,

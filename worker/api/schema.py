@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
@@ -134,6 +134,29 @@ class GitCommitResponse(BaseModel):
     success: StrictBool
     commit_hash: StrictStr | None = None
     message: StrictStr
+
+
+class GitStatusResponse(BaseModel):
+    """Response from git status."""
+
+    branch: StrictStr
+    is_dirty: StrictBool
+    is_merging: StrictBool
+    conflicts: list[StrictStr] = Field(default_factory=list)
+    error: StrictStr | None = None
+
+
+class GitResolveRequest(BaseModel):
+    """Request to resolve a merge conflict."""
+
+    file_path: StrictStr = Field(..., min_length=1)
+    strategy: Literal["ours", "theirs"]
+
+
+class GitMergeRequest(BaseModel):
+    """Request to complete a merge."""
+
+    message: StrictStr | None = None
 
 
 class PreviewDesignRequest(BaseModel):

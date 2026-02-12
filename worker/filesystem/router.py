@@ -10,7 +10,7 @@ from pathlib import Path
 
 import structlog
 
-from .backend import FileInfo, GrepMatch, LocalFilesystemBackend
+from .backend import FileInfo, FileUploadResponse, GrepMatch, LocalFilesystemBackend
 
 logger = structlog.get_logger(__name__)
 
@@ -251,6 +251,37 @@ class FilesystemRouter:
             # This allows the API to return 500 (or we could map to 409 if we distinguished).
             # For "file exists", backend says "Cannot write to ... because it already exists."
             raise OSError(res.error)
+
+    def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
+        """Upload multiple files with read-only check.
+
+        Args:
+            files: List of (path, content) tuples.
+
+        Returns:
+            List of FileUploadResponse objects.
+        """
+        # Filter out read-only paths
+        allowed_files = []
+        responses = []
+
+        for path, content in files:
+            if self._is_read_only(path):
+                logger.warning("router_upload_blocked", path=path)
+                responses.append(
+                    FileUploadResponse(
+                        path=path, error=f"Cannot write to read-only path: {path}"
+                    )
+                )
+            else:
+                allowed_files.append((path, content))
+
+        if allowed_files:
+            # Delegate to backend
+            backend_responses = self.local_backend.upload_files(allowed_files)
+            responses.extend(backend_responses)
+
+        return responses
 
     def edit(self, path: str, old_content: str, new_content: str) -> bool:
         """Edit file by replacing content.

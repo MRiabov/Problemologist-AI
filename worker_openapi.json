@@ -222,23 +222,379 @@
         }
       }
     },
+    "/fs/grep": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Api Grep",
+        "description": "Search for a pattern in files.",
+        "operationId": "api_grep_fs_grep_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrepRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GrepMatch"
+                  },
+                  "title": "Response Api Grep Fs Grep Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/init": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Init",
+        "description": "Initialize a git repository in the workspace.",
+        "operationId": "git_init_git_init_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/commit": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Commit",
+        "description": "Commit changes and sync to S3.",
+        "operationId": "git_commit_git_commit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitCommitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitCommitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/status": {
+      "get": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Status",
+        "description": "Get repository status.",
+        "operationId": "git_status_git_status_get",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/resolve": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Resolve",
+        "description": "Resolve a merge conflict.",
+        "operationId": "git_resolve_git_resolve_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitResolveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/merge/abort": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Abort",
+        "description": "Abort a merge.",
+        "operationId": "git_abort_git_merge_abort_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git/merge/complete": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Git Complete",
+        "description": "Complete a merge.",
+        "operationId": "git_complete_git_merge_complete_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitMergeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitCommitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/runtime/execute": {
       "post": {
         "tags": [
           "worker"
         ],
         "summary": "Execute Code",
-        "description": "Execute Python code.",
+        "description": "Execute Python code in session-isolated environment.",
         "operationId": "execute_code_runtime_execute_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ExecuteRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -270,17 +626,28 @@
           "worker"
         ],
         "summary": "Api Simulate",
-        "description": "Physics-backed stability check.",
+        "description": "Physics-backed stability check in isolated session.",
         "operationId": "api_simulate_benchmark_simulate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BenchmarkToolRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -312,17 +679,28 @@
           "worker"
         ],
         "summary": "Api Validate",
-        "description": "Geometric validity check.",
+        "description": "Geometric validity check in isolated session.",
         "operationId": "api_validate_benchmark_validate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BenchmarkToolRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -348,23 +726,87 @@
         }
       }
     },
+    "/benchmark/analyze": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Api Analyze",
+        "description": "Manufacturing analysis using specified workbench.",
+        "operationId": "api_analyze_benchmark_analyze_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/benchmark/submit": {
       "post": {
         "tags": [
           "worker"
         ],
         "summary": "Api Submit",
-        "description": "Handover to reviewer.",
+        "description": "Handover to reviewer in isolated session.",
         "operationId": "api_submit_benchmark_submit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/BenchmarkToolRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -373,6 +815,162 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/{path}": {
+      "get": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Get Asset",
+        "description": "Serve assets from the filesystem.",
+        "operationId": "get_asset_assets__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/preview": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Api Preview",
+        "description": "Render a preview of the CAD design from specified camera angles.",
+        "operationId": "api_preview_benchmark_preview_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewDesignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lint": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Api Lint",
+        "description": "Lint Python code using ruff.",
+        "operationId": "api_lint_lint_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LintRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LintResponse"
                 }
               }
             }
@@ -427,6 +1025,38 @@
   },
   "components": {
     "schemas": {
+      "AnalyzeRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "method": {
+            "$ref": "#/components/schemas/ManufacturingMethod",
+            "description": "Manufacturing method to analyze (cnc, 3dp, im)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "AnalyzeRequest",
+        "description": "Request to run manufacturing analysis."
+      },
       "BenchmarkToolRequest": {
         "properties": {
           "script_path": {
@@ -434,6 +1064,18 @@
             "title": "Script Path",
             "description": "Path to the script containing the build() function.",
             "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
           }
         },
         "type": "object",
@@ -461,6 +1103,14 @@
               }
             ],
             "title": "Artifacts"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
           }
         },
         "type": "object",
@@ -555,6 +1205,14 @@
             "type": "boolean",
             "title": "Timed Out",
             "default": false
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
           }
         },
         "type": "object",
@@ -601,6 +1259,196 @@
         "title": "FileInfo",
         "description": "Information about a file or directory."
       },
+      "GitCommitRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "GitCommitRequest",
+        "description": "Request to commit changes in the session workspace."
+      },
+      "GitCommitResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "commit_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Hash"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "GitCommitResponse",
+        "description": "Response from a git commit operation."
+      },
+      "GitMergeRequest": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "title": "GitMergeRequest",
+        "description": "Request to complete a merge."
+      },
+      "GitResolveRequest": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "File Path"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "ours",
+              "theirs"
+            ],
+            "title": "Strategy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "strategy"
+        ],
+        "title": "GitResolveRequest",
+        "description": "Request to resolve a merge conflict."
+      },
+      "GitStatusResponse": {
+        "properties": {
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          },
+          "is_dirty": {
+            "type": "boolean",
+            "title": "Is Dirty"
+          },
+          "is_merging": {
+            "type": "boolean",
+            "title": "Is Merging"
+          },
+          "conflicts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "branch",
+          "is_dirty",
+          "is_merging"
+        ],
+        "title": "GitStatusResponse",
+        "description": "Response from git status."
+      },
+      "GrepMatch": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "line": {
+            "type": "integer",
+            "title": "Line"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "line",
+          "text"
+        ],
+        "title": "GrepMatch",
+        "description": "A single match from a grep operation."
+      },
+      "GrepRequest": {
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Pattern"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pattern"
+        ],
+        "title": "GrepRequest",
+        "description": "Request to search for a pattern in files."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -614,11 +1462,71 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "LintRequest": {
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path",
+            "description": "Path to file to lint (if in filesystem)."
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Direct content to lint."
+          }
+        },
+        "type": "object",
+        "title": "LintRequest",
+        "description": "Request to lint Python code."
+      },
+      "LintResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "LintResponse",
+        "description": "Response from linting Python code."
+      },
       "ListFilesRequest": {
         "properties": {
           "path": {
             "type": "string",
-            "minLength": 1,
             "title": "Path",
             "default": "/"
           }
@@ -626,6 +1534,82 @@
         "type": "object",
         "title": "ListFilesRequest",
         "description": "Request to list files in a directory."
+      },
+      "ManufacturingMethod": {
+        "type": "string",
+        "enum": [
+          "cnc",
+          "3dp",
+          "im"
+        ],
+        "title": "ManufacturingMethod"
+      },
+      "PreviewDesignRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch",
+            "description": "Camera elevation angle in degrees (negative = looking down).",
+            "default": -45.0
+          },
+          "yaw": {
+            "type": "number",
+            "exclusiveMaximum": 360.0,
+            "minimum": 0.0,
+            "title": "Yaw",
+            "description": "Camera azimuth angle in degrees (clockwise from front).",
+            "default": 45.0
+          }
+        },
+        "type": "object",
+        "title": "PreviewDesignRequest",
+        "description": "Request to preview a CAD design from specific angles."
+      },
+      "PreviewDesignResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Path"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "PreviewDesignResponse",
+        "description": "Response from preview design endpoint."
       },
       "ReadFileRequest": {
         "properties": {
@@ -722,6 +1706,36 @@
         ],
         "title": "ValidationError"
       },
+      "WorkbenchResult": {
+        "properties": {
+          "is_manufacturable": {
+            "type": "boolean",
+            "title": "Is Manufacturable"
+          },
+          "unit_cost": {
+            "type": "number",
+            "title": "Unit Cost"
+          },
+          "violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_manufacturable",
+          "unit_cost"
+        ],
+        "title": "WorkbenchResult"
+      },
       "WriteFileRequest": {
         "properties": {
           "path": {
@@ -732,6 +1746,11 @@
           "content": {
             "type": "string",
             "title": "Content"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "title": "Overwrite",
+            "default": false
           }
         },
         "type": "object",

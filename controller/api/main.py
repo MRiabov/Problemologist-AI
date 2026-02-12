@@ -86,7 +86,12 @@ async def run_agent(request: AgentRunRequest):
     import asyncio
 
     task = asyncio.create_task(
-        execute_agent_task(episode_id, request.task, request.session_id)
+        execute_agent_task(
+            episode_id,
+            request.task,
+            request.session_id,
+            agent_name=request.agent_name,
+        )
     )
     task_tracker.register_task(episode_id, task)
 

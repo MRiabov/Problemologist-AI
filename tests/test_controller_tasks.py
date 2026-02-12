@@ -184,3 +184,54 @@ async def test_execute_agent_task_failure(
 
     # Verify status changed to FAILED
     assert mock_episode.status == EpisodeStatus.FAILED
+
+
+@pytest.mark.asyncio
+@patch("controller.api.tasks.get_sessionmaker")
+@patch("controller.observability.database.get_sessionmaker")
+@patch("controller.api.tasks.get_worker_client")
+@patch("controller.api.tasks.create_agent_graph")
+@patch("controller.api.tasks.RemoteFilesystemBackend")
+@patch("controller.api.tasks.initialize_agent_files")
+async def test_execute_agent_task_custom_name(
+    mock_init_files,
+    mock_backend_cls,
+    mock_create_graph,
+    _mock_get_worker,
+    mock_db_sessionmaker,
+    mock_get_sessionmaker,
+):
+    episode_id = uuid.uuid4()
+    task = "test task"
+    session_id = "test-session"
+    agent_name = "benchmark_planner"
+
+    mock_session = MagicMock()
+    mock_session.commit = AsyncMock()
+    mock_session.get = AsyncMock()
+
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__.return_value = mock_session
+    mock_get_sessionmaker.return_value = mock_session_factory
+    mock_db_sessionmaker.return_value = mock_session_factory
+
+    mock_episode = Episode(id=episode_id, task=task, status=EpisodeStatus.RUNNING)
+    mock_session.get.return_value = mock_episode
+
+    mock_backend = mock_backend_cls.return_value
+    mock_backend.als_info = AsyncMock(return_value=[])
+
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="done")]}
+    mock_create_graph.return_value = (mock_agent, None)
+
+    await execute_agent_task(
+        episode_id, task, session_id, agent_name=agent_name
+    )
+
+    # Verify initialize_agent_files called with custom name
+    mock_init_files.assert_called_once_with(mock_backend, agent_name=agent_name)
+
+    # Verify create_agent_graph called with custom name
+    mock_create_graph.assert_called_once()
+    assert mock_create_graph.call_args.kwargs["agent_name"] == agent_name
