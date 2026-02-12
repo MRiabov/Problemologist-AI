@@ -33,7 +33,7 @@ async def architect_node(state: AgentState) -> AgentState:
     prompt_text = pm.render("architect", task=state.task, skills=skills_context)
 
     # Using a standard LLM configuration for the agent
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = ChatOpenAI(model="z-ai/glm-4.7-flash", temperature=0)
 
     # We pass the prompt as a human message for simplicity in this skeleton
     response = await llm.ainvoke([HumanMessage(content=prompt_text)])

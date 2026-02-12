@@ -18,11 +18,14 @@ def test_docker_compose_style_env_loading():
     the application picks it up.
     """
     # This simulates what Docker Compose's env_file does (injecting into os.environ)
-    mock_env = {"OPENAI_API_KEY": "sk-dummy-key", "LLM_MODEL": "gpt-4o-test"}
+    mock_env = {
+        "OPENAI_API_KEY": "sk-dummy-key",
+        "LLM_MODEL": "z-ai/glm-4.7-flash-test",
+    }
 
     with patch.dict(os.environ, mock_env):
         # Import the module that reads these vars
         # We need to be careful with imports if they are at top-level
         # But here we just check os.getenv which is what main.py uses
         assert os.getenv("OPENAI_API_KEY") == "sk-dummy-key"
-        assert os.getenv("LLM_MODEL") == "gpt-4o-test"
+        assert os.getenv("LLM_MODEL") == "z-ai/glm-4.7-flash-test"

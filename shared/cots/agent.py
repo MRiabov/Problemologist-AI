@@ -56,7 +56,7 @@ def search_cots_catalog(
     return "\n\n".join(output)
 
 
-def create_cots_search_agent(model_name: str = "gpt-4o"):
+def create_cots_search_agent(model_name: str = "z-ai/glm-4.7-flash"):
     """
     Create a specialized agent for part lookup.
     """
