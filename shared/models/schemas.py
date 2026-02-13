@@ -8,7 +8,7 @@ These models define the contracts for:
 
 from typing import Literal
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # =============================================================================
 # Common Types
@@ -122,6 +122,66 @@ class RandomizationMeta(BaseModel):
     runtime_jitter_enabled: bool = True
 
 
+# =============================================================================
+# WP2 Physics Configuration
+# =============================================================================
+
+
+class PhysicsConfig(BaseModel):
+    """Configuration for the physics engine."""
+
+    backend: str = "mujoco"  # "mujoco" | "genesis"
+    fem_enabled: bool = False
+    compute_target: str = "auto"  # "auto" | "cpu" | "gpu"
+
+
+# =============================================================================
+# WP3 Electronics Models
+# =============================================================================
+
+
+class PowerSupplyConfig(BaseModel):
+    """Configuration for a DC power supply."""
+
+    type: str = "mains_ac_rectified"
+    voltage_dc: float
+    max_current_a: float
+    location: tuple[float, float, float] | None = None
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def coerce_list_to_tuple(cls, v):
+        if isinstance(v, list):
+            return tuple(v)
+        return v
+
+
+class WiringConstraint(BaseModel):
+    """Constraints on wire routing and length."""
+
+    max_total_wire_length_mm: float
+    restricted_zones: list[ForbidZone] = []
+
+
+class ElectronicsRequirements(BaseModel):
+    """Electronics section for objectives.yaml."""
+
+    power_supply_available: PowerSupplyConfig
+    wiring_constraints: WiringConstraint | None = None
+    circuit_validation_required: bool = True
+
+
+class CircuitValidationResult(BaseModel):
+    """Result of a circuit validation check."""
+
+    valid: bool
+    node_voltages: dict[str, float] = {}
+    branch_currents: dict[str, float] = {}
+    total_draw_a: float = 0.0
+    errors: list[str] = []
+    warnings: list[str] = []
+
+
 class ObjectivesYaml(BaseModel):
     """
     The objectives.yaml schema - central data exchange object.
@@ -134,10 +194,12 @@ class ObjectivesYaml(BaseModel):
     """
 
     objectives: ObjectivesSection
+    physics: PhysicsConfig = PhysicsConfig()
     simulation_bounds: BoundingBox
     moved_object: MovedObject
     constraints: Constraints
     randomization: RandomizationMeta = RandomizationMeta()
+    electronics_requirements: ElectronicsRequirements | None = None
     preliminary_totals: dict[str, float] | None = None
 
 
@@ -251,6 +313,50 @@ class CostEstimationConstraints(BaseModel):
     planner_target_max_weight_kg: float
 
 
+# =============================================================================
+# WP3 Assembly Electronics Section
+# =============================================================================
+
+
+class WireTerminal(BaseModel):
+    """A terminal on an electronic component."""
+
+    component: str
+    terminal: str
+
+
+class WireConfig(BaseModel):
+    """Configuration for a physical wire in the assembly."""
+
+    wire_id: str
+    from_terminal: WireTerminal = Field(..., alias="from")
+    to_terminal: WireTerminal = Field(..., alias="to")
+    gauge_awg: int
+    length_mm: float
+    routed_in_3d: bool = False
+
+    model_config = {"populate_by_name": True}
+
+
+class ElectronicComponent(BaseModel):
+    """A component in the electronic circuit."""
+
+    component_id: str
+    type: Literal["power_supply", "motor", "relay", "connector", "switch"]
+    cots_part_id: str | None = None
+    assembly_part_ref: str | None = None
+    rated_voltage: float | None = None
+    stall_current_a: float | None = None
+
+
+class ElectronicsSection(BaseModel):
+    """Electronics section of the assembly definition."""
+
+    power_supply: PowerSupplyConfig
+    wiring: list[WireConfig] = []
+    components: list[ElectronicComponent] = []
+
+
 class PreliminaryCostEstimation(BaseModel):
     """
     Schema for preliminary_cost_estimation.yaml.
@@ -262,6 +368,7 @@ class PreliminaryCostEstimation(BaseModel):
     constraints: CostEstimationConstraints
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
+    electronics: ElectronicsSection | None = None
     final_assembly: list[SubassemblyEstimate | dict[str, AssemblyPartConfig]] = []
     totals: CostTotals
 
@@ -344,3 +451,7 @@ class PreliminaryCostEstimation(BaseModel):
             )
 
         return self
+
+
+# Alias for future renaming as per WP3 spec
+AssemblyDefinition = PreliminaryCostEstimation

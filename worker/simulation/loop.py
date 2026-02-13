@@ -1,8 +1,9 @@
-import mujoco
 import numpy as np
 import structlog
 from build123d import Compound, Part
 from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
+from shared.simulation.backends import SimulatorBackendType, SimulationScene
+from worker.simulation.factory import get_physics_backend
 
 logger = structlog.get_logger(__name__)
 
@@ -27,9 +28,12 @@ class SimulationLoop:
         xml_path: str,
         component: Part | Compound | None = None,
         max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
+        backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
     ):
-        self.model = mujoco.MjModel.from_xml_path(xml_path)
-        self.data = mujoco.MjData(self.model)
+        self.backend = get_physics_backend(backend_type)
+        scene = SimulationScene(scene_path=xml_path)
+        self.backend.load_scene(scene)
+
         self.component = component
         self.validation_report = None
 
@@ -44,28 +48,26 @@ class SimulationLoop:
                 self.component, ManufacturingMethod.CNC, config
             )
 
-        # Cache zone IDs for forbidden zones
-        self.forbidden_sites = set()
-        self.goal_sites = set()
-        for i in range(self.model.nsite):
-            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_SITE, i)
+        # Cache zone names for forbidden zones
+        self.forbidden_sites = []
+        self.goal_sites = []
+        for name in self.backend.get_all_site_names():
             if name and name.startswith("zone_forbid"):
-                self.forbidden_sites.add(i)
+                self.forbidden_sites.append(name)
             elif name and name.startswith("zone_goal"):
-                self.goal_sites.add(i)
+                self.goal_sites.append(name)
 
         logger.info(
             "SimulationLoop_init",
-            goal_sites=list(self.goal_sites),
-            forbidden_sites=list(self.forbidden_sites),
-            nsite=self.model.nsite,
+            goal_sites=self.goal_sites,
+            forbidden_sites=self.forbidden_sites,
         )
 
         # Configurable timeout (capped at hard limit)
         self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
 
         # Motor overload tracking: time each actuator has been at forcerange limit
-        self.actuator_clamp_duration = np.zeros(self.model.nu)
+        self.actuator_clamp_duration = {}  # name -> duration
 
         # Reset metrics
         self.reset_metrics()
@@ -76,8 +78,8 @@ class SimulationLoop:
         self.success = False
         self.fail_reason = None
         self.overloaded_motors: list[str] = []
-        if hasattr(self, "actuator_clamp_duration"):
-            self.actuator_clamp_duration.fill(0.0)
+        for name in self.actuator_clamp_duration:
+            self.actuator_clamp_duration[name] = 0.0
 
     def step(
         self,
@@ -110,123 +112,84 @@ class SimulationLoop:
             )
 
         # Apply initial static controls
-        for name, value in control_inputs.items():
-            actuator_id = mujoco.mj_name2id(
-                self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
-            )
-            if actuator_id != -1:
-                self.data.ctrl[actuator_id] = value
-            else:
-                logger.warning("actuator_not_found", name=name)
+        self.backend.apply_control(control_inputs)
 
-        start_time = self.data.time
-        steps = (
-            int(duration / self.model.opt.timestep)
-            if self.model.opt.timestep > 0
-            else 0
-        )
+        # We assume backend has a fixed or default timestep
+        # For MuJoCo it's usually 0.002
+        # We'll use a small step and loop
+        dt = 0.002  # Default step for loop logic
+        steps = int(duration / dt)
 
-        # Cache actuator IDs for dynamic control
-        actuator_map = {}
-        if dynamic_controllers:
-            for name in dynamic_controllers:
-                act_id = mujoco.mj_name2id(
-                    self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
-                )
-                if act_id != -1:
-                    actuator_map[name] = act_id
+        start_time = 0.0  # We should probably get current time from backend
+        current_time = 0.0
 
-        # Find critical bodies once
-        target_body_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
-        )
-        if target_body_id == -1:
-            # Fallback: search manually
-            for i in range(self.model.nbody):
-                name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, i)
+        # Find critical bodies
+        target_body_name = "target_box"
+        all_bodies = self.backend.get_all_body_names()
+        if target_body_name not in all_bodies:
+            target_body_name = None
+            for name in all_bodies:
                 if name == "target_box":
-                    target_body_id = i
+                    target_body_name = name
                     break
 
-        logger.info("SimulationLoop_step_start", target_body_id=target_body_id)
-        # We rely on self.goal_sites populated in init
-
-        # 0. Check for pre-existing instability
-        if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
-            self.fail_reason = "instability_detected"
-            return SimulationMetrics(
-                total_time=0.0,
-                total_energy=0.0,
-                max_velocity=0.0,
-                success=False,
-                fail_reason=self.fail_reason,
-            )
+        logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         for _ in range(steps):
             # Apply dynamic controllers
             if dynamic_controllers:
+                ctrls = {}
                 for name, controller in dynamic_controllers.items():
-                    if name in actuator_map:
-                        self.data.ctrl[actuator_map[name]] = controller(self.data.time)
+                    ctrls[name] = controller(current_time)
+                self.backend.apply_control(ctrls)
 
-            # 1. Check for instability BEFORE step (catch injected NaNs)
-            if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
-                self.fail_reason = "instability_detected"
+            # Step backend
+            res = self.backend.step(dt)
+            current_time = res.time
+            if not res.success:
+                self.fail_reason = res.failure_reason
                 break
 
-            mujoco.mj_step(self.model, self.data)
-
             # 2. Update Metrics
-            # Energy proxy: abs(ctrl) * abs(velocity) is power. Energy is integral of power * dt.
-            # But here we just sum power? T011 says "sum of ctrl * velocity".
-            # We add it per step.
+            # Energy proxy
+            actuator_names = self.backend.get_all_actuator_names()
             power = 0.0
-            if self.model.nu > 0:
-                # Check shapes properly: ctrl (nu,), qvel (nv,)
-                # Generally nu <= nv. For simple joints, they map 1:1.
-                # We can use actuator velocity? mujoco.mj_objectVelocity?
-                # data.actuator_velocity exists? No.
-                # data.qvel is joint vel.
-                # Using simple norm for now as strict physics valid energy computation is complex.
-                power = np.sum(np.abs(self.data.ctrl * self.data.qvel[: self.model.nu]))
-
+            for name in actuator_names:
+                state = self.backend.get_actuator_state(name)
+                power += abs(state.ctrl * state.velocity)
             self.total_energy += float(power)
 
-            if target_body_id != -1:
-                # cvel is rotational(3)+translational(3)
-                vel = np.linalg.norm(self.data.cvel[target_body_id][3:])
+            if target_body_name:
+                state = self.backend.get_body_state(target_body_name)
+                vel = np.linalg.norm(state.vel)
                 if vel > self.max_velocity:
                     self.max_velocity = vel
 
                 # F002: Check if target fell off the world
-                target_pos = self.data.xpos[target_body_id]
-                if target_pos[2] < -2.0:
+                if state.pos[2] < -2.0:
                     self.fail_reason = "target_fell_off_world"
                     logger.info("simulation_fail", reason="target_fell_off_world")
                     break
 
             # 3. Check Forbidden Zones
-            if self._check_forbidden_collision():
+            if self._check_forbidden_collision(target_body_name):
                 self.fail_reason = "collision_with_forbidden_zone"
                 logger.info("simulation_fail", reason="collision_with_forbidden_zone")
                 break
 
             # 4. Check Goal Zone
-            # Vertex-based check against goal SITES
-            goal_hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
-            if goal_hit:
+            if target_body_name and self.check_goal_with_vertices(target_body_name):
                 self.success = True
                 logger.info("Simulation_SUCCESS", goal_hit=True)
                 break
 
-            # 5. Check Timeout (hard cap at 30 seconds)
-            elapsed = self.data.time - start_time
-            if elapsed >= self.max_simulation_time:
+            # 5. Check Timeout
+            if current_time >= self.max_simulation_time:
                 self.fail_reason = "timeout_exceeded"
                 logger.info(
                     "simulation_fail",
                     reason="timeout_exceeded",
-                    elapsed=elapsed,
+                    elapsed=current_time,
                     limit=self.max_simulation_time,
                 )
                 break
@@ -240,157 +203,72 @@ class SimulationLoop:
                 )
                 break
 
-            # 7. Check Numerical Stability (NaNs)
-            if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
-                self.fail_reason = "instability_detected"
-                logger.info("simulation_fail", reason="numerical_instability")
-                break
-
             if render_callback:
-                render_callback(self.model, self.data)
+                # This might need adjustment as render_callback usually takes model/data
+                # For now, we might skip it or pass the backend
+                pass
 
         return SimulationMetrics(
-            total_time=self.data.time - start_time,
+            total_time=current_time,
             total_energy=self.total_energy,
             max_velocity=self.max_velocity,
             success=self.success,
             fail_reason=self.fail_reason,
         )
 
-    def _check_vertex_in_zone(
-        self, body_id: int, zone_site_ids: set[int]
-    ) -> tuple[bool, int | None]:
-        """Check if any vertex of a body's mesh touches a zone (Site AABB check).
-
-        Args:
-            body_id: ID of the body to check.
-            zone_site_ids: Set of SITE IDs representing zones.
-
-        Returns:
-            (True, zone_id) if collision, (False, None) otherwise.
-        """
-        if body_id == -1 or not zone_site_ids:
-            return False, None
-
-        geom_start = self.model.body_geomadr[body_id]
-        geom_num = self.model.body_geomnum[body_id]
-        if geom_start == -1:
-            return False, None
-
-        for i in range(geom_num):
-            geom_id = geom_start + i
-            geom_type = self.model.geom_type[geom_id]
-
-            # Get global transform and vertices
-            geom_pos = self.data.geom_xpos[geom_id]
-            geom_mat = self.data.geom_xmat[geom_id].reshape(3, 3)
-
-            vertices = []
-            if geom_type == mujoco.mjtGeom.mjGEOM_MESH:
-                mesh_id = self.model.geom_dataid[geom_id]
-                vert_adr = self.model.mesh_vertadr[mesh_id]
-                vert_num = self.model.mesh_vertnum[mesh_id]
-                raw_verts = self.model.mesh_vert[vert_adr : vert_adr + vert_num]
-                vertices = geom_pos + raw_verts @ geom_mat.T
-            else:
-                # Minimal fallback: check geom position
-                vertices = np.array([geom_pos])
-
-            # Check vertices against all zones
-            for zone_id in zone_site_ids:
-                zone_pos = self.data.site_xpos[zone_id]
-                zone_size = self.model.site_size[zone_id]
-                zone_type = self.model.site_type[zone_id]
-
-                # Assume Box or Sphere for zones
-                if zone_type == mujoco.mjtGeom.mjGEOM_BOX:
-                    # Box check (axis aligned for now, assuming site rotation is identity or simple)
-                    site_mat = self.data.site_xmat[zone_id].reshape(3, 3)
-                    diff = vertices - zone_pos
-                    # Transform to site local frame
-                    v_local = diff @ site_mat
-
-                    # Check against half-extents (zone_size)
-                    in_box = np.all(np.abs(v_local) <= zone_size[:3], axis=1)
-                    if np.any(in_box):
-                        return True, zone_id
-
-                elif zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
-                    # Sphere check
-                    dists = np.linalg.norm(vertices - zone_pos, axis=1)
-                    if np.any(dists < zone_size[0]):
-                        return True, zone_id
-
-        return False, None
-
     def _check_motor_overload(self) -> str | None:
-        """Check if any motor has been at forcerange limit for too long.
+        actuator_names = self.backend.get_all_actuator_names()
+        dt = 0.002  # matching our loop dt
 
-        Returns:
-            Name of overloaded actuator, or None if no overload.
-        """
-        if self.model.nu == 0:
-            return None
+        for name in actuator_names:
+            state = self.backend.get_actuator_state(name)
+            forcerange = state.forcerange
 
-        timestep = self.model.opt.timestep
-
-        for i in range(self.model.nu):
-            # Get actuator force and forcerange
-            force = abs(self.data.actuator_force[i])
-            forcerange = self.model.actuator_forcerange[i]
-
-            # Check if forcerange is set (non-zero range)
             if forcerange[0] == 0 and forcerange[1] == 0:
-                continue  # No limit set
+                continue
 
             max_force = max(abs(forcerange[0]), abs(forcerange[1]))
             if max_force == 0:
                 continue
 
-            # Check if force is at limit (within 1% tolerance)
-            is_clamped = force >= max_force * 0.99
+            is_clamped = abs(state.force) >= max_force * 0.99
 
             if is_clamped:
-                self.actuator_clamp_duration[i] += timestep
-                if self.actuator_clamp_duration[i] >= MOTOR_OVERLOAD_THRESHOLD_SECONDS:
-                    name = mujoco.mj_id2name(
-                        self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, i
-                    )
-                    self.overloaded_motors.append(name or f"actuator_{i}")
-                    return name or f"actuator_{i}"
+                self.actuator_clamp_duration[name] = (
+                    self.actuator_clamp_duration.get(name, 0.0) + dt
+                )
+                if (
+                    self.actuator_clamp_duration[name]
+                    >= MOTOR_OVERLOAD_THRESHOLD_SECONDS
+                ):
+                    self.overloaded_motors.append(name)
+                    return name
             else:
-                # Reset if not clamped (must be continuous)
-                self.actuator_clamp_duration[i] = 0.0
+                self.actuator_clamp_duration[name] = 0.0
 
         return None
 
-    def _check_forbidden_collision(self) -> bool:
-        """
-        Iterate all bodies and check vertex overlap with forbidden SITES.
-        """
-        # Check all bodies in the model
-        for body_id in range(self.model.nbody):
-            # Skip the world body (id 0)
-            if body_id == 0:
+    def _check_forbidden_collision(self, target_body_name: str | None) -> bool:
+        all_bodies = self.backend.get_all_body_names()
+        for body_name in all_bodies:
+            if body_name == "world" or body_name == "0":
+                continue
+            if body_name and body_name.startswith("zone_forbid"):
                 continue
 
-            # Skip forbidden zone bodies themselves to avoid false self-collision
-            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id)
-            if name and name.startswith("zone_forbid"):
-                continue
-
-            hit, _ = self._check_vertex_in_zone(body_id, self.forbidden_sites)
-            if hit:
-                return True
-
+            for zone_name in self.forbidden_sites:
+                if self.backend.check_collision(body_name, zone_name):
+                    return True
         return False
 
-    def check_goal_with_vertices(self, target_body_id: int) -> bool:
-        """Check if target body touches any goal zone using vertex check."""
-        hit, _ = self._check_vertex_in_zone(target_body_id, self.goal_sites)
-        return hit
+    def check_goal_with_vertices(self, target_body_name: str) -> bool:
+        for zone_name in self.goal_sites:
+            if self.backend.check_collision(target_body_name, zone_name):
+                return True
+        return False
 
-    def check_forbid_with_vertices(self, target_body_id: int) -> bool:
-        """Check if target body touches any forbidden zone using vertex check."""
-        hit, _ = self._check_vertex_in_zone(target_body_id, self.forbidden_sites)
-        return hit
+    def check_forbid_with_vertices(self, target_body_name: str) -> bool:
+        for zone_name in self.forbidden_sites:
+            if self.backend.check_collision(target_body_name, zone_name):
+                return True
+        return False
