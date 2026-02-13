@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import structlog
 from langgraph.graph import END, START, StateGraph
-from sqlalchemy import update
+from sqlalchemy import select
 
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
@@ -156,26 +156,32 @@ async def run_generation_session(
                 async with session_factory() as db:
                     episode_status = map_status(new_status)
 
-                    # We use Episode instead of GenerationSessionModel so it's visible in UI
+                    # We use Episode instead of GenerationSessionModel so it's
+                    # visible in UI
                     # Since we are the only writer to this episode, overwriting is fine.
-                    # Here we can just overwrite based on local state.
+                    # Actually, we need to MERGE metadata_vars to avoid
+                    # losing objectives.
 
-                    current_logs = final_state["session"].validation_logs or []
+                    stmt_select = select(Episode).where(Episode.id == session_id)
+                    res = await db.execute(stmt_select)
+                    ep = res.scalar_one_or_none()
 
-                    stmt = (
-                        update(Episode)
-                        .where(Episode.id == session_id)
-                        .values(
-                            status=episode_status,
-                            metadata_vars={
+                    if ep:
+                        new_metadata = (ep.metadata_vars or {}).copy()
+                        new_metadata.update(
+                            {
                                 "detailed_status": new_status,
-                                "validation_logs": current_logs,
+                                "validation_logs": final_state[
+                                    "session"
+                                ].validation_logs
+                                or [],
                                 "prompt": prompt,
-                            },
+                            }
                         )
-                    )
-                    await db.execute(stmt)
-                    await db.commit()
+
+                        ep.status = episode_status
+                        ep.metadata_vars = new_metadata
+                        await db.commit()
 
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
@@ -189,23 +195,22 @@ async def run_generation_session(
             final_state["session"].validation_logs.append(error_msg)
 
         async with session_factory() as db:
-            # Retrieve current logs from state
-            current_logs = final_state["session"].validation_logs
+            stmt_select = select(Episode).where(Episode.id == session_id)
+            res = await db.execute(stmt_select)
+            ep = res.scalar_one_or_none()
 
-            stmt = (
-                update(Episode)
-                .where(Episode.id == session_id)
-                .values(
-                    status=EpisodeStatus.FAILED,
-                    metadata_vars={
+            if ep:
+                new_metadata = (ep.metadata_vars or {}).copy()
+                new_metadata.update(
+                    {
                         "detailed_status": SessionStatus.failed,
-                        "validation_logs": current_logs,
+                        "validation_logs": final_state["session"].validation_logs,
                         "prompt": prompt,
-                    },
+                    }
                 )
-            )
-            await db.execute(stmt)
-            await db.commit()
+                ep.status = EpisodeStatus.FAILED
+                ep.metadata_vars = new_metadata
+                await db.commit()
         return final_state
 
     # 4. Final Asset Persistence

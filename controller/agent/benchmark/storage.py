@@ -9,8 +9,9 @@ import boto3
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from controller.persistence.models import BenchmarkAsset as BenchmarkAssetModel
+
 from .models import BenchmarkAsset
-from .schema import BenchmarkAssetModel
 
 logger = structlog.get_logger()
 
