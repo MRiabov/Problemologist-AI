@@ -19,16 +19,18 @@ import {
   Play
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { submitTraceFeedback, runSimulation } from "../../api/client";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useEpisodes } from "../../context/EpisodeContext";
+import { useTheme } from "../../context/ThemeContext";
 import { cn } from "../../lib/utils";
 
 // Internal helper for rendering highlighted content
 const HighlightedContent = ({ content, language = 'text' }: { content: string, language?: string }) => {
+    const { theme } = useTheme();
     if (!content) return null;
     // Basic detection for JSON strings
     const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
@@ -36,14 +38,14 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
     return (
         <SyntaxHighlighter
             language={lang}
-            style={vscDarkPlus}
+            style={theme === 'dark' ? vscDarkPlus : vs}
             customStyle={{
                 margin: 0,
                 padding: '0.5rem',
-                background: 'rgba(0,0,0,0.2)',
+                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
                 fontSize: '10px',
                 borderRadius: '4px',
-                border: '1px solid rgba(255,255,255,0.05)'
+                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
             }}
             wrapLines={true}
             wrapLongLines={true}
@@ -53,44 +55,113 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
     );
 };
 
+import { getFileIconInfo } from "../../lib/fileIcons";
+
 const ActionCard = ({ trace }: { trace: TraceResponse }) => {
+    const { setActiveArtifactId, selectedEpisode } = useEpisodes();
     const isStart = trace.trace_type === 'tool_start';
     const isEnd = trace.trace_type === 'tool_end';
     
     if (!isStart && !isEnd) return null;
 
+    // Determine tool name and arguments
+    const toolName = trace.name || "";
+    let args: any = {};
+    if (trace.content) {
+        try {
+            args = JSON.parse(trace.content);
+        } catch (e) {
+            // Content might be a string or other data
+        }
+    }
+
+    const isFileTool = ['write_file', 'read_file', 'replace_file_content', 'multi_replace_file_content'].includes(toolName);
+    const filePath = args.TargetFile || args.AbsolutePath || args.path || "";
+    const fileName = filePath.split('/').pop() || filePath;
+
+    const handleActionClick = () => {
+        if (!isFileTool || !filePath || !selectedEpisode) return;
+        
+        // Try to find matching asset ID
+        const asset = selectedEpisode.assets?.find(a => a.s3_path.endsWith(filePath) || a.s3_path === filePath);
+        if (asset) {
+            setActiveArtifactId(asset.id.toString());
+        } else if (filePath.toLowerCase().endsWith('plan.md')) {
+            setActiveArtifactId('plan');
+        }
+    };
+
     const getIcon = () => {
-        const name = trace.name?.toLowerCase() || "";
-        if (name.includes('write')) return <FileEdit className="h-3 w-3 text-blue-400" />;
-        if (name.includes('read')) return <Eye className="h-3 w-3 text-emerald-400" />;
-        if (name.includes('list') || name.includes('ls')) return <Folder className="h-3 w-3 text-amber-400" />;
-        if (name.includes('run') || name.includes('exec') || name.includes('command')) return <PlayCircle className="h-3 w-3 text-purple-400" />;
-        if (name.includes('search') || name.includes('cots')) return <Search className="h-3 w-3 text-sky-400" />;
-        return <Zap className="h-3 w-3 text-gray-400" />;
+        if (isFileTool && fileName) {
+            const { icon: FileIcon, color } = getFileIconInfo(fileName);
+            return <FileIcon className="h-3.5 w-3.5" style={{ color }} />;
+        }
+
+        const name = toolName.toLowerCase();
+        if (name.includes('write')) return <FileEdit className="h-3.5 w-3.5 text-blue-400" />;
+        if (name.includes('read')) return <Eye className="h-3.5 w-3.5 text-emerald-400" />;
+        if (name.includes('list') || name.includes('ls')) return <Folder className="h-3.5 w-3.5 text-amber-400" />;
+        if (name.includes('run') || name.includes('exec') || name.includes('command')) return <PlayCircle className="h-3.5 w-3.5 text-purple-400" />;
+        if (name.includes('search') || name.includes('cots')) return <Search className="h-3.5 w-3.5 text-sky-400" />;
+        return <Zap className="h-3.5 w-3.5 text-gray-400" />;
     };
 
     const getLabel = () => {
-        const name = trace.name?.toLowerCase() || "";
-        const action = isStart ? (name.includes('write') ? 'Edited' : name.includes('read') ? 'Read' : name.includes('list') ? 'Viewed' : name.includes('run') ? 'Ran' : name.includes('search') ? 'COTS' : 'Tool') : 'Output';
-        return action;
+        const name = toolName.toLowerCase();
+        if (name.includes('write')) return 'Edited';
+        if (name.includes('read')) return 'Read';
+        if (name.includes('list')) return 'Viewed';
+        if (name.includes('run')) return 'Ran';
+        if (name.includes('search')) return 'COTS';
+        return 'Tool';
     };
 
+    // For file tools, we show a simplified one-line view
+    if (isStart && isFileTool && fileName) {
+        return (
+            <div 
+                onClick={handleActionClick}
+                className={cn(
+                    "group flex items-center gap-2 p-1.5 px-2 rounded-md border border-border/50 transition-all mb-1 cursor-pointer",
+                    "bg-muted/30 hover:bg-muted/50 hover:border-primary/30"
+                )}
+            >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                        {getLabel()}:
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                        {getIcon()}
+                        <span className="text-[11px] font-mono text-foreground truncate">
+                            {fileName}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] text-green-500 font-bold opacity-70">+</span>
+                    <span className="text-[10px] text-red-500 font-bold opacity-70">-</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Default ActionCard for other tools or end signals
     return (
         <div className={cn(
-            "group flex flex-col gap-1 p-2 rounded-md border border-white/5 transition-all mb-2",
-            isStart ? "bg-white/5 hover:bg-white/10" : "bg-black/20"
+            "group flex flex-col gap-1 p-2 rounded-md border border-border/50 transition-all mb-2",
+            isStart ? "bg-muted/30 hover:bg-muted/50" : "bg-muted/10"
         )}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {getIcon()}
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {getLabel()}: <span className="text-foreground">{trace.name}</span>
+                        {getLabel()}: <span className="text-foreground">{toolName}</span>
                     </span>
                 </div>
                 <span className="text-[9px] opacity-30 font-mono">#{trace.id}</span>
             </div>
-            {trace.content && (
-                <div className="mt-1 overflow-hidden rounded">
+            {isStart && trace.content && !isFileTool && (
+                <div className="mt-1 overflow-hidden rounded border border-border/20">
                     <HighlightedContent content={trace.content} />
                 </div>
             )}
@@ -175,7 +246,7 @@ export default function ChatWindow({
       <div className="flex items-center justify-between p-3 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Reasoning Window</span>
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Chat Window</span>
           </div>
           {isRunning && selectedEpisode && (
               <Button 
@@ -225,7 +296,7 @@ export default function ChatWindow({
                                       </div>
                                       <span className="uppercase">{trace.trace_type}</span>
                                   </div>
-                                  <div className="text-muted-foreground break-all opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed">
+                                  <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed">
                                       {trace.trace_type === 'llm_end' ? (
                                           <HighlightedContent content={trace.content} />
                                       ) : (
@@ -273,7 +344,7 @@ export default function ChatWindow({
                                 </Button>
                                 <Button 
                                     variant="outline"
-                                    className="px-3 border-white/10 hover:bg-white/5 text-[10px] uppercase font-bold text-muted-foreground"
+                                    className="px-3 border-border/50 hover:bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground"
                                     onClick={() => {
                                       // Logic for requesting changes - could just focus input
                                       const input = document.getElementById('chat-input');
@@ -318,7 +389,7 @@ export default function ChatWindow({
                 <Input 
                    id="chat-input"
                    placeholder={isRunning ? "Steer the agent..." : "Start a new task..."}
-                   className="h-12 pl-4 pr-12 bg-black/40 border-white/5 focus:border-primary/50 focus:ring-primary/20 transition-all text-xs"
+                   className="h-12 pl-4 pr-12 bg-muted/20 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all text-xs"
                    value={prompt}
                    onChange={(e) => setPrompt(e.target.value)}
                 />

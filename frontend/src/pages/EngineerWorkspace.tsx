@@ -3,10 +3,8 @@ import { useEpisodes } from '../context/EpisodeContext';
 import { useConnection } from '../context/ConnectionContext';
 import { 
   XCircle, 
-  Zap,
-  Play,
-  Box,
   BrainCircuit,
+  Box,
   Signal,
   SignalLow,
   AlertCircle
@@ -18,24 +16,14 @@ import ArtifactView from '../components/workspace/ArtifactView';
 import ConnectionError from '../components/shared/ConnectionError';
 
 import ModelViewer from '../components/visualization/ModelViewer';
-
 export default function EngineerWorkspace() {
   const { 
     selectedEpisode, 
     running, 
-    startAgent, 
     setRunning 
   } = useEpisodes();
   const { isConnected } = useConnection();
-  
-  const [taskPrompt, setTaskPrompt] = useState('');
   const [resetTrigger, setResetTrigger] = useState(0);
-
-  const handleRunAgent = async () => {
-    // If no prompt is provided (since we removed the input), use a default task or current context
-    await startAgent(taskPrompt || "Generate mechanical implementation for current specifications");
-    setTaskPrompt('');
-  };
 
   const handleInterrupt = () => {
     console.log("Interrupting execution...");
@@ -45,6 +33,7 @@ export default function EngineerWorkspace() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
         {/* Workspace Header */}
+
         <header className="flex shrink-0 items-center justify-between border-b px-6 h-16 bg-card/50 backdrop-blur-sm">
             <div className="flex items-center gap-4">
                 <div className="size-10 flex items-center justify-center bg-primary/10 rounded-lg text-primary border border-primary/20">
@@ -85,18 +74,6 @@ export default function EngineerWorkspace() {
                         System Offline
                     </Badge>
                 )}
-                <Button
-                    onClick={handleRunAgent}
-                    disabled={running || !isConnected}
-                    className="gap-2 h-10 px-6 font-bold"
-                >
-                    {running ? (
-                      <Zap className="h-4 w-4 animate-pulse" />
-                    ) : (
-                      <Play className="h-4 w-4 fill-current" />
-                    )}
-                    {running ? 'RUNNING...' : 'SOLVE'}
-                </Button>
             </div>
         </header>
 
@@ -172,12 +149,12 @@ export default function EngineerWorkspace() {
                                     <video 
                                         src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
                                         controls 
-                                        className="max-w-full max-h-full rounded-lg shadow-2xl ring-1 ring-white/10"
+                                        className="max-w-full max-h-full rounded-lg shadow-2xl ring-1 ring-border/50"
                                     />
                                 ) : (
                                     <img 
                                         src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
-                                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl ring-1 ring-white/10"
+                                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl ring-1 ring-border/50"
                                     />
                                 )}
                             </div>
