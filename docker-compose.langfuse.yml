@@ -25,10 +25,11 @@ services:
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY}
       TELEMETRY_ENABLED: "false"
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
-      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
-      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:langfuse@clickhouse:9000/langfuse
+      CLICKHOUSE_URL: http://default:langfuse@clickhouse:8123/langfuse
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: langfuse
+      CLICKHOUSE_DB: langfuse
       CLICKHOUSE_CLUSTER_ENABLED: "false"
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
       LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
@@ -43,6 +44,7 @@ services:
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://:langfuse@redis:6379
+      LANGFUSE_DIRECT_INGESTION: "true"
 
   langfuse-web:
     image: docker.io/langfuse/langfuse:3
@@ -73,21 +75,28 @@ services:
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY}
       TELEMETRY_ENABLED: "false"
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
-      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
-      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:langfuse@clickhouse:9000/langfuse
+      CLICKHOUSE_URL: http://default:langfuse@clickhouse:8123/langfuse
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: langfuse
+      CLICKHOUSE_DB: langfuse
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
       LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
-      LANGFUSE_S3_ACCESS_KEY_ID: minioadmin
-      LANGFUSE_S3_SECRET_ACCESS_KEY: minioadmin
-      LANGFUSE_S3_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minioadmin
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minioadmin
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: minioadmin
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
       REDIS_URL: redis://:langfuse@redis:6379
+      LANGFUSE_DIRECT_INGESTION: "true"
+      LANGFUSE_LOG_LEVEL: debug
+      LANGFUSE_ENABLE_OTEL_INGESTION: "true"
+      LANGFUSE_AUTO_MIGRATION: "true"
       # Initial Admin User (Removed to prevent resets - Langfuse will now use the database)
 
   clickhouse:
