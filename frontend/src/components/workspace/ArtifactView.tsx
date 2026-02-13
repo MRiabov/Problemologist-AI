@@ -14,11 +14,14 @@ import {
 } from "react-icons/vsc";
 import { SiPython } from "react-icons/si";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
-import { fetchAssetContent, type Asset } from "../../api/client";
+import { useEpisodes } from "../../context/EpisodeContext";
+import { getFileIconInfo as getSharedIconInfo } from "../../lib/fileIcons";
+import { useTheme } from "../../context/ThemeContext";
+// No unnecessary exports from client
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -31,21 +34,11 @@ export default function ArtifactView({
   assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const [activeAssetId, setActiveAssetId] = useState<string | 'plan'>(plan ? 'plan' : 'none');
+  const { activeArtifactId, setActiveArtifactId } = useEpisodes();
   const [isTreeOpen, setIsTreeOpen] = useState(true);
 
   const getFileIconInfo = (name: string, type: string) => {
-    const fileName = name.toLowerCase();
-    
-    if (fileName === 'plan.md') return { icon: VscTasklist, color: "#28A745" };
-    if (fileName.endsWith('.py') || type === 'python') return { icon: SiPython, color: "#3776AB" };
-    if (fileName.endsWith('.md') || type === 'markdown') return { icon: VscMarkdown, color: "#007ACC" };
-    if (fileName.endsWith('.json') || fileName.endsWith('.mjcf') || type === 'mjcf') return { icon: VscJson, color: "#FBC02D" };
-    if (fileName.endsWith('.yaml') || fileName.endsWith('.yml')) return { icon: VscSettings, color: "#CB2431" };
-    if (type === 'video') return { icon: VscPlayCircle, color: "#E44D26" };
-    if (type === 'image') return { icon: VscFileMedia, color: "#47A248" };
-    
-    return { icon: VscCode, color: "#858585" };
+    return getSharedIconInfo(name, type);
   };
 
   // Group assets into a tree structure
@@ -88,22 +81,23 @@ export default function ArtifactView({
 
   // Automatically select first asset if none selected
   useMemo(() => {
-    if (activeAssetId === 'none' || activeAssetId === 'plan') {
+    if (!activeArtifactId || activeArtifactId === 'none') {
         if (plan) {
-            setActiveAssetId('plan');
+            setActiveArtifactId('plan');
         } else if (assets.length > 0) {
-            setActiveAssetId(assets[0].id.toString());
+            setActiveArtifactId(assets[0].id.toString());
         }
     }
-  }, [plan, assets]);
+  }, [plan, assets, activeArtifactId]);
 
   const activeAsset = useMemo(() => {
-    if (activeAssetId === 'plan') return { name: 'plan.md', content: plan, asset_type: 'markdown' };
-    const asset = assets.find(a => a.id.toString() === activeAssetId);
+    if (activeArtifactId === 'plan') return { name: 'plan.md', content: plan, asset_type: 'markdown' };
+    const asset = assets.find(a => a.id.toString() === activeArtifactId);
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
-  }, [activeAssetId, assets, plan]);
+  }, [activeArtifactId, assets, plan]);
 
   const renderContent = () => {
+    const { theme } = useTheme();
     if (!activeAsset) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground/30 gap-2">
@@ -116,14 +110,14 @@ export default function ArtifactView({
     const language = activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text');
 
     return (
-        <div className="flex-1 flex flex-col h-full min-h-0">
+        <div className="flex-1 flex flex-col h-full min-h-0 bg-background">
             {/* Plan header removed - moved to ChatWindow */}
             <ScrollArea className="flex-1">
                 <div className="text-[13px] leading-6 p-0">
                     {activeAsset.content ? (
                         <SyntaxHighlighter
                             language={language}
-                            style={vscDarkPlus}
+                            style={theme === 'dark' ? vscDarkPlus : vs}
                             customStyle={{
                                 margin: 0,
                                 padding: '1rem',
@@ -150,12 +144,12 @@ export default function ArtifactView({
   };
 
   return (
-    <div className="flex h-full bg-[#0d1116] border-t border-border overflow-hidden relative">
+    <div className="flex h-full bg-background border-t border-border overflow-hidden relative text-foreground">
         {!isConnected && <ConnectionError className="absolute inset-0 z-[100]" />}
         
         {/* Artifact Sidebar (File Tree) */}
-        <div className="w-48 border-r border-white/5 flex flex-col bg-muted/5">
-            <div className="h-9 px-3 flex items-center border-b border-white/5 bg-white/5">
+        <div className="w-48 border-r border-border/50 flex flex-col bg-muted/5">
+            <div className="h-9 px-3 flex items-center border-b border-border/50 bg-muted/10">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Explorer</span>
             </div>
             <ScrollArea className="flex-1">
@@ -171,16 +165,16 @@ export default function ArtifactView({
                                 {folder.name}
                             </button>
                             {isTreeOpen && folder.children && (
-                                <div className="pl-4 space-y-0.5 border-l border-white/5 ml-2.5">
+                                <div className="pl-4 space-y-0.5 border-l border-border/50 ml-2.5">
                                     {folder.children.map((file: any) => (
                                          <button
                                             key={file.id}
-                                            onClick={() => setActiveAssetId(file.id)}
+                                            onClick={() => setActiveArtifactId(file.id)}
                                             className={cn(
                                                 "flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-[11px] transition-all",
-                                                activeAssetId === file.id 
+                                                activeArtifactId === file.id 
                                                     ? "bg-primary/20 text-primary font-medium" 
-                                                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                             )}
                                          >
                                             <file.icon className="h-3.5 w-3.5" style={{ color: file.iconColor }} />
@@ -198,10 +192,10 @@ export default function ArtifactView({
         {/* Editor Area */}
         <div className="flex-1 flex flex-col min-w-0">
             {/* Tabs Header */}
-            <div className="h-9 flex items-center bg-muted/5 border-b border-white/5 px-2 gap-1 overflow-x-auto no-scrollbar">
+            <div className="h-9 flex items-center bg-muted/5 border-b border-border/50 px-2 gap-1 overflow-x-auto no-scrollbar">
                 <VscCode className={cn(
                     "h-3.5 w-3.5 mr-2",
-                    activeAssetId === 'plan' ? "text-green-400" : "text-blue-400"
+                    activeArtifactId === 'plan' ? "text-green-500" : "text-blue-500"
                 )} />
                 <span className="text-[11px] font-mono text-muted-foreground">
                    {activeAsset?.name || 'Untitled'}

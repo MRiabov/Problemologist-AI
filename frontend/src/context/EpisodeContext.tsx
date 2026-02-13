@@ -7,6 +7,8 @@ interface EpisodeContextType {
   loading: boolean;
   running: boolean;
   isCreationMode: boolean;
+  activeArtifactId: string | null;
+  setActiveArtifactId: (id: string | null) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string) => Promise<void>;
@@ -24,6 +26,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [isCreationMode, setIsCreationMode] = useState(false);
+  const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
 
   const refreshEpisodes = useCallback(async () => {
     try {
@@ -133,7 +136,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       interruptAgent,
       setRunning,
       createNewBenchmark,
-      clearSelection
+      clearSelection,
+      activeArtifactId,
+      setActiveArtifactId
     }}>
       {children}
     </EpisodeContext.Provider>

@@ -1,11 +1,11 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers, Plus } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const navigation = [
   { name: "Workspace", href: "/", icon: LayoutDashboard },
@@ -15,12 +15,22 @@ const navigation = [
 export default function Sidebar() {
   const { episodes, selectedEpisode, selectEpisode, createNewBenchmark, loading } = useEpisodes();
   const location = useLocation();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState("");
 
   const filteredEpisodes = episodes.filter(ep => 
     ep.task.toLowerCase().includes(filter.toLowerCase()) || 
     ep.id.toLowerCase().includes(filter.toLowerCase())
   );
+
+  const handleEpisodeClick = useCallback(async (id: string) => {
+    await selectEpisode(id);
+    if (location.pathname === '/settings') {
+      // If we are in settings, we should go back to the appropriate UI.
+      // For now, we go back to the previous page or default to workspace.
+      navigate(-1);
+    }
+  }, [selectEpisode, location.pathname, navigate]);
 
   return (
     <div className="flex h-full w-full flex-col border-r bg-card text-card-foreground">
@@ -61,7 +71,7 @@ export default function Sidebar() {
             <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        {location.pathname === '/' ? 'Engineer History' : 'Benchmark Runs'}
+                        {(location.pathname === '/' || location.pathname === '/settings') ? 'Engineer History' : 'Benchmark Runs'}
                     </h3>
                     {location.pathname === '/benchmark' ? (
                         <Button 
@@ -96,9 +106,9 @@ export default function Sidebar() {
                         filteredEpisodes.map(ep => (
                             <button 
                                 key={ep.id} 
-                                onClick={() => selectEpisode(ep.id)}
+                                onClick={() => handleEpisodeClick(ep.id)}
                                 className={cn(
-                                  "w-full text-left p-2.5 rounded-md transition-all group border border-transparent",
+                                  "w-full text-left p-2.5 rounded-md transition-all group border border-transparent overflow-hidden",
                                   selectedEpisode?.id === ep.id 
                                     ? "bg-primary/10 border-primary/20" 
                                     : "hover:bg-muted/50"
@@ -106,7 +116,7 @@ export default function Sidebar() {
                             >
                                 <div className="flex justify-between items-start mb-1 min-w-0">
                                     <span className={cn(
-                                      "text-[11px] font-semibold truncate flex-1 pr-2 min-w-0",
+                                      "text-[11px] font-semibold truncate flex-1 pr-2",
                                       selectedEpisode?.id === ep.id ? "text-primary" : "text-foreground"
                                     )}>
                                       {ep.task || ep.id.substring(0,8)}

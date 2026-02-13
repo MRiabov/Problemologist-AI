@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
 import { useConnection } from '../context/ConnectionContext';
-import { fetchEpisodes, runSimulation, type Episode } from '../api/client';
+import { fetchEpisodes, type Episode } from '../api/client';
 import { 
-  Play, 
   Cpu, 
-  CircleDot,
   Signal,
   SignalLow,
   AlertCircle
@@ -24,7 +22,6 @@ export default function BenchmarkGeneration() {
   } = useEpisodes();
   const { isConnected } = useConnection();
   const [, setEpisodes] = useState<Episode[]>([]);
-  const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,24 +33,8 @@ export default function BenchmarkGeneration() {
             console.error("Failed to load episodes", e);
         }
     }
-    loadData();
+  loadData();
   }, []);
-
-  const handleRunSimulation = async () => {
-    setSimulating(true);
-    setError(null);
-    try {
-        const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
-        await runSimulation(sessionId);
-        const data = await fetchEpisodes();
-        setEpisodes(data);
-    } catch (e: any) {
-        console.error("Failed to run simulation", e);
-        setError(e.message || "Failed to start simulation pipeline");
-    } finally {
-        setSimulating(false);
-    }
-  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -88,14 +69,6 @@ export default function BenchmarkGeneration() {
               System Offline
             </Badge>
           )}
-          <Button 
-            onClick={handleRunSimulation}
-            disabled={simulating || !isConnected}
-            className="gap-2 h-10 px-6 font-bold"
-          >
-            {simulating ? <CircleDot className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-            {simulating ? 'SIMULATING...' : 'RUN PIPELINE'}
-          </Button>
         </div>
       </header>
       
@@ -127,7 +100,7 @@ export default function BenchmarkGeneration() {
             <ChatWindow 
               traces={selectedEpisode?.traces}
               task={selectedEpisode?.task}
-              isRunning={simulating || running}
+              isRunning={running}
               isConnected={isConnected}
             />
         </div>
