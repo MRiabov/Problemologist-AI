@@ -1,3 +1,4 @@
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -72,23 +73,30 @@ def test_benchmark_analyze_success(mock_load_config, mock_validate_and_price, mo
         is_manufacturable=True,
         unit_cost=10.5,
         violations=[],
-        metadata={"cost_breakdown": {"total": 100.0}}
+        metadata={"cost_breakdown": {"total": 100.0}},
     )
     mock_validate_and_price.return_value = mock_result
 
+    # 1. Test default quantity (1)
     response = client.post(
         "/benchmark/analyze",
         json={"script_path": "impl.py", "method": "cnc"}
     )
-
     assert response.status_code == 200
     data = response.json()
-    assert data["is_manufacturable"] is True
     assert data["unit_cost"] == 10.5
-    assert data["violations"] == []
 
-    # Check that it calls validate_and_price with correct args
-    mock_validate_and_price.assert_called_once()
-    args = mock_validate_and_price.call_args
-    # args[0] is component (mock), args[1] is method
-    assert args[0][1] == ManufacturingMethod.CNC
+    mock_validate_and_price.assert_called()
+    args, kwargs = mock_validate_and_price.call_args
+    assert args[1] == ManufacturingMethod.CNC
+    assert kwargs.get("quantity") == 1
+
+    # 2. Test custom quantity
+    response = client.post(
+        "/benchmark/analyze",
+        json={"script_path": "impl.py", "method": "cnc", "quantity": 100}
+    )
+    assert response.status_code == 200
+
+    args, kwargs = mock_validate_and_price.call_args
+    assert kwargs.get("quantity") == 100

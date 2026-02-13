@@ -111,6 +111,11 @@ class AnalyzeRequest(BenchmarkToolRequest):
         ...,
         description="Manufacturing method to analyze (cnc, 3dp, im).",
     )
+    quantity: StrictInt = Field(
+        default=1,
+        ge=1,
+        description="Number of units to manufacture for pricing.",
+    )
 
 
 class BenchmarkToolResponse(BaseModel):
