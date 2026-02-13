@@ -1914,6 +1914,11 @@
             "type": "number",
             "title": "Unit Cost"
           },
+          "weight_g": {
+            "type": "number",
+            "title": "Weight G",
+            "default": 0.0
+          },
           "violations": {
             "items": {
               "type": "string"

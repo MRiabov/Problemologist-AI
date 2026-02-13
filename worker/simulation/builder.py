@@ -646,6 +646,10 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         return scene_path
 
 
+# Alias for backward compatibility
+SimulationBuilder = MuJoCoSimulationBuilder
+
+
 class GenesisSimulationBuilder(SimulationBuilderBase):
     """Orchestrates the conversion of build123d assemblies to Genesis scenes."""
 
