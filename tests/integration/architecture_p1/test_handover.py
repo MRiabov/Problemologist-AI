@@ -3,7 +3,7 @@ import asyncio
 from httpx import AsyncClient
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:8000"
+CONTROLLER_URL = "http://localhost:18000"
 
 
 @pytest.mark.integration_p1

@@ -4,8 +4,8 @@ import uuid
 import httpx
 import pytest
 
-# Assuming worker is running at http://localhost:8001
-WORKER_URL = "http://localhost:8001"
+# Assuming worker is running at http://localhost:18001
+WORKER_URL = "http://localhost:18001"
 
 
 async def run_session(session_id: str, filename: str, content: str):

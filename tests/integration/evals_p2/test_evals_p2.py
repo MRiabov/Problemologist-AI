@@ -4,7 +4,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-CONTROLLER_URL = "http://localhost:8000"
+CONTROLLER_URL = "http://localhost:18000"
 
 
 @pytest.mark.integration_p2

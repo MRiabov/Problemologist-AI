@@ -19,8 +19,8 @@ class AssetType:
     MJCF = "mjcf"
 
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
-TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:7233")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")
 
 
 @pytest.mark.integration_p0

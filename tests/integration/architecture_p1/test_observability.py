@@ -5,7 +5,7 @@ import httpx
 import asyncio
 from shared.enums import EpisodeStatus, ResponseStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

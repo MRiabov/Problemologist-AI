@@ -16,7 +16,7 @@ describe('API Client', () => {
     });
 
     const result = await fetchEpisodes();
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/episodes/', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/episodes/', expect.any(Object));
     expect(result).toEqual(mockEpisodes);
   });
 
@@ -30,7 +30,7 @@ describe('API Client', () => {
     });
 
     const result = await fetchSkills();
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/skills/', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/skills/', expect.any(Object));
     expect(result).toEqual(mockSkills);
   });
 
@@ -44,7 +44,7 @@ describe('API Client', () => {
     });
 
     const result = await fetchEpisode('1');
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/episodes/1', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/episodes/1', expect.any(Object));
     expect(result).toEqual(mockEpisode);
   });
 
@@ -57,7 +57,7 @@ describe('API Client', () => {
     });
 
     await runAgent('do something', 'session123');
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/agent/run', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/agent/run', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ task: 'do something', session_id: 'session123' }),
     }));
@@ -72,7 +72,7 @@ describe('API Client', () => {
     });
 
     await runSimulation('session123', '{"data": "test"}');
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/simulation/run', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/simulation/run', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ session_id: 'session123', compound_json: '{"data": "test"}' }),
     }));

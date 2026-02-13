@@ -8,14 +8,14 @@ import { OpenAPI } from '../api/generated/core/OpenAPI';
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'location', {
     value: {
-      origin: 'http://localhost:3000',
+      origin: 'http://localhost:13000',
       pathname: '/',
     },
     writable: true,
   });
 }
 
-OpenAPI.BASE = 'http://localhost:3000';
+OpenAPI.BASE = 'http://localhost:13000';
 
 expect.extend(matchers);
 
