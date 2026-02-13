@@ -59,3 +59,40 @@ export async function checkConnection(): Promise<{ connected: boolean; isMockMod
         };
     }
 }
+
+// Manual API calls avoiding generator dependency
+import { request as __request } from './generated/core/request';
+import { OpenAPI } from './generated/core/OpenAPI';
+
+export interface BenchmarkObjectives {
+    max_cost?: number;
+    max_weight?: number;
+    target_quantity?: number;
+}
+
+export async function generateBenchmark(prompt: string, objectives?: BenchmarkObjectives): Promise<any> {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: '/benchmark/generate',
+        body: {
+            prompt,
+            max_cost: objectives?.max_cost,
+            max_weight: objectives?.max_weight,
+            target_quantity: objectives?.target_quantity
+        },
+        mediaType: 'application/json',
+    });
+}
+
+export async function updateBenchmarkObjectives(sessionId: string, objectives: BenchmarkObjectives): Promise<any> {
+     return __request(OpenAPI, {
+        method: 'POST',
+        url: `/benchmark/${sessionId}/objectives`, // Updated URL path to match backend
+        body: {
+            max_cost: objectives.max_cost,
+            max_weight: objectives.max_weight,
+            target_quantity: objectives.target_quantity
+        },
+        mediaType: 'application/json',
+    });
+}

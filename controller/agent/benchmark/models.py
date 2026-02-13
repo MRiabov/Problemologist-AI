@@ -30,3 +30,4 @@ class GenerationSession(BaseModel):
     prompt: str
     status: SessionStatus = SessionStatus.planning
     validation_logs: list[str] = Field(default_factory=list)
+    custom_objectives: dict[str, Any] = Field(default_factory=dict)

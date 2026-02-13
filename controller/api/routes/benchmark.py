@@ -15,6 +15,9 @@ router = APIRouter(prefix="/benchmark", tags=["benchmark"])
 
 class BenchmarkGenerateRequest(BaseModel):
     prompt: str
+    max_cost: float | None = None
+    max_weight: float | None = None
+    target_quantity: int | None = None
 
     @field_validator("prompt")
     @classmethod
@@ -33,9 +36,20 @@ async def generate_benchmark(
     # but we wrap it in a background task to return immediately.
     session_id = uuid.uuid4()
 
+    custom_objectives = {}
+    if request.max_cost is not None:
+        custom_objectives["max_unit_cost"] = request.max_cost
+    if request.max_weight is not None:
+        custom_objectives["max_weight"] = request.max_weight
+    if request.target_quantity is not None:
+        custom_objectives["target_quantity"] = request.target_quantity
+
     # Run the generation in the background
     background_tasks.add_task(
-        run_generation_session, request.prompt, session_id=session_id
+        run_generation_session,
+        request.prompt,
+        session_id=session_id,
+        custom_objectives=custom_objectives,
     )
 
     return {
@@ -64,3 +78,70 @@ async def get_session(session_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=404, detail="Session not found")
 
     return session
+
+
+class UpdateObjectivesRequest(BaseModel):
+    max_cost: float | None = None
+    max_weight: float | None = None
+    target_quantity: int | None = None
+
+
+@router.post("/{session_id}/objectives")
+async def update_objectives(
+    session_id: uuid.UUID,
+    request: UpdateObjectivesRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update objectives.yaml for a specific session.
+    """
+    import os
+    import httpx
+    import yaml
+    from controller.clients.worker import WorkerClient
+
+    # Verify session exists
+    stmt = select(GenerationSessionModel).where(
+        GenerationSessionModel.session_id == session_id
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    async with httpx.AsyncClient() as http_client:
+        client = WorkerClient(
+            base_url=worker_url, session_id=str(session_id), http_client=http_client
+        )
+
+        try:
+            # Read existing
+            content = await client.read_file("objectives.yaml")
+            obj_data = yaml.safe_load(content) or {}
+
+            if "constraints" not in obj_data:
+                obj_data["constraints"] = {}
+
+            if request.max_cost is not None:
+                obj_data["constraints"]["max_unit_cost"] = request.max_cost
+            if request.max_weight is not None:
+                obj_data["constraints"]["max_weight"] = request.max_weight
+            if request.target_quantity is not None:
+                obj_data["constraints"]["target_quantity"] = request.target_quantity
+
+            # Write back
+            new_content = yaml.dump(obj_data, sort_keys=False)
+            await client.write_file("objectives.yaml", new_content)
+
+            return {
+                "status": ResponseStatus.SUCCESS,
+                "message": "Objectives updated",
+                "objectives": obj_data["constraints"],
+            }
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to update objectives: {e}"
+            )

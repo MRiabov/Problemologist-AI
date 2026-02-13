@@ -76,7 +76,47 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         # Initialize Git Repo on Worker
         await client.git_init()
 
-        agent = create_deep_agent(
+        # Apply custom objectives if any
+        custom_objectives = state["session"].custom_objectives
+        if custom_objectives:
+            try:
+                # Read existing objectives.yaml
+                # We assume git_init scaffolds the template which includes objectives.yaml
+                obj_content = await client.read_file("objectives.yaml")
+                obj_data = yaml.safe_load(obj_content)
+
+                # Update constraints
+                if "constraints" not in obj_data:
+                    obj_data["constraints"] = {}
+
+                if "max_unit_cost" in custom_objectives:
+                    obj_data["constraints"]["max_unit_cost"] = custom_objectives[
+                        "max_unit_cost"
+                    ]
+                if "max_weight" in custom_objectives:
+                    obj_data["constraints"]["max_weight"] = custom_objectives["max_weight"]
+                if "target_quantity" in custom_objectives:
+                    obj_data["constraints"]["target_quantity"] = custom_objectives[
+                        "target_quantity"
+                    ]
+
+                # Write back
+                new_content = yaml.dump(obj_data, sort_keys=False)
+                await client.write_file("objectives.yaml", new_content)
+                logger.info(
+                    "applied_custom_objectives",
+                    session_id=session_id,
+                    objectives=custom_objectives,
+                )
+
+            except Exception as e:
+                logger.error(
+                    "failed_to_apply_custom_objectives",
+                    error=str(e),
+                    session_id=session_id,
+                )
+                # We don't fail the whole session, just log error
+
             model=llm,
             backend=backend,
             system_prompt=system_prompt,
