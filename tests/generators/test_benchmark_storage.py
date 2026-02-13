@@ -34,7 +34,7 @@ def mock_boto3():
 async def test_save_asset_with_variants(db_session, mock_boto3):
     # Setup mocks for environment variables to avoid real AWS calls
     with patch.dict("os.environ", {
-        "S3_ENDPOINT_URL": "http://localhost:9000",
+        "S3_ENDPOINT_URL": "http://localhost:19000",
         "AWS_ACCESS_KEY_ID": "test",
         "AWS_SECRET_ACCESS_KEY": "test",
         "BENCHMARK_SOURCE_BUCKET": "source",

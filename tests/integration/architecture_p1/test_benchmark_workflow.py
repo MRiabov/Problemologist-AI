@@ -3,7 +3,7 @@ import asyncio
 from httpx import AsyncClient
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:8000"
+CONTROLLER_URL = "http://localhost:18000"
 
 
 @pytest.mark.integration_p1
@@ -21,7 +21,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         # 1. Trigger Benchmark Generation
         print("Triggering Benchmark Generation for INT-031...")
         prompt = "Create a simple path planning benchmark with a wall and a goal."
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        resp = await client.post("/benchmark/generate", json={"prompt": prompt})
         assert resp.status_code in [200, 202], (
             f"Failed to trigger benchmark: {resp.text}"
         )

@@ -7,9 +7,9 @@ import boto3
 from temporalio.client import Client
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
-TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:7233")
-S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:9000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:19000")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minioadmin")
 ASSET_BUCKET = os.getenv("ASSET_S3_BUCKET", "problemologist")

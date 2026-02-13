@@ -4,7 +4,7 @@ import time
 import httpx
 import pytest
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
 @pytest.mark.integration_p1

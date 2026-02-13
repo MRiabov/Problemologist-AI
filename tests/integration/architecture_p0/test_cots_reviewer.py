@@ -5,8 +5,8 @@ import httpx
 import yaml
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8001")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:8000")
+WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
 @pytest.fixture

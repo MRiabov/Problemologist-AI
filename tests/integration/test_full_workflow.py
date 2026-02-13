@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 
 # Adjust URL to your controller
-CONTROLLER_URL = "http://localhost:8000"
+CONTROLLER_URL = "http://localhost:18000"
 
 
 @pytest.mark.integration

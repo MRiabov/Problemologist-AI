@@ -18,7 +18,7 @@ from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.agent import create_agent_graph
 
-WORKER_URL = "http://localhost:8001"
+WORKER_URL = "http://localhost:18001"
 
 
 async def run_single_eval(item: dict[str, Any], agent_name: str):

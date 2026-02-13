@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Adjust URL to your worker
-WORKER_URL = "http://localhost:8001"
+WORKER_URL = "http://localhost:18001"
 
 SCRIPT_CONTENT = """
 from build123d import *
