@@ -4,6 +4,8 @@ set -e
 # Problemologist Integration Test Runner
 # This script brings up the full stack using docker compose and runs integration tests.
 
+export IS_INTEGRATION_TEST=true
+
 # Cleanup function
 cleanup() {
   echo "Cleaning up..."
@@ -71,7 +73,9 @@ fi
 cleanup
 
 if [ $INTEGRATION_SUCCESS -eq 1 ] && [ $E2E_SUCCESS -eq 1 ]; then
+  export IS_INTEGRATION_TEST=false
   exit 0
 else
+  export IS_INTEGRATION_TEST=false
   exit 1
 fi

@@ -19,19 +19,51 @@ def create_agent_graph(
     """Create a Deep Agent graph with remote filesystem backend."""
 
     if settings.is_integration_test:
-        from langchain_core.language_models.fake_chat_models import FakeListChatModel
+        from langchain_core.language_models.chat_models import BaseChatModel
+        from langchain_core.messages import BaseMessage, AIMessage
+        from langchain_core.outputs import ChatGenerationChunk, ChatResult
+        from typing import Any
 
-        class FakeModelWithTools(FakeListChatModel):
-            def bind_tools(self, tools, **kwargs):
+        class FakeModelWithTools(BaseChatModel):
+            responses: list[str]
+            model_name: str = "mock-model"
+            _current_response_idx: int = 0
+
+            def _generate(
+                self,
+                messages: list[BaseMessage],
+                stop: list[str] | None = None,
+                run_manager: Any = None,
+                **kwargs: Any,
+            ) -> ChatResult:
+                _ = messages, stop, run_manager, kwargs
+                if self._current_response_idx >= len(self.responses):
+                    raise ValueError(
+                        "No more responses available in FakeModelWithTools"
+                    )
+                response_content = self.responses[self._current_response_idx]
+                self._current_response_idx += 1
+                return ChatResult(
+                    generations=[
+                        ChatGenerationChunk(message=AIMessage(content=response_content))
+                    ]
+                )
+
+            @property
+            def _llm_type(self) -> str:
+                return "fake-chat-model"
+
+            def bind_tools(self, tools: Any, **kwargs: Any) -> Any:
+                _ = tools, kwargs
                 return self
 
-            async def ainvoke(self, input, config=None, **kwargs):
+            async def ainvoke(self, input_data, config=None, **kwargs):
                 import asyncio
 
                 await asyncio.sleep(
                     1.0
                 )  # Simulate some processing time for interruption
-                return await super().ainvoke(input, config, **kwargs)
+                return await super().ainvoke(input_data, config, **kwargs)
 
         # Responses that perform some basic tool calls to satisfy tests
         # We provide a generous sequence of tool calls and completions
@@ -49,7 +81,7 @@ def create_agent_graph(
         llm = FakeModelWithTools(responses=responses)
     else:
         llm = ChatOpenAI(
-            model=settings.llm_model,
+            model_name=settings.llm_model,
             temperature=settings.llm_temperature,
             base_url=settings.openai_api_base,
             api_key=settings.openai_api_key,

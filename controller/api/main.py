@@ -13,9 +13,17 @@ from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger
 
+from controller.observability.langfuse import get_langfuse_client
+
 # Configure logging
 configure_logging("controller")
 logger = get_logger(__name__)
+
+# Initialize Langfuse client globally early to avoid "uninitialized" warnings
+try:
+    get_langfuse_client()
+except Exception as e:
+    logger.warning("failed_to_initialize_langfuse_globally", error=str(e))
 
 TEMPORAL_URL = settings.temporal_url
 WORKER_URL = settings.worker_url
@@ -85,7 +93,10 @@ async def create_test_episode(request: AgentRunRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "is_integration_test": settings.is_integration_test,
+    }
 
 
 @app.post("/agent/run", status_code=202)
