@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import logging
 import xml.etree.ElementTree as ET
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
 import trimesh
 from build123d import Compound, Solid, export_stl
 
 from shared.cots.parts.motors import ServoMotor
+from shared.simulation.backends import SimulatorBackendType
 
 if TYPE_CHECKING:
     from shared.models.schemas import MovingPart, ObjectivesYaml
@@ -183,6 +185,50 @@ class SceneCompiler:
         """Registers a mesh file in the MJCF assets."""
         ET.SubElement(self.assets, "mesh", name=name, file=file_name)
 
+    def add_site(
+        self,
+        name: str,
+        pos: list[float],
+        parent_body_name: str | None = None,
+        size: float = 0.001,
+        rgba: str | None = None,
+    ):
+        """Adds a site to a body or worldbody."""
+        parent = self.worldbody
+        if parent_body_name:
+            # Simple linear search for the body in worldbody
+            for body in self.worldbody.iter("body"):
+                if body.get("name") == parent_body_name:
+                    parent = body
+                    break
+
+        attrs = {"name": name, "pos": " ".join(map(str, pos)), "size": str(size)}
+        if rgba:
+            attrs["rgba"] = rgba
+        ET.SubElement(parent, "site", **attrs)
+
+    def add_spatial_tendon(
+        self,
+        name: str,
+        site_names: list[str],
+        width: float = 0.002,
+        rgba: str = "0.1 0.1 0.8 1",
+        limited: bool = False,
+        range: list[float] | None = None,
+    ):
+        """Adds a spatial tendon connecting a sequence of sites."""
+        if not hasattr(self, "tendon_element"):
+            self.tendon_element = ET.SubElement(self.root, "tendon")
+
+        attrs = {"name": name, "width": str(width), "rgba": rgba}
+        if limited and range:
+            attrs["limited"] = "true"
+            attrs["range"] = " ".join(map(str, range))
+
+        spatial = ET.SubElement(self.tendon_element, "spatial", **attrs)
+        for site_name in site_names:
+            ET.SubElement(spatial, "site", site=site_name)
+
     def add_weld(self, body1: str, body2: str):
         """Adds a weld constraint between two bodies."""
         ET.SubElement(self.equality, "weld", body1=body1, body2=body2)
@@ -328,26 +374,46 @@ class SceneCompiler:
             f.write(pretty_xml)
 
 
-class SimulationBuilder:
-    """Orchestrates the conversion of build123d assemblies to MuJoCo scenes."""
+class SimulationBuilderBase(ABC):
+    """Abstract base class for simulation builders."""
 
     def __init__(self, output_dir: Path, use_vhacd: bool = False):
         self.output_dir = Path(output_dir)
         self.assets_dir = self.output_dir / "assets"
         self.processor = MeshProcessor()
-        self.compiler = SceneCompiler()
         self.use_vhacd = use_vhacd
+
+    @abstractmethod
+    def build_from_assembly(
+        self,
+        assembly: Compound,
+        objectives: ObjectivesYaml | None = None,
+        moving_parts: list[MovingPart] | None = None,
+        electronics: Any | None = None,
+    ) -> Path:
+        """Converts an assembly of parts into a simulation scene."""
+        pass
+
+
+class MuJoCoSimulationBuilder(SimulationBuilderBase):
+    """Orchestrates the conversion of build123d assemblies to MuJoCo scenes."""
+
+    def __init__(self, output_dir: Path, use_vhacd: bool = False):
+        super().__init__(output_dir, use_vhacd)
+        self.compiler = SceneCompiler()
 
     def build_from_assembly(
         self,
         assembly: Compound,
         objectives: ObjectivesYaml | None = None,
         moving_parts: list[MovingPart] | None = None,
+        electronics: Any | None = None,
     ) -> Path:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
         weld_constraints = []
+        body_locations = {} # name -> (pos, euler)
 
         # 1. Add zones from objectives if provided
         if objectives:
@@ -512,6 +578,7 @@ class SimulationBuilder:
                     joint_axis=joint_axis,
                     joint_range=joint_range,
                 )
+                body_locations[label] = (pos, euler)
 
         # Apply collected constraints
         for body1, body2 in weld_constraints:
@@ -527,6 +594,49 @@ class SimulationBuilder:
                         name=mp.part_name,
                         joint=f"{mp.part_name}_joint",
                         actuator_type="position",  # Defaulting to position for servos
+                    )
+
+        # 4. Add Electronics (Wires/Tendons)
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                site_names = []
+                waypoints = getattr(wire, "waypoints", [])
+
+                if waypoints:
+                    for j, pt in enumerate(waypoints):
+                        site_name = f"site_{wire.wire_id}_{j}"
+                        # For now, treat all waypoints as world-relative
+                        # A more advanced version would find the closest body
+                        self.compiler.add_site(name=site_name, pos=list(pt))
+                        site_names.append(site_name)
+                else:
+                    # Fallback: connect from/to components directly
+                    from_comp = wire.from_terminal.component
+                    to_comp = wire.to_terminal.component
+
+                    for comp_id in [from_comp, to_comp]:
+                        site_name = f"site_{comp_id}_{wire.wire_id}"
+                        pos = [0, 0, 0]
+                        parent = None
+                        if comp_id in body_locations:
+                            parent = comp_id
+                        self.compiler.add_site(
+                            name=site_name, pos=pos, parent_body_name=parent
+                        )
+                        site_names.append(site_name)
+
+                if len(site_names) >= 2:
+                    # Add tendon
+                    # Width scaling: AWG 10 is ~2.5mm, AWG 20 is ~0.8mm
+                    # Simple linear approx:
+                    width = 0.001 + (20 - wire.gauge_awg) * 0.0001
+                    self.compiler.add_spatial_tendon(
+                        name=wire.wire_id,
+                        site_names=site_names,
+                        width=max(0.0005, width),
                     )
 
         scene_path = self.output_dir / "scene.xml"
