@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
@@ -12,6 +13,7 @@ from build123d import Compound, Solid, export_stl
 
 from shared.cots.parts.motors import ServoMotor
 from shared.simulation.backends import SimulatorBackendType
+from worker.utils.mesh_utils import tetrahedralize
 
 if TYPE_CHECKING:
     from shared.models.schemas import MovingPart, ObjectivesYaml
@@ -413,7 +415,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
         weld_constraints = []
-        body_locations = {} # name -> (pos, euler)
+        body_locations = {}  # name -> (pos, euler)
 
         # 1. Add zones from objectives if provided
         if objectives:
@@ -641,4 +643,132 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         scene_path = self.output_dir / "scene.xml"
         self.compiler.save(scene_path)
+        return scene_path
+
+
+class GenesisSimulationBuilder(SimulationBuilderBase):
+    """Orchestrates the conversion of build123d assemblies to Genesis scenes."""
+
+    def build_from_assembly(
+        self,
+        assembly: Compound,
+        objectives: ObjectivesYaml | None = None,
+        moving_parts: list[MovingPart] | None = None,
+        electronics: Any | None = None,
+    ) -> Path:
+        """Converts an assembly of parts into a Genesis scene descriptor (JSON)."""
+        self.assets_dir.mkdir(parents=True, exist_ok=True)
+
+        scene_data = {"entities": [], "fluids": [], "objectives": []}
+
+        # 1. Add zones from objectives
+        if objectives:
+            # Add Goal Zone
+            gz = objectives.objectives.goal_zone
+            gz_pos = [(gz.min[i] + gz.max[i]) / 2 for i in range(3)]
+            gz_size = [(gz.max[i] - gz.min[i]) / 2 for i in range(3)]
+            scene_data["entities"].append(
+                {
+                    "name": "zone_goal",
+                    "type": "box",
+                    "pos": gz_pos,
+                    "size": gz_size,
+                    "is_zone": True,
+                    "zone_type": "goal",
+                }
+            )
+
+            # Add Forbid Zones
+            for i, fz in enumerate(objectives.objectives.forbid_zones):
+                fz_pos = [(fz.min[j] + fz.max[j]) / 2 for j in range(3)]
+                fz_size = [(fz.max[j] - fz.min[j]) / 2 for j in range(3)]
+                scene_data["entities"].append(
+                    {
+                        "name": f"zone_forbid_{i}_{fz.name}",
+                        "type": "box",
+                        "pos": fz_pos,
+                        "size": fz_size,
+                        "is_zone": True,
+                        "zone_type": "forbid",
+                    }
+                )
+
+        # 2. Add parts from assembly
+        children = getattr(assembly, "children", [])
+        if not children:
+            children = [assembly]
+
+        # Load manufacturing config to check for deformable materials
+        from worker.workbenches.config import load_config
+
+        mfg_config = load_config()
+
+        for i, child in enumerate(children):
+            label = getattr(child, "label", None) or f"part_{i}"
+            material_id = getattr(child, "material_id", "aluminum_6061")
+
+            # Check if deformable
+            is_deformable = False
+            mat_def = mfg_config.materials.get(material_id)
+            if mat_def and mat_def.material_class in ["soft", "elastomer"]:
+                is_deformable = True
+
+            # Position and orientation
+            pos = [
+                child.location.position.X,
+                child.location.position.Y,
+                child.location.position.Z,
+            ]
+            euler = [
+                child.location.orientation.X,
+                child.location.orientation.Y,
+                child.location.orientation.Z,
+            ]
+
+            mesh_filename = f"{label}.obj"
+            mesh_path = self.assets_dir / mesh_filename
+
+            # Process geometry (save as OBJ for rigid, or intermediate STL for soft)
+            self.processor.process_geometry(child, mesh_path, decompose=False)
+
+            entity_info = {
+                "name": label,
+                "pos": pos,
+                "euler": euler,
+                "material_id": material_id,
+            }
+
+            if is_deformable:
+                msh_path = mesh_path.with_suffix(".msh")
+                # process_geometry saves to .obj, but also produces a .tmp.stl internally.
+                # We might need to export STL explicitly for tetrahedralize.
+                stl_path = mesh_path.with_suffix(".stl")
+                export_stl(child, str(stl_path))
+                tetrahedralize(stl_path, msh_path)
+                entity_info["type"] = "soft_mesh"
+                entity_info["file"] = str(msh_path.relative_to(self.output_dir))
+            else:
+                entity_info["type"] = "mesh"
+                entity_info["file"] = str(mesh_path.relative_to(self.output_dir))
+
+            scene_data["entities"].append(entity_info)
+
+        # 3. Add Fluids (MPM) from objectives if defined
+        if objectives and hasattr(objectives, "fluids") and objectives.fluids:
+            for fluid in objectives.fluids:
+                scene_data["fluids"].append(fluid.model_dump())
+
+        # 4. Add Fluid Objectives
+        if (
+            objectives
+            and hasattr(objectives.objectives, "fluid_objectives")
+            and objectives.objectives.fluid_objectives
+        ):
+            for fo in objectives.objectives.fluid_objectives:
+                scene_data["objectives"].append(fo.model_dump())
+
+        scene_path = self.output_dir / "scene.json"
+        with open(scene_path, "w") as f:
+            json.dump(scene_data, f, indent=2)
+
         return scene_path
