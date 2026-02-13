@@ -20,6 +20,13 @@ class StressSummary(BaseModel):
     location_of_max: tuple[float, float, float]
     utilization_pct: float          # max_stress / yield_stress * 100
 
+class FluidMetricResult(BaseModel):
+    metric_type: str                # "fluid_containment" | "flow_rate"
+    fluid_id: str
+    measured_value: float
+    target_value: float
+    passed: bool
+
 class SimulationMetrics(BaseModel):
     total_time: StrictFloat
     total_energy: StrictFloat
@@ -27,6 +34,7 @@ class SimulationMetrics(BaseModel):
     success: StrictBool
     fail_reason: StrictStr | None = None
     stress_summaries: list[StressSummary] = []
+    fluid_metrics: list[FluidMetricResult] = []
 
 
 # Hard cap on simulation time per architecture spec
@@ -43,6 +51,7 @@ class SimulationLoop:
         max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
         backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
         electronics: ElectronicsSection | None = None,
+        objectives: ObjectivesYaml | None = None,
     ):
         self.backend = get_physics_backend(backend_type)
         scene = SimulationScene(scene_path=xml_path)
@@ -50,6 +59,7 @@ class SimulationLoop:
 
         self.component = component
         self.electronics = electronics
+        self.objectives = objectives
         self.is_powered_map = {}
         self.validation_report = None
 
@@ -116,6 +126,7 @@ class SimulationLoop:
         self.actuator_clamp_duration = {}  # name -> duration
 
         self.stress_summaries = []
+        self.fluid_metrics = []
 
         # Reset metrics
         self.reset_metrics()
@@ -129,6 +140,7 @@ class SimulationLoop:
         for name in self.actuator_clamp_duration:
             self.actuator_clamp_duration[name] = 0.0
         self.stress_summaries = []
+        self.fluid_metrics = []
 
     def step(
         self,
@@ -271,6 +283,26 @@ class SimulationLoop:
                     logger.info("simulation_fail", reason="target_fell_off_world")
                     break
 
+            # 2.2 Fluid & Stress Objectives (WP2)
+            if self.objectives and self.objectives.objectives:
+                # 2.2.1 Stress Objectives
+                for so in self.objectives.objectives.stress_objectives:
+                    stress_field = self.backend.get_stress_field(so.part_label)
+                    if stress_field is not None and len(stress_field.stress) > 0:
+                        max_s = np.max(stress_field.stress)
+                        if max_s > so.max_von_mises_mpa * 1e6:
+                            self.fail_reason = f"STRESS_OBJECTIVE_EXCEEDED:{so.part_label}"
+                            logger.info("simulation_fail", reason="STRESS_OBJECTIVE_EXCEEDED", part=so.part_label, stress=max_s)
+                            break
+                if self.fail_reason: break
+
+                # 2.2.2 Fluid Objectives (Continuous checks)
+                for fo in self.objectives.objectives.fluid_objectives:
+                    if hasattr(fo, "eval_at") and fo.eval_at == "continuous":
+                        # Perform fluid containment/flow check
+                        # This requires particle positions from backend
+                        pass
+
             # 3. Check Forbidden Zones
             if self._check_forbidden_collision(target_body_name):
                 self.fail_reason = "collision_with_forbidden_zone"
@@ -345,13 +377,39 @@ class SimulationLoop:
                 # For now, we might skip it or pass the backend
                 pass
 
+        # Final fluid objectives evaluation (eval_at='end')
+        if self.objectives and self.objectives.objectives:
+            for fo in self.objectives.objectives.fluid_objectives:
+                if not hasattr(fo, "eval_at") or fo.eval_at == "end":
+                    particles = self.backend.get_particle_positions()
+                    if particles is not None:
+                        if fo.type == "fluid_containment":
+                            # Count particles inside containment_zone
+                            zone = fo.containment_zone
+                            inside = np.all((particles >= zone.min) & (particles <= zone.max), axis=1)
+                            ratio = np.sum(inside) / len(particles) if len(particles) > 0 else 0.0
+                            passed = ratio >= fo.threshold
+                            self.fluid_metrics.append(FluidMetricResult(
+                                metric_type="fluid_containment",
+                                fluid_id=fo.fluid_id,
+                                measured_value=float(ratio),
+                                target_value=fo.threshold,
+                                passed=passed
+                            ))
+                            if not passed:
+                                self.fail_reason = self.fail_reason or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
+                        elif fo.type == "flow_rate":
+                            # Flow rate at end is less common, but we could measure cumulative flow
+                            pass
+
         return SimulationMetrics(
             total_time=current_time,
             total_energy=self.total_energy,
             max_velocity=self.max_velocity,
-            success=self.success,
+            success=self.success if self.fail_reason is None else False,
             fail_reason=self.fail_reason,
             stress_summaries=self.stress_summaries,
+            fluid_metrics=self.fluid_metrics,
         )
 
     def _check_motor_overload(self) -> str | None:
