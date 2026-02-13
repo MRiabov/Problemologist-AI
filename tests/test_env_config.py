@@ -29,3 +29,41 @@ def test_docker_compose_style_env_loading():
         # But here we just check os.getenv which is what main.py uses
         assert os.getenv("OPENAI_API_KEY") == "sk-dummy-key"
         assert os.getenv("LLM_MODEL") == "dummy-llm-model"
+
+
+def test_env_files_consistency():
+    """Verify that .env and .env.example have the same keys."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(base_dir, ".env")
+    example_path = os.path.join(base_dir, ".env.example")
+
+    if not os.path.exists(env_path):
+        # If .env doesn't exist (e.g. in CI), we might want to skip or just pass
+        # But for this task, we assume it exists as per user request
+        return
+
+    def get_keys(path):
+        keys = set()
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    if "=" in line:
+                        key = line.split("=")[0].strip()
+                        keys.add(key)
+        return keys
+
+    env_keys = get_keys(env_path)
+    example_keys = get_keys(example_path)
+
+    # Check for missing keys in .env
+    missing_in_env = example_keys - env_keys
+    # Check for extra keys in .env that are missing in .env.example
+    missing_in_example = env_keys - example_keys
+
+    assert (
+        not missing_in_env
+    ), f"Keys found in .env.example but missing in .env: {missing_in_env}"
+    assert (
+        not missing_in_example
+    ), f"Keys found in .env but missing in .env.example: {missing_in_example}"

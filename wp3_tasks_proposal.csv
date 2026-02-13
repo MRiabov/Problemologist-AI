@@ -1,0 +1,77 @@
+Title,Description,Priority
+Define Electronics Schema in assembly_definition.yaml,"Add `electronics` section to `assembly_definition.yaml` schema.
+Fields:
+- `power_supply`: type, voltage, max_current
+- `wiring`: from/to, gauge, length, routed_in_3d
+- `components`: psu, motors, relays",High
+Implement PySpice Circuit Simulation,"Integrate PySpice (Ngspice bindings) for circuit validation.
+Goals:
+- Validate electrical soundness (shorts, floating nodes)
+- Calculate node voltages and branch currents
+- Detect overcurrent/under-voltage",High
+Implement Power Supply Model,"Implement standard mains/wall supply model.
+Default: 24V DC, 10A (configurable).
+Fail simulation if total draw > max_current.",Medium
+Implement Circuit Validation Tool,"Create `validate_circuit(circuit)`  (python) tool for the Electronics Engineer agent.
+Returns: valid (bool), voltages, currents, errors (SHORT_CIRCUIT, OVERCURRENT).",High
+Implement Wire Routing in 3D,"Implement `route_wire` (python) tool for agents to specify 3D waypoints for cables.
+Includes:
+- Waypoint definition
+- Attachment points
+- Length calculation",High
+Implement Wire Physical Model,"Model wires as physical objects in MuJoCo/Genesis (using tendons/cables).
+Properties:
+- Stiffness/damping
+- Tensile strength (tearing limit)",High
+Implement Wire Clearance & Length Checks,"Validation logic before simulation:
+- Check if wire path intersects solid parts.
+- Verify total length matches netlist definition.
+- Check minimum bend radius.",Medium
+Integrate Circuit State with Physics Simulation,"Couple circuit simulation with physics loop per timestep.
+Logic: `effective_torque = controller_fn(t) * is_powered(motor, t)`.
+If wire tears or power fails, motor stops.",High
+Create Electronics Engineer Agent,"Define the Electronics Engineer sub-agent.
+Responsibilities:
+- Circuit design (netlist)
+- Wire routing
+- Power budget validation
+- Interaction with Mechanical Engineer",High
+Add COTS Electrical Components,"Extend `parts.db` with electrical categories:
+- `power_supply`
+- `relay`
+- `connector`
+- `wire` (priced per meter)",Medium
+Implement Electrical Failure Modes,"Map simulation events to failure enums:
+- `FAILED_SHORT_CIRCUIT`
+- `FAILED_OVERCURRENT_SUPPLY`
+- `FAILED_WIRE_TORN`
+- `FAILED_OPEN_CIRCUIT`",Medium
+Implement Frontend Visualization,"Add UI support for electronics:
+- Schematic view (from netlist)
+- 3D wire visualization (colored tubes)
+- Circuit timeline (motor ON/OFF states)",Low
+Define Electronics Requirements Schema in objectives.yaml,"Add `electronics_requirements` section to `objectives.yaml` schema for PSU location and wiring constraints.
+Fields:
+- `power_supply_available`: location
+- `wiring_constraints`: max_length, restricted_zones
+- `circuit_validation_required` flag",High
+Implement Transient Simulation Tool,"Create `simulate_circuit_transient` tool.
+Input: circuit, duration, timestep.
+Output: transient analysis results (motor states over time).",Medium
+Implement Power Budget Tool,"Create `calculate_power_budget` tool.
+Input: circuit, motors.
+Output: total draw vs PSU capacity, margin.",Medium
+Implement Engineering Workflow Handoffs,"Implement LangGraph nodes for:
+1. Mech -> Elec handoff (assembly, space).
+2. Elec -> Mech handoff (wired assembly).
+3. Conflict resolution loop (if wiring fails constraints).",High
+Implement Electronics Observability Events,"Implement domain events:
+- `circuit_validation`
+- `wire_routing`
+- `power_budget_check`
+- `elec_agent_handover`
+- `circuit_simulation`",Medium
+Implement Electronics Evaluation Benchmarks,"Create validation scenarios:
+- Fast: parsing, wiring script execution.
+- Medium: circuit validity, wire clearance.
+- Slow: end-to-end electromechanical solution success rate.",Medium

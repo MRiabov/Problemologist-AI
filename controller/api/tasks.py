@@ -137,7 +137,9 @@ async def execute_agent_task(
                             with suppress(Exception):
                                 raw_content = await backend.aread(path)
                                 if isinstance(raw_content, bytes):
-                                    content = raw_content.decode("utf-8", errors="replace")
+                                    content = raw_content.decode(
+                                        "utf-8", errors="replace"
+                                    )
                                 else:
                                     content = str(raw_content)
 
@@ -152,7 +154,7 @@ async def execute_agent_task(
                     logger.error("failed_to_sync_assets", error=str(e))
 
                 # Update episode
-                episode = await db.get(Episode, episode_id)
+                await db.refresh(episode)
                 # Check if it was cancelled in the meantime
                 if episode.status != EpisodeStatus.CANCELLED:
                     episode.status = EpisodeStatus.COMPLETED

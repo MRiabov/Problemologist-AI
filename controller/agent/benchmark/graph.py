@@ -8,9 +8,10 @@ from sqlalchemy import update
 
 from controller.persistence.db import get_sessionmaker
 
+from controller.persistence.models import Episode
+from shared.enums import EpisodeStatus
 from .models import GenerationSession, SessionStatus
 from .nodes import coder_node, planner_node, reviewer_node, validator_node
-from .schema import GenerationSessionModel
 from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
@@ -67,14 +68,20 @@ async def run_generation_session(
     session_id = session_id or uuid4()
     logger.info("running_generation_session", session_id=session_id, prompt=prompt)
 
-    # 1. Create DB entry
-    # 1. Create DB entry
+    # 1. Create DB entry (Episode)
     session_factory = get_sessionmaker()
     async with session_factory() as db:
-        db_session = GenerationSessionModel(
-            session_id=session_id, prompt=prompt, status=SessionStatus.planning
+        episode = Episode(
+            id=session_id,
+            task=prompt,
+            status=EpisodeStatus.RUNNING,
+            metadata_vars={
+                "detailed_status": SessionStatus.planning,
+                "validation_logs": [],
+                "prompt": prompt,
+            },
         )
-        db.add(db_session)
+        db.add(episode)
         await db.commit()
 
     # 2. Setup State
@@ -94,6 +101,15 @@ async def run_generation_session(
 
     app = define_graph()
     final_state = initial_state
+
+    # Helper to map internal status to EpisodeStatus
+    def map_status(s: SessionStatus) -> EpisodeStatus:
+        if s == SessionStatus.accepted:
+            return EpisodeStatus.COMPLETED
+        if s == SessionStatus.failed:
+            return EpisodeStatus.FAILED
+        # All other states (planning, executing, validating, rejected) are RUNNING
+        return EpisodeStatus.RUNNING
 
     try:
         # 3. Stream execution and checkpoint
@@ -127,34 +143,63 @@ async def run_generation_session(
                             SessionStatus.rejected
                         )  # Temporarily rejected, will retry
 
-                # Update DB
+                # Update internal session status
+                final_state["session"].status = new_status
+
+                # Update DB (Episode)
                 async with session_factory() as db:
+                    episode_status = map_status(new_status)
+
+                    # We use Episode instead of GenerationSessionModel so it's visible in UI
+                    # Since we are the only writer to this episode, overwriting is fine.
+                    # Here we can just overwrite based on local state.
+
+                    current_logs = final_state["session"].validation_logs or []
+
                     stmt = (
-                        update(GenerationSessionModel)
-                        .where(GenerationSessionModel.session_id == session_id)
-                        .values(status=new_status)
+                        update(Episode)
+                        .where(Episode.id == session_id)
+                        .values(
+                            status=episode_status,
+                            metadata_vars={
+                                "detailed_status": new_status,
+                                "validation_logs": current_logs,
+                                "prompt": prompt,
+                            },
+                        )
                     )
                     await db.execute(stmt)
                     await db.commit()
 
-                # Update local session object
-                final_state["session"].status = new_status
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
+        error_msg = f"Error: {e!s}"
+
+        # Update local state
+        if "session" in final_state:
+            final_state["session"].status = SessionStatus.failed
+            if final_state["session"].validation_logs is None:
+                final_state["session"].validation_logs = []
+            final_state["session"].validation_logs.append(error_msg)
+
         async with session_factory() as db:
+            # Retrieve current logs from state
+            current_logs = final_state["session"].validation_logs
+
             stmt = (
-                update(GenerationSessionModel)
-                .where(GenerationSessionModel.session_id == session_id)
+                update(Episode)
+                .where(Episode.id == session_id)
                 .values(
-                    status=SessionStatus.failed,
-                    validation_logs=GenerationSessionModel.validation_logs
-                    + [f"Error: {e!s}"],
+                    status=EpisodeStatus.FAILED,
+                    metadata_vars={
+                        "detailed_status": SessionStatus.failed,
+                        "validation_logs": current_logs,
+                        "prompt": prompt,
+                    },
                 )
             )
             await db.execute(stmt)
             await db.commit()
-        if "session" in final_state:
-            final_state["session"].status = SessionStatus.failed
         return final_state
 
     # 4. Final Asset Persistence
@@ -166,7 +211,8 @@ async def run_generation_session(
                 sim_result = final_state.get("simulation_result", {})
                 images = sim_result.get("render_data", [])
 
-                # If render_data is None or empty but paths exist (e.g. legacy/error), we depend on validator_node to have populated it.
+                # If render_data is None or empty but paths exist (e.g. legacy/error),
+                # we depend on validator_node to have populated it.
                 # If images is None, initialize to empty list
                 if images is None:
                     images = []

@@ -78,6 +78,12 @@ class Episode(Base):
         back_populates="episode", cascade="all, delete-orphan"
     )
 
+    @property
+    def validation_logs(self) -> list[str] | None:
+        if self.metadata_vars:
+            return self.metadata_vars.get("validation_logs")
+        return None
+
 
 class Trace(Base):
     __tablename__ = "traces"
