@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
 import { useConnection } from '../context/ConnectionContext';
 import { fetchEpisodes, type Episode } from '../api/client';
@@ -10,11 +11,6 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import ChatWindow from '../components/workspace/ChatWindow';
 import ArtifactView from '../components/workspace/ArtifactView';
-import { 
-  ResizableHandle, 
-  ResizablePanel, 
-  ResizablePanelGroup 
-} from "../components/ui/resizable";
 import ModelViewer from '../components/visualization/ModelViewer';
 import ConnectionError from '../components/shared/ConnectionError';
 
@@ -93,115 +89,61 @@ export default function BenchmarkGeneration() {
       )}
 
       {/* Main Content Area (Grid 9-cols relative to Outlet) */}
-      {/* Main Content Area - Resizable Panels */}
-      <main className="flex-1 overflow-hidden">
-        <ResizablePanelGroup 
-          orientation="horizontal" 
-          className="h-full w-full"
-          onLayoutChanged={(layout: any) => {
-            localStorage.setItem('resizable-layout:benchmark-cols', JSON.stringify(layout));
-          }}
-        >
-          {/* Chat Column (Traces) */}
-          <ResizablePanel 
-            defaultSize={(() => {
-              const saved = localStorage.getItem('resizable-layout:benchmark-cols');
-              if (saved) {
-                try {
-                  const layout = JSON.parse(saved);
-                  const values = Array.isArray(layout) ? layout : Object.values(layout);
-                  return `${values[0] ?? 25}%` as any;
-                } catch (e) { return "25%"; }
-              }
-              return "25%";
-            })()} 
-            minSize="20%" 
-            maxSize="40%"
-            collapsible={true}
-            className="overflow-hidden"
-          >
-              <ChatWindow 
-                traces={selectedEpisode?.traces}
-                task={selectedEpisode?.task}
-                isRunning={running}
-                isConnected={isConnected}
-              />
-          </ResizablePanel>
+      <main className="flex-1 grid grid-cols-4 overflow-hidden">
+        {/* Middle Column (Traces) - span 1/4 (25%) */}
+        <div className="col-span-1 border-r overflow-hidden">
+            <ChatWindow 
+              traces={selectedEpisode?.traces}
+              task={selectedEpisode?.task}
+              isRunning={running}
+              isConnected={isConnected}
+            />
+        </div>
 
-          <ResizableHandle withHandle />
+        {/* Rightmost Column - span 3/4 (75%) */}
+        <div className="col-span-3 flex flex-col overflow-hidden">
+            {/* Top: Viewport */}
+            <div className="h-1/2 flex flex-col overflow-hidden border-b relative bg-gradient-to-b from-muted to-background flex items-center justify-center">
+                    {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
+                        <div className="w-full h-full flex items-center justify-center relative p-8">
+                            {!isConnected && <ConnectionError className="absolute inset-0 z-[60]" />}
+                            {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
+                                <video 
+                                    src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
+                                    controls 
+                                    className="max-w-full max-h-full rounded-xl shadow-2xl border-4 border-card z-10"
+                                />
+                            ) : (
+                                <img 
+                                    src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
+                                    className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border-4 border-card z-10"
+                                />
+                            )}
+                        </div>
+                    ) : (
+                        <div className="w-full h-full relative">
+                            <ModelViewer 
+                                className="w-full h-full" 
+                                isConnected={isConnected}
+                            />
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
+                                    Simulation Preview • Multi-Body
+                                </Badge>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
-          {/* Rightmost Column (main area) with Vertical Split */}
-          <ResizablePanel defaultSize="75%" className="min-w-0">
-              <ResizablePanelGroup 
-                orientation="vertical" 
-                className="h-full w-full"
-                onLayoutChanged={(layout: any) => {
-                  localStorage.setItem('resizable-layout:benchmark-rows', JSON.stringify(layout));
-                }}
-              >
-                  {/* Top: Viewport */}
-                  <ResizablePanel 
-                    defaultSize={(() => {
-                      const saved = localStorage.getItem('resizable-layout:benchmark-rows');
-                      if (saved) {
-                        try {
-                          const layout = JSON.parse(saved);
-                          const values = Array.isArray(layout) ? layout : Object.values(layout);
-                          return `${values[0] ?? 50}%` as any;
-                        } catch (e) { return "50%"; }
-                      }
-                      return "50%";
-                    })()} 
-                    minSize="30%"
-                  >
-                        <div className="h-full relative bg-gradient-to-b from-muted whitespace-nowrap overflow-hidden flex items-center justify-center">
-                              {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (
-                                  <div className="w-full h-full flex items-center justify-center relative p-8">
-                                      {!isConnected && <ConnectionError className="absolute inset-0 z-[60]" />}
-                                      {selectedEpisode.assets.find(a => a.asset_type === 'video') ? (
-                                          <video 
-                                              src={selectedEpisode.assets.find(a => a.asset_type === 'video')?.s3_path} 
-                                              controls 
-                                              className="max-w-full max-h-full rounded-xl shadow-2xl border-4 border-card z-10"
-                                          />
-                                      ) : (
-                                          <img 
-                                              src={selectedEpisode.assets.find(a => a.asset_type === 'image')?.s3_path} 
-                                              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border-4 border-card z-10"
-                                          />
-                                      )}
-                                  </div>
-                              ) : (
-                                  <div className="w-full h-full relative">
-                                      <ModelViewer 
-                                          className="w-full h-full" 
-                                          isConnected={isConnected}
-                                      />
-                                      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
-                                              Simulation Preview • Multi-Body
-                                          </Badge>
-                                      </div>
-                                  </div>
-                              )}
-                          </div>
-                  </ResizablePanel>
-
-                  <ResizableHandle withHandle className="w-full" />
-
-                  {/* Bottom: Artifacts (MJCF / Validation) */}
-                  <ResizablePanel defaultSize="50%" minSize="20%">
-                      <div className="h-full flex-1 overflow-hidden">
-                          <ArtifactView 
-                              plan={selectedEpisode?.plan}
-                              assets={selectedEpisode?.assets}
-                              isConnected={isConnected}
-                          />
-                      </div>
-                  </ResizablePanel>
-              </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            {/* Bottom: Artifacts (MJCF / Validation) */}
+            <div className="h-1/2 overflow-hidden flex flex-col">
+                <ArtifactView 
+                    plan={selectedEpisode?.plan}
+                    assets={selectedEpisode?.assets}
+                    isConnected={isConnected}
+                />
+            </div>
+        </div>
       </main>
     </div>
   );

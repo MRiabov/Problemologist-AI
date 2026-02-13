@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useConnection } from "../../context/ConnectionContext";
@@ -10,40 +9,21 @@ import {
 } from "../ui/resizable";
 
 export default function AppLayout() {
-  const connection = useConnection();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  const { isMockMode } = connection;
+  const { isMockMode } = useConnection();
 
   return (
     <div className="h-screen w-full overflow-hidden bg-background text-foreground">
       <ResizablePanelGroup 
         orientation="horizontal" 
         className="h-full w-full"
-        onLayoutChanged={(layout: any) => {
+        onLayoutChanged={(layout) => {
           localStorage.setItem('resizable-layout:app-sidebar', JSON.stringify(layout));
         }}
       >
         <ResizablePanel 
-          defaultSize={(() => {
-            const saved = localStorage.getItem('resizable-layout:app-sidebar');
-            if (saved) {
-              try {
-                const layout = JSON.parse(saved);
-                const values = Array.isArray(layout) ? layout : Object.values(layout);
-                return `${values[0] ?? 25}%` as any;
-              } catch (e) { return "25%"; }
-            }
-            return "25%";
-          })()} 
-          minSize="15%" 
-          maxSize="40%"
+          defaultSize={25} 
+          minSize={15} 
+          maxSize={40}
           collapsible={true}
           className="h-full"
         >
@@ -54,7 +34,7 @@ export default function AppLayout() {
         
         <ResizableHandle withHandle />
         
-        <ResizablePanel defaultSize="75%" className="min-w-0">
+        <ResizablePanel defaultSize={75} className="min-w-0">
           <main className="flex flex-col h-full overflow-hidden relative">
             {isMockMode && (
               <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-3 z-50 animate-in slide-in-from-top duration-300">

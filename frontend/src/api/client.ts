@@ -1,7 +1,6 @@
 import { EpisodesService } from './generated/services/EpisodesService';
 import { SkillsService } from './generated/services/SkillsService';
 import { DefaultService } from './generated/services/DefaultService';
-import { SimulationService } from './generated/services/SimulationService';
 import type { EpisodeResponse } from './generated/models/EpisodeResponse';
 import type { Skill } from './generated/models/Skill';
 
@@ -40,7 +39,7 @@ export async function submitTraceFeedback(episodeId: string, traceId: number, sc
 }
 
 export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<any> {
-    return SimulationService.runSimulationSimulationRunPost({
+    return DefaultService.runSimulationSimulationRunPost({
         session_id: sessionId,
         compound_json: compoundJson
     });
@@ -48,7 +47,7 @@ export async function runSimulation(sessionId: string, compoundJson: string = '{
 
 export async function checkConnection(): Promise<{ connected: boolean; isMockMode: boolean }> {
     try {
-        const health = await DefaultService.healthCheckHealthGet();
+        const health = await DefaultService.healthHealthGet();
         return { 
             connected: true, 
             isMockMode: !!health.is_integration_test 
