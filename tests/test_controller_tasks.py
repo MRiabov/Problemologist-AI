@@ -32,6 +32,7 @@ async def test_execute_agent_task_success(
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
     mock_session.get = AsyncMock()
+    mock_session.refresh = AsyncMock()
 
     mock_session_factory = MagicMock()
     mock_session_factory.return_value.__aenter__.return_value = mock_session
@@ -111,6 +112,7 @@ async def test_execute_agent_task_without_langfuse_callback(
     episode_id = uuid.uuid4()
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
+    mock_session.refresh = AsyncMock()
     mock_session.get = AsyncMock(
         return_value=Episode(id=episode_id, task="task", status=EpisodeStatus.RUNNING)
     )
@@ -168,6 +170,7 @@ async def test_execute_agent_task_failure(
 
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
+    mock_session.refresh = AsyncMock()
     mock_session.get = AsyncMock()
 
     mock_session_factory = MagicMock()
@@ -210,6 +213,7 @@ async def test_execute_agent_task_custom_name(
 
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
+    mock_session.refresh = AsyncMock()
     mock_session.get = AsyncMock()
 
     mock_session_factory = MagicMock()

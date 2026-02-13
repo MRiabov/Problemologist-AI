@@ -1,6 +1,3 @@
-include:
-  - path: docker-compose.langfuse.yml
-
 services:
   # I asked for "a very visible warning in "docker compose up" that we are running mock LLMs. FAir..
   mock-warning:
@@ -36,7 +33,6 @@ services:
       - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
-      - LANGFUSE_HOST=http://langfuse-web:3000
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
       - ASSET_S3_BUCKET=problemologist
       - BACKUP_S3_BUCKET=problemologist-backup
@@ -88,7 +84,6 @@ services:
       - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
-      - LANGFUSE_HOST=http://langfuse-web:3000
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
@@ -163,7 +158,6 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
       - postgres_data:/var/lib/postgresql/data
   minio:
     image: minio/minio
@@ -221,8 +215,6 @@ services:
       /bin/sh -c "
       until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do echo 'Waiting for Minio...'; sleep 1; done;
       /usr/bin/mc mb myminio/problemologist || true;
-      /usr/bin/mc mb myminio/langfuse-events || true;
-      /usr/bin/mc mb myminio/langfuse-media || true;
       /usr/bin/mc mb myminio/problemologist-backup || true;
       exit 0;
       "

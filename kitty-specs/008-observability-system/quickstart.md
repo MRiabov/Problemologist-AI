@@ -2,15 +2,15 @@
 
 ## 1. Accessing LangFuse
 
-LangFuse is deployed as a separate container.
+Langfuse is used in its cloud-hosted version.
 
-- **URL**: `http://langfuse-service:3000`
-- **Setup**: Export environment variables in the Controller.
+- **URL**: `https://cloud.langfuse.com`
+- **Setup**: Export environment variables in the Controller (or set them in your `.env` file).
 
   ```bash
   export LANGFUSE_PUBLIC_KEY="..."
   export LANGFUSE_SECRET_KEY="..."
-  export LANGFUSE_HOST="http://langfuse-service:3000"
+  export LANGFUSE_HOST="https://cloud.langfuse.com"
   ```
 
 ## 2. Viewing Structured Logs

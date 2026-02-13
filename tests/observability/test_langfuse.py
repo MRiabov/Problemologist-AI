@@ -18,15 +18,21 @@ def test_get_langfuse_callback_uses_trace_context():
     }
     with (
         patch.dict(os.environ, env, clear=True),
+        patch("controller.observability.langfuse.settings") as mock_settings,
         patch("controller.observability.langfuse.CallbackHandler") as mock_handler,
     ):
+        mock_settings.langfuse_public_key = "pk-test"
+        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.langfuse_host = "https://langfuse.example"
         get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         mock_handler.assert_called_once_with(
+            public_key="pk-test",
             trace_context={
                 "trace_id": "trace-123",
                 "name": "engineer_coder",
                 "tags": [],
-            }
+                "metadata": {},
+            },
         )
 
 
@@ -44,8 +50,12 @@ def test_get_langfuse_client_uses_configured_host():
     }
     with (
         patch.dict(os.environ, env, clear=True),
+        patch("controller.observability.langfuse.settings") as mock_settings,
         patch("controller.observability.langfuse.Langfuse") as mock_langfuse,
     ):
+        mock_settings.langfuse_public_key = "pk-test"
+        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.langfuse_host = "https://langfuse.example"
         get_langfuse_client()
         mock_langfuse.assert_called_once_with(
             public_key="pk-test",
