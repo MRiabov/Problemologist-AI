@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { submitTraceFeedback, runSimulation, type BenchmarkObjectives } from "../../api/client";
+import { runSimulation, type BenchmarkObjectives } from "../../api/client";
 import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
@@ -198,7 +198,7 @@ export default function ChatWindow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isCreationMode, startAgent, interruptAgent, selectedEpisode, updateObjectives } = useEpisodes();
   const [prompt, setPrompt] = useState("");
-  const [feedbackState, setFeedbackState] = useState<Record<number, { score: number; comment: string; isSubmitted: boolean }>>({});
+
   const [showObjectives, setShowObjectives] = useState(false);
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
 
@@ -212,27 +212,7 @@ export default function ChatWindow({
   }, [selectedEpisode, isCreationMode]);
 
 
-  const handleFeedback = async (traceId: number, score: number) => {
-    setFeedbackState(prev => ({
-      ...prev,
-      [traceId]: { ...prev[traceId], score, isSubmitted: false }
-    }));
-  };
 
-  const submitFeedback = async (traceId: number) => {
-    const state = feedbackState[traceId];
-    if (!state || !selectedEpisode) return;
-
-    try {
-      await submitTraceFeedback(selectedEpisode.id, traceId, state.score, state.comment);
-      setFeedbackState(prev => ({
-        ...prev,
-        [traceId]: { ...prev[traceId], isSubmitted: true }
-      }));
-    } catch (error) {
-      console.error("Failed to submit feedback", error);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,7 +307,7 @@ export default function ChatWindow({
                                   </div>
                                   <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed">
                                       {trace.trace_type === 'llm_end' ? (
-                                          <HighlightedContent content={trace.content} />
+                                          <HighlightedContent content={trace.content || ''} />
                                       ) : (
                                           trace.content
                                       )}
