@@ -1,0 +1,124 @@
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+import s3fs
+from build123d import Part
+
+from worker.filesystem.backend import SandboxFilesystemBackend, SimpleSessionManager
+from worker.filesystem.router import (
+    AccessMode,
+    FilesystemRouter,
+    LocalFilesystemBackend,
+    MountPoint,
+)
+from worker.workbenches.base import (
+    ManufacturingConfig,
+    WorkbenchAnalyzer,
+    WorkbenchResult,
+)
+
+
+@pytest.fixture
+def mock_s3_fs():
+    fs = MagicMock(spec=s3fs.S3FileSystem)
+    # Mock exists
+    fs.exists.return_value = False
+    return fs
+
+
+def test_sandbox_write_overwrite(mock_s3_fs):
+    backend = SandboxFilesystemBackend(
+        mock_s3_fs, "bucket", SimpleSessionManager("sess")
+    )
+
+    # 1. Write new file (should succeed)
+    mock_s3_fs.exists.return_value = False
+    res = backend.write("new.txt", "content")
+    assert res.error is None
+    mock_s3_fs.open.assert_called()
+
+    # 2. Write existing file with overwrite=False (should fail)
+    mock_s3_fs.exists.return_value = True
+    res = backend.write("existing.txt", "content", overwrite=False)
+    assert res.error is not None
+    assert "already exists" in res.error
+
+    # 3. Write existing file with overwrite=True (should succeed)
+    mock_s3_fs.exists.return_value = True
+    mock_s3_fs.open.reset_mock()
+    res = backend.write("existing.txt", "content", overwrite=True)
+    assert res.error is None
+    mock_s3_fs.open.assert_called()
+
+
+def test_router_download_files():
+    # Setup temporary directories
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        # Local backend root
+        local_root = tmp_path / "workspace"
+        local_root.mkdir()
+
+        # Mounted directory
+        mount_root = tmp_path / "mount"
+        mount_root.mkdir()
+
+        # Create files
+        (local_root / "local.txt").write_text("local content")
+        (mount_root / "mounted.txt").write_text("mounted content")
+
+        # Setup backend and router
+        backend = LocalFilesystemBackend(local_root, "sess")
+
+        mount = MountPoint(
+            virtual_prefix="/mnt",
+            local_path=mount_root,
+            access_mode=AccessMode.READ_ONLY,
+        )
+
+        router = FilesystemRouter(local_backend=backend, mount_points=[mount])
+
+        # Test download_files with mixed paths
+        paths = ["local.txt", "/mnt/mounted.txt", "nonexistent.txt"]
+        results = router.download_files(paths)
+
+        assert len(results) == 3
+
+        # Check local file
+        res_local = next(r for r in results if r.path == "local.txt")
+        assert res_local.content == b"local content"
+        assert res_local.error is None
+
+        # Check mounted file
+        res_mounted = next(r for r in results if r.path == "/mnt/mounted.txt")
+        assert res_mounted.content == b"mounted content"
+        assert res_mounted.error is None
+
+        # Check nonexistent file
+        res_missing = next(r for r in results if r.path == "nonexistent.txt")
+        assert res_missing.content is None
+        assert res_missing.error is not None  # "file_not_found" or similar
+
+
+def test_workbench_analyzer_protocol():
+    # This test verifies that a function with quantity parameter satisfies
+    # the protocol usage, checking runtime compatibility if we were to enforce it,
+    # but mainly ensuring we updated the protocol definition in the codebase.
+
+    # We can inspect the Protocol signature directly?
+    # Or just ensure our code runs.
+
+    def my_analyze(
+        part: Part, config: ManufacturingConfig, quantity: int = 1
+    ) -> WorkbenchResult:
+        _ = (part, config, quantity)
+        return WorkbenchResult(is_manufacturable=True, unit_cost=10.0, violations=[])
+
+    # Check that WorkbenchAnalyzer has quantity in __call__
+    import inspect
+
+    sig = inspect.signature(WorkbenchAnalyzer.__call__)
+    assert "quantity" in sig.parameters
