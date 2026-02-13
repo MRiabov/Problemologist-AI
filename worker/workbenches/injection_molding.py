@@ -206,7 +206,7 @@ def _calculate_im_cost(
 
 @type_check
 def analyze_im(
-    part: Part | Compound | Solid, config: ManufacturingConfig
+    part: Part | Compound | Solid, config: ManufacturingConfig, quantity: int = 1
 ) -> WorkbenchResult:
     """
     Functional entry point for Injection Molding analysis.
@@ -239,8 +239,8 @@ def analyze_im(
     max_wall = constraints.get("max_wall_thickness_mm", 4.0)
     violations.extend(_check_wall_thickness(mesh, min_wall, max_wall))
 
-    # 4. Cost Calculation (single unit)
-    cost_breakdown = _calculate_im_cost(part, config, quantity=1)
+    # 4. Cost Calculation
+    cost_breakdown = _calculate_im_cost(part, config, quantity=quantity)
 
     is_manufacturable = len(violations) == 0
 

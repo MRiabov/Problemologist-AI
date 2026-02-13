@@ -95,6 +95,7 @@ def validate_and_price(
     method: ManufacturingMethod,
     config: ManufacturingConfig,
     build_zone: BoundingBox | None = None,
+    quantity: int = 1,
 ) -> WorkbenchResult:
     """
     Unified entry point for DFM (Design for Manufacturing) validation and pricing.
@@ -131,11 +132,11 @@ def validate_and_price(
 
     # Dispatch to appropriate workbench
     if method == ManufacturingMethod.CNC:
-        result = analyze_cnc(part, config)
+        result = analyze_cnc(part, config, quantity=quantity)
     elif method == ManufacturingMethod.INJECTION_MOLDING:
-        result = analyze_im(part, config)
+        result = analyze_im(part, config, quantity=quantity)
     elif method == ManufacturingMethod.THREE_DP:
-        result = analyze_3dp(part, config)
+        result = analyze_3dp(part, config, quantity=quantity)
     else:
         logger.error("unsupported_manufacturing_method", method=method)
         raise ValueError(f"Unsupported manufacturing method: {method}")

@@ -186,7 +186,7 @@ def calculate_cnc_cost(
 
 @type_check
 def analyze_cnc(
-    part: Part | Compound | Solid, config: ManufacturingConfig
+    part: Part | Compound | Solid, config: ManufacturingConfig, quantity: int = 1
 ) -> WorkbenchResult:
     """
     Functional entry point for CNC analysis.
@@ -210,8 +210,8 @@ def analyze_cnc(
     corner_violations = check_internal_corner_radii(part, min_radius)
     violations.extend(corner_violations)
 
-    # 3. Cost Calculation (single unit for analysis)
-    cost_breakdown = calculate_cnc_cost(part, config, quantity=1)
+    # 3. Cost Calculation
+    cost_breakdown = calculate_cnc_cost(part, config, quantity=quantity)
 
     is_manufacturable = len(violations) == 0
 

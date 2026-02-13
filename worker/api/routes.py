@@ -488,7 +488,9 @@ async def api_analyze(
         # Load default configuration
         config = load_config()
 
-        result = validate_and_price(component, request.method, config)
+        result = validate_and_price(
+            component, request.method, config, quantity=request.quantity
+        )
 
         # INT-018: Record validation results to satisfy the handover gate
         results_path = fs_router.local_backend.root / "validation_results.json"
