@@ -5,18 +5,19 @@ set -e
 # This script brings up the full stack using docker compose and runs integration tests.
 
 export IS_INTEGRATION_TEST=true
+PROJECT_NAME="problemologist_tests"
 
 # Cleanup function
 cleanup() {
   echo "Cleaning up..."
-  docker compose down -v
+  docker compose -p "$PROJECT_NAME" down -v
 }
 
 # Ensure we are in the project root
 cd "$(dirname "$0")/.."
 
 echo "Building and starting services..."
-docker compose up -d --build
+docker compose -p "$PROJECT_NAME" up -d --build
 
 echo "Waiting for services to be healthy..."
 # We wait for the controller to be healthy, which depends on others
@@ -34,7 +35,7 @@ done
 
 if [ $COUNT -eq $MAX_RETRIES ]; then
   echo "Timeout waiting for services to be healthy."
-  docker compose logs
+  docker compose -p "$PROJECT_NAME" logs
   cleanup
   exit 1
 fi

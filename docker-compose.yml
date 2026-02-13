@@ -2,6 +2,7 @@ include:
   - path: docker-compose.langfuse.yml
 
 services:
+  # I asked for "a very visible warning in "docker compose up" that we are running mock LLMs. FAir..
   mock-warning:
     image: alpine
     environment:
@@ -163,6 +164,7 @@ services:
       retries: 5
     volumes:
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - postgres_data:/var/lib/postgresql/data
   minio:
     image: minio/minio
     ports:
@@ -172,6 +174,8 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
     command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
@@ -222,3 +226,7 @@ services:
       /usr/bin/mc mb myminio/problemologist-backup || true;
       exit 0;
       "
+
+volumes:
+  postgres_data:
+  minio_data:
