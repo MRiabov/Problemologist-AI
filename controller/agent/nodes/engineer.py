@@ -83,10 +83,8 @@ class EngineerNode:
 
                 if exit_code == 0:
                     journal_entry += f"\nSuccessfully executed step: {current_step}"
-                    # Mark TODO as done (simple string replacement for prototype)
-                    new_todo = todo.replace(
-                        f"- [ ] {current_step}", f"- [x] {current_step}"
-                    )
+                    # Mark TODO as done
+                    new_todo = self._mark_step_done(todo, current_step)
 
                     # Track best cost/weight from events
                     best_cost = state.best_cost
@@ -156,6 +154,31 @@ class EngineerNode:
             if line.strip().startswith("- [ ]"):
                 return line.strip().replace("- [ ]", "").strip()
         return None
+
+    def _mark_step_done(self, todo: str, step: str) -> str:
+        """Mark the first occurrence of the step as done in the TODO list."""
+        lines = todo.split("\n")
+        new_lines = []
+        found = False
+        for line in lines:
+            if found:
+                new_lines.append(line)
+                continue
+
+            stripped = line.strip()
+            if stripped.startswith("- [ ]"):
+                # Use replace with count=1 to remove only the first occurrence
+                content = stripped.replace("- [ ]", "", 1).strip()
+                if content == step:
+                    found = True
+                    # Preserve indentation
+                    prefix = line[: line.find("- [ ]")]
+                    new_lines.append(f"{prefix}- [x] {step}")
+                else:
+                    new_lines.append(line)
+            else:
+                new_lines.append(line)
+        return "\n".join(new_lines)
 
     def _extract_code(self, content: str) -> str:
         """Extract Python code from markdown block if present."""
