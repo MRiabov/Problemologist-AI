@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from shared.cots.parts.motors import ServoMotor
+from shared.cots.parts.electronics import PowerSupply, ElectronicRelay
 from shared.type_checking import type_check
 
 from .database.init import init_db
@@ -41,6 +42,8 @@ class Indexer:
             PlainWasher,
             SingleRowDeepGrooveBallBearing,
             ServoMotor,
+            PowerSupply,
+            ElectronicRelay,
         ]
 
     def extract_metadata(self, part_class: type, size: str) -> dict[str, Any] | None:
@@ -61,8 +64,8 @@ class Indexer:
             bb = part.bounding_box()
             volume = part.volume
 
-            if class_name == "ServoMotor":
-                # Use provided weight
+            if class_name in ["ServoMotor", "PowerSupply", "ElectronicRelay"]:
+                # Use provided weight from metadata
                 weight = part.metadata.get("weight_g", volume * STEEL_DENSITY_G_MM3)
                 unit_cost = part.metadata.get("price", 0.0)
             else:
@@ -75,6 +78,10 @@ class Indexer:
                 category = "bearing"
             elif "Motor" in class_name or class_name == "ServoMotor":
                 category = "motor"
+            elif class_name == "PowerSupply":
+                category = "power_supply"
+            elif class_name == "ElectronicRelay":
+                category = "relay"
             elif "Gear" in class_name:
                 category = "gear"
 
@@ -133,6 +140,10 @@ class Indexer:
                     sizes = list(part_class.bearing_data.keys())
                 elif hasattr(part_class, "motor_data"):
                     sizes = list(part_class.motor_data.keys())
+                elif hasattr(part_class, "psu_data"):
+                    sizes = list(part_class.psu_data.keys())
+                elif hasattr(part_class, "relay_data"):
+                    sizes = list(part_class.relay_data.keys())
                 else:
                     logger.warning(f"No size data found for {class_name}, skipping.")
                     continue
