@@ -21,10 +21,8 @@ def get_engine():
         asyncio.set_event_loop(loop)
 
     if loop in _engine_cache:
-        # print(f"DEBUG: returning cached engine for loop {id(loop)}")
         return _engine_cache[loop]
 
-    print(f"DEBUG: Creating new engine for loop {id(loop)}")
     database_url = settings.postgres_url
     engine = create_async_engine(database_url, echo=False)
     _engine_cache[loop] = engine
