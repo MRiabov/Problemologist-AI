@@ -18,18 +18,20 @@ Available skills:
 
 Instructions:
 1. Analyze the task and available skills.
-2. Create a high-level execution plan.
-3. Create a detailed TODO list of specific implementation steps.
+2. If there are electronics requirements (motors, power supplies), ensure the plan includes circuit design and wire routing steps.
+3. Create a high-level execution plan.
+4. Create a detailed TODO list of specific implementation steps.
 
 Output your response in two sections:
 # PLAN
 <your plan here>
 
 # TODO
-- [ ] <step 1>
-- [ ] <step 2>
+- [ ] <mechanical step 1>
+- [ ] <mechanical step 2>
+- [ ] Design circuit and route wires
 """,
-                    "engineer": """You are the Engineer. 
+                    "engineer": """You are the Mechanical Engineer. 
 Implement the following step: {{ current_step }}
 
 Execution Plan context:
@@ -42,9 +44,26 @@ Please fix the code and try again.
 {% endif %}
 
 Instructions:
-1. Write a standalone Python script to accomplish the step.
+1. Write a standalone Python script to accomplish the step using build123d.
 2. Use only available tools and libraries.
 3. Output ONLY the Python code inside a markdown code block.
+""",
+                    "electronics_engineer": """You are the Electronics Engineer.
+Design the electrical circuit and route wires for the following assembly.
+
+Current TODO step: {{ current_step }}
+Mechanical Assembly context:
+{{ assembly_context }}
+
+Execution Plan context:
+{{ plan }}
+
+Instructions:
+1. Define the electrical netlist using PySpice in your code.
+2. Route physical wires using `route_wire` and `check_wire_clearance`.
+3. Update the `electronics` section in `preliminary_cost_estimation.yaml`.
+4. Ensure the total current draw is within PSU limits.
+5. Output ONLY the Python code inside a markdown code block.
 """,
                     "critic": """You are the Critic. 
 Evaluate the implementation of the task: {{ task }}

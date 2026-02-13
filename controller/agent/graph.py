@@ -5,6 +5,7 @@ from controller.config.settings import settings
 
 from .nodes.architect import architect_node
 from .nodes.critic import critic_node
+from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.engineer import engineer_node
 from .nodes.sidecar import sidecar_node
 from .state import AgentState, AgentStatus
@@ -33,19 +34,25 @@ builder = StateGraph(AgentState)
 # Add nodes
 builder.add_node("architect", architect_node)
 builder.add_node("engineer", engineer_node)
+builder.add_node("electronics_engineer", electronics_engineer_node)
 builder.add_node("critic", critic_node)
 builder.add_node("sidecar", sidecar_node)
 
 # Set the entry point and edges
 builder.add_edge(START, "architect")
 builder.add_edge("architect", "engineer")
-builder.add_edge("engineer", "critic")
+builder.add_edge("engineer", "electronics_engineer")
+builder.add_edge("electronics_engineer", "critic")
 
 # Conditional routing from critic
 builder.add_conditional_edges(
     "critic",
     should_continue,
-    {"engineer": "engineer", "architect": "architect", "sidecar": "sidecar"},
+    {
+        "engineer": "engineer",
+        "architect": "architect",
+        "sidecar": "sidecar",
+    },
 )
 
 builder.add_edge("sidecar", END)
