@@ -32,6 +32,7 @@ class DFMReport(BaseModel):
 class MaterialDefinition(BaseModel):
     name: StrictStr
     density_g_cm3: StrictFloat
+    density_kg_m3: StrictFloat | None = None
     cost_per_kg: StrictFloat
     color: StrictStr = "#FFFFFF"
     elongation_stress_mpa: StrictFloat = 0.0
@@ -39,6 +40,14 @@ class MaterialDefinition(BaseModel):
     friction_coef: StrictFloat = 0.5
     machine_hourly_rate: StrictFloat = 0.0
     compatibility: list[ManufacturingMethod] = Field(default_factory=list)
+
+    # NEW - FEM fields (WP2)
+    youngs_modulus_pa: StrictFloat | None = None
+    poissons_ratio: StrictFloat | None = None
+    yield_stress_pa: StrictFloat | None = None
+    ultimate_stress_pa: StrictFloat | None = None
+    elongation_at_break: StrictFloat | None = None
+    material_class: StrictStr = "rigid" # "rigid" | "soft" | "elastomer"
 
 
 class CostBreakdown(BaseModel):
@@ -61,6 +70,7 @@ class MethodConfig(BaseModel):
 
 class ManufacturingConfig(BaseModel):
     defaults: dict[StrictStr, Any] = Field(default_factory=dict)
+    materials: dict[StrictStr, MaterialDefinition] = Field(default_factory=dict)
     cnc: MethodConfig | None = None
     injection_molding: MethodConfig | None = None
     three_dp: MethodConfig | None = None

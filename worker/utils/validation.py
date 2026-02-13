@@ -89,19 +89,27 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
 
     # 3. Build MJCF
     builder = SimulationBuilder(output_dir=working_dir)
-    # Pass objectives and moving_parts to builder if available
+    # Pass objectives, moving_parts and electronics to builder if available
     moving_parts = cost_estimation.moving_parts if cost_estimation else []
+    electronics = cost_estimation.electronics if cost_estimation else None
+
     scene_path = builder.build_from_assembly(
-        component, objectives=objectives, moving_parts=moving_parts
+        component,
+        objectives=objectives,
+        moving_parts=moving_parts,
+        electronics=electronics,
     )
 
     # 4. Initialize Simulation Loop
     backend_type = SimulatorBackendType.MUJOCO
-    if objectives and objectives.physics:
+    if objectives and getattr(objectives, "physics", None):
         backend_type = SimulatorBackendType(objectives.physics.backend)
 
     loop = SimulationLoop(
-        str(scene_path), component=component, backend_type=backend_type
+        str(scene_path),
+        component=component,
+        backend_type=backend_type,
+        electronics=electronics,
     )
 
     # 5. Load Controllers

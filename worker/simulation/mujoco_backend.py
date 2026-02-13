@@ -191,6 +191,12 @@ class MuJoCoBackend(PhysicsBackend):
             for i in range(self.model.nsite)
         ]
 
+    def get_all_tendon_names(self) -> list[str]:
+        return [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_TENDON, i)
+            for i in range(self.model.ntendon)
+        ]
+
     def check_collision(self, body_name: str, site_name: str) -> bool:
         bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
         sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
@@ -235,6 +241,12 @@ class MuJoCoBackend(PhysicsBackend):
                 if np.any(dists < zone_size[0]):
                     return True
         return False
+
+    def get_tendon_tension(self, tendon_name: str) -> float:
+        tid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_TENDON, tendon_name)
+        if tid == -1:
+            raise ValueError(f"Tendon {tendon_name} not found")
+        return float(self.data.ten_force[tid])
 
     def close(self) -> None:
         if self.renderer:
