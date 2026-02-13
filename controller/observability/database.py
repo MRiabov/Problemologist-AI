@@ -1,7 +1,10 @@
+import ast
+import json
 import uuid
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
@@ -54,12 +57,27 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
     async def on_tool_start(
         self, serialized: dict[str, Any], input_str: str, **_kwargs: Any
     ) -> None:
+        # Try to ensure valid JSON content
+        clean_content = input_str
+        if (
+            input_str
+            and not input_str.startswith("{")
+            and not input_str.startswith("[")
+        ):
+            # If it looks like a Python dict string, try to convert to JSON
+            try:
+                data = ast.literal_eval(input_str)
+                if isinstance(data, (dict, list)):
+                    clean_content = json.dumps(data)
+            except Exception:
+                pass
+
         async with self.session_factory() as db:
             trace = Trace(
                 episode_id=self.episode_id,
                 trace_type=TraceType.TOOL_START,
                 name=serialized.get("name"),
-                content=input_str,
+                content=clean_content,
                 langfuse_trace_id=self._get_langfuse_id(),
             )
             db.add(trace)
@@ -68,15 +86,28 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             await self._broadcast_trace(trace)
 
     async def on_tool_end(self, output: Any, **_kwargs: Any) -> None:
-        async with self.session_factory() as db:
-            # Ensure output is serializable (ToolMessage is not)
-            if not isinstance(output, (str, dict, list, int, float, bool, type(None))):
-                output = str(output)
+        # Ensure output is JSON serializable
+        if isinstance(output, (dict, list)):
+            content = json.dumps(output)
+        elif isinstance(output, (str, int, float, bool, type(None))):
+            content = str(output) if output is not None else "null"
+        else:
+            # Fallback for complex objects (like Pydantic models)
+            try:
+                if hasattr(output, "model_dump"):
+                    content = json.dumps(output.model_dump())
+                elif hasattr(output, "dict"):
+                    content = json.dumps(output.dict())
+                else:
+                    content = str(output)
+            except Exception:
+                content = str(output)
 
+        async with self.session_factory() as db:
             trace = Trace(
                 episode_id=self.episode_id,
                 trace_type=TraceType.TOOL_END,
-                content=str(output),
+                content=content,
                 langfuse_trace_id=self._get_langfuse_id(),
             )
             db.add(trace)
@@ -85,10 +116,9 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             await self._broadcast_trace(trace)
 
     async def on_llm_new_token(self, token: str, **_kwargs: Any) -> None:
-        # We might not want to save every token to DB, maybe just full completions
         pass
 
-    async def on_llm_end(self, response: Any, **_kwargs: Any) -> None:
+    async def on_llm_end(self, response: LLMResult, **_kwargs: Any) -> None:
         async with self.session_factory() as db:
             # Extract content from the first generation
             content = ""
@@ -113,13 +143,16 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
 
         async with self.session_factory() as db:
             for event_data in events:
-                # Store the entire event in content or metadata depending on preference.
-                # Here we use content for a summary and metadata for the full data.
+                data = event_data.get("data", {})
+                content = (
+                    json.dumps(data) if isinstance(data, (dict, list)) else str(data)
+                )
+
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.EVENT,
                     name=event_data.get("event_type", "generic_event"),
-                    content=str(event_data.get("data", {})),
+                    content=content,
                     metadata_vars=event_data,
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
