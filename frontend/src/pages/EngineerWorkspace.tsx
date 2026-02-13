@@ -8,7 +8,8 @@ import {
   Box,
   BrainCircuit,
   Signal,
-  SignalLow
+  SignalLow,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -98,6 +99,30 @@ export default function EngineerWorkspace() {
                 </Button>
             </div>
         </header>
+
+        {/* Error Alert */}
+        {selectedEpisode?.status === 'failed' && (
+          <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-red-500 uppercase tracking-tight">Agent Execution Failed</p>
+              <p className="text-xs text-red-400/80 font-medium">
+                The agent encountered an error. Check the traces for more details.
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-[10px] font-bold uppercase text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              onClick={() => {
+                // We don't have a local error state here, but we can't easily "dismiss" a status from the backend
+                // without updating the backend. So we just leave it for now or provide a close button that hides it locally.
+              }}
+            >
+              Details Below
+            </Button>
+          </div>
+        )}
 
         {/* Main Workspace Layout (Grid 9-cols for the Outlet area) */}
         <div className="flex-1 grid grid-cols-9 overflow-hidden">

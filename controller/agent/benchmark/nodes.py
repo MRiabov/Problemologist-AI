@@ -44,7 +44,7 @@ def verify_syntax(code: str) -> tuple[bool, str | None]:
 
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Breaks down the user prompt into a concrete randomization strategy using a Deep Agent.
+    Breaks down the user prompt into a randomization strategy using a Deep Agent.
     """
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
@@ -83,17 +83,23 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             name="Benchmark Planner Agent",
         )
 
-        # We send a trigger message to start the agent's thought process
-        # The actual context is in the system prompt
-        response = await agent.ainvoke(
-            {
-                "messages": [
-                    HumanMessage(
-                        content="Please generate the randomization strategy JSON now."
-                    )
-                ]
-            }
-        )
+        try:
+            # We send a trigger message to start the agent's thought process
+            # The actual context is in the system prompt
+            response = await agent.ainvoke(
+                {
+                    "messages": [
+                        HumanMessage(
+                            content="Please generate the randomization strategy JSON now."
+                        )
+                    ]
+                }
+            )
+        except Exception as e:
+            logger.error(
+                "planner_agent_run_failed", error=str(e), session_id=session_id
+            )
+            raise RuntimeError(f"Planner agent failed: {e}") from e
 
         try:
             # Extract JSON from the agent's final answer
@@ -189,16 +195,20 @@ Validation Logs:
             name="CAD Coder Agent",
         )
 
-        # 4. Invoke Agent
-        result = await agent.ainvoke(
-            {
-                "messages": [
-                    HumanMessage(
-                        content=f"Implement the benchmark script for: {state['session'].prompt}"
-                    )
-                ]
-            }
-        )
+        try:
+            # 4. Invoke Agent
+            result = await agent.ainvoke(
+                {
+                    "messages": [
+                        HumanMessage(
+                            content=f"Implement the benchmark script for: {state['session'].prompt}"
+                        )
+                    ]
+                }
+            )
+        except Exception as e:
+            logger.error("coder_agent_run_failed", error=str(e), session_id=session_id)
+            raise RuntimeError(f"Coder agent failed: {e}") from e
 
         # 5. Update state
         try:
@@ -456,7 +466,13 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         ]
         user_content.extend(image_contents)
 
-        await agent.ainvoke({"messages": [HumanMessage(content=user_content)]})
+        try:
+            await agent.ainvoke({"messages": [HumanMessage(content=user_content)]})
+        except Exception as e:
+            logger.error(
+                "reviewer_agent_run_failed", error=str(e), session_id=session_id
+            )
+            raise RuntimeError(f"Reviewer agent failed: {e}") from e
 
         # 7. Check violations and parse results
         if guarded_backend.violations:

@@ -17,6 +17,7 @@ export type EpisodeResponse = {
     todo_list?: (Record<string, any> | null);
     journal?: (string | null);
     plan?: (string | null);
+    validation_logs?: (string[] | null);
     traces?: Array<TraceResponse>;
     assets?: Array<AssetResponse>;
 };

@@ -7,7 +7,8 @@ import {
   Cpu, 
   CircleDot,
   Signal,
-  SignalLow
+  SignalLow,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -24,6 +25,7 @@ export default function BenchmarkGeneration() {
   const { isConnected } = useConnection();
   const [, setEpisodes] = useState<Episode[]>([]);
   const [simulating, setSimulating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -39,13 +41,15 @@ export default function BenchmarkGeneration() {
 
   const handleRunSimulation = async () => {
     setSimulating(true);
+    setError(null);
     try {
         const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
         await runSimulation(sessionId);
         const data = await fetchEpisodes();
         setEpisodes(data);
-    } catch (e) {
+    } catch (e: any) {
         console.error("Failed to run simulation", e);
+        setError(e.message || "Failed to start simulation pipeline");
     } finally {
         setSimulating(false);
     }
@@ -94,6 +98,27 @@ export default function BenchmarkGeneration() {
           </Button>
         </div>
       </header>
+      
+      {/* Error Alert */}
+      {(error || selectedEpisode?.status === 'failed') && (
+        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+          <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-red-500 uppercase tracking-tight">Pipeline Error</p>
+            <p className="text-xs text-red-400/80 font-medium">
+              {error || "The benchmark generation process encountered an error and could not complete."}
+            </p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-[10px] font-bold uppercase text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            onClick={() => setError(null)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {/* Main Content Area (Grid 9-cols relative to Outlet) */}
       <main className="flex-1 grid grid-cols-9 overflow-hidden">
