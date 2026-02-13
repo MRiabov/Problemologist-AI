@@ -62,8 +62,14 @@ class ObservabilityEventType(StrEnum):
     LIBRARY_USAGE = "library_usage"
     # 24. Review decision (full details)
     REVIEW_DECISION = "review_decision"
-    # 25. Circuit validation
+
+    # 25. WP3 Electronics events
     CIRCUIT_VALIDATION = "circuit_validation"
+    WIRE_ROUTING = "wire_routing"
+    POWER_BUDGET_CHECK = "power_budget_check"
+    ELECTRICAL_FAILURE = "electrical_failure"
+    ELEC_AGENT_HANDOVER = "elec_agent_handover"
+    CIRCUIT_SIMULATION = "circuit_simulation"
 
 
 class SimulationFailureReason(StrEnum):
@@ -294,9 +300,50 @@ class ReviewEvent(BaseEvent):
     comments: list[str] = Field(default_factory=list)
 
 
+# =============================================================================
+# WP3 Electronics Events
+# =============================================================================
+
+
 class CircuitValidationEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_VALIDATION
-    success: bool
+    result: bool
+    total_draw_a: float
     errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    total_draw_a: float | None = None
+
+
+class WireRoutingEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.WIRE_ROUTING
+    wire_count: int
+    total_length_mm: float
+    clearance_passed: bool
+    errors: list[str] = Field(default_factory=list)
+
+
+class PowerBudgetCheckEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.POWER_BUDGET_CHECK
+    total_draw_a: float
+    max_capacity_a: float
+    margin_a: float
+    is_safe: bool
+
+
+class ElectricalFailureEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.ELECTRICAL_FAILURE
+    failure_type: str  # e.g., "short_circuit", "overcurrent", "wire_torn"
+    component_id: str | None = None
+    message: str
+
+
+class ElecAgentHandoverEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.ELEC_AGENT_HANDOVER
+    from_agent: str
+    to_agent: str
+    iteration_count: int
+
+
+class CircuitSimulationEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_SIMULATION
+    duration_s: float
+    motor_states: dict[str, str]  # motor_id -> "on"/"off"

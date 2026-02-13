@@ -31,6 +31,78 @@ class BoundingBox(BaseModel):
 
 
 # =============================================================================
+# WP2 Fluid & Stress Models
+# =============================================================================
+
+
+class FluidProperties(BaseModel):
+    viscosity_cp: float = 1.0
+    density_kg_m3: float = 1000.0
+    surface_tension_n_m: float = 0.07
+
+
+class FluidVolume(BaseModel):
+    type: Literal["cylinder", "box", "sphere"]
+    center: tuple[float, float, float]
+    # For cylinder
+    radius: float | None = None
+    height: float | None = None
+    # For box
+    size: tuple[float, float, float] | None = None
+
+    @field_validator("center", "size", mode="before")
+    @classmethod
+    def coerce_list_to_tuple(cls, v):
+        if isinstance(v, list):
+            return tuple(v)
+        return v
+
+
+class FluidDefinition(BaseModel):
+    fluid_id: str
+    properties: FluidProperties = FluidProperties()
+    initial_volume: FluidVolume
+    color: tuple[int, int, int] = (0, 0, 200)
+
+    @field_validator("color", mode="before")
+    @classmethod
+    def coerce_list_to_tuple(cls, v):
+        if isinstance(v, list):
+            return tuple(v)
+        return v
+
+
+class FluidContainmentObjective(BaseModel):
+    type: Literal["fluid_containment"] = "fluid_containment"
+    fluid_id: str
+    containment_zone: BoundingBox
+    threshold: float = 0.95
+    eval_at: Literal["end", "continuous"] = "end"
+
+
+class FlowRateObjective(BaseModel):
+    type: Literal["flow_rate"] = "flow_rate"
+    fluid_id: str
+    gate_plane_point: tuple[float, float, float]
+    gate_plane_normal: tuple[float, float, float]
+    target_rate_l_per_s: float
+    tolerance: float = 0.2
+
+    @field_validator("gate_plane_point", "gate_plane_normal", mode="before")
+    @classmethod
+    def coerce_list_to_tuple(cls, v):
+        if isinstance(v, list):
+            return tuple(v)
+        return v
+
+
+class MaxStressObjective(BaseModel):
+    type: Literal["max_stress"] = "max_stress"
+    part_label: str
+    max_von_mises_mpa: float
+
+
+# =============================================================================
 # objectives.yaml Schema
 # =============================================================================
 
@@ -56,6 +128,8 @@ class ObjectivesSection(BaseModel):
     goal_zone: BoundingBox
     forbid_zones: list[ForbidZone] = []
     build_zone: BoundingBox
+    fluid_objectives: list[FluidContainmentObjective | FlowRateObjective] = []
+    stress_objectives: list[MaxStressObjective] = []
 
 
 class StaticRandomization(BaseModel):
@@ -195,6 +269,7 @@ class ObjectivesYaml(BaseModel):
 
     objectives: ObjectivesSection
     physics: PhysicsConfig = PhysicsConfig()
+    fluids: list[FluidDefinition] = []
     simulation_bounds: BoundingBox
     moved_object: MovedObject
     constraints: Constraints
