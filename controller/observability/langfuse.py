@@ -185,17 +185,43 @@ def get_langfuse_callback(
         trace_context: dict = kwargs.copy()
         if trace_id:
             trace_context["trace_id"] = trace_id
-        
+
         # Ensure tags is present as an array to avoid server-side forEach error
-        if "tags" not in trace_context:
+        tags = trace_context.get("tags")
+        if tags is None or not isinstance(tags, list):
             trace_context["tags"] = []
 
+        # Ensure metadata is a dict if present, or initialize to empty dict
+        # This prevents server-side errors if metadata is missing or invalid
+        metadata = trace_context.get("metadata")
+        if metadata is None or not isinstance(metadata, dict):
+            trace_context["metadata"] = {}
+
+        # We MUST use os.environ for secret_key and host as the CallbackHandler
+        # constructor doesn't accept them in this version (confirmed via inspect).
         os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
         os.environ["LANGFUSE_SECRET_KEY"] = secret_key
         os.environ["LANGFUSE_HOST"] = host
 
+        # Strictly sanitize trace_context to prevent server-side 500 errors.
+        # Langfuse server can crash if these are not exactly what it expects.
+        tags = trace_context.get("tags")
+        metadata = trace_context.get("metadata")
+        clean_context = {
+            "trace_id": trace_context.get("trace_id"),
+            "name": trace_context.get("name"),
+            "user_id": trace_context.get("user_id"),
+            "session_id": trace_context.get("session_id"),
+            "tags": tags if isinstance(tags, list) else [],
+            "metadata": metadata if isinstance(metadata, dict) else {},
+        }
+        # Remove None values
+        clean_context = {k: v for k, v in clean_context.items() if v is not None}
+
         try:
-            handler = CallbackHandler(trace_context=trace_context)
+            handler = CallbackHandler(
+                public_key=public_key, trace_context=clean_context
+            )
             return SafeCallbackHandler(handler)
         except Exception as e:
             import logging

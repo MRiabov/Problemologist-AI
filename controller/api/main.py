@@ -53,6 +53,9 @@ app.include_router(episodes.router)
 app.include_router(benchmark.router)
 app.include_router(skills.router)
 app.include_router(ops.router)
+from controller.api.routes import simulation
+
+app.include_router(simulation.router)
 
 
 from controller.api.tasks import AgentRunRequest, execute_agent_task

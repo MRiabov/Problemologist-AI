@@ -2144,7 +2144,8 @@ As the agents are long-running (and cost money!) it is desirable to be able to:
 1. Submit requests one-by-one (as opposed to working in batch over a dataset of prompts)
 2. View their reasoning prompts
 3. Interrupt them before they finish.
-4. (dev only) using an environmental variable on all all nodes(dev_mode=True), fetch logs from either controller or worker (and maybe view in UI) (this may be easier as we use `structlog`)
+<!-- 4. (dev only) using an environmental variable on all all nodes(dev_mode=True), fetch logs from either controller or worker (and maybe view in UI) (this may be easier as we use `structlog`) -->
+1. Steer agents reasoning in a "chat" mode, meaning, correct their reasoning in case they made an incorrect assumption.
 
 ##### Benchmark generation workflow
 
@@ -2169,7 +2170,7 @@ For both benchmark generator and engineer we want to view:
 2. Generated code (python, not MJCF) (as artifacts)
 3. Final/starting renders; latest renders. (as artifacts)
 4. Reasoning traces; meaning LLM reasoning steps and how it arrives to its actions.
-5. 3d view.
+5. 3d view of the generated model. Notably, it is desirable to
 
 (additionally), history of the implementation.
 
@@ -2189,9 +2190,9 @@ The rightmost column is split vertically into:
 
 Turns out viewing CAD is not as easy. In addition, special-purpose CAD viewing functionality is desired - for being able to "click" on a face and prompt something to a model - we'll need it in the future.
 
-Ideally, this is solved via WASM in the browser. But I can't give two craps about debugging WASM yet, e.g. by "Yet Another CAD viewer" which runs in WASM.
+Ideally, this is solved via WASM in the browser. But I can't give two craps about debugging WASM yet, e.g. a "Yet Another CAD viewer" which runs in WASM.
 
-So, use a Yet Another CAD Viewer" server-side rendering for now. integrate it into the worker, ideally.
+So, use a "Yet Another CAD Viewer" server-side rendering for now. integrate it into the worker, ideally.
 The file format is GLB (not STL) because of lesser volume.
 
 [!Note] Exception - the frontend will query the worker to get the GLB files. (we specified elsewhere that it will communicate only to controller first.) GET-method only though.

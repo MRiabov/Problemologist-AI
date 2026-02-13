@@ -189,7 +189,7 @@ async def test_int_030_interrupt_propagation():
         # We'll use agent/run for now as it's the main entry point.
         session_id = f"test-interrupt-{int(time.time())}"
         payload = {
-            "task": "Perform a very complex multi-step reasoning task that involves writing a large script with at least 10 different parts and complex joints, and explain each step in detail.",
+            "task": "Perform a very complex multi-step reasoning task that involves writing a large script with at least 50 different parts and complex joints, explain each step in detail, and perform a deep analysis of the physics constraints for each component. Do NOT skip any details.",
             "session_id": session_id,
         }
         resp = await client.post(f"{CONTROLLER_URL}/agent/run", json=payload)
@@ -197,7 +197,7 @@ async def test_int_030_interrupt_propagation():
         episode_id = resp.json()["episode_id"]
 
         # 2. Give it a moment to start
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
 
         # 3. Interrupt
         interrupt_resp = await client.post(
@@ -207,11 +207,13 @@ async def test_int_030_interrupt_propagation():
 
         # 4. Verify state in DB
         # Wait a bit for cancellation to propagate
-        for _ in range(10):
-            await asyncio.sleep(1)
+        status = "unknown"
+        for i in range(20):
+            await asyncio.sleep(0.5)
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             assert status_resp.status_code == 200
             status = status_resp.json()["status"]
+            print(f"INT-030 STATUS CHECK {i}: {status}")
             if status in ["cancelled", "failed"]:
                 break
 
