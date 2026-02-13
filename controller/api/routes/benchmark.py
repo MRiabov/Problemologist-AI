@@ -96,8 +96,10 @@ async def update_objectives(
     Update objectives.yaml for a specific session.
     """
     import os
+
     import httpx
     import yaml
+
     from controller.clients.worker import WorkerClient
 
     # Verify session exists

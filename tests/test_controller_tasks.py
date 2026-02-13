@@ -78,7 +78,9 @@ async def test_execute_agent_task_success(
     assert callbacks[1] is langfuse_callback
 
     # Verify trace records are linked to a single generated Langfuse trace ID
-    added_objects = [call.args[0] for call in mock_session.add.call_args_list if call.args]
+    added_objects = [
+        call.args[0] for call in mock_session.add.call_args_list if call.args
+    ]
     trace_rows = [obj for obj in added_objects if isinstance(obj, Trace)]
     assert len(trace_rows) >= 2
     langfuse_ids = {trace.langfuse_trace_id for trace in trace_rows}
@@ -225,9 +227,7 @@ async def test_execute_agent_task_custom_name(
     mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="done")]}
     mock_create_graph.return_value = (mock_agent, None)
 
-    await execute_agent_task(
-        episode_id, task, session_id, agent_name=agent_name
-    )
+    await execute_agent_task(episode_id, task, session_id, agent_name=agent_name)
 
     # Verify initialize_agent_files called with custom name
     mock_init_files.assert_called_once_with(mock_backend, agent_name=agent_name)

@@ -1,9 +1,9 @@
-import asyncio
 import os
 import uuid
-import yaml
-import pytest
+
 import httpx
+import pytest
+import yaml
 
 # Constants
 WORKER_URL = os.getenv("WORKER_URL", "http://127.0.0.1:18001")

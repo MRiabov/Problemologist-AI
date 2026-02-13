@@ -94,7 +94,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                         "max_unit_cost"
                     ]
                 if "max_weight" in custom_objectives:
-                    obj_data["constraints"]["max_weight"] = custom_objectives["max_weight"]
+                    obj_data["constraints"]["max_weight"] = custom_objectives[
+                        "max_weight"
+                    ]
                 if "target_quantity" in custom_objectives:
                     obj_data["constraints"]["target_quantity"] = custom_objectives[
                         "target_quantity"
@@ -117,6 +119,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                 )
                 # We don't fail the whole session, just log error
 
+        agent = create_deep_agent(
             model=llm,
             backend=backend,
             system_prompt=system_prompt,

@@ -3,7 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
-from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
+from worker.workbenches.models import ManufacturingMethod
 
 
 class ReadFileResponse(BaseModel):

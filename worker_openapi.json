@@ -222,6 +222,110 @@
         }
       }
     },
+    "/fs/upload_file": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Upload File",
+        "description": "Upload a file with binary content.",
+        "operationId": "upload_file_fs_upload_file_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_fs_upload_file_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fs/read_blob": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Read Blob",
+        "description": "Read file contents as binary blob.",
+        "operationId": "read_blob_fs_read_blob_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/grep": {
       "post": {
         "tags": [
@@ -262,6 +366,59 @@
                     "$ref": "#/components/schemas/GrepMatch"
                   },
                   "title": "Response Api Grep Fs Grep Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fs/delete": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Delete File",
+        "description": "Delete a file or directory.",
+        "operationId": "delete_file_fs_delete_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
                 }
               }
             }
@@ -1048,6 +1205,13 @@
           "method": {
             "$ref": "#/components/schemas/ManufacturingMethod",
             "description": "Manufacturing method to analyze (cnc, 3dp, im)."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantity",
+            "description": "Number of units to manufacture for pricing.",
+            "default": 1
           }
         },
         "type": "object",
@@ -1120,6 +1284,40 @@
         ],
         "title": "BenchmarkToolResponse",
         "description": "Response from a benchmark tool."
+      },
+      "Body_upload_file_fs_upload_file_post": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "file"
+        ],
+        "title": "Body_upload_file_fs_upload_file_post"
+      },
+      "DeleteFileRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "DeleteFileRequest",
+        "description": "Request to delete a file."
       },
       "EditFileRequest": {
         "properties": {

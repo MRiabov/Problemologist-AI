@@ -44,7 +44,7 @@ def test_env_files_consistency():
 
     def get_keys(path):
         keys = set()
-        with open(path, "r") as f:
+        with open(path) as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):

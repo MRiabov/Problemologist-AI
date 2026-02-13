@@ -14,9 +14,7 @@ def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     """
     # Use /dev/shm if available (Linux RAM disk) for faster I/O
     temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(
-        suffix=".stl", dir=temp_dir, delete=False
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
     try:
@@ -106,9 +104,7 @@ def compute_part_hash(part: Part | Compound) -> str:
     """
     # Use /dev/shm if available (Linux RAM disk) for faster I/O
     temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(
-        suffix=".stl", dir=temp_dir, delete=False
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
     try:

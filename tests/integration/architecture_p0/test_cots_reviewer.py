@@ -1,8 +1,8 @@
 import os
 import uuid
-import pytest
+
 import httpx
-import yaml
+import pytest
 
 # Constants
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")

@@ -10,12 +10,11 @@ from shared.models.schemas import ObjectivesYaml
 from worker.utils.dfm import validate_and_price
 from worker.workbenches.config import load_config
 from worker.workbenches.models import ManufacturingMethod
-from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
 
 
-def submit_for_review(component: Compound, cwd: Path = Path(".")):
+def submit_for_review(component: Compound, cwd: Path = Path()):
     """
     Standardized handover from Coder to Reviewer.
     Logic:
@@ -27,11 +26,12 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
     renders_dir = cwd / os.getenv("RENDERS_DIR", "renders")
 
     # 1. Validate mandatory base files (INT-005)
-    
+
     # plan.md
     plan_path = cwd / "plan.md"
     if plan_path.exists():
         from .markdown_validator import validate_plan_md
+
         plan_content = plan_path.read_text(encoding="utf-8")
         plan_result = validate_plan_md(plan_content)
         if not plan_result.is_valid:
@@ -45,6 +45,7 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
     todo_path = cwd / "todo.md"
     if todo_path.exists():
         from .markdown_validator import validate_todo_md
+
         todo_content = todo_path.read_text(encoding="utf-8")
         todo_result = validate_todo_md(todo_content, require_completion=True)
         if not todo_result.is_valid:
@@ -58,14 +59,16 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
     objectives_path = cwd / "objectives.yaml"
     if objectives_path.exists():
         from .file_validation import validate_objectives_yaml
+
         objectives_content = objectives_path.read_text(encoding="utf-8")
         is_valid, result = validate_objectives_yaml(objectives_content)
         if not is_valid:
             logger.error("objectives_yaml_invalid", errors=result)
             raise ValueError(f"objectives.yaml invalid: {result}")
-        
+
         # INT-015: Verify immutability
         from .file_validation import validate_immutability
+
         is_immutable, error_msg = validate_immutability(objectives_path)
         if not is_immutable:
             logger.error("objectives_yaml_modified")
@@ -78,6 +81,7 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
     cost_path = cwd / "preliminary_cost_estimation.yaml"
     if cost_path.exists():
         from .file_validation import validate_preliminary_cost_estimation_yaml
+
         cost_content = cost_path.read_text(encoding="utf-8")
         is_valid, result = validate_preliminary_cost_estimation_yaml(cost_content)
         if not is_valid:
@@ -85,18 +89,22 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
             raise ValueError(f"preliminary_cost_estimation.yaml invalid: {result}")
     else:
         logger.error("preliminary_cost_estimation_yaml_missing")
-        raise ValueError("preliminary_cost_estimation.yaml is missing (required for submission)")
+        raise ValueError(
+            "preliminary_cost_estimation.yaml is missing (required for submission)"
+        )
 
     # 2. Verify prior validation (INT-018)
     validation_results_path = cwd / "validation_results.json"
     if not validation_results_path.exists():
         logger.error("prior_validation_missing")
-        raise ValueError("Prior validation missing. Call /benchmark/validate before submission.")
+        raise ValueError(
+            "Prior validation missing. Call /benchmark/validate before submission."
+        )
 
     # 3. Perform DFM + Geometry Checks (INT-019)
     renders_dir.mkdir(parents=True, exist_ok=True)
     dfm_config = load_config()
-    
+
     objectives_data = yaml.safe_load(objectives_path.read_text())
     objectives_model = ObjectivesYaml(**objectives_data)
     build_zone = objectives_model.objectives.build_zone
@@ -111,25 +119,40 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
         raise ValueError(f"Submission rejected (DFM): {validation_result.violations}")
 
     if constraints:
-        if constraints.max_unit_cost and validation_result.unit_cost > constraints.max_unit_cost:
+        if (
+            constraints.max_unit_cost
+            and validation_result.unit_cost > constraints.max_unit_cost
+        ):
             msg = f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit ${constraints.max_unit_cost:.2f}"
-            logger.error("submission_cost_limit_exceeded", cost=validation_result.unit_cost, limit=constraints.max_unit_cost)
+            logger.error(
+                "submission_cost_limit_exceeded",
+                cost=validation_result.unit_cost,
+                limit=constraints.max_unit_cost,
+            )
             raise ValueError(f"Submission rejected (Cost): {msg}")
 
-        if constraints.max_weight and validation_result.metadata.get("weight_kg", 0) > constraints.max_weight:
+        if (
+            constraints.max_weight
+            and validation_result.metadata.get("weight_kg", 0) > constraints.max_weight
+        ):
             weight = validation_result.metadata.get("weight_kg", 0)
             msg = f"Weight {weight:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
-            logger.error("submission_weight_limit_exceeded", weight=weight, limit=constraints.max_weight)
+            logger.error(
+                "submission_weight_limit_exceeded",
+                weight=weight,
+                limit=constraints.max_weight,
+            )
             raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
-    render_paths = [] 
+    render_paths = []
     logger.info("renders_persisted", count=len(render_paths))
 
     cad_path = renders_dir / "model.step"
     export_step(component, str(cad_path))
 
     import shutil
+
     shutil.copy(objectives_path, renders_dir / "objectives.yaml")
     shutil.copy(cost_path, renders_dir / "preliminary_cost_estimation.yaml")
 
@@ -143,7 +166,9 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
         "mjcf_path": str(renders_dir / "scene.xml"),
         "cad_path": str(cad_path),
         "objectives_path": str(renders_dir / "objectives.yaml"),
-        "preliminary_cost_estimation_path": str(renders_dir / "preliminary_cost_estimation.yaml"),
+        "preliminary_cost_estimation_path": str(
+            renders_dir / "preliminary_cost_estimation.yaml"
+        ),
     }
 
     with manifest_path.open("w", encoding="utf-8") as f:

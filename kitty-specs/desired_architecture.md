@@ -2180,6 +2180,7 @@ Benchmark generator and engineer viewer have a very similar structure (I wouldn'
 
 1. Sidebar panel on the left,
 2. We separate the entire UI to 3 columns about 3:3:6 split - 3 is the current sidebar column, 3 for reasoning traces (traces streamed realtime), and 6 for the rightmost column (adjustable, of course.)
+   - Note! This is by default. We allow to resize the dashboard pieces.
 
 The rightmost column is split vertically into:
 

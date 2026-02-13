@@ -1,7 +1,8 @@
 import uuid
+from unittest.mock import MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -10,18 +11,22 @@ from controller.agent.benchmark.storage import BenchmarkStorage
 
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
+
 @pytest_asyncio.fixture
 async def db_session():
     engine = create_async_engine(DATABASE_URL)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     async with async_session() as session:
         yield session
 
     await engine.dispose()
+
 
 @pytest.fixture
 def mock_boto3():
@@ -30,16 +35,20 @@ def mock_boto3():
         mock.client.return_value = mock_client
         yield mock_client
 
+
 @pytest.mark.asyncio
 async def test_save_asset_with_variants(db_session, mock_boto3):
     # Setup mocks for environment variables to avoid real AWS calls
-    with patch.dict("os.environ", {
-        "S3_ENDPOINT_URL": "http://localhost:19000",
-        "AWS_ACCESS_KEY_ID": "test",
-        "AWS_SECRET_ACCESS_KEY": "test",
-        "BENCHMARK_SOURCE_BUCKET": "source",
-        "BENCHMARK_ASSETS_BUCKET": "assets"
-    }):
+    with patch.dict(
+        "os.environ",
+        {
+            "S3_ENDPOINT_URL": "http://localhost:19000",
+            "AWS_ACCESS_KEY_ID": "test",
+            "AWS_SECRET_ACCESS_KEY": "test",
+            "BENCHMARK_SOURCE_BUCKET": "source",
+            "BENCHMARK_ASSETS_BUCKET": "assets",
+        },
+    ):
         storage = BenchmarkStorage()
 
         benchmark_id = uuid.uuid4()
@@ -56,7 +65,7 @@ async def test_save_asset_with_variants(db_session, mock_boto3):
             images=images,
             metadata=metadata,
             db=db_session,
-            random_variants=random_variants
+            random_variants=random_variants,
         )
 
         assert asset.benchmark_id == benchmark_id

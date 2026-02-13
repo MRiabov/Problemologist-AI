@@ -3,20 +3,87 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { EpisodeResponse } from '../models/EpisodeResponse';
+import type { FeedbackRequest } from '../models/FeedbackRequest';
+import type { ReviewRequest } from '../models/ReviewRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class EpisodesService {
     /**
+     * Report Trace Feedback
+     * Report feedback for a specific trace to Langfuse.
+     * @param episodeId
+     * @param traceId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static reportTraceFeedbackEpisodesEpisodeIdTracesTraceIdFeedbackPost(
+        episodeId: string,
+        traceId: number,
+        requestBody: FeedbackRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/episodes/{episode_id}/traces/{trace_id}/feedback',
+            path: {
+                'episode_id': episodeId,
+                'trace_id': traceId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Review Episode
+     * Submit a review for an episode.
+     * @param episodeId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static reviewEpisodeEpisodesEpisodeIdReviewPost(
+        episodeId: string,
+        requestBody: ReviewRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/episodes/{episode_id}/review',
+            path: {
+                'episode_id': episodeId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * List Episodes
      * List all agent episodes.
+     * @param limit
+     * @param offset
      * @returns EpisodeResponse Successful Response
      * @throws ApiError
      */
-    public static listEpisodesEpisodesGet(): CancelablePromise<Array<EpisodeResponse>> {
+    public static listEpisodesEpisodesGet(
+        limit: number = 100,
+        offset?: number,
+    ): CancelablePromise<Array<EpisodeResponse>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/episodes/',
+            query: {
+                'limit': limit,
+                'offset': offset,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
         });
     }
     /**
@@ -32,6 +99,27 @@ export class EpisodesService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/episodes/{episode_id}',
+            path: {
+                'episode_id': episodeId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Interrupt Episode
+     * Interrupt a running episode.
+     * @param episodeId
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static interruptEpisodeEpisodesEpisodeIdInterruptPost(
+        episodeId: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/episodes/{episode_id}/interrupt',
             path: {
                 'episode_id': episodeId,
             },

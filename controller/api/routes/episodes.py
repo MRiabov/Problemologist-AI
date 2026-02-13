@@ -93,9 +93,9 @@ async def review_episode(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a review for an episode."""
-    from worker.utils.file_validation import validate_review_frontmatter
     from shared.observability.events import emit_event
     from shared.observability.schemas import ReviewEvent
+    from worker.utils.file_validation import validate_review_frontmatter
 
     result = await db.execute(select(Episode).where(Episode.id == episode_id))
     episode = result.scalar_one_or_none()

@@ -387,12 +387,12 @@ _SESSION_DIR_REGISTRY: dict[str, tempfile.TemporaryDirectory] = {}
 def get_session_root(session_id: str) -> Path:
     """Get or create a temporary directory for a session."""
     if session_id not in _SESSION_DIR_REGISTRY:
-        # Create a new unique temporary directory. 
+        # Create a new unique temporary directory.
         # The prefix helps identify the session during debugging.
         td = tempfile.TemporaryDirectory(prefix=f"pb-sess-{session_id}-")
         _SESSION_DIR_REGISTRY[session_id] = td
         logger.info("session_directory_created", session_id=session_id, path=td.name)
-    
+
     return Path(_SESSION_DIR_REGISTRY[session_id].name)
 
 
@@ -434,7 +434,7 @@ class LocalFilesystemBackend(BackendProtocol):
             root = base_dir / session_id
         else:
             root = get_session_root(session_id)
-        
+
         s3_backend = SandboxFilesystemBackend.create(session_id, s3_config)
         backend = cls(root=root, session_id=session_id, s3_backend=s3_backend)
         try:

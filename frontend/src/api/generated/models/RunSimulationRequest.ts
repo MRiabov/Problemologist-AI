@@ -2,14 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type SimulationRequest = {
-    /**
-     * Session ID for the worker.
-     */
+export type RunSimulationRequest = {
     session_id: string;
-    /**
-     * Component data.
-     */
     compound_json?: string;
 };
 

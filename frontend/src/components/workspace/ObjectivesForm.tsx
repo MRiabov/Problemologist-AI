@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { BenchmarkObjectives } from '../../api/client';
+import type { BenchmarkObjectives } from '../../api/client';
 
 interface ObjectivesFormProps {
     objectives: BenchmarkObjectives;

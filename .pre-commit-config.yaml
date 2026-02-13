@@ -3,7 +3,7 @@ repos:
     rev: v0.3.0
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix, --select=E9]
       - id: ruff-format
   - repo: local
     hooks:

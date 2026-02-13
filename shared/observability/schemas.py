@@ -285,6 +285,7 @@ class ReviewDecisionEvent(BaseEvent):
 
 class ReviewEvent(BaseEvent):
     """Event emitted when a review is submitted."""
+
     event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
     episode_id: str
     decision: str

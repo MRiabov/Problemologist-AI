@@ -1,7 +1,6 @@
-import structlog
-
 import mujoco
 import numpy as np
+import structlog
 from build123d import Compound, Part
 from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
 
@@ -148,7 +147,7 @@ class SimulationLoop:
                 if name == "target_box":
                     target_body_id = i
                     break
-        
+
         logger.info("SimulationLoop_step_start", target_body_id=target_body_id)
         # We rely on self.goal_sites populated in init
 
@@ -374,7 +373,7 @@ class SimulationLoop:
             # Skip the world body (id 0)
             if body_id == 0:
                 continue
-            
+
             # Skip forbidden zone bodies themselves to avoid false self-collision
             name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id)
             if name and name.startswith("zone_forbid"):
