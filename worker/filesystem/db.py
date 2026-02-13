@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 class S3Config(BaseSettings):
     """S3 connection configuration loaded from environment variables."""
 
-    s3_endpoint: str = "http://localhost:9000"
+    s3_endpoint: str = "http://localhost:19000"
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
     s3_bucket: str = "problemologist"

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     temporal_url: str = Field(default="temporal:7233", alias="TEMPORAL_URL")
     worker_url: str = Field(default="http://worker:8001", alias="WORKER_URL")
     postgres_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/problemologist",
+        default="postgresql+asyncpg://postgres:postgres@localhost:15432/problemologist",
         alias="POSTGRES_URL",
     )
 

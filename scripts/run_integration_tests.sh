@@ -21,7 +21,7 @@ echo "Waiting for services to be healthy..."
 MAX_RETRIES=30
 COUNT=0
 while [ $COUNT -lt $MAX_RETRIES ]; do
-  if curl -s http://localhost:8000/health | grep -q "healthy"; then
+  if curl -s http://localhost:18000/health | grep -q "healthy"; then
     echo "Controller is healthy!"
     break
   fi
