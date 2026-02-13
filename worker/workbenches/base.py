@@ -12,7 +12,7 @@ from worker.workbenches.models import (
 )
 
 # Functional interface for workbench analysis
-AnalyzeFunction = Callable[[Part | Compound, ManufacturingConfig], WorkbenchResult]
+AnalyzeFunction = Callable[[Part | Compound, ManufacturingConfig, int], WorkbenchResult]
 
 
 class WorkbenchAnalyzer(Protocol):
