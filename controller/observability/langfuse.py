@@ -14,9 +14,10 @@ from langchain_core.outputs import LLMResult
 
 import inspect
 import asyncio
-import logging
+from shared.logging import get_logger
+from controller.config.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SafeCallbackHandler(BaseCallbackHandler):
@@ -67,6 +68,18 @@ class SafeCallbackHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> Any:
         try:
+            # Inject model_name if possible to help Langfuse parse it
+            if "metadata" not in kwargs:
+                kwargs["metadata"] = {}
+            if "model_name" not in kwargs["metadata"]:
+                model_name = None
+                if "invocation_params" in kwargs:
+                    model_name = kwargs["invocation_params"].get(
+                        "model_name"
+                    ) or kwargs["invocation_params"].get("model")
+                # Fallback to global settings if not found in invocation
+                kwargs["metadata"]["model_name"] = model_name or settings.llm_model
+
             return self._safe_await(
                 self.handler.on_llm_start(serialized, prompts, **kwargs), "on_llm_start"
             )
@@ -80,6 +93,18 @@ class SafeCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         try:
+            # Inject model_name if possible to help Langfuse parse it
+            if "metadata" not in kwargs:
+                kwargs["metadata"] = {}
+            if "model_name" not in kwargs["metadata"]:
+                model_name = None
+                if "invocation_params" in kwargs:
+                    model_name = kwargs["invocation_params"].get(
+                        "model_name"
+                    ) or kwargs["invocation_params"].get("model")
+                # Fallback to global settings if not found in invocation
+                kwargs["metadata"]["model_name"] = model_name or settings.llm_model
+
             return self._safe_await(
                 self.handler.on_chat_model_start(serialized, messages, **kwargs),
                 "on_chat_model_start",
@@ -175,60 +200,48 @@ def get_langfuse_callback(
 ) -> BaseCallbackHandler | None:
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
-    Compatible with Langfuse v3+ using trace_context.
     """
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    host = os.getenv("LANGFUSE_HOST", "http://localhost:13000")
 
     if public_key and secret_key:
-        trace_context: dict = kwargs.copy()
+        trace_context = kwargs.copy()
         if trace_id:
             trace_context["trace_id"] = trace_id
 
-        # Ensure tags is present as an array to avoid server-side forEach error
-        tags = trace_context.get("tags")
-        if tags is None or not isinstance(tags, list):
-            trace_context["tags"] = []
-
-        # Ensure metadata is a dict if present, or initialize to empty dict
-        # This prevents server-side errors if metadata is missing or invalid
-        metadata = trace_context.get("metadata")
-        if metadata is None or not isinstance(metadata, dict):
-            trace_context["metadata"] = {}
-
-        # We MUST use os.environ for secret_key and host as the CallbackHandler
-        # constructor doesn't accept them in this version (confirmed via inspect).
-        os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
-        os.environ["LANGFUSE_SECRET_KEY"] = secret_key
-        os.environ["LANGFUSE_HOST"] = host
-
-        # Strictly sanitize trace_context to prevent server-side 500 errors.
-        # Langfuse server can crash if these are not exactly what it expects.
-        tags = trace_context.get("tags")
-        metadata = trace_context.get("metadata")
+        # Sanitize trace_context
         clean_context = {
             "trace_id": trace_context.get("trace_id"),
             "name": trace_context.get("name"),
             "user_id": trace_context.get("user_id"),
             "session_id": trace_context.get("session_id"),
-            "tags": tags if isinstance(tags, list) else [],
-            "metadata": metadata if isinstance(metadata, dict) else {},
+            "tags": trace_context.get("tags")
+            if isinstance(trace_context.get("tags"), list)
+            else [],
+            "metadata": trace_context.get("metadata")
+            if isinstance(trace_context.get("metadata"), dict)
+            else {},
         }
-        # Remove None values
         clean_context = {k: v for k, v in clean_context.items() if v is not None}
 
+        # We MUST use os.environ for secret_key and host as some versions of
+        # CallbackHandler don't accept them in the constructor.
+        if secret_key:
+            os.environ["LANGFUSE_SECRET_KEY"] = secret_key
+        if host:
+            os.environ["LANGFUSE_HOST"] = host
+        if public_key:
+            os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
+
         try:
+            # We pass credentials directly to avoid global state issues
             handler = CallbackHandler(
                 public_key=public_key, trace_context=clean_context
             )
             return SafeCallbackHandler(handler)
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).error(
-                f"Failed to initialize Langfuse CallbackHandler: {e}"
-            )
+            logger.error(f"Failed to initialize Langfuse CallbackHandler: {e}")
             return None
     return None
 

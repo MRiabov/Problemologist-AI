@@ -2,6 +2,23 @@ include:
   - path: docker-compose.langfuse.yml
 
 services:
+  mock-warning:
+    image: alpine
+    environment:
+      - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
+    command: >
+      sh -c "if [ \"$IS_INTEGRATION_TEST\" = \"true\" ]; then
+        echo ' '
+        echo '****************************************************'
+        echo '*                                                  *'
+        echo '*   WARNING: MOCK LLM MODE IS ACTIVE               *'
+        echo '*   (IS_INTEGRATION_TEST=true)                      *'
+        echo '*   Real reasoning traces will NOT be generated.   *'
+        echo '*                                                  *'
+        echo '****************************************************'
+        echo ' '
+      fi"
+
   controller:
     build:
       context: .
@@ -15,7 +32,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE=${OPENAI_API_BASE}
-      - IS_INTEGRATION_TEST=true
+      - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-web:3000
@@ -67,7 +84,7 @@ services:
       - ASSET_S3_BUCKET=problemologist
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE=${OPENAI_API_BASE}
-      - IS_INTEGRATION_TEST=true
+      - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
       - WORKER_URL=http://worker:8001
       - LANGFUSE_HOST=http://langfuse-web:3000

@@ -45,11 +45,17 @@ export async function runSimulation(sessionId: string, compoundJson: string = '{
     });
 }
 
-export async function checkConnection(): Promise<boolean> {
+export async function checkConnection(): Promise<{ connected: boolean; isMockMode: boolean }> {
     try {
-        await DefaultService.healthHealthGet();
-        return true;
+        const health = await DefaultService.healthHealthGet();
+        return { 
+            connected: true, 
+            isMockMode: !!health.is_integration_test 
+        };
     } catch (e) {
-        return false;
+        return { 
+            connected: false, 
+            isMockMode: false 
+        };
     }
 }
