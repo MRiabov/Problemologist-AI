@@ -333,9 +333,17 @@ class WireConfig(BaseModel):
     to_terminal: WireTerminal = Field(..., alias="to")
     gauge_awg: int
     length_mm: float
+    waypoints: list[tuple[float, float, float]] = []
     routed_in_3d: bool = False
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("waypoints", mode="before")
+    @classmethod
+    def coerce_waypoints(cls, v):
+        if isinstance(v, list):
+            return [tuple(pt) if isinstance(pt, list) else pt for pt in v]
+        return v
 
 
 class ElectronicComponent(BaseModel):
