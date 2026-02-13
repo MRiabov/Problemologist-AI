@@ -195,9 +195,9 @@ def get_langfuse_callback(
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     """
-    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "http://localhost:13000")
+    public_key = settings.langfuse_public_key
+    secret_key = settings.langfuse_secret_key
+    host = settings.langfuse_host
 
     if public_key and secret_key:
         trace_context = kwargs.copy()
@@ -244,9 +244,9 @@ def get_langfuse_client() -> Langfuse | None:
     """
     Initialize and return a Langfuse client if credentials are provided.
     """
-    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "http://localhost:13000")
+    public_key = settings.langfuse_public_key
+    secret_key = settings.langfuse_secret_key
+    host = settings.langfuse_host
 
     if public_key and secret_key:
         return Langfuse(public_key=public_key, secret_key=secret_key, host=host)
