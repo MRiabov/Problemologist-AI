@@ -94,7 +94,7 @@ def calculate_3dp_cost(
 
 @type_check
 def analyze_3dp(
-    part: Part | Compound | Solid, config: ManufacturingConfig
+    part: Part | Compound | Solid, config: ManufacturingConfig, quantity: int = 1
 ) -> WorkbenchResult:
     """
     Functional entry point for 3D Printing analysis.
@@ -121,12 +121,12 @@ def analyze_3dp(
     if len(solids) > 1:
         violations.append(f"Geometry must be a single body, found {len(solids)} solids")
 
-    # 4. Cost Calculation (single unit)
+    # 4. Cost Calculation
     # We proceed with cost calculation even if there are violations, unless critical?
     # Usually cost is only valid if manufacturable, but giving an estimate is sometimes useful.
     # However, if it's not a valid solid, volume might be wrong.
     try:
-        cost_breakdown = calculate_3dp_cost(part, config, quantity=1)
+        cost_breakdown = calculate_3dp_cost(part, config, quantity=quantity)
         unit_cost = cost_breakdown.unit_cost
     except Exception as e:
         logger.error("3dp_cost_calculation_failed", error=str(e))
