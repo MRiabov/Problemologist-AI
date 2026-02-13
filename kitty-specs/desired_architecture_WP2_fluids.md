@@ -592,3 +592,18 @@ The benchmark planner and CAD engineer gain the ability to create fluid-based an
 4. **Linear FEM for rigid materials**: We use linear (not nonlinear) FEM for `material_class: "rigid"`. This is inaccurate for plastic deformation but sufficient for detecting breakage.
 5. **No pipes/hoses** (extra from roadmap): Fluid transport through enclosed channels is not modelled. Fluids flow freely in the simulation domain. This may be added later if needed.
 6. **Fastener strength not simulated**: Fastener connections remain rigid (weld constraints). Fastener failure under FEM load is not modelled in this WP.
+
+---
+
+## Implementation Status (Feb 2026)
+
+- **Backend Abstraction**: `PhysicsBackend` protocol implemented in `shared/simulation/backends.py`.
+- **MuJoCo Backend**: Fully implemented in `worker/simulation/mujoco_backend.py`.
+- **Genesis Backend**: Skeleton with scene loading and basic entity mapping in `worker/simulation/genesis_backend.py`.
+- **Deformable Materials**: FEM fields added to `manufacturing_config.yaml`. Linear FEM support via `gs.morphs.SoftMesh`.
+- **Tetrahedralization**: Intermediate asset pipeline added using TetGen via `worker/utils/mesh_utils.py`.
+- **Stress Reporting**: `StressSummary` implemented in `SimulationLoop`.
+- **Breakage Detection**: Automatic simulation abort on `ultimate_stress_pa` violation.
+- **Fluid Support**: MPM definitions added to `ObjectivesYaml`.
+- **Validation Metrics**: `fluid_containment` and `max_stress` objective evaluation added to `SimulationLoop`.
+- **Agent Tools**: `define_fluid`, `get_stress_report`, and `preview_stress` added to `worker/utils/validation.py`.
