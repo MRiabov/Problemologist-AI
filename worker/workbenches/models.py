@@ -13,6 +13,7 @@ class ManufacturingMethod(str, Enum):
 class WorkbenchResult(BaseModel):
     is_manufacturable: StrictBool
     unit_cost: StrictFloat
+    weight_g: StrictFloat = 0.0
     violations: list[StrictStr] = Field(default_factory=list)
     metadata: dict[StrictStr, Any] = Field(default_factory=dict)
 

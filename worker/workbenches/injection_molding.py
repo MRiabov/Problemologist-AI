@@ -242,6 +242,15 @@ def analyze_im(
     # 4. Cost Calculation
     cost_breakdown = _calculate_im_cost(part, config, quantity=quantity)
 
+    # 5. Weight Calculation
+    material_name = config.defaults.get("material", "abs")
+    im_cfg = config.injection_molding
+    density = 1.04  # fallback (ABS)
+    if im_cfg and material_name in im_cfg.materials:
+        density = im_cfg.materials[material_name].density_g_cm3
+
+    weight_g = (part.volume / 1000.0) * density
+
     is_manufacturable = len(violations) == 0
 
     logger.info(
@@ -253,6 +262,7 @@ def analyze_im(
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=cost_breakdown.unit_cost,
+        weight_g=weight_g,
         violations=violations,
         metadata={
             "cost_breakdown": cost_breakdown.model_dump(),
