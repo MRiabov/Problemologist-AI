@@ -5,7 +5,10 @@
 export type TraceResponse = {
     id: number;
     langfuse_trace_id: (string | null);
-    raw_trace: (Record<string, any> | null);
+    trace_type: string;
+    name: (string | null);
+    content: (string | null);
+    metadata?: (Record<string, any> | null);
     created_at: string;
 };
 

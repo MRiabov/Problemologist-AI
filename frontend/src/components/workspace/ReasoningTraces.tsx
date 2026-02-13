@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { Terminal, Send, Square, ThumbsUp, ThumbsDown, Check } from "lucide-react";
+import { Terminal, Send, Square, ThumbsUp, ThumbsDown, Check, AlertCircle } from "lucide-react";
 import { submitTraceFeedback } from "../../api/client";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
@@ -240,6 +240,21 @@ export default function ReasoningTraces({
                 {/* Visual indicator for active streaming at the bottom */}
                 {isRunning && (
                     <div className="mt-2 text-primary animate-pulse pl-1 opacity-50 text-[10px]">_</div>
+                )}
+
+                {/* Failure Message */}
+                {selectedEpisode?.status === 'failed' && (
+                    <div className="mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm">
+                        <div className="flex items-center gap-2 mb-2 text-red-500">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Execution Failed</span>
+                        </div>
+                        <div className="text-[11px] text-red-400 font-mono whitespace-pre-wrap">
+                            {selectedEpisode.validation_logs && selectedEpisode.validation_logs.length > 0 
+                                ? selectedEpisode.validation_logs.join('\n')
+                                : "An unknown error occurred during execution."}
+                        </div>
+                    </div>
                 )}
             </div>
         </ScrollArea>

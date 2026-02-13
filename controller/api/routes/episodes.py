@@ -3,7 +3,15 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -156,6 +164,7 @@ class EpisodeResponse(BaseModel):
     todo_list: dict | None = None
     journal: str | None = None
     plan: str | None = None
+    validation_logs: list[str] | None = None
     traces: list[TraceResponse] = []
     assets: list[AssetResponse] = []
 

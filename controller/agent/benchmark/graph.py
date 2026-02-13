@@ -95,50 +95,67 @@ async def run_generation_session(
     app = define_graph()
     final_state = initial_state
 
-    # 3. Stream execution and checkpoint
-    async for output in app.astream(initial_state):
-        for node_name, state in output.items():
-            final_state = state
+    try:
+        # 3. Stream execution and checkpoint
+        async for output in app.astream(initial_state):
+            for node_name, state in output.items():
+                final_state.update(state)
 
-            # Determine new status
-            new_status = SessionStatus.executing  # Default active status
+                # Determine new status
+                new_status = SessionStatus.executing  # Default active status
 
-            if node_name == "planner":
-                new_status = SessionStatus.executing
-            elif node_name == "coder":
-                new_status = SessionStatus.validating
-            elif node_name == "validator":
-                # If valid, it moves to reviewer (still validating/reviewing)
-                # If invalid, moves back to coder (executing)
-                if (
-                    state.get("simulation_result")
-                    and state["simulation_result"]["valid"]
-                ):
-                    new_status = SessionStatus.validating
-                else:
+                if node_name == "planner":
                     new_status = SessionStatus.executing
-            elif node_name == "reviewer":
-                feedback = state.get("review_feedback", "")
-                if feedback == "Approved":
-                    new_status = SessionStatus.accepted
-                else:
-                    new_status = (
-                        SessionStatus.rejected
-                    )  # Temporarily rejected, will retry
+                elif node_name == "coder":
+                    new_status = SessionStatus.validating
+                elif node_name == "validator":
+                    # If valid, it moves to reviewer (still validating/reviewing)
+                    # If invalid, moves back to coder (executing)
+                    if (
+                        state.get("simulation_result")
+                        and state["simulation_result"]["valid"]
+                    ):
+                        new_status = SessionStatus.validating
+                    else:
+                        new_status = SessionStatus.executing
+                elif node_name == "reviewer":
+                    feedback = state.get("review_feedback", "")
+                    if feedback == "Approved":
+                        new_status = SessionStatus.accepted
+                    else:
+                        new_status = (
+                            SessionStatus.rejected
+                        )  # Temporarily rejected, will retry
 
-            # Update DB
-            # Update DB
-            async with session_factory() as db:
-                stmt = (
-                    update(GenerationSessionModel)
-                    .where(GenerationSessionModel.session_id == session_id)
-                    .values(status=new_status)
+                # Update DB
+                async with session_factory() as db:
+                    stmt = (
+                        update(GenerationSessionModel)
+                        .where(GenerationSessionModel.session_id == session_id)
+                        .values(status=new_status)
+                    )
+                    await db.execute(stmt)
+                    await db.commit()
+
+                # Update local session object
+                final_state["session"].status = new_status
+    except Exception as e:
+        logger.error("generation_session_failed", session_id=session_id, error=str(e))
+        async with session_factory() as db:
+            stmt = (
+                update(GenerationSessionModel)
+                .where(GenerationSessionModel.session_id == session_id)
+                .values(
+                    status=SessionStatus.failed,
+                    validation_logs=GenerationSessionModel.validation_logs
+                    + [f"Error: {e!s}"],
                 )
-                await db.execute(stmt)
-                await db.commit()
-
-            # Update local session object
-            final_state["session"].status = new_status
+            )
+            await db.execute(stmt)
+            await db.commit()
+        if "session" in final_state:
+            final_state["session"].status = SessionStatus.failed
+        return final_state
 
     # 4. Final Asset Persistence
     if final_state["session"].status == SessionStatus.accepted:

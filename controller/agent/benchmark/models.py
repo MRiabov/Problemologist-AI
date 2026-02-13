@@ -11,6 +11,7 @@ class SessionStatus(StrEnum):
     validating = "validating"
     accepted = "accepted"
     rejected = "rejected"
+    failed = "failed"
 
 
 class BenchmarkAsset(BaseModel):

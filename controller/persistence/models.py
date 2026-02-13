@@ -39,6 +39,7 @@ class GenerationSession(Base):
             "validating",
             "accepted",
             "rejected",
+            "failed",
             name="sessionstatus",
         )
     )
