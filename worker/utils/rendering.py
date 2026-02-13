@@ -8,7 +8,8 @@ import structlog
 from build123d import Compound
 from PIL import Image
 
-from worker.simulation.builder import SimulationBuilder
+from shared.simulation.backends import SimulatorBackendType
+from worker.simulation.factory import get_simulation_builder
 
 logger = structlog.get_logger(__name__)
 
@@ -28,10 +29,12 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
     saved_files = []
 
     try:
-        # 1. Build MJCF using SimulationBuilder
+        # 1. Build MJCF using get_simulation_builder
         with TemporaryDirectory() as temp_build_dir:
             build_dir = Path(temp_build_dir)
-            builder = SimulationBuilder(output_dir=build_dir)
+            builder = get_simulation_builder(
+                output_dir=build_dir, backend_type=SimulatorBackendType.MUJOCO
+            )
             scene_path = builder.build_from_assembly(component)
 
             # 2. Load into MuJoCo
