@@ -1,18 +1,12 @@
 import { useState, useMemo } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { 
-  VscMarkdown, 
-  VscJson, 
-  VscTasklist, 
-  VscSettings, 
-  VscPlayCircle, 
-  VscFileMedia,
   VscChevronDown,
   VscChevronRight,
   VscProject,
   VscCode
 } from "react-icons/vsc";
-import { SiPython } from "react-icons/si";
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "../../lib/utils";
