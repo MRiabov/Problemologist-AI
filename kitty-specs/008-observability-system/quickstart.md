@@ -28,7 +28,7 @@ To verify API consistency between components:
 
 ```bash
 # Run schemathesis against the local Controller API
-uv run schemathesis run http://localhost:8000/openapi.json
+uv run schemathesis run http://localhost:18000/openapi.json
 ```
 
 ## 4. Episode Reconstruction
