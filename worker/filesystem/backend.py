@@ -208,10 +208,12 @@ class SandboxFilesystemBackend(BackendProtocol):
         except Exception as e:
             return f"Error reading file '{file_path}': {e!s}"
 
-    def write(self, file_path: str, content: str) -> WriteResult:
+    def write(
+        self, file_path: str, content: str, overwrite: bool = False
+    ) -> WriteResult:
         """Write content to a new file."""
         s3_path = self._resolve_path(file_path)
-        if self._fs.exists(s3_path):
+        if not overwrite and self._fs.exists(s3_path):
             return WriteResult(
                 error=f"Cannot write to {file_path} because it already exists."
             )

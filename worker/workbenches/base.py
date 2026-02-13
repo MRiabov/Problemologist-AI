@@ -21,7 +21,7 @@ class WorkbenchAnalyzer(Protocol):
     """
 
     def __call__(
-        self, part: Part | Compound, config: ManufacturingConfig
+        self, part: Part | Compound, config: ManufacturingConfig, quantity: int = 1
     ) -> WorkbenchResult: ...
 
 
