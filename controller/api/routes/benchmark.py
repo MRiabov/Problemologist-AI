@@ -1,13 +1,18 @@
+import os
 import uuid
+from typing import Annotated
 
+import httpx
+import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
-from controller.agent.benchmark.schema import GenerationSessionModel
+from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
+from controller.persistence.models import Episode
 from shared.enums import ResponseStatus
 
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
@@ -62,15 +67,15 @@ async def generate_benchmark(
 # Note: We might need an endpoint to get the status/result of a specific session
 # but run_generation_session returns the final state, so for now we rely on
 # direct DB access or existing episode endpoints if we wrapped it in an episode.
-# However, run_generation_session currently creates its own GenerationSessionModel entry.
+# but we wrap it in a background task to return immediately.
 # We should probably expose a getter for that.
 
 
 @router.get("/{session_id}")
-async def get_session(session_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    stmt = select(GenerationSessionModel).where(
-        GenerationSessionModel.session_id == session_id
-    )
+async def get_session(
+    session_id: uuid.UUID, db: Annotated[AsyncSession, Depends(get_db)]
+):
+    stmt = select(Episode).where(Episode.id == session_id)
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
 
@@ -90,22 +95,16 @@ class UpdateObjectivesRequest(BaseModel):
 async def update_objectives(
     session_id: uuid.UUID,
     request: UpdateObjectivesRequest,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
     Update objectives.yaml for a specific session.
     """
-    import os
-
-    import httpx
-    import yaml
-
-    from controller.clients.worker import WorkerClient
+    # The original code had these imports inside the function.
+    # They are now moved to the top-level imports.
 
     # Verify session exists
-    stmt = select(GenerationSessionModel).where(
-        GenerationSessionModel.session_id == session_id
-    )
+    stmt = select(Episode).where(Episode.id == session_id)
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
 
@@ -133,6 +132,23 @@ async def update_objectives(
             if request.target_quantity is not None:
                 obj_data["constraints"]["target_quantity"] = request.target_quantity
 
+            # Actually, we need to MERGE metadata_vars to avoid losing objectives.
+            # Update the episode's metadata_vars as well to persist it locally
+            new_metadata = (session.metadata_vars or {}).copy()
+            if "custom_objectives" not in new_metadata:
+                new_metadata["custom_objectives"] = {}
+
+            if request.max_cost is not None:
+                new_metadata["custom_objectives"]["max_unit_cost"] = request.max_cost
+            if request.max_weight is not None:
+                new_metadata["custom_objectives"]["max_weight"] = request.max_weight
+            if request.target_quantity is not None:
+                new_metadata["custom_objectives"]["target_quantity"] = (
+                    request.target_quantity
+                )
+
+            session.metadata_vars = new_metadata
+
             # Write back
             new_content = yaml.dump(obj_data, sort_keys=False)
             await client.write_file("objectives.yaml", new_content)
@@ -146,4 +162,4 @@ async def update_objectives(
         except Exception as e:
             raise HTTPException(
                 status_code=500, detail=f"Failed to update objectives: {e}"
-            )
+            ) from e
