@@ -10,7 +10,13 @@ from pathlib import Path
 
 import structlog
 
-from .backend import FileInfo, FileUploadResponse, GrepMatch, LocalFilesystemBackend
+from .backend import (
+    FileDownloadResponse,
+    FileInfo,
+    FileUploadResponse,
+    GrepMatch,
+    LocalFilesystemBackend,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -279,6 +285,44 @@ class FilesystemRouter:
         if allowed_files:
             # Delegate to backend
             backend_responses = self.local_backend.upload_files(allowed_files)
+            responses.extend(backend_responses)
+
+        return responses
+
+    def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        """Download multiple files.
+
+        Args:
+            paths: List of virtual file paths.
+
+        Returns:
+            List of FileDownloadResponse objects.
+        """
+        responses = []
+        local_paths = []
+
+        for path in paths:
+            normalized = path if path.startswith("/") else f"/{path}"
+            mount = self._get_mount_point(normalized)
+            if mount:
+                try:
+                    local_path = self._resolve_local_path(normalized, mount)
+                    if not local_path.exists():
+                        responses.append(
+                            FileDownloadResponse(path=path, error="file_not_found")
+                        )
+                    else:
+                        content = local_path.read_bytes()
+                        responses.append(
+                            FileDownloadResponse(path=path, content=content, error=None)
+                        )
+                except Exception as e:
+                    responses.append(FileDownloadResponse(path=path, error=str(e)))
+            else:
+                local_paths.append(path)
+
+        if local_paths:
+            backend_responses = self.local_backend.download_files(local_paths)
             responses.extend(backend_responses)
 
         return responses

@@ -222,11 +222,16 @@ class WorkerClient:
         method: ManufacturingMethod,
         script_path: str = "script.py",
         script_content: str | None = None,
+        quantity: int = 1,
     ) -> WorkbenchResult:
         """Trigger manufacturing analysis via worker."""
         client = await self._get_client()
         try:
-            payload = {"script_path": script_path, "method": method}
+            payload = {
+                "script_path": script_path,
+                "method": method,
+                "quantity": quantity,
+            }
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
