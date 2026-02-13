@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import ReasoningTraces from '../components/workspace/ReasoningTraces';
+import ChatWindow from '../components/workspace/ChatWindow';
 import ArtifactView from '../components/workspace/ArtifactView';
 import ConnectionError from '../components/shared/ConnectionError';
 
@@ -128,7 +128,7 @@ export default function EngineerWorkspace() {
         <div className="flex-1 grid grid-cols-9 overflow-hidden">
             {/* Middle Column (span 3/9 of Outlet, which is 3/12 of Total) */}
             <div className="col-span-3 border-r overflow-hidden">
-                <ReasoningTraces 
+                <ChatWindow 
                   traces={selectedEpisode?.traces}
                   task={selectedEpisode?.task}
                   isRunning={running}
