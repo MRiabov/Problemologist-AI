@@ -107,6 +107,8 @@ services:
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     volumes:
       - ./config/clickhouse/zookeeper.xml:/etc/clickhouse-server/config.d/zookeeper.xml
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
       interval: 5s
@@ -140,6 +142,8 @@ services:
     image: redis:7.2
     restart: always
     command: redis-server --requirepass langfuse
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "langfuse", "ping"]
       interval: 5s
@@ -149,3 +153,8 @@ services:
       - "16379:6379"
     networks:
       - default
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
+  redis_data:
