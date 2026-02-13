@@ -121,6 +121,7 @@ services:
     restart: always
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: ruok,srvr
+      ZOO_LOG4J_PROP: WARN,CONSOLE
     healthcheck:
       test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
       interval: 5s
