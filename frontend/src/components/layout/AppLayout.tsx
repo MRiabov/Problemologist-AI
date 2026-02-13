@@ -21,9 +21,9 @@ export default function AppLayout() {
         }}
       >
         <ResizablePanel 
-          defaultSize={25} 
-          minSize={15} 
-          maxSize={40}
+          defaultSize="25%"
+          minSize="15%"
+          maxSize="40%"
           collapsible={true}
           className="h-full"
         >
@@ -34,7 +34,7 @@ export default function AppLayout() {
         
         <ResizableHandle withHandle />
         
-        <ResizablePanel defaultSize={75} className="min-w-0">
+        <ResizablePanel defaultSize="75%" className="min-w-0">
           <main className="flex flex-col h-full overflow-hidden relative">
             {isMockMode && (
               <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-3 z-50 animate-in slide-in-from-top duration-300">
