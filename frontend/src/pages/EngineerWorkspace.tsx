@@ -106,7 +106,7 @@ export default function EngineerWorkspace() {
             <ResizablePanelGroup 
               orientation="horizontal" 
               className="h-full w-full"
-              onLayoutChanged={(layout) => {
+              onLayoutChanged={(layout: any) => {
                 localStorage.setItem('resizable-layout:workspace-cols', JSON.stringify(layout));
               }}
             >
@@ -117,13 +117,14 @@ export default function EngineerWorkspace() {
                     if (saved) {
                       try {
                         const layout = JSON.parse(saved);
-                        return layout[0] ?? 25;
-                      } catch (e) { return 25; }
+                        const values = Array.isArray(layout) ? layout : Object.values(layout);
+                        return `${values[0] ?? 25}%` as any;
+                      } catch (e) { return "25%"; }
                     }
-                    return 25;
+                    return "25%";
                   })()} 
-                  minSize={20} 
-                  maxSize={40}
+                  minSize="20%" 
+                  maxSize="40%"
                   collapsible={true}
                   className="overflow-hidden"
                 >
@@ -138,11 +139,11 @@ export default function EngineerWorkspace() {
                 <ResizableHandle withHandle />
 
                 {/* Rightmost Column (main area) with Vertical Split */}
-                <ResizablePanel defaultSize={75} className="min-w-0">
+                <ResizablePanel defaultSize="75%" className="min-w-0">
                     <ResizablePanelGroup 
                       orientation="vertical" 
                       className="h-full w-full"
-                      onLayoutChanged={(layout) => {
+                      onLayoutChanged={(layout: any) => {
                         localStorage.setItem('resizable-layout:workspace-rows', JSON.stringify(layout));
                       }}
                     >
