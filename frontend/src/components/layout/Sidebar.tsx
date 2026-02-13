@@ -33,7 +33,7 @@ export default function Sidebar() {
   }, [selectEpisode, location.pathname, navigate]);
 
   return (
-    <div className="flex h-full w-full flex-col border-r bg-card text-card-foreground">
+    <div className="flex h-full w-full flex-col bg-card text-card-foreground">
       {/* App Header */}
       <div className="flex h-14 items-center border-b px-4 shrink-0">
         <div className="flex items-center gap-2 font-semibold">
