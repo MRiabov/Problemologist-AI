@@ -3,7 +3,7 @@ import structlog
 from build123d import Compound, Part
 from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
 from shared.simulation.backends import SimulatorBackendType, SimulationScene
-from shared.models.schemas import ElectronicsSection
+from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.enums import SimulationFailureMode
 from shared.observability.events import emit_event
 from shared.observability.schemas import ElectricalFailureEvent

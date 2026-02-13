@@ -213,6 +213,15 @@ def analyze_cnc(
     # 3. Cost Calculation
     cost_breakdown = calculate_cnc_cost(part, config, quantity=quantity)
 
+    # 4. Weight Calculation
+    material_name = config.defaults.get("material", "aluminum_6061")
+    cnc_cfg = config.cnc
+    density = 2.7  # fallback
+    if cnc_cfg and material_name in cnc_cfg.materials:
+        density = cnc_cfg.materials[material_name].density_g_cm3
+
+    weight_g = (part.volume / 1000.0) * density
+
     is_manufacturable = len(violations) == 0
 
     logger.info(
@@ -224,6 +233,7 @@ def analyze_cnc(
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=cost_breakdown.unit_cost,
+        weight_g=weight_g,
         violations=violations,
         metadata={
             "cost_breakdown": cost_breakdown.model_dump(),

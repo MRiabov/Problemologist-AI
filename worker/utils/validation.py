@@ -1,25 +1,27 @@
 import os
+import yaml
+import logging
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Literal
 
 import structlog
-import yaml
-from build123d import Compound, Part
+from build123d import Compound, export_stl
 
 from shared.models.schemas import (
-    ElectronicsSection,
+    ObjectivesYaml, 
+    PreliminaryCostEstimation,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
-    ObjectivesYaml,
-    PreliminaryCostEstimation,
+    ElectronicsRequirements
 )
-from worker.simulation.builder import SimulationBuilder
-from worker.simulation.loop import SimulationLoop
-from worker.workbenches.config import load_config
-from .dfm import validate_and_price
-from .rendering import prerender_24_views
 from shared.simulation.backends import SimulatorBackendType
+from worker.simulation.factory import get_simulation_builder
+from worker.simulation.loop import SimulationLoop, StressSummary
+
+from .rendering import prerender_24_views
+from .dfm import validate_and_price
+from worker.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
 
@@ -28,12 +30,10 @@ class SimulationResult:
         self,
         success: bool,
         summary: str,
-        render_paths: List[str] | None = None,
+        render_paths: list[str] | None = None,
         mjcf_content: str | None = None,
-        stress_summaries: List[Any] | None = None,
-        fluid_metrics: List[Any] | None = None,
-        total_cost: float = 0.0,
-        total_weight_g: float = 0.0,
+        stress_summaries: list[StressSummary] | None = None,
+        fluid_metrics: list[Any] | None = None,
     ):
         self.success = success
         self.summary = summary
@@ -41,22 +41,49 @@ class SimulationResult:
         self.mjcf_content = mjcf_content
         self.stress_summaries = stress_summaries or []
         self.fluid_metrics = fluid_metrics or []
-        self.total_cost = total_cost
-        self.total_weight_g = total_weight_g
 
 LAST_SIMULATION_RESULT: SimulationResult | None = None
 
+def get_stress_report(part_label: str) -> dict | None:
+    """Returns the current stress summary for a simulated FEM part."""
+    if LAST_SIMULATION_RESULT is None:
+        logger.warning("get_stress_report_called_before_simulation")
+        return None
+
+    for summary in LAST_SIMULATION_RESULT.stress_summaries:
+        if summary.part_label == part_label:
+            return summary.model_dump()
+
+    logger.warning("stress_report_part_not_found", part_label=part_label)
+    return None
+
+def preview_stress(
+    component: Compound,
+    view_angles: list[tuple[float, float]] | None = None,
+    output_dir: Path | None = None,
+) -> list[str]:
+    """Renders the component with a von Mises stress heatmap overlay."""
+    if LAST_SIMULATION_RESULT is None:
+        logger.warning("preview_stress_called_before_simulation")
+        return []
+
+    logger.info("rendering_stress_heatmap_placeholder")
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    stress_renders_dir = working_dir / "renders" / "stress"
+    stress_renders_dir.mkdir(parents=True, exist_ok=True)
+    return [str(stress_renders_dir / "stress_placeholder.png")]
+
 def define_fluid(
     name: str,
-    shape_type: str = "box",
-    center: Tuple[float, float, float] = (0, 0, 0),
-    size: Tuple[float, float, float] | None = None,
+    shape_type: Literal["cylinder", "box", "sphere"],
+    center: tuple[float, float, float],
+    size: tuple[float, float, float] | None = None,
     radius: float | None = None,
     height: float | None = None,
     viscosity: float = 1.0,
-    density: float = 1000.0,
-    surface_tension: float = 0.072,
-    color: str = "blue",
+    density: float = 1000,
+    surface_tension: float = 0.07,
+    color: tuple[int, int, int] = (0, 0, 200),
     output_dir: Path | None = None,
 ) -> dict:
     """Defines a fluid type for use in the simulation."""
@@ -95,58 +122,10 @@ def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
     if not renders_dir:
         renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
-    builder = SimulationBuilder(output_dir=renders_dir)
+
+    builder = get_simulation_builder(output_dir=renders_dir, backend_type=SimulatorBackendType.MUJOCO)
     scene_path = builder.build_from_assembly(component)
     return scene_path.read_text()
-
-def calculate_assembly_totals(
-    component: Compound, electronics: ElectronicsSection | None = None
-) -> Tuple[float, float]:
-    """Calculate total cost and weight of the assembly including electronics and COTS."""
-    config = load_config()
-    total_cost = 0.0
-    total_weight = 0.0
-
-    # 1. Manufactured parts
-    for child in component.children:
-        if not hasattr(child, "metadata") or not child.metadata:
-            continue
-        
-        method_str = child.metadata.get("manufacturing_method")
-        from worker.workbenches.models import ManufacturingMethod
-        try:
-            method = ManufacturingMethod(method_str)
-            res = validate_and_price(child, method, config)
-            total_cost += res.unit_cost
-            total_weight += res.weight_g
-        except Exception:
-            pass
-
-    # 2. Electronics and COTS parts
-    if electronics:
-        from shared.cots.parts.electronics import PowerSupply, ElectronicRelay
-        from shared.cots.parts.motors import ServoMotor
-        
-        for comp in electronics.components:
-            if comp.type == "power_supply" and comp.cots_part_id:
-                try:
-                    psu = PowerSupply(size=comp.cots_part_id)
-                    total_cost += psu.metadata.get("price", 0.0)
-                    total_weight += psu.metadata.get("weight_g", 0.0)
-                except Exception: pass
-            elif comp.type == "motor" and comp.cots_part_id:
-                try:
-                    motor = ServoMotor(size=comp.cots_part_id)
-                    total_cost += motor.metadata.get("price", 0.0)
-                    total_weight += motor.metadata.get("weight_g", 0.0)
-                except Exception: pass
-        
-        for wire in electronics.wiring:
-            length_m = wire.length_mm / 1000.0
-            total_cost += length_m * 0.5
-            total_weight += length_m * 20.0
-
-    return total_cost, total_weight
 
 def simulate(
     component: Compound,
@@ -177,9 +156,6 @@ def simulate(
             cost_estimation = PreliminaryCostEstimation(**data)
         except Exception as e:
             logger.warning("failed_to_load_cost_estimation", error=str(e))
-
-    # 3. Build Scene
-    from worker.simulation.factory import get_simulation_builder
 
     backend_type = SimulatorBackendType.MUJOCO
     if objectives and getattr(objectives, "physics", None):
@@ -212,25 +188,35 @@ def simulate(
             for part in cost_estimation.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: sinusoidal(t, p.speed, p.frequency or 1.0)
+                        )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
     try:
-        metrics = loop.step(control_inputs=control_inputs, duration=30.0, dynamic_controllers=dynamic_controllers)
-        status_msg = metrics.fail_reason or ("Goal achieved." if metrics.success else "Simulation stable.")
+        metrics = loop.step(
+            control_inputs=control_inputs,
+            duration=30.0,
+            dynamic_controllers=dynamic_controllers,
+        )
+        status_msg = metrics.fail_reason or "Simulation stable."
+        if metrics.success:
+            status_msg = "Goal achieved."
+
         render_paths = prerender_24_views(component, output_dir=str(renders_dir))
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
-        
-        cost, weight = calculate_assembly_totals(component, electronics)
-        
+
         global LAST_SIMULATION_RESULT
         LAST_SIMULATION_RESULT = SimulationResult(
-            metrics.success, status_msg, render_paths, mjcf_content,
-            stress_summaries=getattr(metrics, 'stress_summaries', []),
-            total_cost=cost, total_weight_g=weight
+            metrics.success,
+            status_msg,
+            render_paths,
+            mjcf_content,
+            stress_summaries=metrics.stress_summaries,
+            fluid_metrics=metrics.fluid_metrics
         )
         return LAST_SIMULATION_RESULT
     except Exception as e:
@@ -240,7 +226,7 @@ def simulate(
 def validate(
     component: Compound, build_zone: dict | None = None, output_dir: Path | None = None
 ) -> tuple[bool, str | None]:
-    """Verify geometric validity and randomization robustness."""
+    """Verify geometric validity."""
     logger.info("validate_start")
     solids = component.solids()
     if len(solids) > 1:
@@ -252,25 +238,19 @@ def validate(
 
     bbox = component.bounding_box()
     if build_zone:
-        b_min, b_max = build_zone.get("min", [-1000]*3), build_zone.get("max", [1000]*3)
-        if b_min[0] > bbox.min.X or b_min[1] > bbox.min.Y or b_min[2] > bbox.min.Z or \
-           b_max[0] < bbox.max.X or b_max[1] < bbox.max.Y or b_max[2] < bbox.max.Z:
+        b_min = build_zone.get("min", [-1000, -1000, -1000])
+        b_max = build_zone.get("max", [1000, 1000, 1000])
+        if (b_min[0] > bbox.min.X or b_min[1] > bbox.min.Y or b_min[2] > bbox.min.Z or
+            b_max[0] < bbox.max.X or b_max[1] < bbox.max.Y or b_max[2] < bbox.max.Z):
             return False, f"Build zone violation: bbox {bbox} outside build_zone {build_zone}"
-    
+    else:
+        if 1000.0 < bbox.size.X or 1000.0 < bbox.size.Y or 1000.0 < bbox.size.Z:
+            return False, f"Boundary constraint violation: size {bbox.size} exceeds 1000.0"
+
     try:
-        prerender_24_views(component, output_dir=str(output_dir / "renders") if output_dir else None)
-    except Exception: pass
+        renders_dir = str(output_dir / "renders") if output_dir else None
+        prerender_24_views(component, output_dir=renders_dir)
+    except Exception as e:
+        logger.warning("validate_render_capture_failed", error=str(e))
+
     return True, None
-
-def get_stress_report(part_label: str) -> dict | None:
-    if LAST_SIMULATION_RESULT:
-        for s in LAST_SIMULATION_RESULT.stress_summaries:
-            if getattr(s, 'part_label', '') == part_label: return s.model_dump()
-    return None
-
-def preview_stress(component: Compound, view_angles: List[Tuple[float, float]] | None = None, output_dir: Path | None = None) -> List[str]:
-    if not LAST_SIMULATION_RESULT: return []
-    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-    path = working_dir / "renders" / "stress"
-    path.mkdir(parents=True, exist_ok=True)
-    return [str(path / "stress_placeholder.png")]
