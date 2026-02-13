@@ -117,13 +117,14 @@ export default function EngineerWorkspace() {
                     if (saved) {
                       try {
                         const layout = JSON.parse(saved);
-                        return layout[0] ?? 25;
-                      } catch (e) { return 25; }
+                        const values = Array.isArray(layout) ? layout : Object.values(layout);
+                        return `${values[0] ?? 25}%` as any;
+                      } catch (e) { return "25%"; }
                     }
-                    return 25;
+                    return "25%";
                   })()} 
-                  minSize={20} 
-                  maxSize={40}
+                  minSize="20%" 
+                  maxSize="40%"
                   collapsible={true}
                   className="overflow-hidden"
                 >
@@ -138,7 +139,7 @@ export default function EngineerWorkspace() {
                 <ResizableHandle withHandle />
 
                 {/* Rightmost Column (main area) with Vertical Split */}
-                <ResizablePanel defaultSize={75} className="min-w-0">
+                <ResizablePanel defaultSize="75%" className="min-w-0">
                     <ResizablePanelGroup 
                       orientation="vertical" 
                       className="h-full w-full"
@@ -153,12 +154,13 @@ export default function EngineerWorkspace() {
                             if (saved) {
                               try {
                                 const layout = JSON.parse(saved);
-                                return layout[0] ?? 50;
-                              } catch (e) { return 50; }
+                                const values = Array.isArray(layout) ? layout : Object.values(layout);
+                                return `${values[0] ?? 50}%` as any;
+                              } catch (e) { return "50%"; }
                             }
-                            return 50;
+                            return "50%";
                           })()} 
-                          minSize={30}
+                          minSize="30%"
                         >
                             <div className="h-full relative bg-gradient-to-b from-muted whitespace-nowrap overflow-hidden">
                                {/* 3D Metadata Overlays */}
@@ -224,7 +226,7 @@ export default function EngineerWorkspace() {
                         <ResizableHandle withHandle />
 
                         {/* Bottom: Artifact view */}
-                        <ResizablePanel defaultSize={50} minSize={20}>
+                        <ResizablePanel defaultSize="50%" minSize="20%">
                             <div className="h-full flex-1 overflow-hidden">
                                 <ArtifactView 
                                   plan={selectedEpisode?.plan}
