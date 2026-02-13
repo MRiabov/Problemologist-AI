@@ -6,7 +6,7 @@ from temporalio.client import Client
 
 from controller.api import ops
 from controller.api.manager import task_tracker
-from controller.api.routes import benchmark, episodes, skills
+from controller.api.routes import benchmark, cots, episodes, skills
 from controller.config.settings import settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
@@ -61,6 +61,7 @@ app.include_router(episodes.router)
 app.include_router(benchmark.router)
 app.include_router(skills.router)
 app.include_router(ops.router)
+app.include_router(cots.router)
 from controller.api.routes import simulation
 
 app.include_router(simulation.router)
