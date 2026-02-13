@@ -1,6 +1,6 @@
-from contextlib import suppress
 import os
 import uuid
+from contextlib import suppress
 
 import structlog
 from temporalio import activity
@@ -49,7 +49,6 @@ async def render_video_activity(sim_results: str, simulate_failures: dict = {}) 
     if simulate_failures.get("render_video"):
         raise RuntimeError("Simulated render video failure")
     import tempfile
-    from pathlib import Path
 
     # Create a dummy video file
     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
@@ -61,9 +60,8 @@ async def render_video_activity(sim_results: str, simulate_failures: dict = {}) 
 @activity.defn
 async def upload_to_s3_activity(video_path: str, simulate_failures: dict = {}) -> str:
     """Upload video to S3 using S3Client."""
-    from pathlib import Path
     import os
-    import json
+    from pathlib import Path
 
     if simulate_failures.get("s3_upload"):
         raise RuntimeError("Simulated S3 upload failure")

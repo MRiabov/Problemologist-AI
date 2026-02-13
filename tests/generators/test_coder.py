@@ -93,28 +93,30 @@ async def test_coder_node_with_feedback(mock_state):
     mock_response = MagicMock()
     mock_response.content = "```python\n# refined script\n```"
 
-    with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
-        with patch(
+    with (
+        patch("controller.agent.benchmark.nodes.ChatOpenAI"),
+        patch(
             "controller.agent.benchmark.nodes.create_deep_agent"
-        ) as mock_create_agent:
-            mock_agent = mock_create_agent.return_value
-            mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
+        ) as mock_create_agent,
+    ):
+        mock_agent = mock_create_agent.return_value
+        mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
 
-            with patch(
-                "controller.agent.benchmark.nodes.WorkerClient"
-            ) as mock_client_class:
-                mock_client = mock_client_class.return_value
-                mock_client.read_file = AsyncMock(return_value="# refined script")
-                mock_client.list_files = AsyncMock(return_value=[])
+        with patch(
+            "controller.agent.benchmark.nodes.WorkerClient"
+        ) as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.read_file = AsyncMock(return_value="# refined script")
+            mock_client.list_files = AsyncMock(return_value=[])
 
-                with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
-                    await coder_node(mock_state)
+            with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
+                await coder_node(mock_state)
 
-            # Verify create_deep_agent was called with correct system prompt
-            args, kwargs = mock_create_agent.call_args
-            system_prompt = kwargs.get("system_prompt", "")
-            assert "Make it larger" in system_prompt
-            assert "Intersections found" in system_prompt
+        # Verify create_deep_agent was called with correct system prompt
+        args, kwargs = mock_create_agent.call_args
+        system_prompt = kwargs.get("system_prompt", "")
+        assert "Make it larger" in system_prompt
+        assert "Intersections found" in system_prompt
 
 
 @pytest.mark.asyncio

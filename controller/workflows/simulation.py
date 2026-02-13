@@ -16,11 +16,12 @@ class SimulationWorkflow:
     @workflow.run
     async def run(self, params: dict) -> str:
         import json
+
         compound_json_str = params["compound_json"]
         episode_id = params["episode_id"]
         # Extract failure flags for integration testing
         simulate_failures = params.get("simulate_failures", {})
-        
+
         # Also check inside compound_json if it's a JSON string
         try:
             cj = json.loads(compound_json_str)

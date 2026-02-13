@@ -132,9 +132,7 @@ class RemoteFilesystemBackend(BackendProtocol):
             try:
                 content = await self.client.read_file_binary(path)
                 responses.append(
-                    FileDownloadResponse(
-                        path=path, content=content, error=None
-                    )
+                    FileDownloadResponse(path=path, content=content, error=None)
                 )
             except Exception as e:
                 responses.append(FileDownloadResponse(path=path, error=str(e)))

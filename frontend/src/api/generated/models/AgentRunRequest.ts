@@ -11,5 +11,17 @@ export type AgentRunRequest = {
      * Session ID for the worker.
      */
     session_id: string;
+    /**
+     * Additional metadata for the episode.
+     */
+    metadata_vars?: (Record<string, any> | null);
+    /**
+     * Git hash of the skills used for this run.
+     */
+    skill_git_hash?: (string | null);
+    /**
+     * The name of the agent to run.
+     */
+    agent_name?: string;
 };
 

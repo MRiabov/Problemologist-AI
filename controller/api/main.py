@@ -8,12 +8,11 @@ from controller.api import ops
 from controller.api.manager import task_tracker
 from controller.api.routes import benchmark, cots, episodes, skills
 from controller.config.settings import settings
+from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger
-
-from controller.observability.langfuse import get_langfuse_client
 
 # Configure logging
 configure_logging("controller")

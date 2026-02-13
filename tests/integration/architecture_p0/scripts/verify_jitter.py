@@ -40,7 +40,7 @@ async def run(_ctx=None):
             f"consistent={result.is_consistent}"
         )
         return result.dict()
-    except Exception as e:
+    except Exception:
         import traceback
 
         with open("debug_jitter.txt", "w") as f:

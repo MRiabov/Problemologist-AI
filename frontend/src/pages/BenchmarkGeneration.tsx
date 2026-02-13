@@ -89,9 +89,9 @@ export default function BenchmarkGeneration() {
       )}
 
       {/* Main Content Area (Grid 9-cols relative to Outlet) */}
-      <main className="flex-1 grid grid-cols-9 overflow-hidden">
-        {/* Middle Column (Traces) - span 3/9 */}
-        <div className="col-span-3 border-r overflow-hidden">
+      <main className="flex-1 grid grid-cols-4 overflow-hidden">
+        {/* Middle Column (Traces) - span 1/4 (25%) */}
+        <div className="col-span-1 border-r overflow-hidden">
             <ChatWindow 
               traces={selectedEpisode?.traces}
               task={selectedEpisode?.task}
@@ -100,8 +100,8 @@ export default function BenchmarkGeneration() {
             />
         </div>
 
-        {/* Rightmost Column - span 6/9 */}
-        <div className="col-span-6 flex flex-col overflow-hidden">
+        {/* Rightmost Column - span 3/4 (75%) */}
+        <div className="col-span-3 flex flex-col overflow-hidden">
             {/* Top: Viewport */}
             <div className="h-1/2 flex flex-col overflow-hidden border-b relative bg-gradient-to-b from-muted to-background flex items-center justify-center">
                     {selectedEpisode?.assets && selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0 ? (

@@ -1,5 +1,6 @@
-import pytest
 import asyncio
+
+import pytest
 from httpx import AsyncClient
 
 # Adjust URL to your controller if different
@@ -57,9 +58,9 @@ async def test_benchmark_to_engineer_handoff():
         print(f"Artifacts found: {artifact_paths}")
 
         # Check existence of required files
-        assert any("objectives.yaml" in p for p in artifact_paths), (
-            "objectives.yaml missing"
-        )
+        assert any(
+            "objectives.yaml" in p for p in artifact_paths
+        ), "objectives.yaml missing"
 
         # Check for renders (expecting a directory or multiple files)
         # Renders usually in renders/ folder.

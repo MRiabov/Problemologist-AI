@@ -21,18 +21,9 @@ export default function AppLayout() {
         }}
       >
         <ResizablePanel 
-          defaultSize={(() => {
-            const saved = localStorage.getItem('resizable-layout:app-sidebar');
-            if (saved) {
-              try {
-                const layout = JSON.parse(saved);
-                return layout[0] ?? 20;
-              } catch (e) { return 20; }
-            }
-            return 20;
-          })()} 
-          minSize={0} 
-          maxSize={95}
+          defaultSize={25} 
+          minSize={15} 
+          maxSize={40}
           collapsible={true}
           className="h-full"
         >

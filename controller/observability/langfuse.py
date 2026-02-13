@@ -1,21 +1,15 @@
+import inspect
 import os
-
-from langfuse import Langfuse
-from langfuse.langchain import CallbackHandler
-
-
-from typing import Any, Dict, List, Optional
-from uuid import UUID
+from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import LLMResult
+from langfuse import Langfuse
+from langfuse.langchain import CallbackHandler
 
-
-import inspect
-import asyncio
-from shared.logging import get_logger
 from controller.config.settings import settings
+from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -65,7 +59,7 @@ class SafeCallbackHandler(BaseCallbackHandler):
     # But get_langfuse_callback returns CallbackHandler? No, BaseCallbackHandler.
 
     def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
+        self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any
     ) -> Any:
         try:
             # Inject model_name if possible to help Langfuse parse it
@@ -88,8 +82,8 @@ class SafeCallbackHandler(BaseCallbackHandler):
 
     def on_chat_model_start(
         self,
-        serialized: Dict[str, Any],
-        messages: List[List[BaseMessage]],
+        serialized: dict[str, Any],
+        messages: list[list[BaseMessage]],
         **kwargs: Any,
     ) -> Any:
         try:
@@ -141,7 +135,7 @@ class SafeCallbackHandler(BaseCallbackHandler):
             logger.warning(f"Langfuse callback error in on_llm_error suppressed: {e}")
 
     def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
+        self, serialized: dict[str, Any], inputs: dict[str, Any], **kwargs: Any
     ) -> Any:
         try:
             return self._safe_await(
@@ -151,7 +145,7 @@ class SafeCallbackHandler(BaseCallbackHandler):
         except Exception as e:
             logger.warning(f"Langfuse callback error in on_chain_start suppressed: {e}")
 
-    def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
+    def on_chain_end(self, outputs: dict[str, Any], **kwargs: Any) -> Any:
         try:
             return self._safe_await(
                 self.handler.on_chain_end(outputs, **kwargs), "on_chain_end"
@@ -168,7 +162,7 @@ class SafeCallbackHandler(BaseCallbackHandler):
             logger.warning(f"Langfuse callback error in on_chain_error suppressed: {e}")
 
     def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> Any:
         try:
             return self._safe_await(

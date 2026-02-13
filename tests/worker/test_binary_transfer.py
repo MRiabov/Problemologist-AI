@@ -1,9 +1,13 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from pathlib import Path
-from worker.filesystem.router import FilesystemRouter, AccessMode, MountPoint, FileUploadResponse
-from worker.filesystem.backend import LocalFilesystemBackend
+
 from controller.clients.worker import WorkerClient
+from worker.filesystem.backend import LocalFilesystemBackend
+from worker.filesystem.router import (
+    FilesystemRouter,
+)
+
 
 @pytest.fixture
 def mock_backend():
@@ -24,6 +28,7 @@ def mock_backend():
 
     return backend
 
+
 @pytest.fixture
 def router(mock_backend):
     router = FilesystemRouter(local_backend=mock_backend)
@@ -31,10 +36,11 @@ def router(mock_backend):
     router.READ_ONLY_PREFIXES = ("/readonly/",)
     return router
 
+
 def test_router_upload_files_binary(router, mock_backend):
     files = [
         ("/workspace/test.bin", b"\x00\x01\x02"),
-        ("/readonly/test.bin", b"\x03\x04\x05")
+        ("/readonly/test.bin", b"\x03\x04\x05"),
     ]
 
     responses = router.upload_files(files)
@@ -53,6 +59,7 @@ def test_router_upload_files_binary(router, mock_backend):
     assert len(responses) == 1
     assert responses[0].path == "/readonly/test.bin"
     assert "read-only" in responses[0].error
+
 
 @pytest.mark.asyncio
 async def test_worker_client_upload_file():
@@ -89,6 +96,7 @@ async def test_worker_client_upload_file():
         # Verify files argument structure
         assert "files" in kwargs
         assert kwargs["files"]["file"] == ("blob", b"\x00\xff")
+
 
 @pytest.mark.asyncio
 async def test_worker_client_read_file_binary():

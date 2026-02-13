@@ -1,16 +1,13 @@
-import pytest
 from worker.utils.git import (
-    init_workspace_repo,
+    abort_merge,
     commit_all,
-    get_repo_status,
-    resolve_conflict_ours,
-    resolve_conflict_theirs,
     complete_merge,
+    get_repo_status,
     has_merge_conflicts,
-    abort_merge
+    init_workspace_repo,
+    resolve_conflict_ours,
 )
-from pathlib import Path
-from git import Repo
+
 
 def test_git_conflict_resolution(tmp_path):
     # 1. Setup repo
@@ -53,6 +50,7 @@ def test_git_conflict_resolution(tmp_path):
     status = get_repo_status(tmp_path)
     assert status["is_merging"] is False
     assert file_path.read_text() == "Master content"
+
 
 def test_git_abort_merge(tmp_path):
     # 1. Setup repo

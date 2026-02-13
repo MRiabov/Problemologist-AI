@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -6,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from worker.api.routes import get_router
 from worker.app import app
-from worker.workbenches.models import WorkbenchResult, ManufacturingMethod
+from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
 
 client = TestClient(app)
 
@@ -65,7 +64,9 @@ def test_benchmark_simulate_error(mock_load):
 @patch("worker.api.routes._load_component")
 @patch("worker.api.routes.validate_and_price")
 @patch("worker.api.routes.load_config")
-def test_benchmark_analyze_success(mock_load_config, mock_validate_and_price, mock_load):
+def test_benchmark_analyze_success(
+    mock_load_config, mock_validate_and_price, mock_load
+):
     mock_load.return_value = MagicMock()
     mock_load_config.return_value = MagicMock()
 
@@ -79,8 +80,7 @@ def test_benchmark_analyze_success(mock_load_config, mock_validate_and_price, mo
 
     # 1. Test default quantity (1)
     response = client.post(
-        "/benchmark/analyze",
-        json={"script_path": "impl.py", "method": "cnc"}
+        "/benchmark/analyze", json={"script_path": "impl.py", "method": "cnc"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -94,7 +94,7 @@ def test_benchmark_analyze_success(mock_load_config, mock_validate_and_price, mo
     # 2. Test custom quantity
     response = client.post(
         "/benchmark/analyze",
-        json={"script_path": "impl.py", "method": "cnc", "quantity": 100}
+        json={"script_path": "impl.py", "method": "cnc", "quantity": 100},
     )
     assert response.status_code == 200
 

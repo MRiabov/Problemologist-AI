@@ -1,5 +1,4 @@
 import os
-import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -49,12 +48,16 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
             # 4. Setup Camera
             cam = mujoco.MjvCamera()
             mujoco.mjv_defaultCamera(cam)
-            
+
             # Center the camera on the object
             bbox = component.bounding_box()
-            center = [(bbox.min.X + bbox.max.X)/2, (bbox.min.Y + bbox.max.Y)/2, (bbox.min.Z + bbox.max.Z)/2]
+            center = [
+                (bbox.min.X + bbox.max.X) / 2,
+                (bbox.min.Y + bbox.max.Y) / 2,
+                (bbox.min.Z + bbox.max.Z) / 2,
+            ]
             cam.lookat = np.array(center)
-            
+
             # Distance based on bbox size
             diag = np.sqrt(bbox.size.X**2 + bbox.size.Y**2 + bbox.size.Z**2)
             cam.distance = max(diag * 1.5, 0.5)
@@ -62,7 +65,11 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
             # 8 horizontal angles
             angles = [0, 45, 90, 135, 180, 225, 270, 315]
             # 3 elevations
-            elevations = [-15, -45, -75]  # MuJoCo uses negative elevation for looking down
+            elevations = [
+                -15,
+                -45,
+                -75,
+            ]  # MuJoCo uses negative elevation for looking down
 
             for elevation in elevations:
                 for angle in angles:

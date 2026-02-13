@@ -6,7 +6,6 @@ import pytest
 from git import GitCommandError
 
 from controller.agent.nodes.sidecar import SidecarNode
-from controller.agent.state import AgentState
 from shared.type_checking import type_check
 
 
@@ -82,6 +81,7 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
     # Cleanup
     if test_dir.exists():
         shutil.rmtree(test_dir)
+
 
 @type_check
 @pytest.mark.asyncio

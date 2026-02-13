@@ -19,10 +19,11 @@ def create_agent_graph(
     """Create a Deep Agent graph with remote filesystem backend."""
 
     if settings.is_integration_test:
-        from langchain_core.language_models.chat_models import BaseChatModel
-        from langchain_core.messages import BaseMessage, AIMessage
-        from langchain_core.outputs import ChatGenerationChunk, ChatResult
         from typing import Any
+
+        from langchain_core.language_models.chat_models import BaseChatModel
+        from langchain_core.messages import AIMessage, BaseMessage
+        from langchain_core.outputs import ChatGenerationChunk, ChatResult
 
         class FakeModelWithTools(BaseChatModel):
             responses: list[str]

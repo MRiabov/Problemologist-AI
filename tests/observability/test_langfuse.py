@@ -52,4 +52,3 @@ def test_get_langfuse_client_uses_configured_host():
             secret_key="sk-test",
             host="https://langfuse.example",
         )
-

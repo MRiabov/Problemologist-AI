@@ -1,10 +1,9 @@
 import asyncio
-import contextlib
-import json
 import os
 import time
-import pytest
+
 import httpx
+import pytest
 
 # Constants
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
@@ -141,12 +140,12 @@ def build():
         data1 = res1.json()
         data2 = res2.json()
 
-        assert data1["success"] or "Simulation stable" in data1["message"], (
-            f"Sim 1 marked failure: {data1}"
-        )
-        assert data2["success"] or "Simulation stable" in data2["message"], (
-            f"Sim 2 marked failure: {data2}"
-        )
+        assert (
+            data1["success"] or "Simulation stable" in data1["message"]
+        ), f"Sim 1 marked failure: {data1}"
+        assert (
+            data2["success"] or "Simulation stable" in data2["message"]
+        ), f"Sim 2 marked failure: {data2}"
 
         # Check artifacts
         assert "mjcf_content" in data1["artifacts"]
@@ -308,7 +307,7 @@ constraints:
         )
 
         script_path = "tests/integration/architecture_p0/scripts/verify_jitter.py"
-        with open(script_path, "r") as f:
+        with open(script_path) as f:
             script_content = f.read()
 
         await client.post(
@@ -355,7 +354,7 @@ async def test_int_022_motor_overload_behavior():
         session_id = f"test-int-022-{int(time.time())}"
 
         script_path = "tests/integration/architecture_p0/scripts/verify_overload.py"
-        with open(script_path, "r") as f:
+        with open(script_path) as f:
             script_content = f.read()
 
         await client.post(

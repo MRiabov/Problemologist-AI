@@ -12,7 +12,6 @@ from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
 
-
 logger = logging.getLogger(__name__)
 
 

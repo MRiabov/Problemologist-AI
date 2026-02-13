@@ -117,13 +117,13 @@ export default function EngineerWorkspace() {
                     if (saved) {
                       try {
                         const layout = JSON.parse(saved);
-                        return layout[0] ?? 33;
-                      } catch (e) { return 33; }
+                        return layout[0] ?? 25;
+                      } catch (e) { return 25; }
                     }
-                    return 33;
+                    return 25;
                   })()} 
-                  minSize={0} 
-                  maxSize={95}
+                  minSize={20} 
+                  maxSize={40}
                   collapsible={true}
                   className="overflow-hidden"
                 >
@@ -138,7 +138,7 @@ export default function EngineerWorkspace() {
                 <ResizableHandle withHandle />
 
                 {/* Rightmost Column (main area) with Vertical Split */}
-                <ResizablePanel defaultSize={67} className="min-w-0">
+                <ResizablePanel defaultSize={75} className="min-w-0">
                     <ResizablePanelGroup 
                       orientation="vertical" 
                       className="h-full w-full"

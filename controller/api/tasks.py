@@ -5,7 +5,7 @@ from contextlib import suppress
 from pydantic import BaseModel, Field, StrictStr, field_validator
 
 from controller.agent.initialization import initialize_agent_files
-from controller.api.manager import manager, task_tracker
+from controller.api.manager import task_tracker
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph

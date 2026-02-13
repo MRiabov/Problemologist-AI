@@ -1,5 +1,6 @@
-import pytest
 import asyncio
+
+import pytest
 from httpx import AsyncClient
 
 # Adjust URL to your controller if different
@@ -22,9 +23,10 @@ async def test_benchmark_planner_cad_reviewer_path():
         print("Triggering Benchmark Generation for INT-031...")
         prompt = "Create a simple path planning benchmark with a wall and a goal."
         resp = await client.post("/benchmark/generate", json={"prompt": prompt})
-        assert resp.status_code in [200, 202], (
-            f"Failed to trigger benchmark: {resp.text}"
-        )
+        assert resp.status_code in [
+            200,
+            202,
+        ], f"Failed to trigger benchmark: {resp.text}"
         data = resp.json()
         session_id = data["session_id"]
         print(f"Benchmark Session ID: {session_id}")
@@ -63,9 +65,9 @@ async def test_benchmark_planner_cad_reviewer_path():
         print(f"Found artifacts: {artifact_paths}")
 
         assert any(p.endswith("plan.md") for p in artifact_paths), "plan.md missing"
-        assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
-            "objectives.yaml missing"
-        )
+        assert any(
+            p.endswith("objectives.yaml") for p in artifact_paths
+        ), "objectives.yaml missing"
         # Check for reviews (assuming reviews are stored in a reviews/ folder)
         assert any("reviews/" in p for p in artifact_paths), "Reviews missing"
 

@@ -341,8 +341,8 @@ class SimulationBuilder:
     def build_from_assembly(
         self,
         assembly: Compound,
-        objectives: "ObjectivesYaml" | None = None,
-        moving_parts: list["MovingPart"] | None = None,
+        objectives: ObjectivesYaml | None = None,
+        moving_parts: list[MovingPart] | None = None,
     ) -> Path:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)

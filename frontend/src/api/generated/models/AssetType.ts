@@ -12,4 +12,5 @@ export enum AssetType {
     STEP = 'step',
     STL = 'stl',
     PYTHON = 'python',
+    OTHER = 'other',
 }

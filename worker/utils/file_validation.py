@@ -8,7 +8,11 @@ Validates the structure and content of:
 - Review files: YAML frontmatter with decision field
 """
 
+# T015: Hashing for immutability checks
+import hashlib
 import re
+import subprocess
+from pathlib import Path
 
 import structlog
 import yaml
@@ -21,12 +25,6 @@ from shared.models.schemas import (
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
-
-# T015: Hashing for immutability checks
-import hashlib
-from pathlib import Path
-import subprocess
-
 
 logger = structlog.get_logger(__name__)
 

@@ -47,6 +47,7 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "exclusiveMaximum": 9223372036854775808,
               "title": "Trace Id"
             }
           }
@@ -83,6 +84,58 @@
         }
       }
     },
+    "/episodes/{episode_id}/review": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Review Episode",
+        "description": "Submit a review for an episode.",
+        "operationId": "review_episode_episodes__episode_id__review_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/episodes/": {
       "get": {
         "tags": [
@@ -98,6 +151,8 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "minimum": 0,
+              "exclusiveMaximum": 9223372036854775808,
               "default": 100,
               "title": "Limit"
             }
@@ -108,6 +163,8 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "minimum": 0,
+              "exclusiveMaximum": 9223372036854775808,
               "default": 0,
               "title": "Offset"
             }
@@ -119,11 +176,21 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/EpisodeResponse"
                   },
-                  "type": "array",
                   "title": "Response List Episodes Episodes  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -225,17 +292,16 @@
         "summary": "Generate Benchmark",
         "description": "Trigger a new benchmark generation session.",
         "operationId": "generate_benchmark_benchmark_generate_post",
-        "parameters": [
-          {
-            "name": "prompt",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Prompt"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkGenerateRequest"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -277,6 +343,58 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/{session_id}/objectives": {
+      "post": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Update Objectives",
+        "description": "Update objectives.yaml for a specific session.",
+        "operationId": "update_objectives_benchmark__session_id__objectives_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateObjectivesRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -346,6 +464,146 @@
         ],
         "responses": {
           "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cots/search": {
+      "get": {
+        "tags": [
+          "cots"
+        ],
+        "summary": "Search Cots",
+        "description": "Search for COTS parts by name or category.",
+        "operationId": "search_cots_cots_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query",
+              "title": "Q"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Search Cots Cots Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/simulation/run": {
+      "post": {
+        "tags": [
+          "simulation"
+        ],
+        "summary": "Run Simulation",
+        "description": "Trigger a benchmark generation session (simulation pipeline).\nThis endpoint reuses the benchmark generation graph but is called 'simulation'\nin the frontend for historical reasons.",
+        "operationId": "run_simulation_simulation_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/episodes": {
+      "post": {
+        "summary": "Create Test Episode",
+        "description": "Create a dummy episode for testing purposes (no agent run).",
+        "operationId": "create_test_episode_test_episodes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -458,6 +716,12 @@
             ],
             "title": "Skill Git Hash",
             "description": "Git hash of the skills used for this run."
+          },
+          "agent_name": {
+            "type": "string",
+            "title": "Agent Name",
+            "description": "The name of the agent to run.",
+            "default": "engineer_coder"
           }
         },
         "type": "object",
@@ -519,6 +783,52 @@
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."
+      },
+      "BenchmarkGenerateRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "max_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cost"
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
+          },
+          "target_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "BenchmarkGenerateRequest"
       },
       "EpisodeResponse": {
         "properties": {
@@ -613,6 +923,20 @@
             ],
             "title": "Plan"
           },
+          "validation_logs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Logs"
+          },
           "traces": {
             "items": {
               "$ref": "#/components/schemas/TraceResponse"
@@ -687,6 +1011,37 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ReviewRequest": {
+        "properties": {
+          "review_content": {
+            "type": "string",
+            "title": "Review Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "review_content"
+        ],
+        "title": "ReviewRequest"
+      },
+      "RunSimulationRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "compound_json": {
+            "type": "string",
+            "title": "Compound Json",
+            "default": "{}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "RunSimulationRequest"
       },
       "Skill": {
         "properties": {
@@ -812,6 +1167,45 @@
         ],
         "title": "TraceType",
         "description": "Type of observability trace."
+      },
+      "UpdateObjectivesRequest": {
+        "properties": {
+          "max_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cost"
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
+          },
+          "target_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Quantity"
+          }
+        },
+        "type": "object",
+        "title": "UpdateObjectivesRequest"
       },
       "ValidationError": {
         "properties": {
