@@ -6,6 +6,7 @@ import yaml
 from build123d import Compound
 
 from shared.models.schemas import ObjectivesYaml, PreliminaryCostEstimation
+from shared.simulation.backends import SimulatorBackendType
 from worker.simulation.builder import SimulationBuilder
 from worker.simulation.loop import SimulationLoop
 
@@ -95,7 +96,13 @@ def simulate(component: Compound, output_dir: Path | None = None) -> SimulationR
     )
 
     # 4. Initialize Simulation Loop
-    loop = SimulationLoop(str(scene_path), component=component)
+    backend_type = SimulatorBackendType.MUJOCO
+    if objectives and objectives.physics:
+        backend_type = SimulatorBackendType(objectives.physics.backend)
+
+    loop = SimulationLoop(
+        str(scene_path), component=component, backend_type=backend_type
+    )
 
     # 5. Load Controllers
     dynamic_controllers = {}
