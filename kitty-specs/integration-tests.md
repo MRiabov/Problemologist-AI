@@ -2,7 +2,7 @@
 
 ## Why this document exists
 
-This document defines the integration test coverage required to match `kitty-specs/desired_architecture.md` as of February 11, 2026.
+This document defines the integration test coverage required to match `kitty-specs/desired_architecture.md`, `kitty-specs/desired_architecture_WP2_fluids.md`, and `kitty-specs/desired_architecture_WP3_electronics.md` as of February 13, 2026.
 
 Short answer to the audit question: **No, current integration tests do not accurately reflect the current desired architecture.**
 
@@ -111,6 +111,27 @@ Priorities:
 | INT-054 | Temporal outage/failure logging path | If Temporal is unavailable/fails, episode must not report false success; explicit failure state/reason/event must be persisted. |
 | INT-055 | S3 artifact upload logging | Successful asset uploads persist storage metadata (bucket/key/etag-or-version where available) and link to episode/asset records. |
 | INT-056 | S3 upload failure + retry logging | Forced object-store failure triggers retry/failure policy; final state and failure events are consistent and queryable. |
+| INT-101 | Physics backend selection contract | Setting `physics.backend: "genesis"` in config selects the Genesis backend; `"mujoco"` selects MuJoCo. Default (`mujoco`) preserves backward compat. `simulation_backend_selected` event emitted. |
+| INT-102 | FEM material config validation | When `fem_enabled: true`, all manufactured parts must have FEM fields (`youngs_modulus_pa`, `poissons_ratio`, `yield_stress_pa`, `ultimate_stress_pa`) in `manufacturing_config.yaml`; missing fields rejected with clear error before simulation. |
+| INT-103 | Part breakage detection | Simulation with a part exceeding `ultimate_stress_pa` stops immediately with `failure_reason: PART_BREAKAGE`; result contains part label, stress value, location; `part_breakage` event emitted. |
+| INT-104 | Stress reporting in simulation result | After genesis/FEM simulation, `SimulationResult.stress_summaries` populated with per-part `StressSummary` (max von Mises, safety factor, utilization %); empty list for mujoco-only runs. |
+| INT-105 | Fluid containment objective evaluation | Benchmark with `fluid_containment` objective passes when ≥ threshold fraction of particles remain in containment zone; fails otherwise with `FLUID_OBJECTIVE_FAILED`. |
+| INT-106 | Flow rate objective evaluation | Benchmark with `flow_rate` objective passes when measured particles-per-second across gate plane is within tolerance of target; fails otherwise with `FLUID_OBJECTIVE_FAILED`. |
+| INT-107 | Stress objective evaluation | Benchmark with `max_stress` objective fails simulation when max von Mises exceeds threshold with `STRESS_OBJECTIVE_EXCEEDED`; passes when below. |
+| INT-108 | Tetrahedralization pipeline | STL → TetGen → `.msh` pipeline succeeds for valid geometry; emits `meshing_failure` event and retries with mesh repair for non-manifold input; hard-fails with `FAILED_ASSET_GENERATION` if unrecoverable. |
+| INT-109 | Physics instability abort | If total kinetic energy exceeds threshold during simulation, simulation aborts with `failure_reason: PHYSICS_INSTABILITY`; `physics_instability` event emitted. |
+| INT-110 | GPU OOM retry with particle reduction | Forced CUDA OOM triggers auto-retry at 75% particle count; `gpu_oom_retry` event emitted; result annotated `confidence: approximate`. |
+| INT-111 | `validate_and_price` FEM material gate | `validate_and_price` rejects parts whose `material_id` lacks FEM fields when `fem_enabled: true` and `backend: genesis`. |
+| INT-112 | Backward compat: mujoco ignores FEM/fluid config | Running with `backend: mujoco` ignores `fluids`, `fluid_objectives`, `stress_objectives`, and `fem_enabled`; existing benchmarks pass unchanged. |
+| INT-120 | Circuit validation pre-gate | `validate_circuit()` must pass (no short circuits, no floating nodes, total draw ≤ PSU rating) before physics simulation proceeds; simulation rejected otherwise. |
+| INT-121 | Short circuit detection | Circuit with near-zero resistance path across supply triggers `FAILED_SHORT_CIRCUIT` with branch current in result. |
+| INT-122 | Overcurrent supply detection | Circuit total draw exceeding `max_current_a` triggers `FAILED_OVERCURRENT_SUPPLY`; validation reports total draw vs PSU rating. |
+| INT-123 | Overcurrent wire detection | Wire carrying current exceeding gauge rating triggers `FAILED_OVERCURRENT_WIRE` with wire ID and measured current. |
+| INT-124 | Open circuit / floating node detection | Unconnected circuit node triggers `FAILED_OPEN_CIRCUIT`; validation reports floating node identifier. |
+| INT-125 | Motor power gating in simulation | Motor with valid controller function but no circuit power (`is_powered = 0`) produces zero effective torque; motor with power produces expected torque. |
+| INT-126 | Wire tear during simulation | Wire tension exceeding rated tensile triggers `FAILED_WIRE_TORN`; affected motor stops (`is_powered` drops to 0); event emitted. |
+| INT-127 | Pre-WP3 backward compat: implicit power | Episodes without `electronics` section implicitly set `is_powered = 1.0` for all motors; existing benchmarks pass unchanged. |
+| INT-128 | `objectives.yaml` electronics schema gate | `electronics_requirements` section validates `power_supply_available`, `wiring_constraints`, and `circuit_validation_required` fields; malformed entries rejected. |
 
 ### P1: Full architecture workflow coverage
 
@@ -135,6 +156,17 @@ Priorities:
 | INT-058 | Cross-system correlation IDs | A single episode/trace can be correlated across controller logs/events, Temporal records, and S3 asset metadata. |
 | INT-059 | Langfuse trace linkage in live runs | With valid `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`, live episode execution emits trace records linked by non-empty `langfuse_trace_id`; tool/LLM/event traces are correlated to the same run-level trace identity. |
 | INT-060 | Langfuse feedback forwarding contract | `POST /episodes/{episode_id}/traces/{trace_id}/feedback` forwards score/comment to Langfuse and persists local feedback fields; missing Langfuse client returns `503`, missing `langfuse_trace_id` returns `400`. |
+| INT-131 | Full fluid benchmark workflow (planner → engineer → reviewer) | Benchmark planner creates fluid-based benchmark; engineer designs solution with `define_fluid()` and `get_stress_report()`; reviewer verifies fluid containment metrics pass and stress results are reasonable. |
+| INT-132 | Full electromechanical workflow (mech → elec → reviewer) | Mech engineer designs assembly with motors; electronics engineer wires circuit, routes wires, passes `validate_circuit()`; reviewer approves; unified simulation runs with power gating. |
+| INT-133 | Elec → Mech conflict iteration loop | Wire routing conflict (wire intersects moving part sweep) triggers Elec→Mech handover; Mech modifies assembly; iteration count tracked via `elec_agent_handover` event. |
+| INT-134 | Stress heatmap render artifact | `preview_stress()` produces stress heatmap images stored in S3 and discoverable by reviewer. |
+| INT-135 | Wire routing clearance validation | `check_wire_clearance()` rejects routes that intersect solid parts (except at attachment points) and wire bend radius violations. |
+| INT-136 | Power budget validation | `calculate_power_budget()` computes total draw vs PSU capacity; warns on over-provisioning (>200%) and rejects under-provisioning. |
+| INT-137 | COTS electrical component search | COTS search returns valid PSU, relay, connector, wire components from `parts.db`; required fields (`cots_part_id`, price, specs) present. |
+| INT-138 | Smoke-test mode for Genesis | `smoke_test_mode: true` caps particles to 5000, labels result `confidence: approximate`, and rejects use in final validation. |
+| INT-139 | Fluid data storage policy | Raw particle data stays on worker `/tmp`; only MP4 video, JSON summary metrics, and stress summaries uploaded to S3; raw cache wiped after upload. |
+| INT-140 | Wire and electrical component costing | `validate_and_price()` includes wire cost (per-meter × length) and COTS electrical component costs in total. |
+| INT-141 | Circuit transient simulation | `simulate_circuit_transient()` produces motor ON/OFF states over time; results match expected switching sequence from netlist. |
 
 ### P2: Multi-episode and evaluation architecture tests
 
@@ -147,6 +179,12 @@ Priorities:
 | INT-050 | Dataset readiness completeness | A completed episode has all mandatory artifacts/traces/validation markers for training readiness. |
 | INT-051 | Journal quality integration checks | Journal entries are linked to observation IDs and satisfy required structure at ingestion time. |
 | INT-052 | Skill effectiveness tracking | Performance delta before/after skill version updates is measurable from stored metadata. |
+| INT-151 | Breakage prevention eval | Engineer solutions do not cause `PART_BREAKAGE` failure in 90% of cases across multi-seed runs. |
+| INT-152 | Safety factor range eval | Average safety factor across all parts is between 1.5 and 5.0 in 80% of solutions (no overdesign, no under-design). |
+| INT-153 | End-to-end fluid benchmark eval | Planner designs fluid challenge → engineer solves → passes containment metric — 50% success rate target. |
+| INT-154 | Elec agent circuit success rate | Given a mechanism with motors, the Elec Engineer produces a valid circuit in 80% (first attempt), 95% after one retry. |
+| INT-155 | Wire routing survival under jitter | Wire routing survives runtime jitter (no tears across 5 seeds) in 70% of successful solutions. |
+| INT-156 | Circuit-gates-motor correctness | Circuit state correctly gates motor behaviour in 95% of simulations — motors don't spin without power. |
 
 ## Per-test Unit->Integration Implementation Map (mandatory)
 
@@ -214,6 +252,44 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-058 | For one episode, correlate IDs across events, Temporal records, and S3 metadata from real persistence. | Asserting hardcoded correlation IDs in fixtures. |
 | INT-059 | Run live episode with Langfuse configured and assert persisted trace linkage (`langfuse_trace_id`) across emitted traces. | Unit-testing callback wiring or mocking Langfuse handler calls only. |
 | INT-060 | Call live feedback endpoint and assert both remote Langfuse scoring effect and local DB feedback persistence + error-path status codes. | Directly invoking feedback route function with mocked DB/Langfuse client only. |
+| INT-101 | Set `physics.backend` in config and hit simulation endpoint; assert backend-selected event and correct engine used. | Importing backend factory and calling it directly. |
+| INT-102 | Submit parts with missing FEM fields via API when `fem_enabled: true`; assert rejection before simulation. | Calling Pydantic validator on material dict directly. |
+| INT-103 | Run simulation via API with a part designed to break; assert `PART_BREAKAGE` in result and `part_breakage` event in event stream. | Constructing `SimulationResult` manually with breakage flag. |
+| INT-104 | Run FEM simulation via API; assert `stress_summaries` populated in HTTP response with expected fields. | Calling stress computation function in-process. |
+| INT-105 | Upload objectives with `fluid_containment` and run simulation via API; assert pass/fail based on particle distribution in result. | Unit-testing particle counting function only. |
+| INT-106 | Upload objectives with `flow_rate` and run simulation; assert measured rate in result matches expected behavior. | Mocking particle gate crossings. |
+| INT-107 | Upload objectives with `max_stress` and run simulation; assert `STRESS_OBJECTIVE_EXCEEDED` on overloaded part. | Testing stress threshold comparison in isolation. |
+| INT-108 | Submit non-manifold geometry via API and assert mesh repair retry + eventual success or `FAILED_ASSET_GENERATION` with `meshing_failure` event. | Calling TetGen wrapper function directly. |
+| INT-109 | Run simulation designed to produce runaway energy via API; assert `PHYSICS_INSTABILITY` result and event. | Setting kinetic energy variable directly. |
+| INT-110 | (Requires GPU env) Force CUDA OOM conditions; assert retry at reduced particle count and `gpu_oom_retry` event. | Mocking CUDA allocator only. |
+| INT-111 | Submit part with FEM-missing material via `validate_and_price` API when genesis+FEM; assert rejection. | Calling validation function directly with dict. |
+| INT-112 | Run existing rigid-body benchmark with `backend: mujoco` config and assert success unchanged despite fluids/FEM config present. | Importing backend and toggling flags in unit test. |
+| INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
+| INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
+| INT-122 | Submit circuit exceeding PSU `max_current_a` via API; assert `FAILED_OVERCURRENT_SUPPLY` with total draw reported. | Comparing current values in unit test. |
+| INT-123 | Submit circuit with overloaded wire gauge via API; assert `FAILED_OVERCURRENT_WIRE` with wire ID. | Mocking wire current lookup. |
+| INT-124 | Submit circuit with floating node via API; assert `FAILED_OPEN_CIRCUIT` and node ID in response. | Running Ngspice locally without API. |
+| INT-125 | Run simulation via API with motor that has controller function but no power; assert zero torque output. Run again with power; assert expected torque. | Calling `is_powered()` helper directly. |
+| INT-126 | Run simulation via API where wire tension exceeds rated tensile mid-run; assert `FAILED_WIRE_TORN` and motor stops in result. | Setting tendon tension variable directly. |
+| INT-127 | Run pre-WP3 benchmark (no electronics section) via API; assert all motors produce expected torque (implicit power=1.0). | Patching `is_powered` return value. |
+| INT-128 | Submit malformed `electronics_requirements` in objectives via API; assert schema rejection before simulation. | Validating Pydantic model constructor only. |
+| INT-131 | Execute full fluid benchmark planner→engineer→reviewer pipeline through APIs with real tool calls. | Patching agent graph nodes in-process. |
+| INT-132 | Execute full mech→elec→reviewer pipeline through APIs with real tool calls including circuit validation and wire routing. | Mocking LangGraph node transitions. |
+| INT-133 | Trigger wire routing conflict via API and observe Elec→Mech iteration with `elec_agent_handover` events in stream. | Unit-testing handover state machine only. |
+| INT-134 | Call `preview_stress` via API after simulation; assert images stored in S3 and accessible via asset endpoint. | Mocking renderer output files. |
+| INT-135 | Submit wire routes via API that intersect solid parts; assert `check_wire_clearance` rejection with specific failure details. | Calling clearance check function directly in-process. |
+| INT-136 | Submit circuit with known motor specs via `calculate_power_budget` API; assert correct total draw and over/under-provisioning warnings. | Unit-testing arithmetic helper only. |
+| INT-137 | Query COTS catalog for electrical components (PSU, relay, wire) via API; assert valid results with required fields. | Mocking catalog search response. |
+| INT-138 | Run genesis simulation with `smoke_test_mode: true` via API; assert particle cap applied and result labelled `approximate`. | Setting config flag in unit test. |
+| INT-139 | Run fluid simulation via API; assert only MP4/JSON/stress uploaded to S3; assert raw particle data absent from S3. | Checking local filesystem directly. |
+| INT-140 | Call `validate_and_price` on assembly with wires and electrical COTS parts; assert wire and elec costs included in total. | Calling pricing helper function directly. |
+| INT-141 | Run `simulate_circuit_transient` via API; assert motor ON/OFF timeline matches expected switching sequence. | Importing transient solver directly. |
+| INT-151 | Run multi-seed engineer episodes via API; assert <10% produce `PART_BREAKAGE`. | Single mock seed assertion. |
+| INT-152 | Collect safety factors from multi-episode runs via API; assert average 1.5–5.0 in ≥80%. | Manual safety factor calculation. |
+| INT-153 | Execute planner→engineer fluid benchmark end-to-end via APIs; assert ≥50% pass containment metric. | Offline metric analysis only. |
+| INT-154 | Execute Elec Engineer on motor-mechanism benchmark via APIs; assert ≥80% valid circuit first attempt. | Mocking circuit validation result. |
+| INT-155 | Execute wire-routed assemblies across 5 seeds via API; assert ≥70% survive without `FAILED_WIRE_TORN`. | Single-seed unit test only. |
+| INT-156 | Run electromechanical simulations via API; assert ≥95% correctly gate motor on/off based on circuit state. | Asserting `is_powered` return values only. |
 
 ## Coverage map: current vs required
 
@@ -221,13 +297,17 @@ This section exists to force implementation as true integration tests, not unit 
   - INT-001, INT-002, INT-003, INT-004 (basic smoke/plumbing/concurrency).
 - Not covered or only weakly covered:
   - INT-005 through INT-060 (planner gating, COTS, artifact validation, observability completeness, Langfuse logging guarantees, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).
+  - INT-101 through INT-112 (WP2: physics backend abstraction, FEM/deformable materials, fluid simulation, stress reporting, breakage detection, meshing pipeline, fluid/stress metrics, GPU OOM handling).
+  - INT-120 through INT-128 (WP3: circuit validation, electrical failure modes, motor power gating, wire tear, backward compat, electronics schema).
+  - INT-131 through INT-141 (WP2/WP3 P1: full fluid and electromechanical workflows, agent handovers, stress rendering, wire routing, power budget, COTS electrical, smoke-test mode, data storage policy, circuit transient).
+  - INT-151 through INT-156 (WP2/WP3 P2: breakage prevention evals, safety factor range, fluid benchmark evals, circuit success rate, wire survival, motor gating correctness).
 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056.
-- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060.
-- `tests/integration/evals_p2/`: INT-046..INT-052.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-101..INT-112, INT-120..INT-128.
+- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-131..INT-141.
+- `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 
 Marker recommendation:
 

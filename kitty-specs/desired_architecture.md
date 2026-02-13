@@ -1021,6 +1021,11 @@ In addition, the engineers should be able to, just as in common software agentic
 
 Because we have a bill of materials/part tree, it should be very straightforward to "@-mention" the part or subassembly that one wants to edit.
 
+#### Other
+
+Ideally, agents would have standard per-user memory sets.
+<!-- per-org, per-project memory is a TODO later.-->
+
 ## Agent Evaluations
 
 Evaluations are treated as a first-class architecture in this application. In fact our work on manufacturability validation, code linting, simulation is just a tool for evaluation.
@@ -2239,6 +2244,12 @@ For each "action" there should be a nice render, kind of like a "edited: [icon] 
 ##### (important feature) Chat UI
 
 The "reasoning trace" UI should be not a single message, but something iterative. An engineer should be able to say "I don't like X, it's unstable" and the planner will replan accordingly.
+
+###### Collecting feedback from users
+
+Users can submit thumbs up/down on model outputs, just as they would in most "chat" UIs.
+
+The feedback would be when the model ends its output, and not at each message.
 
 ##### All tools are in chat
 
