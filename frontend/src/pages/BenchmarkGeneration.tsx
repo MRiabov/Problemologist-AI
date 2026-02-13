@@ -4,7 +4,6 @@ import { useConnection } from '../context/ConnectionContext';
 import { fetchEpisodes, type Episode } from '../api/client';
 import { 
   Cpu, 
-  Signal,
   SignalLow,
   AlertCircle
 } from "lucide-react";
@@ -47,13 +46,9 @@ export default function BenchmarkGeneration() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold tracking-tight">Benchmark Pipeline</h2>
-              {isConnected ? (
-                <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-green-500/30 text-green-500 bg-green-500/5 gap-1">
-                  <Signal className="h-2 w-2" /> ONLINE
-                </Badge>
-              ) : (
+              {!isConnected && (
                 <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-red-500/30 text-red-500 bg-red-500/5 gap-1">
-                  <SignalLow className="h-2 w-2" /> DISCONNECTED
+                  <SignalLow className="h-2 w-2" /> OFFLINE
                 </Badge>
               )}
             </div>
