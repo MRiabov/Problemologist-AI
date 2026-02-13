@@ -1,0 +1,77 @@
+Title,Description,Priority,Status,Assignee,Labels,Created,Completed,Started,Estimate
+Implement PhysicsBackend Interface,"Introduce a `PhysicsBackend` abstraction (Protocol) to support MuJoCo and Genesis backends. Includes methods for loading scenes, stepping, querying state/stress, and rendering.
+
+```python
+class PhysicsBackend(Protocol):
+    def load_scene(self, scene: SimulationScene) -> None: ...
+    def step(self, dt: float) -> StepResult: ...
+    def get_body_state(self, body_id: str) -> BodyState: ...
+    def get_stress_field(self, body_id: str) -> StressField | None: ...
+    def get_particle_positions(self) -> np.ndarray | None: ...
+    def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray: ...
+    def get_camera_matrix(self, camera_name: str) -> np.ndarray: ...
+```",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Genesis Backend Integration,Develop the `GenesisBackend` class implementing the `PhysicsBackend` protocol. This backend must support FEM soft bodies and MPM fluids natively.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Create config/simulation_config.yaml,"Create `config/simulation_config.yaml` for backend selection. Remove `physics` section from `objectives.yaml` (if present) and use this dedicated config instead.
+
+```yaml
+physics:
+  backend: ""genesis"" # ""mujoco"" | ""genesis""
+  fem_enabled: true
+  compute_target: ""cpu"" # ""cpu"" | ""gpu""
+```",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Extend manufacturing_config.yaml with FEM Properties,"Add FEM-specific fields to the materials section in `manufacturing_config.yaml`:
+- `youngs_modulus_pa`
+- `poissons_ratio`
+- `yield_stress_pa`
+- `ultimate_stress_pa`
+- `elongation_at_break`
+- `material_class` (""rigid"" | ""soft"" | ""elastomer"")",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Part Breakage Detection,"In Genesis backend, detect when any element exceeds `ultimate_stress_pa`.
+- Simulation must fail immediately with `PART_BREAKAGE`.
+- Capture stress field at failure.
+- Notify agent with structured breakage message.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Stress Reporting Module,"At configurable intervals (default 50 steps), compute and store `StressSummary` for all FEM bodies:
+- `max_von_mises_pa`
+- `safety_factor` (yield_stress / max_stress)
+- `utilization_pct` (max_stress / yield_stress * 100)
+Append results to `SimulationResult.stress_summaries`.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Tetrahedralization Pipeline (TetGen),"Extend the asset conversion pipeline (`build123d -> OBJ -> MuJoCo`) for deformable parts:
+- Tessellate to STL.
+- Use **TetGen** to tetrahedralize into `.msh` files.
+- Integrate into the worker container's `mesh_utils.py`.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Mesh Repair Infrastructure,"Enhance `mesh_utils.py` to handle non-manifold geometry:
+- Catch TetGen failures.
+- Run mesh repair using `trimesh` (remove duplicates, repair self-intersections).
+- Retry tetrahedralization after repair.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Add Fluid Definition Support in Objectives,"Implement parsing and handling of the `fluids` section in `objectives.yaml`.
+- Define fluid properties (viscosity, density, surface tension).
+- Handle initial volume primitives (e.g., cylinder particle seeding).",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Fluid-Electronics Interaction Check,"Implement a check (no-op until WP3) for fluid particle overlap with bodies tagged `electronics: true`.
+- If overlap detected, fail with `ELECTRONICS_FLUID_DAMAGE`.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Fluid Containment & Flow Metrics,"Integrate new objective types for fluid validation:
+- `fluid_containment`: Compute ratio of particles within a zone.
+- `flow_rate`: Compute volume flow rate across a gate plane.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Engineer Tool: define_fluid,Add `define_fluid(...)` tool for agents to define fluid types for simulation.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Engineer Tool: get_stress_report,Add `get_stress_report(part_label)` tool for agents to query stress metrics post-simulation.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Engineer Tool: preview_stress,Add `preview_stress(component)` tool to render stress heatmaps for agent visual inspection.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Physics Instability Detection,"Monitor total kinetic energy during simulation. Abort and fail with `PHYSICS_INSTABILITY` if energy exceeds thresholds (e.g., NaN events).",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement GPU OOM Auto-Retry Logic,"In Genesis backend, catch CUDA OOM errors and automatically retry simulation with reduced particle count (e.g., 75% of original). Log a `gpu_oom_retry` event. Ideally fail simulation if reduction is too drastic.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Update SimulationResult and failure_reason Enums,"Add new failure reasons:
+- `PART_BREAKAGE`
+- `STRESS_OBJECTIVE_EXCEEDED`
+- `FLUID_OBJECTIVE_FAILED`
+Update `SimulationResult` Pydantic model with `stress_summaries` and `fluid_metrics`.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Develop Stress Heatmap Visualization in Frontend,Implement display of von Mises stress heatmaps (blue-to-red) alongside existing part renders in the UI.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Integrate Genesis Video Rendering,Ensure MPM fluid particles are visible in the output simulation MP4 files generated by the Genesis worker.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement WP2 Observability Events,"Integrate new events into the observability system:
+- `part_breakage`
+- `fluid_containment_check`
+- `flow_rate_check`
+- `stress_summary`
+- `meshing_failure`
+- `physics_instability`",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Stress Objectives Evaluation,Implement logic to evaluate `stress_objectives` in `objectives.yaml`. Check `max_von_mises_mpa` against part stress. Fail simulation with `STRESS_OBJECTIVE_EXCEEDED` if thresholds are violated.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Update Agent Tools for WP2 Parameters,Update `simulate` tool to support `fem_enabled` and `particle_budget` arguments. Update `validate_and_price` to validate existence of FEM properties in `manufacturing_config.yaml` when FEM is active.,No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Worker Compute Configuration,"Implement logic for `compute_target: ""auto""` (detect GPU), `smoke_test_mode` (particle cap), and update Worker Dockerfile to support Genesis with optional CUDA.",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,
+Implement Simulation Data Management,"Implement transient storage strategy: store raw particle data/renders in `/tmp`, upload only MP4/JSON/Summaries to S3, and delete raw data after processing. (do it exactly how it was done for MP4 anyway)",No priority,Backlog,,"WP2, Fluids, Deformable Materials",,,,

@@ -35,6 +35,14 @@ class PhysicsBackend(Protocol):
     def get_body_state(self, body_id: str) -> BodyState: ...
     def get_stress_field(self, body_id: str) -> StressField | None: ...
     def get_particle_positions(self) -> np.ndarray | None: ...
+    
+    # Rendering & Visualization
+    def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray: ...
+    def get_camera_matrix(self, camera_name: str) -> np.ndarray: ...
+    
+    # Advanced interactions (superset of MuJoCo)
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None: ...
+    def get_contact_forces(self) -> list[ContactForce]: ...
 
 class SimulatorBackendType(str, Enum):
     MUJOCO = "mujoco"      # Rigid-body only, fast, no FEM/fluids
@@ -43,9 +51,10 @@ class SimulatorBackendType(str, Enum):
 
 ### Backend Selection
 
-The backend is selected per episode via `objectives.yaml`:
+The backend is selected per episode via `config/simulation_config.yaml` (or typically just `objectives.yaml` in previous versions, now separated for clarity):
 
 ```yaml
+# config/simulation_config.yaml
 physics:
   backend: "genesis"        # "mujoco" | "genesis"
   fem_enabled: true         # Toggle FEM on/off (Genesis only)
@@ -254,20 +263,14 @@ objectives:
   stress_objectives: [...]    # Stress-based success criteria
 ```
 
-### `preliminary_cost_estimation.yaml` additions
+### `preliminary_cost_estimation.yaml` (No Changes)
 
-Per-part in `manufactured_parts`:
+We do **not** add explicit FEM fields to `preliminary_cost_estimation.yaml`.
 
-```yaml
-manufactured_parts:
-  - part_name: "gripper_pad"
-    # ... existing fields ...
-    # NEW — WP2 fields
-    fem_properties:
-      material_class: "rigid"     # Pulled from manufacturing_config.yaml
-      deformable: true            # Opt-out flag (default true after WP2)
-      stress_monitoring: true     # Whether to compute stress summaries
-```
+- FEM properties are inherent to the material selected in `manufacturing_config.yaml`.
+- If a part's material is "rigid", it simulates as rigid (or linear FEM) - which is the case for only off-the-shelf, not manufactured parts.
+- If "elastomer", it simulates as hyperelastic.
+- Stress monitoring is enabled by default for all parts in WP2.
 
 ### `SimulationResult` additions
 
@@ -378,7 +381,7 @@ Existing validation gains one new check:
 #### Engineer Planner
 
 - Must consider material strength when designing mechanisms. Plans should include a "Stress Considerations" subsection in `## 5. Risk Assessment` noting which parts are load-bearing and their expected safety factor.
-- Must specify `fem_properties.deformable` and `fem_properties.stress_monitoring` per part in `preliminary_cost_estimation.yaml`.
+- Relies on material properties for FEM checking; does not need to toggle flags in `preliminary_cost_estimation.yaml`.
 
 #### Engineer CAD
 
@@ -432,7 +435,7 @@ Existing validation gains one new check:
 **Handling**:
 
 1. Genesis throws CUDA OOM.
-2. System catches and auto-retries with fewer particles (50% reduction).
+2. System catches and auto-retries with fewer particles (25% reduction -> 75% of original).
 3. Adds warning to result: `"Simulation resolution was reduced to fit VRAM. Results may be less accurate."`
 4. Emits `gpu_oom_retry` event.
 
