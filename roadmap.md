@@ -62,7 +62,10 @@ Outside of adding just the standard rigid body simulator, add deformable bodies 
 
 From now on, (all) materials are subject to finite element modelling deformation.
 
-1. (how?)
+1. All materials are now finite-element modelled, thus will bend or break, if their strength is exceeded.
+2. Simulation fidelity - fair, approximately how dynamics would normally be simulated.
+
+We focus on more rigid body than softer materials, i.e. plastic over foam.
 
 #### Fluids
 
