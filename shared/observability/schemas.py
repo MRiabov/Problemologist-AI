@@ -62,6 +62,8 @@ class ObservabilityEventType(StrEnum):
     LIBRARY_USAGE = "library_usage"
     # 24. Review decision (full details)
     REVIEW_DECISION = "review_decision"
+    # 25. Circuit validation
+    CIRCUIT_VALIDATION = "circuit_validation"
 
 
 class SimulationFailureReason(StrEnum):
@@ -290,3 +292,11 @@ class ReviewEvent(BaseEvent):
     episode_id: str
     decision: str
     comments: list[str] = Field(default_factory=list)
+
+
+class CircuitValidationEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_VALIDATION
+    success: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    total_draw_a: float | None = None
