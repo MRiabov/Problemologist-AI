@@ -5,8 +5,6 @@ import {
   Terminal, 
   Send, 
   Square, 
-  ThumbsUp, 
-  ThumbsDown, 
   Check, 
   AlertCircle,
   FileEdit,
@@ -16,11 +14,14 @@ import {
   Search,
   Zap,
   Clock,
-  Play
+  Play,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { submitTraceFeedback, runSimulation } from "../../api/client";
+import { submitTraceFeedback, runSimulation, type BenchmarkObjectives } from "../../api/client";
+import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -62,28 +63,42 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
     const isStart = trace.trace_type === 'tool_start';
     const isEnd = trace.trace_type === 'tool_end';
     
-    if (!isStart && !isEnd) return null;
+    // Hide tool_end traces as they are usually redundant or just "Tool completed"
+    if (isEnd) return null;
+    if (!isStart) return null;
 
     // Determine tool name and arguments
-    const toolName = trace.name || "";
+    const toolName = (trace.name || "").toLowerCase();
     let args: any = {};
     if (trace.content) {
         try {
             args = JSON.parse(trace.content);
         } catch (e) {
-            // Content might be a string or other data
+            // Try to extract TargetFile or similar via regex if JSON fails
+            const targetFileMatch = trace.content.match(/'TargetFile':\s*'([^']+)'/) || 
+                                   trace.content.match(/"TargetFile":\s*"([^"]+)"/) ||
+                                   trace.content.match(/'AbsolutePath':\s*'([^']+)'/) ||
+                                   trace.content.match(/"AbsolutePath":\s*"([^"]+)"/);
+            if (targetFileMatch) {
+                args.TargetFile = targetFileMatch[1];
+            }
         }
     }
 
-    const isFileTool = ['write_file', 'read_file', 'replace_file_content', 'multi_replace_file_content'].includes(toolName);
-    const filePath = args.TargetFile || args.AbsolutePath || args.path || "";
+    const isFileTool = ['write_file', 'read_file', 'replace_file_content', 'multi_replace_file_content', 'view_file', 'view_file_outline'].some(t => toolName.includes(t));
+    const filePath = args.TargetFile || args.AbsolutePath || args.path || args.TargetFile || "";
     const fileName = filePath.split('/').pop() || filePath;
 
     const handleActionClick = () => {
         if (!isFileTool || !filePath || !selectedEpisode) return;
         
         // Try to find matching asset ID
-        const asset = selectedEpisode.assets?.find(a => a.s3_path.endsWith(filePath) || a.s3_path === filePath);
+        const asset = selectedEpisode.assets?.find(a => 
+            a.s3_path.toLowerCase().endsWith(filePath.toLowerCase()) || 
+            a.s3_path.toLowerCase() === filePath.toLowerCase() ||
+            (a.content && filePath.includes(a.s3_path.split('/').pop() || ""))
+        );
+        
         if (asset) {
             setActiveArtifactId(asset.id.toString());
         } else if (filePath.toLowerCase().endsWith('plan.md')) {
@@ -97,27 +112,25 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
             return <FileIcon className="h-3.5 w-3.5" style={{ color }} />;
         }
 
-        const name = toolName.toLowerCase();
-        if (name.includes('write')) return <FileEdit className="h-3.5 w-3.5 text-blue-400" />;
-        if (name.includes('read')) return <Eye className="h-3.5 w-3.5 text-emerald-400" />;
-        if (name.includes('list') || name.includes('ls')) return <Folder className="h-3.5 w-3.5 text-amber-400" />;
-        if (name.includes('run') || name.includes('exec') || name.includes('command')) return <PlayCircle className="h-3.5 w-3.5 text-purple-400" />;
-        if (name.includes('search') || name.includes('cots')) return <Search className="h-3.5 w-3.5 text-sky-400" />;
+        if (toolName.includes('write')) return <FileEdit className="h-3.5 w-3.5 text-blue-400" />;
+        if (toolName.includes('read') || toolName.includes('view')) return <Eye className="h-3.5 w-3.5 text-emerald-400" />;
+        if (toolName.includes('list') || toolName.includes('ls')) return <Folder className="h-3.5 w-3.5 text-amber-400" />;
+        if (toolName.includes('run') || toolName.includes('exec') || toolName.includes('command')) return <PlayCircle className="h-3.5 w-3.5 text-purple-400" />;
+        if (toolName.includes('search') || toolName.includes('cots')) return <Search className="h-3.5 w-3.5 text-sky-400" />;
         return <Zap className="h-3.5 w-3.5 text-gray-400" />;
     };
 
     const getLabel = () => {
-        const name = toolName.toLowerCase();
-        if (name.includes('write')) return 'Edited';
-        if (name.includes('read')) return 'Read';
-        if (name.includes('list')) return 'Viewed';
-        if (name.includes('run')) return 'Ran';
-        if (name.includes('search')) return 'COTS';
+        if (toolName.includes('write')) return 'Edited';
+        if (toolName.includes('read') || toolName.includes('view')) return 'Read';
+        if (toolName.includes('list')) return 'Viewed';
+        if (toolName.includes('run')) return 'Ran';
+        if (toolName.includes('search')) return 'COTS';
         return 'Tool';
     };
 
-    // For file tools, we show a simplified one-line view
-    if (isStart && isFileTool && fileName) {
+    // For file tools (or if we extracted a filename), we show a simplified one-line view
+    if (fileName && (isFileTool || getLabel() !== 'Tool')) {
         return (
             <div 
                 onClick={handleActionClick}
@@ -145,22 +158,22 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
         );
     }
 
-    // Default ActionCard for other tools or end signals
+    // Default ActionCard for other tools
     return (
         <div className={cn(
             "group flex flex-col gap-1 p-2 rounded-md border border-border/50 transition-all mb-2",
-            isStart ? "bg-muted/30 hover:bg-muted/50" : "bg-muted/10"
+            "bg-muted/30 hover:bg-muted/50"
         )}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {getIcon()}
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {getLabel()}: <span className="text-foreground">{toolName}</span>
+                        {getLabel()}: <span className="text-foreground">{trace.name || "Tool"}</span>
                     </span>
                 </div>
                 <span className="text-[9px] opacity-30 font-mono">#{trace.id}</span>
             </div>
-            {isStart && trace.content && !isFileTool && (
+            {trace.content && !isFileTool && (
                 <div className="mt-1 overflow-hidden rounded border border-border/20">
                     <HighlightedContent content={trace.content} />
                 </div>
@@ -183,9 +196,21 @@ export default function ChatWindow({
   isConnected = true
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { isCreationMode, startAgent, interruptAgent, selectedEpisode } = useEpisodes();
+  const { isCreationMode, startAgent, interruptAgent, selectedEpisode, updateObjectives } = useEpisodes();
   const [prompt, setPrompt] = useState("");
   const [feedbackState, setFeedbackState] = useState<Record<number, { score: number; comment: string; isSubmitted: boolean }>>({});
+  const [showObjectives, setShowObjectives] = useState(false);
+  const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
+
+  // Reset objectives when episode changes (optional, or fetch from episode metadata)
+  useEffect(() => {
+      if (selectedEpisode?.metadata_vars?.custom_objectives) {
+          setObjectives(selectedEpisode.metadata_vars.custom_objectives as BenchmarkObjectives);
+      } else if (isCreationMode) {
+          setObjectives({});
+      }
+  }, [selectedEpisode, isCreationMode]);
+
 
   const handleFeedback = async (traceId: number, score: number) => {
     setFeedbackState(prev => ({
@@ -212,7 +237,11 @@ export default function ChatWindow({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim()) {
-      startAgent(prompt);
+      if (isCreationMode) {
+          startAgent(prompt, objectives);
+      } else {
+          startAgent(prompt);
+      }
       setPrompt("");
     }
   };
@@ -239,7 +268,7 @@ export default function ChatWindow({
   const showExecutionPlan = selectedEpisode?.plan && !isRunning && selectedEpisode.status !== 'completed';
 
   return (
-    <div className="flex flex-col h-full bg-card/30 border-r border-border relative overflow-hidden">
+    <div className="flex flex-col h-full bg-card/30 relative overflow-hidden">
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       
       {/* Header */}
@@ -384,7 +413,31 @@ export default function ChatWindow({
         </ScrollArea>
 
         {/* Steering / Input Area */}
-        <div className="p-4 border-t border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm relative">
+             {/* Objectives Toggle Helper */}
+            <div className="absolute top-0 left-0 right-0 -mt-3 flex justify-center pointer-events-none">
+                <Button
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-5 rounded-t-lg rounded-b-none border-t border-x border-border/50 bg-background/90 text-[9px] text-muted-foreground hover:bg-background hover:text-foreground pointer-events-auto shadow-sm"
+                    onClick={() => setShowObjectives(!showObjectives)}
+                >
+                    {showObjectives ? <ChevronDown className="h-3 w-3 mr-1" /> : <ChevronUp className="h-3 w-3 mr-1" />}
+                    <span className="uppercase tracking-wider font-bold">Objectives</span>
+                </Button>
+            </div>
+
+            {showObjectives && (
+                <ObjectivesForm 
+                    objectives={objectives} 
+                    onChange={setObjectives} 
+                    onUpdate={() => updateObjectives(objectives)}
+                    showUpdate={!isCreationMode && !!selectedEpisode}
+                    disabled={isRunning}
+                />
+            )}
+
+            <div className="p-4 pt-4">
             <form onSubmit={handleSubmit} className="relative group">
                 <Input 
                    id="chat-input"
@@ -414,5 +467,6 @@ export default function ChatWindow({
         </div>
       </div>
     </div>
+  </div>
   );
 }

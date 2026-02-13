@@ -60,7 +60,9 @@ def define_graph():
 
 
 async def run_generation_session(
-    prompt: str, session_id: uuid.UUID | None = None
+    prompt: str,
+    session_id: uuid.UUID | None = None,
+    custom_objectives: dict | None = None,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
@@ -79,6 +81,7 @@ async def run_generation_session(
                 "detailed_status": SessionStatus.planning,
                 "validation_logs": [],
                 "prompt": prompt,
+                "custom_objectives": custom_objectives,
             },
         )
         db.add(episode)
@@ -86,7 +89,10 @@ async def run_generation_session(
 
     # 2. Setup State
     session = GenerationSession(
-        session_id=session_id, prompt=prompt, status=SessionStatus.planning
+        session_id=session_id,
+        prompt=prompt,
+        status=SessionStatus.planning,
+        custom_objectives=custom_objectives or {},
     )
 
     initial_state = BenchmarkGeneratorState(

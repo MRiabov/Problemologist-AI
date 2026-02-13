@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchEpisodes, fetchEpisode, runAgent, type Episode } from '../api/client';
+import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, type Episode, type BenchmarkObjectives } from '../api/client';
 
 interface EpisodeContextType {
   episodes: Episode[];
@@ -11,7 +10,8 @@ interface EpisodeContextType {
   setActiveArtifactId: (id: string | null) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
-  startAgent: (task: string) => Promise<void>;
+  startAgent: (task: string, objectives?: BenchmarkObjectives) => Promise<void>;
+  updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
   createNewBenchmark: () => void;
@@ -61,12 +61,34 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setIsCreationMode(true);
   }, []);
 
-  const startAgent = useCallback(async (task: string) => {
-    setRunning(true);
-    setIsCreationMode(false);
+  const updateObjectives = useCallback(async (objectives: BenchmarkObjectives) => {
+    if (!selectedEpisode) return;
     try {
-      const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
-      const response = await runAgent(task, sessionId);
+      await updateBenchmarkObjectives(selectedEpisode.id, objectives);
+      // Optionally refresh episode to show updated state if backend returns it
+    } catch (e) {
+      console.error("Failed to update objectives", e);
+      throw e;
+    }
+  }, [selectedEpisode]);
+
+  const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives) => {
+    setRunning(true);
+    const wasCreationMode = isCreationMode;
+    setIsCreationMode(false);
+    
+    try {
+      let response;
+      if (wasCreationMode || objectives) {
+         response = await generateBenchmark(task, objectives);
+         // Backend returns { session_id: ... }
+         if (response.session_id) {
+            response.episode_id = response.session_id; // Normalize key
+         }
+      } else {
+         const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
+         response = await runAgent(task, sessionId);
+      }
       
       if (response.episode_id) {
         // Create a minimal episode object to start polling
@@ -86,7 +108,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to run agent", e);
       setRunning(false);
     }
-  }, [refreshEpisodes]);
+  }, [isCreationMode, refreshEpisodes]);
 
   const interruptAgent = useCallback(async (id: string) => {
     try {
@@ -138,7 +160,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       createNewBenchmark,
       clearSelection,
       activeArtifactId,
-      setActiveArtifactId
+      setActiveArtifactId,
+      updateObjectives
     }}>
       {children}
     </EpisodeContext.Provider>
