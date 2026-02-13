@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libosmesa6 \
     libglib2.0-0 \
     libsm6 \
+    libngspice0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
