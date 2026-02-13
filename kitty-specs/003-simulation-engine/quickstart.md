@@ -41,6 +41,6 @@ In the distributed setup, the worker node hosts the simulation engine and expose
 
 ```bash
 # Internal Worker API call
-curl -X POST http://localhost:8080/simulate \
+curl -X POST http://localhost:18081/simulate \
      -d '{"mjcf_url": "s3://bucket/model.xml"}'
 ```

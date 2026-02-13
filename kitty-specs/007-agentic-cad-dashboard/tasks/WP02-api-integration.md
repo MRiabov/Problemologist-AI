@@ -30,7 +30,7 @@ Establish a robust, type-safe data fetching layer and implement the "Runs List" 
 - **Goal**: Generate TypeScript client from backend schema.
 - **Details**:
   - Install `openapi-typescript-codegen` as a dev dependency.
-  - Create a script in `package.json`: `"gen:api": "openapi --input http://localhost:8000/openapi.json --output ./src/api --client axios"`.
+  - Create a script in `package.json`: `"gen:api": "openapi --input http://localhost:18000/openapi.json --output ./src/api --client axios"`.
   - **Note**: Since backend might not be running, you may need to rely on a local `openapi.json` file. If one exists in the repo, point to it. If not, assume a structure or ask user to provide one. *For this task, assume we can mock or use a provided schema file.*
   - Run the generation to create `src/api`.
 - **Files**:
