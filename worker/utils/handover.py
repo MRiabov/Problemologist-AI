@@ -123,7 +123,7 @@ def submit_for_review(component: Compound, cwd: Path = Path(".")):
             raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
-    render_paths = [] 
+    render_paths = prerender_24_views(component, output_dir=str(renders_dir))
     logger.info("renders_persisted", count=len(render_paths))
 
     cad_path = renders_dir / "model.step"

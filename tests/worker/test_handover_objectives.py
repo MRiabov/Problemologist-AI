@@ -1,6 +1,6 @@
 import json
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from build123d import Box
@@ -75,17 +75,57 @@ totals:
     cost_file = temp_dir / "preliminary_cost_estimation.yaml"
     cost_file.write_text(cost_content)
 
+    # Create plan.md
+    plan_file = temp_dir / "plan.md"
+    plan_file.write_text("""# PLAN
+
+## 1. Solution Overview
+Overview content.
+
+## 2. Parts List
+- Part A
+
+## 3. Assembly Strategy
+1. Assemble part A.
+2. Assemble part B.
+
+## 4. Cost & Weight Budget
+- Cost: $10.
+- Weight: 10g.
+
+## 5. Risk Assessment
+- Risk: Breaking.
+- Mitigation: Be careful.
+""")
+
+    # Create todo.md
+    todo_file = temp_dir / "todo.md"
+    todo_file.write_text("# TODO\n\n- [x] Step 1\n")
+
+    # Create validation_results.json
+    validation_file = temp_dir / "validation_results.json"
+    validation_file.write_text(json.dumps({"success": True, "message": "OK"}))
+
     # We need to run in the temp_dir context
     os.chdir(temp_dir)
 
     with (
-        patch("worker.utils.handover.prerender_24_views", return_value=["img1.png"]),
+        patch("worker.utils.handover.prerender_24_views", return_value=["img1.png"]) as mock_render,
         patch("worker.utils.handover.export_step"),
         patch.dict(
             os.environ,
             {"RENDERS_DIR": str(temp_dir / "renders"), "SESSION_ID": "test_session"},
         ),
+        # Mock validate_and_price to avoid actual build123d analysis overhead/errors
+        patch("worker.utils.handover.validate_and_price") as mock_validate
     ):
+        # Configure mock validation result
+        mock_result = MagicMock()
+        mock_result.is_manufacturable = True
+        mock_result.unit_cost = 50.0
+        mock_result.metadata = {"weight_kg": 1.0}
+        mock_validate.return_value = mock_result
+
         success = submit_for_review(component)
         assert success is True
 
@@ -102,3 +142,7 @@ totals:
 
         assert manifest["objectives_path"] == str(target_obj)
         assert manifest["session_id"] == "test_session"
+        assert manifest["renders"] == ["img1.png"]
+
+        # Verify prerender was called
+        mock_render.assert_called_once()
