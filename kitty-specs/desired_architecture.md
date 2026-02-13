@@ -998,6 +998,29 @@ As usual, the reviews will be strictly typed.
 
 The agents will have a max_turns=60 (for example) cap, which would control how many turns (tool call invocations/responses) the agent can do. The agent will stop on turn number max turns. The user is able to have the agent continue for another number of turns.
 
+### Steerability
+
+Agents must be steered by the engineer towards the right solution. In essense, the engineer (user), seeing incorrect traces, can send a prompt to edit the prompt.
+Just as with coding agents.
+
+In the simplest example, if the plan is incorrect, the engineer will intervene and tell the model what to do differently.
+
+The work here is the UI, the backend processing and prompt optimization.
+
+#### Steerability with exact pointing
+
+It's desired that agents are able to understand the exact face or volume that the engineer wants to fix. The engineer, in the UI, will select the set of faces, or edges, or corners, and "attach" them to the prompt, similar to how a programmer can attach faulty logic to code. Thus, the agents will get the name of the part (or set of) they need to edit, and whatever... features on them.
+
+<!-- Likely, if there are a large number of volumes, don't send them all at once? -->
+
+#### Steering code directly
+
+In addition, the engineers should be able to, just as in common software agentic environments, select some code and put it.
+
+#### Pointing in the chat
+
+Because we have a bill of materials/part tree, it should be very straightforward to "@-mention" the part or subassembly that one wants to edit.
+
 ## Agent Evaluations
 
 Evaluations are treated as a first-class architecture in this application. In fact our work on manufacturability validation, code linting, simulation is just a tool for evaluation.
