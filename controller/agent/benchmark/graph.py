@@ -224,6 +224,21 @@ async def run_generation_session(
         )
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
+        initial_state["session"].status = SessionStatus.failed
+        # Update DB (Episode) to failed
+        async with session_factory() as db:
+            episode = await db.get(Episode, session_id)
+            if episode:
+                episode.status = EpisodeStatus.FAILED
+                metadata = (episode.metadata_vars or {}).copy()
+                metadata.update(
+                    {
+                        "detailed_status": SessionStatus.failed,
+                        "error": str(e),
+                    }
+                )
+                episode.metadata_vars = metadata
+                await db.commit()
         return initial_state
 
     # 4. Final Asset Persistence

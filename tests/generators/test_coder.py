@@ -67,8 +67,8 @@ async def test_coder_node_success(mock_llm_cls, mock_state):
             updated_state = await coder_node(mock_state)
 
     assert updated_state["current_script"] == valid_script
-    # HumanMessage + 1st response (loop breaks)
-    assert len(updated_state["messages"]) == 2
+    # SystemMessage + HumanMessage + 1st response (loop breaks)
+    assert len(updated_state["messages"]) == 3
 
     # Verify it's runnable
     local_scope = {}

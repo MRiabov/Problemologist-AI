@@ -249,11 +249,15 @@ Validation Logs:
 
         # 4. Invoke Agent using manual tool loop to avoid nested graphs
         llm_with_tools = llm.bind_tools(tools)
-        messages = state.get("messages", []) + [
-            HumanMessage(
-                content=f"Implement the benchmark script for: {state['session'].prompt}"
-            )
-        ]
+        messages = (
+            [SystemMessage(content=system_prompt)]
+            + state.get("messages", [])
+            + [
+                HumanMessage(
+                    content=f"Implement the benchmark script for: {state['session'].prompt}"
+                )
+            ]
+        )
 
         # Basic ReAct loop
         for _ in range(5):

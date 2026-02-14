@@ -22,11 +22,23 @@ async def test_run_generation_session_mocked():
 
     with (
         patch("controller.agent.benchmark.graph.define_graph") as mock_define,
-        patch("controller.agent.benchmark.graph.get_db") as mock_get_db,
+        patch(
+            "controller.agent.benchmark.graph.get_sessionmaker"
+        ) as mock_get_sessionmaker,
     ):
         # Configure mock DB context manager
         mock_db_session = AsyncMock()
-        mock_get_db.return_value.__aenter__.return_value = mock_db_session
+        mock_get_sessionmaker.return_value.return_value.__aenter__.return_value = (
+            mock_db_session
+        )
+
+        # Mock Episode for DB updates inside _execute_graph_streaming
+        mock_episode = MagicMock()
+        mock_episode.metadata_vars = {}
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_episode
+        mock_db_session.execute.return_value = mock_result
+        mock_db_session.get.return_value = mock_episode
         # Mock the compiled graph's astream method
         mock_app = MagicMock()
 
@@ -58,11 +70,23 @@ async def test_run_generation_session_rejected():
 
     with (
         patch("controller.agent.benchmark.graph.define_graph") as mock_define,
-        patch("controller.agent.benchmark.graph.get_db") as mock_get_db,
+        patch(
+            "controller.agent.benchmark.graph.get_sessionmaker"
+        ) as mock_get_sessionmaker,
     ):
         # Configure mock DB context manager
         mock_db_session = AsyncMock()
-        mock_get_db.return_value.__aenter__.return_value = mock_db_session
+        mock_get_sessionmaker.return_value.return_value.__aenter__.return_value = (
+            mock_db_session
+        )
+
+        # Mock Episode for DB updates inside _execute_graph_streaming
+        mock_episode = MagicMock()
+        mock_episode.metadata_vars = {}
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_episode
+        mock_db_session.execute.return_value = mock_result
+        mock_db_session.get.return_value = mock_episode
         mock_app = MagicMock()
 
         async def mock_astream_gen(input_state, **kwargs):
