@@ -1,7 +1,7 @@
 # Frontend specs
 
 As frontend has grown in the complexity and becomes an actual user-facing feature, it is worth separating it into the UI.
-The main architectural specification is in @desired_architecture.md
+The main architectural specification is in @./desired_architecture.md
 
 ## Core flows
 
@@ -74,19 +74,20 @@ It is likely we will use the exact same component/template for the benchmark and
 A CAD viewer is a tool that engineers will use to:
 
 1. View the model
-2. Suggest improvements on the model.
-3. View topology (on by default, hideable)
-4. View simulations (time-progressive)
+2. View topology (on by default, hideable)
+3. View simulations (time-progressive)
      - Move the simulation time forward or backward.
-5. View individual parts (hide some or all other parts):
+4. View individual parts (hide some or all other parts):
      - During design
      - During simulation (make some parts hideable)
+5. Suggest improvements on the model.
+    - Add parts to context. Click the part or a face to reference it in during the next workflow
 
 Ideally, this the CAD viewer renders build123d directly as WASM in the browser, however, I don't want to debug it yet, so the GLB/OBJ model(s) will be pulled from the backend. (or STEP models? I'm not sure. Whatever YACV supports.)
 
-We will use a "Yet Another CAD Viewer" (YACV) with server-side rendering.
+We will use standard GLB files exported from the backend. To support topology selection (faces, edges), the backend will break down the model into individual meshes for each face/edge within the GLB file, named accordingly (e.g., `face_1`, `edge_2`).
 
-[!Note] Exception - the frontend will query the worker, not the controller to get the GLB files. (we specified elsewhere that it will communicate only to controller first). Only GET HTTP methods, however.
+> [!Note] Exception - the frontend will query the worker, not the controller to get the GLB files. (we specified elsewhere that it will communicate only to controller first). Only GET HTTP methods, however.
 
 Viewing topology, the model, is done as in the standard CAD viewers. Viewing the simulation modifies the screen (to possibly a non-CAD viewer? to show simulation details)
 
@@ -106,7 +107,7 @@ The users are to be able to click on a CAD model and do actions with it, primari
 2. Particular primitive (face, vertex, line/arc.)
 3. Or a subassembly.
 
-Thus three buttons (if not integrated already into the YACV).
+Thus three buttons.
 
 ### Viewing electronics and circuits
 

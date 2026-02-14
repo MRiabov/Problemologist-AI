@@ -330,6 +330,31 @@ Database:
 
 We use LangChain and LangGraph for the agentic infrastructure. Langfuse is used for observability.
 
+#### Implementation
+
+We create two LangGraph graphs for agents - a Benchmark Generator graph, consisting of:
+
+- Planner,
+- Implementer,
+- Reviewer,
+- Skill agent
+- COTS search subagent.
+
+The Engineer consists of
+
+- Planner,
+- Electrical Planner
+- Implementer,
+- Electrical implementer
+- Reviewer,
+- Electrical reviewer
+- Skill agent
+- COTS search subagent.
+
+I decided to split the electrical planner because of complexity and different skills that may be involved in electrical engineering.
+
+We trace all graphs with LangFuse.
+
 ### Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
@@ -1189,6 +1214,23 @@ There is a controller node which runs the LLM and tool calls, and the worker nod
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
 
 In the future we may well refactor to run on distributed nodes, perhaps even IPv6.
+
+### Worker API
+
+The worker exposes a REST API (FastAPI) for task execution and asset management.
+
+#### Asset Serving
+
+All intermediate and final simulation artifacts (GLB models, STLs, renders) are served directly from the worker's filesystem.
+
+- **Endpoint**: `GET /assets/{path:path}`
+- **Functionality**: Serves files from the active session's workspace.
+- **Supported Formats**:
+  - `.glb`: `model/gltf-binary` (Standard for CAD visualization)
+  - `.stl`: `model/stl`
+  - `.py`: `text/x-python` (Allows agents to read their own source code)
+- **Security**: The worker enforces a syntax check (heuristic-based) on the source Python file when an asset is requested. If the source file contains red (syntax) errors, the asset request is refused with a `422 Unprocessable Entity` to prevent stale or broken models from being rendered.
+- **Session Isolation**: Assets are delivered within the context of an `X-Session-ID` header, ensuring that one session cannot access assets from another.
 
 ### Persistent state and durable execution
 
