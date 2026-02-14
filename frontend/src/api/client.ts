@@ -20,10 +20,11 @@ export async function fetchEpisode(id: string): Promise<EpisodeResponse> {
     return EpisodesService.getEpisodeEpisodesEpisodeIdGet(id);
 }
 
-export async function runAgent(task: string, sessionId: string): Promise<any> {
+export async function runAgent(task: string, sessionId: string, metadata?: Record<string, unknown>): Promise<any> {
     return DefaultService.runAgentAgentRunPost({
         task,
-        session_id: sessionId
+        session_id: sessionId,
+        metadata_vars: metadata
     });
 }
 

@@ -73,11 +73,11 @@ export default function Sidebar() {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         {(location.pathname === '/' || location.pathname === '/settings') ? 'Engineer History' : 'Benchmark Runs'}
                     </h3>
-                    {location.pathname === '/benchmark' ? (
+                    {(location.pathname === '/benchmark' || location.pathname === '/') ? (
                         <Button 
                             size="sm" 
                             className="h-6 px-2 text-[9px] font-bold gap-1"
-                            onClick={createNewBenchmark}
+                            onClick={() => createNewBenchmark(location.pathname === '/benchmark')}
                         >
                             <Plus className="h-3 w-3" />
                             CREATE NEW

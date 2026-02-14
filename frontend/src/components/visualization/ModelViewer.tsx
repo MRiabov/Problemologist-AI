@@ -2,19 +2,22 @@ import { useRef, useEffect, useMemo } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center } from '@react-three/drei'
 import * as THREE from 'three'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import ConnectionError from '../shared/ConnectionError'
 
-function StlModel({ url }: { url: string }) {
-  const geom = useLoader(STLLoader, url)
-  const meshRef = useRef<THREE.Mesh>(null!)
+function GlbModel({ url }: { url: string }) {
+  const gltf = useLoader(GLTFLoader, url)
+  const meshRef = useRef<THREE.Group>(null!)
 
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
       <Center>
-        <mesh ref={meshRef} geometry={geom} castShadow receiveShadow>
-          <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.8} />
-        </mesh>
+        <primitive 
+          object={gltf.scene} 
+          ref={meshRef}
+          castShadow 
+          receiveShadow 
+        />
       </Center>
     </Float>
   )
@@ -69,6 +72,7 @@ interface WireRoute {
 interface ModelViewerProps {
   className?: string;
   assetUrl?: string | null;
+  assetUrls?: string[];
   wireRoutes?: WireRoute[];
   isConnected?: boolean;
   resetTrigger?: number;
@@ -77,11 +81,20 @@ interface ModelViewerProps {
 export default function ModelViewer({ 
   className, 
   assetUrl, 
+  assetUrls = [],
   wireRoutes = [], 
   isConnected = true, 
   resetTrigger = 0 
 }: ModelViewerProps) {
   const controlsRef = useRef<any>(null)
+
+  const urls = useMemo(() => {
+    const all = [...assetUrls];
+    if (assetUrl && !all.includes(assetUrl)) {
+      all.push(assetUrl);
+    }
+    return all;
+  }, [assetUrl, assetUrls]);
 
   useEffect(() => {
     if (resetTrigger > 0 && controlsRef.current) {
@@ -111,8 +124,8 @@ export default function ModelViewer({
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
-        {assetUrl ? (
-            <StlModel url={assetUrl} />
+        {urls.length > 0 ? (
+            urls.map(url => <GlbModel key={url} url={url} />)
         ) : (
             <PlaceholderModel />
         )}

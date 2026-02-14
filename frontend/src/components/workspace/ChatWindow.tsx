@@ -15,8 +15,10 @@ import {
   Zap,
   Clock,
   Play,
+  Plus,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Rocket
 } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -196,11 +198,20 @@ export default function ChatWindow({
   isConnected = true
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { isCreationMode, startAgent, interruptAgent, selectedEpisode, updateObjectives } = useEpisodes();
+  const { isCreationMode, startAgent, interruptAgent, selectedEpisode, updateObjectives, episodes } = useEpisodes();
   const [prompt, setPrompt] = useState("");
+  const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
 
   const [showObjectives, setShowObjectives] = useState(false);
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
+
+  const location = window.location;
+  const isBenchmarkPath = location.pathname === '/benchmark';
+
+  const benchmarks = episodes?.filter(ep => 
+    ep.status === 'completed' && 
+    ep.metadata_vars?.detailed_status === 'accepted'
+  ) || [];
 
   // Reset objectives when episode changes (optional, or fetch from episode metadata)
   useEffect(() => {
@@ -218,11 +229,13 @@ export default function ChatWindow({
     e.preventDefault();
     if (prompt.trim()) {
       if (isCreationMode) {
-          startAgent(prompt, objectives);
+          const metadata = selectedBenchmarkId ? { benchmark_id: selectedBenchmarkId } : undefined;
+          startAgent(prompt, objectives, metadata);
       } else {
           startAgent(prompt);
       }
       setPrompt("");
+      setSelectedBenchmarkId("");
     }
   };
 
@@ -273,6 +286,28 @@ export default function ChatWindow({
       <div className="flex-1 overflow-hidden flex flex-col relative">
         <ScrollArea className="flex-1" ref={scrollRef}>
             <div className="p-4 flex flex-col min-h-full">
+                {/* Creation Mode Prompt */}
+                {isCreationMode && !task && (
+                    <div className="mb-6 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20 animate-in fade-in zoom-in-95 duration-500">
+                        <div className="flex flex-col items-center text-center gap-3">
+                            <div className="size-10 flex items-center justify-center bg-primary/20 rounded-full text-primary">
+                                {isBenchmarkPath ? <Rocket className="h-5 w-5" /> : <Zap className="h-5 w-5" />}
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-primary">
+                                    {isBenchmarkPath ? 'Benchmark Creation Mode' : 'New Design Session'}
+                                </h3>
+                                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[200px]">
+                                    {isBenchmarkPath 
+                                        ? 'Enter a high-level prompt below to begin generating a new benchmark plan.'
+                                        : 'Describe the part or mechanism you want to design to start a new session.'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Initial Task Message */}
                 {task && (
                     <div className="mb-6 p-3 bg-primary/10 rounded-lg border border-primary/20 shadow-sm relative overflow-hidden group">
@@ -394,6 +429,26 @@ export default function ChatWindow({
 
         {/* Steering / Input Area */}
         <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm relative">
+            {isCreationMode && benchmarks.length > 0 && (
+                <div className="px-4 py-2 border-b border-border/50 bg-muted/10">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <Rocket className="h-3 w-3 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Benchmark (Optional)</span>
+                    </div>
+                    <select 
+                        className="w-full bg-background border border-border/50 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/30 text-foreground"
+                        value={selectedBenchmarkId}
+                        onChange={(e) => setSelectedBenchmarkId(e.target.value)}
+                    >
+                        <option value="">-- No benchmark selected --</option>
+                        {benchmarks.map(b => (
+                            <option key={b.id} value={b.id}>
+                                {b.task.length > 60 ? b.task.substring(0, 60) + '...' : b.task} ({b.id.substring(0,8)})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
              {/* Objectives Toggle Helper */}
             <div className="absolute top-0 left-0 right-0 -mt-3 flex justify-center pointer-events-none">
                 <Button

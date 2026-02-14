@@ -11,11 +11,11 @@ interface EpisodeContextType {
   setActiveArtifactId: (id: string | null) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
-  startAgent: (task: string, objectives?: BenchmarkObjectives) => Promise<void>;
+  startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
-  createNewBenchmark: () => void;
+  createNewBenchmark: (isBenchmark?: boolean) => void;
   clearSelection: () => void;
 }
 
@@ -27,6 +27,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [isCreationMode, setIsCreationMode] = useState(false);
+  const [isBenchmarkCreation, setIsBenchmarkCreation] = useState(false);
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
 
   const refreshEpisodes = useCallback(async () => {
@@ -42,6 +43,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
+    setIsBenchmarkCreation(false);
     try {
       const fullEp = await fetchEpisode(id);
       setSelectedEpisode(fullEp);
@@ -55,11 +57,13 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const clearSelection = useCallback(() => {
     setSelectedEpisode(null);
     setIsCreationMode(false);
+    setIsBenchmarkCreation(false);
   }, []);
 
-  const createNewBenchmark = useCallback(() => {
+  const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
     setSelectedEpisode(null);
     setIsCreationMode(true);
+    setIsBenchmarkCreation(isBenchmark);
   }, []);
 
   const updateObjectives = useCallback(async (objectives: BenchmarkObjectives) => {
@@ -73,14 +77,18 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedEpisode]);
 
-  const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives) => {
+  const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => {
     setRunning(true);
     const wasCreationMode = isCreationMode;
+    const wasBenchmarkCreation = isBenchmarkCreation;
     setIsCreationMode(false);
+    setIsBenchmarkCreation(false);
     
     try {
       let response;
-      if (wasCreationMode || objectives) {
+      const isSolvingBenchmark = metadata && metadata.benchmark_id;
+
+      if ((wasBenchmarkCreation || (wasCreationMode && objectives)) && !isSolvingBenchmark) {
          response = await generateBenchmark(task, objectives);
          // Backend returns { session_id: ... }
          if (response.session_id) {
@@ -88,7 +96,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
          }
       } else {
          const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
-         response = await runAgent(task, sessionId);
+         response = await runAgent(task, sessionId, metadata);
       }
       
       if (response.episode_id) {

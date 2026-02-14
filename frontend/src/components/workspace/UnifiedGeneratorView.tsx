@@ -63,12 +63,19 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     return defaultVal;
   };
 
+  const getAssetUrl = (asset: any) => {
+    if (!asset || !selectedEpisode) return null;
+    if (asset.s3_path.startsWith('http')) return asset.s3_path;
+    return `/api/episodes/${selectedEpisode.id}/assets/${asset.s3_path}`;
+  };
+
   const hasMediaAssets = selectedEpisode?.assets && 
     selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0;
 
   const videoAsset = selectedEpisode?.assets?.find(a => a.asset_type === 'video');
   const imageAsset = selectedEpisode?.assets?.find(a => a.asset_type === 'image');
-  const modelAsset = selectedEpisode?.assets?.find(a => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb');
+  const modelAssets = selectedEpisode?.assets?.filter(a => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
+  const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -180,13 +187,13 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                       {!isConnected && <ConnectionError className="absolute inset-0 z-[60]" />}
                       {videoAsset ? (
                         <video 
-                          src={videoAsset.s3_path} 
+                          src={getAssetUrl(videoAsset) || ""} 
                           controls 
                           className="max-w-full max-h-full rounded-xl shadow-2xl border-4 border-card z-10"
                         />
                       ) : (
                         <img 
-                          src={imageAsset?.s3_path} 
+                          src={getAssetUrl(imageAsset) || ""} 
                           className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border-4 border-card z-10"
                         />
                       )}
@@ -195,7 +202,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     <div className="w-full h-full relative">
                       <ModelViewer 
                         className="w-full h-full" 
-                        assetUrl={modelAsset?.s3_path}
+                        assetUrls={modelUrls}
                         isConnected={isConnected}
                         resetTrigger={resetTrigger}
                       />

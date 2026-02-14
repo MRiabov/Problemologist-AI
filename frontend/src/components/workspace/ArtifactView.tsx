@@ -34,8 +34,14 @@ export default function ArtifactView({
   assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const { activeArtifactId, setActiveArtifactId } = useEpisodes();
+  const { selectedEpisode, activeArtifactId, setActiveArtifactId } = useEpisodes();
   const [isTreeOpen, setIsTreeOpen] = useState(true);
+
+  const getAssetUrl = (assetPath: string | undefined) => {
+    if (!assetPath || !selectedEpisode) return null;
+    if (assetPath.startsWith('http')) return assetPath;
+    return `/api/episodes/${selectedEpisode.id}/assets/${assetPath}`;
+  };
 
   const getFileIconInfo = (name: string, type: string) => {
     return getSharedIconInfo(name, type);
@@ -96,8 +102,6 @@ export default function ArtifactView({
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
 
-  const { selectedEpisode } = useEpisodes();
-
   const renderContent = () => {
     const { theme } = useTheme();
     if (!activeAsset) {
@@ -128,7 +132,7 @@ export default function ArtifactView({
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                             <CircuitSchematic electronics={data.electronics} />
                             <WireView 
-                                assetUrl={assets.find(a => a.asset_type === 'stl')?.s3_path} 
+                                assetUrl={getAssetUrl(assets.find(a => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
                                 wireRoutes={data.electronics.wiring || []} 
                             />
                         </div>
