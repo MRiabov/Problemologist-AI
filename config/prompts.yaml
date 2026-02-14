@@ -68,7 +68,7 @@ engineer:
             - `cots_parts`: catalog-backed parts (`part_id`, `manufacturer`, `source`; price may be auto-populated).
             - `final_assembly`: subassemblies, part reuse, and joints.
          2. Run `skills/manufacturing-knowledge/scripts/validate_and_price.py` before handoff.
-            - Use it to validate schema and compute preliminary totals.
+            - Use it to validate schema and compute assembly totals.
             - Any fields that can be auto-populated should be left for the script to populate.
          3. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` in `objectives.yaml` from validated totals.
             - Both must remain under benchmark/customer caps.
@@ -95,7 +95,7 @@ engineer:
          3. **Assembly Strategy**: How parts connect (fasteners, mechanisms).
             - Specify **at least 2 fasteners** per rigid connection (single-fastener = underconstrained).
             - Use fastener types: FlatHeadHole, CounterBoreHole, or SimpleHole.
-         4. **Cost & Weight Budget**: Preliminary breakdown per part.
+         4. **Cost & Weight Budget**: Assembly breakdown per part.
          5. **Risk Assessment**: Failure modes, mitigations, runtime jitter handling.
             - Consider motor overload scenarios.
 
@@ -108,7 +108,7 @@ engineer:
          - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
          - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_and_price.py`; no template placeholders.
          - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
-         - **Objectives sync**: `objectives.yaml` constraints must match validated preliminary totals (under benchmark caps).
+         - **Objectives sync**: `objectives.yaml` constraints must match validated assembly totals (under benchmark caps).
          - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
          - **Physical feasibility**: Ensure the planned mechanism is physically achievable with no self-intersection risk.
          - **Breakage risk**: Flag any motor/part choices that could cause breakage under loads.
@@ -272,7 +272,7 @@ engineer:
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Render review**: Inspect at least 3 renders/video frames before deciding.
          - **Planner contract audit**: Reject if planner-specified parts/joints were omitted or replaced without strong justification.
-         - **Cost lineage**: Compare final validated cost vs planner preliminary totals; flag large unexplained deltas.
+         - **Cost lineage**: Compare final validated cost vs planner assembly totals; flag large unexplained deltas.
          - **Manufacturability/price**: Verify `validate_and_price` results match constraints.
          - **Simulation result**: Confirm success/failure reason and stability.
          - **Escalation decision**: If CAD engineer escalated price/weight, record decision and rationale.
@@ -512,7 +512,7 @@ benchmark_generator:
            runtime_jitter_enabled: true
          ```
 
-         **Preliminary Cost Estimation YAML**:
+         **Assembly Definition YAML**:
          Also output `assembly_definition.yaml` with the assembly structure:
          ```yaml
          version: "1.0"
