@@ -24,10 +24,13 @@ from worker.api.schema import ExecuteResponse
 def mock_worker():
     with patch("controller.agent.nodes.engineer.WorkerClient") as mock:
         instance = mock.return_value
+        instance.session_id = "00000000-0000-0000-0000-000000000000"
         instance.execute_python = AsyncMock()
         instance.execute_python.return_value = ExecuteResponse(
             stdout="hello", stderr="", exit_code=0
         )
+        instance.write_file = AsyncMock(return_value=True)
+        instance.read_file = AsyncMock(return_value="hello")
         yield instance
 
 

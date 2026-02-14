@@ -83,10 +83,14 @@ class EngineerNode:
 
                 if exit_code == 0:
                     journal_entry += f"\nSuccessfully executed step: {current_step}"
-                    # Mark TODO as done (simple string replacement for prototype)
-                    new_todo = todo.replace(
-                        f"- [ ] {current_step}", f"- [x] {current_step}"
-                    )
+                    # Mark TODO as done (T010: Handling whitespace variations)
+                    new_todo = self._mark_step_done(todo, current_step)
+
+                    # Update todo.md in the workspace to keep it in sync
+                    try:
+                        await self.fs.write_file("todo.md", new_todo)
+                    except Exception as e:
+                        logger.warning("failed_to_sync_todo_md", error=str(e))
 
                     # Track best cost/weight from events
                     best_cost = state.best_cost
@@ -156,6 +160,18 @@ class EngineerNode:
             if line.strip().startswith("- [ ]"):
                 return line.strip().replace("- [ ]", "").strip()
         return None
+
+    def _mark_step_done(self, todo: str, step: str) -> str:
+        """Mark a step as done in the TODO list, handling whitespace variations."""
+        import re
+
+        # Match '- [ ]' or '- [ ]' followed by the step text
+        # We allow for any amount of whitespace inside [ ] and after it.
+        pattern = re.compile(
+            rf"- \[\s*\]\s+{re.escape(step)}",
+            re.IGNORECASE,
+        )
+        return pattern.sub(f"- [x] {step}", todo)
 
     def _extract_code(self, content: str) -> str:
         """Extract Python code from markdown block if present."""

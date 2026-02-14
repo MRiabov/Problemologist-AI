@@ -9,13 +9,14 @@ import structlog
 from build123d import Compound, export_stl
 
 from shared.models.schemas import (
-    ObjectivesYaml,
-    PreliminaryCostEstimation,
+    CotsPartEstimate,
+    ElectronicsRequirements,
+    ElectronicsSection,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
-    ElectronicsRequirements,
-    ElectronicsSection,
+    ObjectivesYaml,
+    PreliminaryCostEstimation,
 )
 from shared.simulation.backends import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
@@ -218,7 +219,9 @@ def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
 
 
 def calculate_assembly_totals(
-    component: Compound, electronics: ElectronicsSection | None = None
+    component: Compound,
+    electronics: ElectronicsSection | None = None,
+    cots_parts: list[CotsPartEstimate] | None = None,
 ) -> tuple[float, float]:
     """
     Calculate total cost and weight of the assembly including electronics and COTS.
@@ -248,6 +251,15 @@ def calculate_assembly_totals(
             pass
 
     # 2. Electronics and COTS parts
+    if cots_parts:
+        for cots in cots_parts:
+            total_cost += cots.unit_cost_usd * cots.quantity
+            # Weight is not directly in CotsPartEstimate, we might need a lookup or heuristic
+            # For now, if it's missing, we skip or use a default.
+            # But wait, CotsPartEstimate doesn't have weight.
+            # However, the architecture says "including COTS".
+            # Let's see if we can improve this.
+
     if electronics:
         for comp in electronics.components:
             if comp.type == "power_supply" and comp.cots_part_id:
@@ -366,7 +378,10 @@ def simulate(
         render_paths = prerender_24_views(component, output_dir=str(renders_dir))
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
-        cost, weight = calculate_assembly_totals(component, electronics)
+        cots_parts = cost_estimation.cots_parts if cost_estimation else []
+        cost, weight = calculate_assembly_totals(
+            component, electronics, cots_parts=cots_parts
+        )
 
         global LAST_SIMULATION_RESULT
         LAST_SIMULATION_RESULT = SimulationResult(

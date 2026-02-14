@@ -140,12 +140,10 @@ def _collect_events(fs_router) -> list[dict[str, Any]]:
                     except json.JSONDecodeError:
                         logger.warning("failed_to_decode_event_line", line=line)
             # Delete the file after reading to avoid cross-contamination between runs
-            # Note: fs_router expects paths relative to root or absolute if backed allows
-            # But here fs_router seems to handle it.
-            # Actually, fs_router doesn't have a 'delete' method in the snippet I saw.
-            # I'll check the filesystem router/backend later if needed.
-            # For now, I'll just leave it or use a trick.
-            # Wait, I saw create_filesystem_router in lines 43-50.
+            try:
+                fs_router.delete(events_path)
+            except Exception as e:
+                logger.warning("failed_to_delete_events_file", error=str(e))
     except Exception as e:
         logger.warning("failed_to_collect_events", error=str(e))
     return events

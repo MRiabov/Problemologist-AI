@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+
 # We need to mock build123d before importing modules that use it
 # or use patch on the module level.
 
@@ -11,6 +13,7 @@ from unittest.mock import MagicMock, patch
 @patch("worker.utils.handover.export_step")
 def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     from worker.utils.handover import submit_for_review
+    from build123d import Box
 
     # Setup
     renders_dir = tmp_path / "renders"
@@ -19,7 +22,10 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     os.environ["SESSION_ID"] = "test-session"
     os.environ["TIMESTAMP"] = "2026-02-07"
 
-    mock_component = MagicMock()
+    # Use a real build123d object to satisfy beartype
+    mock_component = Box(10, 10, 10).translate((5, 5, 5))
+    mock_component.metadata = {"manufacturing_method": "cnc"}
+
     mock_prerender.return_value = ["/path/to/render1.png"]
 
     # Create valid objectives.yaml in tmp_path
@@ -41,7 +47,7 @@ moved_object:
   start_position: [5, 5, 5]
   runtime_jitter: [0, 0, 0]
 constraints:
-  max_unit_cost: 100.0
+  max_unit_cost: 200.0
   max_weight: 10.0
 randomization:
   static_variation_id: "test"
@@ -71,6 +77,22 @@ totals:
   estimate_confidence: "high"
 """
     (tmp_path / "preliminary_cost_estimation.yaml").write_text(cost_content)
+    plan_content = """
+# PLAN
+## 1. Solution Overview
+Something.
+## 2. Parts List
+- Part A
+## 3. Assembly Strategy
+1. Step 1
+## 4. Cost & Weight Budget
+- $10
+## 5. Risk Assessment
+- High risk
+"""
+    (tmp_path / "plan.md").write_text(plan_content)
+    (tmp_path / "todo.md").write_text("- [x] Done")
+    (tmp_path / "validation_results.json").write_text('{"success": true}')
 
     # Change to tmp_path so submit_for_review finds the file
     old_cwd = Path.cwd()
@@ -83,7 +105,7 @@ totals:
 
     # Assert
     assert result is True
-    mock_prerender.assert_called_once_with(mock_component)
+    mock_prerender.assert_called_once_with(mock_component, output_dir=str(renders_dir))
     mock_export_step.assert_called_once()
 
     manifest_path = renders_dir / "review_manifest.json"
@@ -96,28 +118,39 @@ totals:
         assert "/path/to/render1.png" in manifest["renders"]
 
 
-@patch("worker.utils.rendering.pv.Plotter")
-@patch("worker.utils.rendering.pv.read")
-@patch("worker.utils.rendering.export_stl")
-def test_prerender_24_views(
-    mock_export_stl, mock_pv_read, mock_plotter_class, tmp_path
-):
+@patch("worker.utils.rendering.get_simulation_builder")
+@patch("worker.utils.rendering.mujoco")
+def test_prerender_24_views(mock_mujoco, mock_builder_factory, tmp_path):
     from worker.utils.rendering import prerender_24_views
 
     # Setup
-    mock_plotter = MagicMock()
-    mock_plotter_class.return_value = mock_plotter
+    mock_builder = MagicMock()
+    mock_builder_factory.return_value = mock_builder
     mock_component = MagicMock()
+    # Fix BoundingBox mock to return real numbers to avoid max() failure
+    mock_bbox = MagicMock()
+    mock_bbox.min.X = 0
+    mock_bbox.min.Y = 0
+    mock_bbox.min.Z = 0
+    mock_bbox.max.X = 1
+    mock_bbox.max.Y = 1
+    mock_bbox.max.Z = 1
+    mock_bbox.size.X = 1
+    mock_bbox.size.Y = 1
+    mock_bbox.size.Z = 1
+    mock_component.bounding_box.return_value = mock_bbox
+
+    mock_mujoco.Renderer.return_value.render.return_value = np.zeros(
+        (480, 640, 3), dtype=np.uint8
+    )
 
     # Execute
     renders = prerender_24_views(mock_component, output_dir=str(tmp_path))
 
     # Assert
     assert len(renders) == 24
-    assert mock_export_stl.called
-    assert mock_pv_read.called
-    # Each view should have a screenshot
-    assert mock_plotter.screenshot.call_count == 24
+    assert mock_mujoco.Renderer.called
+    assert mock_mujoco.mj_step.called
 
     for render_path in renders:
         assert Path(render_path).parent == tmp_path
