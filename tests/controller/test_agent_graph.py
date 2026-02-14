@@ -6,50 +6,36 @@ from controller.graph.agent import create_agent_graph
 
 
 @patch("controller.graph.agent.get_langfuse_callback")
-@patch("controller.graph.agent.get_prompt")
-@patch("controller.graph.agent.ChatOpenAI")
-@patch("controller.graph.agent.create_deep_agent")
-def test_create_agent_graph_uses_config_prompt(
-    mock_create_deep_agent, _mock_chat_openai, mock_get_prompt, mock_get_callback
-):
+def test_create_agent_graph_returns_engineering_graph(mock_get_callback):
     """
-    Verifies that create_agent_graph calls get_prompt and passes it to create_deep_agent.
+    Verifies that create_agent_graph returns the engineering graph and callback.
     """
     # Setup
-    mock_backend = MagicMock()
-    mock_get_prompt.return_value = "Mocked System Prompt"
+    mock_callback = MagicMock()
+    mock_get_callback.return_value = mock_callback
 
     # Execute
-    _agent, _callback = create_agent_graph(mock_backend)
+    agent, callback = create_agent_graph(agent_name="engineer")
 
     # Assert
+    from controller.agent.graph import graph as engineering_graph
+
+    assert agent == engineering_graph
+    assert callback == mock_callback
+    mock_get_callback.assert_called_once_with(
+        trace_id=None, name="engineer", session_id=None
+    )
+
+
+def test_create_agent_graph_returns_benchmark_graph():
+    """
+    Verifies that create_agent_graph returns the benchmark graph.
+    """
+    # Execute
+    agent, _callback = create_agent_graph(agent_name="benchmark_gen")
+
     # Assert
-    # It might be called multiple times (for agent + subagents), so we just check it was called.
-    assert mock_get_prompt.call_count >= 1
-    mock_get_prompt.assert_any_call("engineer.engineer.system")
-    mock_create_deep_agent.assert_called_once()
-    _args, kwargs = mock_create_deep_agent.call_args
-    assert kwargs["system_prompt"] == "Mocked System Prompt"
-    assert kwargs["backend"] == mock_backend
+    # We check if it's a CompiledGraph from langgraph
+    from langgraph.graph.graph import CompiledGraph
 
-
-@patch("controller.graph.agent.get_langfuse_callback")
-@patch("controller.graph.agent.get_prompt")
-@patch("controller.graph.agent.ChatOpenAI")
-@patch("controller.graph.agent.create_deep_agent")
-def test_create_agent_graph_strict_prompt(
-    mock_create_deep_agent, _mock_chat_openai, mock_get_prompt, _mock_get_callback
-):
-    """
-    Verifies that create_agent_graph raises an exception if get_prompt fails.
-    """
-    # Setup
-    mock_backend = MagicMock()
-    mock_get_prompt.side_effect = Exception("Prompt not found")
-
-    # Execute & Assert
-    with pytest.raises(ValueError, match="Could not find prompt"):
-        create_agent_graph(mock_backend)
-
-    mock_get_prompt.assert_called_once_with("engineer.engineer.system")
-    mock_create_deep_agent.assert_not_called()
+    assert isinstance(agent, CompiledGraph)
