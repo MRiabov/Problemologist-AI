@@ -73,8 +73,10 @@ ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "controller", "worker", "shared"]
-addopts = "-m 'not (integration or integration_p0 or integration_p1 or integration_p2)'"
+pythonpath = ["."]
+# keep it paralel. no point in disabling globally.
+# set to -n0 in integration tests though!
+addopts = "-n4 -m 'not (integration or integration_p0 or integration_p1 or integration_p2)'"
 filterwarnings = [
     "ignore::DeprecationWarning:ezdxf.queryparser",
     "ignore::DeprecationWarning:build123d.objects_curve",
@@ -88,3 +90,6 @@ markers = [
     "benchmark: marks tests related to the benchmark generator",
     "e2e: end-to-end frontend tests",
 ]
+
+[tool.uv.sources]
+pyspice = { git = "https://github.com/FabriceSalvaire/PySpice" }
