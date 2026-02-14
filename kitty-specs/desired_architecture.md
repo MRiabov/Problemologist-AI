@@ -552,7 +552,7 @@ The skill agent will read a `skill-creator/` skill as from Anthropic.
 
 ##### Skill agent is run async
 
-The skill agent is run asynchronous to the execution, modifying the skill folder and pushing it to a git repo. Its filesystem is managed by `deepagents` (as an exception), is stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
+The skill agent is run asynchronous to the execution, modifying the skill folder and pushing it to a git repo. Its filesystem is managed in the same way as other agents, its outputs stored on (the same) Railway bucket under the folder (because it's easier from the deployment perspective).
 The containers will likely have an endpoint to update the skills without restarting. However, for agents, skills are read-only.
 
 ##### Skill agent has a journal too
@@ -1220,7 +1220,7 @@ The "main app" essentially serves as a business logic layer that also forwards r
 
 #### Workers' filesystem
 
-`deepagents` `FilesystemMiddleware` supports a "sandbox" filesystem backend. This is handy, and we will expose the workers' filesystem as sandbox - something that can easily be removed.
+`FilesystemMiddleware` (which previously was a dependency from some architecture, now removed and migrated to a standalone class) supports a "sandbox" filesystem backend. This is handy, and we will expose the workers' filesystem as sandbox - something that can easily be removed.
 
 Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
@@ -1889,8 +1889,6 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 (Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `ls`, `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above), `execute` (runs a shell command, e.g. python -m ...) and `wait` for waiting for the agent. The (engineering) agent will validate, cost-estimate, verify, submit; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
 
-We also have other notable, only possibly useful commands (as from [deepagents documentation](https://reference.langchain.com/python/deepagents/backends/sandbox/)):
-
 - `execute` Execute a command in the sandbox and return ExecuteResponse.
 - `ls_info` Structured listing with file metadata using os.scandir.
 - `read` Read file content with line numbers using a single shell command.
@@ -1934,7 +1932,7 @@ Validated under all environment randomization.
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
-<!-- Note 2: `deepagents` framework supports subagents this is what we'll use here.-->
+<!-- Note 2: LangGraph supports subagents this is what we'll use here.-->
 
 #### Planner tools
 
@@ -2200,12 +2198,6 @@ Updating skills via git:
   We will pull from git to update the skills before every session (e.g. benchmark generation start to finish). The skills will be updated on the next agent execution.
   reason: >
   We need to update to 
-
-deepagents framework: 
-  what: >
-    We will use a deepagents framework.
-  reason: >
-    deepagents provides abstractions over filesystem, memory, TODO lists and Subagents. (so-called Middleware.)
 
 tool calls are just python imports: 
   what:
