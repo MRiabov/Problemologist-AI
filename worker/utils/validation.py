@@ -35,6 +35,7 @@ class SimulationResult:
         render_paths: list[str] | None = None,
         mjcf_content: str | None = None,
         stress_summaries: list[StressSummary] | None = None,
+        stress_fields: dict[str, dict] | None = None,
         fluid_metrics: list[FluidMetricResult] | None = None,
         total_cost: float = 0.0,
         total_weight_g: float = 0.0,
@@ -45,6 +46,7 @@ class SimulationResult:
         self.render_paths = render_paths or []
         self.mjcf_content = mjcf_content
         self.stress_summaries = stress_summaries or []
+        self.stress_fields = stress_fields or {}
         self.fluid_metrics = fluid_metrics or []
         self.total_cost = total_cost
         self.total_weight_g = total_weight_g
@@ -57,6 +59,7 @@ class SimulationResult:
             "render_paths": self.render_paths,
             "mjcf_content": self.mjcf_content,
             "stress_summaries": [s.model_dump() for s in self.stress_summaries],
+            "stress_fields": self.stress_fields,
             "fluid_metrics": [f.model_dump() for f in self.fluid_metrics],
             "total_cost": self.total_cost,
             "total_weight_g": self.total_weight_g,
@@ -72,6 +75,7 @@ class SimulationResult:
             stress_summaries=[
                 StressSummary(**s) for s in data.get("stress_summaries", [])
             ],
+            stress_fields=data.get("stress_fields", {}),
             fluid_metrics=[
                 FluidMetricResult(**f) for f in data.get("fluid_metrics", [])
             ],
@@ -151,11 +155,27 @@ def preview_stress(
         logger.warning("preview_stress_called_before_simulation")
         return []
 
-    logger.info("rendering_stress_heatmap_placeholder")
+    logger.info(
+        "rendering_stress_heatmaps", count=len(LAST_SIMULATION_RESULT.stress_fields)
+    )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     stress_renders_dir = working_dir / "renders" / "stress"
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
-    return [str(stress_renders_dir / "stress_placeholder.png")]
+
+    from .rendering import render_stress_heatmap
+    from shared.simulation.backends import StressField
+    import numpy as np
+
+    render_paths = []
+    for part_label, field_data in LAST_SIMULATION_RESULT.stress_fields.items():
+        field = StressField(
+            nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
+        )
+        out_path = stress_renders_dir / f"stress_{part_label}.png"
+        render_stress_heatmap(field, out_path)
+        render_paths.append(str(out_path))
+
+    return render_paths
 
 
 def define_fluid(
@@ -393,6 +413,7 @@ def simulate(
             render_paths,
             mjcf_content,
             stress_summaries=metrics.stress_summaries,
+            stress_fields=metrics.stress_fields,
             fluid_metrics=getattr(metrics, "fluid_metrics", []),
             total_cost=cost,
             total_weight_g=weight,

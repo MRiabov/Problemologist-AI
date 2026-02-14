@@ -90,47 +90,29 @@ def check_wire_clearance(
     if not wire_waypoints or len(wire_waypoints) < 2:
         return True
 
-    # 1. Create a simplified 'tube' or polyline representing the wire
-    # For efficiency, we'll check segments against the compound
-    path_points = [Vector(p) for p in wire_waypoints]
-
-    for i in range(len(path_points) - 1):
-        p1 = path_points[i]
-        p2 = path_points[j := i + 1]
-
-        # Segment vector
-        vec = p2 - p1
-        length = vec.length
-        if length < 1e-6:
-            continue
-
-        # Optimization: AABB check first (build123d handles this in intersect)
-        # We can use build123d's distance check or intersection check.
-        # For wires, we often care about DISTANCE (clearance).
-
-        # Simplest collision: check if the line segment intersects the solid.
-        # But we need clearance. So we check if the distance from segment to compound < clearance_mm.
-
-        # build123d doesn't have a direct "distance(segment, solid)" available in all versions
-        # but we can sample points or use the bounding box to prune.
-
-        # For now, let's implement a sampling-based approach as a robust first pass
-        # unless we find a better build123d primitive.
-
-        num_samples = max(2, int(length / (clearance_mm / 2.0)))
-        for s in range(num_samples):
-            current_pt = p1 + vec * (s / (num_samples - 1))
-
-            # Use build123d distance if available, otherwise fallback
-            try:
-                # distance() returns the shortest distance between objects
-                dist = assembly_meshes.distance(current_pt)
-                if dist < clearance_mm:
-                    return False
-            except AttributeError:
-                # Fallback: check if point is inside or very close to any face/solid
-                # This is slower but safer
+    from build123d import Polyline, Vector
+    
+    try:
+        path_points = [Vector(p) for p in wire_waypoints]
+        polyline = Polyline(path_points)
+        
+        # distance() returns the shortest distance between objects
+        dist = assembly_meshes.distance(polyline)
+        return dist >= clearance_mm
+    except Exception as e:
+        logger.error(f"Error in check_wire_clearance: {e}")
+        # Fallback to sampling if distance calculation fails
+        path_points = [Vector(p) for p in wire_waypoints]
+        for i in range(len(path_points) - 1):
+            p1 = path_points[i]
+            p2 = path_points[i + 1]
+            vec = p2 - p1
+            length = vec.length
+            num_samples = max(2, int(length / (clearance_mm / 2.0)))
+            for s in range(num_samples):
+                current_pt = p1 + vec * (s / (num_samples - 1))
                 if assembly_meshes.is_inside(current_pt):
                     return False
+                # We can't easily check distance here without the tool that failed
+        return True
 
-    return True

@@ -56,6 +56,11 @@ engineer:
          - **5x verification runs**: Solution must succeed with runtime position jitter.
          - **Motor sizing**: Select motors from COTS catalog with appropriate torque limits.
            - Motors that hit force limits for >2 seconds will fail the simulation.
+         - **WP2 Physics**:
+           - **Soft Meshes**: For deformable parts, specify `type: soft_mesh` in `assembly_definition.yaml`.
+           - **Fluid Containment**: If designing for fluids, ensure geometry is manifold and has no gaps.
+           - **Stress Limits**: Check yield stress (MPa) in `manufacturing_config.yaml` and design to stay below it.
+
 
          **Planner Costing Workflow** (MANDATORY):
          1. Create `assembly_definition.yaml` with:
@@ -186,6 +191,12 @@ engineer:
          6. Call `validate_and_price()` to check manufacturability, cost, and build zone.
          7. Call `simulate()` to verify physics. This runs 5 randomized tests.
          8. Call `submit_for_review()` when requirements are met.
+
+         **WP2 Engineering (Fluids & Deformables)**:
+         - Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
+         - For fluids, use `define_fluid(...)` in `utils/validation.py` to set up MPM behavior.
+         - Use `preview_stress(compound)` to visualize heatmaps before submission.
+
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Component usage**: Use and label fasteners/motors/bearings/COTS parts as planned.
@@ -374,6 +385,12 @@ benchmark_generator:
          - **Price/weight prediction**: Provide expected price/weight range (target 80–120% accuracy).
 
          Ensure no objects coincide with each other in any randomization.
+
+         **WP2 Benchmark Design (Fluids & Stress)**:
+         - Design puzzles requiring fluid containment or controlled flow.
+         - Use `fluid_objectives` (containment zones, flow rate gates) in `objectives.yaml`.
+         - Design "stress-limited" puzzles where parts must not yield under load.
+         - Use `stress_objectives` in `objectives.yaml` for FEM validation.
 
    coder:
       system: |
