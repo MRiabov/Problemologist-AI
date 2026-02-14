@@ -3,6 +3,7 @@ from langchain_core.tools import tool
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from worker.api.schema import EditOp
 
+
 def get_benchmark_tools(fs: RemoteFilesystemMiddleware):
     @tool
     async def list_files(path: str = "/") -> List[dict]:
@@ -22,10 +23,14 @@ def get_benchmark_tools(fs: RemoteFilesystemMiddleware):
     @tool
     async def edit_file(path: str, old_string: str, new_string: str) -> bool:
         """Edit a file by replacing old_string with new_string."""
-        return await fs.edit_file(path, [EditOp(old_string=old_string, new_string=new_string)])
+        return await fs.edit_file(
+            path, [EditOp(old_string=old_string, new_string=new_string)]
+        )
 
     @tool
-    async def grep(pattern: str, path: Optional[str] = None, glob: Optional[str] = None) -> List[dict]:
+    async def grep(
+        pattern: str, path: Optional[str] = None, glob: Optional[str] = None
+    ) -> List[dict]:
         """Search for a pattern in files."""
         return await fs.grep(pattern, path, glob)
 
@@ -44,4 +49,13 @@ def get_benchmark_tools(fs: RemoteFilesystemMiddleware):
         """Submit the benchmark for review."""
         return await fs.submit(script_path)
 
-    return [list_files, read_file, write_file, edit_file, grep, simulate, validate, submit_for_review]
+    return [
+        list_files,
+        read_file,
+        write_file,
+        edit_file,
+        grep,
+        simulate,
+        validate,
+        submit_for_review,
+    ]

@@ -80,7 +80,7 @@ def test_handover():
     plan_path = Path("plan.md")
     todo_path = Path("todo.md")
     obj_path = Path("objectives.yaml")
-    cost_path = Path("preliminary_cost_estimation.yaml")
+    cost_path = Path("assembly_definition.yaml")
     try:
         obj_path.write_text("""
 objectives:

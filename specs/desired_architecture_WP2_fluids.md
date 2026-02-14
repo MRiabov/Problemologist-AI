@@ -272,9 +272,9 @@ objectives:
   stress_objectives: [...]    # Stress-based success criteria
 ```
 
-### `preliminary_cost_estimation.yaml` (No Changes)
+### `assembly_definition.yaml` (No Changes)
 
-We do **not** add explicit FEM fields to `preliminary_cost_estimation.yaml`.
+We do **not** add explicit FEM fields to `assembly_definition.yaml`.
 
 - FEM properties are inherent to the material selected in `manufacturing_config.yaml`.
 - If a part's material is "rigid", it simulates as rigid (or linear FEM) - which is the case for only off-the-shelf, not manufactured parts.
@@ -390,7 +390,7 @@ Existing validation gains one new check:
 #### Engineer Planner
 
 - Must consider material strength when designing mechanisms. Plans should include a "Stress Considerations" subsection in `## 5. Risk Assessment` noting which parts are load-bearing and their expected safety factor.
-- Relies on material properties for FEM checking; does not need to toggle flags in `preliminary_cost_estimation.yaml`.
+- Relies on material properties for FEM checking; does not need to toggle flags in `assembly_definition.yaml`.
 
 #### Engineer CAD
 

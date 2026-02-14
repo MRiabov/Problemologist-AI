@@ -49,7 +49,7 @@ randomization:
 """
     (tmp_path / "objectives.yaml").write_text(objectives_content)
 
-    # Create valid preliminary_cost_estimation.yaml in tmp_path
+    # Create valid assembly_definition.yaml in tmp_path
     cost_content = """
 version: "1.0"
 units:
@@ -70,7 +70,7 @@ totals:
   estimated_weight_g: 100.0
   estimate_confidence: "high"
 """
-    (tmp_path / "preliminary_cost_estimation.yaml").write_text(cost_content)
+    (tmp_path / "assembly_definition.yaml").write_text(cost_content)
 
     # Change to tmp_path so submit_for_review finds the file
     old_cwd = Path.cwd()

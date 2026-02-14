@@ -14,7 +14,7 @@ OBJECTIVES_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
 # The environment geometry in this file is READ-ONLY. Engineering assembly
-# motion metadata is stored under engineering preliminary_cost_estimation.yaml
+# motion metadata is stored under engineering assembly_definition.yaml
 # final_assembly.parts and is also READ-ONLY once written.
 # =============================================================================
 

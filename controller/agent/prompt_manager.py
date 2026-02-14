@@ -61,7 +61,7 @@ Execution Plan context:
 Instructions:
 1. Define the electrical netlist using PySpice in your code.
 2. Route physical wires using `route_wire` and `check_wire_clearance`.
-3. Update the `electronics` section in `preliminary_cost_estimation.yaml`.
+3. Update the `electronics` section in `assembly_definition.yaml`.
 4. Ensure the total current draw is within PSU limits.
 5. Output ONLY the Python code inside a markdown code block.
 """,

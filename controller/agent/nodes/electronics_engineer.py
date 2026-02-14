@@ -59,11 +59,9 @@ class ElectronicsEngineerNode:
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
         try:
-            # Check preliminary_cost_estimation.yaml (Assembly Definition)
+            # Check assembly_definition.yaml (Assembly Definition)
             with suppress(Exception):
-                assembly_context = await self.fs.read_file(
-                    "preliminary_cost_estimation.yaml"
-                )
+                assembly_context = await self.fs.read_file("assembly_definition.yaml")
         except Exception:
             pass
 

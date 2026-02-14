@@ -51,7 +51,7 @@ randomization:
     objectives_file = temp_dir / "objectives.yaml"
     objectives_file.write_text(objectives_content)
 
-    # Create valid preliminary_cost_estimation.yaml
+    # Create valid assembly_definition.yaml
     cost_content = """
 version: "1.0"
 units:
@@ -72,7 +72,7 @@ totals:
   estimated_weight_g: 100.0
   estimate_confidence: "high"
 """
-    cost_file = temp_dir / "preliminary_cost_estimation.yaml"
+    cost_file = temp_dir / "assembly_definition.yaml"
     cost_file.write_text(cost_content)
 
     # We need to run in the temp_dir context

@@ -48,7 +48,7 @@ Commonly, these models and enums would be in `shared/` folder.
 - Major post-runner additions include:
   - Engineering planner workflow and mandatory planner artifacts.
   - COTS subagent architecture and read-only catalog requirements.
-  - `preliminary_cost_estimation.yaml` + `validate_costing_and_price` gate.
+  - `assembly_definition.yaml` + `validate_costing_and_price` gate.
   - Formal event taxonomy, metrics, and seed tracking.
   - Multi-tier evaluations and multi-episode integration/post-processing evals.
 
@@ -81,11 +81,11 @@ Priorities:
 | INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Simulation serialization | Multiple agents may run, but only one simulation runs at a time (queue/lock behavior enforced). |
-| INT-005 | Engineer planner mandatory artifact gate | Planner handoff blocked unless `plan.md`, `todo.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml` are present and valid. |
+| INT-005 | Engineer planner mandatory artifact gate | Planner handoff blocked unless `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml` are present and valid. |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
 | INT-008 | `objectives.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, valid moving-parts definitions. |
-| INT-009 | `preliminary_cost_estimation.yaml` schema gate | Required fields and numeric types enforced per method; malformed/template-like files rejected. |
+| INT-009 | `assembly_definition.yaml` schema gate | Required fields and numeric types enforced per method; malformed/template-like files rejected. |
 | INT-010 | Planner pricing script integration | `validate_costing_and_price` runs, computes totals, and blocks handoff when over caps. |
 | INT-011 | Planner caps under benchmark caps | Planner-owned `max_unit_cost`/`max_weight` are <= benchmark/customer limits. |
 | INT-012 | COTS search read-only behavior | COTS search path can query catalog, cannot mutate DB/files beyond allowed journal logging. |
@@ -200,7 +200,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
 | INT-008 | Upload invalid `objectives.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |
-| INT-009 | Submit malformed `preliminary_cost_estimation.yaml` in run flow and assert blocked handoff. | Pydantic-schema-only unit checks. |
+| INT-009 | Submit malformed `assembly_definition.yaml` in run flow and assert blocked handoff. | Pydantic-schema-only unit checks. |
 | INT-010 | Execute planner submission over HTTP and verify pricing script gate behavior. | Mocking script call result. |
 | INT-011 | Provide planner caps above benchmark caps via real artifacts and assert refusal. | Comparing dicts in unit-only test. |
 | INT-012 | Run COTS query through runtime interface and assert read-only behavior. | Mocking DB/search client end-to-end. |
@@ -293,7 +293,7 @@ This section exists to force implementation as true integration tests, not unit 
 
 ## Coverage map: current vs required
 
-- Covered partially today:
+- Covered partially feb 14:
   - INT-001, INT-002, INT-003, INT-004 (basic smoke/plumbing/concurrency).
 - Not covered or only weakly covered:
   - INT-005 through INT-060 (planner gating, COTS, artifact validation, observability completeness, Langfuse logging guarantees, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).

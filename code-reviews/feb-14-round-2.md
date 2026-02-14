@@ -19,7 +19,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 
 ### Gaps / Inconsistencies
 
-- **Naming**: The spec (line 123) mentions renaming `preliminary_cost_estimation.yaml` to `assembly_definition.yaml`. The code still uses the old name.
+- **Naming**: The spec (line 123) mentions renaming `assembly_definition.yaml` to `assembly_definition.yaml`. The code still uses the old name.
 - **Transient Simulation**: While `simulate_circuit_transient` exists, it is not yet integrated into the main simulation loop for time-varying circuit states.
 
 ---
@@ -80,5 +80,5 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 
 1. **Restore/Implement Tests**: Prioritize implementing `INT-120` through `INT-128`.
 2. **Complete Clearance Checks**: Implement the `check_wire_clearance` stub using the CAD engine collision detection.
-3. **Align Naming**: Rename `preliminary_cost_estimation.yaml` to `assembly_definition.yaml` to match the "central source of truth."
+3. **Align Naming**: Rename `assembly_definition.yaml` to `assembly_definition.yaml` to match the "central source of truth."
 4. **Dynamic Circuit States**: Consider an optimization where PySpice is re-run only if a switch state changes, rather than every step, to satisfy "unified simulation" without killing performance.

@@ -114,7 +114,7 @@ export default function ArtifactView({
     }
 
     // Special rendering for Assembly Definition with Electronics
-    if (activeAsset.name === 'preliminary_cost_estimation.yaml' && activeAsset.content) {
+    if (activeAsset.name === 'assembly_definition.yaml' && activeAsset.content) {
         try {
             const data = yaml.load(activeAsset.content) as any;
             if (data && data.electronics) {

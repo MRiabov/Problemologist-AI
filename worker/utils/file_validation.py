@@ -3,7 +3,7 @@ File validation utilities for agent handover files.
 
 Validates the structure and content of:
 - objectives.yaml: Central data exchange object
-- preliminary_cost_estimation.yaml: Cost risk management
+- assembly_definition.yaml: Cost risk management
 - plan.md: Structured planning documents
 - Review files: YAML frontmatter with decision field
 """
@@ -70,11 +70,11 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
         return False, errors
 
 
-def validate_preliminary_cost_estimation_yaml(
+def validate_assembly_definition_yaml(
     content: str,
 ) -> tuple[bool, PreliminaryCostEstimation | list[str]]:
     """
-    Parse and validate preliminary_cost_estimation.yaml content.
+    Parse and validate assembly_definition.yaml content.
 
     Args:
         content: Raw YAML string content
@@ -93,7 +93,7 @@ def validate_preliminary_cost_estimation_yaml(
         # Only check if it looks EXACTLY like the template example
         if any(p in content for p in placeholders):
             return False, [
-                "preliminary_cost_estimation.yaml still contains template placeholders"
+                "assembly_definition.yaml still contains template placeholders"
             ]
 
         estimation = PreliminaryCostEstimation(**data)
@@ -109,7 +109,7 @@ def validate_preliminary_cost_estimation_yaml(
         for error in errors:
             emit_event(
                 LogicFailureEvent(
-                    file_path="preliminary_cost_estimation.yaml",
+                    file_path="assembly_definition.yaml",
                     constraint_name="pydantic_validation",
                     error_message=error,
                 )
@@ -190,7 +190,7 @@ TEMPLATE_PLACEHOLDERS = [
     "y_min",
     "z_min",  # objectives.yaml
     "ramp_main",
-    "guide_clip",  # preliminary_cost_estimation.yaml
+    "guide_clip",  # assembly_definition.yaml
     "[implement here]",
     "TODO:",
     "...",  # generic

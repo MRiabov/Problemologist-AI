@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Populate and validate preliminary_cost_estimation.yaml for the Engineering Planner.
+Populate and validate assembly_definition.yaml for the Engineering Planner.
 Calculates stock volumes and removed volumes based on planner-provided dimensions.
 """
 
@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 def main():
-    file_path = Path("preliminary_cost_estimation.yaml")
+    file_path = Path("assembly_definition.yaml")
     if not file_path.exists():
         print(f"Error: {file_path} not found.")
         sys.exit(1)
@@ -60,7 +60,7 @@ def main():
         file_path.write_text(updated_content, encoding="utf-8")
 
         # 4. Success Output
-        print("Success: preliminary_cost_estimation.yaml validated and updated.")
+        print("Success: assembly_definition.yaml validated and updated.")
         print(f"Total Estimated Cost: ${estimation.totals.estimated_unit_cost_usd:.2f}")
         print(f"Total Estimated Weight: {estimation.totals.estimated_weight_g:.1f}g")
 

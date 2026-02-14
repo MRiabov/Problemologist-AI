@@ -85,7 +85,9 @@ def tetrahedralize(
         raise ValueError(f"Unknown tetrahedralization method: {method}")
 
 
-def _tetrahedralize_gmsh(input_path: Path, output_msh_path: Path, refine_level: float) -> Path:
+def _tetrahedralize_gmsh(
+    input_path: Path, output_msh_path: Path, refine_level: float
+) -> Path:
     """Internal implementation using Gmsh Python API."""
     import gmsh
 

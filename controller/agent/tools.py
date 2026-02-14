@@ -3,6 +3,7 @@ from langchain_core.tools import tool
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.cots.agent import search_cots_catalog
 
+
 def get_engineer_tools(fs: RemoteFilesystemMiddleware):
     @tool
     async def list_files(path: str = "/") -> List[dict]:
@@ -20,7 +21,9 @@ def get_engineer_tools(fs: RemoteFilesystemMiddleware):
         return await fs.write_file(path, content)
 
     @tool
-    async def grep(pattern: str, path: Optional[str] = None, glob: Optional[str] = None) -> List[dict]:
+    async def grep(
+        pattern: str, path: Optional[str] = None, glob: Optional[str] = None
+    ) -> List[dict]:
         """Search for a pattern in files."""
         return await fs.grep(pattern, path, glob)
 

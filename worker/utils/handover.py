@@ -77,8 +77,8 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         logger.error("objectives_yaml_missing")
         raise ValueError("objectives.yaml is missing (required for submission)")
 
-    # preliminary_cost_estimation.yaml
-    cost_path = cwd / "preliminary_cost_estimation.yaml"
+    # assembly_definition.yaml
+    cost_path = cwd / "assembly_definition.yaml"
     if cost_path.exists():
         from .file_validation import validate_preliminary_cost_estimation_yaml
 
@@ -86,11 +86,11 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         is_valid, result = validate_preliminary_cost_estimation_yaml(cost_content)
         if not is_valid:
             logger.error("cost_estimation_yaml_invalid", errors=result)
-            raise ValueError(f"preliminary_cost_estimation.yaml invalid: {result}")
+            raise ValueError(f"assembly_definition.yaml invalid: {result}")
     else:
-        logger.error("preliminary_cost_estimation_yaml_missing")
+        logger.error("assembly_definition_yaml_missing")
         raise ValueError(
-            "preliminary_cost_estimation.yaml is missing (required for submission)"
+            "assembly_definition.yaml is missing (required for submission)"
         )
 
     # 2. Verify prior validation (INT-018)
@@ -154,7 +154,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     import shutil
 
     shutil.copy(objectives_path, renders_dir / "objectives.yaml")
-    shutil.copy(cost_path, renders_dir / "preliminary_cost_estimation.yaml")
+    shutil.copy(cost_path, renders_dir / "assembly_definition.yaml")
 
     # 5. Create manifest
     manifest_path = renders_dir / "review_manifest.json"
@@ -166,9 +166,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         "mjcf_path": str(renders_dir / "scene.xml"),
         "cad_path": str(cad_path),
         "objectives_path": str(renders_dir / "objectives.yaml"),
-        "preliminary_cost_estimation_path": str(
-            renders_dir / "preliminary_cost_estimation.yaml"
-        ),
+        "assembly_definition_path": str(renders_dir / "assembly_definition.yaml"),
     }
 
     with manifest_path.open("w", encoding="utf-8") as f:
