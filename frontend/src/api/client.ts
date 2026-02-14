@@ -107,6 +107,15 @@ export async function confirmBenchmark(sessionId: string): Promise<any> {
     });
 }
 
+export async function continueEpisode(id: string, message: string): Promise<any> {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: `/episodes/${id}/messages`,
+        body: { message },
+        mediaType: 'application/json',
+    });
+}
+
 export async function rebuildModel(scriptPath: string): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',

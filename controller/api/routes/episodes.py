@@ -139,6 +139,15 @@ class ReviewRequest(BaseModel):
         return v.replace("\u0000", "")
 
 
+class MessageRequest(BaseModel):
+    message: StrictStr
+
+    @field_validator("message")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
+
+
 @router.post("/{episode_id}/review")
 async def review_episode(
     episode_id: uuid.UUID,
@@ -179,6 +188,35 @@ async def review_episode(
 
     await db.commit()
     return {"status": ResponseStatus.SUCCESS, "decision": decision}
+
+
+@router.post("/{episode_id}/messages", status_code=202)
+async def continue_episode(
+    episode_id: uuid.UUID,
+    request: MessageRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a follow-up message to a running or completed episode."""
+    from controller.api.tasks import continue_agent_task
+
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    # In a real system, we might want to check if the agent is already busy
+    # but for now we'll rely on the task_tracker or just allow it to queue.
+
+    task = asyncio.create_task(
+        continue_agent_task(
+            episode_id,
+            request.message,
+        )
+    )
+    task_tracker.register_task(episode_id, task)
+
+    return {"status": ResponseStatus.ACCEPTED, "message": "Message sent to agent"}
 
 
 class TraceResponse(BaseModel):
@@ -284,6 +322,7 @@ async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
     except Exception as e:
         print(f"WebSocket error: {e}")
         manager.disconnect(episode_id, websocket)
+        raise e from None
 
 
 @router.post("/{episode_id}/interrupt")
@@ -307,19 +346,18 @@ async def interrupt_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(ge
     result = await db.execute(select(Episode).where(Episode.id == episode_id))
     episode = result.scalar_one_or_none()
 
-    if episode:
-        if episode.status in [EpisodeStatus.RUNNING]:
-            episode.status = EpisodeStatus.CANCELLED
-            await db.commit()
+    if episode and episode.status in [EpisodeStatus.RUNNING]:
+        episode.status = EpisodeStatus.CANCELLED
+        await db.commit()
 
-            # Broadcast update
-            await manager.broadcast(
-                episode_id,
-                {
-                    "type": "status_update",
-                    "status": EpisodeStatus.CANCELLED,
-                    "timestamp": datetime.utcnow().isoformat(),
-                },
-            )
+        # Broadcast update
+        await manager.broadcast(
+            episode_id,
+            {
+                "type": "status_update",
+                "status": EpisodeStatus.CANCELLED,
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
 
     return {"status": ResponseStatus.ACCEPTED, "message": "Interruption requested"}
