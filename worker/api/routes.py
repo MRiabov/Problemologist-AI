@@ -444,6 +444,9 @@ async def api_simulate(
             artifacts={
                 "render_paths": result.render_paths,
                 "mjcf_content": result.mjcf_content,
+                "stress_summaries": [s.model_dump() for s in result.stress_summaries]
+                if result.stress_summaries
+                else [],
                 "fluid_metrics": [m.model_dump() for m in result.fluid_metrics]
                 if result.fluid_metrics
                 else [],
@@ -466,7 +469,43 @@ async def api_validate(
         component = _load_component(
             fs_router, request.script_path, request.script_content
         )
+        # Geometric validation
         is_valid, message = validate(component, output_dir=fs_router.local_backend.root)
+
+        # INT-102: Fetch objectives to check if FEM material validation is required
+        working_dir = fs_router.local_backend.root
+        obj_path = working_dir / "objectives.yaml"
+        if is_valid and obj_path.exists():
+            try:
+                import yaml
+                from shared.models.schemas import ObjectivesYaml
+                from worker.utils.dfm import validate_and_price
+                from worker.workbenches.config import load_config
+                from worker.workbenches.models import ManufacturingMethod
+
+                data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+                objectives = ObjectivesYaml(**data)
+                if objectives.physics and objectives.physics.fem_enabled:
+                    config = load_config()
+                    # Check for custom config in working dir
+                    custom_config_path = working_dir / "manufacturing_config.yaml"
+                    if custom_config_path.exists():
+                        config = load_config(str(custom_config_path))
+
+                    val_report = validate_and_price(
+                        component,
+                        ManufacturingMethod.CNC,
+                        config,
+                        fem_required=True,
+                    )
+                    if not val_report.is_manufacturable:
+                        is_valid = False
+                        msg = "Material validation failed: " + "; ".join(
+                            map(str, val_report.violations)
+                        )
+                        message = (message + "; " + msg) if message else msg
+            except Exception as e:
+                logger.warning("api_validate_fem_check_failed", error=str(e))
 
         # INT-018: Record validation results to satisfy the handover gate
         results_path = fs_router.local_backend.root / "validation_results.json"

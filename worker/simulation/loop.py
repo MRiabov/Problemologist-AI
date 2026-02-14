@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import structlog
 from build123d import Compound, Part
@@ -117,8 +119,14 @@ class SimulationLoop:
             from worker.workbenches.config import load_config
             from worker.workbenches.models import ManufacturingMethod
 
-            # Default to CNC for simulation validation
-            self.config = load_config()
+            # WP2: Load custom configuration from working directory if present
+            working_dir = Path(xml_path).parent
+            custom_config_path = working_dir / "manufacturing_config.yaml"
+            if custom_config_path.exists():
+                self.config = load_config(str(custom_config_path))
+            else:
+                self.config = load_config()
+
             fem_required = (
                 self.objectives.physics.fem_enabled
                 if self.objectives and self.objectives.physics
@@ -218,10 +226,10 @@ class SimulationLoop:
         # We assume backend has a fixed or default timestep
         # For MuJoCo it's usually 0.002
         # We'll use a small step and loop
+        # We'll use a small step and loop
         dt = 0.002  # Default step for loop logic
         steps = int(duration / dt)
 
-        start_time = 0.0  # We should probably get current time from backend
         current_time = 0.0
 
         # Find critical bodies
@@ -236,7 +244,7 @@ class SimulationLoop:
 
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
-        STRESS_REPORT_INTERVAL = 50
+        stress_report_interval = 50
 
         for step_idx in range(steps):
             # Apply dynamic controllers
@@ -282,7 +290,7 @@ class SimulationLoop:
             self.total_energy += float(power)
 
             # 2.1 Stress Monitoring & Breakage Detection
-            if step_idx % STRESS_REPORT_INTERVAL == 0:
+            if step_idx % stress_report_interval == 0:
                 for body_name in all_bodies:
                     stress_field = self.backend.get_stress_field(body_name)
                     if stress_field is not None and len(stress_field.stress) > 0:
