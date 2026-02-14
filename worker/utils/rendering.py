@@ -10,8 +10,7 @@ import trimesh
 from build123d import Compound
 from PIL import Image
 
-from shared.simulation.backends (
-    PhysicsBackend,
+from shared.simulation.backends import (
     SimulatorBackendType,
     StressField,
 )
@@ -20,7 +19,7 @@ from worker.simulation.factory import get_simulation_builder
 logger = structlog.get_logger(__name__)
 
 
-def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]:
+def prerender_24_views(component: Compound, output_dir: str | None = None) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component using MuJoCo.
     Saves to output_dir.
@@ -124,19 +123,19 @@ def render_stress_heatmap(
             mesh = trimesh.load(str(mesh_path))
             # Map stresses to vertices (simple nearest neighbor or interpolation)
             # For Genesis, stress is often per-node already.
-            
+
             # Simple colormap mapping
             norm = plt.Normalize(vmin=stresses.min(), vmax=stresses.max())
             cmap = plt.get_cmap("jet")
-            colors = cmap(norm(stresses))[:, :3] * 255 # RGB
+            colors = cmap(norm(stresses))[:, :3] * 255  # RGB
 
             # If node count matches vertex count, apply directly
             if len(stresses) == len(mesh.vertices):
                 mesh.visual.vertex_colors = colors.astype(np.uint8)
-            
+
             scene = mesh.scene()
             data = scene.save_image(resolution=(width, height))
-            with open(output_path, "wb") as f:
+            with output_path.open("wb") as f:
                 f.write(data)
         else:
             # Fallback to matplotlib 2D projection or simple scatter
@@ -161,7 +160,9 @@ def render_stress_heatmap(
 class VideoRenderer:
     """Handles video generation for simulations."""
 
-    def __init__(self, output_path: Path, width: int = 640, height: int = 480, fps: int = 30):
+    def __init__(
+        self, output_path: Path, width: int = 640, height: int = 480, fps: int = 30
+    ):
         self.output_path = output_path
         self.width = width
         self.height = height

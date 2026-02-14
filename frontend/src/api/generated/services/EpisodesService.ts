@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { EpisodeResponse } from '../models/EpisodeResponse';
 import type { FeedbackRequest } from '../models/FeedbackRequest';
+import type { MessageRequest } from '../models/MessageRequest';
 import type { ReviewRequest } from '../models/ReviewRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -87,6 +88,31 @@ export class EpisodesService {
         });
     }
     /**
+     * Continue Episode
+     * Send a follow-up message to a running or completed episode.
+     * @param episodeId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static continueEpisodeEpisodesEpisodeIdMessagesPost(
+        episodeId: string,
+        requestBody: MessageRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/episodes/{episode_id}/messages',
+            path: {
+                'episode_id': episodeId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * List Episodes
      * List all agent episodes.
      * @param limit
@@ -122,6 +148,27 @@ export class EpisodesService {
     ): CancelablePromise<EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
+            url: '/episodes/{episode_id}',
+            path: {
+                'episode_id': episodeId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Delete Episode
+     * Delete an episode and its associated data.
+     * @param episodeId
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static deleteEpisodeEpisodesEpisodeIdDelete(
+        episodeId: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
             url: '/episodes/{episode_id}',
             path: {
                 'episode_id': episodeId,

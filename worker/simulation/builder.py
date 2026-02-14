@@ -8,13 +8,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
+import tempfile
 import trimesh
 from build123d import Compound, Solid, export_stl
 
-try:
-    from yacv.exporter import export_all
-except ImportError:
-    export_all = None
+# YACV removed in favor of custom trimesh-based export capable of preserving topology
+# try:
+#     from yacv.exporter import export_all
+# except ImportError:
+#     export_all = None
 
 from shared.cots.parts.motors import ServoMotor
 
@@ -102,17 +104,13 @@ class MeshProcessor:
             glb_path = filepath.with_suffix(".glb")
 
             mesh.export(str(obj_path), file_type="obj")
-            mesh.export(str(obj_path), file_type="obj")
 
-            # Use YACV for GLB if available to preserve topology, otherwise fallback to trimesh
-            if export_all:
-                try:
-                    # YACV export_all(path, *objects)
-                    export_all(str(glb_path), part)
-                except Exception as e:
-                    logger.warning("yacv_export_failed", error=str(e))
-                    mesh.export(str(glb_path), file_type="glb")
-            else:
+            # Custom topology-preserving export for frontend viewer
+            try:
+                self.export_topology_glb(part, glb_path)
+            except Exception as e:
+                logger.warning("topology_export_failed", error=str(e))
+                # Fallback to simple mesh export
                 mesh.export(str(glb_path), file_type="glb")
 
             output_paths.extend([obj_path, glb_path])
@@ -121,6 +119,37 @@ class MeshProcessor:
                 temp_stl.unlink()
 
         return output_paths
+
+    def export_topology_glb(self, part: Solid | Compound, filepath: Path):
+        """Exports the part to GLB with separate meshes for faces to allow selection in UI."""
+        scene = trimesh.Scene()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+
+            # 1. Export Faces
+            # access faces via topological properties
+            faces = part.faces()
+            for i, face in enumerate(faces):
+                fname = tmp_path / f"face_{i}.stl"
+                export_stl(face, str(fname))
+
+                try:
+                    # Load the face mesh
+                    face_mesh = trimesh.load(str(fname))
+                    if isinstance(face_mesh, trimesh.Scene):
+                        face_mesh = face_mesh.dump(concatenate=True)
+
+                    # Add to scene with specific name for UI selection
+                    # The node name is what allows the frontend to identify it as 'face_X'
+                    scene.add_geometry(
+                        face_mesh, node_name=f"face_{i}", geom_name=f"face_{i}_geom"
+                    )
+                except Exception as e:
+                    logger.warning(f"failed_to_export_face_{i}", error=str(e))
+
+        # Export the scene to GLB
+        scene.export(str(filepath), file_type="glb")
 
     def _recenter_mesh(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
         """Recenter mesh to origin (0,0,0) based on its centroid."""
