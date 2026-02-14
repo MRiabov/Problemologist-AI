@@ -150,7 +150,7 @@ def check_wire_clearance(
         items = assembly_meshes if isinstance(assembly_meshes, list) else [assembly_meshes]
         for item in items:
             if hasattr(item, "tessellate") or hasattr(item, "solids"):  # build123d
-                from worker.workbenches.analysis_utils import part_to_trimesh
+                from shared.cad_utils import part_to_trimesh
                 meshes.append(part_to_trimesh(item))
             elif hasattr(item, "ray"):  # already a trimesh
                 meshes.append(item)

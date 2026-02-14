@@ -22,6 +22,7 @@ from shared.observability.schemas import (
     WriteFileToolEvent,
 )
 from worker.api.schema import EditOp
+from worker.workbenches.models import ManufacturingMethod
 
 
 class RemoteFilesystemMiddleware:
@@ -193,7 +194,9 @@ class RemoteFilesystemMiddleware:
         results = await self.client.grep(pattern, path=path, glob=glob)
         return [match.model_dump() for match in results]
 
-    async def simulate(self, script_path: str) -> dict[str, Any]:
+    async def simulate(
+        self, script_path: str, method: ManufacturingMethod | None = None
+    ) -> dict[str, Any]:
         """Trigger physics simulation via worker client."""
         # Record request
         await record_worker_events(
@@ -201,7 +204,7 @@ class RemoteFilesystemMiddleware:
             events=[SimulationRequestEvent(script_path=script_path)],
         )
 
-        result = await self.client.simulate(script_path)
+        result = await self.client.simulate(script_path, method=method)
         res_dict = result.model_dump()
 
         # Record result
@@ -260,9 +263,11 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def validate(self, script_path: str) -> dict[str, Any]:
+    async def validate(
+        self, script_path: str, method: ManufacturingMethod | None = None
+    ) -> dict[str, Any]:
         """Trigger geometric validation via worker client."""
-        result = await self.client.validate(script_path)
+        result = await self.client.validate(script_path, method=method)
         res_dict = result.model_dump()
 
         # Record as ManufacturabilityCheckEvent
@@ -282,9 +287,11 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def submit(self, script_path: str) -> dict[str, Any]:
+    async def submit(
+        self, script_path: str, method: ManufacturingMethod | None = None
+    ) -> dict[str, Any]:
         """Trigger handover to review via worker client."""
-        result = await self.client.submit(script_path)
+        result = await self.client.submit(script_path, method=method)
         res_dict = result.model_dump()
 
         # Record as PlanSubmissionEngineerEvent

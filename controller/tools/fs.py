@@ -22,10 +22,16 @@ class ExecInput(BaseModel):
     timeout: StrictInt = Field(default=30, description="Execution timeout in seconds.")
 
 
+from worker.workbenches.models import ManufacturingMethod
+
 class BenchmarkInput(BaseModel):
     script_path: str = Field(
         default="script.py",
         description="Path to the script containing the build() function.",
+    )
+    method: ManufacturingMethod | None = Field(
+        default=None,
+        description="Manufacturing method to assume (cnc, 3dp, im).",
     )
 
 

@@ -178,7 +178,10 @@ class WorkerClient:
             await self._close_client(client)
 
     async def simulate(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        method: ManufacturingMethod | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         client = await self._get_client()
@@ -186,6 +189,8 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+            if method is not None:
+                payload["method"] = method
             response = await client.post(
                 f"{self.base_url}/benchmark/simulate",
                 json=payload,
@@ -198,7 +203,10 @@ class WorkerClient:
             await self._close_client(client)
 
     async def validate(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        method: ManufacturingMethod | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
         client = await self._get_client()
@@ -206,6 +214,8 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+            if method is not None:
+                payload["method"] = method
             response = await client.post(
                 f"{self.base_url}/benchmark/validate",
                 json=payload,
@@ -246,7 +256,10 @@ class WorkerClient:
             await self._close_client(client)
 
     async def submit(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        method: ManufacturingMethod | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         client = await self._get_client()
@@ -254,6 +267,8 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+            if method is not None:
+                payload["method"] = method
             response = await client.post(
                 f"{self.base_url}/benchmark/submit",
                 json=payload,

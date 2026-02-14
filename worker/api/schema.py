@@ -106,6 +106,10 @@ class BenchmarkToolRequest(BaseModel):
         default=False,
         description="If true: cap particles to 5000, label results as approximate.",
     )
+    method: ManufacturingMethod | None = Field(
+        default=None,
+        description="Manufacturing method to assume (cnc, 3dp, im).",
+    )
 
 
 class AnalyzeRequest(BenchmarkToolRequest):

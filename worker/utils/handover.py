@@ -15,7 +15,11 @@ from worker.workbenches.models import ManufacturingMethod
 logger = structlog.get_logger(__name__)
 
 
-def submit_for_review(component: Compound, cwd: Path = Path()):
+def submit_for_review(
+    component: Compound,
+    cwd: Path = Path(),
+    method: ManufacturingMethod | None = None,
+):
     """
     Standardized handover from Coder to Reviewer.
     Logic:
@@ -111,15 +115,16 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
-    # T016: Extract manufacturing method from component metadata, fallback to CNC
-    method_str = getattr(component, "metadata", {}).get(
-        "manufacturing_method", ManufacturingMethod.CNC.value
-    )
-    try:
-        method = ManufacturingMethod(method_str)
-    except ValueError:
-        logger.warning("invalid_manufacturing_method", method=method_str)
-        method = ManufacturingMethod.CNC
+    # T016: Use explicit method if provided, else fallback to metadata or CNC
+    if method is None:
+        method_str = getattr(component, "metadata", {}).get(
+            "manufacturing_method", ManufacturingMethod.CNC.value
+        )
+        try:
+            method = ManufacturingMethod(method_str)
+        except ValueError:
+            logger.warning("invalid_manufacturing_method", method=method_str)
+            method = ManufacturingMethod.CNC
 
     validation_result = validate_and_price(
         component, method, dfm_config, build_zone=build_zone
