@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 
+from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field, StrictStr, field_validator
 
 from controller.agent.initialization import initialize_agent_files
@@ -140,7 +141,7 @@ async def execute_agent_task(
                     initial_input = {
                         "task": task,
                         "session_id": session_id,
-                        "messages": [("user", task)],
+                        "messages": [HumanMessage(content=task)],
                     }
                 elif agent_name.startswith("benchmark"):
                     from controller.agent.benchmark.models import (
@@ -161,13 +162,13 @@ async def execute_agent_task(
                     )
                     initial_input = {
                         "session": session,
-                        "messages": [("user", task)],
+                        "messages": [HumanMessage(content=task)],
                         "current_script": "",
                         "review_round": 0,
                     }
                 else:
                     initial_input = {
-                        "messages": [("user", task)],
+                        "messages": [HumanMessage(content=task)],
                         "session_id": session_id,
                     }
 
@@ -421,7 +422,7 @@ async def continue_agent_task(
                 thread_id = str(episode_id)
 
                 # LangGraph state update: append message to 'messages' key
-                input_update = {"messages": [("user", message)]}
+                input_update = {"messages": [HumanMessage(content=message)]}
 
                 result = await agent.ainvoke(
                     input_update,
