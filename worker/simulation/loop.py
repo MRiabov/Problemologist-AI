@@ -6,7 +6,10 @@ from shared.simulation.backends import SimulatorBackendType, SimulationScene
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.enums import SimulationFailureMode
 from shared.observability.events import emit_event
-from shared.observability.schemas import ElectricalFailureEvent
+from shared.observability.schemas import (
+    ElectricalFailureEvent,
+    SimulationBackendSelectedEvent,
+)
 from worker.simulation.factory import get_physics_backend
 
 logger = structlog.get_logger(__name__)
@@ -35,6 +38,7 @@ class SimulationMetrics(BaseModel):
     fail_reason: StrictStr | None = None
     stress_summaries: list[StressSummary] = []
     fluid_metrics: list[FluidMetricResult] = []
+    confidence: StrictStr = "high"
 
 
 # Hard cap on simulation time per architecture spec
@@ -52,8 +56,24 @@ class SimulationLoop:
         backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
+        smoke_test_mode: bool = False,
     ):
         self.backend = get_physics_backend(backend_type)
+        self.smoke_test_mode = smoke_test_mode
+        self.particle_budget = 5000 if smoke_test_mode else 100000
+
+        # Emit backend selection event (WP2)
+        emit_event(
+            SimulationBackendSelectedEvent(
+                backend=backend_type.value
+                if hasattr(backend_type, "value")
+                else backend_type,
+                fem_enabled=objectives.physics.fem_enabled if objectives else False,
+                compute_target=objectives.physics.compute_target
+                if objectives
+                else "auto",
+            )
+        )
         scene = SimulationScene(scene_path=xml_path)
         self.backend.load_scene(scene)
 
@@ -389,13 +409,27 @@ class SimulationLoop:
                             inside = np.all((particles >= zone.min) & (particles <= zone.max), axis=1)
                             ratio = np.sum(inside) / len(particles) if len(particles) > 0 else 0.0
                             passed = ratio >= fo.threshold
-                            self.fluid_metrics.append(FluidMetricResult(
+                            result = FluidMetricResult(
                                 metric_type="fluid_containment",
                                 fluid_id=fo.fluid_id,
                                 measured_value=float(ratio),
                                 target_value=fo.threshold,
-                                passed=passed
-                            ))
+                                passed=passed,
+                            )
+                            self.fluid_metrics.append(result)
+
+                            from shared.observability.schemas import (
+                                FluidContainmentCheckEvent,
+                            )
+
+                            emit_event(
+                                FluidContainmentCheckEvent(
+                                    fluid_id=fo.fluid_id,
+                                    ratio=float(ratio),
+                                    threshold=fo.threshold,
+                                    passed=passed,
+                                )
+                            )
                             if not passed:
                                 self.fail_reason = self.fail_reason or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
                         elif fo.type == "flow_rate":
@@ -410,6 +444,7 @@ class SimulationLoop:
             fail_reason=self.fail_reason,
             stress_summaries=self.stress_summaries,
             fluid_metrics=self.fluid_metrics,
+            confidence="approximate" if self.smoke_test_mode else "high",
         )
 
     def _check_motor_overload(self) -> str | None:

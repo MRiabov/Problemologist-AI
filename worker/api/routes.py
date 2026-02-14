@@ -431,15 +431,22 @@ async def api_simulate(
         # Enforce single concurrent simulation
         async with SIMULATION_SEMAPHORE:
             result = await asyncio.to_thread(
-                simulate, component, output_dir=fs_router.local_backend.root
+                simulate,
+                component,
+                output_dir=fs_router.local_backend.root,
+                smoke_test_mode=request.smoke_test_mode,
             )
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=result.success,
             message=result.summary,
+            confidence=result.confidence,
             artifacts={
                 "render_paths": result.render_paths,
                 "mjcf_content": result.mjcf_content,
+                "fluid_metrics": [m.model_dump() for m in result.fluid_metrics]
+                if result.fluid_metrics
+                else [],
             },
             events=events,
         )
