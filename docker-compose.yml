@@ -128,11 +128,9 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    volumes:
+      - ./worker:/app/worker
+      - ./shared:/app/shared
     # develop:
     #   watch:
     #     - action: sync
