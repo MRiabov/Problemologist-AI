@@ -99,3 +99,10 @@ export async function updateBenchmarkObjectives(sessionId: string, objectives: B
         mediaType: 'application/json',
     });
 }
+
+export async function confirmBenchmark(sessionId: string): Promise<any> {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: `/benchmark/${sessionId}/confirm`,
+    });
+}

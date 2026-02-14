@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 import httpx
@@ -43,7 +43,12 @@ def define_graph():
     workflow.add_node("skills", skills_node)
 
     # Define transitions
-    workflow.add_edge(START, "planner")
+    def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
+        if state["session"].status == SessionStatus.executing:
+            return "coder"
+        return "planner"
+
+    workflow.add_conditional_edges(START, route_start)
     workflow.add_edge("planner", "coder")
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
@@ -121,178 +126,151 @@ async def run_generation_session(
     app = define_graph()
     final_state = initial_state
 
+
+async def _execute_graph_streaming(
+    app: Any,
+    initial_state: BenchmarkGeneratorState,
+    session_id: uuid.UUID,
+    prompt: str,
+) -> BenchmarkGeneratorState:
+    """Helper to run the graph with streaming and persistence."""
+    session_factory = get_sessionmaker()
+    final_state = initial_state
+
     # Helper to map internal status to EpisodeStatus
     def map_status(s: SessionStatus) -> EpisodeStatus:
         if s == SessionStatus.accepted:
             return EpisodeStatus.COMPLETED
         if s == SessionStatus.failed:
             return EpisodeStatus.FAILED
-        # All other states (planning, executing, validating, rejected) are RUNNING
+        if s == SessionStatus.planned:
+            return EpisodeStatus.PLANNED
         return EpisodeStatus.RUNNING
+
+    async for output in app.astream(initial_state):
+        for node_name, state in output.items():
+            final_state.update(state)
+
+            # Determine new status
+            new_status = SessionStatus.executing
+
+            should_stop = False
+            if node_name == "planner":
+                if state.get("plan") and "error" not in state["plan"]:
+                    new_status = SessionStatus.planned
+                    should_stop = True
+                else:
+                    new_status = SessionStatus.failed
+            elif node_name == "coder":
+                new_status = SessionStatus.validating
+            elif node_name == "reviewer":
+                feedback = state.get("review_feedback", "")
+                if feedback == "Approved":
+                    new_status = SessionStatus.accepted
+                else:
+                    new_status = SessionStatus.rejected
+            elif node_name == "skills":
+                pass
+
+            # Update internal session status
+            final_state["session"].status = new_status
+
+            # Update DB (Episode)
+            async with session_factory() as db:
+                episode_status = map_status(new_status)
+
+                stmt_select = select(Episode).where(Episode.id == session_id)
+                res = await db.execute(stmt_select)
+                ep = res.scalar_one_or_none()
+
+                if ep:
+                    new_metadata = (ep.metadata_vars or {}).copy()
+                    new_metadata.update(
+                        {
+                            "detailed_status": new_status,
+                            "validation_logs": final_state["session"].validation_logs
+                            or [],
+                            "prompt": prompt,
+                        }
+                    )
+
+                    ep.status = episode_status
+                    ep.metadata_vars = new_metadata
+
+                    # Update plan if it exists in state
+                    if final_state.get("plan"):
+                        import json
+
+                        ep.plan = json.dumps(final_state["plan"], indent=2)
+
+                    await db.commit()
+
+            if should_stop:
+                logger.info("pausing_for_user_confirmation", session_id=session_id)
+                return final_state
+
+    return final_state
+
+
+async def run_generation_session(
+    prompt: str,
+    session_id: uuid.UUID | None = None,
+    custom_objectives: dict | None = None,
+) -> BenchmarkGeneratorState:
+    """
+    Entry point to run the full generation pipeline with persistence.
+    """
+    session_id = session_id or uuid4()
+    logger.info("running_generation_session", session_id=session_id, prompt=prompt)
+
+    # 1. Create DB entry (Episode)
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = Episode(
+            id=session_id,
+            task=prompt,
+            status=EpisodeStatus.RUNNING,
+            metadata_vars={
+                "detailed_status": SessionStatus.planning,
+                "validation_logs": [],
+                "prompt": prompt,
+                "custom_objectives": custom_objectives,
+            },
+        )
+        db.add(episode)
+        await db.commit()
+
+    # 2. Setup State
+    session = GenerationSession(
+        session_id=session_id,
+        prompt=prompt,
+        status=SessionStatus.planning,
+        custom_objectives=custom_objectives or {},
+    )
+
+    initial_state = BenchmarkGeneratorState(
+        session=session,
+        current_script="",
+        simulation_result=None,
+        review_feedback=None,
+        review_round=0,
+        plan=None,
+        messages=[],
+    )
+
+    app = define_graph()
 
     try:
         # 3. Stream execution and checkpoint
-        async for output in app.astream(initial_state):
-            for node_name, state in output.items():
-                final_state.update(state)
-
-                # Determine new status
-                new_status = SessionStatus.executing  # Default active status
-
-                if node_name == "planner":
-                    new_status = SessionStatus.executing
-                elif node_name == "coder":
-                    new_status = SessionStatus.validating
-                elif node_name == "reviewer":
-                    feedback = state.get("review_feedback", "")
-                    if feedback == "Approved":
-                        new_status = SessionStatus.accepted
-                    else:
-                        new_status = (
-                            SessionStatus.rejected
-                        )  # Temporarily rejected, will retry
-                elif node_name == "skills":
-                    # After skills node, we should be done
-                    pass
-
-                # Update internal session status
-                final_state["session"].status = new_status
-
-                # Update DB (Episode)
-                async with session_factory() as db:
-                    episode_status = map_status(new_status)
-
-                    stmt_select = select(Episode).where(Episode.id == session_id)
-                    res = await db.execute(stmt_select)
-                    ep = res.scalar_one_or_none()
-
-                    if ep:
-                        new_metadata = (ep.metadata_vars or {}).copy()
-                        new_metadata.update(
-                            {
-                                "detailed_status": new_status,
-                                "validation_logs": final_state[
-                                    "session"
-                                ].validation_logs
-                                or [],
-                                "prompt": prompt,
-                            }
-                        )
-
-                        ep.status = episode_status
-                        ep.metadata_vars = new_metadata
-                        await db.commit()
-
+        final_state = await _execute_graph_streaming(
+            app, initial_state, session_id, prompt
+        )
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
-        error_msg = f"Error: {e!s}"
-
-        # Update local state
-        if "session" in final_state:
-            final_state["session"].status = SessionStatus.failed
-            if final_state["session"].validation_logs is None:
-                final_state["session"].validation_logs = []
-            final_state["session"].validation_logs.append(error_msg)
-
-        async with session_factory() as db:
-            stmt_select = select(Episode).where(Episode.id == session_id)
-            res = await db.execute(stmt_select)
-            ep = res.scalar_one_or_none()
-
-            if ep:
-                new_metadata = (ep.metadata_vars or {}).copy()
-                new_metadata.update(
-                    {
-                        "detailed_status": SessionStatus.failed,
-                        "validation_logs": final_state["session"].validation_logs,
-                        "prompt": prompt,
-                    }
-                )
-                ep.status = EpisodeStatus.FAILED
-                ep.metadata_vars = new_metadata
-                await db.commit()
-        return final_state
+        return initial_state
 
     # 4. Final Asset Persistence
-    if final_state["session"].status == SessionStatus.accepted:
-        try:
-            async with session_factory() as db:
-                storage = BenchmarkStorage()
-
-                sim_result = final_state.get("simulation_result", {})
-                images = sim_result.get("render_data", [])
-
-                if images is None:
-                    images = []
-
-                mjcf_content = final_state.get(
-                    "mjcf_content", "<!-- MJCF content missing in state -->"
-                )
-
-                await storage.save_asset(
-                    benchmark_id=session_id,
-                    script=final_state["current_script"],
-                    mjcf=mjcf_content,
-                    images=images,
-                    metadata=final_state.get("plan", {}),
-                    db=db,
-                )
-                logger.info("asset_persisted", session_id=session_id)
-
-                # Sync assets to the Asset table for regular UI viewing and easy copying
-                try:
-                    from contextlib import suppress
-
-                    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
-                    async with httpx.AsyncClient() as http_client:
-                        client = WorkerClient(
-                            base_url=worker_url,
-                            session_id=str(session_id),
-                            http_client=http_client,
-                        )
-                        middleware = RemoteFilesystemMiddleware(client)
-                        backend = RemoteFilesystemBackend(middleware)
-
-                        files = await backend.als_info("/")
-                        for file_info in files:
-                            if not file_info["is_dir"]:
-                                path = file_info["path"]
-                                asset_type = AssetType.OTHER
-                                if path.endswith(".py"):
-                                    asset_type = AssetType.PYTHON
-                                elif path.endswith(".xml") or path.endswith(".mjcf"):
-                                    asset_type = AssetType.MJCF
-
-                                # Read content for small files
-                                content = None
-                                with suppress(Exception):
-                                    raw_content = await backend.aread(path)
-                                    if isinstance(raw_content, bytes):
-                                        content = raw_content.decode(
-                                            "utf-8", errors="replace"
-                                        )
-                                    else:
-                                        content = str(raw_content)
-
-                                asset = Asset(
-                                    episode_id=session_id,
-                                    asset_type=asset_type,
-                                    s3_path=path,
-                                    content=content,
-                                )
-                                db.add(asset)
-                        await db.commit()
-                        logger.info("assets_synced_to_db", session_id=session_id)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_sync_assets_to_db",
-                        session_id=session_id,
-                        error=str(e),
-                    )
-        except Exception as e:
-            logger.error(
-                "asset_persistence_failed", session_id=session_id, error=str(e)
-            )
+    await _persist_session_assets(final_state, session_id)
 
     logger.info(
         "generation_session_complete",
@@ -300,3 +278,140 @@ async def run_generation_session(
         status=final_state["session"].status,
     )
     return final_state
+
+
+async def _persist_session_assets(
+    final_state: BenchmarkGeneratorState, session_id: uuid.UUID
+):
+    """Helper to persist final assets after a successful session."""
+    if final_state["session"].status != SessionStatus.accepted:
+        return
+
+    session_factory = get_sessionmaker()
+    try:
+        async with session_factory() as db:
+            storage = BenchmarkStorage()
+
+            sim_result = final_state.get("simulation_result", {})
+            images = sim_result.get("render_data", []) or []
+
+            mjcf_content = final_state.get(
+                "mjcf_content", "<!-- MJCF content missing in state -->"
+            )
+
+            await storage.save_asset(
+                benchmark_id=session_id,
+                script=final_state["current_script"],
+                mjcf=mjcf_content,
+                images=images,
+                metadata=final_state.get("plan", {}),
+                db=db,
+            )
+            logger.info("asset_persisted", session_id=session_id)
+
+            # Sync assets to the Asset table
+            try:
+                from contextlib import suppress
+
+                worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+                async with httpx.AsyncClient() as http_client:
+                    client = WorkerClient(
+                        base_url=worker_url,
+                        session_id=str(session_id),
+                        http_client=http_client,
+                    )
+                    middleware = RemoteFilesystemMiddleware(client)
+                    backend = RemoteFilesystemBackend(middleware)
+
+                    files = await backend.als_info("/")
+                    for file_info in files:
+                        if not file_info["is_dir"]:
+                            path = file_info["path"]
+                            asset_type = AssetType.OTHER
+                            if path.endswith(".py"):
+                                asset_type = AssetType.PYTHON
+                            elif path.endswith(".xml") or path.endswith(".mjcf"):
+                                asset_type = AssetType.MJCF
+
+                            content = None
+                            with suppress(Exception):
+                                raw_content = await backend.aread(path)
+                                if isinstance(raw_content, bytes):
+                                    content = raw_content.decode(
+                                        "utf-8", errors="replace"
+                                    )
+                                else:
+                                    content = str(raw_content)
+
+                            asset = Asset(
+                                episode_id=session_id,
+                                asset_type=asset_type,
+                                s3_path=path,
+                                content=content,
+                            )
+                            db.add(asset)
+                    await db.commit()
+            except Exception as e:
+                logger.error("failed_to_sync_assets_to_db", error=str(e))
+    except Exception as e:
+        logger.error("asset_persistence_failed", error=str(e))
+
+
+async def continue_generation_session(
+    session_id: uuid.UUID,
+) -> BenchmarkGeneratorState | None:
+    """
+    Resumes a paused generation session from the 'coder' node.
+    """
+    logger.info("continuing_generation_session", session_id=session_id)
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, session_id)
+        if not episode:
+            logger.error("episode_not_found_for_resume", session_id=session_id)
+            return None
+
+        prompt = episode.task
+        metadata = episode.metadata_vars or {}
+        custom_objectives = metadata.get("custom_objectives", {})
+
+        # Reconstruct session with status 'executing' so define_graph routes to 'coder'
+        session = GenerationSession(
+            session_id=session_id,
+            prompt=prompt,
+            status=SessionStatus.executing,
+            custom_objectives=custom_objectives,
+            validation_logs=metadata.get("validation_logs", []),
+        )
+
+        # Update episode status
+        episode.status = EpisodeStatus.RUNNING
+        metadata["detailed_status"] = SessionStatus.executing
+        episode.metadata_vars = metadata
+        await db.commit()
+
+    initial_state = BenchmarkGeneratorState(
+        session=session,
+        current_script="",
+        simulation_result=None,
+        review_feedback=None,
+        review_round=0,
+        plan=None,
+        messages=[],
+    )
+
+    app = define_graph()
+
+    try:
+        final_state = await _execute_graph_streaming(
+            app, initial_state, session_id, prompt
+        )
+
+        await _persist_session_assets(final_state, session_id)
+
+        return final_state
+    except Exception as e:
+        logger.error("resume_failed", error=str(e))
+
+    return None

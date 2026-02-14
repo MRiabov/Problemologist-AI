@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, type Episode, type BenchmarkObjectives } from '../api/client';
+import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
 
 interface EpisodeContextType {
   episodes: Episode[];
@@ -12,6 +13,7 @@ interface EpisodeContextType {
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
+  confirmBenchmark: (id: string) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
@@ -104,7 +106,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
         const newEpisode: Episode = {
           id: response.episode_id,
           task: task,
-          status: 'running' as any, // Cast to any to avoid enum issues for now, or import EpisodeStatus
+          status: EpisodeStatus.RUNNING,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           traces: [],
@@ -118,6 +120,17 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       setRunning(false);
     }
   }, [isCreationMode, refreshEpisodes]);
+
+  const confirmBenchmark = useCallback(async (id: string) => {
+    setRunning(true);
+    try {
+        await import('../api/client').then(m => m.confirmBenchmark(id));
+        await refreshEpisodes();
+    } catch (e) {
+        console.error("Failed to confirm benchmark", e);
+        setRunning(false);
+    }
+  }, [refreshEpisodes]);
 
   const interruptAgent = useCallback(async (id: string) => {
     try {
@@ -143,7 +156,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           ]);
           setEpisodes(episodesData);
           setSelectedEpisode(currentEp);
-          if (currentEp.status !== 'running') {
+          if (currentEp.status !== EpisodeStatus.RUNNING && currentEp.status !== EpisodeStatus.PLANNED) {
             setRunning(false);
           }
         } catch (e) {
@@ -164,6 +177,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       refreshEpisodes,
       selectEpisode,
       startAgent,
+      confirmBenchmark,
       interruptAgent,
       setRunning,
       createNewBenchmark,
