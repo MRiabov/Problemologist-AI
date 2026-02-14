@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from git import GitCommandError
 
-from controller.agent.nodes.sidecar import SidecarNode
+from controller.agent.nodes.skills import SkillsNode
 from shared.type_checking import type_check
 
 
 @pytest.fixture
 def mock_repo():
-    with patch("controller.agent.nodes.sidecar.Repo") as mock:
+    with patch("controller.agent.nodes.skills.Repo") as mock:
         repo_instance = mock.return_value
         repo_instance.git.status.return_value = "UU conflict.md"
         repo_instance.git.diff.return_value = "conflict.md"
@@ -20,7 +20,7 @@ def mock_repo():
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.sidecar.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.skills.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         # Mocking the conflict resolution response
@@ -45,7 +45,7 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
 
     # Mock environment variables
     with patch.dict("os.environ", {"GIT_REPO_URL": "https://github.com/test/repo.git"}):
-        node = SidecarNode(suggested_skills_dir=str(test_dir))
+        node = SkillsNode(suggested_skills_dir=str(test_dir))
 
         # Ensure repo is mocked correctly
         node.repo = mock_repo
@@ -98,7 +98,7 @@ async def test_sidecar_git_conflict_resolution_abort_on_failure(mock_repo, mock_
 
     # Mock environment variables
     with patch.dict("os.environ", {"GIT_REPO_URL": "https://github.com/test/repo.git"}):
-        node = SidecarNode(suggested_skills_dir=str(test_dir))
+        node = SkillsNode(suggested_skills_dir=str(test_dir))
         node.repo = mock_repo
 
         # Mock pull to raise GitCommandError

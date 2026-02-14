@@ -8,36 +8,35 @@ from controller.agent.state import AgentState, AgentStatus
 
 
 def test_should_continue_termination():
-    """Verify that should_continue returns END when turn_count >= max_agent_turns."""
+    """Verify that should_continue returns 'skills' when turn_count >= max_agent_turns."""
     with patch("controller.agent.graph.settings") as mock_settings:
         mock_settings.max_agent_turns = 60
 
         state = AgentState(task="test", turn_count=59, status=AgentStatus.EXECUTING)
-        assert should_continue(state) != END
+        assert should_continue(state) != "skills"
 
         state.turn_count = 60
-        assert should_continue(state) == END
+        assert should_continue(state) == "skills"
 
         state.turn_count = 61
-        assert should_continue(state) == END
+        assert should_continue(state) == "skills"
 
         # Verify configurability
         mock_settings.max_agent_turns = 10
         state.turn_count = 9
-        assert should_continue(state) != END
+        assert should_continue(state) != "skills"
 
         state.turn_count = 10
-        assert should_continue(state) == END
+        assert should_continue(state) == "skills"
 
 
 @pytest.mark.asyncio
 async def test_engineer_node_increments_turn_count():
-    """Verify that engineer_node increments turn_count."""
-    from controller.agent.nodes.engineer import engineer_node
+    """Verify that coder_node increments turn_count."""
+    from controller.agent.nodes.coder import coder_node as engineer_node
 
     # Mock dependencies
-    # We patch the EngineerNode class so that when instantiated, it returns a mock object that is also callable
-    with patch("controller.agent.nodes.engineer.EngineerNode") as MockNodeClass:
+    with patch("controller.agent.nodes.coder.CoderNode") as MockNodeClass:
         mock_instance = MockNodeClass.return_value
 
         # Scenario 1: Success

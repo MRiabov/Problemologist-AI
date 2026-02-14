@@ -36,6 +36,6 @@ def test_create_agent_graph_returns_benchmark_graph():
 
     # Assert
     # We check if it's a CompiledGraph from langgraph
-    from langgraph.graph.graph import CompiledGraph
+    from langgraph.graph.state import CompiledStateGraph
 
-    assert isinstance(agent, CompiledGraph)
+    assert isinstance(agent, CompiledStateGraph)

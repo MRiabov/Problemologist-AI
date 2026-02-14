@@ -21,7 +21,7 @@ async def test_smoke_e2e(fresh_graph):
     """Smoke test: Create a 10x10x10 cube."""
 
     # Mocking node implementations to avoid actual LLM and Worker calls
-    mock_architect = AsyncMock(
+    mock_planner = AsyncMock(
         return_value={
             "task": "Create a 10x10x10 cube",
             "plan": "1. Import box. 2. Create box.",
@@ -29,25 +29,36 @@ async def test_smoke_e2e(fresh_graph):
         }
     )
 
-    mock_engineer = AsyncMock(
+    mock_coder = AsyncMock(
         return_value={
             "journal": "Created cube successfully",
             "current_step": "Create cube",
             "todo": "- [x] Create cube",
+            "status": "approved",  # reviewer will check this
         }
     )
 
-    mock_critic = AsyncMock(
+    mock_electronics_engineer = AsyncMock(
+        return_value={
+            "journal": "No electronics needed for a simple cube.",
+        }
+    )
+
+    mock_reviewer = AsyncMock(
         return_value={"status": "approved", "feedback": "Perfect cube."}
     )
 
-    mock_sidecar = AsyncMock(return_value={"journal": "Learned about cubes."})
+    mock_skills = AsyncMock(return_value={"journal": "Learned about cubes."})
 
     with (
-        patch("controller.agent.nodes.architect.architect_node", mock_architect),
-        patch("controller.agent.nodes.engineer.engineer_node", mock_engineer),
-        patch("controller.agent.nodes.critic.critic_node", mock_critic),
-        patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar),
+        patch("controller.agent.nodes.planner.planner_node", mock_planner),
+        patch("controller.agent.nodes.coder.coder_node", mock_coder),
+        patch(
+            "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
+            mock_electronics_engineer,
+        ),
+        patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
+        patch("controller.agent.nodes.skills.skills_node", mock_skills),
     ):
         graph = fresh_graph()
 
@@ -61,12 +72,13 @@ async def test_smoke_e2e(fresh_graph):
 
         # Verify the sequence of nodes
         node_sequence = [list(e.keys())[0] for e in events]
-        assert "architect" in node_sequence
-        assert "engineer" in node_sequence
-        assert "critic" in node_sequence
-        assert "sidecar" in node_sequence
+        assert "planner" in node_sequence
+        assert "coder" in node_sequence
+        assert "electronics_engineer" in node_sequence
+        assert "reviewer" in node_sequence
+        assert "skills" in node_sequence
 
         # Verify last state
         last_event = events[-1]
-        assert "sidecar" in last_event
-        assert "Learned about cubes" in last_event["sidecar"]["journal"]
+        assert "skills" in last_event
+        assert "Learned about cubes" in last_event["skills"]["journal"]

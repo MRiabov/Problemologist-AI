@@ -101,11 +101,11 @@ class TestPositionActuatorIntegration:
 
         # The joint should have moved towards the target
         joint_id = mujoco.mj_name2id(
-            sim_loop_position.model, mujoco.mjtObj.mjOBJ_JOINT, "hinge"
+            sim_loop_position.backend.model, mujoco.mjtObj.mjOBJ_JOINT, "hinge"
         )
         # qpos for hinge is 1D
-        qpos_addr = sim_loop_position.model.jnt_qposadr[joint_id]
-        actual_pos = sim_loop_position.data.qpos[qpos_addr]
+        qpos_addr = sim_loop_position.backend.model.jnt_qposadr[joint_id]
+        actual_pos = sim_loop_position.backend.data.qpos[qpos_addr]
 
         # Should be close to target (PD control with kp=100, kv=10)
         assert abs(actual_pos - target) < 0.1, f"Expected ~{target}, got {actual_pos}"
@@ -120,9 +120,9 @@ class TestPositionActuatorIntegration:
 
         # At end, should be near 0.6
         joint_id = mujoco.mj_name2id(
-            sim_loop_position.model, mujoco.mjtObj.mjOBJ_JOINT, "hinge"
+            sim_loop_position.backend.model, mujoco.mjtObj.mjOBJ_JOINT, "hinge"
         )
-        qpos_addr = sim_loop_position.model.jnt_qposadr[joint_id]
-        actual_pos = sim_loop_position.data.qpos[qpos_addr]
+        qpos_addr = sim_loop_position.backend.model.jnt_qposadr[joint_id]
+        actual_pos = sim_loop_position.backend.data.qpos[qpos_addr]
 
         assert abs(actual_pos - 0.6) < 0.15, f"Expected ~0.6, got {actual_pos}"

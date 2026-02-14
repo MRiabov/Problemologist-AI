@@ -41,25 +41,22 @@ def sim_loop(tmp_path):
 def test_initialization(sim_loop):
     import mujoco
 
-    assert sim_loop.model is not None
-    assert sim_loop.data is not None
-    # Check if ID of forbidden zone is in the set
-    site_id = mujoco.mj_name2id(
-        sim_loop.model, mujoco.mjtObj.mjOBJ_SITE, "zone_forbid_1"
-    )
-    assert site_id in sim_loop.forbidden_sites
+    assert sim_loop.backend.model is not None
+    assert sim_loop.backend.data is not None
+    # Check if name of forbidden zone is in the list
+    assert "zone_forbid_1" in sim_loop.forbidden_sites
 
 
 def test_step_simulation(sim_loop):
     # Initial Z height
-    z_start = sim_loop.data.qpos[2]  # free joint: x y z w x y z
+    z_start = sim_loop.backend.data.qpos[2]  # free joint: x y z w x y z
 
     metrics = sim_loop.step({}, duration=0.1)
 
     # Check time advanced
     assert metrics.total_time > 0
     # Check gravity worked (box fell)
-    assert sim_loop.data.qpos[2] < z_start
+    assert sim_loop.backend.data.qpos[2] < z_start
     assert metrics.success is False  # Not reached goal yet
 
 
@@ -72,7 +69,7 @@ def test_metrics_collection(sim_loop):
     assert metrics.max_velocity >= 0  # Target box might not move much but hinges will
 
     # Check velocity of target box specifically
-    sim_loop.data.qvel[0] = 5.0  # Set x-velocity of target box
+    sim_loop.backend.data.qvel[0] = 5.0  # Set x-velocity of target box
     metrics = sim_loop.step({}, duration=0.01)
     assert metrics.max_velocity >= 5.0
 
@@ -81,9 +78,9 @@ def test_goal_zone_trigger(sim_loop):
     # move target to goal
     # Goal is at 0.5 0 0
     # Target is free joint. qpos[0:3] is pos.
-    sim_loop.data.qpos[0] = 0.5
-    sim_loop.data.qpos[1] = 0.0
-    sim_loop.data.qpos[2] = 0.0
+    sim_loop.backend.data.qpos[0] = 0.5
+    sim_loop.backend.data.qpos[1] = 0.0
+    sim_loop.backend.data.qpos[2] = 0.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
@@ -92,9 +89,9 @@ def test_goal_zone_trigger(sim_loop):
 
 def test_forbidden_zone_trigger(sim_loop):
     # Move target to forbidden zone (-0.5 0 0)
-    sim_loop.data.qpos[0] = -0.5
-    sim_loop.data.qpos[1] = 0.0
-    sim_loop.data.qpos[2] = 0.0
+    sim_loop.backend.data.qpos[0] = -0.5
+    sim_loop.backend.data.qpos[1] = 0.0
+    sim_loop.backend.data.qpos[2] = 0.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
@@ -167,7 +164,7 @@ def test_timeout_capped_at_30s(tmp_path):
 def test_target_fell_off_world(sim_loop):
     """Test failure detection when target falls below Z threshold."""
     # Set target Z to -3.0 (below -2.0 threshold)
-    sim_loop.data.qpos[2] = -3.0
+    sim_loop.backend.data.qpos[2] = -3.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
@@ -181,10 +178,10 @@ def test_instability_detection(sim_loop):
     import numpy as np
 
     # Inject NaN into qpos
-    sim_loop.data.qpos[0] = np.nan
+    sim_loop.backend.data.qpos[0] = np.nan
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "instability_detected"
+    assert metrics.fail_reason == "PHYSICS_INSTABILITY"

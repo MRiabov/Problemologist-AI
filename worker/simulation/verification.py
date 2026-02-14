@@ -99,16 +99,16 @@ def verify_with_jitter(
         import mujoco
 
         target_body_id = mujoco.mj_name2id(
-            loop.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
+            loop.backend.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
         )
 
         # Apply position jitter
-        apply_position_jitter(loop.data, target_body_id, jitter_range, rng)
+        apply_position_jitter(loop.backend.data, target_body_id, jitter_range, rng)
 
         # Forward kinematics after position change
         import mujoco
 
-        mujoco.mj_forward(loop.model, loop.data)
+        mujoco.mj_forward(loop.backend.model, loop.backend.data)
 
         # Run simulation
         metrics = loop.step(

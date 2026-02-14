@@ -88,11 +88,11 @@ class TestMotorOverload:
     def test_overload_resets_on_unclamp(self, overload_loop):
         """Test that clamp counter resets if motor becomes unclamped."""
         # This tests that overload requires CONTINUOUS clamping
-        assert overload_loop.actuator_clamp_duration[0] == 0.0
+        assert overload_loop.actuator_clamp_duration.get("servo", 0.0) == 0.0
 
         # After reset, should be zero
         overload_loop.reset_metrics()
-        assert overload_loop.actuator_clamp_duration[0] == 0.0
+        assert overload_loop.actuator_clamp_duration.get("servo", 0.0) == 0.0
 
     def test_threshold_constant_is_2_seconds(self):
         """Verify the overload threshold matches architecture spec."""
