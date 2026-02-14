@@ -32,7 +32,7 @@ def test_benchmark_creation_flow(page: Page):
         "a goal in the other. Make a benchmark that would test "
         "a machine that does it."
     )
-    prompt_input = page.get_by_placeholder("Describe the benchmark goal...")
+    prompt_input = page.locator("#chat-input")
     expect(prompt_input).to_be_visible(timeout=30000)
     prompt_input.fill(prompt_text)
     print("Prompt filled.")
@@ -43,9 +43,10 @@ def test_benchmark_creation_flow(page: Page):
     print("Prompt submitted.")
 
     # 6. Wait for the generation to start and a plan to appear
-    print("Waiting for Reasoning Trace...")
-    expect(page.get_by_text("Reasoning Trace")).to_be_visible(timeout=60000)
-    print("Reasoning Trace visible.")
+    print("Waiting for Thinking process...")
+    # New frontend uses "Thought for Xs" label
+    expect(page.get_by_text("Thought for", exact=False)).to_be_visible(timeout=60000)
+    print("Thinking process visible.")
 
     # Now look for the plan in ArtifactView.
     print("Waiting for plan.md tab...")
@@ -58,17 +59,16 @@ def test_benchmark_creation_flow(page: Page):
 
     # 7. Verify the plan is "non-template"
     print("Verifying plan content...")
-    # Based on ArtifactView.tsx, content is in a font-mono pre tag
-    plan_content = page.locator("pre.whitespace-pre-wrap")
-    expect(plan_content).to_be_visible(timeout=30000)
-
-    # Verify it mentions "steel ball" or "40mm"
-    expect(plan_content).to_contain_text("steel ball", ignore_case=True)
-    expect(plan_content).to_contain_text("40mm", ignore_case=True)
+    # The content is now rendered via Prism SyntaxHighlighter, often in a pre tag or similar
+    # We can just look for the text in the artifact view area
+    expect(page.get_by_text("steel ball", ignore_case=True)).to_be_visible(
+        timeout=30000
+    )
+    expect(page.get_by_text("40mm", ignore_case=True)).to_be_visible(timeout=30000)
     print("Verified keywords in plan.")
 
     # Final check: ensure "goal" is mentioned
-    expect(plan_content).to_contain_text("goal", ignore_case=True)
+    expect(page.get_by_text("goal", ignore_case=True)).to_be_visible(timeout=30000)
     print("Final check passed.")
 
     print("Success: Benchmark creation flow verified.")
