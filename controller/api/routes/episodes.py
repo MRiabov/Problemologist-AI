@@ -300,6 +300,22 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
     return episode
 
 
+@router.delete("/{episode_id}")
+async def delete_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Delete an episode and its associated data."""
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    await db.delete(episode)
+    await db.commit()
+    return {
+        "status": ResponseStatus.SUCCESS,
+        "message": f"Episode {episode_id} and its traces/assets deleted.",
+    }
+
+
 @router.websocket("/{episode_id}/ws")
 async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
     await manager.connect(episode_id, websocket)
