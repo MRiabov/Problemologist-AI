@@ -227,7 +227,6 @@ class SimulationLoop:
         # We assume backend has a fixed or default timestep
         # For MuJoCo it's usually 0.002
         # We'll use a small step and loop
-        # We'll use a small step and loop
         dt = 0.002  # Default step for loop logic
         steps = int(duration / dt)
 
@@ -238,14 +237,15 @@ class SimulationLoop:
         all_bodies = self.backend.get_all_body_names()
         if target_body_name not in all_bodies:
             target_body_name = None
+            # Fallback: look for target_box OR any body with 'target' or 'bucket' in name
             for name in all_bodies:
-                if name == "target_box":
+                if "target" in name.lower() or "bucket" in name.lower():
                     target_body_name = name
                     break
 
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
-        stress_report_interval = 50
+        stress_report_interval = 1 if self.smoke_test_mode else 50
 
         for step_idx in range(steps):
             # Apply dynamic controllers
@@ -334,15 +334,17 @@ class SimulationLoop:
 
                         # F004: Part Breakage
                         if max_stress > ultimate_stress:
-                            self.fail_reason = f"PART_BREAKAGE:{body_name}"
+                            self.fail_reason = f"{SimulationFailureMode.PART_BREAKAGE}:{body_name}"
                             logger.info(
                                 "simulation_fail",
-                                reason="PART_BREAKAGE",
+                                reason=SimulationFailureMode.PART_BREAKAGE,
                                 part=body_name,
                                 stress=max_stress,
                             )
+                            # Internal break for the body loop
                             break
-                if self.fail_reason and "PART_BREAKAGE" in self.fail_reason:
+                # Check for breakage in the outer loop
+                if self.fail_reason and SimulationFailureMode.PART_BREAKAGE in self.fail_reason:
                     break
 
             if target_body_name:
@@ -366,11 +368,11 @@ class SimulationLoop:
                         max_s = np.max(stress_field.stress)
                         if max_s > so.max_von_mises_mpa * 1e6:
                             self.fail_reason = (
-                                f"STRESS_OBJECTIVE_EXCEEDED:{so.part_label}"
+                                f"{SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED}:{so.part_label}"
                             )
                             logger.info(
                                 "simulation_fail",
-                                reason="STRESS_OBJECTIVE_EXCEEDED",
+                                reason=SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED,
                                 part=so.part_label,
                                 stress=max_s,
                             )
@@ -472,8 +474,10 @@ class SimulationLoop:
                         if fo.type == "fluid_containment":
                             # Count particles inside containment_zone
                             zone = fo.containment_zone
+                            z_min = np.array(zone.min)
+                            z_max = np.array(zone.max)
                             inside = np.all(
-                                (particles >= zone.min) & (particles <= zone.max),
+                                (particles >= z_min) & (particles <= z_max),
                                 axis=1,
                             )
                             ratio = (
@@ -506,17 +510,28 @@ class SimulationLoop:
                             if not passed:
                                 self.fail_reason = (
                                     self.fail_reason
-                                    or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
+                                    or f"{SimulationFailureMode.FLUID_OBJECTIVE_FAILED}:{fo.fluid_id}"
                                 )
                         elif fo.type == "flow_rate":
                             # Flow rate at end is less common, but we could measure cumulative flow
                             pass
 
+        # Final success determination: 
+        # If any explicit failure was recorded, it's not a success.
+        if self.fail_reason:
+            is_success = False
+        elif target_body_name and self.goal_sites:
+            # If target object AND goals are required, success depends on goal achievement
+            is_success = self.success
+        else:
+            # If no failures and either no target or no goal sites, it's a pass
+            is_success = True
+
         return SimulationMetrics(
             total_time=current_time,
             total_energy=self.total_energy,
             max_velocity=self.max_velocity,
-            success=self.success if self.fail_reason is None else False,
+            success=is_success,
             fail_reason=self.fail_reason,
             stress_summaries=self.stress_summaries,
             fluid_metrics=self.fluid_metrics,

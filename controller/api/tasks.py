@@ -172,12 +172,18 @@ async def execute_agent_task(
                     }
 
                 # Run the agent with tracing
+                # Determine thread_id for persistence.
+                # Use episode_id as thread_id to allow resuming.
+                # But LangGraph might expect string.
+                thread_id = str(episode_id)
+
                 result = await agent.ainvoke(
                     initial_input,
                     config={
                         "callbacks": callbacks,
                         "metadata": {"episode_id": str(episode_id)},
                         "run_name": agent_name,
+                        "configurable": {"thread_id": thread_id},
                     },
                 )
 
@@ -325,3 +331,151 @@ async def execute_agent_task(
     finally:
         # Always remove task from tracker
         task_tracker.remove_task(episode_id)
+
+
+async def continue_agent_task(
+    episode_id: uuid.UUID,
+    message: str,
+):
+    """
+    Continue an existing agent task with a new user message.
+    """
+    session_factory = get_sessionmaker()
+
+    try:
+        async with session_factory() as db:
+            episode = await db.get(Episode, episode_id)
+            if not episode:
+                logger.error(
+                    "episode_not_found_for_continuation", episode_id=episode_id
+                )
+                return
+
+            # Helper to broadcast status
+            async def broadcast_status(status):
+                episode.status = status
+                await db.commit()
+                # Broadcast logic could be added here if not handled by db commit hooks or manually
+                # For now rely on polling or implement direct broadcast if manager is available
+                # But manager is in api.manager. We need to import it carefully to avoid circular deps if any.
+                # Actually manager is imported at top level.
+
+            # Update status to RUNNING
+            # We don't change status immediately here because execute_agent_task didn't?
+            # actually execute_agent_task created episode as RUNNING.
+            # Here we might be resuming from COMPLETED or WAITING.
+            if episode.status != EpisodeStatus.RUNNING:
+                episode.status = EpisodeStatus.RUNNING
+                await db.commit()
+
+            try:
+                # Setup context
+                trace_id = uuid.uuid4().hex
+                session_id = None
+                if episode.metadata_vars:
+                    session_id = episode.metadata_vars.get("worker_session_id")
+
+                if not session_id:
+                    # Fallback
+                    session_id = str(episode_id)
+
+                client = get_worker_client(session_id)
+
+                # Check if agent name is stored, otherwise default check
+                agent_name = "engineer_coder"
+                if episode.skill_git_hash and "benchmark" in episode.task.lower():
+                    # Heuristic if not stored. Ideally store agent_name in episode.
+                    # For now assume engineer_coder unless we have metadata.
+                    pass
+
+                agent, langfuse_callback = create_agent_graph(
+                    agent_name=agent_name,
+                    trace_id=trace_id,
+                    session_id=session_id,
+                )
+
+                # Add trace for user message
+                user_trace = Trace(
+                    episode_id=episode_id,
+                    trace_type=TraceType.LOG,  # Or maybe a specialized USER_MESSAGE type?
+                    content=f"User message: {message}",
+                    langfuse_trace_id=trace_id,
+                    metadata_vars={"role": "user", "message": message},
+                )
+                db.add(user_trace)
+                await db.commit()
+                await db.refresh(user_trace)
+
+                # Setup callbacks
+                db_callback = DatabaseCallbackHandler(
+                    episode_id, langfuse_callback=langfuse_callback
+                )
+                await db_callback._broadcast_trace(user_trace)
+
+                callbacks = [db_callback]
+                if langfuse_callback:
+                    callbacks.append(langfuse_callback)
+
+                # Invoke agent with new message
+                # We use the same thread_id to resume state
+                thread_id = str(episode_id)
+
+                # LangGraph state update: append message to 'messages' key
+                input_update = {"messages": [("user", message)]}
+
+                result = await agent.ainvoke(
+                    input_update,
+                    config={
+                        "callbacks": callbacks,
+                        "metadata": {"episode_id": str(episode_id)},
+                        "run_name": agent_name,
+                        "configurable": {"thread_id": thread_id},
+                    },
+                )
+
+                # Final trace
+                if isinstance(result, dict):
+                    final_messages = result.get("messages", [])
+                else:
+                    final_messages = getattr(result, "messages", [])
+
+                if final_messages:
+                    final_output = final_messages[-1].content
+                else:
+                    final_output = "No output produced by agent."
+
+                final_trace = Trace(
+                    episode_id=episode_id,
+                    trace_type=TraceType.LLM_END,
+                    content=final_output,
+                    langfuse_trace_id=trace_id,
+                )
+                db.add(final_trace)
+
+                # Update status
+                await db.refresh(episode)
+                if episode.status != EpisodeStatus.CANCELLED:
+                    episode.status = EpisodeStatus.COMPLETED
+                    # Append result to plan/journal?
+                    # For now just update status.
+
+                await db.commit()
+                await db_callback._broadcast_trace(final_trace)
+
+                logger.info("agent_continuation_completed", episode_id=episode_id)
+
+            except Exception as e:
+                import traceback
+
+                logger.error(
+                    "agent_continuation_failed",
+                    error=str(e),
+                    traceback=traceback.format_exc(),
+                    episode_id=episode_id,
+                )
+                episode = await db.get(Episode, episode_id)
+                if episode:
+                    episode.status = EpisodeStatus.FAILED
+                    await db.commit()
+    finally:
+        pass

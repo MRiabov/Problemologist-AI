@@ -106,3 +106,14 @@ export async function confirmBenchmark(sessionId: string): Promise<any> {
         url: `/benchmark/${sessionId}/confirm`,
     });
 }
+
+export async function rebuildModel(scriptPath: string): Promise<any> {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: '/benchmark/build',
+        body: {
+            script_path: scriptPath
+        },
+        mediaType: 'application/json',
+    });
+}

@@ -17,6 +17,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/benchmark/build': {
+        target: 'http://localhost:18001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/api': {
         target: 'http://localhost:18000',
         changeOrigin: true,

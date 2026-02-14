@@ -2,13 +2,19 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import matplotlib.pyplot as plt
 import mujoco
 import numpy as np
 import structlog
+import trimesh
 from build123d import Compound
 from PIL import Image
 
-from shared.simulation.backends import SimulatorBackendType
+from shared.simulation.backends (
+    PhysicsBackend,
+    SimulatorBackendType,
+    StressField,
+)
 from worker.simulation.factory import get_simulation_builder
 
 logger = structlog.get_logger(__name__)
@@ -96,3 +102,96 @@ def prerender_24_views(component: Compound, output_dir: str = None) -> list[str]
     except Exception as e:
         logger.error("prerender_failed", error=str(e))
         raise
+
+
+def render_stress_heatmap(
+    stress_field: StressField,
+    output_path: Path,
+    mesh_path: Path | None = None,
+    width: int = 800,
+    height: int = 600,
+) -> Path:
+    """
+    Renders a stress heatmap using PyVista (if available) or Matplotlib.
+    For MVP, we use Matplotlib scatter if no mesh is provided, or trimesh if it is.
+    """
+    try:
+        nodes = stress_field.nodes
+        stresses = stress_field.stress
+
+        if mesh_path and mesh_path.exists():
+            # Use trimesh for 3D visualization if available
+            mesh = trimesh.load(str(mesh_path))
+            # Map stresses to vertices (simple nearest neighbor or interpolation)
+            # For Genesis, stress is often per-node already.
+            
+            # Simple colormap mapping
+            norm = plt.Normalize(vmin=stresses.min(), vmax=stresses.max())
+            cmap = plt.get_cmap("jet")
+            colors = cmap(norm(stresses))[:, :3] * 255 # RGB
+
+            # If node count matches vertex count, apply directly
+            if len(stresses) == len(mesh.vertices):
+                mesh.visual.vertex_colors = colors.astype(np.uint8)
+            
+            scene = mesh.scene()
+            data = scene.save_image(resolution=(width, height))
+            with open(output_path, "wb") as f:
+                f.write(data)
+        else:
+            # Fallback to matplotlib 2D projection or simple scatter
+            fig = plt.figure(figsize=(width / 100, height / 100))
+            ax = fig.add_subplot(111, projection="3d")
+            p = ax.scatter(
+                nodes[:, 0], nodes[:, 1], nodes[:, 2], c=stresses, cmap="jet"
+            )
+            fig.colorbar(p, label="von Mises Stress (Pa)")
+            plt.savefig(output_path)
+            plt.close(fig)
+
+        return output_path
+    except Exception as e:
+        logger.error("render_stress_heatmap_failed", error=str(e))
+        # Create a blank error image
+        img = Image.new("RGB", (width, height), color=(255, 0, 0))
+        img.save(output_path)
+        return output_path
+
+
+class VideoRenderer:
+    """Handles video generation for simulations."""
+
+    def __init__(self, output_path: Path, width: int = 640, height: int = 480, fps: int = 30):
+        self.output_path = output_path
+        self.width = width
+        self.height = height
+        self.fps = fps
+        self.frames = []
+
+    def add_frame(self, frame: np.ndarray, particles: np.ndarray | None = None):
+        """Adds a frame to the video. Optionally overlays particles."""
+        if particles is not None:
+            # Simple particle overlay logic for the simulation video
+            # In Genesis, this is usually handled by the backend's internal renderer
+            pass
+        self.frames.append(frame)
+
+    def save(self):
+        """Saves the frames as an MP4 video."""
+        if not self.frames:
+            logger.warning("video_render_no_frames")
+            return
+
+        import cv2
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(
+            str(self.output_path), fourcc, self.fps, (self.width, self.height)
+        )
+
+        for frame in self.frames:
+            # Convert RGB to BGR for OpenCV
+            bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            out.write(bgr_frame)
+        out.release()
+        logger.info("video_render_complete", path=str(self.output_path))

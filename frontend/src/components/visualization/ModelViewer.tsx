@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center } from '@react-three/drei'
+import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { 
@@ -30,12 +30,22 @@ function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: {
   useEffect(() => {
     if (gltf.scene && onStructureParsed) {
         const collectTopology = (object: THREE.Object3D): TopologyNode | null => {
-            if (!object.name && !(object instanceof THREE.Mesh)) return null;
+            // YACV / Occ naming convention support
+            let type: TopologyNode['type'] = 'group';
+            if (object instanceof THREE.Mesh) type = 'part';
+            
+            const name = object.name || '';
+            if (name.startsWith('face_')) type = 'face';
+            else if (name.startsWith('edge_')) type = 'edge';
+            else if (name.startsWith('vertex_')) type = 'vertex';
+            else if (object.children.length > 0) type = 'assembly';
+
+            if (!name && type === 'group') return null;
             
             const node: TopologyNode = {
                 id: object.uuid,
-                name: object.name || (object instanceof THREE.Mesh ? 'Part' : 'Assembly'),
-                type: object instanceof THREE.Mesh ? 'part' : (object.children.length > 0 ? 'assembly' : 'group'),
+                name: name || (type === 'part' ? 'Part' : 'Assembly'),
+                type: type,
                 children: []
             };
 
@@ -141,8 +151,9 @@ export default function ModelViewer({
   assetUrls = [],
   wireRoutes = [], 
   isConnected = true, 
-  resetTrigger = 0 
-}: ModelViewerProps) {
+  resetTrigger = 0,
+  onRebuildModel
+}: ModelViewerProps & { onRebuildModel?: () => void }) {
   const controlsRef = useRef<any>(null)
   const { addToContext } = useEpisodes();
   const [hiddenParts, setHiddenParts] = useState<string[]>([])
@@ -226,6 +237,26 @@ export default function ModelViewer({
                 ))
             ) : (
                 <PlaceholderModel />
+            )}
+            
+            {/* Rebuild Prompt Overlay */}
+            {urls.length === 0 && onRebuildModel && (
+                <Html center>
+                    <div className="w-64 text-center pointer-events-auto">
+                         <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                            <h3 className="text-sm font-bold text-slate-200">No Model Loaded</h3>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={onRebuildModel}
+                                className="w-full gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+                            >
+                                <RotateCcw className="h-3 w-3" />
+                                Rebuild Assets
+                            </Button>
+                         </div>
+                    </div>
+                </Html>
             )}
 
             {/* Render physical wires */}

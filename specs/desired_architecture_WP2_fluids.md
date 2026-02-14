@@ -148,9 +148,9 @@ This data:
 
 ## Fluid Simulation (MPM)
 
-### Fluid Definition
+### Fluid Material Property Definition
 
-Fluids are defined via new fields in `objectives.yaml` (for benchmark-defined fluids) or via agent tools (for engineer-defined fluid interactions):
+Fluids are defined in a new `materials.yaml`:
 
 ```yaml
 # objectives.yaml — new section
@@ -160,12 +160,19 @@ fluids:
       viscosity_cp: 1.0       # Centipoise
       density_kg_m3: 1000
       surface_tension_n_m: 0.07
+      color: [0, 0, 200]
+```
+
+### Fluid in-scene
+
+Fludis as in scene are defined in assembly_definition if the fluid is in the assembly OR it is `objectives.yaml` if it's as a "starting setup".
+
+```yaml
     initial_volume:
       type: "cylinder"        # Primitive shape filled with particles
       center: [0, 0, 50]
       radius: 15
       height: 30
-    color: [0, 0, 200]
 ```
 
 ### Asset Conversion Pipeline
@@ -181,6 +188,8 @@ The existing `build123d → OBJ → MuJoCo` pipeline extends as follows:
 - **TetGen** is installed in the worker container. A `mesh_utils.py` wrapper handles invocation and error recovery.
 - **V-HACD** (currently used for MuJoCo convex decomposition) is not needed for Genesis, which handles collision natively.
 - When `backend: mujoco`, the pipeline remains unchanged (no FEM/fluid support).
+
+Note: all parts are deformable by default. The only rigid bodies are COTS.
 
 ### Fluid–Electronics Interaction
 

@@ -5,7 +5,7 @@
 ## Status
 
 - [ ] WP01: Genesis Backend & Core Physics <!-- id: WP01 -->
-- [ ] WP02: Meshing Pipeline (FEM) <!-- id: WP02 -->
+- [/] WP02: Meshing Pipeline (FEM) <!-- id: WP02 -->
 - [ ] WP03: Validation & Rendering <!-- id: WP03 -->
 - [ ] WP04: Agent Reasoning & Benchmarks <!-- id: WP04 -->
 
@@ -36,15 +36,17 @@
 
 **Implement a functional tetrahedralization utility for generating FEM assets.**
 
-- [ ] T006: Properly integrate `TetGen` or `Gmsh` into `worker/utils/mesh_utils.py`. <!-- id: T006 -->
+- [ ] T006: Integrate `gmsh` or `TetGen` into `worker/utils/mesh_utils.py`. <!-- id: T006 -->
 - [ ] T007: Implement `STL` -> `.msh` conversion with appropriate quality constraints for FEM. <!-- id: T007 -->
-- [ ] T008: Ensure `GenesisSimulationBuilder` correctly caches and references these assets. <!-- id: T008 -->
-- [ ] T009: Implement part repair/watertightness check as a prerequisite for meshing. <!-- id: T009 -->
+- [ ] T008: Update `GenesisSimulationBuilder` to correctly cache and reference `.msh` assets. <!-- id: T008 -->
+- [ ] T009: Implement robust part repair/watertightness check as a prerequisite for meshing. <!-- id: T009 -->
+- [ ] T009.2: Add CAD validation gate to verify material FEM properties exist before simulation. <!-- id: T009.2 -->
 
 **Implementation Notes**:
 
-- Large meshes should be handled efficiently.
-- Prefer `Gmsh` if `TetGen` integration remains brittle.
+- Large meshes should be handled efficiently with hashing/caching.
+- Prefer `Gmsh` for better `.msh` format support.
+- Ensure mesh repair handles non-manifold geometry from build123d.
 
 **Dependencies**: WP01
 **Prompt Size**: ~400 lines

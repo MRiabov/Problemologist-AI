@@ -5,6 +5,7 @@ import {
   SignalLow,
   AlertCircle
 } from "lucide-react";
+import { rebuildModel } from "../../api/client";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import ChatWindow from './ChatWindow';
@@ -205,6 +206,15 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                         assetUrls={modelUrls}
                         isConnected={isConnected}
                         resetTrigger={resetTrigger}
+                        onRebuildModel={async () => {
+                            try {
+                                await rebuildModel("solution.py");
+                                window.location.reload(); 
+                            } catch (e) {
+                                console.error(e);
+                                alert("Failed to rebuild model: " + e);
+                            }
+                        }}
                       />
                       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                         <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
