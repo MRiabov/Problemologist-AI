@@ -65,7 +65,17 @@ function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: {
   useEffect(() => {
     gltf.scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.visible = !hiddenParts.includes(child.uuid) && !hiddenParts.includes(child.name);
+        // Check if the part itself is hidden, or if any of its parents are hidden
+        let isParentHidden = false;
+        let p: THREE.Object3D | null = child;
+        while (p) {
+            if (hiddenParts.includes(p.uuid) || (p.name && hiddenParts.includes(p.name))) {
+                isParentHidden = true;
+                break;
+            }
+            p = p.parent;
+        }
+        child.visible = !isParentHidden;
       }
     });
   }, [gltf, hiddenParts]);
