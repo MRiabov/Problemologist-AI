@@ -1,124 +1,185 @@
 # Frontend specs
 
 As frontend has grown in the complexity and becomes an actual user-facing feature, it is worth separating it into the UI.
+The main architectural specification is in @desired_architecture.md
 
-## Frontend and debugging infrastructure
+## Core flows
 
-I will need some frontend. I suggest designing a custom UI. This is relatively easy now because we can handle off to Google Stitch (Google's AI website designer; however it only designs websites, it doesn't integrate them). Plus it's convenient to use in backend. The website will be deployed on Vercel for simplicity (or a railway bucket maybe? it doesn't really matter.)
-A detailed specification of what needs to be in frontend to create a good UI will be required.
+The frontend has two core flows:
 
-This means that we will have a user-facing API.
+1. Benchmark generation
+2. Problem solution (a.k.a. Engineering.)
 
-<!-- I used streamlit in the past and it works but is limiting due to inability to stream data, as far as I've seen it.-->
+In both, engineer submit requests one-by-one as a chat UI interface common in coding agents.
 
-### Debugging requirements
+### Benchmark generation workflow
 
-As the agents are long-running (and cost money!) it is desirable to be able to:
+For engineers, benchmarks serve as a way to create a set of constraints that the model must follow - "problem" geometric constraints and unit cost/weight/manufacturing solutions constraints.
 
-1. Submit requests one-by-one (as opposed to working in batch over a dataset of prompts)
-2. View their reasoning prompts
-3. Interrupt them before they finish.
-<!-- 4. (dev only) using an environmental variable on all all nodes(dev_mode=True), fetch logs from either controller or worker (and maybe view in UI) (this may be easier as we use `structlog`) -->
-1. Steer agents reasoning in a "chat" mode, meaning, correct their reasoning in case they made an incorrect assumption.
+To specify a benchmark, the engineers will define how the benchmark will behave, or at least how it looks (see main `desired_architecture.md` for details), and the model will implement it.
 
-#### Benchmark generation workflow
+#### Confirming the workflow
 
-I need a place to enable "create benchmark" functionality. So go from a high-level prompt to a benchmark plan, through the confirm and implementation.
+Exact logic as in the "Solution workflow".
 
-Here's what I suggest: add a "+ Create new" primary button instead of "history" icon next to "benchmark runs". Upon this, the data from the the current will clear (from the UI, not from the DB), and we'll go into "benchmark creation" mode. Here the "traces" section will have a textbox on top of it, prompting to create a benchmark.
-
-Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder directory. the plan file will have a "start implementation" on the top of it; with it the benchmark generation will start.
-The UI will be automatically updated with new models as the build123d generation will progress.
-
-#### Solution workflow
+### Solution workflow
 
 Engineers must be able to prompt solutions to benchmarks (this is a core workflow). They will select a benchmark that will be solved and will generate solutions to the benchmark.
+The planning will then start, the engineers will be able to review edits, and the models will be generated from there.
 
-#### Interrupting the worker and progress bars
+### Shared workflow parts
 
-If we want to stop the generation in the controller, it will also halt the job(s) in the workers.
+The UI for benchmark generation and for solution is likely exactly equal, consisting of:
 
-Notably `deepagents` has a [support for this](https://docs.langchain.com/oss/python/deepagents/human-in-the-loop.md) - for reviewing and interruption.
+1. A history of sessions,
+2. A coding agent chat interface,
+3. A 3d CAD viewer,
+4. A code file viewer.
 
-#### Viewing code, plans, reviews, simulation
+Thus, they share most of equal features.
 
-For both benchmark generator and engineer we want to view:
+### Plan approval
 
-1. Markdown plans
-2. Generated code (python, not MJCF) (as artifacts)
-3. Final/starting renders; latest renders. (as artifacts)
-4. Reasoning traces; meaning LLM reasoning steps and how it arrives to its actions.
-5. 3d view of the generated model. Notably, it is desirable to
+Plans are approved or commented on explicitly by the user. After the planning is done in the solution/benchmark workflow, the users are to be able to review and confirm/disapprove the plan, and share comments in the chat section. Confirmation is done by a button in the bottom of a chat interface, or in the top right top of the file explorer.
 
-(additionally), history of the implementation.
+### Chat UI
 
-##### Component layout
+In Chat UI, agents must be able to:
 
-Benchmark generator and engineer viewer have a very similar structure (I wouldn't make them one piece of code yet, just similar/shared components)...
+1. View agents' reasoning traces
+2. View agents' tool calls (read, write)
+3. Interrupt agents before they finish.
+4. Steer agents reasoning in a "chat" mode, meaning, correct their reasoning in case they made an incorrect assumption.
 
-1. Sidebar panel on the left,
-2. We separate the entire UI to 3 columns about 3:3:6 split - 3 is the current sidebar column, 3 for reasoning traces (traces streamed realtime), and 6 for the rightmost column (adjustable, of course.)
-   - Note! This is by default. We allow to resize the dashboard pieces.
+#### Reasoning traces
 
-The rightmost column is split vertically into:
+By default, agents' reasoning is hidden, however users are able to expand it. [Chat UI desired design](/frontend/designs/Chat%20UI%20design.png)
 
-1. a 3d view on top (like it currently is)
-2. an artifact view. Artifacts are plans, reviews etc. it's like a mini-tree + cards on top view - the file tree is collapsible and cards on top can be used to switch files.
+### Interrupting the worker
 
-##### CAD viewer
+The engineers will have a "stop" button, superseding the "send" message button, but only active during agent generation.
+*Note:* if we want to stop the generation in the controller, it will also halt the job(s) in the workers.
 
-Turns out viewing CAD is not as easy. In addition, special-purpose CAD viewing functionality is desired - for being able to "click" on a face and prompt something to a model - we'll need it in the future.
+## Component layout
 
-Ideally, this is solved via WASM in the browser. But I can't give two craps about debugging WASM yet, e.g. a "Yet Another CAD viewer" which runs in WASM.
+Benchmark generator and engineer viewer have a very similar structure:
 
-So, use a "Yet Another CAD Viewer" server-side rendering for now. integrate it into the worker, ideally.
-The file format is GLB (not STL) because of lesser volume.
+We separate the entire UI to 3 columns about 3:3:6 split - 3 is a sidebar column with previous session history, 3 for the Chat UI, and 6 for the rightmost column - the CAD viewer and filesystem, split verticaly.
+      - Note! This is by default. We allow to resize the dashboard pieces.
 
-[!Note] Exception - the frontend will query the worker to get the GLB files. (we specified elsewhere that it will communicate only to controller first.) GET-method only though.
-<!-- Note: in the future it should be WASM+b123d viewer in the browser though. Or at least a CAD viewer. -->
+It is likely we will use the exact same component/template for the benchmark and engineer views.
 
-<!-- *Current hack*: the frontend would simply send the  -->
+## CAD and simulation viewer
 
-### Frontend architecture
+A CAD viewer is a tool that engineers will use to:
 
-Vite, React. Autogenerated types on git hooks from Controller. Super-modern, powerful look
+1. View the model
+2. Suggest improvements on the model.
+3. View topology (on by default, hideable)
+4. View simulations (time-progressive)
+     - Move the simulation time forward or backward.
+5. View individual parts (hide some or all other parts):
+     - During design
+     - During simulation (make some parts hideable)
 
-### A set of nice UI features
+Ideally, this the CAD viewer renders build123d directly as WASM in the browser, however, I don't want to debug it yet, so the GLB/OBJ model(s) will be pulled from the backend. (or STEP models? I'm not sure. Whatever YACV supports.)
 
-I want a set of nice UI features in the app. they'll be also useful if we'll take the app to prod:
+We will use a "Yet Another CAD Viewer" (YACV) with server-side rendering.
 
-#### Action buttons
+[!Note] Exception - the frontend will query the worker, not the controller to get the GLB files. (we specified elsewhere that it will communicate only to controller first). Only GET HTTP methods, however.
 
-For each "action" there should be a nice render, kind of like a "edited: [icon] [file name]", and "[viewed: dir], similar to coding agents (because it is one)
+Viewing topology, the model, is done as in the standard CAD viewers. Viewing the simulation modifies the screen (to possibly a non-CAD viewer? to show simulation details)
 
-### (important feature) Chat UI
+### Viewing the simulation
 
-The "reasoning trace" UI should be not a single message, but something iterative. An engineer should be able to say "I don't like X, it's unstable" and the planner will replan accordingly.
+Notably, simlations are sometimes rigid-body and sometimes (most of the time) deformable meshes. This means that the simulator viewer must support deformable meshes.
 
-##### Collecting feedback from users
+In addition, the simulation is time-progressive, and that the users are to be able to rewind/skip kind of like they can in video viewers.
 
-Users can submit thumbs up/down on model outputs, just as they would in most "chat" UIs.
+We will use mostly `three.js` with wrappers to display simulation.
 
-The feedback would be when the model ends its output, and not at each message.
+### Selecting the CAD models
 
-##### All tools are in chat
+The users are to be able to click on a CAD model and do actions with it, primarily show/hide. There will be a way to select if the user wants to:
 
-the "approve plan(and thus implement)" buttons should be also in the reasoning trace (or, I guess it should be named "chat window" now).. and all the "action" buttons should be in reasoning trace now. This text in particular that currently sits elsewhere
-"""
-Execution Plan
-Review and approve the benchmark implementation steps.
-"""
+1. Select a part
+2. Particular primitive (face, vertex, line/arc.)
+3. Or a subassembly.
 
-##### Code/text linting
+Thus three buttons (if not integrated already into the YACV).
 
-The user will review code or markdown to the user that we generate. Lint them properly, and with colors. e.g. for markdown, color the headings, for python color functions, etc.
+### Viewing electronics and circuits
 
-##### Proper icons
+We have circuit design in our application. The engineers are to be able to view circuits in the application.
 
-All files in code should have proper, colorful icons. Python icon for python files, yaml for aml files, etc.
+We use `tscircuit` as our dependency. (actively maintained, ships with a lot of features out of the box, including, circuit rendering and even, PCB rendering).
 
-When files are edited in the chat UI, the files have icons too.
+Why not SVG rendering: the users should be able to click and add the particular part to a context.
 
-### Config
+## Design
 
-Config - benchmark generation config, linting config, manufacturability and pricing config, and prompts will be stored in YAML files.
+A super-modern design to a degree, suitable for an engineering software, however signficantly more "modern" than incumbents.
+
+### Color palette
+
+Light mode: White with black (or just dark) as a primary color,
+Dark mode: Dark with white as a primary color
+
+The users are to be able to switch between light and dark modes.
+
+### Chat UI design and features
+
+For each successful tool call that the model has generated, we will have a text message in the UI (looking exactly as in design):
+
+- "Edited [file icon] [file name] [git diff lines]"
+- "Viewed [file icon] [file name]"
+- "Viewed [directory static icon] [directory]"
+
+And other annotated tool calls.
+
+If the model will fail, the user will be informed "The model has failed a tool call."
+
+#### Adding context
+
+The users should know what they are prompting with and should visually display the component they are passing as a context when selecting a prompt UI. When a user has clicked a part, a piece in a simulation, the part will be added to the context, above the UI. Please see [### Steerability](/kitty-specs/desired_architecture.md#steerability) section in the main spec for what can be added.
+However, in the UI, it will be shown on the top of the chat UI.
+
+By holding Ctrl, users can select multiple items, and each will have a card - parts, code items, and others.
+On top of each "context" card, the users will be able delete it from context by pressing a cross on top of them (top right corner).
+
+Frontend will only send a set of elements that are selected, and won't actually concatenate values to prompt; the backend will handle the prompting.
+
+### Code viewer
+
+The core workflow of a user is to view code and markdown plans that the system produces. Use a code viewer to display, lint (color), the code.
+
+Requirements:
+
+1. File tree,
+2. Coloring (linting, meaning - markdown headings are linted, python syntax is colored, etc),
+3. Line numbers.
+4. Ideally, when the user selects a line, UI (see "#### Adding context" section), will add a line of the file that is selected, or a set of lines.
+
+### Icons
+
+Icons are from vscode, colorful. E.g. Python is blue and yellow, YAML has standard icons, etc.
+
+## Collecting feedback from users
+
+Users are to be able to submit thumbs up/down on model outputs, just as they would in common "chat" LLM UIs.
+
+The users will be able to rate the agent when the model ends its output, and not at each message.
+
+The feedback should be accompanied with a modal containing:
+
+1. A way to edit the feedback (recall thumbs up or down)
+2. A textbox explaining the feedback
+3. A set of common feedback topics - what went wrong (misinterpretation, doesn't follow instructions, etc).
+
+Ideally, the model would have a "selector"
+
+## Dependencies
+
+We will use Vite with React.
+
+Our schema will be generated automatically via typescript type generation, updated via git hooks; dependant on OpenAPI schema from controller.
