@@ -38,7 +38,7 @@ async def test_report_trace_feedback_success():
         response = await report_trace_feedback(episode_id, trace_id, feedback, db)
 
         assert response["status"] == ResponseStatus.ACCEPTED
-        mock_langfuse.score.assert_called_once_with(
+        mock_langfuse.create_score.assert_called_once_with(
             trace_id=langfuse_trace_id,
             name="user-feedback",
             value=1,

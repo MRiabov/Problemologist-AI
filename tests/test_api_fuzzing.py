@@ -20,6 +20,7 @@ def mock_dependencies():
     router_mock.read.return_value = b""
     router_mock.exists.return_value = True
     router_mock.edit.return_value = True
+    router_mock.upload_files.return_value = []
     router_mock.local_backend = MagicMock()
 
     app.dependency_overrides[get_router] = lambda: router_mock
