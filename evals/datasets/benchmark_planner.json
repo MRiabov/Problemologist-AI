@@ -1,43 +1,43 @@
 [
     {
         "id": "bp-001",
-        "task": "Create a benchmark where a ball must be guided down a ramp to a target bin.",
-        "expected_criteria": "Plan includes static geometry (ramp, walls), dynamic object (ball), goal zone, and randomization."
+        "task": "Create a benchmark where a ball must be guided down a ramp into a goal zone.",
+        "expected_criteria": "Plan includes static geometry (ramp) and correct goal zone definition."
     },
     {
         "id": "bp-002",
-        "task": "Create a benchmark involving a sorting mechanism where balls of different sizes must be separated.",
-        "expected_criteria": "Plan defines input objects (balls of radius R1, R2), and two goal zones."
+        "task": "Create a benchmark where the ball must avoid a forbid zone (obstacle) to reach the goal.",
+        "expected_criteria": "Plan includes a forbid zone AABB that lies between the spawn point and the goal."
     },
     {
         "id": "bp-003",
-        "task": "Create a benchmark where a 40mm radius steel ball must move 1m sideways into a goal. The ball starts at X=0,Y=0,Z=200. The goal AABB is centered at X=1000,Y=0,Z=50. Include a forbid zone directly under the ball (AABB from X=-100..100,Y=-100..100,Z=0..80).",
-        "expected_criteria": "Plan lists input object shape and location with randomization margins, specifies forbid and goal AABBs, and includes static geometry that can redirect the ball sideways without intersecting the forbid zone."
+        "task": "Create a benchmark with multiple forbid zones and a narrow path to the goal.",
+        "expected_criteria": "Plan defines multiple forbid zones and a goal zone that requires precise steering."
     },
     {
         "id": "bp-004",
-        "task": "Create a benchmark where the ball must pass through a motorized rotating gate (a swinging bar) before reaching the goal bin. The gate rotates around Z at Y=200. Require a motor and specify its rotation limits.",
-        "expected_criteria": "Plan includes moving part geometry with coordinates, motor definition (axis, limits), and a goal AABB; randomization does not intersect the gate."
+        "task": "Create a benchmark where the goal is at a higher elevation than the starting position.",
+        "expected_criteria": "Plan specifies a starting Z and a goal Z such that goal_Z > spawn_Z."
     },
     {
         "id": "bp-005",
-        "task": "Create a benchmark with two dynamic objects: a 30mm ball and a 20mm cube. The ball must reach Goal A while the cube must reach Goal B. Both start at different heights and positions within X=-200..200,Y=-200..200. Include a forbid zone between the two goals to prevent a shared path.",
-        "expected_criteria": "Plan includes two input shapes, their spawn ranges, two goal AABBs, a forbid AABB between them, and geometry that supports separation."
+        "task": "Create a benchmark with a very tight build zone constraint.",
+        "expected_criteria": "Plan includes a build_zone with small delta between min and max coordinates."
     },
     {
         "id": "bp-006",
-        "task": "Create a benchmark where a ball slides across a low-friction floor into a goal. The ball starts at X=-300,Y=0,Z=20 and the goal is at X=300,Y=0,Z=20. Add a sloped deflector plate. Randomize start X by +/-50 and goal X by +/-50.",
-        "expected_criteria": "Plan specifies floor and deflector geometry with coordinates, input location with randomization, goal AABB with randomization, and confirms no initial intersections."
+        "task": "Create a benchmark where the ball radius has significant static randomization.",
+        "expected_criteria": "Plan includes moved_object with static_randomization for radius (e.g., [5, 15])."
     },
     {
         "id": "bp-007",
-        "task": "Create a benchmark where the ball must be lifted by a moving platform (prismatic joint) from Z=0 to Z=200, then roll into a goal. Require a non-fixed part with linear motion along Z.",
-        "expected_criteria": "Plan specifies the moving platform geometry, prismatic DOF direction and limits, ball spawn location, and goal AABB."
+        "task": "Create a benchmark involving two separate ramps and a gap that must be jumped.",
+        "expected_criteria": "Plan describes two ramp geometries and a gap, with a goal zone at the end."
     },
     {
         "id": "bp-008",
-        "task": "Create a benchmark where the ball must avoid a central column and land in a side goal. The column is at X=0,Y=0 with radius 50 and height 300. The goal is at X=300,Y=0,Z=50. Randomize ball start within X=-50..50,Y=-50..50,Z=250..300.",
-        "expected_criteria": "Plan includes the column geometry, ball spawn region, goal AABB, and static geometry that routes around the column without overlaps."
+        "task": "Create a benchmark where the ball spawn has significant runtime jitter.",
+        "expected_criteria": "Plan includes moved_object with runtime_jitter of at least [5, 5, 2]."
     },
     {
         "id": "bp-009",
@@ -48,5 +48,10 @@
         "id": "bp-010",
         "task": "Create a benchmark with a moving conveyor-like roller (rotating cylinder) that imparts lateral motion to the ball. The roller is centered at X=0,Y=0,Z=50 with axis along Y and is motor-driven. Goal is at X=200,Y=0,Z=50.",
         "expected_criteria": "Plan includes motorized moving part with axis definition, ball spawn location, goal AABB, and randomization that avoids initial intersections with the roller."
+    },
+    {
+        "id": "bp-011",
+        "task": "Create a benchmark for a simple ramp. You MUST produce `benchmark_structure.md` and `benchmark_engineer_todo.md`. You MUST also update the existing `objectives.yaml` template with the correct goal and build zones.",
+        "expected_criteria": "Agent produces mandatory markdown files and modifies `objectives.yaml` while preserving the template header."
     }
 ]

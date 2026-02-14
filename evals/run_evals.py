@@ -43,25 +43,83 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
         await backend.awrite("test_connect.txt", "hello")
         print(f"Connectivity test passed for {agent_name}")
 
+        # For benchmark agents, we might need to initialize some files (like objectives.yaml template)
+        if agent_name.startswith("benchmark"):
+            from worker.objectives_template import OBJECTIVES_YAML_TEMPLATE
+
+            await backend.awrite("objectives.yaml", OBJECTIVES_YAML_TEMPLATE)
+
         agent, _ = create_agent_graph(
             agent_name=agent_name, trace_id=trace_id, session_id=session_id
         )
 
-        await agent.ainvoke(
-            {
+        # Build initial state based on agent type
+        if agent_name.startswith("benchmark"):
+            from controller.agent.benchmark.models import GenerationSession
+
+            session = GenerationSession(
+                session_id=uuid.UUID(session_id), prompt=task_description
+            )
+            initial_state = {
+                "session": session,
+                "current_script": "",
+                "mjcf_content": "",
+                "simulation_result": None,
+                "review_feedback": None,
+                "review_round": 0,
+                "plan": None,
+                "messages": [],
+            }
+        else:
+            initial_state = {
                 "messages": [
                     (
                         "user",
-                        "Write a file named 'hello.txt' with content 'world' and then finish.",
+                        task_description,
                     )
                 ],
                 "session_id": session_id,
-            },
+            }
+
+        await agent.ainvoke(
+            initial_state,
             config={"metadata": {"eval_task_id": task_id, "agent_name": agent_name}},
         )
 
+        # Post-run verification
+        if task_id == "bp-011":
+            print(f"Verifying outputs for {task_id}...")
+            files = await client.list_files(".")
+            file_paths = [f.path.lstrip("/") for f in files]
+            required = [
+                "benchmark_structure.md",
+                "benchmark_engineer_todo.md",
+                "objectives.yaml",
+            ]
+            for r in required:
+                if r not in file_paths:
+                    print(f"  FAILED: Missing required file {r}")
+                else:
+                    print(f"  PASSED: Found {r}")
+
+            # Check objectives.yaml content
+            obj_content = await client.read_file("objectives.yaml")
+            if "# [TEMPLATE]" in obj_content:
+                print("  PASSED: Header preserved in objectives.yaml")
+            else:
+                print("  FAILED: Header missing in objectives.yaml")
+
+            # Check if it was actually modified (not just the template)
+            if "goal_zone" in obj_content and "x_min" not in obj_content:
+                print("  PASSED: objectives.yaml appears modified with real values")
+            else:
+                print("  FAILED: objectives.yaml does not appear correctly modified")
+
     except Exception as e:
         print(f"Eval {task_id} failed: {e}")
+        import traceback
+
+        traceback.print_exc()
 
 
 async def main():
@@ -85,6 +143,9 @@ async def main():
     )
     parser.add_argument(
         "--limit", type=int, default=0, help="Limit number of eval items per agent"
+    )
+    parser.add_argument(
+        "--task-id", type=str, default=None, help="Run only a specific task ID"
     )
     args = parser.parse_args()
 
@@ -120,6 +181,8 @@ async def main():
                     data = json.load(f)
                     if args.limit > 0:
                         data = data[: args.limit]
+                    if args.task_id:
+                        data = [item for item in data if item["id"] == args.task_id]
                     datasets[agent] = data
                 except json.JSONDecodeError:
                     print(f"Error: Could not decode JSON at {json_path}")
