@@ -2,7 +2,7 @@
 work_package_id: "WP01"
 title: "Simulation Foundation & Abstraction"
 lane: "planned"
-dependencies: "[]"
+dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
 ---
 

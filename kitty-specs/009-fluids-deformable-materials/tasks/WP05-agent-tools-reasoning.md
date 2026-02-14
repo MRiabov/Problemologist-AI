@@ -2,7 +2,7 @@
 work_package_id: "WP05"
 title: "Agent Tools & Reasoning"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP03"]
 subtasks: ["T016", "T017", "T018", "T019", "T020"]
 ---
 

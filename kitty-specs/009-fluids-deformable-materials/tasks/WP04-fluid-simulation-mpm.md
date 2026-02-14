@@ -2,7 +2,7 @@
 work_package_id: "WP04"
 title: "Fluid Simulation (MPM)"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP03"]
 subtasks: ["T013", "T014", "T015"]
 ---
 

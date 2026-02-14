@@ -2,7 +2,7 @@
 work_package_id: "WP03"
 title: "Genesis FEM & Rigid Simulation"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP02"]
 subtasks: ["T009", "T010", "T011", "T012"]
 ---
 

@@ -2,7 +2,7 @@
 work_package_id: "WP07"
 title: "Verification & Testing"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP06"]
 subtasks: ["T024", "T025", "T026"]
 ---
 
