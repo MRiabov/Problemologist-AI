@@ -11,6 +11,8 @@ from sqlalchemy import select
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
@@ -18,9 +20,9 @@ from shared.enums import AssetType, EpisodeStatus
 from .models import GenerationSession, SessionStatus
 from .nodes import (
     coder_node,
+    cots_search_node,
     planner_node,
     reviewer_node,
-    cots_search_node,
     skills_node,
 )
 from .state import BenchmarkGeneratorState
@@ -52,8 +54,6 @@ def define_graph():
     workflow.add_edge("planner", "coder")
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
-    # We'll merge validator into coder or make it a helper called by coder.
-    # The user wanted 5 nodes.
     workflow.add_edge("coder", "reviewer")
 
     # Conditional edges for reviewer
@@ -61,7 +61,6 @@ def define_graph():
         feedback = state.get("review_feedback", "")
         if feedback == "Approved":
             return "skills"
-        # Optional: Add retry limit check here
         return "coder"
 
     workflow.add_conditional_edges(
@@ -71,60 +70,9 @@ def define_graph():
     workflow.add_edge("skills", END)
 
     # cots_search can be reached from planner or coder if we add those edges
-    # For now keep it simple and just have them in the graph.
     workflow.add_edge("cots_search", "planner")
 
     return workflow.compile()
-
-
-async def run_generation_session(
-    prompt: str,
-    session_id: uuid.UUID | None = None,
-    custom_objectives: dict | None = None,
-) -> BenchmarkGeneratorState:
-    """
-    Entry point to run the full generation pipeline with persistence.
-    """
-    session_id = session_id or uuid4()
-    logger.info("running_generation_session", session_id=session_id, prompt=prompt)
-
-    # 1. Create DB entry (Episode)
-    session_factory = get_sessionmaker()
-    async with session_factory() as db:
-        episode = Episode(
-            id=session_id,
-            task=prompt,
-            status=EpisodeStatus.RUNNING,
-            metadata_vars={
-                "detailed_status": SessionStatus.planning,
-                "validation_logs": [],
-                "prompt": prompt,
-                "custom_objectives": custom_objectives,
-            },
-        )
-        db.add(episode)
-        await db.commit()
-
-    # 2. Setup State
-    session = GenerationSession(
-        session_id=session_id,
-        prompt=prompt,
-        status=SessionStatus.planning,
-        custom_objectives=custom_objectives or {},
-    )
-
-    initial_state = BenchmarkGeneratorState(
-        session=session,
-        current_script="",
-        simulation_result=None,
-        review_feedback=None,
-        review_round=0,
-        plan=None,
-        messages=[],
-    )
-
-    app = define_graph()
-    final_state = initial_state
 
 
 async def _execute_graph_streaming(
@@ -147,7 +95,16 @@ async def _execute_graph_streaming(
             return EpisodeStatus.PLANNED
         return EpisodeStatus.RUNNING
 
-    async for output in app.astream(initial_state):
+    # Langfuse tracing
+    langfuse_callback = get_langfuse_callback(
+        name="benchmark_generator", session_id=str(session_id)
+    )
+    db_callback = DatabaseCallbackHandler(episode_id=str(session_id))
+    callbacks = [db_callback]
+    if langfuse_callback:
+        callbacks.append(langfuse_callback)
+
+    async for output in app.astream(initial_state, config={"callbacks": callbacks}):
         for node_name, state in output.items():
             final_state.update(state)
 

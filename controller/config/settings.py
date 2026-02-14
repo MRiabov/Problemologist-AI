@@ -1,4 +1,4 @@
-from pydantic import Field, StrictStr
+from pydantic import AliasChoices, Field, StrictStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
     # Observability Settings
     langfuse_host: str = Field(
-        default="https://cloud.langfuse.com", alias="LANGFUSE_HOST"
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
     )
     langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str | None = Field(default=None, alias="LANGFUSE_SECRET_KEY")
