@@ -18,6 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     xauth \
     libngspice0 \
+    libvulkan1 \
+    vulkan-tools \
+    libxcursor1 \
+    libxinerama1 \
+    libxft2 \
+    libxrandr2 \
+    libxi6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -40,16 +47,17 @@ USER agent
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev
 
 # Copy source code
 COPY --chown=agent:agent worker ./worker
 COPY --chown=agent:agent shared ./shared
+COPY --chown=agent:agent config ./config
 COPY --chown=agent:agent pyproject.toml uv.lock ./
 
 # Install the project
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    uv sync --no-dev
+    uv sync --frozen --no-dev
 
 # Set Python path
 ENV PYTHONPATH=/app
