@@ -9,12 +9,14 @@ import {
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
+import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { getFileIconInfo as getSharedIconInfo } from "../../lib/fileIcons";
+import { detectLanguage } from "../../lib/languageUtils";
 import { useTheme } from "../../context/ThemeContext";
 import CircuitSchematic from "../visualization/CircuitSchematic";
 import CircuitTimeline from "../visualization/CircuitTimeline";
@@ -94,7 +96,7 @@ export default function ArtifactView({
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
 
-  const { activeEpisode } = useEpisodes();
+  const { selectedEpisode } = useEpisodes();
 
   const renderContent = () => {
     const { theme } = useTheme();
@@ -113,13 +115,13 @@ export default function ArtifactView({
             const data = yaml.load(activeAsset.content) as any;
             if (data && data.electronics) {
                 // Extract timeline events from traces
-                const timelineEvents = (activeEpisode?.traces || [])
-                    .filter(t => t.trace_type === 'event' && t.name === 'circuit_simulation')
-                    .map(t => ({
+                const timelineEvents = (selectedEpisode?.traces || [])
+                    .filter((t: TraceResponse) => t.trace_type === 'event' && t.name === 'circuit_simulation')
+                    .map((t: TraceResponse) => ({
                         timestamp: new Date(t.created_at).getTime() / 1000,
-                        motor_states: t.metadata?.motor_states || {}
+                        motor_states: (t as any).metadata?.motor_states || {}
                     }))
-                    .sort((a, b) => a.timestamp - b.timestamp);
+                    .sort((a: any, b: any) => a.timestamp - b.timestamp);
 
                 return (
                     <div className="p-6 space-y-8 bg-background min-h-full">
@@ -151,7 +153,7 @@ export default function ArtifactView({
         }
     }
 
-    const language = activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text');
+    const language = detectLanguage(activeAsset.name, activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text'));
 
     return (
         <div className="flex-1 flex flex-col h-full min-h-0 bg-background">
