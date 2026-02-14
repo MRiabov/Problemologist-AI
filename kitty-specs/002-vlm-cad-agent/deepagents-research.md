@@ -76,7 +76,6 @@ Skills are not just static text but a directory structure (`SKILL.md` + assets).
     ```
 
 * **Progressive Disclosure**: The agent first reads the frontmatter. Only if the skill is relevant does it read the full content/assets. This saves context tokens.
-* **Loading**: Skills are loaded via the `skills=["./workspace/skills"]` parameter in `create_deep_agent`. For the Worker (Docker), these are synced to the sandbox filesystem.
 
 ### 2.7. Async Execution
 

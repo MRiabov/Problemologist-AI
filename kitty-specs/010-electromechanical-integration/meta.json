@@ -1,0 +1,10 @@
+{
+    "feature_number": "010",
+    "slug": "electromechanical-integration",
+    "friendly_name": "Electromechanical Integration",
+    "mission": "software-dev",
+    "source_description": "WP3. The roadmap is the 'definitely canonical' human-written version, and there is also more expanded specs/desired_architecture_WP3_electronics.md, however not human-written. We also deliver the nets to the frontend, and in there, open it with tscircuit, in place of a 3d viewer, when a user switches to electronics viewing mode.",
+    "created_at": "2026-02-14T18:15:00Z",
+    "target_branch": "main",
+    "vcs": "git"
+}

@@ -1,108 +1,75 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Electromechanical Integration (WP3)
 
+*Path: [kitty-specs/010-electromechanical-integration/plan.md](kitty-specs/010-electromechanical-integration/plan.md)*
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `feat/wp3-electronics` | **Date**: 2026-02-14 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/010-electromechanical-integration/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+This work package enables the AI to design and verify electromechanical systems. The technical approach involves:
+
+- **Circuit Simulation**: Using `PySpice` (Ngspice) to validate electrical soundness and determine motor power status.
+- **Power Gating**: Enforcing that motors only operate if properly powered in the physics simulation (`is_powered` scaling of control inputs).
+- **3D Wire Routing**: Defining wires as 3D splines with waypoints, enforced by clearance checks in `build123d` and tension/breakage monitoring in MuJoCo tendons.
+- **Visual Coordination**: Providing the Electrical Agent with a "Visual Map" of the assembly and a "Spline Query Tool" to propose waypoints autonomously.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Python 3.11+
+**Primary Dependencies**: `pyspice`, `skidl`, `build123d`, `trimesh`, `mujoco` (tendons)
+**Storage**: `parts.db` (SQLite via SQLAlchemy) for COTS electronics indexing.
+**Testing**: `pytest` for circuit logic and routing validation.
+**Target Platform**: Linux server (Worker environment)
+**Project Type**: Multi-worker web application (FastAPI backend + React/Three.js frontend).
+**Performance Goals**: Circuit simulation < 1s; Wire routing validation < 2s.
+**Constraints**: 100% power gating correctness; Zero penetration of solid volumes by wires.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+[Passed - All requirements align with the project's electromechanical focus and safety standards.]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/010-electromechanical-integration/
+├── plan.md              # This file
+├── research.md          # Phase 0 results: PySpice reliability and Spline algorithms
+├── data-model.md        # Phase 1: ElectricalAgent Tool schemas and Map format
+├── quickstart.md        # Setup guide for local Ngspice and circuit testing
+├── contracts/           # API/Pydantic schemas for ElectronicsSection
+└── tasks.md             # Implementation tasks
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── shared/
+│   ├── circuit_builder.py    # Spice netlist generation
+│   ├── pyspice_utils.py       # Simulation & validation loop
+│   ├── wire_utils.py          # Spline math & clearance checks
+│   └── models/                # Pydantic schemas for ElectronicsSection
+├── worker/
+│   ├── simulation/
+│   │   ├── builder.py         # Tendon/Site injection for MuJoCo
+│   │   └── loop.py            # is_powered gating logic
+│   └── workbenches/           # Electrical Planner node logic
+├── controller/
+│   └── api/                   # Electronics visualization endpoints
+└── frontend/
+    └── src/                   # tscircuit integration
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application structure (Option 2) as it involves both backend physics/circuit logic and frontend `tscircuit` visualization.
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
-
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| PySpice dependency | Real-world electrical validation | Heuristic-only checks miss circuit-level failure modes (overcurrent, floating nodes). |
+| MuJoCo Tendons | Physical wire failure simulation | Static spline checks don't account for dynamic tension/tearing during robot movement. |
