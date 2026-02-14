@@ -25,9 +25,9 @@ class CriticDecision(StrEnum):
 
 
 @type_check
-class CriticNode:
+class ReviewerNode:
     """
-    Critic node: Evaluates the Engineer's output based on simulation and workbench reports.
+    Reviewer node: Evaluates the Coder's output based on simulation and workbench reports.
     """
 
     def __init__(
@@ -148,8 +148,8 @@ class CriticNode:
 
 # Factory function for LangGraph
 @type_check
-async def critic_node(state: AgentState) -> AgentState:
-    node = CriticNode(
+async def reviewer_node(state: AgentState) -> AgentState:
+    node = ReviewerNode(
         worker_url=settings.spec_001_api_url, session_id=settings.default_session_id
     )
     return await node(state)
