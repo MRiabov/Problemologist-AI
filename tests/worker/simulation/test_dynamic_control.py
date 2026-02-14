@@ -34,7 +34,7 @@ def test_dynamic_controllers(sim_loop):
     sim_loop.step({}, duration=0.01, dynamic_controllers=controllers)
 
     # Check that ctrl was set to 10.0
-    assert sim_loop.data.ctrl[0] == 10.0
+    assert sim_loop.backend.data.ctrl[0] == 10.0
 
 
 def test_dynamic_controllers_time_varying(sim_loop):
@@ -49,5 +49,5 @@ def test_dynamic_controllers_time_varying(sim_loop):
 
     # At t=0.1, ctrl should be roughly 1.0 (if applied at the end/during)
     # The last applied control in the loop was at t_prev
-    assert sim_loop.data.ctrl[0] > 0
-    assert sim_loop.data.ctrl[0] <= 1.0
+    assert sim_loop.backend.data.ctrl[0] > 0
+    assert sim_loop.backend.data.ctrl[0] <= 1.0

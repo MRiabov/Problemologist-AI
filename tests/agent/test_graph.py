@@ -25,7 +25,10 @@ async def test_full_graph_flow(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_coder = AsyncMock(return_value={"journal": "Worked", "current_step": "Step"})
+    mock_coder = AsyncMock(
+        return_value={"journal": "Worked", "current_step": "Step", "todo": "- [x] Task"}
+    )
+    mock_electronics = AsyncMock(return_value={"journal": "Electronics worked"})
     mock_reviewer = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
     mock_skills = AsyncMock(return_value={"journal": "Learned"})
     mock_cots = AsyncMock(return_value={})
@@ -33,6 +36,10 @@ async def test_full_graph_flow(fresh_graph):
     with (
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
         patch("controller.agent.nodes.coder.coder_node", mock_coder),
+        patch(
+            "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
+            mock_electronics,
+        ),
         patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
         patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
@@ -60,7 +67,10 @@ async def test_graph_rejection_loop(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_coder = AsyncMock(return_value={"journal": "Worked", "current_step": "Step"})
+    mock_coder = AsyncMock(
+        return_value={"journal": "Worked", "current_step": "Step", "todo": "- [x] Task"}
+    )
+    mock_electronics = AsyncMock(return_value={"journal": "Electronics worked"})
 
     mock_reviewer = AsyncMock()
     mock_reviewer.side_effect = [
@@ -74,6 +84,10 @@ async def test_graph_rejection_loop(fresh_graph):
     with (
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
         patch("controller.agent.nodes.coder.coder_node", mock_coder),
+        patch(
+            "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
+            mock_electronics,
+        ),
         patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
         patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),

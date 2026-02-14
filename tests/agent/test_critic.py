@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from controller.agent.nodes.critic import CriticNode
-from controller.agent.state import AgentState
+from controller.agent.nodes.reviewer import ReviewerNode
+from controller.agent.state import AgentState, AgentStatus
 
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.critic.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.reviewer.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(
@@ -23,7 +23,7 @@ Looks good."""
 
 @pytest.fixture
 def mock_worker():
-    with patch("controller.agent.nodes.critic.WorkerClient") as mock:
+    with patch("controller.agent.nodes.reviewer.WorkerClient") as mock:
         instance = mock.return_value
         instance.read_file = AsyncMock()
         yield instance
@@ -37,12 +37,12 @@ async def test_critic_node_approve(mock_llm, mock_worker):
         "Part is manufacturable.",  # mfg report
     ]
 
-    node = CriticNode()
+    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="Implementation details")
 
     result = await node(state)
 
-    assert result.status == "approved"
+    assert result.status == AgentStatus.APPROVED
     assert "Looks good" in result.feedback
     assert "Critic Decision: APPROVE" in result.journal
 
@@ -60,12 +60,12 @@ Simulation failed."""
         "Too expensive.",
     ]
 
-    node = CriticNode()
+    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="")
 
     result = await node(state)
 
-    assert result.status == "code_rejected"
+    assert result.status == AgentStatus.CODE_REJECTED
     assert "Simulation failed" in result.feedback
     assert "Critic Decision: REJECT" in result.journal
 
@@ -74,7 +74,7 @@ Simulation failed."""
 async def test_critic_node_no_artifacts(mock_llm, mock_worker):
     mock_worker.read_file.side_effect = Exception("File not found")
 
-    node = CriticNode()
+    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="")
 
     result = await node(state)
