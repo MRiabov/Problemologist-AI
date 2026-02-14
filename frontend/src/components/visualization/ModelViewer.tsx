@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center } from '@react-three/drei'
 import * as THREE from 'three'
@@ -18,6 +18,26 @@ function StlModel({ url }: { url: string }) {
       </Center>
     </Float>
   )
+}
+
+interface WireProps {
+  waypoints: [number, number, number][];
+  color?: string;
+  radius?: number;
+}
+
+function Wire({ waypoints, color = "#ef4444", radius = 0.05 }: WireProps) {
+  const curve = useMemo(() => {
+    const points = waypoints.map(wp => new THREE.Vector3(...wp));
+    return new THREE.CatmullRomCurve3(points);
+  }, [waypoints]);
+
+  return (
+    <mesh castShadow>
+      <tubeGeometry args={[curve, waypoints.length * 4, radius, 8, false]} />
+      <meshStandardMaterial color={color} roughness={0.5} />
+    </mesh>
+  );
 }
 
 function PlaceholderModel() {
@@ -40,21 +60,32 @@ function PlaceholderModel() {
   )
 }
 
+interface WireRoute {
+  wire_id: string;
+  waypoints: [number, number, number][];
+  gauge_awg?: number;
+}
+
 interface ModelViewerProps {
   className?: string;
   assetUrl?: string | null;
+  wireRoutes?: WireRoute[];
   isConnected?: boolean;
   resetTrigger?: number;
 }
 
-export default function ModelViewer({ className, assetUrl, isConnected = true, resetTrigger = 0 }: ModelViewerProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function ModelViewer({ 
+  className, 
+  assetUrl, 
+  wireRoutes = [], 
+  isConnected = true, 
+  resetTrigger = 0 
+}: ModelViewerProps) {
   const controlsRef = useRef<any>(null)
 
   useEffect(() => {
     if (resetTrigger > 0 && controlsRef.current) {
       const controls = controlsRef.current
-      // Isometric view: position camera at equal distance from origin on all axes
       controls.object.position.set(3, 3, 3)
       controls.target.set(0, 0, 0)
       controls.update()
@@ -75,20 +106,26 @@ export default function ModelViewer({ className, assetUrl, isConnected = true, r
           makeDefault
         />
         
-        {/* Environment & Lighting */}
         <Environment preset="city" />
         <ambientLight intensity={0.5} />
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
-        {/* Scene Objects */}
         {assetUrl ? (
             <StlModel url={assetUrl} />
         ) : (
             <PlaceholderModel />
         )}
+
+        {/* Render physical wires */}
+        {wireRoutes.map(route => (
+          <Wire 
+            key={route.wire_id} 
+            waypoints={route.waypoints} 
+            radius={route.gauge_awg ? 0.05 * (20 / route.gauge_awg) : 0.05}
+          />
+        ))}
         
-        {/* Visual Aids */}
         <Grid 
           infiniteGrid 
           fadeDistance={50} 
