@@ -14,7 +14,7 @@ from typing import Protocol, runtime_checkable
 
 import s3fs
 import structlog
-from deepagents.backends.protocol import (
+from shared.backend.protocol import (
     BackendProtocol,
     EditResult,
     FileDownloadResponse,
@@ -22,10 +22,10 @@ from deepagents.backends.protocol import (
     GrepMatch,
     WriteResult,
 )
-from deepagents.backends.protocol import (
+from shared.backend.protocol import (
     FileInfo as ProtocolFileInfo,
 )
-from deepagents.backends.utils import (
+from shared.backend.utils import (
     check_empty_content,
     format_content_with_line_numbers,
     perform_string_replacement,

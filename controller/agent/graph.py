@@ -3,59 +3,63 @@ from langgraph.graph import END, START, StateGraph
 
 from controller.config.settings import settings
 
-from .nodes.architect import architect_node
-from .nodes.critic import critic_node
-from .nodes.electronics_engineer import electronics_engineer_node
-from .nodes.engineer import engineer_node
-from .nodes.sidecar import sidecar_node
+from .nodes.planner import planner_node
+from .nodes.reviewer import reviewer_node
+from .nodes.coder import coder_node
+from .nodes.skills import skills_node
+from .nodes.cots_search import cots_search_node
 from .state import AgentState, AgentStatus
 
 
 def should_continue(state: AgentState) -> str:
-    """Route after critic based on approval status."""
+    """Route after reviewer based on approval status."""
     if state.turn_count >= settings.max_agent_turns:
-        return END
+        return "skills"
 
     if state.status == AgentStatus.APPROVED:
-        return "sidecar"
+        return "skills"
 
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
         if state.status == AgentStatus.PLAN_REJECTED:
-            return "architect"
-        return "engineer"
+            return "planner"
+        return "coder"
 
-    return "sidecar"
+    return "skills"
 
 
 # Initialize the StateGraph with our AgentState
 builder = StateGraph(AgentState)
 
 # Add nodes
-builder.add_node("architect", architect_node)
-builder.add_node("engineer", engineer_node)
-builder.add_node("electronics_engineer", electronics_engineer_node)
-builder.add_node("critic", critic_node)
-builder.add_node("sidecar", sidecar_node)
+builder.add_node("planner", planner_node)
+builder.add_node("coder", coder_node)
+builder.add_node("reviewer", reviewer_node)
+builder.add_node("cots_search", cots_search_node)
+builder.add_node("skills", skills_node)
 
 # Set the entry point and edges
-builder.add_edge(START, "architect")
-builder.add_edge("architect", "engineer")
-builder.add_edge("engineer", "electronics_engineer")
-builder.add_edge("electronics_engineer", "critic")
+builder.add_edge(START, "planner")
+builder.add_edge("planner", "coder")
+builder.add_edge("coder", "reviewer")
 
-# Conditional routing from critic
+# Conditional routing from reviewer
 builder.add_conditional_edges(
-    "critic",
+    "reviewer",
     should_continue,
     {
-        "engineer": "engineer",
-        "architect": "architect",
-        "sidecar": "sidecar",
+        "coder": "coder",
+        "planner": "planner",
+        "skills": "skills",
     },
 )
 
-builder.add_edge("sidecar", END)
+# We can also add edges to cots_search if needed, but for now we'll keep it simple
+# Maybe coder can decide to go to cots_search?
+# For now let's just make it reachable or at least present.
+
+builder.add_edge("skills", END)
+builder.add_edge("cots_search", "planner") # Example path back
 
 # T026: Implement Checkpointing
 memory = MemorySaver()

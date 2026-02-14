@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 @type_check
-class SidecarNode:
+class SkillsNode:
     """
-    Sidecar Learner node: Analyzes the journal to suggest new skills.
+    Skills node: Analyzes the journal to suggest new skills.
     Includes Git synchronization for skill persistence.
     """
 
@@ -162,6 +162,6 @@ class SidecarNode:
 
 # Factory function for LangGraph
 @type_check
-async def sidecar_node(state: AgentState) -> AgentState:
-    node = SidecarNode()
+async def skills_node(state: AgentState) -> AgentState:
+    node = SkillsNode()
     return await node(state)

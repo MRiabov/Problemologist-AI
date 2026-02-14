@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 @type_check
-class EngineerNode:
+class CoderNode:
     """
-    Engineer node: Picks a task from TODO, writes code, executes it, and fixes errors.
+    Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
     """
 
     def __init__(
@@ -34,7 +34,7 @@ class EngineerNode:
         self.fs = RemoteFilesystemMiddleware(self.worker_client)
 
     async def __call__(self, state: AgentState) -> AgentState:
-        """Execute the engineer node logic."""
+        """Execute the coder node logic."""
         # T010: Find next active item in TODO
         todo = state.todo
         current_step = self._get_next_step(todo)
@@ -168,8 +168,8 @@ class EngineerNode:
 
 # Factory function for LangGraph
 @type_check
-async def engineer_node(state: AgentState) -> AgentState:
+async def coder_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    node = EngineerNode(worker_url=settings.spec_001_api_url, session_id=session_id)
+    node = CoderNode(worker_url=settings.spec_001_api_url, session_id=session_id)
     return await node(state)

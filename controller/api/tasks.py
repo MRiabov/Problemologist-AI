@@ -72,7 +72,6 @@ async def execute_agent_task(
                 await initialize_agent_files(backend, agent_name=agent_name)
 
                 agent, langfuse_callback = create_agent_graph(
-                    backend,
                     agent_name=agent_name,
                     # For now hardcoded in original code too.
                     trace_id=trace_id,
@@ -99,9 +98,38 @@ async def execute_agent_task(
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
 
+                # Prepare initial state based on agent type
+                if agent_name.startswith("engineer"):
+                    initial_input = {
+                        "task": task,
+                        "session_id": session_id,
+                        "messages": [("user", task)]
+                    }
+                elif agent_name.startswith("benchmark"):
+                    from controller.agent.benchmark.models import GenerationSession, SessionStatus
+                    # Try to parse session_id as UUID, fallback to new one
+                    try:
+                        u_session_id = uuid.UUID(session_id)
+                    except ValueError:
+                        u_session_id = uuid.uuid4()
+
+                    session = GenerationSession(
+                        session_id=u_session_id,
+                        prompt=task,
+                        status=SessionStatus.planning,
+                    )
+                    initial_input = {
+                        "session": session,
+                        "messages": [("user", task)],
+                        "current_script": "",
+                        "review_round": 0,
+                    }
+                else:
+                    initial_input = {"messages": [("user", task)], "session_id": session_id}
+
                 # Run the agent with tracing
                 result = await agent.ainvoke(
-                    {"messages": [("user", task)], "session_id": session_id},
+                    initial_input,
                     config={
                         "callbacks": callbacks,
                         "metadata": {"episode_id": str(episode_id)},
@@ -110,7 +138,15 @@ async def execute_agent_task(
                 )
 
                 # Final trace
-                final_output = result["messages"][-1].content
+                if isinstance(result, dict):
+                    final_messages = result.get("messages", [])
+                else:
+                    final_messages = getattr(result, "messages", [])
+
+                if final_messages:
+                    final_output = final_messages[-1].content
+                else:
+                    final_output = "No output produced by agent."
                 final_trace = Trace(
                     episode_id=episode_id,
                     trace_type=TraceType.LOG,
