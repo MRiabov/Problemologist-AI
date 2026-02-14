@@ -1,4 +1,5 @@
 import hashlib
+import io
 import os
 import pathlib
 import tempfile
@@ -8,9 +9,9 @@ import trimesh
 from build123d import Compound, Part
 
 
-def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
+def _get_stl_bytes(part: Part | Compound) -> bytes:
     """
-    Converts a build123d Part or Compound to a trimesh.Trimesh object.
+    Exports a build123d Part or Compound to STL bytes.
     """
     # Use /dev/shm if available (Linux RAM disk) for faster I/O
     temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
@@ -21,14 +22,35 @@ def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
         from build123d import export_stl
 
         export_stl(part, tmp_path)
-        mesh = trimesh.load(tmp_path)
-        # trimesh.load can return a Scene, we want a single mesh
-        if isinstance(mesh, trimesh.Scene):
-            mesh = mesh.dump(concatenate=True)
-        return mesh
+        with open(tmp_path, "rb") as f:
+            content = f.read()
+        return content
     finally:
         if pathlib.Path(tmp_path).exists():
             pathlib.Path(tmp_path).unlink()
+
+
+def analyze_geometry(part: Part | Compound) -> tuple[trimesh.Trimesh, str]:
+    """
+    Computes both the trimesh geometry and the part hash in one pass.
+    Avoids double export to STL.
+    """
+    content = _get_stl_bytes(part)
+    part_hash = hashlib.sha256(content).hexdigest()
+
+    mesh = trimesh.load(io.BytesIO(content), file_type="stl")
+    if isinstance(mesh, trimesh.Scene):
+        mesh = mesh.dump(concatenate=True)
+
+    return mesh, part_hash
+
+
+def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
+    """
+    Converts a build123d Part or Compound to a trimesh.Trimesh object.
+    """
+    mesh, _ = analyze_geometry(part)
+    return mesh
 
 
 def check_undercuts(
@@ -102,18 +124,5 @@ def compute_part_hash(part: Part | Compound) -> str:
     Computes a stable hash for a build123d Part or Compound.
     Uses STL export as a proxy for geometry.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
-        tmp_path = tmp.name
-
-    try:
-        from build123d import export_stl
-
-        export_stl(part, tmp_path)
-        with open(tmp_path, "rb") as f:
-            content = f.read()
-        return hashlib.sha256(content).hexdigest()
-    finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+    content = _get_stl_bytes(part)
+    return hashlib.sha256(content).hexdigest()

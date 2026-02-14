@@ -7,6 +7,7 @@ from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
+    analyze_geometry,
     check_undercuts,
     compute_part_hash,
     part_to_trimesh,
@@ -124,6 +125,7 @@ def _calculate_im_cost(
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
+    part_hash: str | None = None,
 ) -> CostBreakdown:
     """
     Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
@@ -150,7 +152,9 @@ def _calculate_im_cost(
     # Apply reuse discount
     is_reused = False
     if context is not None:
-        part_hash = compute_part_hash(part)
+        if part_hash is None:
+            part_hash = compute_part_hash(part)
+
         if part_hash in context:
             tooling_cost *= 0.1
             is_reused = True
@@ -216,7 +220,7 @@ def analyze_im(
     im_cfg = config.injection_molding
     constraints = im_cfg.constraints if im_cfg else {}
 
-    mesh = part_to_trimesh(part)
+    mesh, part_hash = analyze_geometry(part)
     violations = []
 
     # 1. Draft Angle Check
@@ -240,7 +244,9 @@ def analyze_im(
     violations.extend(_check_wall_thickness(mesh, min_wall, max_wall))
 
     # 4. Cost Calculation
-    cost_breakdown = _calculate_im_cost(part, config, quantity=quantity)
+    cost_breakdown = _calculate_im_cost(
+        part, config, quantity=quantity, part_hash=part_hash
+    )
 
     # 5. Weight Calculation
     material_name = config.defaults.get("material", "abs")

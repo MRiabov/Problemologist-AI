@@ -5,6 +5,7 @@ from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
 from worker.workbenches.analysis_utils import (
+    analyze_geometry,
     check_undercuts,
     compute_part_hash,
     part_to_trimesh,
@@ -100,6 +101,7 @@ def calculate_cnc_cost(
     config: ManufacturingConfig,
     quantity: int = 1,
     context: dict[str, Any] | None = None,
+    part_hash: str | None = None,
 ) -> CostBreakdown:
     """
     Calculates CNC cost: Setup + (Material + Run) * Quantity.
@@ -152,7 +154,8 @@ def calculate_cnc_cost(
     # Apply reuse discount if part hash is in context
     is_reused = False
     if context is not None:
-        part_hash = compute_part_hash(part)
+        if part_hash is None:
+            part_hash = compute_part_hash(part)
         if part_hash in context:
             setup_cost *= 0.5
             is_reused = True
@@ -196,7 +199,7 @@ def analyze_cnc(
     violations = []
 
     # 1. Undercut Check
-    mesh = part_to_trimesh(part)
+    mesh, part_hash = analyze_geometry(part)
     undercuts = check_undercuts(mesh, (0, 0, 1))
     if undercuts:
         msg = f"CNC Machining Violation: {len(undercuts)} undercut faces detected."
@@ -211,7 +214,9 @@ def analyze_cnc(
     violations.extend(corner_violations)
 
     # 3. Cost Calculation
-    cost_breakdown = calculate_cnc_cost(part, config, quantity=quantity)
+    cost_breakdown = calculate_cnc_cost(
+        part, config, quantity=quantity, part_hash=part_hash
+    )
 
     # 4. Weight Calculation
     material_name = config.defaults.get("material", "aluminum_6061")
