@@ -11,6 +11,11 @@ from xml.dom import minidom
 import trimesh
 from build123d import Compound, Solid, export_stl
 
+try:
+    from yacv.exporter import export_all
+except ImportError:
+    export_all = None
+
 from shared.cots.parts.motors import ServoMotor
 
 if TYPE_CHECKING:
@@ -97,7 +102,18 @@ class MeshProcessor:
             glb_path = filepath.with_suffix(".glb")
 
             mesh.export(str(obj_path), file_type="obj")
-            mesh.export(str(glb_path), file_type="glb")
+            mesh.export(str(obj_path), file_type="obj")
+
+            # Use YACV for GLB if available to preserve topology, otherwise fallback to trimesh
+            if export_all:
+                try:
+                    # YACV export_all(path, *objects)
+                    export_all(str(glb_path), part)
+                except Exception as e:
+                    logger.warning("yacv_export_failed", error=str(e))
+                    mesh.export(str(glb_path), file_type="glb")
+            else:
+                mesh.export(str(glb_path), file_type="glb")
 
             output_paths.extend([obj_path, glb_path])
         finally:

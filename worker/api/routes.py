@@ -772,3 +772,38 @@ async def api_lint(
             success=False,
             errors=[{"message": str(e)}],
         )
+
+
+@router.post("/benchmark/build", response_model=BenchmarkToolResponse)
+async def api_build(
+    request: PreviewDesignRequest,
+    fs_router=Depends(get_router),
+):
+    """Rebuild simulation assets (GLB) from source without running full simulation."""
+    try:
+        # Load component
+        component = _load_component(fs_router, request.script_path)
+
+        # Get builder
+        from worker.simulation.factory import get_simulation_builder
+
+        builder = get_simulation_builder(fs_router.local_backend.root)
+
+        # Build assets (GLB/OBJ/Scene)
+        # We don't need objectives/moving_parts for basic visualization rebuild
+        scene_path = builder.build_from_assembly(component)
+
+        events = _collect_events(fs_router)
+        return BenchmarkToolResponse(
+            success=True,
+            message=f"Assets rebuilt. Scene saved to {scene_path}",
+            artifacts={
+                # Return paths relative to session root
+                "scene_path": str(scene_path.relative_to(fs_router.local_backend.root))
+            },
+            events=events,
+        )
+
+    except Exception as e:
+        logger.error("api_benchmark_build_failed", error=str(e))
+        return BenchmarkToolResponse(success=False, message=str(e))

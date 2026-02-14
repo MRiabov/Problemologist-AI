@@ -9,7 +9,10 @@ import {
   Folder, 
   Link, 
   Crosshair, 
-  Package
+  Package,
+  Square,
+  Minus,
+  Circle
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Input } from '../ui/input';
@@ -17,7 +20,7 @@ import { Input } from '../ui/input';
 export interface TopologyNode {
   id: string;
   name: string;
-  type: 'assembly' | 'part' | 'group';
+  type: 'assembly' | 'part' | 'group' | 'face' | 'edge' | 'vertex';
   children?: TopologyNode[];
 }
 
@@ -72,6 +75,9 @@ export function ModelBrowser({ nodes, hiddenParts, onToggleVisibility, className
             {node.type === 'assembly' && <Package className="h-3.5 w-3.5 text-primary" />}
             {node.type === 'group' && <Folder className="h-3.5 w-3.5 text-amber-500" />}
             {node.type === 'part' && <Box className="h-3.5 w-3.5 text-blue-400" />}
+            {node.type === 'face' && <Square className="h-3.5 w-3.5 text-emerald-400" />}
+            {node.type === 'edge' && <Minus className="h-3.5 w-3.5 text-slate-400" />}
+            {node.type === 'vertex' && <Circle className="h-2 w-2 text-slate-400" />}
           </div>
 
           {/* Label */}

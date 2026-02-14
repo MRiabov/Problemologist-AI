@@ -1,0 +1,10 @@
+{
+    "feature_number": "009",
+    "slug": "009-fluids-deformable-materials",
+    "friendly_name": "Fluids & Deformable Materials",
+    "mission": "software-dev",
+    "source_description": "WP2 from roadmap.md — Extend the system from rigid-body-only dynamics to deformable materials (FEM) and fluids (MPM). All manufactured parts deform under load, fluid benchmarks become a first-class objective type, and agents reason about stress, breakage, and fluid behaviour. Togglable MuJoCo/Genesis backends.",
+    "created_at": "2026-02-14T15:54:07Z",
+    "target_branch": "main",
+    "vcs": "git"
+}

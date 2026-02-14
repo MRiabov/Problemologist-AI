@@ -63,7 +63,7 @@ Outside of adding just the standard rigid body simulator, add deformable bodies 
 From now on, (all) materials are subject to finite element modelling deformation.
 
 1. All materials are now finite-element modelled, thus will bend or break, if their strength is exceeded.
-2. Simulation fidelity - fair, approximately how dynamics would normally be simulated.
+2. Simulation fidelity - fair, approximately how dynamics would normally be simulated.,
 
 We focus on more rigid body than softer materials, i.e. plastic over foam.
 
@@ -105,7 +105,6 @@ Train (optimize) the model to do electrical engineering in 3d.
 
 #### Work necessary
 
-<!-- 1. KiCad -->
 1. Electronics modelling in CAD
 2. Optimize the agent prompts to use electronics
 3. Generate more training data.
@@ -136,12 +135,13 @@ Again, this is already done (done, but fragmeneted. Nobody has "unified" all of 
 #### Technology stack
 
 1. SKiDL (schematics),
-2. KiCad (PCBs; autorouting, perhaps. Possibly, full LLM routing; export of PCB geometry.)
-3. PySpice - a circuit simulator. Note: we don't need high-fidelity simulation. Simply calculating:
+routing; export of PCB geometry.)
+2. PySpice - a circuit simulator. Note: we don't need high-fidelity simulation. Simply calculating:
     1. motors on/off
     2. on every timestep
     is fine and is good enough.
-4. MuJoCo or Genesis-world Tendonds for wires (as far as I remember).
+3. MuJoCo or Genesis-world Tendonds for wires (as far as I remember).
+<!-- 2. KiCad (PCBs; autorouting, perhaps. Possibly, full LLM -kicad is out of spec-->
 
 About PySpice:
 """
@@ -217,6 +217,10 @@ The electronics will get an extra set of agents which would communicate between 
 I would note here that it appears that PCBs don't really add any value here YET, but it should be added because that's what used in production.
 <!-- Or is it? they use....  -->
 <!-- PCB damage -->
+
+#### CAD
+
+In CAD they are defined as 3d arcs (splines?), attached to certain points. The points must be next to the surface. The arcs must not intersect any volumes.
 
 ##### Out of scope
 
