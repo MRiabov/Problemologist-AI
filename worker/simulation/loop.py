@@ -171,11 +171,28 @@ class SimulationLoop:
         # Configurable timeout (capped at hard limit)
         self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
 
-        # Motor overload tracking: time each actuator has been at forcerange limit
-        self.actuator_clamp_duration = {}  # name -> duration
-
         self.stress_summaries = []
         self.fluid_metrics = []
+
+        # T015: derive is_powered_map from electronics.circuit state
+        self.is_powered_map = {}
+        if self.electronics:
+            from shared.pyspice_utils import validate_circuit
+
+            res = validate_circuit(
+                self.electronics.circuit, self.electronics.power_supply
+            )
+            if res.valid:
+                # Map motors to their power state (1.0 = powered, 0.0 = not)
+                for part in self.electronics.parts:
+                    if part.type == "motor":
+                        v_diff = abs(
+                            res.node_voltages.get(part.node_a, 0)
+                            - res.node_voltages.get(part.node_b, 0)
+                        )
+                        self.is_powered_map[part.name] = 1.0 if v_diff > 0.1 else 0.0
+            else:
+                logger.warning("initial_electronics_invalid", errors=res.errors)
 
         # Reset metrics
         self.reset_metrics()
@@ -253,13 +270,8 @@ class SimulationLoop:
                 ctrls = {}
                 for name, controller in dynamic_controllers.items():
                     val = controller(current_time)
-                    # Gate by electronics (T014)
-                    # If electronics section exists, use is_powered_map (defaults to 0.0 for known motors)
-                    # If no electronics section, default to 1.0 (backward compatibility)
-                    if hasattr(self, "electronics") and self.electronics:
-                        power_scale = getattr(self, "is_powered_map", {}).get(name, 0.0)
-                        # If the actuator is not in electronics, it might be a passive part or something else.
-                        # But usually all motors should be in electronics if it exists.
+                    if self.electronics:
+                        power_scale = self.is_powered_map.get(name, 0.0)
                         val *= power_scale
                     ctrls[name] = val
                 self.backend.apply_control(ctrls)
@@ -334,7 +346,9 @@ class SimulationLoop:
 
                         # F004: Part Breakage
                         if max_stress > ultimate_stress:
-                            self.fail_reason = f"{SimulationFailureMode.PART_BREAKAGE}:{body_name}"
+                            self.fail_reason = (
+                                f"{SimulationFailureMode.PART_BREAKAGE}:{body_name}"
+                            )
                             logger.info(
                                 "simulation_fail",
                                 reason=SimulationFailureMode.PART_BREAKAGE,
@@ -344,7 +358,10 @@ class SimulationLoop:
                             # Internal break for the body loop
                             break
                 # Check for breakage in the outer loop
-                if self.fail_reason and SimulationFailureMode.PART_BREAKAGE in self.fail_reason:
+                if (
+                    self.fail_reason
+                    and SimulationFailureMode.PART_BREAKAGE in self.fail_reason
+                ):
                     break
 
             if target_body_name:
@@ -367,9 +384,7 @@ class SimulationLoop:
                     if stress_field is not None and len(stress_field.stress) > 0:
                         max_s = np.max(stress_field.stress)
                         if max_s > so.max_von_mises_mpa * 1e6:
-                            self.fail_reason = (
-                                f"{SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED}:{so.part_label}"
-                            )
+                            self.fail_reason = f"{SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED}:{so.part_label}"
                             logger.info(
                                 "simulation_fail",
                                 reason=SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED,
@@ -542,9 +557,8 @@ class SimulationLoop:
                                     else 0.0
                                 )
 
-                                passed = (
-                                    measured_rate
-                                    >= fo.target_rate_l_per_s * (1.0 - fo.tolerance)
+                                passed = measured_rate >= fo.target_rate_l_per_s * (
+                                    1.0 - fo.tolerance
                                 )
                                 result = FluidMetricResult(
                                     metric_type="flow_rate",
@@ -573,7 +587,7 @@ class SimulationLoop:
                                         or f"FLOW_RATE_FAILED:{fo.fluid_id}"
                                     )
 
-        # Final success determination: 
+        # Final success determination:
         # If any explicit failure was recorded, it's not a success.
         if self.fail_reason:
             is_success = False

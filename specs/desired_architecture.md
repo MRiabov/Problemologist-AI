@@ -105,7 +105,7 @@ Problems with motors and moving parts are verified more consistently because the
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
    - Write draft `objectives.yaml` matching this geometry/constraint data.
-   - Write draft `preliminary_cost_estimation.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+   - Write draft `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
 ```
 
 ```yaml
@@ -179,7 +179,7 @@ The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
    - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
-   - Do not read benchmark `preliminary_cost_estimation.yaml`; benchmark cost estimation stays local to the benchmark planner.
+   - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the benchmark planner.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
@@ -192,7 +192,7 @@ The Engineering Planner workflow is:
 
   We want to estimate a rough, but detailed prices and architecture of the solution.
 
-  Create a file like `preliminary_cost_estimation.yaml` containing:
+  Create a file like `assembly_definition.yaml` containing:
 
   For each part:
       1. A name of the part
@@ -245,9 +245,9 @@ The Engineering Planner workflow is:
      `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
 - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
-- Create `preliminary_cost_estimation.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
+- Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 
-At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `preliminary_cost_estimation.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -365,12 +365,12 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 
 ##### Initial files for each agent
 
-- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml` (draft/write)
-- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `preliminary_cost_estimation.yaml` (read), `script.py`, `journal.md`, `renders/`
-- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`)
-- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `preliminary_cost_estimation.yaml` (draft, local only), `journal.md`
-- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`, `script.py`, `journal.md`, `renders/`
-- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`)
+- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `assembly_definition.yaml` (draft/write)
+- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `assembly_definition.yaml` (read), `script.py`, `journal.md`, `renders/`
+- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `assembly_definition.yaml`)
+- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `assembly_definition.yaml` (draft, local only), `journal.md`
+- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `script.py`, `journal.md`, `renders/`
+- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `assembly_definition.yaml`)
 - COTS Search: read-only COTS catalog DB/CLI, `journal.md` (queries + results)
 - Skill Creator: `skill-creator/SKILL.md` (read), `skills/` (read/write), `journal.md`, git metadata
 
@@ -388,7 +388,7 @@ Where possible, templates would have a validation schema. E.g. (in particular) f
 
 #### Immutability validation
 
-We assert that files (especially "control" files like `objectives.yaml` and `preliminary_cost_estimation.yaml`) are not edited by the agent. We use git-based hash assertions for such files where they must be immutable.
+We assert that files (especially "control" files like `objectives.yaml` and `assembly_definition.yaml`) are not edited by the agent. We use git-based hash assertions for such files where they must be immutable.
 
 #### File updates
 
@@ -712,7 +712,7 @@ The plan will have the following bullet points. The plan will be validated for c
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
 3. A draft of `objectives.yaml` with rough values filled in.
-4. A draft of `preliminary_cost_estimation.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+4. A draft of `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
 <!-- Note: it may be interesting that the implementer could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
@@ -730,7 +730,7 @@ The engineer will also receive YAML files with:
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The benchmark planner's `preliminary_cost_estimation.yaml` stays in the benchmark planner scope and is not handed over to engineering.
+The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The benchmark planner's `assembly_definition.yaml` stays in the benchmark planner scope and is not handed over to engineering.
 
 ##### A benchmark is reused multiple times
 
@@ -747,7 +747,7 @@ Engineer sends four files to the coder agent who has to implement the plan:
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
-4. A `preliminary_cost_estimation.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_costing_and_price.py`.
+4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_costing_and_price.py`.
 
 ##### `plan.md` structure for the engineering plan
 
@@ -800,7 +800,7 @@ For each part:
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
 # The environment geometry in this file is READ-ONLY. Engineering assembly
-# motion metadata is stored under engineering preliminary_cost_estimation.yaml
+# motion metadata is stored under engineering assembly_definition.yaml
 # final_assembly.parts and is also READ-ONLY once written.
 # =============================================================================
 
@@ -860,7 +860,7 @@ randomization:
 
 <!-- Note: we are using metric units and degrees. -->
 
-##### `preliminary_cost_estimation.yaml`
+##### `assembly_definition.yaml`
 
 To reduce cost guessing, the Engineering Planner outputs a machine-readable estimate file that also serves as an assembly plan: it captures all pricing inputs per part plus the assembly structure used to derive quantities, reuse, and motion metadata.
 
@@ -973,11 +973,11 @@ totals:
 
 Validation requirement:
 
-- Submission is blocked if `preliminary_cost_estimation.yaml` is missing, malformed, still template-like, fails `validate_costing_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
+- Submission is blocked if `assembly_definition.yaml` is missing, malformed, still template-like, fails `validate_costing_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
 
 #### Coder and Reviewer interaction
 
-1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), plus `objectives.yaml` and `preliminary_cost_estimation.yaml` (YAML files with objectives and `final_assembly.parts` DOF/control metadata). Thus the Reviewer will only have readonly on all agent files permissions.
+1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), plus `objectives.yaml` and `assembly_definition.yaml` (YAML files with objectives and `final_assembly.parts` DOF/control metadata). Thus the Reviewer will only have readonly on all agent files permissions.
 The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
@@ -1532,7 +1532,7 @@ Note: they will need to be importable utils, just as tools like `simulate` are.
 
 ##### Implementation for time-based controller functions
 
-One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. The `preliminary_cost_estimation.yaml` `final_assembly.parts` entries will contain which controller functions the motors are referencing.
+One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. The `assembly_definition.yaml` `final_assembly.parts` entries will contain which controller functions the motors are referencing.
 
 ##### Position-based functions
 
@@ -1544,7 +1544,7 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 
 <!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
 
-<!-- moving-part metadata moved out of objectives.yaml into preliminary_cost_estimation.yaml final_assembly.parts to keep objectives focused on task constraints. -->
+<!-- moving-part metadata moved out of objectives.yaml into assembly_definition.yaml final_assembly.parts to keep objectives focused on task constraints. -->
 
 ###### Position-based controllers implementation
 
@@ -1810,7 +1810,7 @@ We track the following structured domain events to compute the evaluation metric
 18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
-    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `preliminary_cost_estimation.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
+    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
 21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with an explicit refusal reason and proof-of-impossibility evidence (note: no agent currently for plan refusal)
 23. Forbidden joint creation/adding logic.

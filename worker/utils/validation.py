@@ -318,7 +318,7 @@ def simulate(
         except Exception as e:
             logger.warning("failed_to_load_objectives", error=str(e))
 
-    cost_est_path = working_dir / "preliminary_cost_estimation.yaml"
+    cost_est_path = working_dir / "assembly_definition.yaml"
     if cost_est_path.exists():
         try:
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
@@ -359,10 +359,8 @@ def simulate(
             for part in cost_estimation.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = (
-                            lambda t, p=part.control: (
-                                sinusoidal(t, p.speed, p.frequency or 1.0)
-                            )
+                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            sinusoidal(t, p.speed, p.frequency or 1.0)
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed

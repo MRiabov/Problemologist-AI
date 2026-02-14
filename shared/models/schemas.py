@@ -309,7 +309,7 @@ class ReviewFrontmatter(BaseModel):
 
 
 # =============================================================================
-# preliminary_cost_estimation.yaml Schema
+# assembly_definition.yaml Schema
 # =============================================================================
 
 
@@ -442,7 +442,7 @@ class ElectronicsSection(BaseModel):
 
 class PreliminaryCostEstimation(BaseModel):
     """
-    Schema for preliminary_cost_estimation.yaml.
+    Schema for assembly_definition.yaml.
     Output by the Engineering Planner to track cost risks.
     """
 

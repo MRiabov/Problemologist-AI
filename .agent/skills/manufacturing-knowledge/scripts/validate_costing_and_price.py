@@ -60,7 +60,7 @@ def calculate_part_cost(part, materials_data):
 
 
 def main():
-    cost_file = Path("preliminary_cost_estimation.yaml")
+    cost_file = Path("assembly_definition.yaml")
     objectives_file = Path("objectives.yaml")
 
     if not cost_file.exists():

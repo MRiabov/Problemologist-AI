@@ -66,12 +66,71 @@ def route_wire(
     )
 
 
+import numpy as np
+from build123d import Compound, Face, Plane, Vector
+
+
 def check_wire_clearance(
-    wire_waypoints: list[tuple[float, float, float]], assembly_meshes: Any
+    wire_waypoints: list[tuple[float, float, float]],
+    assembly_meshes: Compound,
+    clearance_mm: float = 2.0,
 ) -> bool:
     """
-    Check if a wire path intersects with any meshes in the assembly.
-    This is a stub that will be integrated with the CAD engine's collision detection.
+    Check if a wire path intersects with any meshes in the assembly with a given clearance.
+
+    Args:
+        wire_waypoints: List of (x, y, z) coordinates defining the wire path.
+        assembly_meshes: The build123d Compound containing the assembly geometry.
+        clearance_mm: Minimum required distance from any mesh.
+
+    Returns:
+        True if the wire path is clear of intersections and maintains clearance.
+        False otherwise.
     """
-    # Implementation depends on whether we use trimesh or build123d's internal collision
+    if not wire_waypoints or len(wire_waypoints) < 2:
+        return True
+
+    # 1. Create a simplified 'tube' or polyline representing the wire
+    # For efficiency, we'll check segments against the compound
+    path_points = [Vector(p) for p in wire_waypoints]
+
+    for i in range(len(path_points) - 1):
+        p1 = path_points[i]
+        p2 = path_points[j := i + 1]
+
+        # Segment vector
+        vec = p2 - p1
+        length = vec.length
+        if length < 1e-6:
+            continue
+
+        # Optimization: AABB check first (build123d handles this in intersect)
+        # We can use build123d's distance check or intersection check.
+        # For wires, we often care about DISTANCE (clearance).
+
+        # Simplest collision: check if the line segment intersects the solid.
+        # But we need clearance. So we check if the distance from segment to compound < clearance_mm.
+
+        # build123d doesn't have a direct "distance(segment, solid)" available in all versions
+        # but we can sample points or use the bounding box to prune.
+
+        # For now, let's implement a sampling-based approach as a robust first pass
+        # unless we find a better build123d primitive.
+
+        num_samples = max(2, int(length / (clearance_mm / 2.0)))
+        for s in range(num_samples):
+            current_pt = p1 + vec * (s / (num_samples - 1))
+
+            # Use build123d distance if available, otherwise fallback
+            try:
+                # distance() returns the shortest distance between objects
+                dist = assembly_meshes.distance(current_pt)
+                if dist < clearance_mm:
+                    return False
+            except AttributeError:
+                # Fallback: check if point is inside or very close to any face/solid
+                # This is slower but safer
+                if assembly_meshes.is_inside(current_pt):
+                    return False
+
     return True

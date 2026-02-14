@@ -120,7 +120,7 @@ This is a pre-simulation gate. If the circuit fails validation, the physics simu
 
 ### Integration with `assembly_definition.yaml`
 
-<!-- Note: preliminary_cost_estimation.yaml is being renamed to assembly_definition.yaml -->
+<!-- Note: assembly_definition.yaml is being renamed to assembly_definition.yaml -->
 
 The assembly definition gains an `electronics` section:
 

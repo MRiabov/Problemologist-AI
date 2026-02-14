@@ -8,6 +8,7 @@ from ..state import AgentState
 
 logger = logging.getLogger(__name__)
 
+
 @type_check
 async def cots_search_node(state: AgentState) -> AgentState:
     """
@@ -36,11 +37,11 @@ Identify specific search queries.
     tools = [search_cots_catalog]
     agent = create_react_agent(llm, tools)
 
-    result = await agent.ainvoke({
-        "messages": [HumanMessage(content=prompt)]
-    })
+    result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
 
     new_journal = state.journal + "\n[COTS Search] Completed search for components."
     # We could add more detail from the result if needed
 
-    return state.model_copy(update={"journal": new_journal, "messages": state.messages + result["messages"]})
+    return state.model_copy(
+        update={"journal": new_journal, "messages": state.messages + result["messages"]}
+    )

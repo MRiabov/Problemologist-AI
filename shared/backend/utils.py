@@ -2,6 +2,7 @@ EMPTY_CONTENT_WARNING = "System reminder: File exists but has empty contents"
 MAX_LINE_LENGTH = 5000
 LINE_NUMBER_WIDTH = 6
 
+
 def format_content_with_line_numbers(
     content: str | list[str],
     start_line: int = 1,
@@ -30,7 +31,9 @@ def format_content_with_line_numbers(
                     result_lines.append(f"{line_num:{LINE_NUMBER_WIDTH}d}\t{chunk}")
                 else:
                     continuation_marker = f"{line_num}.{chunk_idx}"
-                    result_lines.append(f"{continuation_marker:>{LINE_NUMBER_WIDTH}}\t{chunk}")
+                    result_lines.append(
+                        f"{continuation_marker:>{LINE_NUMBER_WIDTH}}\t{chunk}"
+                    )
 
     return "\n".join(result_lines)
 

@@ -39,11 +39,11 @@ engineer:
          2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
          3. Propose and select a physically feasible mechanism that satisfies the constraints.
          4. Invoke `cots_search` for every planned COTS component and lock part IDs/prices.
-         5. Build `preliminary_cost_estimation.yaml` with all manufactured/COTS parts and `final_assembly`.
+         5. Build `assembly_definition.yaml` with all manufactured/COTS parts and `final_assembly`.
          6. Run `skills/manufacturing-knowledge/scripts/validate_and_price.py`; iterate until validation passes and totals are within caps.
          7. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` into `objectives.yaml` from validated totals (under benchmark caps).
          8. Write `plan.md` and `todo.md` so they exactly match the validated parts, assembly, and constraints.
-         9. Perform final consistency checks across `plan.md`, `todo.md`, `preliminary_cost_estimation.yaml`, and `objectives.yaml`; only then handoff.
+         9. Perform final consistency checks across `plan.md`, `todo.md`, `assembly_definition.yaml`, and `objectives.yaml`; only then handoff.
 
          **Economic Constraints**:
          - Adhere to `max_unit_cost` and `max_weight` from `objectives.yaml`.
@@ -58,7 +58,7 @@ engineer:
            - Motors that hit force limits for >2 seconds will fail the simulation.
 
          **Planner Costing Workflow** (MANDATORY):
-         1. Create `preliminary_cost_estimation.yaml` with:
+         1. Create `assembly_definition.yaml` with:
             - `manufactured_parts`: method/material + method-specific costing fields.
             - `cots_parts`: catalog-backed parts (`part_id`, `manufacturer`, `source`; price may be auto-populated).
             - `final_assembly`: subassemblies, part reuse, and joints.
@@ -70,7 +70,7 @@ engineer:
          4. If validation fails or totals exceed caps, re-plan and rerun pricing. Do NOT handoff.
 
          **Output Requirements**:
-         You MUST output `plan.md`, `todo.md`, and `preliminary_cost_estimation.yaml`.
+         You MUST output `plan.md`, `todo.md`, and `assembly_definition.yaml`.
          `plan.md` must use the following structure (auto-validated).
          Use these EXACT markdown headings:
          - `## 1. Solution Overview`
@@ -99,9 +99,9 @@ engineer:
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Component usage**: Explicitly list all components (fasteners, motors, bearings, COTS parts) in the Parts List with part numbers.
          - **COTS search**: Invoke the `cots_search` subagent for each COTS item you plan to use.
-         - **Plan submission**: Ensure `plan.md`, `todo.md`, and `preliminary_cost_estimation.yaml` are complete and valid.
+         - **Plan submission**: Ensure `plan.md`, `todo.md`, and `assembly_definition.yaml` are complete and valid.
          - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
-         - **Pricing YAML validity**: `preliminary_cost_estimation.yaml` must pass `validate_and_price.py`; no template placeholders.
+         - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_and_price.py`; no template placeholders.
          - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
          - **Objectives sync**: `objectives.yaml` constraints must match validated preliminary totals (under benchmark caps).
          - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
@@ -166,7 +166,7 @@ engineer:
          from utils.controllers.time_based import constant, sinusoidal, square, trapezoidal
          from utils.controllers.position_based import waypoint, hold_position, oscillate
          ```
-         Motors are defined in `preliminary_cost_estimation.yaml` under `final_assembly` with their control modes and COTS specs.
+         Motors are defined in `assembly_definition.yaml` under `final_assembly` with their control modes and COTS specs.
 
          **Simulation Rules**:
          - **30 second timeout**: Hard cap on all simulations.
@@ -176,10 +176,10 @@ engineer:
          - **Build zone violation**: Parts placed outside build zone = validation failure.
 
          **Workflow**:
-         1. Read the Planner's `plan.md`, `todo.md`, and `preliminary_cost_estimation.yaml`.
+         1. Read the Planner's `plan.md`, `todo.md`, and `assembly_definition.yaml`.
             - Treat planner-defined parts/assembly in these files as the implementation contract.
          2. Read `objectives.yaml` for exact coordinates and runtime randomization.
-            - Note: `max_unit_cost` and `max_weight` are set by the Planner in `objectives.yaml` and should match the `preliminary_cost_estimation.yaml` targets.
+            - Note: `max_unit_cost` and `max_weight` are set by the Planner in `objectives.yaml` and should match the `assembly_definition.yaml` targets.
          3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
          4. Write your CAD script (e.g., `solution.py`).
          5. Run and self-test: `execute("python solution.py")`.
@@ -190,7 +190,7 @@ engineer:
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Component usage**: Use and label fasteners/motors/bearings/COTS parts as planned.
          - **Planner contract compliance**: Implement planner-specified parts/joints first; log and justify any deviations in `journal.md`.
-         - **Part traceability**: Keep `part_id` and quantity intent from `preliminary_cost_estimation.yaml` traceable in your implementation.
+         - **Part traceability**: Keep `part_id` and quantity intent from `assembly_definition.yaml` traceable in your implementation.
          - **Tool invocation**: Do not skip required tool calls (`validate_and_price`, `preview_design`, `simulate`, `submit_for_review`).
          - **Manufacturability/price check**: Run `validate_and_price()` and fix any failures.
          - **Render request (engineer)**: Call `preview_design()` at least once before simulation.
@@ -237,7 +237,7 @@ engineer:
          Your job is to evaluate the engineer's work after simulation.
 
          **Review Process**:
-         1. Read `plan.md` and `preliminary_cost_estimation.yaml` to understand planned parts, assembly, and budget assumptions.
+         1. Read `plan.md` and `assembly_definition.yaml` to understand planned parts, assembly, and budget assumptions.
          2. Read `todo.md` to confirm what the engineer was asked to implement.
          3. Read the simulation video in `renders/videos/` for visual verification.
          4. Read `objectives.yaml` to verify constraints were met (cost, weight, zones).
@@ -401,7 +401,7 @@ benchmark_generator:
 
          **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
          - `objectives.yaml`: Using the template below. This is REQUIRED.
-         - `preliminary_cost_estimation.yaml`: Assembly structure using the template below.
+         - `assembly_definition.yaml`: Assembly structure using the template below.
          - Implementation script (e.g., `script.py`): The build123d code.
          Do NOT create any other files (no summaries, specifications, or completion reports).
 
@@ -435,7 +435,7 @@ benchmark_generator:
          #   3. Respecting `max_unit_cost` and `max_weight` constraints
          #
           # The environment geometry in this file is READ-ONLY. Engineering assembly
-          # motion metadata is stored under engineering preliminary_cost_estimation.yaml
+          # motion metadata is stored under engineering assembly_definition.yaml
           # final_assembly.parts and is also READ-ONLY once written.
          # =============================================================================
 
@@ -496,7 +496,7 @@ benchmark_generator:
          ```
 
          **Preliminary Cost Estimation YAML**:
-         Also output `preliminary_cost_estimation.yaml` with the assembly structure:
+         Also output `assembly_definition.yaml` with the assembly structure:
          ```yaml
          version: "1.0"
          constraints:
