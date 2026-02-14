@@ -40,7 +40,7 @@ USER agent
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --no-install-project --no-dev
 
 # Copy source code
 COPY --chown=agent:agent worker ./worker
@@ -49,7 +49,7 @@ COPY --chown=agent:agent pyproject.toml uv.lock ./
 
 # Install the project
 RUN --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
-    uv sync --frozen --no-dev
+    uv sync --no-dev
 
 # Set Python path
 ENV PYTHONPATH=/app
