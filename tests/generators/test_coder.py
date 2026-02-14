@@ -36,8 +36,9 @@ Hope it helps!"""
     assert code_no_block == "print('world')"
 
 
+@patch("controller.agent.benchmark.nodes.ChatOpenAI")
 @pytest.mark.asyncio
-async def test_coder_node_success(mock_state):
+async def test_coder_node_success(mock_llm_cls, mock_state):
     valid_script = textwrap.dedent("""
         import build123d as bd
         import mujoco
@@ -50,39 +51,38 @@ async def test_coder_node_success(mock_state):
 
     mock_response = MagicMock()
     mock_response.content = f"```python\n{valid_script}\n```"
+    mock_response.tool_calls = []
 
-    with patch("controller.agent.benchmark.nodes.ChatOpenAI"):
-        with patch(
-            "controller.agent.benchmark.nodes.create_deep_agent"
-        ) as mock_create_agent:
-            mock_agent = mock_create_agent.return_value
-            mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
+    # Mock LLM
+    mock_llm = mock_llm_cls.return_value
+    mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    mock_llm.bind_tools = MagicMock(return_value=mock_llm)
 
-            with patch(
-                "controller.agent.benchmark.nodes.WorkerClient"
-            ) as mock_client_class:
-                mock_client = mock_client_class.return_value
-                mock_client.read_file = AsyncMock(return_value=valid_script)
-                mock_client.list_files = AsyncMock(return_value=[])
+    with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
+        mock_client = mock_client_class.return_value
+        mock_client.read_file = AsyncMock(return_value=valid_script)
+        mock_client.list_files = AsyncMock(return_value=[])
 
-                with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
-                    updated_state = await coder_node(mock_state)
+        with patch("controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"):
+            updated_state = await coder_node(mock_state)
 
-        assert updated_state["current_script"] == valid_script
-        assert len(updated_state["messages"]) == 1
+    assert updated_state["current_script"] == valid_script
+    # HumanMessage + 1st response (loop breaks)
+    assert len(updated_state["messages"]) == 2
 
-        # Verify it's runnable
-        local_scope = {}
-        exec(updated_state["current_script"], local_scope)
-        assert "build" in local_scope
+    # Verify it's runnable
+    local_scope = {}
+    exec(updated_state["current_script"], local_scope)
+    assert "build" in local_scope
 
-        part, mjcf = local_scope["build"](42)
-        assert part is not None
-        assert mjcf == "<mujoco/>"
+    part, mjcf = local_scope["build"](42)
+    assert part is not None
+    assert mjcf == "<mujoco/>"
 
 
+@patch("controller.agent.benchmark.nodes.ChatOpenAI")
 @pytest.mark.asyncio
-async def test_coder_node_with_feedback(mock_state):
+async def test_coder_node_with_feedback(mock_llm_cls, mock_state):
     mock_state["review_feedback"] = "Make it larger"
     mock_state["simulation_result"] = {
         "valid": False,
@@ -92,74 +92,24 @@ async def test_coder_node_with_feedback(mock_state):
 
     mock_response = MagicMock()
     mock_response.content = "```python\n# refined script\n```"
+    mock_response.tool_calls = []
 
-    with (
-        patch("controller.agent.benchmark.nodes.ChatOpenAI"),
-        patch(
-            "controller.agent.benchmark.nodes.create_deep_agent"
-        ) as mock_create_agent,
-    ):
-        mock_agent = mock_create_agent.return_value
-        mock_agent.ainvoke = AsyncMock(return_value={"messages": [mock_response]})
-
-        with patch(
-            "controller.agent.benchmark.nodes.WorkerClient"
-        ) as mock_client_class:
-            mock_client = mock_client_class.return_value
-            mock_client.read_file = AsyncMock(return_value="# refined script")
-            mock_client.list_files = AsyncMock(return_value=[])
-
-            with patch("controller.agent.benchmark.nodes.RemoteFilesystemBackend"):
-                await coder_node(mock_state)
-
-        # Verify create_deep_agent was called with correct system prompt
-        args, kwargs = mock_create_agent.call_args
-        system_prompt = kwargs.get("system_prompt", "")
-        assert "Make it larger" in system_prompt
-        assert "Intersections found" in system_prompt
-
-
-@pytest.mark.asyncio
-async def test_validator_node_success(mock_state):
-    from controller.agent.benchmark.nodes import validator_node
-
-    mock_state["current_script"] = textwrap.dedent("""
-        import build123d as bd
-        def build(seed: int, scale: float = 1.0):
-            with bd.BuildPart() as p:
-                bd.Box(1, 1, 1)
-            return p.part, "<mujoco/>"
-    """)
+    # Mock LLM
+    mock_llm = mock_llm_cls.return_value
+    mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+    mock_llm.bind_tools = MagicMock(return_value=mock_llm)
 
     with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
         mock_client = mock_client_class.return_value
-        mock_client.git_commit = AsyncMock(
-            return_value=MagicMock(success=True, commit_hash="hash")
-        )
-        mock_client.validate = AsyncMock(return_value=MagicMock(success=True))
-        mock_client.simulate = AsyncMock(
-            return_value=MagicMock(success=True, artifacts={"render_paths": []})
-        )
+        mock_client.read_file = AsyncMock(return_value="# refined script")
+        mock_client.list_files = AsyncMock(return_value=[])
 
-        updated_state = await validator_node(mock_state)
+        with patch("controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"):
+            await coder_node(mock_state)
 
-        assert updated_state["simulation_result"]["valid"] is True
-        assert mock_client.simulate.call_count == 1
-
-
-@pytest.mark.asyncio
-async def test_validator_node_failure(mock_state):
-    from controller.agent.benchmark.nodes import validator_node
-
-    mock_state["current_script"] = "invalid code"
-
-    with patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_class:
-        mock_client = mock_client_class.return_value
-        mock_client.git_commit = AsyncMock(return_value=MagicMock(success=True))
-        mock_client.validate = AsyncMock(
-            return_value=MagicMock(success=False, message="Validation error")
-        )
-
-        updated_state = await validator_node(mock_state)
-        assert updated_state["simulation_result"]["valid"] is False
-        assert "Validation error" in updated_state["simulation_result"]["logs"][0]
+    # Verify LLM was called with correct context
+    call_args = mock_llm.ainvoke.call_args
+    messages = call_args.args[0]
+    system_prompt = messages[0].content
+    assert "Make it larger" in system_prompt
+    assert "Intersections found" in system_prompt

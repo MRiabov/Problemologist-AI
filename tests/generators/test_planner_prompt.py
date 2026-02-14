@@ -27,37 +27,30 @@ async def test_planner_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "controller.agent.benchmark.nodes.create_deep_agent"
-        ) as mock_create_agent,
-        patch(
-            "controller.agent.benchmark.nodes.RemoteFilesystemBackend"
+            "controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"
         ) as mock_backend,
-        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm_cls,
         patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
     ):
         # Mock client
         mock_client = AsyncMock()
         mock_client_cls.return_value = mock_client
 
-        # Mock agent response
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [MagicMock(content='{"theme": "balls"}')]
-        }
-        mock_create_agent.return_value = mock_agent
+        # Mock LLM
+        mock_llm = mock_llm_cls.return_value
+        mock_llm.ainvoke = AsyncMock()
+        mock_llm.ainvoke.return_value = MagicMock(content='{"theme": "balls"}')
 
         # Execute
         await planner_node(state)
 
         # Verify
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        system_prompt = call_args.kwargs["system_prompt"]
+        mock_llm.ainvoke.assert_called_once()
+        call_args = mock_llm.ainvoke.call_args
+        messages = call_args.args[0]
+        system_prompt = messages[0].content
 
-        assert "A red ball bouncing" in system_prompt
-        assert (
-            "You are a mechanical engineering architect" not in system_prompt
-        )  # Should utilize the new template
+        assert "A red ball bouncing" not in system_prompt  # Prompt is in HumanMessage
         assert (
             "You are an expert designer of spatial and geometric puzzles"
             in system_prompt
@@ -85,30 +78,30 @@ async def test_coder_node_prompt_construction():
     # Patch dependencies
     with (
         patch(
-            "controller.agent.benchmark.nodes.create_deep_agent"
-        ) as mock_create_agent,
-        patch(
-            "controller.agent.benchmark.nodes.RemoteFilesystemBackend"
+            "controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"
         ) as mock_backend,
-        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
+        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm_cls,
         patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
     ):
         # Mock client
         mock_client = AsyncMock()
         mock_client_cls.return_value = mock_client
 
-        # Mock agent response
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Done")]}
-        mock_create_agent.return_value = mock_agent
+        # Mock LLM
+        mock_llm = mock_llm_cls.return_value
+        mock_llm.ainvoke = AsyncMock()
+        mock_llm.ainvoke.return_value = MagicMock(content="Done", tool_calls=[])
+        mock_llm.bind_tools = MagicMock(return_value=mock_llm)
 
         # Execute
         await coder_node(state)
 
         # Verify
-        mock_create_agent.assert_called_once()
-        call_args = mock_create_agent.call_args
-        system_prompt = call_args.kwargs["system_prompt"]
+        mock_llm.ainvoke.assert_called_once()
+        call_args = mock_llm.ainvoke.call_args
+        messages = call_args.args[0]
+        # In coder_node, system prompt is messages[0].content
+        system_prompt = messages[0].content
 
         assert "A blue cube" in system_prompt
         assert "Original User Request" in system_prompt

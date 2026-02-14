@@ -41,16 +41,16 @@ def test_int_123_dynamic_power_gating():
 
     components = [
         ElectronicComponent(
-            component_id="motor_a", 
-            type="motor", 
-            rated_voltage=12.0, 
-            stall_current_a=2.0
+            component_id="motor_a",
+            type="motor",
+            rated_voltage=12.0,
+            stall_current_a=2.0,
         ),
         ElectronicComponent(
-            component_id="motor_b", 
-            type="motor", 
-            rated_voltage=12.0, 
-            stall_current_a=2.0
+            component_id="motor_b",
+            type="motor",
+            rated_voltage=12.0,
+            stall_current_a=2.0,
         ),
     ]
 
@@ -105,7 +105,7 @@ def test_int_128_wire_torn_failure(monkeypatch):
                 to_terminal=WireTerminal(component="m1", terminal="+"),
                 gauge_awg=24,
                 length_mm=100.0,
-                routed_in_3d=True
+                routed_in_3d=True,
             ),
             WireConfig(
                 wire_id="w2",
@@ -113,9 +113,9 @@ def test_int_128_wire_torn_failure(monkeypatch):
                 to_terminal=WireTerminal(component="supply", terminal="0"),
                 gauge_awg=24,
                 length_mm=100.0,
-                routed_in_3d=True
-            )
-        ]
+                routed_in_3d=True,
+            ),
+        ],
     )
 
     loop = SimulationLoop(
@@ -126,18 +126,80 @@ def test_int_128_wire_torn_failure(monkeypatch):
     # Mock backend to return high tension for our wire
     def mock_get_tendon_tension(wire_id):
         if wire_id == "wire_torn_test":
-            return 1000.0 # Way over limit
+            return 1000.0  # Way over limit
         return 0.0
 
     monkeypatch.setattr(loop.backend, "get_tendon_tension", mock_get_tendon_tension)
-    
+
     # Run one step
     metrics = loop.step(control_inputs={}, duration=0.01)
-    
+
     assert metrics.success is False
     assert "WIRE_TORN:wire_torn_test" in metrics.fail_reason
     # Motors should be unpowered after tear
     assert loop.is_powered_map["m1"] == 0.0
+
+
+def test_int_125_switch_toggling():
+    """INT-125: Motor power changes when switch state is toggled."""
+    from shared.models.schemas import WireTerminal, WireConfig
+
+    psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
+    electronics = ElectronicsSection(
+        power_supply=psu_config,
+        components=[
+            ElectronicComponent(component_id="sw1", type="switch"),
+            ElectronicComponent(component_id="m1", type="motor"),
+        ],
+        wiring=[
+            # PSU+ -> sw1_in
+            WireConfig(
+                wire_id="w1",
+                from_terminal=WireTerminal(component="supply", terminal="v+"),
+                to_terminal=WireTerminal(component="sw1", terminal="in"),
+                gauge_awg=22,
+                length_mm=50.0,
+            ),
+            # sw1_out -> m1_+
+            WireConfig(
+                wire_id="w2",
+                from_terminal=WireTerminal(component="sw1", terminal="out"),
+                to_terminal=WireTerminal(component="m1", terminal="+"),
+                gauge_awg=22,
+                length_mm=50.0,
+            ),
+            # m1_- -> PSU-
+            WireConfig(
+                wire_id="w3",
+                from_terminal=WireTerminal(component="m1", terminal="-"),
+                to_terminal=WireTerminal(component="supply", terminal="0"),
+                gauge_awg=22,
+                length_mm=50.0,
+            ),
+        ],
+    )
+
+    loop = SimulationLoop(
+        xml_path="tests/assets/empty_scene.xml",
+        electronics=electronics,
+    )
+
+    # Initial state: switch is True (CLOSED) by default
+    assert loop.is_powered_map["m1"] == 1.0
+
+    # Toggle switch OFF
+    loop.switch_states["sw1"] = False
+    loop._electronics_dirty = True
+
+    # Run step to trigger update
+    loop.step(control_inputs={}, duration=0.01)
+    assert loop.is_powered_map["m1"] == 0.0
+
+    # Toggle switch ON
+    loop.switch_states["sw1"] = True
+    loop._electronics_dirty = True
+    loop.step(control_inputs={}, duration=0.01)
+    assert loop.is_powered_map["m1"] == 1.0
 
 
 if __name__ == "__main__":
