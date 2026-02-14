@@ -15,6 +15,7 @@ export type { EpisodeResponse } from './models/EpisodeResponse';
 export { EpisodeStatus } from './models/EpisodeStatus';
 export type { FeedbackRequest } from './models/FeedbackRequest';
 export type { HTTPValidationError } from './models/HTTPValidationError';
+export type { MessageRequest } from './models/MessageRequest';
 export type { ReviewRequest } from './models/ReviewRequest';
 export type { RunSimulationRequest } from './models/RunSimulationRequest';
 export type { Skill } from './models/Skill';

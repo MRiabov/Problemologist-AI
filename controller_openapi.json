@@ -187,6 +187,58 @@
         }
       }
     },
+    "/episodes/{episode_id}/messages": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Continue Episode",
+        "description": "Send a follow-up message to a running or completed episode.",
+        "operationId": "continue_episode_episodes__episode_id__messages_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/episodes/": {
       "get": {
         "tags": [
@@ -277,6 +329,46 @@
                 "schema": {
                   "$ref": "#/components/schemas/EpisodeResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Delete Episode",
+        "description": "Delete an episode and its associated data.",
+        "operationId": "delete_episode_episodes__episode_id__delete",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1106,6 +1198,19 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "MessageRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "MessageRequest"
       },
       "ReviewRequest": {
         "properties": {
