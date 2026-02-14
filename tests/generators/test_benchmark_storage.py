@@ -3,7 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from controller.agent.benchmark.schema import Base, BenchmarkAssetModel
+from controller.persistence.db import Base
+from controller.persistence.models import BenchmarkAsset as BenchmarkAssetModel
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
