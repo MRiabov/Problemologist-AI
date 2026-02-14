@@ -1,5 +1,7 @@
 from enum import StrEnum
 
+from typing import Annotated
+from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, StrictInt, StrictStr
 
@@ -22,7 +24,7 @@ class AgentStatus(StrEnum):
 class AgentState(BaseModel):
     """The state of the agent passed between nodes in the graph."""
 
-    messages: list[BaseMessage] = Field(default_factory=list)
+    messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
     task: StrictStr = ""
     plan: StrictStr = ""
     todo: StrictStr = ""

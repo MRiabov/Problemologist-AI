@@ -1,6 +1,7 @@
-from typing import Any, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
 
 from .models import GenerationSession
 
@@ -28,4 +29,4 @@ class BenchmarkGeneratorState(TypedDict):
 
     plan: dict[str, Any] | None  # The randomization strategy
 
-    messages: list[BaseMessage]  # Chat history
+    messages: Annotated[list[BaseMessage], add_messages]  # Chat history
