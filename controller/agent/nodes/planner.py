@@ -15,9 +15,9 @@ from ..state import AgentState
 
 
 @type_check
-async def architect_node(state: AgentState) -> AgentState:
+async def planner_node(state: AgentState) -> AgentState:
     """
-    Architect node: Analyzes the task and creates plan.md and todo.md.
+    Planner node: Analyzes the task and creates plan.md and todo.md.
     """
     pm = PromptManager()
 

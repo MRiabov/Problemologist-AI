@@ -1,153 +1,43 @@
-from deepagents import create_deep_agent
+import structlog
 from langchain_openai import ChatOpenAI
 
-from controller.clients.backend import RemoteFilesystemBackend
+from controller.agent.graph import graph as engineering_graph
+from controller.agent.benchmark.graph import define_graph
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_callback
-from controller.prompts import get_prompt
-from shared.cots.agent import search_cots_catalog
+from shared.cots.agent import create_cots_search_agent
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def create_agent_graph(
-    backend: RemoteFilesystemBackend,
     agent_name: str = "engineer_coder",
     trace_id: str | None = None,
 ):
-    """Create a Deep Agent graph with remote filesystem backend."""
-
-    if settings.is_integration_test:
-        from typing import Any
-
-        from langchain_core.language_models.chat_models import BaseChatModel
-        from langchain_core.messages import AIMessage, BaseMessage
-        from langchain_core.outputs import ChatGenerationChunk, ChatResult
-
-        class FakeModelWithTools(BaseChatModel):
-            responses: list[str]
-            model_name: str = "mock-model"
-            _current_response_idx: int = 0
-
-            def _generate(
-                self,
-                messages: list[BaseMessage],
-                stop: list[str] | None = None,
-                run_manager: Any = None,
-                **kwargs: Any,
-            ) -> ChatResult:
-                _ = messages, stop, run_manager, kwargs
-                if self._current_response_idx >= len(self.responses):
-                    raise ValueError(
-                        "No more responses available in FakeModelWithTools"
-                    )
-                response_content = self.responses[self._current_response_idx]
-                self._current_response_idx += 1
-                return ChatResult(
-                    generations=[
-                        ChatGenerationChunk(message=AIMessage(content=response_content))
-                    ]
-                )
-
-            @property
-            def _llm_type(self) -> str:
-                return "fake-chat-model"
-
-            def bind_tools(self, tools: Any, **kwargs: Any) -> Any:
-                _ = tools, kwargs
-                return self
-
-            async def ainvoke(self, input_data, config=None, **kwargs):
-                import asyncio
-
-                await asyncio.sleep(
-                    1.0
-                )  # Simulate some processing time for interruption
-                return await super().ainvoke(input_data, config, **kwargs)
-
-        # Responses that perform some basic tool calls to satisfy tests
-        # We provide a generous sequence of tool calls and completions
-        responses = [
-            '{"action": "write_file", "action_input": {"path": "worker_execution.txt", "content": "verified"}}',
-            '{"action": "submit_for_review", "action_input": {"script_path": "solution.py"}}',
-            "I have completed the task successfully.",
-            # Add more for potential retries or subagent calls
-            '{"action": "write_file", "action_input": {"path": "plan.md", "content": "## 1. Solution Overview\\nDone."}}',
-            '{"action": "write_file", "action_input": {"path": "todo.md", "content": "- [x] Task"}}',
-            '{"action": "write_file", "action_input": {"path": "objectives.yaml", "content": "objectives: {}"}}',
-            '{"action": "submit_for_review", "action_input": {"script_path": "solution.py"}}',
-            "Handover complete.",
-        ]
-        llm = FakeModelWithTools(responses=responses)
-    else:
-        llm = ChatOpenAI(
-            model_name=settings.llm_model,
-            temperature=settings.llm_temperature,
-            base_url=settings.openai_api_base,
-            api_key=settings.openai_api_key,
-        )
-
-    # Try to get Langfuse callback
+    """
+    Factory to create/return the appropriate LangGraph based on agent_name.
+    Migrated from deepagents to LangGraph.
+    """
     langfuse_callback = get_langfuse_callback(trace_id=trace_id, name=agent_name)
-    callbacks = [langfuse_callback] if langfuse_callback else []
 
-    # Map simple agent names to config prompt keys
-    # Keys must match controller/config/prompts.yaml structure
-    prompt_mapping = {
-        "benchmark_planner": "benchmark_generator.planner.system",
-        "benchmark_coder": "benchmark_generator.coder.system",
-        "benchmark_reviewer": "benchmark_generator.reviewer.system",
-        "engineer_planner": "engineer.planner.system",
-        "engineer_coder": "engineer.engineer.system",
-        "engineer_reviewer": "engineer.critic.system",
-        "cots_search": "subagents.cots_search.system",
-        "skill_creator": "subagents.skill_learner.system",
-        "sidecar": "sidecar",
-    }
+    # In the new LangGraph-based architecture, we generally use unified graphs.
+    # We map the legacy agent names to the new graphs.
 
-    # Fallback or direct key usage
-    prompt_key = prompt_mapping.get(agent_name, f"{agent_name}.system")
+    if agent_name.startswith("engineer"):
+        # Unified engineering graph (Architect -> Engineer -> Critic)
+        return engineering_graph, langfuse_callback
 
-    try:
-        system_prompt = get_prompt(prompt_key)
-    except Exception as err:
-        raise ValueError(
-            f"Could not find prompt for {agent_name} mapped to {prompt_key}."
-        ) from err
+    elif agent_name.startswith("benchmark"):
+        # Unified benchmark generation graph (Planner -> Coder -> Reviewer)
+        return define_graph(), langfuse_callback
 
-    if callbacks:
-        llm = llm.with_config({"callbacks": callbacks})
+    elif agent_name == "cots_search":
+        # Specialized COTS search agent
+        return create_cots_search_agent(settings.llm_model), langfuse_callback
 
-    # Define subagents
-    cots_search_subagent = {
-        "name": "cots_search",
-        "description": "Search for components (motors, fasteners, bearings).",
-        "system_prompt": get_prompt("subagents.cots_search.system"),
-        "tools": [search_cots_catalog],
-    }
-
-    # Map agents that have access to subagents
-    primary_agents = [
-        "engineer_planner",
-        "engineer_coder",
-        "benchmark_planner",
-    ]
-    subagents = []
-    if agent_name in primary_agents:
-        subagents = [cots_search_subagent]
-
-    # Tools for the agent itself
-    agent_tools = []
-    if agent_name == "cots_search":
-        agent_tools = [search_cots_catalog]
-
-    agent = create_deep_agent(
-        model=llm,
-        backend=backend,
-        system_prompt=system_prompt,
-        name=agent_name,
-        subagents=subagents,
-        tools=agent_tools,
-    )
-    return agent, langfuse_callback
+    else:
+        logger.warning(
+            "unknown_agent_name_falling_back_to_engineer", agent_name=agent_name
+        )
+        return engineering_graph, langfuse_callback

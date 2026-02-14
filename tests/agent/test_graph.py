@@ -22,20 +22,22 @@ def fresh_graph():
 async def test_full_graph_flow(fresh_graph):
     """Test the graph transitions with mocked nodes."""
 
-    mock_architect = AsyncMock(
+    mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_engineer = AsyncMock(
+    mock_coder = AsyncMock(
         return_value={"journal": "Worked", "current_step": "Step"}
     )
-    mock_critic = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
-    mock_sidecar = AsyncMock(return_value={"journal": "Learned"})
+    mock_reviewer = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
+    mock_skills = AsyncMock(return_value={"journal": "Learned"})
+    mock_cots = AsyncMock(return_value={})
 
     with (
-        patch("controller.agent.nodes.architect.architect_node", mock_architect),
-        patch("controller.agent.nodes.engineer.engineer_node", mock_engineer),
-        patch("controller.agent.nodes.critic.critic_node", mock_critic),
-        patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar),
+        patch("controller.agent.nodes.planner.planner_node", mock_planner),
+        patch("controller.agent.nodes.coder.coder_node", mock_coder),
+        patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
+        patch("controller.agent.nodes.skills.skills_node", mock_skills),
+        patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
     ):
         graph = fresh_graph()
 
@@ -44,10 +46,10 @@ async def test_full_graph_flow(fresh_graph):
 
         final_state = await graph.ainvoke(initial_state, config=config)
 
-        assert mock_architect.called
-        assert mock_engineer.called
-        assert mock_critic.called
-        assert mock_sidecar.called
+        assert mock_planner.called
+        assert mock_coder.called
+        assert mock_reviewer.called
+        assert mock_skills.called
 
         assert final_state["status"] == "approved"
         assert "Learned" in final_state["journal"]
@@ -57,26 +59,28 @@ async def test_full_graph_flow(fresh_graph):
 async def test_graph_rejection_loop(fresh_graph):
     """Test that the graph can loop back to engineer on rejection."""
 
-    mock_architect = AsyncMock(
+    mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_engineer = AsyncMock(
+    mock_coder = AsyncMock(
         return_value={"journal": "Worked", "current_step": "Step"}
     )
 
-    mock_critic = AsyncMock()
-    mock_critic.side_effect = [
+    mock_reviewer = AsyncMock()
+    mock_reviewer.side_effect = [
         {"status": "code_rejected", "feedback": "Fix it", "iteration": 1},
         {"status": "approved", "feedback": "Fixed"},
     ]
 
-    mock_sidecar = AsyncMock(return_value={})
+    mock_skills = AsyncMock(return_value={})
+    mock_cots = AsyncMock(return_value={})
 
     with (
-        patch("controller.agent.nodes.architect.architect_node", mock_architect),
-        patch("controller.agent.nodes.engineer.engineer_node", mock_engineer),
-        patch("controller.agent.nodes.critic.critic_node", mock_critic),
-        patch("controller.agent.nodes.sidecar.sidecar_node", mock_sidecar),
+        patch("controller.agent.nodes.planner.planner_node", mock_planner),
+        patch("controller.agent.nodes.coder.coder_node", mock_coder),
+        patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
+        patch("controller.agent.nodes.skills.skills_node", mock_skills),
+        patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
     ):
         graph = fresh_graph()
 
@@ -85,6 +89,6 @@ async def test_graph_rejection_loop(fresh_graph):
 
         final_state = await graph.ainvoke(initial_state, config=config)
 
-        assert mock_engineer.call_count == 2
-        assert mock_critic.call_count == 2
+        assert mock_coder.call_count == 2
+        assert mock_reviewer.call_count == 2
         assert final_state["status"] == "approved"
