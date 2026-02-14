@@ -106,6 +106,7 @@ async def execute_agent_task(
                     agent_name=agent_name,
                     # For now hardcoded in original code too.
                     trace_id=trace_id,
+                    session_id=session_id,
                 )
 
                 # Add initial trace

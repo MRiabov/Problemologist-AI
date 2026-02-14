@@ -30,12 +30,15 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
 
     async def _broadcast_trace(self, trace: Trace) -> None:
         """Helper to broadcast a new trace."""
+        import datetime
+
+        created_at = trace.created_at or datetime.datetime.now(datetime.UTC)
         await self.broadcaster.broadcast(
             self.episode_id,
             {
                 "type": "new_trace",
                 "id": trace.id,
-                "created_at": trace.created_at.isoformat(),
+                "created_at": created_at.isoformat(),
                 "trace_type": trace.trace_type,
                 "name": trace.name,
                 "content": trace.content,

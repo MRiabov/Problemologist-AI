@@ -14,12 +14,15 @@ logger = get_logger(__name__)
 def create_agent_graph(
     agent_name: str = "engineer_coder",
     trace_id: str | None = None,
+    session_id: str | None = None,
 ):
     """
     Factory to create/return the appropriate LangGraph based on agent_name.
     Migrated from deepagents to LangGraph.
     """
-    langfuse_callback = get_langfuse_callback(trace_id=trace_id, name=agent_name)
+    langfuse_callback = get_langfuse_callback(
+        trace_id=trace_id, name=agent_name, session_id=session_id
+    )
 
     # In the new LangGraph-based architecture, we generally use unified graphs.
     # We map the legacy agent names to the new graphs.

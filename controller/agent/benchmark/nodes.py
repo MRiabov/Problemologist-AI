@@ -69,7 +69,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
         # Langfuse tracing
         langfuse_callback = get_langfuse_callback(
-            trace_id=session_id, name="benchmark_planner"
+            name="benchmark_planner", session_id=session_id
         )
         # Database tracing for real-time tool tracking in UI
         db_callback = DatabaseCallbackHandler(episode_id=session_id)
@@ -220,7 +220,7 @@ Validation Logs:
 
         # Langfuse tracing
         langfuse_callback = get_langfuse_callback(
-            trace_id=session_id, name="benchmark_coder"
+            name="benchmark_coder", session_id=session_id
         )
         # Database tracing for real-time tool tracking in UI
         db_callback = DatabaseCallbackHandler(episode_id=session_id)
@@ -313,13 +313,17 @@ Validation Logs:
                     else:
                         # Download Renders
                         render_paths = (
-                            sim_res.artifacts.get("render_paths", []) if sim_res.artifacts else []
+                            sim_res.artifacts.get("render_paths", [])
+                            if sim_res.artifacts
+                            else []
                         )
 
                         async def _download_render(hc: httpx.AsyncClient, p: str):
                             url = f"{worker_url}/assets/{p.lstrip('/')}"
                             try:
-                                resp = await hc.get(url, headers={"X-Session-ID": session_id})
+                                resp = await hc.get(
+                                    url, headers={"X-Session-ID": session_id}
+                                )
                                 if resp.status_code == 200:
                                     return resp.content
                             except Exception:
@@ -343,8 +347,6 @@ Validation Logs:
     return state
 
 
-
-
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     COTS Search node for benchmark generation.
@@ -358,6 +360,7 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         )
 
         from shared.cots.agent import search_cots_catalog
+
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
         tools = [search_cots_catalog]
         agent = create_react_agent(llm, tools)
@@ -432,10 +435,16 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
                 violations.append(f"Attempted to write unauthorized path: {path}")
                 return "Error: Unauthorized path."
             success = await middleware.write_file(path, content)
-            return "Review written successfully." if success else "Error writing review."
+            return (
+                "Review written successfully." if success else "Error writing review."
+            )
 
         # Keep only safe tools
-        safe_tools = [t for t in all_tools if t.name not in ("write_file", "edit_file", "submit_for_review")]
+        safe_tools = [
+            t
+            for t in all_tools
+            if t.name not in ("write_file", "edit_file", "submit_for_review")
+        ]
         safe_tools.append(write_review_file)
 
         # 4. Prepare system prompt
@@ -464,7 +473,7 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
 
         # 5. Setup Agent
         langfuse_callback = get_langfuse_callback(
-            trace_id=session_id, name="benchmark_reviewer"
+            name="benchmark_reviewer", session_id=session_id
         )
         db_callback = DatabaseCallbackHandler(episode_id=session_id)
 
@@ -525,7 +534,9 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         # 7. Check violations and parse results
         if violations:
             logger.error("reviewer_security_violations", violations=violations)
-            state["review_feedback"] = f"Reviewer security violation: {', '.join(violations)}"
+            state["review_feedback"] = (
+                f"Reviewer security violation: {', '.join(violations)}"
+            )
             return state
 
         # Parse review from worker
@@ -544,6 +555,7 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
                 if frontmatter_match:
                     from pydantic import ValidationError
                     from shared.models.schemas import ReviewFrontmatter
+
                     try:
                         raw_frontmatter = yaml.safe_load(frontmatter_match.group(1))
                         frontmatter = ReviewFrontmatter(**raw_frontmatter)
@@ -557,7 +569,9 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
                     except ValidationError as e:
                         state["review_feedback"] = f"Invalid review frontmatter: {e}"
                 else:
-                    state["review_feedback"] = "Error: Missing YAML frontmatter in review file."
+                    state["review_feedback"] = (
+                        "Error: Missing YAML frontmatter in review file."
+                    )
             else:
                 state["review_feedback"] = "Error: Review file not created by agent."
         except Exception as e:
