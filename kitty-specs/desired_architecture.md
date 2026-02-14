@@ -2261,11 +2261,13 @@ Review and approve the benchmark implementation steps.
 
 ##### Code/text linting
 
-After all, we serve code or markdown to the user. Lint them accordingly.
+The user will review code or markdown to the user that we generate. Lint them properly, and with colors. e.g. for markdown, color the headings, for python color functions, etc.
 
 ##### Proper icons
 
 All files in code should have proper, colorful icons. Python icon for python files, yaml for aml files, etc.
+
+When files are edited in the chat UI, the files have icons too.
 
 ### Config
 
