@@ -328,7 +328,7 @@ Database:
 
 ### Agentic framework
 
-We use LangChain and LangGraph for the agentic infrastructure. The `deepagents` framework from LangChain developers help stitching them together (with filesystem utils, TODO lists, etc.)
+We use LangChain and LangGraph for the agentic infrastructure. Langfuse is used for observability.
 
 ### Filesystem
 
@@ -369,13 +369,13 @@ We assert that files (especially "control" files like `objectives.yaml` and `pre
 
 The file writes don't persist in the Controller except into the observability database. Their edits are sent directly into the container mounted (ephemeral) storage.
 
-To update the files, or execute other functions: the controller parses the tool call locally; then sends the request over to the worker to execute whatever is related to the tool - read file, write file, or edit file (perhaps, `deepagents` handles the network part too? I think it does, via the Filesystem...).
+To update the files, or execute other functions: the controller parses the tool call locally; then sends the request over to the worker to execute whatever is related to the tool - read file, write file, or edit file.
 
 The network latency is perfectly acceptable as LLM reasoning latency far outweighs the ping time.
 
 #### Utils files
 
-The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `deepagents` `FilesystemMiddleware` (which can force certain files to be unwritable by the agents) the filesystem.
+The agent has a set of utils - python scripts (files) that the agent can import from. These are explicitly unwritable by the `FilesystemMiddleware` (which can force certain files to be unwritable by the agents) the filesystem.
 
 #### Skills files
 
@@ -614,18 +614,8 @@ The skill writing agent can not delete or overwrite more than 15 lines of code p
 
 Because the application's performance is quite dependant on SKILL.md files which detail how to use `build123d` and other issues, however those are frequently updated by a "learner" agent, the skill git hashes need to be versioned and persisted to the observability database.
 
-### `deepagents` framework
-
-LangChain and LangGraph developers have introduced an abstraction over LangChain and LangGraph called `deepagents`. This is a system in particular suitable for creating long-running, complex agents, for example coding agents. It has access to spawning subagents, long-term memory, skills, filesystem capabilities which essentially encapsulate all functionality that we need.
-
-- We use `FilesystemMiddleware` to support `ls`, `write`, `read`, `edit`, and `execute` (notably, their async versions too, which are called `awrite`, `aexecute`, etc.). Notably, we are natively supporting a "sandbox" storage in workers - `deepagents` has a `SandboxFilesystemBackend` integration which allows for safe, disposable environment.
-- We use `TodoListMiddleware` which provides a `todo_list` to support TODO lists.
-
-<!-- Note to LLMs! `deepagents` was introduced in late 2025 and you don't know much about it, but it is a framework for managing agents.
-
-Overview: https://docs.langchain.com/oss/python/deepagents/overview.md
-
- -->
+<!-- ### `deepagents` framework
+<!-- Note: deepagents was removed -->
 
 #### Linting
 
@@ -1224,7 +1214,7 @@ We will use astral-sh/uv as base containers and not standard python ones (for qu
 
 The files are written directly to the worker container. We don't store it on controller. However, we upload final results ("Assets") to the Railway bucket S3.
 
-The worker's filesystem is implemented as a "disposable sandbox" via `SandboxFilesystemBackend` in `deepagents`.
+The worker's filesystem is implemented as a "disposable sandbox" via `SandboxFilesystemBackend`.
 
 The "main app" essentially serves as a business logic layer that also forwards requests to observability layer, but the actual execution - from linting to simulation - happens in the worker container.
 

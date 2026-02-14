@@ -16,7 +16,13 @@ from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
 
 from .models import GenerationSession, SessionStatus
-from .nodes import coder_node, planner_node, reviewer_node, validator_node
+from .nodes import (
+    coder_node,
+    planner_node,
+    reviewer_node,
+    cots_search_node,
+    skills_node,
+)
 from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
@@ -32,34 +38,36 @@ def define_graph():
     # Add nodes
     workflow.add_node("planner", planner_node)
     workflow.add_node("coder", coder_node)
-    workflow.add_node("validator", validator_node)
     workflow.add_node("reviewer", reviewer_node)
+    workflow.add_node("cots_search", cots_search_node)
+    workflow.add_node("skills", skills_node)
 
     # Define transitions
     workflow.add_edge(START, "planner")
     workflow.add_edge("planner", "coder")
-    workflow.add_edge("coder", "validator")
 
-    # Conditional edges
-    def after_validator(state: BenchmarkGeneratorState) -> Literal["coder", "reviewer"]:
-        if state.get("simulation_result") and state["simulation_result"]["valid"]:
-            return "reviewer"
-        return "coder"
+    # In benchmark coder also does validation (it was coder -> validator -> reviewer)
+    # We'll merge validator into coder or make it a helper called by coder.
+    # The user wanted 5 nodes.
+    workflow.add_edge("coder", "reviewer")
 
-    workflow.add_conditional_edges(
-        "validator", after_validator, {"coder": "coder", "reviewer": "reviewer"}
-    )
-
-    def after_reviewer(state: BenchmarkGeneratorState) -> Literal["coder", "END"]:
+    # Conditional edges for reviewer
+    def after_reviewer(state: BenchmarkGeneratorState) -> Literal["coder", "skills"]:
         feedback = state.get("review_feedback", "")
         if feedback == "Approved":
-            return "END"
+            return "skills"
         # Optional: Add retry limit check here
         return "coder"
 
     workflow.add_conditional_edges(
-        "reviewer", after_reviewer, {"coder": "coder", "END": END}
+        "reviewer", after_reviewer, {"coder": "coder", "skills": "skills"}
     )
+
+    workflow.add_edge("skills", END)
+
+    # cots_search can be reached from planner or coder if we add those edges
+    # For now keep it simple and just have them in the graph.
+    workflow.add_edge("cots_search", "planner")
 
     return workflow.compile()
 
@@ -135,16 +143,6 @@ async def run_generation_session(
                     new_status = SessionStatus.executing
                 elif node_name == "coder":
                     new_status = SessionStatus.validating
-                elif node_name == "validator":
-                    # If valid, it moves to reviewer (still validating/reviewing)
-                    # If invalid, moves back to coder (executing)
-                    if (
-                        state.get("simulation_result")
-                        and state["simulation_result"]["valid"]
-                    ):
-                        new_status = SessionStatus.validating
-                    else:
-                        new_status = SessionStatus.executing
                 elif node_name == "reviewer":
                     feedback = state.get("review_feedback", "")
                     if feedback == "Approved":
@@ -153,6 +151,9 @@ async def run_generation_session(
                         new_status = (
                             SessionStatus.rejected
                         )  # Temporarily rejected, will retry
+                elif node_name == "skills":
+                    # After skills node, we should be done
+                    pass
 
                 # Update internal session status
                 final_state["session"].status = new_status
@@ -160,12 +161,6 @@ async def run_generation_session(
                 # Update DB (Episode)
                 async with session_factory() as db:
                     episode_status = map_status(new_status)
-
-                    # We use Episode instead of GenerationSessionModel so it's
-                    # visible in UI
-                    # Since we are the only writer to this episode, overwriting is fine.
-                    # Actually, we need to MERGE metadata_vars to avoid
-                    # losing objectives.
 
                     stmt_select = select(Episode).where(Episode.id == session_id)
                     res = await db.execute(stmt_select)
@@ -227,9 +222,6 @@ async def run_generation_session(
                 sim_result = final_state.get("simulation_result", {})
                 images = sim_result.get("render_data", [])
 
-                # If render_data is None or empty but paths exist (e.g. legacy/error),
-                # we depend on validator_node to have populated it.
-                # If images is None, initialize to empty list
                 if images is None:
                     images = []
 
