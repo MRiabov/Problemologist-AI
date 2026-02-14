@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, type Episode, type BenchmarkObjectives } from '../api/client';
+import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, continueEpisode, type Episode, type BenchmarkObjectives } from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
 
 export interface ContextItem {
@@ -21,6 +21,7 @@ interface EpisodeContextType {
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
+  continueAgent: (id: string, message: string) => Promise<void>;
   confirmBenchmark: (id: string) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
@@ -130,7 +131,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to run agent", e);
       setRunning(false);
     }
-  }, [isCreationMode, refreshEpisodes]);
+  }, [isCreationMode, refreshEpisodes, isBenchmarkCreation]);
+
+  const continueAgent = useCallback(async (id: string, message: string) => {
+    setRunning(true);
+    try {
+      await continueEpisode(id, message);
+      // Wait a bit then refresh to show new trace if polling didn't catch it
+      await refreshEpisodes();
+    } catch (e) {
+      console.error("Failed to continue agent", e);
+      setRunning(false);
+    }
+  }, [refreshEpisodes]);
 
   const confirmBenchmark = useCallback(async (id: string) => {
     setRunning(true);
@@ -205,6 +218,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       refreshEpisodes,
       selectEpisode,
       startAgent,
+      continueAgent,
       confirmBenchmark,
       interruptAgent,
       setRunning,

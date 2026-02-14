@@ -75,6 +75,7 @@ export default function ChatWindow({
   const { 
       isCreationMode, 
       startAgent, 
+      continueAgent,
       confirmBenchmark,
       interruptAgent, 
       selectedEpisode, 
@@ -114,7 +115,11 @@ export default function ChatWindow({
         ...(selectedContext.length > 0 ? { context_items: selectedContext } : {})
       };
       
-      startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
+      if (selectedEpisode && !isCreationMode) {
+        continueAgent(selectedEpisode.id, prompt);
+      } else {
+        startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
+      }
       
       setPrompt("");
       setSelectedBenchmarkId("");
