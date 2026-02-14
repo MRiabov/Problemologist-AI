@@ -9,6 +9,7 @@ from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import CostWeightDeltaEvent, RunCommandToolEvent
 from shared.type_checking import type_check
 
+from contextlib import suppress
 from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
@@ -82,6 +83,31 @@ class CoderNode:
                     )
 
                 if exit_code == 0:
+                    # T015: Validation Gate after successful execution
+                    from worker.utils.file_validation import validate_node_output
+
+                    # Read current files from worker to validate
+                    # For coder, we check plan, todo, and objectives
+                    all_files = {}
+                    for f in ["plan.md", "todo.md", "objectives.yaml"]:
+                        with suppress(Exception):
+                            all_files[f] = await self.fs.read_file(f)
+
+                    is_valid, validation_errors = validate_node_output(
+                        "coder", all_files
+                    )
+                    if not is_valid:
+                        error_msg = "Coder produced invalid output:\n" + "\n".join(
+                            [f"- {e}" for e in validation_errors]
+                        )
+                        # We treat this as a failure that needs a retry/fix
+                        last_error = error_msg
+                        journal_entry += (
+                            f"\nValidation failed after executive: {validation_errors}"
+                        )
+                        retry_count += 1
+                        continue
+
                     journal_entry += f"\nSuccessfully executed step: {current_step}"
                     # Mark TODO as done (simple string replacement for prototype)
                     new_todo = todo.replace(

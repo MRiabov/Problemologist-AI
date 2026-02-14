@@ -11,7 +11,7 @@ from shared.type_checking import type_check
 
 from ..config import settings
 from ..prompt_manager import PromptManager
-from ..state import AgentState
+from ..state import AgentState, AgentStatus
 
 
 @type_check
@@ -59,30 +59,40 @@ async def planner_node(state: AgentState) -> AgentState:
     )
     fs = RemoteFilesystemMiddleware(worker_client)
 
+    # Validation Gate
+    from worker.utils.file_validation import validate_node_output
+
+    is_valid, validation_errors = validate_node_output(
+        "planner", {"plan.md": plan_content, "todo.md": todo_content}
+    )
+
+    if not is_valid:
+        feedback = "Planner output validation failed:\n" + "\n".join(
+            [f"- {e}" for e in validation_errors]
+        )
+        return state.model_copy(
+            update={
+                "status": AgentStatus.PLAN_REJECTED,
+                "feedback": feedback,
+                "journal": state.journal
+                + f"\n[Planner] Validation failed: {validation_errors}",
+            }
+        )
+
     await fs.write_file("plan.md", plan_content)
     await fs.write_file("todo.md", todo_content)
 
     # Emit SubmissionValidationEvent
-    artifacts_present = []
-    errors = []
-    if plan_content.strip():
-        artifacts_present.append("plan.md")
-    else:
-        errors.append("plan.md is empty")
-
-    if todo_content.strip():
-        artifacts_present.append("todo.md")
-    else:
-        errors.append("todo.md is empty")
+    artifacts_present = ["plan.md", "todo.md"]
 
     await record_worker_events(
         episode_id=session_id,
         events=[
             SubmissionValidationEvent(
                 artifacts_present=artifacts_present,
-                verification_passed=len(errors) == 0,
+                verification_passed=True,
                 reasoning_trace_quality=1.0,  # Placeholder
-                errors=errors,
+                errors=[],
             )
         ],
     )
@@ -91,5 +101,6 @@ async def planner_node(state: AgentState) -> AgentState:
         update={
             "plan": plan_content,
             "todo": todo_content,
+            "status": AgentStatus.EXECUTING,
         }
     )

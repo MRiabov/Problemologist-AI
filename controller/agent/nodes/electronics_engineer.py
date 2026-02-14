@@ -8,6 +8,7 @@ from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import ElecAgentHandoverEvent, RunCommandToolEvent
 from shared.type_checking import type_check
 
+from contextlib import suppress
 from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
@@ -59,9 +60,10 @@ class ElectronicsEngineerNode:
         assembly_context = "No assembly context available."
         try:
             # Check preliminary_cost_estimation.yaml (Assembly Definition)
-            assembly_context = await self.fs.read_file(
-                "preliminary_cost_estimation.yaml"
-            )
+            with suppress(Exception):
+                assembly_context = await self.fs.read_file(
+                    "preliminary_cost_estimation.yaml"
+                )
         except Exception:
             pass
 
@@ -101,7 +103,30 @@ class ElectronicsEngineerNode:
                 )
 
             if exit_code == 0:
-                journal_entry += "\nCircuit and wiring implementation successful."
+                # T015: Validation Gate after successful execution
+                from worker.utils.file_validation import validate_node_output
+
+                all_files = {}
+                for f in ["plan.md", "todo.md"]:
+                    with suppress(Exception):
+                        all_files[f] = await self.fs.read_file(f)
+
+                is_valid, validation_errors = validate_node_output(
+                    "electronics_engineer", all_files
+                )
+                if is_valid:
+                    journal_entry += "\nCircuit and wiring implementation successful."
+                else:
+                    journal_entry += (
+                        f"\nCircuit implementation produced invalid output: "
+                        f"{validation_errors}"
+                    )
+                    logger.warning(
+                        "electronics_engineer_validation_failed",
+                        errors=validation_errors,
+                    )
+                    # Note: Current implementation doesn't have a retry loop,
+                    # but we mark the failure in the journal.
             else:
                 journal_entry += f"\nCircuit implementation failed: {stderr or stdout}"
                 logger.warning("electronics_engineer_failed", error=stderr or stdout)

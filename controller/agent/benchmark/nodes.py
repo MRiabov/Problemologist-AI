@@ -124,6 +124,22 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                     session_id=session_id,
                 )
 
+        # Validation Gate for objectives.yaml if it was updated
+        if custom_objectives:
+            from worker.utils.file_validation import validate_node_output
+
+            try:
+                obj_content = await client.read_file("objectives.yaml")
+                is_valid, errors = validate_node_output(
+                    "planner", {"objectives.yaml": obj_content}
+                )
+                if not is_valid:
+                    logger.warning("benchmark_planner_validation_failed", errors=errors)
+                    # We don't fail the whole node yet, but we add to state
+                    state["plan"]["validation_errors"] = errors
+            except Exception:
+                pass
+
         try:
             # We use the LLM directly as the planner doesn't currently need complex tools
             messages = [
@@ -279,6 +295,20 @@ Validation Logs:
             logger.warning("coder_agent_failed_to_read_script", error=str(e))
 
         state["messages"] = messages
+
+        # T015: Validation Gate for benchmark script
+        if state.get("current_script"):
+            from worker.utils.file_validation import validate_node_output
+
+            is_valid, errors = validate_node_output(
+                "coder", {"script.py": state["current_script"]}
+            )
+            if not is_valid:
+                logger.warning("benchmark_coder_validation_failed", errors=errors)
+                # Add validation errors to logs for the next loop
+                state["session"].validation_logs.append(
+                    f"Output validation failed: {errors}"
+                )
 
         logger.info(
             "coder_node_complete", script_length=len(state.get("current_script", ""))
