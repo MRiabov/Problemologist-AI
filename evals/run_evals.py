@@ -43,7 +43,9 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
         await backend.awrite("test_connect.txt", "hello")
         print(f"Connectivity test passed for {agent_name}")
 
-        agent, _ = create_agent_graph(backend, agent_name=agent_name, trace_id=trace_id)
+        agent, _ = create_agent_graph(
+            agent_name=agent_name, trace_id=trace_id, session_id=session_id
+        )
 
         await agent.ainvoke(
             {
