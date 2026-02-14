@@ -11,8 +11,9 @@ from controller.agent.benchmark.state import BenchmarkGeneratorState
 async def test_planner_node_prompt_construction():
     # Setup
     mock_session = MagicMock(spec=GenerationSession)
-    mock_session.session_id = "test-session"
+    mock_session.session_id = "00000000-0000-0000-0000-000000000000"
     mock_session.prompt = "A red ball bouncing"
+    mock_session.custom_objectives = {}
 
     state = BenchmarkGeneratorState(
         session=mock_session,
@@ -61,9 +62,10 @@ async def test_planner_node_prompt_construction():
 async def test_coder_node_prompt_construction():
     # Setup
     mock_session = MagicMock(spec=GenerationSession)
-    mock_session.session_id = "test-session"
+    mock_session.session_id = "00000000-0000-0000-0000-000000000000"
     mock_session.prompt = "A blue cube"
     mock_session.validation_logs = []
+    mock_session.custom_objectives = {}
 
     state = BenchmarkGeneratorState(
         session=mock_session,

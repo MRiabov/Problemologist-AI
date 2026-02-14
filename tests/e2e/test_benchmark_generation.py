@@ -59,7 +59,10 @@ async def test_benchmark_generation_e2e():
     # Patch dependencies
     # Note: We patch where they are IMPORTED in graph.py and storage.py
     with (
-        patch("controller.agent.benchmark.graph.get_db", side_effect=mock_get_db_gen),
+        patch(
+            "controller.agent.benchmark.graph.get_sessionmaker",
+            return_value=mock_get_db_gen,
+        ),
         patch("controller.agent.benchmark.storage.boto3", mock_boto),
         patch("controller.agent.benchmark.graph.define_graph", return_value=mock_app),
         patch(

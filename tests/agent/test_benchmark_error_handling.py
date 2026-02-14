@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from controller.agent.benchmark.schema import GenerationSessionModel
+from controller.persistence.models import GenerationSession
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.agent.benchmark.models import SessionStatus
@@ -44,7 +44,19 @@ async def test_run_generation_session_exception_handling():
 
     # Mock database session and update statement
     mock_db = AsyncMock()
-    mock_session_factory = MagicMock(return_value=mock_db)
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__.return_value = mock_db
+
+    # Mock Episode object
+    mock_episode = MagicMock()
+    mock_episode.metadata_vars = {}
+    mock_episode.status = "running"
+
+    # Mock db.get for the exception handler
+    mock_db.get = AsyncMock(return_value=mock_episode)
+
+    async def mock_execute_graph_streaming(*args, **kwargs):
+        raise RuntimeError("LLM Failure: Out of credits")
 
     with (
         patch("controller.agent.benchmark.graph.define_graph", return_value=mock_app),
@@ -52,23 +64,32 @@ async def test_run_generation_session_exception_handling():
             "controller.agent.benchmark.graph.get_sessionmaker",
             return_value=mock_session_factory,
         ),
-        patch("controller.agent.benchmark.graph.update") as mock_update,
+        patch(
+            "controller.agent.benchmark.graph._execute_graph_streaming",
+            side_effect=mock_execute_graph_streaming,
+        ),
     ):
-        mock_update_obj = MagicMock()
-        mock_update.return_value = mock_update_obj
-        mock_update_obj.where.return_value = mock_update_obj
-        mock_update_obj.values.return_value = mock_update_obj
-
         # Execute the session
         final_state = await run_generation_session(prompt, session_id=session_id)
 
-        # Verify status update to failed happened in DB
+        # Verify status update to failed happened in state
         assert final_state["session"].status == SessionStatus.failed
 
-        # Check that update was called with status=failed
-        # The second call in the loop (Exception handler) should set it to failed
-        mock_update_obj.values.assert_any_call(
-            status=SessionStatus.failed,
-            validation_logs=GenerationSessionModel.validation_logs
-            + ["Error: LLM Failure: Out of credits"],
-        )
+        # Check that DB was updated
+        mock_db.get.assert_called()
+        assert mock_episode.status == "failed"
+        assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
+        assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
+        mock_db.commit.assert_called()
+        # Execute the session
+        final_state = await run_generation_session(prompt, session_id=session_id)
+
+        # Verify status update to failed happened in state
+        assert final_state["session"].status == SessionStatus.failed
+
+        # Check that DB was updated
+        mock_db.get.assert_called()
+        assert mock_episode.status == "failed"
+        assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
+        assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
+        mock_db.commit.assert_called()

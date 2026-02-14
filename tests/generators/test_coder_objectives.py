@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 
 from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.nodes import coder_node
