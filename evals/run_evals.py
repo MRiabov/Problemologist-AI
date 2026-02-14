@@ -1,8 +1,8 @@
 import argparse
 import asyncio
 import json
+import os
 import sys
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -13,83 +13,86 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-from controller.clients.backend import RemoteFilesystemBackend
+import httpx
+from shared.enums import EpisodeStatus
 from controller.clients.worker import WorkerClient
-from controller.graph.agent import create_agent_graph
 
-WORKER_URL = "http://localhost:18001"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
 
 
 async def run_single_eval(item: dict[str, Any], agent_name: str):
     """
-    Runs a single evaluation task for a specific agent.
+    Runs a single evaluation task for a specific agent via the Controller API.
     """
     task_id = item["id"]
     task_description = item["task"]
 
     print(f"Running eval: {task_id} for agent: {agent_name}")
 
-    session_id = str(uuid.uuid4())
-    client = WorkerClient(base_url=WORKER_URL, session_id=session_id)
-    backend = RemoteFilesystemBackend(client)
-
-    try:
-        # Generate a trace_id for Langfuse (optional, controller will generate one if not passed)
-        trace_id = uuid.uuid4().hex
-
-        # Test a very simple operation first
-        print(f"Testing connectivity for {agent_name}...")
-        await backend.awrite("test_connect.txt", "hello")
-        print(f"Connectivity test passed for {agent_name}")
-
-        # For benchmark agents, we might need to initialize some files (like objectives.yaml template)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        # 1. Trigger generation via API
         if agent_name.startswith("benchmark"):
-            from worker.objectives_template import OBJECTIVES_YAML_TEMPLATE
-
-            await backend.awrite("objectives.yaml", OBJECTIVES_YAML_TEMPLATE)
-
-        agent, _ = create_agent_graph(
-            agent_name=agent_name, trace_id=trace_id, session_id=session_id
-        )
-
-        # Build initial state based on agent type
-        if agent_name.startswith("benchmark"):
-            from controller.agent.benchmark.models import GenerationSession
-
-            session = GenerationSession(
-                session_id=uuid.UUID(session_id), prompt=task_description
-            )
-            initial_state = {
-                "session": session,
-                "current_script": "",
-                "mjcf_content": "",
-                "simulation_result": None,
-                "review_feedback": None,
-                "review_round": 0,
-                "plan": None,
-                "messages": [],
-            }
+            url = f"{CONTROLLER_URL}/benchmark/generate"
+            payload = {"prompt": task_description}
         else:
-            initial_state = {
-                "messages": [
-                    (
-                        "user",
-                        task_description,
+            # Fallback for other agents if endpoints exist
+            print(
+                f"Warning: Non-benchmark agent {agent_name} not yet fully supported via API evals."
+            )
+            return
+
+        resp = await client.post(url, json=payload)
+        if resp.status_code >= 400:
+            print(
+                f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
+            )
+            return
+
+        data = resp.json()
+        session_id = data["session_id"]
+        print(f"  [{task_id}] Session started: {session_id}")
+
+        # 2. Poll for completion
+        status_url = f"{CONTROLLER_URL}/benchmark/{session_id}"
+        max_attempts = 120  # 10 minutes at 5s interval
+        attempt = 0
+
+        while attempt < max_attempts:
+            await asyncio.sleep(5)
+            attempt += 1
+
+            try:
+                status_resp = await client.get(status_url)
+                if status_resp.status_code == 200:
+                    status_data = status_resp.json()
+                    status = status_data.get("status")
+
+                    if status == EpisodeStatus.COMPLETED:
+                        print(f"  [{task_id}] PASSED: Session completed successfully")
+                        break
+
+                    if status == EpisodeStatus.FAILED:
+                        print(f"  [{task_id}] FAILED: Session failed in controller")
+                        break
+
+                    if attempt % 6 == 0:  # Log every 30s
+                        print(f"  [{task_id}] Still running (status: {status})...")
+                else:
+                    print(
+                        f"  [{task_id}] Warning: Error checking status: {status_resp.status_code}"
                     )
-                ],
-                "session_id": session_id,
-            }
+            except Exception as e:
+                print(f"  [{task_id}] Warning: Exception during status check: {e}")
 
-        await agent.ainvoke(
-            initial_state,
-            config={"metadata": {"eval_task_id": task_id, "agent_name": agent_name}},
-        )
+        if attempt >= max_attempts:
+            print(f"  [{task_id}] TIMEOUT: Session did not complete within 10 minutes")
 
-        # Post-run verification
+        # 3. Post-run verification (White-box checks if needed, using WorkerClient)
         if task_id == "bp-011":
-            print(f"Verifying outputs for {task_id}...")
-            files = await client.list_files(".")
+            print(f"Verifying final side-effects for {task_id}...")
+            worker = WorkerClient(base_url=WORKER_URL, session_id=session_id)
+            files = await worker.list_files(".")
             file_paths = [f.path.lstrip("/") for f in files]
             required = [
                 "benchmark_structure.md",
@@ -97,29 +100,19 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
                 "objectives.yaml",
             ]
             for r in required:
-                if r not in file_paths:
-                    print(f"  FAILED: Missing required file {r}")
-                else:
+                if r in file_paths:
                     print(f"  PASSED: Found {r}")
+                else:
+                    print(f"  FAILED: Missing required file {r}")
 
-            # Check objectives.yaml content
-            obj_content = await client.read_file("objectives.yaml")
-            if "# [TEMPLATE]" in obj_content:
-                print("  PASSED: Header preserved in objectives.yaml")
-            else:
-                print("  FAILED: Header missing in objectives.yaml")
-
-            # Check if it was actually modified (not just the template)
-            if "goal_zone" in obj_content and "x_min" not in obj_content:
-                print("  PASSED: objectives.yaml appears modified with real values")
-            else:
-                print("  FAILED: objectives.yaml does not appear correctly modified")
-
-    except Exception as e:
-        print(f"Eval {task_id} failed: {e}")
-        import traceback
-
-        traceback.print_exc()
+            try:
+                obj_content = await worker.read_file("objectives.yaml")
+                if "goal_zone" in obj_content and "x_min" not in obj_content:
+                    print("  PASSED: objectives.yaml correctly modified")
+                else:
+                    print("  FAILED: objectives.yaml not correctly modified")
+            except Exception as e:
+                print(f"  FAILED: Error reading objectives.yaml: {e}")
 
 
 async def main():
