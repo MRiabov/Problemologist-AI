@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEpisodes } from '../../context/EpisodeContext';
 import { useConnection } from '../../context/ConnectionContext';
 import { 
@@ -20,7 +20,7 @@ import ModelViewer from '../visualization/ModelViewer';
 interface UnifiedGeneratorViewProps {
   title: string;
   subtitle: string;
-  headerIcon: React.ElementType;
+  headerIcon: React.ComponentType<{ className?: string }>;
   storageKeys: {
     cols: string;
     rows: string;
@@ -143,9 +143,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
         >
           {/* Chat Column */}
           <ResizablePanel 
-            defaultSize={getSavedLayout(storageKeys.cols, "25%")} 
+            defaultSize={getSavedLayout(storageKeys.cols, "33.3%")} 
             minSize="20%" 
-            maxSize="25%"
+            maxSize="50%"
             collapsible={true}
             className="overflow-hidden"
           >

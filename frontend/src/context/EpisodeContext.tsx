@@ -2,6 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, type Episode, type BenchmarkObjectives } from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
 
+export interface ContextItem {
+  id: string;
+  type: 'code' | 'cad' | 'circuit';
+  label: string;
+  metadata?: Record<string, any>;
+}
+
 interface EpisodeContextType {
   episodes: Episode[];
   selectedEpisode: Episode | null;
@@ -9,6 +16,7 @@ interface EpisodeContextType {
   running: boolean;
   isCreationMode: boolean;
   activeArtifactId: string | null;
+  selectedContext: ContextItem[];
   setActiveArtifactId: (id: string | null) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
@@ -19,6 +27,9 @@ interface EpisodeContextType {
   setRunning: (running: boolean) => void;
   createNewBenchmark: (isBenchmark?: boolean) => void;
   clearSelection: () => void;
+  addToContext: (item: ContextItem) => void;
+  removeFromContext: (id: string) => void;
+  clearContext: () => void;
 }
 
 const EpisodeContext = createContext<EpisodeContextType | undefined>(undefined);
@@ -132,6 +143,23 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshEpisodes]);
 
+  const [selectedContext, setSelectedContext] = useState<ContextItem[]>([]);
+
+  const addToContext = useCallback((item: ContextItem) => {
+    setSelectedContext((prev) => {
+      if (prev.find(i => i.id === item.id)) return prev;
+      return [...prev, item];
+    });
+  }, []);
+
+  const removeFromContext = useCallback((id: string) => {
+    setSelectedContext((prev) => prev.filter(i => i.id !== id));
+  }, []);
+
+  const clearContext = useCallback(() => {
+    setSelectedContext([]);
+  }, []);
+
   const interruptAgent = useCallback(async (id: string) => {
     try {
         await import('../api/client').then(m => m.interruptEpisode(id));
@@ -184,7 +212,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       clearSelection,
       activeArtifactId,
       setActiveArtifactId,
-      updateObjectives
+      updateObjectives,
+      selectedContext,
+      addToContext,
+      removeFromContext,
+      clearContext
     }}>
       {children}
     </EpisodeContext.Provider>

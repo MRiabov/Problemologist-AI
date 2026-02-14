@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useEpisodes } from '../context/EpisodeContext';
 import { Cpu } from "lucide-react";
 import UnifiedGeneratorView from '../components/workspace/UnifiedGeneratorView';
 

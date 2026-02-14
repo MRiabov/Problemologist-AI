@@ -34,7 +34,7 @@ export default function ArtifactView({
   assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const { selectedEpisode, activeArtifactId, setActiveArtifactId } = useEpisodes();
+  const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext } = useEpisodes();
   const [isTreeOpen, setIsTreeOpen] = useState(true);
 
   const getAssetUrl = (assetPath: string | undefined) => {
@@ -175,8 +175,23 @@ export default function ArtifactView({
                                 fontSize: '13px',
                                 lineHeight: '1.6'
                             }}
+                            showLineNumbers={true}
                             wrapLines={true}
                             wrapLongLines={true}
+                            lineProps={(lineNumber) => ({
+                                style: { display: 'block', cursor: 'pointer' },
+                                onClick: () => {
+                                    if (activeAsset) {
+                                        const assetPath = (activeAsset as any).s3_path || activeAsset.name;
+                                        addToContext({
+                                            id: `code-${assetPath}-${lineNumber}`,
+                                            type: 'code',
+                                            label: `${assetPath.split('/').pop()}:${lineNumber}`,
+                                            metadata: { path: assetPath, line: lineNumber }
+                                        });
+                                    }
+                                }
+                            })}
                         >
                             {activeAsset.content}
                         </SyntaxHighlighter>
