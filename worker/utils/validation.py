@@ -1,3 +1,4 @@
+import json
 import os
 import yaml
 import logging
@@ -18,7 +19,7 @@ from shared.models.schemas import (
 )
 from shared.simulation.backends import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
-from worker.simulation.loop import SimulationLoop, StressSummary
+from worker.simulation.loop import SimulationLoop, StressSummary, FluidMetricResult
 
 from .rendering import prerender_24_views
 from .dfm import validate_and_price
@@ -35,7 +36,7 @@ class SimulationResult:
         render_paths: list[str] | None = None,
         mjcf_content: str | None = None,
         stress_summaries: list[StressSummary] | None = None,
-        fluid_metrics: list[Any] | None = None,
+        fluid_metrics: list[FluidMetricResult] | None = None,
         total_cost: float = 0.0,
         total_weight_g: float = 0.0,
         confidence: str = "high",
@@ -50,12 +51,72 @@ class SimulationResult:
         self.total_weight_g = total_weight_g
         self.confidence = confidence
 
+    def to_dict(self) -> dict:
+        return {
+            "success": self.success,
+            "summary": self.summary,
+            "render_paths": self.render_paths,
+            "mjcf_content": self.mjcf_content,
+            "stress_summaries": [s.model_dump() for s in self.stress_summaries],
+            "fluid_metrics": [f.model_dump() for f in self.fluid_metrics],
+            "total_cost": self.total_cost,
+            "total_weight_g": self.total_weight_g,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SimulationResult":
+        return cls(
+            success=data["success"],
+            summary=data["summary"],
+            render_paths=data.get("render_paths", []),
+            mjcf_content=data.get("mjcf_content"),
+            stress_summaries=[
+                StressSummary(**s) for s in data.get("stress_summaries", [])
+            ],
+            fluid_metrics=[
+                FluidMetricResult(**f) for f in data.get("fluid_metrics", [])
+            ],
+            total_cost=data.get("total_cost", 0.0),
+            total_weight_g=data.get("total_weight_g", 0.0),
+        )
+
+    def save(self, path: Path):
+        path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path: Path) -> "SimulationResult | None":
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return cls.from_dict(data)
+        except Exception as e:
+            logger.warning(
+                "failed_to_load_simulation_result", path=str(path), error=str(e)
+            )
+            return None
+
 
 LAST_SIMULATION_RESULT: SimulationResult | None = None
 
 
 def get_stress_report(part_label: str) -> dict | None:
     """Returns the current stress summary for a simulated FEM part."""
+    global LAST_SIMULATION_RESULT
+    if LAST_SIMULATION_RESULT is None:
+        # Try to load from disk
+        candidates = [Path("simulation_result.json")]
+        if os.getenv("RENDERS_DIR"):
+            candidates.append(
+                Path(os.getenv("RENDERS_DIR")).parent / "simulation_result.json"
+            )
+
+        for p in candidates:
+            res = SimulationResult.load(p)
+            if res:
+                LAST_SIMULATION_RESULT = res
+                break
+
     if LAST_SIMULATION_RESULT is None:
         logger.warning("get_stress_report_called_before_simulation")
         return None
@@ -74,6 +135,19 @@ def preview_stress(
     output_dir: Path | None = None,
 ) -> list[str]:
     """Renders the component with a von Mises stress heatmap overlay."""
+    global LAST_SIMULATION_RESULT
+    if LAST_SIMULATION_RESULT is None:
+        # Try to load from disk
+        candidates = [Path("simulation_result.json")]
+        working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+        candidates.append(working_dir / "simulation_result.json")
+
+        for p in candidates:
+            res = SimulationResult.load(p)
+            if res:
+                LAST_SIMULATION_RESULT = res
+                break
+
     if LAST_SIMULATION_RESULT is None:
         logger.warning("preview_stress_called_before_simulation")
         return []
@@ -306,6 +380,11 @@ def simulate(
             total_weight_g=weight,
             confidence=metrics.confidence,
         )
+        try:
+            LAST_SIMULATION_RESULT.save(working_dir / "simulation_result.json")
+        except Exception as e:
+            logger.warning("failed_to_save_simulation_result", error=str(e))
+
         return LAST_SIMULATION_RESULT
     except Exception as e:
         logger.error("simulation_error", error=str(e))
