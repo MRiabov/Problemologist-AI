@@ -103,12 +103,17 @@ async def health_check():
 async def run_agent(request: AgentRunRequest):
     # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()
+
+    # Ensure session_id is preserved in metadata for asset proxying
+    metadata = request.metadata_vars or {}
+    metadata["worker_session_id"] = request.session_id
+
     async with session_factory() as db:
         episode = Episode(
             id=uuid.uuid4(),
             task=request.task,
             status=EpisodeStatus.RUNNING,
-            metadata_vars=request.metadata_vars,
+            metadata_vars=metadata,
             skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)
