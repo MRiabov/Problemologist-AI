@@ -4,6 +4,26 @@ from typing import Any
 
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
 
+# NGSpice 42 compatibility monkeypatch
+# NGSpice 42 sends "Using SPARSE 1.3" to stderr, which PySpice treats as an error.
+_original_send_char = NgSpiceShared._send_char
+
+
+@staticmethod
+def _patched_send_char(message_c, ngspice_id, user_data):
+    from PySpice.Spice.NgSpice.Shared import ffi, ffi_string_utf8
+
+    self = ffi.from_handle(user_data)
+    message = ffi_string_utf8(message_c)
+    prefix, _, content = message.partition(" ")
+    if prefix == "stderr" and ("SPARSE" in content or content.startswith("Note:")):
+        self._stdout.append(content)
+        return 0
+    return _original_send_char(message_c, ngspice_id, user_data)
+
+
+NgSpiceShared._send_char = _patched_send_char
+
 # Configure PySpice to find ngspice library
 if not os.environ.get("PYSPICE_LIBRARY_PATH"):
     for path in [
@@ -29,75 +49,6 @@ def create_circuit(name: str) -> Circuit:
     return Circuit(name)
 
 
-def build_circuit_from_section(section: Any) -> Circuit:
-    """
-    Build a PySpice Circuit from an ElectronicsSection schema.
-
-    Args:
-        section: ElectronicsSection instance.
-
-    Returns:
-        A PySpice Circuit instance.
-    """
-    circuit = Circuit("Assembly Electronics")
-
-    # 1. Add PSU
-    # Assume PSU is connected between 'supply_v+' and '0'
-    circuit.V(
-        "supply", "supply_v+", circuit.gnd, float(section.power_supply.voltage_dc) @ u_V
-    )
-
-    # 2. Add Components
-    # We need to map component_id to spice models.
-    # For now, we use a simple resistor model for motors (stall resistance)
-    for comp in section.components:
-        if comp.type == "motor":
-            # Heuristic: resistance = rated_voltage / stall_current
-            v = comp.rated_voltage or section.power_supply.voltage_dc
-            i = comp.stall_current_a or 2.0
-            r = v / i
-            # Wires will connect to component_id.a and component_id.b
-            circuit.R(
-                comp.component_id,
-                f"{comp.component_id}_a",
-                f"{comp.component_id}_b",
-                r @ u_Ohm,
-            )
-
-    # 3. Add Wiring
-    # Wiring connects terminals. We treat each 'net' as a PySpice node.
-    # We'll use a simple Union-Find or similar to group connected terminals into nodes.
-
-    # For now, let's assume a simpler model where wires are direct connections (zero ohm)
-    # until we need wire resistance.
-    # We'll use the 'terminal' name as the node name if it's 'supply_v+' or '0'.
-    # Otherwise, we'll assign node names based on connections.
-
-    # Netlist mapping: (comp_id, terminal) -> node_name
-    term_to_node = {}
-
-    def get_node(comp_id, term_name):
-        if term_name in ["supply_v+", "0"]:
-            return term_name if term_name != "0" else circuit.gnd
-        # Standardize node names
-        # Motors have 'a' and 'b' terminals in our circuit.R above
-        if comp_id and term_name:
-            return f"{comp_id}_{term_name}"
-        return f"{comp_id}"
-
-    # Connect components to the netlist using the wires
-    for wire in section.wiring:
-        node_from = get_node(wire.from_terminal.component, wire.from_terminal.terminal)
-        node_to = get_node(wire.to_terminal.component, wire.to_terminal.terminal)
-
-        # In PySpice, a wire is a 0V voltage source or a very small resistor.
-        # To avoid singular matrix, we use a tiny resistor.
-        if node_from != node_to:
-            circuit.R(f"wire_{wire.wire_id}", node_from, node_to, 1e-6 @ u_Ohm)
-
-    return circuit
-
-
 def validate_circuit(
     circuit: Circuit, psu_config: PowerSupplyConfig | None = None
 ) -> CircuitValidationResult:
@@ -111,9 +62,14 @@ def validate_circuit(
         simulator = circuit.simulator()
         analysis = simulator.operating_point()
 
-        node_voltages = {str(node): float(node) for node in analysis.nodes.values()}
+        import numpy as np
+
+        node_voltages = {
+            str(node): float(np.array(node).item()) for node in analysis.nodes.values()
+        }
         branch_currents = {
-            str(branch): float(branch) for branch in analysis.branches.values()
+            str(branch): float(np.array(branch).item())
+            for branch in analysis.branches.values()
         }
 
         total_draw = 0.0

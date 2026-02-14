@@ -9,7 +9,7 @@ Implements runtime randomization verification per architecture spec:
 import logging
 from typing import Any
 
-import mujoco
+# import mujoco  # Moved to lazy imports
 import numpy as np
 from pydantic import BaseModel
 
@@ -33,11 +33,13 @@ class MultiRunResult(BaseModel):
 
 
 def apply_position_jitter(
-    data: mujoco.MjData,
+    data: Any,
     target_body_id: int,
     jitter_range: tuple[float, float, float],
     rng: np.random.Generator,
 ) -> None:
+    import mujoco
+
     """Apply random position jitter to a body.
 
     Args:
@@ -94,6 +96,8 @@ def verify_with_jitter(
         loop = SimulationLoop(xml_path)
 
         # Find target body for jittering
+        import mujoco
+
         target_body_id = mujoco.mj_name2id(
             loop.model, mujoco.mjtObj.mjOBJ_BODY, "target_box"
         )
@@ -102,6 +106,8 @@ def verify_with_jitter(
         apply_position_jitter(loop.data, target_body_id, jitter_range, rng)
 
         # Forward kinematics after position change
+        import mujoco
+
         mujoco.mj_forward(loop.model, loop.data)
 
         # Run simulation

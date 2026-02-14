@@ -180,6 +180,9 @@ class SimulationLoop:
             )
             res = validate_circuit(self.circuit, self.electronics.power_supply)
             if res.valid:
+                logger.debug(
+                    "electronics_simulation_success", total_draw=res.total_draw_a
+                )
                 for comp in self.electronics.components:
                     if comp.type == "motor":
                         v_diff = abs(
@@ -208,10 +211,12 @@ class SimulationLoop:
 
         # Simple BFS to find nodes connected to supply_v+
         adj = {}  # node -> set of connected nodes
-        
+
         def add_edge(u, v):
-            if u not in adj: adj[u] = set()
-            if v not in adj: adj[v] = set()
+            if u not in adj:
+                adj[u] = set()
+            if v not in adj:
+                adj[v] = set()
             adj[u].add(v)
             adj[v].add(u)
 
@@ -219,21 +224,27 @@ class SimulationLoop:
         for wire in self.electronics.wiring:
             # Use same normalization as circuit_builder
             def norm(c, t):
-                if t == "supply_v+" or (c == "supply" and t == "v+"): return "supply_v+"
-                if t == "0" or (c == "supply" and t == "0"): return "0"
-                if t == "a": t = "+"
-                if t == "b": t = "-"
+                if t == "supply_v+" or (c == "supply" and t == "v+"):
+                    return "supply_v+"
+                if t == "0" or (c == "supply" and t == "0"):
+                    return "0"
+                if t == "a":
+                    t = "+"
+                if t == "b":
+                    t = "-"
                 return f"{c}_{t}"
-            
-            add_edge(norm(wire.from_terminal.component, wire.from_terminal.terminal),
-                     norm(wire.to_terminal.component, wire.to_terminal.terminal))
+
+            add_edge(
+                norm(wire.from_terminal.component, wire.from_terminal.terminal),
+                norm(wire.to_terminal.component, wire.to_terminal.terminal),
+            )
 
         # 2. Add closed switches
         for comp in self.electronics.components:
             if comp.type in ["switch", "relay"]:
                 if self.switch_states.get(comp.component_id, True):
                     add_edge(f"{comp.component_id}_in", f"{comp.component_id}_out")
-        
+
         # 3. Traverse from supply_v+
         powered_nodes = set()
         stack = ["supply_v+"]
@@ -245,7 +256,7 @@ class SimulationLoop:
                 if v not in visited:
                     visited.add(v)
                     stack.append(v)
-        
+
         # 4. Map motors: powered if both + and - terminals are reached?
         # No, a motor is powered if + is connected to VCC and - is connected to GND.
         # Let's find nodes connected to GND (0)
@@ -262,8 +273,14 @@ class SimulationLoop:
 
         for comp in self.electronics.components:
             if comp.type == "motor":
-                is_powered = 1.0 if (f"{comp.component_id}_+" in powered_nodes and 
-                                     f"{comp.component_id}_-" in gnd_nodes) else 0.0
+                is_powered = (
+                    1.0
+                    if (
+                        f"{comp.component_id}_+" in powered_nodes
+                        and f"{comp.component_id}_-" in gnd_nodes
+                    )
+                    else 0.0
+                )
                 self.is_powered_map[comp.component_id] = is_powered
                 if comp.assembly_part_ref:
                     self.is_powered_map[comp.assembly_part_ref] = is_powered

@@ -3,7 +3,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import matplotlib.pyplot as plt
-import mujoco
+
+# import mujoco  # Moved to lazy imports where needed
 import numpy as np
 import structlog
 import trimesh
@@ -43,6 +44,8 @@ def prerender_24_views(component: Compound, output_dir: str | None = None) -> li
             scene_path = builder.build_from_assembly(component)
 
             # 2. Load into MuJoCo
+            import mujoco
+
             model = mujoco.MjModel.from_xml_path(str(scene_path))
             data = mujoco.MjData(model)
 
