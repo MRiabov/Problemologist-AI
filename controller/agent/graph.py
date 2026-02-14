@@ -1,7 +1,10 @@
+import structlog
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from controller.config.settings import settings
+
+logger = structlog.get_logger(__name__)
 
 from .nodes.planner import planner_node
 from .nodes.reviewer import reviewer_node
@@ -18,6 +21,10 @@ def should_continue(state: AgentState) -> str:
         return "skills"
 
     if state.status == AgentStatus.APPROVED:
+        # T010: Check if there are more steps in TODO before finishing
+        if "- [ ]" in state.todo:
+            logger.info("step_approved_continuing_to_next", todo=state.todo)
+            return "coder"
         return "skills"
 
     # If rejected and we haven't looped too many times

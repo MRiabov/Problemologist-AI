@@ -380,10 +380,23 @@ class SimulationLoop:
 
                 # 2.2.2 Fluid Objectives (Continuous checks)
                 for fo in self.objectives.objectives.fluid_objectives:
-                    if hasattr(fo, "eval_at") and fo.eval_at == "continuous":
-                        # Perform fluid containment/flow check
-                        # This requires particle positions from backend
-                        pass
+                    if getattr(fo, "eval_at", "end") == "continuous":
+                        if fo.type == "fluid_containment":
+                            particles = self.backend.get_particle_positions()
+                            if particles is not None and len(particles) > 0:
+                                zone = fo.containment_zone
+                                inside = np.all(
+                                    (particles >= zone.min) & (particles <= zone.max),
+                                    axis=1,
+                                )
+                                ratio = np.sum(inside) / len(particles)
+                                if ratio < fo.threshold:
+                                    self.fail_reason = (
+                                        f"FLUID_CONTAINMENT_FAILED:{fo.fluid_id}"
+                                    )
+                                    break
+                if self.fail_reason:
+                    break
 
             # 3. Check Forbidden Zones
             if self._check_forbidden_collision(target_body_name):
@@ -509,8 +522,52 @@ class SimulationLoop:
                                     or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
                                 )
                         elif fo.type == "flow_rate":
-                            # Flow rate at end is less common, but we could measure cumulative flow
-                            pass
+                            # Flow rate at end: measure cumulative flow
+                            particles = self.backend.get_particle_positions()
+                            if particles is not None and len(particles) > 0:
+                                p0 = np.array(fo.gate_plane_point)
+                                n = np.array(fo.gate_plane_normal)
+                                # Distance from plane: (p - p0) . n
+                                distances = np.dot(particles - p0, n)
+                                passed_count = np.sum(distances > 0)
+                                # Heuristic: 1 particle ~= 0.001L (1ml) for MVP
+                                measured_volume_l = passed_count * 0.001
+                                measured_rate = (
+                                    measured_volume_l / current_time
+                                    if current_time > 0
+                                    else 0.0
+                                )
+
+                                passed = (
+                                    measured_rate
+                                    >= fo.target_rate_l_per_s * (1.0 - fo.tolerance)
+                                )
+                                result = FluidMetricResult(
+                                    metric_type="flow_rate",
+                                    fluid_id=fo.fluid_id,
+                                    measured_value=float(measured_rate),
+                                    target_value=fo.target_rate_l_per_s,
+                                    passed=passed,
+                                )
+                                self.fluid_metrics.append(result)
+
+                                from shared.observability.schemas import (
+                                    FlowRateCheckEvent,
+                                )
+
+                                emit_event(
+                                    FlowRateCheckEvent(
+                                        fluid_id=fo.fluid_id,
+                                        measured_rate=float(measured_rate),
+                                        target_rate=fo.target_rate_l_per_s,
+                                        passed=passed,
+                                    )
+                                )
+                                if not passed:
+                                    self.fail_reason = (
+                                        self.fail_reason
+                                        or f"FLOW_RATE_FAILED:{fo.fluid_id}"
+                                    )
 
         return SimulationMetrics(
             total_time=current_time,

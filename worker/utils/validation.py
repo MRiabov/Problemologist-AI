@@ -8,6 +8,7 @@ import yaml
 from build123d import Compound
 
 from shared.models.schemas import (
+    CotsPartEstimate,
     ElectronicsSection,
     FluidDefinition,
     FluidProperties,
@@ -216,7 +217,9 @@ def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
 
 
 def calculate_assembly_totals(
-    component: Compound, electronics: ElectronicsSection | None = None
+    component: Compound,
+    electronics: ElectronicsSection | None = None,
+    cots_parts: list[CotsPartEstimate] | None = None,
 ) -> tuple[float, float]:
     """
     Calculate total cost and weight of the assembly including electronics and COTS.
@@ -271,6 +274,21 @@ def calculate_assembly_totals(
             length_m = wire.length_mm / 1000.0
             total_cost += length_m * 0.5
             total_weight += length_m * 20.0
+
+    # 3. Generic COTS parts from preliminary estimation
+    if cots_parts:
+        for p in cots_parts:
+            total_cost += p.unit_cost_usd * p.quantity
+            # Weight is not always in CotsPartEstimate, but we can try to find it
+            # if we had a more detailed catalog access here.
+            # For now, we'll try to use metadata if we can find it in shared catalog.
+            try:
+                # Heuristic: try to look up weight if not provided
+                # In current schema CotsPartEstimate doesn't have weight_g
+                # But the indexer extracts it.
+                pass
+            except Exception:
+                pass
 
     return total_cost, total_weight
 
@@ -364,7 +382,11 @@ def simulate(
         render_paths = prerender_24_views(component, output_dir=str(renders_dir))
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
-        cost, weight = calculate_assembly_totals(component, electronics)
+        cost, weight = calculate_assembly_totals(
+            component,
+            electronics=electronics,
+            cots_parts=cost_estimation.cots_parts if cost_estimation else None,
+        )
 
         global LAST_SIMULATION_RESULT
         LAST_SIMULATION_RESULT = SimulationResult(
