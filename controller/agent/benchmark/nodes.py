@@ -13,6 +13,9 @@ from langchain_openai import ChatOpenAI
 
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from controller.prompts import get_prompt
 
 from ..config import settings
@@ -68,10 +71,24 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         # We append the user prompt as context
         system_prompt = f"{base_prompt}\n\nUser Request:\n{state['session'].prompt}"
 
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+        # Use a remote backend wrapped in middleware for observability/sync
+        middleware = RemoteFilesystemMiddleware(client)
+        backend = RemoteFilesystemBackend(middleware)
 
-        # Use a remote backend
-        backend = RemoteFilesystemBackend(client)
+        # Langfuse tracing
+        langfuse_callback = get_langfuse_callback(
+            trace_id=session_id, name="benchmark_planner"
+        )
+        # Database tracing for real-time tool tracking in UI
+        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
+        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+        if callbacks:
+            llm = llm.with_config({"callbacks": callbacks})
 
         # Initialize Git Repo on Worker
         await client.git_init()
@@ -228,8 +245,24 @@ Validation Logs:
 """
 
         # 3. Setup Agent with deepagents
+        # Use a remote backend wrapped in middleware for observability/sync
+        middleware = RemoteFilesystemMiddleware(client)
+        backend = RemoteFilesystemBackend(middleware)
+
+        # Langfuse tracing
+        langfuse_callback = get_langfuse_callback(
+            trace_id=session_id, name="benchmark_coder"
+        )
+        # Database tracing for real-time tool tracking in UI
+        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        backend = RemoteFilesystemBackend(client)
+        if callbacks:
+            llm = llm.with_config({"callbacks": callbacks})
 
         agent = create_deep_agent(
             model=llm,
@@ -463,7 +496,8 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
                 self.violations.append(f"Attempted to delete path: {file_path}")
                 return await self.inner.adelete(file_path)
 
-        base_backend = RemoteFilesystemBackend(client)
+        middleware = RemoteFilesystemMiddleware(client)
+        base_backend = RemoteFilesystemBackend(middleware)
         guarded_backend = GuardedBackend(base_backend, review_filename)
 
         # 4. Prepare system prompt
@@ -492,7 +526,21 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
 """
 
         # 5. Setup Agent
+        # Langfuse tracing
+        langfuse_callback = get_langfuse_callback(
+            trace_id=session_id, name="benchmark_reviewer"
+        )
+        # Database tracing for real-time tool tracking in UI
+        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+        if callbacks:
+            llm = llm.with_config({"callbacks": callbacks})
+
         agent = create_deep_agent(
             model=llm,
             backend=guarded_backend,

@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 import structlog
 from deepagents.backends.protocol import (
@@ -30,7 +31,7 @@ class RemoteFilesystemBackend(BackendProtocol):
     files on the Worker.
     """
 
-    def __init__(self, client: WorkerClient):
+    def __init__(self, client: Any):
         self.client = client
 
     # --- Async BackendProtocol Implementation ---

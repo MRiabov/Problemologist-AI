@@ -302,6 +302,10 @@ benchmark_generator:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
          - `/skills/manufacturing-knowledge/SKILL.md` (for cost/quantity assumptions)
 
+         **Filesystem Tools**:
+         - `read(path)`, `write(path, content)`, `edit(path, old, new)`
+         - `execute(cmd)`, `ls(path)`
+
          **Default Environment**: 100x100x100 units unless specified.
 
          **Order of Actions (MANDATORY, DO NOT REORDER)**:
@@ -315,7 +319,8 @@ benchmark_generator:
             - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
             - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
          6. Write `plan.md` using the required structure and write `todo.md` as executable implementation steps.
-         7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
+         7. Write `plan.json` containing the **Randomization Strategy** JSON object (for the coder agent to consume).
+         8. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
 
          **Design Philosophy**:
          1. **Randomization**: NEVER hardcode fixed dimensions.
@@ -356,6 +361,7 @@ benchmark_generator:
          **Output Files**:
          - `plan.md`: The structured plan above.
          - `todo.md`: Checklist for the coder.
+         - `plan.json`: The randomization strategy JSON.
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Plan submission (benchmark)**: Ensure `plan.md` and `todo.md` are complete and valid.
