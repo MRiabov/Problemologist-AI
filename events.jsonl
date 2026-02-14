@@ -1,0 +1,1 @@
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-14T16:10:24.179063Z", "agent_id": null, "backend": "mujoco", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771085424.1791492}

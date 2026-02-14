@@ -19,7 +19,8 @@ from shared.simulation.backends import (
 
 class GenesisBackend(PhysicsBackend):
     def __init__(self):
-        self.scene = None
+        self.scene_def = None
+        self.gs_scene = None
         self.entities = {}
         self.current_time = 0.0
         if gs is not None:
@@ -29,7 +30,7 @@ class GenesisBackend(PhysicsBackend):
         if gs is None:
             raise ImportError("Genesis not installed")
 
-        self.scene = scene
+        self.scene_def = scene
 
         # Parse scene.json to get body names for integration test stubs
         if scene.scene_path and scene.scene_path.endswith(".json"):
@@ -43,16 +44,18 @@ class GenesisBackend(PhysicsBackend):
             except Exception:
                 pass
 
-        if self.scene:
-            self.scene.build()
+        # Initialize Genesis scene
+        if gs is not None:
+            self.gs_scene = gs.Scene(show_viewer=False)
+            # In a real implementation, we would add entities from scene.assets or scene_path here
+            self.gs_scene.build()
 
     def step(self, dt: float) -> StepResult:
-        if self.scene is None:
+        if self.gs_scene is None:
             raise RuntimeError("Scene not loaded")
 
         # Genesis step
-        if self.scene:
-            self.scene.step()
+        self.gs_scene.step()
 
         self.current_time += dt
         return StepResult(time=self.current_time, success=True)
@@ -113,5 +116,12 @@ class GenesisBackend(PhysicsBackend):
     def check_collision(self, body_name: str, site_name: str) -> bool:
         return False
 
+    def get_all_tendon_names(self) -> list[str]:
+        return []
+
+    def get_tendon_tension(self, tendon_name: str) -> float:
+        return 0.0
+
     def close(self) -> None:
-        self.scene = None
+        self.gs_scene = None
+        self.scene_def = None
