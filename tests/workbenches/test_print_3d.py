@@ -67,3 +67,21 @@ def test_3dp_reuse_discount(config):
 
     assert cost2.setup_cost < cost1.setup_cost
     assert cost2.is_reused is True
+
+
+def test_3dp_wall_thickness(config):
+    """Test wall thickness validation for 3D printing."""
+    # Create a very thin box
+    # 0.5mm thickness < 0.8mm default
+    thin_box = Box(10, 10, 0.5)
+
+    result = analyze_3dp(thin_box, config)
+
+    # analyze_3dp flags thin walls
+    assert result.is_manufacturable is False
+    assert any("thin" in v for v in result.violations)
+
+    # Create a valid box
+    thick_box = Box(10, 10, 2)
+    result = analyze_3dp(thick_box, config)
+    assert result.is_manufacturable is True
