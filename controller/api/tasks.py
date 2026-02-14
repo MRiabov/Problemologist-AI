@@ -10,6 +10,7 @@ from controller.clients.backend import RemoteFilesystemBackend
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
 from controller.observability.database import DatabaseCallbackHandler
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import AssetType, EpisodeStatus, TraceType
@@ -66,7 +67,8 @@ async def execute_agent_task(
                 trace_id = uuid.uuid4().hex
 
                 client = get_worker_client(session_id)
-                backend = RemoteFilesystemBackend(client)
+                middleware = RemoteFilesystemMiddleware(client)
+                backend = RemoteFilesystemBackend(middleware)
 
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)

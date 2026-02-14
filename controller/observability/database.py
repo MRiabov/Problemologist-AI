@@ -3,7 +3,7 @@ import json
 import uuid
 from typing import Any
 
-from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
 
 from controller.observability.broadcast import EpisodeBroadcaster
@@ -12,15 +12,18 @@ from controller.persistence.models import Trace
 from shared.enums import TraceType
 
 
-class DatabaseCallbackHandler(BaseCallbackHandler):
+class DatabaseCallbackHandler(AsyncCallbackHandler):
     """Callback handler that stores traces in the database."""
 
     def __init__(
         self,
-        episode_id: uuid.UUID,
+        episode_id: str | uuid.UUID,
         langfuse_callback: Any | None = None,
     ):
-        self.episode_id = episode_id
+        if isinstance(episode_id, str):
+            self.episode_id = uuid.UUID(episode_id)
+        else:
+            self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
         self.langfuse_callback = langfuse_callback
