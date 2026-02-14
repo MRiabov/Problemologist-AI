@@ -1202,6 +1202,12 @@
             "title": "Script Content",
             "description": "Direct content of the script."
           },
+          "smoke_test_mode": {
+            "type": "boolean",
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
+          },
           "method": {
             "$ref": "#/components/schemas/ManufacturingMethod",
             "description": "Manufacturing method to analyze (cnc, 3dp, im)."
@@ -1240,6 +1246,12 @@
             ],
             "title": "Script Content",
             "description": "Direct content of the script."
+          },
+          "smoke_test_mode": {
+            "type": "boolean",
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
           }
         },
         "type": "object",
@@ -1255,6 +1267,11 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
           },
           "artifacts": {
             "anyOf": [
