@@ -2,7 +2,7 @@
 work_package_id: "WP02"
 title: "Advanced Asset Pipeline"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP01"]
 subtasks: ["T006", "T007", "T008"]
 ---
 

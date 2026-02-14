@@ -2,7 +2,7 @@
 work_package_id: "WP06"
 title: "Observability, Benchmarks & UI"
 lane: "planned"
-dependencies: "[]"
+dependencies: ["WP05"]
 subtasks: ["T021", "T022", "T023"]
 ---
 
