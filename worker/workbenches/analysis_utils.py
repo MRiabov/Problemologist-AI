@@ -1,34 +1,26 @@
 import hashlib
-import os
-import pathlib
-import tempfile
 
 import numpy as np
 import trimesh
-from build123d import Compound, Part
+from build123d import Compound, Part, Solid
 
 
-def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
+def part_to_trimesh(part: Part | Compound | Solid) -> trimesh.Trimesh:
     """
-    Converts a build123d Part or Compound to a trimesh.Trimesh object.
+    Converts a build123d Part, Compound, or Solid to a trimesh.Trimesh object
+    using direct tessellation to avoid disk I/O.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
-        tmp_path = tmp.name
+    # Use default tolerance from export_stl (0.001) and angular_tolerance (0.1)
+    vertices, faces = part.tessellate(tolerance=0.001, angular_tolerance=0.1)
 
-    try:
-        from build123d import export_stl
+    # Convert vertices (list of Vector) to numpy array of floats
+    # Vector objects have X, Y, Z attributes
+    vertices_np = np.array([[v.X, v.Y, v.Z] for v in vertices], dtype=np.float64)
 
-        export_stl(part, tmp_path)
-        mesh = trimesh.load(tmp_path)
-        # trimesh.load can return a Scene, we want a single mesh
-        if isinstance(mesh, trimesh.Scene):
-            mesh = mesh.dump(concatenate=True)
-        return mesh
-    finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+    # Convert faces (list of tuples) to numpy array of ints
+    faces_np = np.array(faces, dtype=np.int64)
+
+    return trimesh.Trimesh(vertices=vertices_np, faces=faces_np)
 
 
 def check_undercuts(
@@ -97,23 +89,22 @@ def check_undercuts(
     return list(set(undercut_indices))
 
 
-def compute_part_hash(part: Part | Compound) -> str:
+def compute_part_hash(part: Part | Compound | Solid) -> str:
     """
-    Computes a stable hash for a build123d Part or Compound.
-    Uses STL export as a proxy for geometry.
+    Computes a stable hash for a build123d Part, Compound, or Solid.
+    Uses tessellated geometry (vertices and faces) to compute a SHA256 hash.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
-        tmp_path = tmp.name
+    # Use consistent tolerance to ensure stability
+    vertices, faces = part.tessellate(tolerance=0.001, angular_tolerance=0.1)
 
-    try:
-        from build123d import export_stl
+    # Create a stable string representation
+    # We use high precision format for vertices to capture small differences
+    vertices_np = np.array([[v.X, v.Y, v.Z] for v in vertices], dtype=np.float64)
+    faces_np = np.array(faces, dtype=np.int64)
 
-        export_stl(part, tmp_path)
-        with open(tmp_path, "rb") as f:
-            content = f.read()
-        return hashlib.sha256(content).hexdigest()
-    finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+    # Hash both arrays
+    hasher = hashlib.sha256()
+    hasher.update(vertices_np.tobytes())
+    hasher.update(faces_np.tobytes())
+
+    return hasher.hexdigest()
