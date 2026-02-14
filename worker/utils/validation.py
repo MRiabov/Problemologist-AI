@@ -38,6 +38,7 @@ class SimulationResult:
         fluid_metrics: list[Any] | None = None,
         total_cost: float = 0.0,
         total_weight_g: float = 0.0,
+        confidence: str = "high",
     ):
         self.success = success
         self.summary = summary
@@ -47,6 +48,7 @@ class SimulationResult:
         self.fluid_metrics = fluid_metrics or []
         self.total_cost = total_cost
         self.total_weight_g = total_weight_g
+        self.confidence = confidence
 
 
 LAST_SIMULATION_RESULT: SimulationResult | None = None
@@ -206,6 +208,7 @@ def simulate(
     output_dir: Path | None = None,
     fem_enabled: bool | None = None,
     particle_budget: int | None = None,
+    smoke_test_mode: bool = False,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     logger.info(
@@ -254,6 +257,7 @@ def simulate(
         backend_type=backend_type,
         electronics=electronics,
         objectives=objectives,
+        smoke_test_mode=smoke_test_mode,
     )
 
     dynamic_controllers = {}
@@ -300,6 +304,7 @@ def simulate(
             fluid_metrics=getattr(metrics, "fluid_metrics", []),
             total_cost=cost,
             total_weight_g=weight,
+            confidence=metrics.confidence,
         )
         return LAST_SIMULATION_RESULT
     except Exception as e:

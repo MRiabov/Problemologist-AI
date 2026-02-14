@@ -71,6 +71,16 @@ class ObservabilityEventType(StrEnum):
     ELEC_AGENT_HANDOVER = "elec_agent_handover"
     CIRCUIT_SIMULATION = "circuit_simulation"
 
+    # 26. WP2 Fluids & Deformable Materials events
+    SIMULATION_BACKEND_SELECTED = "simulation_backend_selected"
+    PART_BREAKAGE = "part_breakage"
+    FLUID_CONTAINMENT_CHECK = "fluid_containment_check"
+    FLOW_RATE_CHECK = "flow_rate_check"
+    STRESS_SUMMARY = "stress_summary"
+    MESHING_FAILURE = "meshing_failure"
+    PHYSICS_INSTABILITY = "physics_instability"
+    GPU_OOM_RETRY = "gpu_oom_retry"
+
 
 class SimulationFailureReason(StrEnum):
     TIMEOUT = "timeout"
@@ -347,3 +357,70 @@ class CircuitSimulationEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_SIMULATION
     duration_s: float
     motor_states: dict[str, str]  # motor_id -> "on"/"off"
+
+
+# =============================================================================
+# WP2 Fluids & Deformable Materials Events
+# =============================================================================
+
+
+class SimulationBackendSelectedEvent(BaseEvent):
+    event_type: ObservabilityEventType = (
+        ObservabilityEventType.SIMULATION_BACKEND_SELECTED
+    )
+    backend: str
+    fem_enabled: bool
+    compute_target: str
+
+
+class PartBreakageEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.PART_BREAKAGE
+    part_label: str
+    stress_mpa: float
+    ultimate_mpa: float
+    location: tuple[float, float, float]
+    step: int
+
+
+class FluidContainmentCheckEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.FLUID_CONTAINMENT_CHECK
+    fluid_id: str
+    ratio: float
+    threshold: float
+    passed: bool
+
+
+class FlowRateCheckEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.FLOW_RATE_CHECK
+    fluid_id: str
+    measured_rate: float
+    target_rate: float
+    passed: bool
+
+
+class StressSummaryEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.STRESS_SUMMARY
+    part_label: str
+    max_von_mises: float
+    safety_factor: float
+
+
+class MeshingFailureEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.MESHING_FAILURE
+    part_label: str
+    error: str
+    retry_count: int
+    repaired: bool
+
+
+class PhysicsInstabilityEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.PHYSICS_INSTABILITY
+    kinetic_energy: float
+    threshold: float
+    step: int
+
+
+class GpuOomRetryEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.GPU_OOM_RETRY
+    original_particles: int
+    reduced_particles: int

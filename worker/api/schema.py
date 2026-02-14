@@ -102,6 +102,10 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Direct content of the script.",
     )
+    smoke_test_mode: bool = Field(
+        default=False,
+        description="If true: cap particles to 5000, label results as approximate.",
+    )
 
 
 class AnalyzeRequest(BenchmarkToolRequest):
@@ -123,6 +127,7 @@ class BenchmarkToolResponse(BaseModel):
 
     success: StrictBool
     message: StrictStr
+    confidence: StrictStr = "high"
     artifacts: dict[StrictStr, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
 
