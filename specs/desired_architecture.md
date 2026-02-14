@@ -247,7 +247,7 @@ The Engineering Planner workflow is:
 - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 
-At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute preliminary totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -747,7 +747,7 @@ Engineer sends four files to the coder agent who has to implement the plan:
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
-4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and preliminary totals produced by `validate_costing_and_price.py`.
+4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
 
 ##### `plan.md` structure for the engineering plan
 
@@ -772,7 +772,7 @@ For each part:
 ## 4. Cost & Weight Budget
 - `max_unit_cost`: $X (from objectives.yaml, planner's allocation)
 - `max_weight`: Y kg
-- Preliminary breakdown per part
+- Assembly breakdown per part
 ## 5. Risk Assessment
 - Potential failure modes (e.g., "ball bounces off ramp edge")
 - Mitigations for each risk
@@ -871,10 +871,10 @@ Expected flow:
     - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
-    - The script validates schema consistency and computes preliminary totals.
+    - The script validates schema consistency and computes assembly totals.
     - The script auto-populates the unit cost and weight to the objectives.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
-5. Planner writes planner-owned constraints in `objectives.yaml` using validated preliminary totals, under benchmark/customer caps.
+5. Planner writes planner-owned constraints in `objectives.yaml` using validated assembly totals, under benchmark/customer caps.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:
 
