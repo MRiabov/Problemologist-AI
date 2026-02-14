@@ -6,11 +6,14 @@ from git import GitCommandError, Repo
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
+from langchain_core.runnables import RunnableConfig
 from shared.type_checking import type_check
 
-from ..config import settings
+from controller.observability.tracing import sync_asset
+
 from ..prompt_manager import PromptManager
 from ..state import AgentState
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -127,12 +130,18 @@ class SidecarNode:
         except GitCommandError as e:
             logger.error(f"Git sync failed: {e}")
 
-    async def __call__(self, state: AgentState) -> AgentState:
+    async def __call__(
+        self, state: AgentState, config: RunnableConfig | None = None
+    ) -> AgentState:
         """Execute the sidecar node logic."""
         # T021: Parse Journal for patterns
         prompt = self.pm.render("sidecar", journal=state.journal, task=state.task)
 
-        response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+        # Pass callbacks from config if available
+        callbacks = config.get("callbacks") if config else None
+        response = await self.llm.ainvoke(
+            [HumanMessage(content=prompt)], config={"callbacks": callbacks}
+        )
         content = str(response.content)
 
         # T022: Skill extraction logic
@@ -152,6 +161,17 @@ class SidecarNode:
             suggested_skill = title
             logger.info(f"Suggested new skill: {title}")
 
+            # Sync to Database as Asset
+            try:
+                import uuid
+
+                episode_id = uuid.UUID(state.session_id)
+                await sync_asset(
+                    episode_id, f"suggested_skills/{title}.md", skill_content
+                )
+            except Exception as e:
+                logger.warning(f"Failed to sync skill asset: {e}")
+
             # Sync to Git
             await self._sync_git(f"Add skill: {title}")
 
@@ -162,6 +182,8 @@ class SidecarNode:
 
 # Factory function for LangGraph
 @type_check
-async def sidecar_node(state: AgentState) -> AgentState:
+async def sidecar_node(
+    state: AgentState, config: RunnableConfig | None = None
+) -> AgentState:
     node = SidecarNode()
-    return await node(state)
+    return await node(state, config=config)

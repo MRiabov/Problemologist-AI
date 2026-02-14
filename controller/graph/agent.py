@@ -102,6 +102,8 @@ def create_agent_graph(
         "engineer_coder": "engineer.engineer.system",
         "engineer_reviewer": "engineer.critic.system",
         "cots_search": "subagents.cots_search.system",
+        "skill_creator": "subagents.skill_learner.system",
+        "sidecar": "sidecar",
     }
 
     # Fallback or direct key usage
