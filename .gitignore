@@ -59,3 +59,7 @@ steps.id/
 MUJOCO_LOG.TXT
 .jsonl 
 # ^event outputs
+
+# Simulation assets
+assets/part_0.glb
+assets/part_0.obj
