@@ -16,7 +16,7 @@ describe('API Client', () => {
     });
 
     const result = await fetchEpisodes();
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/episodes/', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('http://localhost:13000/episodes/'), expect.any(Object));
     expect(result).toEqual(mockEpisodes);
   });
 
@@ -30,7 +30,7 @@ describe('API Client', () => {
     });
 
     const result = await fetchSkills();
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:13000/skills/', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('http://localhost:13000/skills/'), expect.any(Object));
     expect(result).toEqual(mockSkills);
   });
 
@@ -84,6 +84,7 @@ describe('API Client', () => {
       status: 500,
       statusText: 'Internal Server Error',
       headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: async () => ({ message: 'Error' }),
     });
 
     await expect(fetchEpisodes()).rejects.toThrow('Internal Server Error');

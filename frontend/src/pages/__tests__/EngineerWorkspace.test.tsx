@@ -1,15 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '../../test/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EngineerWorkspace from '../EngineerWorkspace';
 import * as apiClient from '../../api/client';
-import { MemoryRouter } from 'react-router-dom';
-import { EpisodeProvider } from '../../context/EpisodeContext';
 
 vi.mock('../../api/client', () => ({
   fetchEpisodes: vi.fn(),
   fetchSkills: vi.fn(),
   fetchEpisode: vi.fn(),
   runAgent: vi.fn(),
+  checkConnection: vi.fn().mockResolvedValue({ connected: true, isMockMode: false }),
 }));
 
 describe('EngineerWorkspace', () => {
@@ -24,45 +23,32 @@ describe('EngineerWorkspace', () => {
   });
 
   it('renders correctly with layout components', async () => {
-    render(
-      <EpisodeProvider>
-        <MemoryRouter>
-          <EngineerWorkspace />
-        </MemoryRouter>
-      </EpisodeProvider>
-    );
+    render(<EngineerWorkspace />);
 
     // Verify workspace-specific elements
-    expect(screen.getByPlaceholderText(/Describe a mechanical task/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Ask anything/i)).toBeInTheDocument();
     
-    // Middle column components
-    expect(screen.getByText(/Execution Traces/i)).toBeInTheDocument();
-    expect(screen.getByText(/Critic Audit/i)).toBeInTheDocument();
+    // Middle column components (ChatWindow header)
+    expect(screen.getAllByText(/Engineer Workspace/i).length).toBeGreaterThan(0);
 
     // Right column components (ArtifactView)
     expect(screen.getByText(/Explorer/i)).toBeInTheDocument();
   });
 
   it('runs new agent task', async () => {
-    (apiClient.runAgent as any).mockResolvedValue({ status: 'ok', id: 'new-id', traces: [], assets: [] });
+    (apiClient.runAgent as any).mockResolvedValue({ episode_id: 'new-id' });
     
-    render(
-      <EpisodeProvider>
-        <MemoryRouter>
-          <EngineerWorkspace />
-        </MemoryRouter>
-      </EpisodeProvider>
-    );
+    render(<EngineerWorkspace />);
 
-    const input = screen.getByPlaceholderText(/Describe a mechanical task/);
+    const input = screen.getByPlaceholderText(/Ask anything/);
     fireEvent.change(input, { target: { value: 'New Test Task' } });
     
-    const solveButton = screen.getByText('SOLVE');
-    fireEvent.click(solveButton);
+    const sendButton = screen.getByLabelText('Send Message');
+    fireEvent.click(sendButton);
 
     await waitFor(() => {
-      // Expect two arguments: task and session_id
-      expect(apiClient.runAgent).toHaveBeenCalledWith('New Test Task', expect.any(String));
+      // Expect two arguments: task and session_id (and 3rd is undefined)
+      expect(apiClient.runAgent).toHaveBeenCalledWith('New Test Task', expect.any(String), undefined);
     });
   });
 });

@@ -1,14 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '../../test/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BenchmarkGeneration from '../BenchmarkGeneration';
 import * as apiClient from '../../api/client';
-import { MemoryRouter } from 'react-router-dom';
-import { EpisodeProvider } from '../../context/EpisodeContext';
 
 vi.mock('../../api/client', () => ({
   fetchEpisodes: vi.fn(),
   fetchEpisode: vi.fn(),
   runSimulation: vi.fn(),
+  runAgent: vi.fn(),
+  checkConnection: vi.fn().mockResolvedValue({ connected: true, isMockMode: false }),
 }));
 
 describe('BenchmarkGeneration', () => {
@@ -22,38 +22,29 @@ describe('BenchmarkGeneration', () => {
   });
 
   it('renders benchmark pipeline correctly', async () => {
-    render(
-      <EpisodeProvider>
-        <MemoryRouter>
-          <BenchmarkGeneration />
-        </MemoryRouter>
-      </EpisodeProvider>
-    );
+    render(<BenchmarkGeneration />);
 
     await waitFor(() => {
       // Pipeline header
       expect(screen.getByText(/Benchmark Pipeline/i)).toBeInTheDocument();
-      // Look for the "Isolated" badge
-      expect(screen.getByText(/Isolated/i)).toBeInTheDocument();
+      // Look for the "Simulation Preview" text
+      expect(screen.getByText(/Simulation Preview/i)).toBeInTheDocument();
     });
   });
 
   it('triggers simulation run', async () => {
-    (apiClient.runSimulation as any).mockResolvedValue({ status: 'accepted' });
+    (apiClient.runAgent as any).mockResolvedValue({ episode_id: 'new-ep' });
     
-    render(
-      <EpisodeProvider>
-        <MemoryRouter>
-          <BenchmarkGeneration />
-        </MemoryRouter>
-      </EpisodeProvider>
-    );
+    render(<BenchmarkGeneration />);
 
-    const runButton = screen.getByRole('button', { name: /RUN PIPELINE/i });
-    fireEvent.click(runButton);
+    const input = screen.getByPlaceholderText(/Ask anything/);
+    fireEvent.change(input, { target: { value: 'Start simulation' } });
+    
+    const sendButton = screen.getByLabelText('Send Message');
+    fireEvent.click(sendButton);
 
     await waitFor(() => {
-      expect(apiClient.runSimulation).toHaveBeenCalled();
+      expect(apiClient.runAgent).toHaveBeenCalled();
     });
   });
 });
