@@ -307,7 +307,7 @@ export default function ChatWindow({
                                   </div>
                                   <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed">
                                       {trace.trace_type === 'llm_end' ? (
-                                          <HighlightedContent content={trace.content || ''} />
+                                          <HighlightedContent content={trace.content || ''} language="markdown" />
                                       ) : (
                                           trace.content
                                       )}
