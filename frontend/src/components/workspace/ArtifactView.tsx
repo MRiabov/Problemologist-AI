@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { 
   VscChevronDown,
@@ -86,7 +86,7 @@ export default function ArtifactView({
   }, [plan, assets]);
 
   // Automatically select first asset if none selected
-  useMemo(() => {
+  useEffect(() => {
     if (!activeArtifactId || activeArtifactId === 'none') {
         if (plan) {
             setActiveArtifactId('plan');
@@ -94,7 +94,7 @@ export default function ArtifactView({
             setActiveArtifactId(assets[0].id.toString());
         }
     }
-  }, [plan, assets, activeArtifactId]);
+  }, [plan, assets, activeArtifactId, setActiveArtifactId]);
 
   const activeAsset = useMemo(() => {
     if (activeArtifactId === 'plan') return { name: 'plan.md', content: plan, asset_type: 'markdown' };

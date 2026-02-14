@@ -3,29 +3,25 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { 
   Terminal, 
-  Send, 
-  Square, 
   Check, 
   AlertCircle,
-  FileEdit,
-  Eye,
-  Folder,
-  PlayCircle,
-  Search,
   Zap,
-  Clock,
   Play,
-  ChevronRight,
   ChevronUp,
   ChevronDown,
-  Rocket
+  Rocket,
+  Plus,
+  Mic,
+  ArrowRight,
+  Square
 } from "lucide-react";
+import { ThoughtBlock } from "./ThoughtBlock";
+import { ActionCard } from "./ActionCard";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { runSimulation, type BenchmarkObjectives } from "../../api/client";
 import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
-import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { ContextCards } from "./ContextCards";
 import { FeedbackSystem } from "./FeedbackSystem";
@@ -60,162 +56,7 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
     );
 };
 
-import { getFileIconInfo } from "../../lib/fileIcons";
 
-// Internal helper for rendering reasoning traces (expandable)
-const ReasoningTrace = ({ trace }: { trace: TraceResponse }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    return (
-        <div className="space-y-1 group">
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors uppercase font-bold tracking-widest"
-            >
-                {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
-                <Clock className="h-2.5 w-2.5 opacity-50" />
-                <span>{new Date(trace.created_at).toLocaleTimeString()} • {trace.trace_type}</span>
-            </button>
-            {isOpen && (
-                <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed pl-3 border-l border-border/30 ml-1.5 py-1">
-                    {trace.trace_type === 'llm_end' ? (
-                        <HighlightedContent content={trace.content || ''} language="markdown" />
-                    ) : (
-                        trace.content
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const ActionCard = ({ trace }: { trace: TraceResponse }) => {
-    const { setActiveArtifactId, selectedEpisode } = useEpisodes();
-    const isStart = trace.trace_type === 'tool_start';
-    const isEnd = trace.trace_type === 'tool_end';
-    
-    // Hide tool_end traces as they are usually redundant or just "Tool completed"
-    if (isEnd) return null;
-    if (!isStart) return null;
-
-    // Determine tool name and arguments
-    const toolName = (trace.name || "").toLowerCase();
-    let args: any = {};
-    if (trace.content) {
-        try {
-            args = JSON.parse(trace.content);
-        } catch (e) {
-            // Try to extract TargetFile or similar via regex if JSON fails
-            const targetFileMatch = trace.content.match(/'TargetFile':\s*'([^']+)'/) || 
-                                   trace.content.match(/"TargetFile":\s*"([^"]+)"/) ||
-                                   trace.content.match(/'AbsolutePath':\s*'([^']+)'/) ||
-                                   trace.content.match(/"AbsolutePath":\s*"([^"]+)"/);
-            if (targetFileMatch) {
-                args.TargetFile = targetFileMatch[1];
-            }
-        }
-    }
-
-    const isFileTool = ['write_file', 'read_file', 'replace_file_content', 'multi_replace_file_content', 'view_file', 'view_file_outline'].some(t => toolName.includes(t));
-    const isWriteTool = ['write_file', 'replace_file_content', 'multi_replace_file_content'].some(t => toolName.includes(t));
-    const filePath = args.TargetFile || args.AbsolutePath || args.path || "";
-    const fileName = filePath.split('/').pop() || filePath;
-
-    const handleActionClick = () => {
-        if (!isFileTool || !filePath || !selectedEpisode) return;
-        
-        // Try to find matching asset ID
-        const asset = selectedEpisode.assets?.find(a => 
-            a.s3_path.toLowerCase().endsWith(filePath.toLowerCase()) || 
-            a.s3_path.toLowerCase() === filePath.toLowerCase() ||
-            (a.content && filePath.includes(a.s3_path.split('/').pop() || ""))
-        );
-        
-        if (asset) {
-            setActiveArtifactId(asset.id.toString());
-        } else if (filePath.toLowerCase().endsWith('plan.md')) {
-            setActiveArtifactId('plan');
-        }
-    };
-
-    const getIcon = () => {
-        if (isFileTool && fileName) {
-            const { icon: FileIcon, color } = getFileIconInfo(fileName);
-            return <FileIcon className="h-3.5 w-3.5" style={{ color }} />;
-        }
-
-        if (toolName.includes('write')) return <FileEdit className="h-3.5 w-3.5 text-blue-400" />;
-        if (toolName.includes('read') || toolName.includes('view')) return <Eye className="h-3.5 w-3.5 text-emerald-400" />;
-        if (toolName.includes('list') || toolName.includes('ls')) return <Folder className="h-3.5 w-3.5 text-amber-400" />;
-        if (toolName.includes('run') || toolName.includes('exec') || toolName.includes('command')) return <PlayCircle className="h-3.5 w-3.5 text-purple-400" />;
-        if (toolName.includes('search') || toolName.includes('cots')) return <Search className="h-3.5 w-3.5 text-sky-400" />;
-        return <Zap className="h-3.5 w-3.5 text-gray-400" />;
-    };
-
-    const getLabel = () => {
-        if (toolName.includes('write')) return 'Edited';
-        if (toolName.includes('read') || toolName.includes('view')) return 'Read';
-        if (toolName.includes('list')) return 'Viewed';
-        if (toolName.includes('run')) return 'Ran';
-        if (toolName.includes('search')) return 'COTS';
-        return 'Tool';
-    };
-
-    // For file tools (or if we extracted a filename), we show a simplified one-line view
-    if (fileName && (isFileTool || getLabel() !== 'Tool')) {
-        return (
-            <div 
-                onClick={handleActionClick}
-                className={cn(
-                  "group flex flex-col gap-1 p-1.5 px-2 rounded-md border border-border/50 transition-all mb-1 cursor-pointer",
-                  "bg-muted/30 hover:bg-muted/50 hover:border-primary/30"
-                )}
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                        {getLabel()}:
-                    </span>
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                        {getIcon()}
-                        <span className="text-[11px] font-mono text-foreground truncate">
-                            {fileName}
-                        </span>
-                    </div>
-                </div>
-                {isWriteTool && (
-                  <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] text-green-500 font-bold opacity-70">+24</span>
-                      <span className="text-[10px] text-red-500 font-bold opacity-70">-12</span>
-                  </div>
-                )}
-              </div>
-            </div>
-        );
-    }
-
-    // Default ActionCard for other tools
-    return (
-        <div className={cn(
-            "group flex flex-col gap-1 p-2 rounded-md border border-border/50 transition-all mb-2",
-            "bg-muted/30 hover:bg-muted/50"
-        )}>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    {getIcon()}
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {getLabel()}: <span className="text-foreground">{trace.name || "Tool"}</span>
-                    </span>
-                </div>
-                <span className="text-[9px] opacity-30 font-mono">#{trace.id}</span>
-            </div>
-            {trace.content && !isFileTool && (
-                <div className="mt-1 overflow-hidden rounded border border-border/20">
-                    <HighlightedContent content={trace.content} />
-                </div>
-            )}
-        </div>
-    );
-};
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
@@ -246,15 +87,12 @@ export default function ChatWindow({
   const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
 
   const [showObjectives, setShowObjectives] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
 
-  const benchmarks = episodes?.filter(ep => 
-    ep.status === 'completed' && 
-    ep.metadata_vars?.detailed_status === 'accepted'
-  ) || [];
 
   // Reset objectives when episode changes (optional, or fetch from episode metadata)
   useEffect(() => {
@@ -307,14 +145,14 @@ export default function ChatWindow({
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
   return (
-    <div className="flex flex-col h-full bg-card/30 relative overflow-hidden">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border/50 bg-card/50 backdrop-blur-sm shrink-0">
+      <div className="flex items-center justify-between p-3 border-b border-white/5 bg-background shrink-0">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Chat Window</span>
+            <span className="text-[11px] font-bold tracking-tight opacity-70">Engineer Workspace</span>
           </div>
       </div>
 
@@ -344,33 +182,53 @@ export default function ChatWindow({
                     </div>
                 )}
 
-                {/* Initial Task Message */}
+                {/* Initial Task Message (User Style) */}
                 {task && (
-                    <div className="mb-6 p-3 bg-primary/10 rounded-lg border border-primary/20 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-1 opacity-20 group-hover:opacity-40 transition-opacity">
-                            <Send className="h-3 w-3 text-primary" />
-                        </div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-primary/70 mb-1">
-                            Current Objective
-                        </div>
-                        <div className="text-foreground font-medium leading-relaxed text-[11px] whitespace-pre-wrap max-h-32 overflow-y-auto pr-1 scrollbar-thin">
-                            {task}
+                    <div className="flex justify-end mb-8 animate-in slide-in-from-right-4 fade-in duration-300">
+                        <div className="max-w-[85%] bg-muted/40 rounded-2xl p-4 shadow-sm border border-border/10 relative group">
+                            <div className="text-[13px] leading-relaxed text-foreground whitespace-pre-wrap">
+                                {task}
+                            </div>
+                            <button className="absolute bottom-2 right-4 opacity-0 group-hover:opacity-40 transition-opacity">
+                                <Rocket className="h-3.5 w-3.5" />
+                            </button>
                         </div>
                     </div>
                 )}
 
                 {/* Messages / Traces */}
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-3xl mx-auto w-full">
                   {traces && traces.length > 0 ? (
                       traces.map(trace => {
-                          if (trace.trace_type === 'tool_start' || trace.trace_type === 'tool_end') {
+                          const type = trace.trace_type as string;
+                          if (type === 'llm_thought' || type === 'thought') {
+                            return <ThoughtBlock key={trace.id} duration={Math.floor(Math.random() * 5) + 1} content={trace.content || ""} />;
+                          }
+                          if (type === 'tool_start') {
                               return <ActionCard key={trace.id} trace={trace} />;
                           }
-
-                          return <ReasoningTrace key={trace.id} trace={trace} />;
+                          if (type === 'llm_end' && trace.content) {
+                            return (
+                                <div key={trace.id} className="relative group/msg">
+                                    <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
+                                         <HighlightedContent content={trace.content} language="markdown" />
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                                        <button 
+                                            onClick={() => setShowFeedbackModal(true)}
+                                            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                        >
+                                            <AlertCircle className="h-3 w-3" />
+                                            Feedback
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                          }
+                          return null;
                       })
                   ) : (
-                      <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-20 h-full">
+                      <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-10 h-full">
                          <Terminal className="h-8 w-8" />
                          <span className="text-[10px] uppercase font-bold tracking-widest">Awaiting interaction...</span>
                       </div>
@@ -448,101 +306,115 @@ export default function ChatWindow({
                         </div>
                     </div>
                 )}
-                {/* Session Feedback */}
-                {selectedEpisode?.status === 'completed' && (
-                    <div className="mt-8 mb-4">
-                        <FeedbackSystem episodeId={selectedEpisode.id} />
-                    </div>
+                {/* Session Feedback Modal */}
+                {showFeedbackModal && selectedEpisode && (
+                    <FeedbackSystem 
+                        episodeId={selectedEpisode.id} 
+                        onClose={() => setShowFeedbackModal(false)}
+                    />
                 )}
             </div>
         </ScrollArea>
 
-        {/* Steering / Input Area */}
-        <div className="border-t border-border/50 bg-card/50 backdrop-blur-sm relative">
-            {isCreationMode && benchmarks.length > 0 && (
-                <div className="px-4 py-2 border-b border-border/50 bg-muted/10">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <Rocket className="h-3 w-3 text-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Benchmark (Optional)</span>
+        {/* Steering / Input Area (Claude Inspired) */}
+        <div className="p-4 max-w-3xl mx-auto w-full relative">
+            <ContextCards />
+            
+            <div className="bg-muted/30 border border-white/5 rounded-2xl p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+                    <textarea 
+                       id="chat-input"
+                       placeholder={isRunning ? "Steer the agent..." : "Ask anything (Ctrl+L), @ to mention, / for workflows"}
+                       className="w-full bg-transparent border-none focus:ring-0 text-[14px] leading-relaxed resize-none min-h-[40px] max-h-48"
+                       rows={1}
+                       value={prompt}
+                       onChange={(e) => {
+                           setPrompt(e.target.value);
+                           e.target.style.height = 'auto';
+                           e.target.style.height = e.target.scrollHeight + 'px';
+                       }}
+                       onKeyDown={(e) => {
+                           if (e.key === 'Enter' && !e.shiftKey) {
+                               e.preventDefault();
+                               handleSubmit(e);
+                           }
+                       }}
+                    />
+                    
+                    <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center gap-1.5">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-white/5">
+                                <Plus className="h-4 w-4 opacity-40" />
+                            </Button>
+                            
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowObjectives(!showObjectives);
+                                }}
+                            >
+                                <Zap className="h-3 w-3 opacity-40" />
+                                Planning
+                                {showObjectives ? <ChevronDown className="h-3 w-3 ml-0.5 opacity-40" /> : <ChevronUp className="h-3 w-3 ml-0.5 opacity-40" />}
+                            </Button>
+
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
+                            >
+                                <Rocket className="h-3 w-3 opacity-40" />
+                                Claude Opus 4.6
+                            </Button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/5">
+                                <Mic className="h-4 w-4 opacity-40" />
+                            </Button>
+                            
+                            <Button 
+                               type={isRunning ? "button" : "submit"}
+                               size="icon" 
+                               disabled={!isRunning && !prompt.trim()}
+                               className={cn(
+                                   "h-8 w-8 rounded-full transition-all flex items-center justify-center",
+                                   isRunning 
+                                    ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" 
+                                    : "bg-foreground text-background hover:opacity-90 disabled:bg-muted/20 disabled:text-muted-foreground"
+                               )}
+                               onClick={(e) => {
+                                   if (isRunning && selectedEpisode) {
+                                       e.preventDefault();
+                                       interruptAgent(selectedEpisode.id);
+                                   }
+                               }}
+                            >
+                                {isRunning ? <Square className="h-3.5 w-3.5 fill-current" /> : <ArrowRight className="h-4 w-4" />}
+                            </Button>
+                        </div>
                     </div>
-                    <select 
-                        className="w-full bg-background border border-border/50 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/30 text-foreground"
-                        value={selectedBenchmarkId}
-                        onChange={(e) => setSelectedBenchmarkId(e.target.value)}
-                    >
-                        <option value="">-- No benchmark selected --</option>
-                        {benchmarks.map(b => (
-                            <option key={b.id} value={b.id}>
-                                {b.task.length > 60 ? b.task.substring(0, 60) + '...' : b.task} ({b.id.substring(0,8)})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
-             {/* Objectives Toggle Helper */}
-            <div className="absolute top-0 left-0 right-0 -mt-3 flex justify-center pointer-events-none">
-                <Button
-                    variant="secondary" 
-                    size="sm" 
-                    className="h-5 rounded-t-lg rounded-b-none border-t border-x border-border/50 bg-background/90 text-[9px] text-muted-foreground hover:bg-background hover:text-foreground pointer-events-auto shadow-sm"
-                    onClick={() => setShowObjectives(!showObjectives)}
-                >
-                    {showObjectives ? <ChevronDown className="h-3 w-3 mr-1" /> : <ChevronUp className="h-3 w-3 mr-1" />}
-                    <span className="uppercase tracking-wider font-bold">Objectives</span>
-                </Button>
+                </form>
             </div>
 
             {showObjectives && (
-                <ObjectivesForm 
-                    objectives={objectives} 
-                    onChange={setObjectives} 
-                    onUpdate={() => updateObjectives(objectives)}
-                    showUpdate={!isCreationMode && !!selectedEpisode}
-                    disabled={isRunning}
-                />
-            )}
-
-            <div className="p-4 pt-4">
-            <ContextCards />
-            <form onSubmit={handleSubmit} className="relative group">
-                <Input 
-                   id="chat-input"
-                   placeholder={isRunning ? "Steer the agent..." : "Start a new task..."}
-                   className="h-12 pl-4 pr-12 bg-muted/20 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all text-xs"
-                   value={prompt}
-                   onChange={(e) => setPrompt(e.target.value)}
-                />
-                <Button 
-                   type={isRunning ? "button" : "submit"}
-                   size="icon" 
-                   disabled={!isRunning && !prompt.trim()}
-                   className={cn(
-                       "absolute right-1 top-1 h-10 w-10 bg-transparent transition-all",
-                       isRunning 
-                        ? "hover:bg-red-500/10 text-red-500" 
-                        : "hover:bg-primary/10 text-primary disabled:opacity-0"
-                   )}
-                   onClick={() => {
-                       if (isRunning && selectedEpisode) {
-                           interruptAgent(selectedEpisode.id);
-                       }
-                   }}
-                >
-                    {isRunning ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-4 w-4" />}
-                </Button>
-            </form>
-            <div className="mt-2 flex items-center justify-between px-1">
-                <span className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">
-                    {isRunning ? 'Steering Mode Active' : 'Ready for target'}
-                </span>
-                <div className="flex items-center gap-1.5 opacity-20">
-                   <div className="size-1.5 rounded-full bg-green-500 animate-pulse" />
-                   <span className="text-[8px] font-bold uppercase">System Link</span>
+                <div className="absolute bottom-full left-0 right-0 mb-2 px-4 animate-in slide-in-from-bottom-2 duration-200">
+                    <div className="bg-background border border-border shadow-2xl rounded-xl overflow-hidden">
+                        <ObjectivesForm 
+                            objectives={objectives} 
+                            onChange={setObjectives} 
+                            onUpdate={() => updateObjectives(objectives)}
+                            showUpdate={!isCreationMode && !!selectedEpisode}
+                            disabled={isRunning}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
       </div>
     </div>
-  </div>
   );
 }
