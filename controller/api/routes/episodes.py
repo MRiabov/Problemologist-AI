@@ -3,12 +3,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
+import httpx
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     Path,
     Query,
+    Response,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -18,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
@@ -37,6 +40,56 @@ class FeedbackRequest(BaseModel):
 
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
+
+
+@router.get("/{episode_id}/assets/{path:path}")
+async def get_episode_asset(
+    episode_id: uuid.UUID,
+    path: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Proxy asset requests to the worker."""
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    worker_session_id = None
+    if episode.metadata_vars:
+        worker_session_id = episode.metadata_vars.get("worker_session_id")
+
+    if not worker_session_id:
+        # Fallback for older episodes or benchmarks where session_id might be the id itself
+        worker_session_id = str(episode_id)
+
+    worker_url = settings.worker_url
+    asset_url = f"{worker_url}/assets/{path}"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                asset_url, headers={"X-Session-ID": worker_session_id}, timeout=10.0
+            )
+            if resp.status_code == 404:
+                raise HTTPException(
+                    status_code=404, detail=f"Asset {path} not found on worker"
+                )
+            resp.raise_for_status()
+
+            return Response(
+                content=resp.content,
+                media_type=resp.headers.get("content-type"),
+                status_code=resp.status_code,
+            )
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code, detail=str(e)
+            ) from e
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to proxy asset: {e!s}"
+            ) from e
 
 
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
@@ -186,8 +239,7 @@ async def list_episodes(
             .offset(offset)
             .options(selectinload(Episode.traces), selectinload(Episode.assets))
         )
-        episodes = result.scalars().all()
-        return episodes
+        return result.scalars().all()
     except Exception as e:
         import structlog
 

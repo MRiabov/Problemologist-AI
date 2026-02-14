@@ -1,14 +1,19 @@
+import os
 import uuid
 from typing import Literal
 from uuid import uuid4
 
+import httpx
 import structlog
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy import select
 
+from controller.clients.backend import RemoteFilesystemBackend
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Episode
-from shared.enums import EpisodeStatus
+from controller.persistence.models import Asset, Episode
+from shared.enums import AssetType, EpisodeStatus
 
 from .models import GenerationSession, SessionStatus
 from .nodes import coder_node, planner_node, reviewer_node, validator_node
@@ -241,6 +246,57 @@ async def run_generation_session(
                     db=db,
                 )
                 logger.info("asset_persisted", session_id=session_id)
+
+                # Sync assets to the Asset table for regular UI viewing and easy copying
+                try:
+                    from contextlib import suppress
+
+                    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+                    async with httpx.AsyncClient() as http_client:
+                        client = WorkerClient(
+                            base_url=worker_url,
+                            session_id=str(session_id),
+                            http_client=http_client,
+                        )
+                        middleware = RemoteFilesystemMiddleware(client)
+                        backend = RemoteFilesystemBackend(middleware)
+
+                        files = await backend.als_info("/")
+                        for file_info in files:
+                            if not file_info["is_dir"]:
+                                path = file_info["path"]
+                                asset_type = AssetType.OTHER
+                                if path.endswith(".py"):
+                                    asset_type = AssetType.PYTHON
+                                elif path.endswith(".xml") or path.endswith(".mjcf"):
+                                    asset_type = AssetType.MJCF
+
+                                # Read content for small files
+                                content = None
+                                with suppress(Exception):
+                                    raw_content = await backend.aread(path)
+                                    if isinstance(raw_content, bytes):
+                                        content = raw_content.decode(
+                                            "utf-8", errors="replace"
+                                        )
+                                    else:
+                                        content = str(raw_content)
+
+                                asset = Asset(
+                                    episode_id=session_id,
+                                    asset_type=asset_type,
+                                    s3_path=path,
+                                    content=content,
+                                )
+                                db.add(asset)
+                        await db.commit()
+                        logger.info("assets_synced_to_db", session_id=session_id)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_sync_assets_to_db",
+                        session_id=session_id,
+                        error=str(e),
+                    )
         except Exception as e:
             logger.error(
                 "asset_persistence_failed", session_id=session_id, error=str(e)

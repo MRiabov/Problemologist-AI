@@ -9,8 +9,8 @@ from controller.api.manager import task_tracker
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
-from controller.observability.database import DatabaseCallbackHandler
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import AssetType, EpisodeStatus, TraceType
@@ -73,6 +73,36 @@ async def execute_agent_task(
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)
 
+                # If benchmark_id is present, copy benchmark assets to the session
+                if episode.metadata_vars and "benchmark_id" in episode.metadata_vars:
+                    benchmark_id_str = episode.metadata_vars["benchmark_id"]
+                    try:
+                        benchmark_id = uuid.UUID(benchmark_id_str)
+                        async with session_factory() as db_inner:
+                            from sqlalchemy import select
+
+                            stmt = select(Asset).where(Asset.episode_id == benchmark_id)
+                            res = await db_inner.execute(stmt)
+                            benchmark_assets = res.scalars().all()
+
+                            for asset in benchmark_assets:
+                                if asset.content:
+                                    # Copy to worker
+                                    await backend.awrite(asset.s3_path, asset.content)
+                                    logger.info(
+                                        "copied_benchmark_asset",
+                                        episode_id=episode_id,
+                                        benchmark_id=benchmark_id,
+                                        path=asset.s3_path,
+                                    )
+                    except Exception as e:
+                        logger.error(
+                            "failed_to_copy_benchmark_assets",
+                            episode_id=episode_id,
+                            benchmark_id=benchmark_id_str,
+                            error=str(e),
+                        )
+
                 agent, langfuse_callback = create_agent_graph(
                     backend,
                     agent_name=agent_name,
@@ -124,26 +154,49 @@ async def execute_agent_task(
 
                 # Sync assets from worker
                 try:
-                    files = await backend.als_info("/")
-                    for file_info in files:
-                        if not file_info["is_dir"]:
-                            path = file_info["path"]
-                            asset_type = AssetType.OTHER
+
+                    async def sync_dir(dir_path: str):
+                        files = await client.list_files(dir_path)
+                        for file_info in files:
+                            path = file_info.path
+                            if file_info.is_dir:
+                                # Recursively sync directories, but skip some obvious ones
+                                if not any(
+                                    path.endswith(s)
+                                    for s in ["__pycache__", ".git", ".venv", "renders"]
+                                ):
+                                    await sync_dir(path)
+                                continue
+
+                            asset_type = None
                             if path.endswith(".py"):
                                 asset_type = AssetType.PYTHON
-                            elif path.endswith(".xml") or path.endswith(".mjcf"):
+                            elif path.endswith((".xml", ".mjcf")):
                                 asset_type = AssetType.MJCF
+                            elif path.endswith(".glb"):
+                                asset_type = AssetType.GLB
+                            elif path.endswith(".stl"):
+                                asset_type = AssetType.STL
+                            elif path.endswith((".png", ".jpg", ".jpeg", ".webp")):
+                                asset_type = AssetType.IMAGE
+                            else:
+                                asset_type = AssetType.OTHER
 
-                            # Read content for small files
+                            # Read content
                             content = None
-                            with suppress(Exception):
-                                raw_content = await backend.aread(path)
-                                if isinstance(raw_content, bytes):
-                                    content = raw_content.decode(
-                                        "utf-8", errors="replace"
-                                    )
-                                else:
-                                    content = str(raw_content)
+                            # Only store content in DB for text-like or small metadata files
+                            if asset_type in [
+                                AssetType.PYTHON,
+                                AssetType.MJCF,
+                                AssetType.OTHER,
+                            ]:
+                                with suppress(Exception):
+                                    raw_content = await client.read_file(path)
+                                    content = raw_content
+
+                            # For GLB/STL/IMAGE, we don't store content in 'content' column (it's for text)
+                            # In a real S3 setup, we'd have a real S3 URL in s3_path.
+                            # For now, s3_path is used by the frontend to fetch from worker via /api/v1/episodes/{id}/assets/{path}
 
                             asset = Asset(
                                 episode_id=episode_id,
@@ -152,6 +205,9 @@ async def execute_agent_task(
                                 content=content,
                             )
                             db.add(asset)
+
+                    await sync_dir("/")
+                    await db.commit()
                 except Exception as e:
                     logger.error("failed_to_sync_assets", error=str(e))
 

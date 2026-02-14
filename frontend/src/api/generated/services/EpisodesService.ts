@@ -10,6 +10,30 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class EpisodesService {
     /**
+     * Get Episode Asset
+     * Proxy asset requests to the worker.
+     * @param episodeId
+     * @param path
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeAssetEpisodesEpisodeIdAssetsPathGet(
+        episodeId: string,
+        path: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/episodes/{episode_id}/assets/{path}',
+            path: {
+                'episode_id': episodeId,
+                'path': path,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Report Trace Feedback
      * Report feedback for a specific trace to Langfuse.
      * @param episodeId

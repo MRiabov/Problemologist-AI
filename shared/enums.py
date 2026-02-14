@@ -24,6 +24,7 @@ class AssetType(StrEnum):
     IMAGE = "image"
     STEP = "step"
     STL = "stl"
+    GLB = "glb"
     PYTHON = "python"
     OTHER = "other"
 
