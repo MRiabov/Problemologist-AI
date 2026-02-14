@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, MessageSquare, CheckCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { Button } from "../ui/button";
-import { cn } from "../../lib/utils";
 
 interface FeedbackSystemProps {
     episodeId: string;
@@ -9,21 +8,11 @@ interface FeedbackSystemProps {
 }
 
 export function FeedbackSystem({ episodeId, onClose }: FeedbackSystemProps) {
-    const [rating, setRating] = useState<'positive' | 'negative' | null>(null);
     const [comment, setComment] = useState("");
     const [submitted, setSubmitted] = useState(false);
-    const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
-
-    const issues = [
-        "Incorrect CAD geometry",
-        "Invalid code logic",
-        "Hallucinated reference",
-        "Poor reasoning",
-        "Interface glitch"
-    ];
 
     const handleSubmit = () => {
-        console.log("Submitting feedback for", episodeId, { rating, comment, selectedIssues });
+        console.log("Submitting feedback for", episodeId, { comment });
         setSubmitted(true);
         setTimeout(() => {
             if (onClose) onClose();
@@ -41,74 +30,48 @@ export function FeedbackSystem({ episodeId, onClose }: FeedbackSystemProps) {
     }
 
     return (
-        <div className="p-4 bg-muted/20 border border-border/50 rounded-lg space-y-4 animate-in slide-in-from-bottom-2 fade-in">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <MessageSquare className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Session Feedback</span>
-                </div>
-                <div className="flex gap-2">
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setRating('positive')}
-                        className={cn("h-7 px-2 gap-1.5", rating === 'positive' && "bg-green-500/10 text-green-500 hover:bg-green-500/20")}
-                    >
-                        <ThumbsUp className={cn("h-3 w-3", rating === 'positive' && "fill-current")} />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setRating('negative')}
-                        className={cn("h-7 px-2 gap-1.5", rating === 'negative' && "bg-red-500/10 text-red-500 hover:bg-red-500/20")}
-                    >
-                        <ThumbsDown className={cn("h-3 w-3", rating === 'negative' && "fill-current")} />
-                    </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 min-h-screen">
+            <div 
+                className="absolute inset-0 bg-background/60 backdrop-blur-[2px]" 
+                onClick={onClose}
+            />
+            <div className="bg-background border border-border shadow-2xl rounded-2xl p-6 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Feedback</h2>
+                
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[13px] text-muted-foreground">
+                            Please provide details: (optional)
+                        </label>
+                        <textarea 
+                            placeholder="What was satisfying about this response?"
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            className="w-full bg-background border border-border rounded-xl p-4 text-[14px] min-h-[120px] focus:ring-1 focus:ring-primary/20 focus:border-primary/30 transition-all outline-none resize-none"
+                        />
+                    </div>
+
+                    <p className="text-[12px] text-muted-foreground/60 leading-relaxed">
+                        Submitting this report will send the entire current conversation to the evaluation system for future improvements to our models. <span className="underline cursor-pointer hover:text-muted-foreground transition-colors">Learn More</span>
+                    </p>
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button 
+                            variant="outline"
+                            onClick={onClose}
+                            className="h-9 px-5 rounded-xl border-border hover:bg-muted font-medium text-[13px]"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleSubmit}
+                            className="h-9 px-5 rounded-xl bg-foreground text-background hover:opacity-90 font-medium text-[13px] transition-all"
+                        >
+                            Submit
+                        </Button>
+                    </div>
                 </div>
             </div>
-
-            {rating === 'negative' && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-1">
-                    <div className="flex flex-wrap gap-2">
-                        {issues.map(issue => (
-                            <button 
-                                key={issue}
-                                onClick={() => {
-                                    setSelectedIssues(prev => 
-                                        prev.includes(issue) ? prev.filter(i => i !== issue) : [...prev, issue]
-                                    )
-                                }}
-                                className={cn(
-                                    "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border transition-all",
-                                    selectedIssues.includes(issue) 
-                                        ? "bg-red-500/10 border-red-500/30 text-red-500" 
-                                        : "bg-background border-border hover:border-muted-foreground/30 text-muted-foreground"
-                                )}
-                            >
-                                {issue}
-                            </button>
-                        ))}
-                    </div>
-                    <textarea 
-                        placeholder="What went wrong? Be specific..."
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        className="w-full bg-background border border-border/50 rounded-md p-2 text-[11px] min-h-[60px] focus:outline-none focus:ring-1 focus:ring-primary/30"
-                    />
-                </div>
-            )}
-
-            {rating && (
-                <div className="flex justify-end gap-2">
-                    <Button 
-                        size="sm" 
-                        onClick={handleSubmit}
-                        className="h-8 px-4 bg-primary text-primary-foreground font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20"
-                    >
-                        Submit Review
-                    </Button>
-                </div>
-            )}
         </div>
     );
 }

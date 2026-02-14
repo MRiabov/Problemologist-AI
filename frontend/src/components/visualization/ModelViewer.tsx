@@ -9,19 +9,48 @@ import {
   Pause, 
   RotateCcw, 
   FastForward, 
-  Rewind,
-  Eye,
-  EyeOff
+  Rewind
 } from "lucide-react"
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { useEpisodes } from '../../context/EpisodeContext'
 import ConnectionError from '../shared/ConnectionError'
 import { cn } from '../../lib/utils'
+import { ModelBrowser, type TopologyNode } from './ModelBrowser'
 
-function GlbModel({ url, hiddenParts = [], onSelect }: { url: string, hiddenParts: string[], onSelect?: (partName: string) => void }) {
+function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: { 
+    url: string, 
+    hiddenParts: string[], 
+    onSelect?: (partName: string) => void,
+    onStructureParsed?: (nodes: TopologyNode[]) => void
+}) {
   const gltf = useLoader(GLTFLoader, url)
   const meshRef = useRef<THREE.Group>(null!)
+
+  useEffect(() => {
+    if (gltf.scene && onStructureParsed) {
+        const collectTopology = (object: THREE.Object3D): TopologyNode | null => {
+            if (!object.name && !(object instanceof THREE.Mesh)) return null;
+            
+            const node: TopologyNode = {
+                id: object.uuid,
+                name: object.name || (object instanceof THREE.Mesh ? 'Part' : 'Assembly'),
+                type: object instanceof THREE.Mesh ? 'part' : (object.children.length > 0 ? 'assembly' : 'group'),
+                children: []
+            };
+
+            object.children.forEach(child => {
+                const childNode = collectTopology(child);
+                if (childNode) node.children?.push(childNode);
+            });
+
+            return node;
+        };
+
+        const rootNode = collectTopology(gltf.scene);
+        if (rootNode) onStructureParsed([rootNode]);
+    }
+  }, [gltf.scene, onStructureParsed]);
 
   useEffect(() => {
     gltf.scene.traverse((child) => {
@@ -119,7 +148,8 @@ export default function ModelViewer({
   const [hiddenParts, setHiddenParts] = useState<string[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [showTopology, setShowTopology] = useState(false)
+  const [showTopology, setShowTopology] = useState(true) // Default to open for Model Browser
+  const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([])
 
   const urls = useMemo(() => {
     const all = [...assetUrls];
@@ -139,37 +169,25 @@ export default function ModelViewer({
   }, [resetTrigger])
 
   return (
-    <div className={cn(className, "relative group flex flex-col overflow-hidden")}>
+    <div className={cn(className, "relative group flex overflow-hidden bg-slate-950")}>
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       
-      {/* Topology Overlay */}
+      {/* Model Browser Sidebar (Inventor Style) */}
       {showTopology && (
-        <div className="absolute top-4 right-4 z-40 w-48 p-3 bg-background/80 backdrop-blur-md rounded-lg border border-border/50 shadow-xl animate-in fade-in slide-in-from-right-4">
-             <div className="flex items-center justify-between mb-3 border-b border-border/20 pb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Topology</span>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setShowTopology(false)}>
-                   <EyeOff className="h-3 w-3" />
-                </Button>
-             </div>
-             <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                {/* Mock parts for now, in a real scenario we'd extract names from the scene */}
-                {['Body Shell', 'Internal Frame', 'Motor Mount', 'Electronics Housing'].map(part => (
-                    <button 
-                        key={part}
-                        onClick={() => {
-                            setHiddenParts(prev => 
-                                prev.includes(part) ? prev.filter(p => p !== part) : [...prev, part]
-                            )
-                        }}
-                        className="flex items-center justify-between w-full p-1.5 rounded hover:bg-muted/50 text-[11px] group/item"
-                    >
-                        <span className={cn(hiddenParts.includes(part) ? "text-muted-foreground line-through" : "text-foreground")}>{part}</span>
-                        {hiddenParts.includes(part) ? <EyeOff className="h-3 w-3 text-muted-foreground" /> : <Eye className="h-3 w-3 text-primary opacity-0 group-hover/item:opacity-100 transition-opacity" />}
-                    </button>
-                ))}
-             </div>
-        </div>
+        <ModelBrowser 
+          nodes={topologyNodes}
+          hiddenParts={hiddenParts}
+          onToggleVisibility={(id) => {
+            setHiddenParts(prev => 
+                prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+            )
+          }}
+          className="w-72 shrink-0 z-20"
+        />
       )}
+
+      {/* Main Viewport Area */}
+      <div className="flex-1 flex flex-col relative min-w-0">
 
       {/* Main Viewport */}
       <div className="flex-1 min-h-0 relative">
@@ -195,6 +213,7 @@ export default function ModelViewer({
                         key={url} 
                         url={url} 
                         hiddenParts={hiddenParts} 
+                        onStructureParsed={setTopologyNodes}
                         onSelect={(partName) => {
                             addToContext({
                                 id: `cad-${partName}`,
@@ -297,6 +316,7 @@ export default function ModelViewer({
                   Dynamics Enabled
               </Badge>
           </div>
+      </div>
       </div>
     </div>
   )
