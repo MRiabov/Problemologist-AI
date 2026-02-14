@@ -104,16 +104,16 @@ async def test_engineering_full_loop():
         # Check for Planner artifacts
         assert any("plan.md" in p for p in artifact_paths), "plan.md missing"
         assert any("todo.md" in p for p in artifact_paths), "todo.md missing"
-        assert any("preliminary_cost_estimation.yaml" in p for p in artifact_paths), (
-            "assembly_definition.yaml
-        )
+        assert any(
+            "assembly_definition.yaml" in p for p in artifact_paths
+        ), "assembly_definition.yaml missing"
 
         # Check for Reviewer artifacts
         # Reviews are usually in reviews/ folder
         review_files = [p for p in artifact_paths if "reviews/" in p]
-        assert len(review_files) > 0, (
-            "No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing)"
-        )
+        assert (
+            len(review_files) > 0
+        ), "No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing)"
 
         # We could inspect content here if we had content access,
         # to verify "typed decision" (e.g. accepted/rejected in frontmatter)

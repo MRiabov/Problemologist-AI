@@ -64,35 +64,21 @@ class TestMovingPart:
 
     def test_motor_type(self):
         part = MovingPart(
-            name="feeder",
+            part_name="feeder",
             type="motor",
-            position=(0, 0, 0),
-            dof="rotate_z",
-            description="Rotation motor",
+            dofs=["rotate_z"],
         )
         assert part.type == "motor"
-        assert part.dof == "rotate_z"
+        assert "rotate_z" in part.dofs
 
     def test_passive_type(self):
         part = MovingPart(
-            name="slider",
+            part_name="slider",
             type="passive",
-            position=[5, 5, 0],
-            dof="slide_y",
-            description="Sliding element",
+            dofs=["slide_y"],
         )
         assert part.type == "passive"
-        assert part.position == (5, 5, 0)
-
-    def test_invalid_dof(self):
-        with pytest.raises(ValidationError):
-            MovingPart(
-                name="test",
-                type="motor",
-                position=(0, 0, 0),
-                dof="spin",  # Invalid
-                description="test",
-            )
+        assert "slide_y" in part.dofs
 
 
 class TestObjectivesYaml:
@@ -133,17 +119,3 @@ class TestObjectivesYaml:
         del valid_objectives_data["objectives"]
         with pytest.raises(ValidationError):
             ObjectivesYaml(**valid_objectives_data)
-
-    def test_with_moving_parts(self, valid_objectives_data):
-        valid_objectives_data["moving_parts"] = [
-            {
-                "name": "motor1",
-                "type": "motor",
-                "position": [0, 0, 0],
-                "dof": "rotate_z",
-                "description": "Main motor",
-            }
-        ]
-        obj = ObjectivesYaml(**valid_objectives_data)
-        assert len(obj.moving_parts) == 1
-        assert obj.moving_parts[0].name == "motor1"

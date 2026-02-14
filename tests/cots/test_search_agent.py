@@ -51,5 +51,5 @@ def test_search_cots_catalog_no_results():
 
 def test_create_cots_search_agent():
     with patch("shared.cots.agent.ChatOpenAI") as mock_chat:
-        agent = create_cots_search_agent()
+        agent = create_cots_search_agent("gpt-4o")
         assert agent is not None
