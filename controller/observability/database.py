@@ -78,18 +78,28 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 pass
 
-        async with self.session_factory() as db:
-            trace = Trace(
-                episode_id=self.episode_id,
-                trace_type=TraceType.TOOL_START,
-                name=serialized.get("name"),
-                content=clean_content,
-                langfuse_trace_id=self._get_langfuse_id(),
+        try:
+            async with self.session_factory() as db:
+                trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.TOOL_START,
+                    name=serialized.get("name"),
+                    content=clean_content,
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace)
+                await db.commit()
+                await db.refresh(trace)
+                await self._broadcast_trace(trace)
+        except Exception as e:
+            # Silently fail or log a warning if DB is unavailable/constraint fails
+            # This is critical for standalone evals or transient issues
+            import structlog
+
+            logger = structlog.get_logger(__name__)
+            logger.warning(
+                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
-            db.add(trace)
-            await db.commit()
-            await db.refresh(trace)
-            await self._broadcast_trace(trace)
 
     async def on_tool_end(self, output: Any, **_kwargs: Any) -> None:
         # Ensure output is JSON serializable
@@ -109,62 +119,88 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 content = str(output)
 
-        async with self.session_factory() as db:
-            trace = Trace(
-                episode_id=self.episode_id,
-                trace_type=TraceType.TOOL_END,
-                content=content,
-                langfuse_trace_id=self._get_langfuse_id(),
+        try:
+            async with self.session_factory() as db:
+                trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.TOOL_END,
+                    content=content,
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace)
+                await db.commit()
+                await db.refresh(trace)
+                await self._broadcast_trace(trace)
+        except Exception as e:
+            import structlog
+
+            logger = structlog.get_logger(__name__)
+            logger.warning(
+                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
-            db.add(trace)
-            await db.commit()
-            await db.refresh(trace)
-            await self._broadcast_trace(trace)
 
     async def on_llm_new_token(self, token: str, **_kwargs: Any) -> None:
         pass
 
     async def on_llm_end(self, response: LLMResult, **_kwargs: Any) -> None:
-        async with self.session_factory() as db:
-            # Extract content from the first generation
-            content = ""
-            if response.generations and response.generations[0]:
-                content = response.generations[0][0].text
+        try:
+            async with self.session_factory() as db:
+                # Extract content from the first generation
+                content = ""
+                if response.generations and response.generations[0]:
+                    content = response.generations[0][0].text
 
-            trace = Trace(
-                episode_id=self.episode_id,
-                trace_type=TraceType.LLM_END,
-                content=content,
-                langfuse_trace_id=self._get_langfuse_id(),
+                trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.LLM_END,
+                    content=content,
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace)
+                await db.commit()
+                await db.refresh(trace)
+                await self._broadcast_trace(trace)
+        except Exception as e:
+            import structlog
+
+            logger = structlog.get_logger(__name__)
+            logger.warning(
+                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
-            db.add(trace)
-            await db.commit()
-            await db.refresh(trace)
-            await self._broadcast_trace(trace)
 
     async def record_events(self, events: list[dict[str, Any]]) -> None:
         """Record domain-specific events in the database."""
         if not events:
             return
 
-        async with self.session_factory() as db:
-            for event_data in events:
-                data = event_data.get("data", {})
-                content = (
-                    json.dumps(data) if isinstance(data, (dict, list)) else str(data)
-                )
+        try:
+            async with self.session_factory() as db:
+                for event_data in events:
+                    data = event_data.get("data", {})
+                    content = (
+                        json.dumps(data)
+                        if isinstance(data, (dict, list))
+                        else str(data)
+                    )
 
-                trace = Trace(
-                    episode_id=self.episode_id,
-                    trace_type=TraceType.EVENT,
-                    name=event_data.get("event_type", "generic_event"),
-                    content=content,
-                    metadata_vars=event_data,
-                    langfuse_trace_id=self._get_langfuse_id(),
-                )
-                db.add(trace)
+                    trace = Trace(
+                        episode_id=self.episode_id,
+                        trace_type=TraceType.EVENT,
+                        name=event_data.get("event_type", "generic_event"),
+                        content=content,
+                        metadata_vars=event_data,
+                        langfuse_trace_id=self._get_langfuse_id(),
+                    )
+                    db.add(trace)
 
-            await db.commit()
+                await db.commit()
+        except Exception as e:
+            import structlog
+
+            logger = structlog.get_logger(__name__)
+            logger.warning(
+                "database_events_failed", error=str(e), episode_id=str(self.episode_id)
+            )
             # We don't necessarily need to broadcast every event individually
             # if there are many, but for now we do it for consistency.
             # However, _broadcast_trace expects a Trace object with an ID.
