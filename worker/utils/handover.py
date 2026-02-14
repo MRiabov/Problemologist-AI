@@ -8,6 +8,7 @@ from build123d import Compound, export_step
 
 from shared.models.schemas import ObjectivesYaml
 from worker.utils.dfm import validate_and_price
+from worker.utils.rendering import prerender_24_views
 from worker.workbenches.config import load_config
 from worker.workbenches.models import ManufacturingMethod
 
@@ -110,8 +111,18 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
+    # T016: Extract manufacturing method from component metadata, fallback to CNC
+    method_str = getattr(component, "metadata", {}).get(
+        "manufacturing_method", ManufacturingMethod.CNC.value
+    )
+    try:
+        method = ManufacturingMethod(method_str)
+    except ValueError:
+        logger.warning("invalid_manufacturing_method", method=method_str)
+        method = ManufacturingMethod.CNC
+
     validation_result = validate_and_price(
-        component, ManufacturingMethod.CNC, dfm_config, build_zone=build_zone
+        component, method, dfm_config, build_zone=build_zone
     )
 
     if not validation_result.is_manufacturable:
@@ -145,7 +156,8 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
-    render_paths = []
+    # T016: Automatically generate 24 views for the reviewer
+    render_paths = prerender_24_views(component, output_dir=str(renders_dir))
     logger.info("renders_persisted", count=len(render_paths))
 
     cad_path = renders_dir / "model.step"

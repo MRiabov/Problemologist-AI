@@ -41,6 +41,9 @@ injection_molding:
     injection_rate_cm3_s: 10.0
 
 three_dp:
+  constraints:
+    min_wall_thickness_mm: 0.8
+    max_wall_thickness_mm: 10.0
   materials:
     abs:
       name: "ABS (3DP)"

@@ -4,31 +4,23 @@ import pathlib
 import tempfile
 
 import numpy as np
+import structlog
 import trimesh
 from build123d import Compound, Part
+
+logger = structlog.get_logger(__name__)
 
 
 def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     """
     Converts a build123d Part or Compound to a trimesh.Trimesh object.
+    Uses in-memory tessellation for performance.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
-        tmp_path = tmp.name
-
-    try:
-        from build123d import export_stl
-
-        export_stl(part, tmp_path)
-        mesh = trimesh.load(tmp_path)
-        # trimesh.load can return a Scene, we want a single mesh
-        if isinstance(mesh, trimesh.Scene):
-            mesh = mesh.dump(concatenate=True)
-        return mesh
-    finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+    # T016: Use direct tessellation to avoid disk I/O
+    verts, faces = part.tessellate(tolerance=0.1, angular_tolerance=0.1)
+    vertices = np.array([[v.X, v.Y, v.Z] for v in verts])
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+    return mesh
 
 
 def check_undercuts(
@@ -97,23 +89,73 @@ def check_undercuts(
     return list(set(undercut_indices))
 
 
+def check_wall_thickness(
+    mesh: trimesh.Trimesh, min_mm: float = 1.0, max_mm: float = 4.0
+) -> list[str]:
+    """
+    Functional check for wall thickness consistency using raycasting.
+    Shared utility used by both IM and 3DP workbenches.
+    """
+    logger.debug("checking_wall_thickness", min_mm=min_mm, max_mm=max_mm)
+
+    violations = []
+
+    # Sample points on the mesh and cast rays along normals to find opposite wall
+    # For MVP, we sample a subset of faces to keep it fast
+    sample_size = min(len(mesh.faces), 1000)
+    face_indices = np.random.choice(len(mesh.faces), sample_size, replace=False)
+
+    centers = mesh.triangles_center[face_indices]
+    # Inward normals
+    normals = -mesh.face_normals[face_indices]
+
+    # Offset origins slightly to avoid self-intersection
+    origins = centers + normals * 1e-4
+
+    # Use mesh.ray to leverage cached BVH and potentially faster engine (pyembree)
+    locations, index_ray, _ = mesh.ray.intersects_location(
+        origins, normals, multiple_hits=False
+    )
+
+    if len(locations) > 0:
+        # Distance between origin and hit point
+        hit_origins = origins[index_ray]
+        distances = np.linalg.norm(locations - hit_origins, axis=1)
+
+        too_thin = np.where(distances < min_mm)[0]
+        too_thick = np.where(distances > max_mm)[0]
+
+        if len(too_thin) > 0:
+            violations.append(
+                f"Wall thickness too thin: {len(too_thin)} samples < {min_mm}mm"
+            )
+            logger.warning(
+                "wall_too_thin", count=len(too_thin), min_dist=float(distances.min())
+            )
+        if len(too_thick) > 0:
+            violations.append(
+                f"Wall thickness too thick: {len(too_thick)} samples > {max_mm}mm"
+            )
+            logger.warning(
+                "wall_too_thick", count=len(too_thick), max_dist=float(distances.max())
+            )
+
+    return violations
+
+
 def compute_part_hash(part: Part | Compound) -> str:
     """
     Computes a stable hash for a build123d Part or Compound.
-    Uses STL export as a proxy for geometry.
+    Uses in-memory tessellation for performance.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
-    with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
-        tmp_path = tmp.name
+    # T016: Use direct tessellation to avoid disk I/O
+    verts, faces = part.tessellate(tolerance=0.1, angular_tolerance=0.1)
 
-    try:
-        from build123d import export_stl
+    # Convert to stable bytes representation for hashing
+    # We round to 4 decimal places to avoid tiny floating point variations
+    vertices = np.array([[v.X, v.Y, v.Z] for v in verts], dtype=np.float32)
+    vertices = np.round(vertices, 4)
+    faces_arr = np.array(faces, dtype=np.int32)
 
-        export_stl(part, tmp_path)
-        with open(tmp_path, "rb") as f:
-            content = f.read()
-        return hashlib.sha256(content).hexdigest()
-    finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+    data = vertices.tobytes() + faces_arr.tobytes()
+    return hashlib.sha256(data).hexdigest()
