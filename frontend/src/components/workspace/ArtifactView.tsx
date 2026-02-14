@@ -9,12 +9,16 @@ import {
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import yaml from "js-yaml";
 import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { getFileIconInfo as getSharedIconInfo } from "../../lib/fileIcons";
 import { useTheme } from "../../context/ThemeContext";
+import CircuitSchematic from "../visualization/CircuitSchematic";
+import CircuitTimeline from "../visualization/CircuitTimeline";
+import WireView from "../visualization/WireView";
 // No unnecessary exports from client
 
 interface ArtifactViewProps {
@@ -90,6 +94,8 @@ export default function ArtifactView({
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
 
+  const { activeEpisode } = useEpisodes();
+
   const renderContent = () => {
     const { theme } = useTheme();
     if (!activeAsset) {
@@ -99,6 +105,50 @@ export default function ArtifactView({
                 <span className="text-[10px] uppercase font-bold tracking-widest">No artifact selected</span>
             </div>
         );
+    }
+
+    // Special rendering for Assembly Definition with Electronics
+    if (activeAsset.name === 'preliminary_cost_estimation.yaml' && activeAsset.content) {
+        try {
+            const data = yaml.load(activeAsset.content) as any;
+            if (data && data.electronics) {
+                // Extract timeline events from traces
+                const timelineEvents = (activeEpisode?.traces || [])
+                    .filter(t => t.trace_type === 'event' && t.name === 'circuit_simulation')
+                    .map(t => ({
+                        timestamp: new Date(t.created_at).getTime() / 1000,
+                        motor_states: t.metadata?.motor_states || {}
+                    }))
+                    .sort((a, b) => a.timestamp - b.timestamp);
+
+                return (
+                    <div className="p-6 space-y-8 bg-background min-h-full">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <CircuitSchematic electronics={data.electronics} />
+                            <WireView 
+                                assetUrl={assets.find(a => a.asset_type === 'stl')?.s3_path} 
+                                wireRoutes={data.electronics.wiring || []} 
+                            />
+                        </div>
+                        {timelineEvents.length > 0 && (
+                            <CircuitTimeline events={timelineEvents} />
+                        )}
+                        <div className="border-t border-border pt-6">
+                            <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Assembly Definition</h3>
+                            <SyntaxHighlighter
+                                language="yaml"
+                                style={theme === 'dark' ? vscDarkPlus : vs}
+                                customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
+                            >
+                                {activeAsset.content}
+                            </SyntaxHighlighter>
+                        </div>
+                    </div>
+                );
+            }
+        } catch (e) {
+            console.error("Failed to parse assembly definition for electronics view", e);
+        }
     }
 
     const language = activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text');
