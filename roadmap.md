@@ -212,7 +212,7 @@ The electronics will get an extra set of agents which would communicate between 
 ##### Other - Electronics
 
 1. The simulation would not pass if the electronics is failing - e.g. short circuit, or others.
-2. Electronics is defined in `preliminary_cost_calculation.yaml` (note: the `preliminary_cost_calculation.yaml` will be soon renamed to `assembly_definition.yaml`); under some `electronics` section.
+2. Electronics is defined in `assembly_definition.yaml` (note: the `preliminary_cost_calculation.yaml` has been renamed to `assembly_definition.yaml`); under some `electronics` section.
 
 I would note here that it appears that PCBs don't really add any value here YET, but it should be added because that's what used in production.
 <!-- Or is it? they use....  -->
