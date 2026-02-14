@@ -1,4 +1,4 @@
-import logging
+import structlog
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
@@ -13,7 +13,7 @@ from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @type_check
@@ -39,11 +39,13 @@ class ElectronicsEngineerNode:
             # Emit handover event
             await record_worker_events(
                 episode_id=state.session_id,
-                events=[ElecAgentHandoverEvent(
-                    from_agent="Mechanical Engineer",
-                    to_agent="Electronics Engineer",
-                    iteration_count=state.iteration
-                )]
+                events=[
+                    ElecAgentHandoverEvent(
+                        from_agent="Mechanical Engineer",
+                        to_agent="Electronics Engineer",
+                        iteration_count=state.iteration,
+                    )
+                ],
             )
 
             objectives_content = await self.fs.read_file("objectives.yaml")
@@ -58,7 +60,9 @@ class ElectronicsEngineerNode:
         assembly_context = "No assembly context available."
         try:
             # Check preliminary_cost_estimation.yaml (Assembly Definition)
-            assembly_context = await self.fs.read_file("preliminary_cost_estimation.yaml")
+            assembly_context = await self.fs.read_file(
+                "preliminary_cost_estimation.yaml"
+            )
         except Exception:
             pass
 
@@ -76,8 +80,7 @@ class ElectronicsEngineerNode:
             return state
 
         # 4. Execute code
-        journal_entry = "
-[Electronics Engineer] Starting circuit design and routing."
+        journal_entry = "\n[Electronics Engineer] Starting circuit design and routing."
         try:
             # Record tool invocation
             await record_worker_events(
@@ -99,16 +102,13 @@ class ElectronicsEngineerNode:
                 )
 
             if exit_code == 0:
-                journal_entry += "
-Circuit and wiring implementation successful."
+                journal_entry += "\nCircuit and wiring implementation successful."
             else:
-                journal_entry += f"
-Circuit implementation failed: {stderr or stdout}"
+                journal_entry += f"\nCircuit implementation failed: {stderr or stdout}"
                 logger.warning("electronics_engineer_failed", error=stderr or stdout)
 
         except Exception as e:
-            journal_entry += f"
-System error during electronics implementation: {e}"
+            journal_entry += f"\nSystem error during electronics implementation: {e}"
             logger.error("electronics_engineer_system_error", error=str(e))
 
         return state.model_copy(
