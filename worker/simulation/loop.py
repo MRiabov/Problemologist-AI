@@ -9,6 +9,7 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
     SimulationBackendSelectedEvent,
+    PhysicsInstabilityEvent,
 )
 from worker.simulation.factory import get_physics_backend
 
@@ -258,7 +259,17 @@ class SimulationLoop:
             res = self.backend.step(dt)
             current_time = res.time
             if not res.success:
-                self.fail_reason = res.failure_reason
+                if res.failure_reason == "instability_detected":
+                    self.fail_reason = "PHYSICS_INSTABILITY"
+                    emit_event(
+                        PhysicsInstabilityEvent(
+                            kinetic_energy=0.0,  # Placeholder
+                            threshold=0.0,
+                            step=step_idx,
+                        )
+                    )
+                else:
+                    self.fail_reason = res.failure_reason
                 break
 
             # 2. Update Metrics
