@@ -7,7 +7,6 @@ Renders CAD models from specific camera angles for agent inspection.
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import mujoco
 import numpy as np
 import structlog
 from build123d import Compound, Part
@@ -40,6 +39,8 @@ def preview_design(
     Returns:
         Path to the saved preview image
     """
+    import mujoco
+
     # Build MJCF from component using SimulationBuilder
     with TemporaryDirectory() as temp_build_dir:
         build_dir = Path(temp_build_dir)
