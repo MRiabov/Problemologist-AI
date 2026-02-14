@@ -15,6 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsm6 \
     libngspice0 \
+    libvulkan1 \
+    libxcursor1 \
+    libxinerama1 \
+    libxft2 \
+    libxrandr2 \
+    libxi6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
