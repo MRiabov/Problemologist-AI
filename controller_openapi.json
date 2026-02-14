@@ -22,6 +22,57 @@
         }
       }
     },
+    "/episodes/{episode_id}/assets/{path}": {
+      "get": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Get Episode Asset",
+        "description": "Proxy asset requests to the worker.",
+        "operationId": "get_episode_asset_episodes__episode_id__assets__path__get",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/episodes/{episode_id}/traces/{trace_id}/feedback": {
       "post": {
         "tags": [
@@ -778,6 +829,7 @@
           "image",
           "step",
           "stl",
+          "glb",
           "python",
           "other"
         ],

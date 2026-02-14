@@ -1,11 +1,12 @@
 import uuid
 from typing import Any
 
+from sqlalchemy import select
+
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Trace
 from shared.enums import AssetType, TraceType
 from shared.observability.schemas import BaseEvent
-from sqlalchemy import select
 
 
 async def record_worker_events(
@@ -91,8 +92,10 @@ async def sync_asset(
             asset_type = AssetType.MJCF
         elif path.endswith((".png", ".jpg", ".jpeg", ".webp")):
             asset_type = AssetType.IMAGE
-        elif path.endswith((".glb", ".stl")):
-            asset_type = AssetType.STL if path.endswith(".stl") else AssetType.OTHER
+        elif path.endswith(".glb"):
+            asset_type = AssetType.GLB
+        elif path.endswith(".stl"):
+            asset_type = AssetType.STL
         else:
             asset_type = AssetType.OTHER
 

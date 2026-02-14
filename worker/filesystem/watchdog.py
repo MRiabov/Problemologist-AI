@@ -11,10 +11,10 @@ from worker.utils.storage import StorageClient
 logger = structlog.get_logger(__name__)
 
 
-class STLWatchdogHandler(PatternMatchingEventHandler):
+class AssetWatchdogHandler(PatternMatchingEventHandler):
     def __init__(self, storage_client: StorageClient, controller_url: str | None):
         super().__init__(
-            patterns=["*.stl", "*.STL"],
+            patterns=["*.stl", "*.STL", "*.glb", "*.GLB"],
             ignore_patterns=["*/.venv/*", "*/.git/*", "*/__pycache__/*"],
             ignore_directories=True,
         )
@@ -50,9 +50,13 @@ class STLWatchdogHandler(PatternMatchingEventHandler):
             return
 
         try:
+            asset_type = "stl"
+            if filename.lower().endswith(".glb"):
+                asset_type = "glb"
+
             payload = {
                 "type": "asset_update",
-                "asset_type": "stl",
+                "asset_type": asset_type,
                 "filename": filename,
                 "url": url,
             }
@@ -87,7 +91,7 @@ def start_watchdog(path: str) -> Observer:
         # Re-raising might prevent app startup.
         return None
 
-    event_handler = STLWatchdogHandler(storage_client, controller_url)
+    event_handler = AssetWatchdogHandler(storage_client, controller_url)
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
     try:
