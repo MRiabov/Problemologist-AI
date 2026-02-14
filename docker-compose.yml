@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: controller/Dockerfile
+    image: problemologist-ai-controller:latest
     ports:
       - "18000:8000"
     environment:
@@ -58,9 +59,7 @@ services:
       retries: 5
 
   migrations:
-    build:
-      context: .
-      dockerfile: controller/Dockerfile
+    image: problemologist-ai-controller:latest
     command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment:
       - POSTGRES_URL=postgresql+psycopg://postgres:postgres@postgres:5432/postgres
@@ -69,9 +68,7 @@ services:
         condition: service_healthy
   
   controller-worker:
-    build:
-      context: .
-      dockerfile: controller/Dockerfile
+    image: problemologist-ai-controller:latest
     command: ["python", "controller/temporal_worker.py"]
     environment:
       - POSTGRES_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
@@ -110,6 +107,7 @@ services:
     build:
       context: .
       dockerfile: worker/Dockerfile
+    image: problemologist-ai-worker:latest
     ports:
       - "18001:8001"
     environment:

@@ -33,6 +33,9 @@ WORKDIR /app
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
+# Use CPU-only torch to save space
+ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+
 # Copy from the cache instead of linking since it's a separate volume
 ENV UV_LINK_MODE=copy
 
