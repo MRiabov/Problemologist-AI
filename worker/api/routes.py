@@ -503,8 +503,28 @@ async def api_analyze(
         # Load default configuration
         config = load_config()
 
+        # Determine if FEM validation is required from objectives
+        fem_required = False
+        working_dir = fs_router.local_backend.root
+        obj_path = working_dir / "objectives.yaml"
+        if obj_path.exists():
+            try:
+                import yaml
+                from shared.models.schemas import ObjectivesYaml
+
+                data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+                objectives = ObjectivesYaml(**data)
+                if objectives.physics:
+                    fem_required = objectives.physics.fem_enabled
+            except Exception:
+                pass
+
         result = validate_and_price(
-            component, request.method, config, quantity=request.quantity
+            component,
+            request.method,
+            config,
+            quantity=request.quantity,
+            fem_required=fem_required,
         )
 
         # INT-018: Record validation results to satisfy the handover gate

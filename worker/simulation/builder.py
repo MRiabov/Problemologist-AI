@@ -713,9 +713,12 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
             # Check if deformable
             is_deformable = False
-            mat_def = mfg_config.materials.get(material_id)
-            if mat_def and mat_def.material_class in ["soft", "elastomer"]:
+            if objectives and objectives.physics and objectives.physics.fem_enabled:
                 is_deformable = True
+            else:
+                mat_def = mfg_config.materials.get(material_id)
+                if mat_def and mat_def.material_class in ["soft", "elastomer"]:
+                    is_deformable = True
 
             # Position and orientation
             pos = [

@@ -19,16 +19,18 @@ class StressSummary(BaseModel):
     part_label: str
     max_von_mises_pa: float
     mean_von_mises_pa: float
-    safety_factor: float            # yield_stress / max_von_mises
+    safety_factor: float  # yield_stress / max_von_mises
     location_of_max: tuple[float, float, float]
-    utilization_pct: float          # max_stress / yield_stress * 100
+    utilization_pct: float  # max_stress / yield_stress * 100
+
 
 class FluidMetricResult(BaseModel):
-    metric_type: str                # "fluid_containment" | "flow_rate"
+    metric_type: str  # "fluid_containment" | "flow_rate"
     fluid_id: str
     measured_value: float
     target_value: float
     passed: bool
+
 
 class SimulationMetrics(BaseModel):
     total_time: StrictFloat
@@ -98,16 +100,12 @@ class SimulationLoop:
                         voltage = abs(v_plus - v_minus)
                         # Powered if > 80% of rated voltage
                         is_powered = (
-                            1.0
-                            if voltage > 0.8 * (comp.rated_voltage or 24.0)
-                            else 0.0
+                            1.0 if voltage > 0.8 * (comp.rated_voltage or 24.0) else 0.0
                         )
                         if comp.assembly_part_ref:
                             self.is_powered_map[comp.assembly_part_ref] = is_powered
             else:
-                logger.warning(
-                    "electronics_validation_failed", errors=res.errors
-                )
+                logger.warning("electronics_validation_failed", errors=res.errors)
                 # If circuit is invalid, all motors are unpowered
                 for comp in self.electronics.components:
                     if comp.type == "motor" and comp.assembly_part_ref:
@@ -119,10 +117,31 @@ class SimulationLoop:
             from worker.workbenches.models import ManufacturingMethod
 
             # Default to CNC for simulation validation
-            config = load_config()
-            self.validation_report = validate_and_price(
-                self.component, ManufacturingMethod.CNC, config
+            self.config = load_config()
+            fem_required = (
+                self.objectives.physics.fem_enabled
+                if self.objectives and self.objectives.physics
+                else False
             )
+            self.validation_report = validate_and_price(
+                self.component,
+                ManufacturingMethod.CNC,
+                self.config,
+                fem_required=fem_required,
+            )
+
+            # Build material lookup
+            self.material_lookup = {}
+            children = getattr(self.component, "children", [])
+            if not children:
+                children = [self.component]
+            for child in children:
+                label = getattr(child, "label", None)
+                if label:
+                    self.material_lookup[label] = child.metadata.get("material_id")
+        else:
+            self.config = None
+            self.material_lookup = {}
 
         # Cache zone names for forbidden zones
         self.forbidden_sites = []
@@ -261,10 +280,25 @@ class SimulationLoop:
                         max_idx = np.argmax(stress_field.stress)
                         max_loc = stress_field.nodes[max_idx]
 
-                        # We'd need material data here for yield/ultimate
-                        # For now, placeholder values or fetch from config
-                        yield_stress = 276e6  # Default Aluminum
-                        ultimate_stress = 310e6
+                        # WP2: Fetch material data from config
+                        mat_id = self.material_lookup.get(body_name)
+                        mat_def = None
+                        if mat_id and self.config:
+                            mat_def = self.config.materials.get(mat_id)
+                            # Also check CNC specific materials if not in global
+                            if not mat_def and self.config.cnc:
+                                mat_def = self.config.cnc.materials.get(mat_id)
+
+                        yield_stress = (
+                            mat_def.yield_stress_pa
+                            if mat_def and mat_def.yield_stress_pa
+                            else 276e6
+                        )
+                        ultimate_stress = (
+                            mat_def.ultimate_stress_pa
+                            if mat_def and mat_def.ultimate_stress_pa
+                            else 310e6
+                        )
 
                         summary = StressSummary(
                             part_label=body_name,
@@ -311,10 +345,18 @@ class SimulationLoop:
                     if stress_field is not None and len(stress_field.stress) > 0:
                         max_s = np.max(stress_field.stress)
                         if max_s > so.max_von_mises_mpa * 1e6:
-                            self.fail_reason = f"STRESS_OBJECTIVE_EXCEEDED:{so.part_label}"
-                            logger.info("simulation_fail", reason="STRESS_OBJECTIVE_EXCEEDED", part=so.part_label, stress=max_s)
+                            self.fail_reason = (
+                                f"STRESS_OBJECTIVE_EXCEEDED:{so.part_label}"
+                            )
+                            logger.info(
+                                "simulation_fail",
+                                reason="STRESS_OBJECTIVE_EXCEEDED",
+                                part=so.part_label,
+                                stress=max_s,
+                            )
                             break
-                if self.fail_reason: break
+                if self.fail_reason:
+                    break
 
                 # 2.2.2 Fluid Objectives (Continuous checks)
                 for fo in self.objectives.objectives.fluid_objectives:
@@ -368,12 +410,16 @@ class SimulationLoop:
                             # Using a conservative limit for now.
                             limit = 100.0 * (1.26 ** (18 - wire.gauge_awg))
                             if tension > limit:
-                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN}:{wire.wire_id}"
-                                emit_event(ElectricalFailureEvent(
-                                    failure_type="wire_torn",
-                                    component_id=wire.wire_id,
-                                    message=f"Wire {wire.wire_id} torn due to high tension ({tension:.2f}N > {limit:.2f}N)"
-                                ))
+                                self.fail_reason = (
+                                    f"{SimulationFailureMode.WIRE_TORN}:{wire.wire_id}"
+                                )
+                                emit_event(
+                                    ElectricalFailureEvent(
+                                        failure_type="wire_torn",
+                                        component_id=wire.wire_id,
+                                        message=f"Wire {wire.wire_id} torn due to high tension ({tension:.2f}N > {limit:.2f}N)",
+                                    )
+                                )
                                 logger.info(
                                     "simulation_fail",
                                     reason="wire_torn",
@@ -406,8 +452,15 @@ class SimulationLoop:
                         if fo.type == "fluid_containment":
                             # Count particles inside containment_zone
                             zone = fo.containment_zone
-                            inside = np.all((particles >= zone.min) & (particles <= zone.max), axis=1)
-                            ratio = np.sum(inside) / len(particles) if len(particles) > 0 else 0.0
+                            inside = np.all(
+                                (particles >= zone.min) & (particles <= zone.max),
+                                axis=1,
+                            )
+                            ratio = (
+                                np.sum(inside) / len(particles)
+                                if len(particles) > 0
+                                else 0.0
+                            )
                             passed = ratio >= fo.threshold
                             result = FluidMetricResult(
                                 metric_type="fluid_containment",
@@ -431,7 +484,10 @@ class SimulationLoop:
                                 )
                             )
                             if not passed:
-                                self.fail_reason = self.fail_reason or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
+                                self.fail_reason = (
+                                    self.fail_reason
+                                    or f"FLUID_OBJECTIVE_FAILED:{fo.fluid_id}"
+                                )
                         elif fo.type == "flow_rate":
                             # Flow rate at end is less common, but we could measure cumulative flow
                             pass
