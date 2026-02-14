@@ -37,16 +37,19 @@ class MeshProcessor:
         decompose: bool = True,
         use_vhacd: bool = False,
     ) -> list[Path]:
-        """Converts a build123d object to OBJ file(s).
+        """Converts a build123d object to OBJ and GLB file(s).
+
+        OBJ is used for physics simulation (MuJoCo/Genesis),
+        while GLB is used for efficient frontend visualization.
 
         Args:
             part: The build123d geometry to convert
-            filepath: Output path (will be changed to .obj extension)
+            filepath: Output base path
             decompose: Whether to compute convex hull for physics
             use_vhacd: Whether to use V-HACD decomposition for concave shapes
 
         Returns:
-            List of output file paths
+            List of output file paths (both .obj and .glb)
 
         Raises:
             ValueError: If mesh is not watertight
@@ -54,11 +57,7 @@ class MeshProcessor:
         # Ensure the directory exists
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        # Force .obj extension for output
-        filepath = filepath.with_suffix(".obj")
-
         # Export build123d object to a temporary STL file
-        # (build123d doesn't have native OBJ export, so we convert via trimesh)
         temp_stl = filepath.with_suffix(".tmp.stl")
         export_stl(part, str(temp_stl))
 
@@ -82,11 +81,12 @@ class MeshProcessor:
                         decomposed = trimesh.decomposition.convex_decomposition(mesh)
                         if isinstance(decomposed, list) and len(decomposed) > 1:
                             for i, dm in enumerate(decomposed):
-                                sub_path = filepath.with_name(
-                                    f"{filepath.stem}_{i}.obj"
-                                )
-                                dm.export(str(sub_path), file_type="obj")
-                                output_paths.append(sub_path)
+                                # Export both OBJ and GLB for each decomposed part
+                                obj_sub = filepath.with_name(f"{filepath.stem}_{i}.obj")
+                                glb_sub = filepath.with_name(f"{filepath.stem}_{i}.glb")
+                                dm.export(str(obj_sub), file_type="obj")
+                                dm.export(str(glb_sub), file_type="glb")
+                                output_paths.extend([obj_sub, glb_sub])
                             return output_paths
                     except Exception:
                         # Fallback to single convex hull if VHACD fails
@@ -94,9 +94,14 @@ class MeshProcessor:
 
                 mesh = self.compute_convex_hull(mesh)
 
-            # Export as OBJ format
-            mesh.export(str(filepath), file_type="obj")
-            output_paths.append(filepath)
+            # Export in both formats
+            obj_path = filepath.with_suffix(".obj")
+            glb_path = filepath.with_suffix(".glb")
+
+            mesh.export(str(obj_path), file_type="obj")
+            mesh.export(str(glb_path), file_type="glb")
+
+            output_paths.extend([obj_path, glb_path])
         finally:
             if temp_stl.exists():
                 temp_stl.unlink()
@@ -552,22 +557,25 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     euler=euler,
                 )
             else:
-                # Use .obj extension for mesh files (per architecture spec)
-                mesh_filename_base = f"{label}.obj"
-                mesh_path_base = self.assets_dir / mesh_filename_base
+                # Use base name for processing; MeshProcessor will add extensions
+                mesh_path_base = self.assets_dir / label
 
-                # Process geometry and save STL(s)
+                # Process geometry and save both OBJ (for sim) and GLB (for viewer)
                 saved_paths = self.processor.process_geometry(
                     child, mesh_path_base, use_vhacd=self.use_vhacd
                 )
 
+                # MuJoCo ONLY supports OBJ or STL for meshes
+                # Filter saved paths for OBJ files to include in MJCF
+                obj_paths = [p for p in saved_paths if p.suffix == ".obj"]
+
                 mesh_names = []
-                for j, path in enumerate(saved_paths):
-                    mesh_name = f"{label}_{j}" if len(saved_paths) > 1 else label
+                for j, path in enumerate(obj_paths):
+                    mesh_name = f"{label}_{j}" if len(obj_paths) > 1 else label
                     self.compiler.add_mesh_asset(name=mesh_name, file_name=path.name)
                     mesh_names.append(mesh_name)
 
-                # Add body with all generated meshes as geoms
+                # Add body with all generated OBJ meshes as geoms
                 # Check if part is marked as fixed (no free joint in simulation)
                 is_fixed = getattr(child, "fixed", False)
                 self.compiler.add_body(
@@ -732,11 +740,10 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 child.location.orientation.Z,
             ]
 
-            mesh_filename = f"{label}.obj"
-            mesh_path = self.assets_dir / mesh_filename
+            mesh_path_base = self.assets_dir / label
 
-            # Process geometry (save as OBJ for rigid, or intermediate STL for soft)
-            self.processor.process_geometry(child, mesh_path, decompose=False)
+            # Process geometry (save as OBJ for sim/genesis, and GLB for viewer)
+            self.processor.process_geometry(child, mesh_path_base, decompose=False)
 
             entity_info = {
                 "name": label,
@@ -746,17 +753,25 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             }
 
             if is_deformable:
-                msh_path = mesh_path.with_suffix(".msh")
+                msh_path = mesh_path_base.with_suffix(".msh")
                 # process_geometry saves to .obj, but also produces a .tmp.stl internally.
                 # We might need to export STL explicitly for tetrahedralize.
-                stl_path = mesh_path.with_suffix(".stl")
+                stl_path = mesh_path_base.with_suffix(".stl")
+                from worker.simulation.builder import export_stl
+
                 export_stl(child, str(stl_path))
+                from worker.utils.mesh_utils import tetrahedralize
+
                 tetrahedralize(stl_path, msh_path)
                 entity_info["type"] = "soft_mesh"
-                entity_info["file"] = str(msh_path.relative_to(self.output_dir))
+                entity_info["file"] = str(msh_path.relative_to(self.assets_dir.parent))
             else:
                 entity_info["type"] = "mesh"
-                entity_info["file"] = str(mesh_path.relative_to(self.output_dir))
+                entity_info["file"] = str(
+                    mesh_path_base.with_suffix(".obj").relative_to(
+                        self.assets_dir.parent
+                    )
+                )
 
             scene_data["entities"].append(entity_info)
 

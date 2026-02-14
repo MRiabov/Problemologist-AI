@@ -29,6 +29,8 @@ class GenesisBackend(PhysicsBackend):
         if gs is None:
             raise ImportError("Genesis not installed")
 
+        self.scene = scene
+
         # Parse scene.json to get body names for integration test stubs
         if scene.scene_path and scene.scene_path.endswith(".json"):
             import json
