@@ -3,7 +3,7 @@ from typing import Any
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
-from controller.observability.tracing import record_worker_events
+from controller.observability.tracing import record_worker_events, sync_asset
 from controller.workflows.execution import ScriptExecutionWorkflow
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -124,6 +124,8 @@ class RemoteFilesystemMiddleware:
                         "timestamp": datetime.now(datetime.UTC).isoformat(),
                     },
                 )
+                # Sync to Asset table for Explorer visibility
+                await sync_asset(episode_id, path, content)
             except ValueError:
                 # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
                 pass
@@ -142,7 +144,16 @@ class RemoteFilesystemMiddleware:
             episode_id=self.client.session_id,
             events=[EditFileToolEvent(path=path, num_edits=len(edits))],
         )
-        return await self.client.edit_file(path, edits)
+        success = await self.client.edit_file(path, edits)
+        if success:
+            # For edits, we read the file back to get the updated content for the Asset table
+            try:
+                content = await self.client.read_file(path)
+                await sync_asset(self.client.session_id, path, content)
+            except Exception:
+                # Don't fail the edit if sync fails
+                pass
+        return success
 
     async def run_command(self, code: str, timeout: int = 30) -> dict[str, Any]:
         """Execute a command (Python code) via the Worker client, wrapped in Temporal for durability."""
