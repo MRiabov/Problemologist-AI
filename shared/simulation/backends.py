@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Protocol, Any, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
+
 import numpy as np
 from pydantic import BaseModel
 

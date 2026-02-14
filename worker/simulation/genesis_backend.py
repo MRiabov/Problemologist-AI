@@ -6,14 +6,14 @@ except ImportError:
     gs = None
 
 from shared.simulation.backends import (
+    ActuatorState,
+    BodyState,
+    ContactForce,
     PhysicsBackend,
     SimulationScene,
-    StepResult,
-    BodyState,
     SiteState,
-    ActuatorState,
+    StepResult,
     StressField,
-    ContactForce,
 )
 
 
@@ -36,7 +36,7 @@ class GenesisBackend(PhysicsBackend):
             import json
 
             try:
-                with open(scene.scene_path, "r") as f:
+                with open(scene.scene_path) as f:
                     data = json.load(f)
                     for ent in data.get("entities", []):
                         self.entities[ent["name"]] = ent

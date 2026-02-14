@@ -1,6 +1,7 @@
 import logging
+from typing import Any
+
 import numpy as np
-from typing import List, Tuple, Any
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -9,12 +10,12 @@ logger = logging.getLogger(__name__)
 class WireRouteResult(BaseModel):
     wire_id: str
     total_length_mm: float
-    waypoints: List[Tuple[float, float, float]]
+    waypoints: list[tuple[float, float, float]]
     valid: bool
-    errors: List[str] = []
+    errors: list[str] = []
 
 
-def calculate_length(waypoints: List[Tuple[float, float, float]]) -> float:
+def calculate_length(waypoints: list[tuple[float, float, float]]) -> float:
     """Calculate total length of a path defined by waypoints."""
     if not waypoints or len(waypoints) < 2:
         return 0.0
@@ -28,9 +29,9 @@ def calculate_length(waypoints: List[Tuple[float, float, float]]) -> float:
 
 def route_wire(
     wire_id: str,
-    waypoints: List[Tuple[float, float, float]],
+    waypoints: list[tuple[float, float, float]],
     gauge_awg: int,
-    attach_to: List[str] = None,
+    attach_to: list[str] = None,
 ) -> WireRouteResult:
     """
     Process a wire route, calculating length and basic path validation.
@@ -66,7 +67,7 @@ def route_wire(
 
 
 def check_wire_clearance(
-    wire_waypoints: List[Tuple[float, float, float]], assembly_meshes: Any
+    wire_waypoints: list[tuple[float, float, float]], assembly_meshes: Any
 ) -> bool:
     """
     Check if a wire path intersects with any meshes in the assembly.

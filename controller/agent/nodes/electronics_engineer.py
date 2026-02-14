@@ -1,12 +1,11 @@
 import structlog
-
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
-from shared.observability.schemas import RunCommandToolEvent, ElecAgentHandoverEvent
+from shared.observability.schemas import ElecAgentHandoverEvent, RunCommandToolEvent
 from shared.type_checking import type_check
 
 from ..config import settings

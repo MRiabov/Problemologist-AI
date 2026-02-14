@@ -18,8 +18,6 @@ from deepagents.backends.utils import (
     format_content_with_line_numbers,
 )
 
-from .worker import WorkerClient
-
 logger = structlog.get_logger(__name__)
 
 

@@ -1,13 +1,15 @@
-import pytest
-import numpy as np
 import os
 from pathlib import Path
-from shared.simulation.backends import SimulatorBackendType, SimulationScene
+
+import pytest
+
+from shared.simulation.backends import SimulatorBackendType
+from worker.simulation.builder import GenesisSimulationBuilder, MuJoCoSimulationBuilder
 from worker.simulation.factory import get_physics_backend, get_simulation_builder
-from worker.simulation.mujoco_backend import MuJoCoBackend
 from worker.simulation.genesis_backend import GenesisBackend
-from worker.simulation.builder import MuJoCoSimulationBuilder, GenesisSimulationBuilder
 from worker.simulation.loop import SimulationLoop
+from worker.simulation.mujoco_backend import MuJoCoBackend
+
 
 def test_simulation_loop_with_mujoco():
     # Use the minimal XML created for testing
@@ -25,32 +27,40 @@ def test_simulation_loop_with_mujoco():
         </body>
     </worldbody>
 </mujoco>""")
-        
+
     loop = SimulationLoop(xml_path, backend_type=SimulatorBackendType.MUJOCO)
-    
+
     # Run a few steps
     metrics = loop.step(control_inputs={}, duration=0.1)
-    
+
     assert metrics.total_time >= 0.1
-    assert metrics.success == False # No goal achieved in minimal.xml
-    assert metrics.fail_reason == None # Finished normally
+    assert metrics.success == False  # No goal achieved in minimal.xml
+    assert metrics.fail_reason == None  # Finished normally
+
 
 def test_simulation_builder_factory():
     output_dir = Path("test_renders")
-    
-    builder_mujoco = get_simulation_builder(output_dir, backend_type=SimulatorBackendType.MUJOCO)
+
+    builder_mujoco = get_simulation_builder(
+        output_dir, backend_type=SimulatorBackendType.MUJOCO
+    )
     assert isinstance(builder_mujoco, MuJoCoSimulationBuilder)
-    
-    builder_genesis = get_simulation_builder(output_dir, backend_type=SimulatorBackendType.GENESIS)
+
+    builder_genesis = get_simulation_builder(
+        output_dir, backend_type=SimulatorBackendType.GENESIS
+    )
     assert isinstance(builder_genesis, GenesisSimulationBuilder)
+
 
 def test_factory_mujoco():
     backend = get_physics_backend(SimulatorBackendType.MUJOCO)
     assert isinstance(backend, MuJoCoBackend)
 
+
 def test_factory_genesis():
     backend = get_physics_backend(SimulatorBackendType.GENESIS)
     assert isinstance(backend, GenesisBackend)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

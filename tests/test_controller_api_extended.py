@@ -91,8 +91,8 @@ def test_trigger_backup_no_temporal(mock_getenv):
 @patch("controller.api.ops.os.getenv")
 @patch("controller.api.ops.BackupWorkflow")
 def test_trigger_backup_success(mock_workflow, mock_getenv):
-    mock_getenv.side_effect = (
-        lambda k, default=None: "secret" if k == "BACKUP_SECRET" else "config-val"
+    mock_getenv.side_effect = lambda k, default=None: (
+        "secret" if k == "BACKUP_SECRET" else "config-val"
     )
 
     mock_client = AsyncMock()

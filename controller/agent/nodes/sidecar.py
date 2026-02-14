@@ -4,16 +4,15 @@ from pathlib import Path
 
 from git import GitCommandError, Repo
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
-from langchain_core.runnables import RunnableConfig
+from controller.observability.tracing import sync_asset
 from shared.type_checking import type_check
 
-from controller.observability.tracing import sync_asset
-
+from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
-from ..config import settings
 
 logger = logging.getLogger(__name__)
 

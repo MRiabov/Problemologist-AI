@@ -5,7 +5,6 @@ from sqlalchemy.orm import DeclarativeBase
 
 from controller.config.settings import settings
 
-
 # Cache engines per loop to avoid "Future attached to a different loop" errors
 _engine_cache = {}
 

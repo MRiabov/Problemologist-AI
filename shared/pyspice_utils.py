@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Any
+
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
 
 # Configure PySpice to find ngspice library
@@ -17,9 +18,8 @@ if not os.environ.get("PYSPICE_LIBRARY_PATH"):
 
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit import *
+
 from shared.models.schemas import CircuitValidationResult, PowerSupplyConfig
-from shared.observability.events import emit_event
-from shared.observability.schemas import CircuitValidationEvent
 
 logger = logging.getLogger(__name__)
 

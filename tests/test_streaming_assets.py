@@ -75,8 +75,8 @@ async def test_get_asset_syntax_error():
 
     # Simulate a python file existing and having syntax error
     mock_fs_router.exists.side_effect = lambda path: path == "model.py"
-    mock_fs_router.read.side_effect = (
-        lambda path: b"def broken_code(" if path == "model.py" else b"ignored"
+    mock_fs_router.read.side_effect = lambda path: (
+        b"def broken_code(" if path == "model.py" else b"ignored"
     )
 
     # Expect HTTPException 422

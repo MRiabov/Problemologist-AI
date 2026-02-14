@@ -1,4 +1,3 @@
-import asyncio
 import os
 import time
 
@@ -105,7 +104,9 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 
         # Verify raw particle data absent from workspace
         ls_resp = await client.post(
-            f"{WORKER_URL}/fs/ls", json={"path": "/"}, headers={"X-Session-ID": session_id}
+            f"{WORKER_URL}/fs/ls",
+            json={"path": "/"},
+            headers={"X-Session-ID": session_id},
         )
         files = [f["name"] for f in ls_resp.json()]
         assert not any(

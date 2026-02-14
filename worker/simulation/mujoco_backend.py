@@ -1,14 +1,15 @@
 import mujoco
 import numpy as np
+
 from shared.simulation.backends import (
+    ActuatorState,
+    BodyState,
+    ContactForce,
     PhysicsBackend,
     SimulationScene,
-    StepResult,
-    BodyState,
     SiteState,
-    ActuatorState,
+    StepResult,
     StressField,
-    ContactForce,
 )
 
 

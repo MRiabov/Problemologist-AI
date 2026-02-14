@@ -48,7 +48,7 @@ class MaterialDefinition(BaseModel):
     yield_stress_pa: StrictFloat | None = None
     ultimate_stress_pa: StrictFloat | None = None
     elongation_at_break: StrictFloat | None = None
-    material_class: StrictStr = "rigid" # "rigid" | "soft" | "elastomer"
+    material_class: StrictStr = "rigid"  # "rigid" | "soft" | "elastomer"
 
 
 class CostBreakdown(BaseModel):

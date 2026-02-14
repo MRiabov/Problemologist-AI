@@ -6,8 +6,8 @@ from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from shared.cots.parts.electronics import ElectronicRelay, PowerSupply
 from shared.cots.parts.motors import ServoMotor
-from shared.cots.parts.electronics import PowerSupply, ElectronicRelay
 from shared.type_checking import type_check
 
 from .database.init import init_db

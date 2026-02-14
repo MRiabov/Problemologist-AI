@@ -1,29 +1,27 @@
 import json
 import os
-import yaml
-import logging
 from pathlib import Path
-from typing import Any, List, Tuple, Literal
+from typing import Literal
 
 import structlog
-from build123d import Compound, export_stl
+import yaml
+from build123d import Compound
 
 from shared.models.schemas import (
-    ObjectivesYaml,
-    PreliminaryCostEstimation,
+    ElectronicsSection,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
-    ElectronicsRequirements,
-    ElectronicsSection,
+    ObjectivesYaml,
+    PreliminaryCostEstimation,
 )
 from shared.simulation.backends import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
-from worker.simulation.loop import SimulationLoop, StressSummary, FluidMetricResult
-
-from .rendering import prerender_24_views
-from .dfm import validate_and_price
+from worker.simulation.loop import FluidMetricResult, SimulationLoop, StressSummary
 from worker.workbenches.config import load_config
+
+from .dfm import validate_and_price
+from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
 
@@ -344,8 +342,8 @@ def simulate(
                 if part.control:
                     if part.control.mode == "sinusoidal":
                         dynamic_controllers[part.part_name] = (
-                            lambda t, p=part.control: sinusoidal(
-                                t, p.speed, p.frequency or 1.0
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
                             )
                         )
                     elif part.control.mode == "constant":
@@ -424,7 +422,7 @@ def validate(
                 f"Build zone violation: bbox {bbox} outside build_zone {build_zone}",
             )
     else:
-        if 1000.0 < bbox.size.X or 1000.0 < bbox.size.Y or 1000.0 < bbox.size.Z:
+        if bbox.size.X > 1000.0 or bbox.size.Y > 1000.0 or bbox.size.Z > 1000.0:
             return (
                 False,
                 f"Boundary constraint violation: size {bbox.size} exceeds 1000.0",
