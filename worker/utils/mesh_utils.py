@@ -92,30 +92,35 @@ def _tetrahedralize_gmsh(
     import gmsh
 
     try:
-        gmsh.initialize()
-        gmsh.model.add("Model")
+        if not gmsh.isInitialized():
+            gmsh.initialize()
+        gmsh.option.setNumber("General.Terminal", 1)
+        gmsh.model.add("VolumetricModel")
 
         # Load the STL
         gmsh.merge(str(input_path))
 
-        # Create a volume from the surface
-        # For STL, we need to create a surface loop and then a volume
-        surfaces = gmsh.model.getEntities(2)
-        if not surfaces:
+        # In Gmsh, STL is just a collection of triangles (discrete surfaces)
+        # We need to create a volume from them.
+        entities = gmsh.model.getEntities(2)
+        if not entities:
             raise RuntimeError("No surfaces found in STL")
 
-        surface_loop = gmsh.model.geo.addSurfaceLoop([s[1] for s in surfaces])
-        gmsh.model.geo.addVolume([surface_loop])
+        # Create a surface loop from all surfaces
+        surface_tags = [e[1] for e in entities]
+        loop_tag = gmsh.model.geo.addSurfaceLoop(surface_tags)
+
+        # Add a volume
+        volume_tag = gmsh.model.geo.addVolume([loop_tag])
         gmsh.model.geo.synchronize()
 
-        # Set mesh size constraints if needed
+        # Optional: refine mesh size
         # gmsh.option.setNumber("Mesh.MeshSizeFactor", refine_level)
 
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
 
-        # Save as .msh (Genesis usually prefers Version 2 or 4 ASCII)
-        # Gmsh version 4.0 is often the default now.
+        # Save as .msh (Genesis usually prefers Version 4 ASCII)
         output_msh_path.parent.mkdir(parents=True, exist_ok=True)
         gmsh.write(str(output_msh_path))
 

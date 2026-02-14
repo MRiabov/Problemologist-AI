@@ -43,6 +43,7 @@ class SimulationMetrics(BaseModel):
     success: StrictBool
     fail_reason: StrictStr | None = None
     stress_summaries: list[StressSummary] = []
+    stress_fields: dict[str, dict] = {}  # part_label -> {"nodes": ..., "stress": ...}
     fluid_metrics: list[FluidMetricResult] = []
     confidence: StrictStr = "high"
 
@@ -88,32 +89,6 @@ class SimulationLoop:
         self.objectives = objectives
         self.is_powered_map = {}
         self.validation_report = None
-
-        if self.electronics:
-            from shared.circuit_builder import build_circuit_from_section
-            from shared.pyspice_utils import validate_circuit
-
-            self.circuit = build_circuit_from_section(self.electronics)
-            # Initial validation to set up is_powered_map
-            res = validate_circuit(self.circuit, self.electronics.power_supply)
-            if res.valid:
-                for comp in self.electronics.components:
-                    if comp.type == "motor":
-                        v_plus = res.node_voltages.get(f"{comp.component_id}_+", 0.0)
-                        v_minus = res.node_voltages.get(f"{comp.component_id}_-", 0.0)
-                        voltage = abs(v_plus - v_minus)
-                        # Powered if > 80% of rated voltage
-                        is_powered = (
-                            1.0 if voltage > 0.8 * (comp.rated_voltage or 24.0) else 0.0
-                        )
-                        if comp.assembly_part_ref:
-                            self.is_powered_map[comp.assembly_part_ref] = is_powered
-            else:
-                logger.warning("electronics_validation_failed", errors=res.errors)
-                # If circuit is invalid, all motors are unpowered
-                for comp in self.electronics.components:
-                    if comp.type == "motor" and comp.assembly_part_ref:
-                        self.is_powered_map[comp.assembly_part_ref] = 0.0
 
         if self.component:
             from worker.utils.dfm import validate_and_price
@@ -173,29 +148,125 @@ class SimulationLoop:
 
         self.stress_summaries = []
         self.fluid_metrics = []
+        self.actuator_clamp_duration = {}
 
         # T015: derive is_powered_map from electronics.circuit state
         self.is_powered_map = {}
+        self.switch_states = {}
+        self._electronics_dirty = True
         if self.electronics:
-            from shared.pyspice_utils import validate_circuit
-
-            res = validate_circuit(
-                self.electronics.circuit, self.electronics.power_supply
-            )
-            if res.valid:
-                # Map motors to their power state (1.0 = powered, 0.0 = not)
-                for part in self.electronics.parts:
-                    if part.type == "motor":
-                        v_diff = abs(
-                            res.node_voltages.get(part.node_a, 0)
-                            - res.node_voltages.get(part.node_b, 0)
-                        )
-                        self.is_powered_map[part.name] = 1.0 if v_diff > 0.1 else 0.0
-            else:
-                logger.warning("initial_electronics_invalid", errors=res.errors)
+            for comp in self.electronics.components:
+                if comp.type in ["switch", "relay"]:
+                    self.switch_states[comp.component_id] = True
+            self._update_electronics(force=True)
 
         # Reset metrics
         self.reset_metrics()
+
+    def _update_electronics(self, force=False):
+        """Update is_powered_map based on circuit state."""
+        if not self.electronics:
+            return
+
+        if not force and not self._electronics_dirty:
+            return
+
+        from shared.circuit_builder import build_circuit_from_section
+        from shared.pyspice_utils import validate_circuit
+
+        try:
+            self.circuit = build_circuit_from_section(
+                self.electronics, self.switch_states
+            )
+            res = validate_circuit(self.circuit, self.electronics.power_supply)
+            if res.valid:
+                for comp in self.electronics.components:
+                    if comp.type == "motor":
+                        v_diff = abs(
+                            res.node_voltages.get(f"{comp.component_id}_+", 0.0)
+                            - res.node_voltages.get(f"{comp.component_id}_-", 0.0)
+                        )
+                        is_powered = 1.0 if v_diff > 0.1 else 0.0
+                        self.is_powered_map[comp.component_id] = is_powered
+                        if comp.assembly_part_ref:
+                            self.is_powered_map[comp.assembly_part_ref] = is_powered
+                self._electronics_dirty = False
+                return
+            else:
+                logger.warning("electronics_validation_failed", errors=res.errors)
+        except Exception as e:
+            logger.debug("electronics_simulation_failed_using_fallback", error=str(e))
+
+        # Fallback: Simple connectivity-based power gating
+        self._fallback_electronics_update()
+        self._electronics_dirty = False
+
+    def _fallback_electronics_update(self):
+        """Connectivity-based fallback for is_powered_map if SPICE fails."""
+        if not self.electronics:
+            return
+
+        # Simple BFS to find nodes connected to supply_v+
+        adj = {}  # node -> set of connected nodes
+        
+        def add_edge(u, v):
+            if u not in adj: adj[u] = set()
+            if v not in adj: adj[v] = set()
+            adj[u].add(v)
+            adj[v].add(u)
+
+        # 1. Add wires
+        for wire in self.electronics.wiring:
+            # Use same normalization as circuit_builder
+            def norm(c, t):
+                if t == "supply_v+" or (c == "supply" and t == "v+"): return "supply_v+"
+                if t == "0" or (c == "supply" and t == "0"): return "0"
+                if t == "a": t = "+"
+                if t == "b": t = "-"
+                return f"{c}_{t}"
+            
+            add_edge(norm(wire.from_terminal.component, wire.from_terminal.terminal),
+                     norm(wire.to_terminal.component, wire.to_terminal.terminal))
+
+        # 2. Add closed switches
+        for comp in self.electronics.components:
+            if comp.type in ["switch", "relay"]:
+                if self.switch_states.get(comp.component_id, True):
+                    add_edge(f"{comp.component_id}_in", f"{comp.component_id}_out")
+        
+        # 3. Traverse from supply_v+
+        powered_nodes = set()
+        stack = ["supply_v+"]
+        visited = {"supply_v+"}
+        while stack:
+            u = stack.pop()
+            powered_nodes.add(u)
+            for v in adj.get(u, []):
+                if v not in visited:
+                    visited.add(v)
+                    stack.append(v)
+        
+        # 4. Map motors: powered if both + and - terminals are reached?
+        # No, a motor is powered if + is connected to VCC and - is connected to GND.
+        # Let's find nodes connected to GND (0)
+        gnd_nodes = set()
+        stack = ["0"]
+        visited = {"0"}
+        while stack:
+            u = stack.pop()
+            gnd_nodes.add(u)
+            for v in adj.get(u, []):
+                if v not in visited:
+                    visited.add(v)
+                    stack.append(v)
+
+        for comp in self.electronics.components:
+            if comp.type == "motor":
+                is_powered = 1.0 if (f"{comp.component_id}_+" in powered_nodes and 
+                                     f"{comp.component_id}_-" in gnd_nodes) else 0.0
+                self.is_powered_map[comp.component_id] = is_powered
+                if comp.assembly_part_ref:
+                    self.is_powered_map[comp.assembly_part_ref] = is_powered
 
     def reset_metrics(self):
         self.total_energy = 0.0
@@ -265,6 +336,10 @@ class SimulationLoop:
         stress_report_interval = 1 if self.smoke_test_mode else 50
 
         for step_idx in range(steps):
+            # T015: Update electronics if state changed
+            if self.electronics and self._electronics_dirty:
+                self._update_electronics()
+
             # Apply dynamic controllers
             if dynamic_controllers:
                 ctrls = {}
@@ -477,10 +552,10 @@ class SimulationLoop:
                                     tension=tension,
                                 )
                                 wire_broken = True
-                                # If wire breaks, update circuit
-                                # Since SPICE is slow, we'll assume a broken wire kills the circuit for simplicity in the loop.
-                                for motor_name in self.is_powered_map:
-                                    self.is_powered_map[motor_name] = 0.0
+                                # If wire breaks, remove it and re-evaluate circuit
+                                self.electronics.wiring.remove(wire)
+                                self._electronics_dirty = True
+                                self._update_electronics()
                                 break
                         except Exception:
                             # Tendon might not be in backend if not routed
@@ -605,9 +680,24 @@ class SimulationLoop:
             success=is_success,
             fail_reason=self.fail_reason,
             stress_summaries=self.stress_summaries,
+            stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
             confidence="approximate" if self.smoke_test_mode else "high",
         )
+
+    def _get_stress_fields(self) -> dict[str, dict]:
+        fields = {}
+        if not self.objectives or not self.objectives.objectives:
+            return fields
+
+        for so in self.objectives.objectives.stress_objectives:
+            field = self.backend.get_stress_field(so.part_label)
+            if field is not None:
+                fields[so.part_label] = {
+                    "nodes": field.nodes.tolist(),
+                    "stress": field.stress.tolist(),
+                }
+        return fields
 
     def _check_motor_overload(self) -> str | None:
         actuator_names = self.backend.get_all_actuator_names()

@@ -71,7 +71,7 @@ class GenesisBackend(PhysicsBackend):
 
             scene_dir = Path(scene.scene_path).parent
             try:
-                with open(scene.scene_path) as f:
+                with Path(scene.scene_path).open() as f:
                     data = json.load(f)
 
                     # 1. Add Entities
@@ -194,32 +194,41 @@ class GenesisBackend(PhysicsBackend):
             pos = state.pos[0].mean(axis=0).tolist()
             vel = state.vel[0].mean(axis=0).tolist()
             return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
-        else:
-            # Rigid entity
-            return BodyState(
-                pos=entity.get_pos().tolist(),
-                quat=entity.get_quat().tolist(),
-                vel=entity.get_vel().tolist(),
-                angvel=entity.get_angvel().tolist(),
-            )
+        return BodyState(
+            pos=entity.get_pos().tolist(),
+            quat=entity.get_quat().tolist(),
+            vel=entity.get_vel().tolist(),
+            angvel=entity.get_angvel().tolist(),
+        )
 
     def get_stress_field(self, body_id: str) -> StressField | None:
         if body_id not in self.entities:
             return None
 
         entity = self.entities[body_id]
-        # For FEM, we might want to return per-node stress if available
-        # Placeholder for now
+        state = entity.get_state()
+
+        # Check if it's an FEM entity
+        if hasattr(state, "von_mises"):
+            nodes = state.pos[0].cpu().numpy()
+            stress = state.von_mises[0].cpu().numpy()
+            return StressField(nodes=nodes, stress=stress)
+
         return None
 
     def get_particle_positions(self) -> np.ndarray | None:
         # For MPM fluids
         all_particles = []
-        for name, entity in self.entities.items():
-            if "MPM" in str(type(entity)):
+        for _, entity in self.entities.items():
+            # In Genesis, MPM entities have particles
+            try:
                 state = entity.get_state()
-                if hasattr(state, "pos"):
-                    all_particles.append(state.pos[0].cpu().numpy())
+                if hasattr(state, "pos") and not hasattr(state, "von_mises"):
+                    # Heuristic: MPM has pos but not von_mises (which FEM has)
+                    pos = state.pos[0].cpu().numpy()
+                    all_particles.append(pos)
+            except Exception:
+                continue
 
         if not all_particles:
             return None
@@ -236,26 +245,26 @@ class GenesisBackend(PhysicsBackend):
             self.cameras[camera_name] = cam
 
         cam = self.cameras[camera_name]
-        rgb, depth, seg = cam.render()
+        rgb, _, _ = cam.render()
 
         if hasattr(rgb, "cpu"):
             rgb = rgb.cpu().numpy()
 
         return rgb.astype(np.uint8)
 
-    def get_camera_matrix(self, camera_name: str) -> np.ndarray:
+    def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
         pass
 
     def get_contact_forces(self) -> list[ContactForce]:
         return []
 
-    def get_site_state(self, site_name: str) -> SiteState:
+    def get_site_state(self, _site_name: str) -> SiteState:
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
-    def get_actuator_state(self, actuator_name: str) -> ActuatorState:
+    def get_actuator_state(self, _actuator_name: str) -> ActuatorState:
         return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
@@ -273,10 +282,10 @@ class GenesisBackend(PhysicsBackend):
     def get_all_tendon_names(self) -> list[str]:
         return []
 
-    def check_collision(self, body_name: str, site_name: str) -> bool:
+    def check_collision(self, _body_name: str, _site_name: str) -> bool:
         return False
 
-    def get_tendon_tension(self, tendon_name: str) -> float:
+    def get_tendon_tension(self, _tendon_name: str) -> float:
         return 0.0
 
     def close(self) -> None:
