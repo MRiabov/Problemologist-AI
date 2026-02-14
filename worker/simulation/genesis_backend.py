@@ -26,6 +26,7 @@ class GenesisBackend(PhysicsBackend):
         self.entities = {}  # name -> gs.Entity
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
+        self.motors = []  # part_name -> dict
         self.current_time = 0.0
         self.mfg_config = None
         if gs is not None:
@@ -129,7 +130,14 @@ class GenesisBackend(PhysicsBackend):
 
                         self.entities[name] = entity
 
-                    # 2. Add Fluids (MPM)
+                    # 2. Add Joints (if any)
+                    # Note: Genesis often adds joints via the morph or as part of the asset loading
+                    # For custom meshes, we might need to set them up.
+                    # Currently we assume the backend handles it via entity properties if supported.
+                    # Genesis 0.3.x uses links/joints for URDF, but for single meshes we can set dmp properties.
+
+                    # 3. Add Motors / Controls
+                    self.motors = data.get("motors", [])
                     for fluid_cfg in data.get("fluids", []):
                         vol = fluid_cfg["initial_volume"]
                         material = gs.materials.MPM.Liquid(
@@ -259,22 +267,89 @@ class GenesisBackend(PhysicsBackend):
         pass
 
     def get_contact_forces(self) -> list[ContactForce]:
-        return []
+        if not self.scene:
+            return []
+
+        # Genesis provides contacts via solver/sim
+        # In version 0.3.x, contacts are typically accessed via simulator.get_contacts()
+        try:
+            contacts = self.scene.sim.get_contacts()
+            results = []
+            for c in contacts:
+                # c has fields like pos, normal, force, entities, etc.
+                # c.entities is a tuple of (entity_a, entity_b)
+                force = c.force.cpu().numpy() if hasattr(c.force, "cpu") else c.force
+                results.append(
+                    ContactForce(
+                        body1=c.entities[0].name,
+                        body2=c.entities[1].name,
+                        force=tuple(force.tolist()),
+                        pos=tuple(c.pos.cpu().numpy().tolist())
+                        if hasattr(c.pos, "cpu")
+                        else tuple(c.pos.tolist()),
+                        normal=tuple(c.normal.cpu().numpy().tolist())
+                        if hasattr(c.normal, "cpu")
+                        else tuple(c.normal.tolist()),
+                    )
+                )
+            return results
+        except Exception:
+            # Fallback if API changed or no contacts
+            return []
 
     def get_site_state(self, _site_name: str) -> SiteState:
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
-    def get_actuator_state(self, _actuator_name: str) -> ActuatorState:
-        return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
+    def get_actuator_state(self, actuator_name: str) -> ActuatorState:
+        # Find motor by name in self.motors (which are mapped to entities)
+        entity_name = actuator_name
+        for motor in getattr(self, "motors", []):
+            if motor["part_name"] == actuator_name:
+                # In this architecture, we assume entity name matches part_name for moving parts
+                break
+
+        if entity_name not in self.entities:
+            return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
+
+        entity = self.entities[entity_name]
+        try:
+            # Genesis uses DOFs for articulated/controlled entities
+            forces = entity.get_dofs_force().cpu().numpy()
+            vels = entity.get_dofs_velocity().cpu().numpy()
+
+            force = float(forces[0]) if forces.size > 0 else 0.0
+            vel = float(vels[0]) if vels.size > 0 else 0.0
+
+            return ActuatorState(
+                force=force,
+                velocity=vel,
+                ctrl=0.0,
+                forcerange=(-1000, 1000),  # Default limit
+            )
+        except Exception:
+            return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
-        pass
+        # control_inputs: motor_id -> value
+        for motor in getattr(self, "motors", []):
+            motor_id = motor["part_name"]
+            if motor_id in control_inputs:
+                val = control_inputs[motor_id]
+                # Map motor to entity
+                if motor_id in self.entities:
+                    entity = self.entities[motor_id]
+                    try:
+                        entity.set_dofs_force(np.array([val], dtype=np.float32))
+                    except Exception as e:
+                        logger.debug(
+                            "genesis_apply_control_failed", name=motor_id, error=str(e)
+                        )
 
     def get_all_body_names(self) -> list[str]:
         return list(self.entities.keys())
 
     def get_all_actuator_names(self) -> list[str]:
-        return []
+        return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
         return []
@@ -282,7 +357,36 @@ class GenesisBackend(PhysicsBackend):
     def get_all_tendon_names(self) -> list[str]:
         return []
 
-    def check_collision(self, _body_name: str, _site_name: str) -> bool:
+    def check_collision(self, body_name: str, site_name: str) -> bool:
+        """Checks if a body is in collision with another body or site (zone)."""
+        # In Genesis, sites are often just entities or zones.
+        # If site_name is an entity, check contact.
+        target_entity = self.entities.get(body_name)
+        site_entity = self.entities.get(site_name)
+
+        if not target_entity or not site_entity:
+            # Fallback for zones that are not entities
+            # We can check bounding boxes if available in scene meta
+            if self.scene_meta:
+                for ent_cfg in self.scene_meta.assets.get("entities", []):
+                    if ent_cfg.get("name") == site_name and ent_cfg.get("is_zone"):
+                        # Check if target body pos is within zone
+                        state = self.get_body_state(body_name)
+                        pos = state.pos
+                        z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
+                        z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
+                        return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+
+            return False
+
+        # If both are entities, check simulation contacts
+        contacts = self.get_contact_forces()
+        for c in contacts:
+            if (c.body1 == body_name and c.body2 == site_name) or (
+                c.body1 == site_name and c.body2 == body_name
+            ):
+                return True
+
         return False
 
     def get_tendon_tension(self, _tendon_name: str) -> float:

@@ -788,11 +788,38 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             # Process geometry (save as OBJ for sim/genesis, and GLB for viewer)
             self.processor.process_geometry(child, mesh_path_base, decompose=False)
 
+            # Check for constraints metadata (Joints)
+            joint_info = None
+            constraint = getattr(child, "constraint", None)
+            if constraint and isinstance(constraint, str):
+                if constraint.startswith(("hinge", "slide")):
+                    parts = constraint.split(":")
+                    jtype = parts[0]
+                    axis = [0, 0, 1]
+                    if len(parts) > 1:
+                        if parts[1] == "x":
+                            axis = [1, 0, 0]
+                        elif parts[1] == "y":
+                            axis = [0, 1, 0]
+                        elif parts[1] == "z":
+                            axis = [0, 0, 1]
+                        elif "," in parts[1]:
+                            axis = [float(x) for x in parts[1].split(",")]
+
+                    jrange = None
+                    for p in parts[2:]:
+                        if p.startswith("range="):
+                            jrange = [float(x) for x in p.split("=")[1].split(",")]
+
+                    joint_info = {"type": jtype, "axis": axis, "range": jrange}
+
             entity_info = {
                 "name": label,
                 "pos": pos,
                 "euler": euler,
                 "material_id": material_id,
+                "fixed": getattr(child, "fixed", False),
+                "joint": joint_info,
             }
 
             if is_deformable:
@@ -818,7 +845,11 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
             scene_data["entities"].append(entity_info)
 
-        # 3. Add Fluids (MPM) from objectives if defined
+        # 3. Add moving parts (Motors)
+        scene_data["motors"] = []
+        if moving_parts:
+            for mp in moving_parts:
+                scene_data["motors"].append(mp.model_dump())
         if objectives and hasattr(objectives, "fluids") and objectives.fluids:
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())

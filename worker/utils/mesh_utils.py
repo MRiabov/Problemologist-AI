@@ -115,10 +115,15 @@ def _tetrahedralize_gmsh(
         gmsh.model.geo.synchronize()
 
         # Optional: refine mesh size
-        # gmsh.option.setNumber("Mesh.MeshSizeFactor", refine_level)
+        gmsh.option.setNumber("Mesh.MeshSizeFactor", refine_level)
+        gmsh.option.setNumber("Mesh.Algorithm", 6)  # HXT for 3D
+        gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 32)  # Refine near curves
 
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
+
+        # Optimize 3D mesh for better quality
+        gmsh.model.mesh.optimize("Netgen")
 
         # Save as .msh (Genesis usually prefers Version 4 ASCII)
         output_msh_path.parent.mkdir(parents=True, exist_ok=True)
