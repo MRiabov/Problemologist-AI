@@ -395,8 +395,21 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         tools = [search_cots_catalog]
         agent = create_react_agent(llm, tools)
 
+        # Langfuse tracing
+        langfuse_callback = get_langfuse_callback(
+            name="benchmark_cots_search", session_id=session_id
+        )
+        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         prompt = f"Find components for the benchmark: {state['session'].prompt}"
-        result = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        result = await agent.ainvoke(
+            {"messages": [HumanMessage(content=prompt)]},
+            config={"callbacks": callbacks},
+        )
 
         state["messages"].extend(result["messages"])
     return state
@@ -406,8 +419,20 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
     """
     Skills node for benchmark generation: Identifies patterns.
     """
+    session_id = str(state["session"].session_id)
+    # Langfuse tracing
+    langfuse_callback = get_langfuse_callback(
+        name="benchmark_skills", session_id=session_id
+    )
+    db_callback = DatabaseCallbackHandler(episode_id=session_id)
+
     # Simple implementation for now
-    logger.info("skills_node_start")
+    logger.info(
+        "skills_node_start",
+        session_id=session_id,
+        db_enabled=db_callback is not None,
+        tracing_enabled=langfuse_callback is not None,
+    )
     return state
 
 
