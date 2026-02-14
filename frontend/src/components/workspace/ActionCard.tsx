@@ -20,8 +20,8 @@ export function ActionCard({ trace, resultCount, className }: ActionCardProps) {
   try {
     if (trace.content) args = JSON.parse(trace.content);
   } catch (e) {
-    // Basic extraction for non-JSON content
-    const match = trace.content?.match(/(?:TargetFile|AbsolutePath|path)["']?\s*[:=]\s*["']([^"']+)["']/);
+    // Basic extraction for non-JSON content - handles quoted and unquoted paths
+    const match = trace.content?.match(/(?:TargetFile|AbsolutePath|path)["']?\s*[:=]\s*["']?([^"'\s,]+)["']?/);
     if (match) args.path = match[1];
   }
 

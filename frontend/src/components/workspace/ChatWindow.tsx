@@ -391,6 +391,7 @@ export default function ChatWindow({
                                     ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" 
                                     : "bg-foreground text-background hover:opacity-90 disabled:bg-muted/20 disabled:text-muted-foreground"
                                )}
+                               aria-label={isRunning ? "Stop Agent" : "Send Message"}
                                onClick={(e) => {
                                    if (isRunning && selectedEpisode) {
                                        e.preventDefault();
@@ -398,7 +399,7 @@ export default function ChatWindow({
                                    }
                                }}
                             >
-                                {isRunning ? <Square className="h-3.5 w-3.5 fill-current" /> : <ArrowRight className="h-4 w-4" />}
+                                {isRunning ? <Square className="h-3.5 w-3.5 fill-current" aria-label="Stop Icon" /> : <ArrowRight className="h-4 w-4" aria-label="Send Icon" />}
                             </Button>
                         </div>
                     </div>
