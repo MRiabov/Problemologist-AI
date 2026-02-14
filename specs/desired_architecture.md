@@ -46,7 +46,7 @@ The benchmarks are randomized to ensure data distribution.
 The benchmarks are consisting of CAD models which are converted into XML.
 
 - The execution runs in isolated containers to prevent accidental harmful code execution in the main system.
-- The benchmarks are verified for being creatable in MuJoCo. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
+- The benchmarks are verified for being creatable in Genesis. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
   - Validity means no intersections and other problems; it also means that the code will compile in the first place.
   - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
 - MJCF is created programmatically, not by a LLM.
@@ -1306,15 +1306,12 @@ Because tasks like simulation (with involve both simulation and uploading to the
 
 ## Simulation and "Definitions of Done"
 
-While this platform has notable downsides for future use, we pick MuJoCo because it's battle-tested, and requires almost no compile time.
+While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to boot.
 
 <!-- Downsides of MuJoCo?
 
 - we won't support deformation (finite element analysis)
-- we won't support fluids
-
-But for an MVP this is fine. -->
-<!-- The corollary of not being able to run FEM is that the model can produce physically inadequate parts and still succeed. But I can't do much about it yet. -->
+- we won't support fluids-->
 
 ### Simulation constants and assumptions
 
@@ -1421,7 +1418,7 @@ This avoids the need for global ID management or dict-based hole matching.
 
 ###### Mechanisms and Moving Parts
 
-MuJoCo constraints will only ever be spawned from predefined components. Meaning, a "revolute constraint" will only ever be spawned if there is either a:
+Genesis (which has parity with MuJoCo) constraints will only ever be spawned from predefined components. Meaning, a "revolute constraint" will only ever be spawned if there is either a:
 
 1. Bearing (ideally),
 2. Motor,
@@ -1435,14 +1432,14 @@ To support moving parts (hinges, sliders, motors), we force build123d Joints fro
 
 Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
 
-Map of joints to MuJoCo constraints and their uses:
+Map of joints to Genesis (which has parity with MuJoCo) constraints and their uses:
 
 1. RigidJoint to `<weld>` constraint:
     - Used for fasteners and fixed connections.
     - Connects two bodies rigidly at the joint location.
 2. **RevoluteJoint** to `<joint type="hinge">`:
     - Used for axles, pivots, and motors.
-    - The joint axis in build123d becomes the hinge axis in MuJoCo.
+    - The joint axis in build123d becomes the hinge axis in Genesis.
     - If the joint is motorized, we add an `<actuator>` targeting this joint.
 3. **PrismaticJoint** -> `<joint type="slide">`:
     - Used for linear sliders and rails.
@@ -1454,7 +1451,7 @@ Map of joints to MuJoCo constraints and their uses:
 - Walk the `build123d` assembly and inspect `part.joints`.
 - If a joint is connected (via `connect_to`), identify the two parts involved.
 - Assert the joint is valid programmatically (distance, not conflicting with other constraints, etc.)
-- Generate the appropriate MuJoCo XML element connecting the two bodies.
+- Generate the appropriate Genesis/MuJoCo XML element connecting the two bodies.
 - Assign stable names to identifying joints so controllers can reference them (e.g. "motor_joint").
 
 ##### Constraining to the environment
@@ -1494,7 +1491,7 @@ Fluid pumps.-->
 
 #### Constants
 
-- Simulation timestep of the rigid-body simulation -  0.002s (default mujoco)
+- Simulation timestep of the rigid-body simulation -  0.002s (default MuJoCo setting)
 - Max simulation time - 30 seconds (configurable globally)
 - Max speed - >1000m/s
 - Default benchmark size - 1\*1\*1m
@@ -1507,13 +1504,15 @@ Fluid pumps.-->
 
 ### Convex decomposition
 
-We don't have convex decomposition logic in MuJoCo (we do in Genesis, but we'll approach it later). We'll need a V-HACD logic on worker.
+<!-- We don't have convex decomposition logic in MuJoCo (we do in Genesis, but we'll approach it later). We'll need a V-HACD logic on worker. -->
+
+Genesis supports convex decomposition natively.
 
 <!-- Note: I have no clue about how V-HACD works. Assume good defaults. -->
 
 ### Motors
 
-We use standard MuJoCo actuators. They need to be controller by the controller functions.
+We use standard Genesis/MuJoCo actuators. They need to be controller by the controller functions.
 
 #### Controller functions
 
@@ -1667,7 +1666,7 @@ Notably, the engineer is informed about runtime randomization to prevent unexpec
 
 ###### Runtime randomization verification
 
-The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as MuJoCo is made for parallel simulations with slightly varying input positions.
+The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as Genesis/MuJoCo are made for parallel simulations with slightly varying input positions.
 
 #### Failure
 
@@ -1683,13 +1682,13 @@ Failure is achieved via either of:
     - With "passive/static" parts: break upon stress which is higher than max stress - safety factor(note: not applicable for now as we are simulating rigid-body only).
     - Some parts have custom breaking logic - e.g. motors can be overloaded on shaft.
 
-### Conversion of CAD to mesh and to MuJoCo
+### Conversion of CAD to mesh and to MuJoCo/Genesis
 
 We will convert `build123d` CAD files into `obj` format (not STL, because the it is very bulky), and then put the obj into mesh. I think build123d allows a `export_obj(Compound|Part)` function.
 
 The conversion pipeline is - putting every part into mesh;
 
-When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
+When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to Genesis/MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
 
 <!-- Note: Genesis if we'll migrate to it, supports GLB. -->
 
@@ -2055,7 +2054,8 @@ The project needs to render the models in images (for preview) and for rendering
 
 #### Rendering CAD
 
-To simplify matters *(actually, I couldn't debug pyvista, so I'm doing this)*, the CAD will be rendered by porting to MuJoCo and rendering in there. It'll also provide a unified view for the model.
+To simplify matters *(actually, I couldn't debug pyvista, so I'm doing this)*, the CAD will be rendered by porting to MuJoCo/Genesis and rendering in there. It'll also provide a unified view for the model.
+Alternatively, we could use some simple GLB renderer, but MuJoCo/Gensis already do it for us!
 
 #### Rendering views
 
