@@ -96,6 +96,7 @@ def validate_and_price(
     config: ManufacturingConfig,
     build_zone: BoundingBox | None = None,
     quantity: int = 1,
+    fem_required: bool = False,
 ) -> WorkbenchResult:
     """
     Unified entry point for DFM (Design for Manufacturing) validation and pricing.
@@ -106,11 +107,15 @@ def validate_and_price(
         method: Manufacturing method (CNC, 3DP, IM)
         config: Manufacturing configuration
         build_zone: Optional build zone bounds to validate against
+        quantity: Number of units
+        fem_required: If True, validates presence of FEM material fields (WP2/INT-111)
 
     Returns:
         WorkbenchResult with manufacturability, cost, and violations
     """
-    logger.info("starting_dfm_facade_analysis", method=method)
+    logger.info(
+        "starting_dfm_facade_analysis", method=method, fem_required=fem_required
+    )
 
     # First, check build zone if provided
     build_zone_violations: list[str] = []
@@ -141,24 +146,54 @@ def validate_and_price(
         logger.error("unsupported_manufacturing_method", method=method)
         raise ValueError(f"Unsupported manufacturing method: {method}")
 
+    # WP2: FEM Material Field Validation (INT-111)
+    fem_violations: list[str] = []
+    if fem_required:
+        material_id = getattr(part, "metadata", {}).get("material_id")
+        # Check global materials and method-specific materials
+        mat_def = config.materials.get(material_id)
+        if not mat_def and method == ManufacturingMethod.CNC and config.cnc:
+            mat_def = config.cnc.materials.get(material_id)
+        elif (
+            not mat_def
+            and method == ManufacturingMethod.INJECTION_MOLDING
+            and config.injection_molding
+        ):
+            mat_def = config.injection_molding.materials.get(material_id)
+        elif not mat_def and method == ManufacturingMethod.THREE_DP and config.three_dp:
+            mat_def = config.three_dp.materials.get(material_id)
+
+        if not mat_def:
+            fem_violations = [
+                f"FEM Validation Error: Material '{material_id}' not found in configuration."
+            ]
+        else:
+            required_fields = [
+                "youngs_modulus_pa",
+                "poissons_ratio",
+                "yield_stress_pa",
+                "ultimate_stress_pa",
+            ]
+            missing = [f for f in required_fields if getattr(mat_def, f) is None]
+            if missing:
+                fem_violations = [
+                    f"FEM Validation Error: Material '{material_id}' missing required FEM fields: {', '.join(missing)}"
+                ]
+
     # Add DOF warning to metadata (for reviewer notification)
     result_metadata = dict(result.metadata)
     result_metadata["dof_count"] = dof_count
     result_metadata["dof_warning"] = dof_warning
 
-    # Combine build zone violations with workbench violations
-    if build_zone_violations:
-        all_violations = list(result.violations) + build_zone_violations
-        return WorkbenchResult(
-            is_manufacturable=False,  # Not manufacturable if outside build zone
-            unit_cost=result.unit_cost,
-            violations=all_violations,
-            metadata=result_metadata,
-        )
+    # Combine all violations
+    all_violations = list(result.violations) + build_zone_violations + fem_violations
+    is_manufacturable = (
+        result.is_manufacturable and not build_zone_violations and not fem_violations
+    )
 
     return WorkbenchResult(
-        is_manufacturable=result.is_manufacturable,
+        is_manufacturable=is_manufacturable,
         unit_cost=result.unit_cost,
-        violations=result.violations,
+        violations=all_violations,
         metadata=result_metadata,
     )
