@@ -275,7 +275,7 @@ class ObjectivesYaml(BaseModel):
     constraints: Constraints
     randomization: RandomizationMeta = RandomizationMeta()
     electronics_requirements: ElectronicsRequirements | None = None
-    preliminary_totals: dict[str, float] | None = None
+    assembly_totals: dict[str, float] | None = None
 
 
 # =============================================================================
@@ -314,7 +314,7 @@ class ReviewFrontmatter(BaseModel):
 
 
 class ManufacturedPartEstimate(BaseModel):
-    """Preliminary estimate for a manufactured part."""
+    """Assembly estimate for a manufactured part."""
 
     part_name: str
     part_id: str
@@ -330,7 +330,7 @@ class ManufacturedPartEstimate(BaseModel):
 
 
 class CotsPartEstimate(BaseModel):
-    """Preliminary estimate for a COTS part."""
+    """Assembly estimate for a COTS part."""
 
     part_id: str
     manufacturer: str
@@ -370,7 +370,7 @@ class CostTotals(BaseModel):
     estimate_confidence: Literal["low", "medium", "high"]
 
 
-class CostEstimationUnits(BaseModel):
+class AssemblyUnits(BaseModel):
     """Units used in the estimation file."""
 
     length: str = "mm"
@@ -379,7 +379,7 @@ class CostEstimationUnits(BaseModel):
     currency: str = "USD"
 
 
-class CostEstimationConstraints(BaseModel):
+class AssemblyConstraints(BaseModel):
     """Cap values from benchmark vs planner targets."""
 
     benchmark_max_unit_cost_usd: float
@@ -440,15 +440,15 @@ class ElectronicsSection(BaseModel):
     components: list[ElectronicComponent] = []
 
 
-class PreliminaryCostEstimation(BaseModel):
+class AssemblyDefinition(BaseModel):
     """
     Schema for assembly_definition.yaml.
     Output by the Engineering Planner to track cost risks.
     """
 
     version: str = "1.0"
-    units: CostEstimationUnits = CostEstimationUnits()
-    constraints: CostEstimationConstraints
+    units: AssemblyUnits = AssemblyUnits()
+    constraints: AssemblyConstraints
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
     electronics: ElectronicsSection | None = None
@@ -490,7 +490,7 @@ class PreliminaryCostEstimation(BaseModel):
         return parts
 
     @model_validator(mode="after")
-    def validate_caps(self) -> "PreliminaryCostEstimation":
+    def validate_caps(self) -> "AssemblyDefinition":
         """Enforce INT-011: Planner target caps must be <= benchmark caps."""
         if (
             self.constraints.planner_target_max_unit_cost_usd
@@ -534,7 +534,3 @@ class PreliminaryCostEstimation(BaseModel):
             )
 
         return self
-
-
-# Alias for future renaming as per WP3 spec
-AssemblyDefinition = PreliminaryCostEstimation

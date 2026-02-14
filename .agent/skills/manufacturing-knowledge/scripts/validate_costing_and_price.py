@@ -8,7 +8,7 @@ from pydantic import ValidationError
 sys.path.append(str(Path(__file__).resolve().parents[4]))
 
 from shared.logging import get_logger
-from shared.models.schemas import PreliminaryCostEstimation
+from shared.models.schemas import AssemblyDefinition
 
 logger = get_logger(__name__)
 
@@ -80,7 +80,7 @@ def main():
         }
 
         # Validate with Pydantic
-        estimation = PreliminaryCostEstimation(**data)
+        estimation = AssemblyDefinition(**data)
 
         total_cost = 0.0
         total_weight_g = 0.0

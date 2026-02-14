@@ -8,13 +8,13 @@ import yaml
 from build123d import Compound
 
 from shared.models.schemas import (
+    AssemblyDefinition,
     CotsPartEstimate,
     ElectronicsSection,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
     ObjectivesYaml,
-    PreliminaryCostEstimation,
 )
 from shared.simulation.backends import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
@@ -295,7 +295,7 @@ def calculate_assembly_totals(
             total_cost += length_m * 0.5
             total_weight += length_m * 20.0
 
-    # 3. Generic COTS parts from preliminary estimation
+    # 3. Generic COTS parts from assembly definition
     if cots_parts:
         for p in cots_parts:
             total_cost += p.unit_cost_usd * p.quantity
@@ -329,7 +329,7 @@ def simulate(
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     objectives = None
-    cost_estimation = None
+    assembly_definition = None
     objectives_path = working_dir / "objectives.yaml"
     if objectives_path.exists():
         try:
@@ -342,17 +342,17 @@ def simulate(
     if cost_est_path.exists():
         try:
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
-            cost_estimation = PreliminaryCostEstimation(**data)
+            assembly_definition = AssemblyDefinition(**data)
         except Exception as e:
-            logger.warning("failed_to_load_cost_estimation", error=str(e))
+            logger.warning("failed_to_load_assembly_definition", error=str(e))
 
     backend_type = SimulatorBackendType.MUJOCO
     if objectives and getattr(objectives, "physics", None):
         backend_type = SimulatorBackendType(objectives.physics.backend)
 
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
-    moving_parts = cost_estimation.moving_parts if cost_estimation else []
-    electronics = cost_estimation.electronics if cost_estimation else None
+    moving_parts = assembly_definition.moving_parts if assembly_definition else []
+    electronics = assembly_definition.electronics if assembly_definition else None
 
     scene_path = builder.build_from_assembly(
         component,
@@ -372,15 +372,17 @@ def simulate(
 
     dynamic_controllers = {}
     control_inputs = {}
-    if cost_estimation and cost_estimation.moving_parts:
+    if assembly_definition and assembly_definition.moving_parts:
         try:
             from worker.utils.controllers import sinusoidal
 
-            for part in cost_estimation.moving_parts:
+            for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
+                            )
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
@@ -403,7 +405,7 @@ def simulate(
         cost, weight = calculate_assembly_totals(
             component,
             electronics=electronics,
-            cots_parts=cost_estimation.cots_parts if cost_estimation else None,
+            cots_parts=assembly_definition.cots_parts if assembly_definition else None,
         )
 
         global LAST_SIMULATION_RESULT

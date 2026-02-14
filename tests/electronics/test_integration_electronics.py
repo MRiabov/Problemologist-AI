@@ -8,7 +8,7 @@ from shared.models.schemas import (
     PowerSupplyConfig,
     ElectronicComponent,
     WireConfig,
-    PreliminaryCostEstimation,
+    AssemblyDefinition,
 )
 from worker.simulation.loop import SimulationLoop
 

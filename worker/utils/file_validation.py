@@ -19,8 +19,8 @@ import yaml
 from pydantic import ValidationError
 
 from shared.models.schemas import (
+    AssemblyDefinition,
     ObjectivesYaml,
-    PreliminaryCostEstimation,
     ReviewFrontmatter,
 )
 from shared.observability.events import emit_event
@@ -72,7 +72,7 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
 
 def validate_assembly_definition_yaml(
     content: str,
-) -> tuple[bool, PreliminaryCostEstimation | list[str]]:
+) -> tuple[bool, AssemblyDefinition | list[str]]:
     """
     Parse and validate assembly_definition.yaml content.
 
@@ -80,7 +80,7 @@ def validate_assembly_definition_yaml(
         content: Raw YAML string content
 
     Returns:
-        (True, PreliminaryCostEstimation) if valid
+        (True, AssemblyDefinition) if valid
         (False, list[str]) with error messages if invalid
     """
     try:
@@ -96,7 +96,7 @@ def validate_assembly_definition_yaml(
                 "assembly_definition.yaml still contains template placeholders"
             ]
 
-        estimation = PreliminaryCostEstimation(**data)
+        estimation = AssemblyDefinition(**data)
 
         logger.info("cost_estimation_yaml_valid")
         return True, estimation

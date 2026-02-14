@@ -80,12 +80,12 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     # assembly_definition.yaml
     cost_path = cwd / "assembly_definition.yaml"
     if cost_path.exists():
-        from .file_validation import validate_preliminary_cost_estimation_yaml
+        from .file_validation import validate_assembly_definition_yaml
 
         cost_content = cost_path.read_text(encoding="utf-8")
-        is_valid, result = validate_preliminary_cost_estimation_yaml(cost_content)
+        is_valid, result = validate_assembly_definition_yaml(cost_content)
         if not is_valid:
-            logger.error("cost_estimation_yaml_invalid", errors=result)
+            logger.error("assembly_definition_yaml_invalid", errors=result)
             raise ValueError(f"assembly_definition.yaml invalid: {result}")
     else:
         logger.error("assembly_definition_yaml_missing")

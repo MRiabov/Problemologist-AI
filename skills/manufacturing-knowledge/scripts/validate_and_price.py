@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 # Add project root to path to import shared models
 sys.path.append(str(Path(__file__).parents[3]))
-from shared.models.schemas import PreliminaryCostEstimation
+from shared.models.schemas import AssemblyDefinition
 
 logger = structlog.get_logger(__name__)
 
@@ -53,7 +53,7 @@ def main():
                     part["removed_volume_mm3"] = 0.0
 
         # 2. Pydantic Validation
-        estimation = PreliminaryCostEstimation(**data)
+        estimation = AssemblyDefinition(**data)
 
         # 3. Write back normalized YAML
         updated_content = yaml.dump(data, sort_keys=False, default_flow_style=False)
