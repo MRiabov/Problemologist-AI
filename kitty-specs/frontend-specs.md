@@ -30,6 +30,10 @@ Here's what I suggest: add a "+ Create new" primary button instead of "history" 
 Afterwards (this should be the standard agent flow), the plan.md wil be created and placed into the folder directory. the plan file will have a "start implementation" on the top of it; with it the benchmark generation will start.
 The UI will be automatically updated with new models as the build123d generation will progress.
 
+#### Solution workflow
+
+Engineers must be able to prompt solutions to benchmarks (this is a core workflow). They will select a benchmark that will be solved and will generate solutions to the benchmark.
+
 #### Interrupting the worker and progress bars
 
 If we want to stop the generation in the controller, it will also halt the job(s) in the workers.
