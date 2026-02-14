@@ -25,9 +25,7 @@ async def test_full_graph_flow(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_coder = AsyncMock(
-        return_value={"journal": "Worked", "current_step": "Step"}
-    )
+    mock_coder = AsyncMock(return_value={"journal": "Worked", "current_step": "Step"})
     mock_reviewer = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
     mock_skills = AsyncMock(return_value={"journal": "Learned"})
     mock_cots = AsyncMock(return_value={})
@@ -62,9 +60,7 @@ async def test_graph_rejection_loop(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_coder = AsyncMock(
-        return_value={"journal": "Worked", "current_step": "Step"}
-    )
+    mock_coder = AsyncMock(return_value={"journal": "Worked", "current_step": "Step"})
 
     mock_reviewer = AsyncMock()
     mock_reviewer.side_effect = [

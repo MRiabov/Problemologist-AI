@@ -137,7 +137,7 @@ async def test_int_005_mandatory_artifacts_gate(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -174,13 +174,13 @@ async def test_int_005_mandatory_artifacts_gate(
         assert not resp.json()["success"]
         assert "todo.md is missing" in resp.json()["message"]
 
-        # 3. Missing preliminary_cost_estimation.yaml
+        # 3. Missing assembly_definition.yaml
         files = base_files.copy()
-        del files["preliminary_cost_estimation.yaml"]
+        del files["assembly_definition.yaml"]
         await setup_workspace(client, base_headers, files)
         await client.post(
             f"{WORKER_URL}/fs/delete",
-            json={"path": "preliminary_cost_estimation.yaml"},
+            json={"path": "assembly_definition.yaml"},
             headers=base_headers,
         )
         resp = await client.post(
@@ -189,7 +189,7 @@ async def test_int_005_mandatory_artifacts_gate(
             headers=base_headers,
         )
         assert not resp.json()["success"]
-        assert "preliminary_cost_estimation.yaml is missing" in resp.json()["message"]
+        assert "assembly_definition.yaml is missing" in resp.json()["message"]
 
 
 @pytest.mark.integration_p0
@@ -202,7 +202,7 @@ async def test_int_006_plan_structure_validation(
         base_files = {
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -254,7 +254,7 @@ async def test_int_007_todo_integrity(
         base_files = {
             "plan.md": valid_plan,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -294,7 +294,7 @@ async def test_int_008_objectives_validation(
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -328,7 +328,7 @@ async def test_int_008_objectives_validation(
 async def test_int_009_cost_estimation_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
-    """INT-009: Verify preliminary_cost_estimation.yaml schema and placeholders."""
+    """INT-009: Verify assembly_definition.yaml schema and placeholders."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         base_files = {
             "plan.md": valid_plan,
@@ -342,7 +342,7 @@ async def test_int_009_cost_estimation_validation(
         await setup_workspace(
             client,
             base_headers,
-            {**base_files, "preliminary_cost_estimation.yaml": template_cost},
+            {**base_files, "assembly_definition.yaml": template_cost},
         )
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
@@ -359,14 +359,14 @@ async def test_int_009_cost_estimation_validation(
         await setup_workspace(
             client,
             base_headers,
-            {**base_files, "preliminary_cost_estimation.yaml": invalid_cost},
+            {**base_files, "assembly_definition.yaml": invalid_cost},
         )
         resp = await client.post(
             f"{WORKER_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
-        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
+        assert "assembly_definition.yaml invalid" in resp.json()["message"]
 
 
 @pytest.mark.integration_p0
@@ -395,7 +395,7 @@ async def test_int_011_planner_caps_enforcement(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": invalid_cost,
+            "assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -411,7 +411,7 @@ async def test_int_011_planner_caps_enforcement(
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
-        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
+        assert "assembly_definition.yaml invalid" in resp.json()["message"]
         assert (
             "Planner target cost (60.0) must be less than or equal to benchmark max cost (50.0)"
             in resp.json()["message"]
@@ -437,7 +437,7 @@ async def test_int_015_engineer_handover_immutability(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -495,7 +495,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": oob_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -546,7 +546,7 @@ async def test_int_010_planner_pricing_script_integration(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": invalid_cost,
+            "assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -563,7 +563,7 @@ async def test_int_010_planner_pricing_script_integration(
             headers=base_headers,
         )
         assert not resp.json()["success"]
-        assert "preliminary_cost_estimation.yaml invalid" in resp.json()["message"]
+        assert "assembly_definition.yaml invalid" in resp.json()["message"]
         assert "exceeds target" in resp.json()["message"].lower()
 
 
@@ -585,7 +585,7 @@ async def test_int_018_validate_and_price_integration_gate(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
-            "preliminary_cost_estimation.yaml": valid_cost,
+            "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)

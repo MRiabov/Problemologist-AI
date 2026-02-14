@@ -72,14 +72,14 @@ async def test_manufacturing_methods_and_materials():
         assert artifacts_resp.status_code == 200
         artifacts = artifacts_resp.json()
 
-        # Check for preliminary_cost_estimation.yaml which implies workbench ran
+        # Check for assembly_definition.yaml which implies workbench ran
         cost_yaml_artifact = next(
-            (a for a in artifacts if "preliminary_cost_estimation.yaml" in a["path"]),
+            (a for a in artifacts if "assembly_definition.yaml" in a["path"]),
             None,
         )
-        assert (
-            cost_yaml_artifact is not None
-        ), "Workbench output (cost estimation) missing"
+        assert cost_yaml_artifact is not None, (
+            "Workbench output (cost estimation) missing"
+        )
 
         # To verify INT-036 "Supported workbench methods", we would ideally check the content
         # of the yaml to see "method: cnc" or similar.

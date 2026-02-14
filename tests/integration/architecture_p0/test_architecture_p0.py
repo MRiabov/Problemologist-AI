@@ -140,12 +140,12 @@ def build():
         data1 = res1.json()
         data2 = res2.json()
 
-        assert (
-            data1["success"] or "Simulation stable" in data1["message"]
-        ), f"Sim 1 marked failure: {data1}"
-        assert (
-            data2["success"] or "Simulation stable" in data2["message"]
-        ), f"Sim 2 marked failure: {data2}"
+        assert data1["success"] or "Simulation stable" in data1["message"], (
+            f"Sim 1 marked failure: {data1}"
+        )
+        assert data2["success"] or "Simulation stable" in data2["message"], (
+            f"Sim 2 marked failure: {data2}"
+        )
 
         # Check artifacts
         assert "mjcf_content" in data1["artifacts"]

@@ -52,9 +52,9 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         data = resp.json()
 
         # Verify result labelled approximate
-        assert (
-            data["confidence"] == "approximate"
-        ), f"Expected confidence 'approximate', got '{data['confidence']}'"
+        assert data["confidence"] == "approximate", (
+            f"Expected confidence 'approximate', got '{data['confidence']}'"
+        )
 
 
 @pytest.mark.integration_p1
@@ -109,6 +109,6 @@ constraints: {max_unit_cost: 100, max_weight: 10}
             headers={"X-Session-ID": session_id},
         )
         files = [f["name"] for f in ls_resp.json()]
-        assert not any(
-            "particles" in f.lower() for f in files
-        ), "Raw particle data found in workspace"
+        assert not any("particles" in f.lower() for f in files), (
+            "Raw particle data found in workspace"
+        )
