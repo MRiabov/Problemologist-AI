@@ -1,7 +1,9 @@
 import logging
+
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit import *
-from shared.models.schemas import ElectronicsSection, ElectronicComponent
+
+from shared.models.schemas import ElectronicsSection
 
 logger = logging.getLogger(__name__)
 

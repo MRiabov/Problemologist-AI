@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from contextlib import suppress
 
 from pydantic import BaseModel, Field, StrictStr, field_validator
 
@@ -120,11 +119,16 @@ async def execute_agent_task(
                 )
                 db.add(initial_trace)
                 await db.commit()
+                await db.refresh(initial_trace)
 
                 # Setup real-time tracing to DB, pass langfuse_callback for linking
                 db_callback = DatabaseCallbackHandler(
                     episode_id, langfuse_callback=langfuse_callback
                 )
+
+                # Broadcast initial trace (refresh to get ID)
+                await db.refresh(initial_trace)
+                await db_callback._broadcast_trace(initial_trace)
 
                 # Prepare callbacks for agent run
                 callbacks = [db_callback]
@@ -152,20 +156,56 @@ async def execute_agent_task(
                 )
                 db.add(final_trace)
 
-                # Sync assets from worker
+                # Also add a dedicated LLM_END trace for the full final response to ensure it shows in chat
+                final_llm_trace = Trace(
+                    episode_id=episode_id,
+                    trace_type=TraceType.LLM_END,
+                    content=final_output,
+                    langfuse_trace_id=trace_id,
+                )
+                db.add(final_llm_trace)
+
+                # Update episode status immediately
+                await db.refresh(episode)
+                if episode.status != EpisodeStatus.CANCELLED:
+                    episode.status = EpisodeStatus.COMPLETED
+                    episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
+
+                await db.commit()
+                # Broadcast final message
+                await db_callback._broadcast_trace(final_llm_trace)
+                logger.info("agent_task_logic_completed", episode_id=episode_id)
+
+                # Sync assets from worker (now in background after status update)
+                logger.info("starting_asset_sync", episode_id=episode_id)
                 try:
 
                     async def sync_dir(dir_path: str):
-                        files = await client.list_files(dir_path)
+                        try:
+                            # Use new session for sync to avoid sharing with main loop if needed,
+                            # but here we are at the end so it's fine.
+                            files = await client.list_files(dir_path)
+                        except Exception as e:
+                            logger.warning(
+                                "failed_to_list_dir_during_sync",
+                                dir=dir_path,
+                                error=str(e),
+                            )
+                            return
+
                         for file_info in files:
                             path = file_info.path
                             if file_info.is_dir:
                                 # Recursively sync directories, but skip some obvious ones
                                 if not any(
-                                    path.endswith(s)
+                                    path.lower().endswith(s)
                                     for s in ["__pycache__", ".git", ".venv", "renders"]
                                 ):
                                     await sync_dir(path)
+                                continue
+
+                            # Skip obviously huge or irrelevant files
+                            if path.endswith((".log", ".lock", ".tmp", ".pyc")):
                                 continue
 
                             asset_type = None
@@ -182,21 +222,18 @@ async def execute_agent_task(
                             else:
                                 asset_type = AssetType.OTHER
 
-                            # Read content
+                            # Read content for text assets
                             content = None
-                            # Only store content in DB for text-like or small metadata files
                             if asset_type in [
                                 AssetType.PYTHON,
                                 AssetType.MJCF,
                                 AssetType.OTHER,
                             ]:
-                                with suppress(Exception):
+                                try:
                                     raw_content = await client.read_file(path)
                                     content = raw_content
-
-                            # For GLB/STL/IMAGE, we don't store content in 'content' column (it's for text)
-                            # In a real S3 setup, we'd have a real S3 URL in s3_path.
-                            # For now, s3_path is used by the frontend to fetch from worker via /api/v1/episodes/{id}/assets/{path}
+                                except Exception:
+                                    pass
 
                             asset = Asset(
                                 episode_id=episode_id,
@@ -208,17 +245,9 @@ async def execute_agent_task(
 
                     await sync_dir("/")
                     await db.commit()
+                    logger.info("asset_sync_completed", episode_id=episode_id)
                 except Exception as e:
                     logger.error("failed_to_sync_assets", error=str(e))
-
-                # Update episode
-                await db.refresh(episode)
-                # Check if it was cancelled in the meantime
-                if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
-                    episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
-                    await db.commit()
-                    logger.info("agent_run_completed", episode_id=episode_id)
 
             except asyncio.CancelledError:
                 logger.info("agent_run_cancelled", episode_id=episode_id)

@@ -2,10 +2,10 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from controller.agent.benchmark.schema import GenerationSessionModel
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.agent.benchmark.models import SessionStatus
-from controller.agent.benchmark.schema import GenerationSessionModel
 
 
 @pytest.mark.asyncio

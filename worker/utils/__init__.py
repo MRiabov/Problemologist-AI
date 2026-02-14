@@ -1,6 +1,8 @@
 from ..workbenches.models import ManufacturingConfig, ManufacturingMethod
 from . import cad, controllers, electronics
 from .cad import HoleType, fastener_hole
+from .dfm import validate_and_price
+from .docs import get_docs_for
 from .electronics import (
     calculate_power_budget,
     create_circuit,
@@ -8,8 +10,6 @@ from .electronics import (
     simulate_circuit_transient,
     validate_circuit,
 )
-from .dfm import validate_and_price
-from .docs import get_docs_for
 from .handover import submit_for_review
 from .markdown_validator import (
     ValidationResult,

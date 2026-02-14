@@ -1,4 +1,3 @@
-import asyncio
 import os
 import time
 
@@ -143,7 +142,9 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         assert metric["passed"] is True
 
         # 4. Fail path: threshold > 1.0 (impossible to achieve)
-        objectives_fail = objectives_content.replace("threshold: 0.95", "threshold: 1.1")
+        objectives_fail = objectives_content.replace(
+            "threshold: 0.95", "threshold: 1.1"
+        )
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_fail},

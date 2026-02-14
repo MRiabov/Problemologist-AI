@@ -12,8 +12,6 @@ import trimesh
 from build123d import Compound, Solid, export_stl
 
 from shared.cots.parts.motors import ServoMotor
-from shared.simulation.backends import SimulatorBackendType
-from worker.utils.mesh_utils import tetrahedralize
 
 if TYPE_CHECKING:
     from shared.models.schemas import MovingPart, ObjectivesYaml

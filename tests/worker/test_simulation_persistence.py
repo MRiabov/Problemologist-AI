@@ -1,24 +1,28 @@
-
-import os
 import json
-from pathlib import Path
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from build123d import Box
 
-from worker.utils import validation
-from worker.utils.validation import simulate, get_stress_report, preview_stress, SimulationResult
 from worker.simulation.loop import SimulationMetrics, StressSummary
+from worker.utils import validation
+from worker.utils.validation import (
+    get_stress_report,
+    preview_stress,
+    simulate,
+)
+
 
 @pytest.fixture
 def mock_simulation_dependencies():
-    with patch("worker.utils.validation.get_simulation_builder") as mock_builder, \
-         patch("worker.utils.validation.SimulationLoop") as mock_loop_cls, \
-         patch("worker.utils.validation.prerender_24_views") as mock_render, \
-         patch("worker.utils.validation.calculate_assembly_totals") as mock_totals, \
-         patch("worker.utils.validation.validate_and_price"):
-
+    with (
+        patch("worker.utils.validation.get_simulation_builder") as mock_builder,
+        patch("worker.utils.validation.SimulationLoop") as mock_loop_cls,
+        patch("worker.utils.validation.prerender_24_views") as mock_render,
+        patch("worker.utils.validation.calculate_assembly_totals") as mock_totals,
+        patch("worker.utils.validation.validate_and_price"),
+    ):
         # Mock builder
         mock_scene_path = MagicMock()
         mock_scene_path.read_text.return_value = "<mujoco/>"
@@ -34,7 +38,7 @@ def mock_simulation_dependencies():
             mean_von_mises_pa=50.0,
             safety_factor=2.0,
             location_of_max=(0.0, 0.0, 0.0),
-            utilization_pct=50.0
+            utilization_pct=50.0,
         )
 
         mock_metrics = SimulationMetrics(
@@ -43,7 +47,7 @@ def mock_simulation_dependencies():
             max_velocity=1.0,
             success=True,
             stress_summaries=[stress_summary],
-            fluid_metrics=[]
+            fluid_metrics=[],
         )
         mock_loop.step.return_value = mock_metrics
 
@@ -54,6 +58,7 @@ def mock_simulation_dependencies():
         mock_totals.return_value = (10.0, 5.0)
 
         yield
+
 
 def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
     # Set up environment

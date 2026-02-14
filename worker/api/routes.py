@@ -478,6 +478,7 @@ async def api_validate(
         if is_valid and obj_path.exists():
             try:
                 import yaml
+
                 from shared.models.schemas import ObjectivesYaml
                 from worker.utils.dfm import validate_and_price
                 from worker.workbenches.config import load_config
@@ -549,6 +550,7 @@ async def api_analyze(
         if obj_path.exists():
             try:
                 import yaml
+
                 from shared.models.schemas import ObjectivesYaml
 
                 data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))

@@ -4,15 +4,16 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
-from shared.simulation.backends import SimulatorBackendType, SimulationScene
-from shared.models.schemas import ElectronicsSection, ObjectivesYaml
+
 from shared.enums import SimulationFailureMode
+from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
-    SimulationBackendSelectedEvent,
     PhysicsInstabilityEvent,
+    SimulationBackendSelectedEvent,
 )
+from shared.simulation.backends import SimulationScene, SimulatorBackendType
 from worker.simulation.factory import get_physics_backend
 
 logger = structlog.get_logger(__name__)
