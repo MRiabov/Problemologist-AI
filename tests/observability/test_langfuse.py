@@ -5,7 +5,12 @@ from controller.observability.langfuse import get_langfuse_callback, get_langfus
 
 
 def test_get_langfuse_callback_returns_none_without_credentials():
-    with patch.dict(os.environ, {}, clear=True):
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch("controller.observability.langfuse.settings") as mock_settings,
+    ):
+        mock_settings.langfuse_public_key = None
+        mock_settings.langfuse_secret_key = None
         callback = get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         assert callback is None
 
@@ -37,7 +42,12 @@ def test_get_langfuse_callback_uses_trace_context():
 
 
 def test_get_langfuse_client_returns_none_without_credentials():
-    with patch.dict(os.environ, {}, clear=True):
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch("controller.observability.langfuse.settings") as mock_settings,
+    ):
+        mock_settings.langfuse_public_key = None
+        mock_settings.langfuse_secret_key = None
         client = get_langfuse_client()
         assert client is None
 
