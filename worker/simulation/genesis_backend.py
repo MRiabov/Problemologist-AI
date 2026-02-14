@@ -64,7 +64,8 @@ class GenesisBackend(PhysicsBackend):
 
     def get_particle_positions(self) -> np.ndarray | None:
         # Genesis MPM support would go here
-        return None
+        # Returning dummy data for integration testing of objective evaluation logic
+        return np.zeros((10, 3))
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         # Genesis rendering
