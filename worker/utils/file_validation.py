@@ -183,6 +183,86 @@ ENGINEERING_PLAN_REQUIRED_SECTIONS = [
     "Risk Assessment",
 ]
 
+TEMPLATE_PLACEHOLDERS = [
+    "x_min",
+    "x_max",
+    "[x, y, z]",
+    "y_min",
+    "z_min",  # objectives.yaml
+    "ramp_main",
+    "guide_clip",  # preliminary_cost_estimation.yaml
+    "[implement here]",
+    "TODO:",
+    "...",  # generic
+    "[x_min",
+    "[x_max",  # generic
+]
+
+
+def validate_node_output(
+    node_type: str, files_content_map: dict[str, str]
+) -> tuple[bool, list[str]]:
+    """
+    Universally validate node output for required files and template placeholders.
+
+    Args:
+        node_type: 'planner', 'coder', 'electronics_engineer', etc.
+        files_content_map: Mapping of filename to string content.
+
+    Returns:
+        (True, []) if valid
+        (False, list[str]) with error messages if invalid
+    """
+    errors = []
+
+    # 1. Required files check
+    required_files = {
+        "planner": ["plan.md", "todo.md"],
+        "coder": [
+            "plan.md",
+            "todo.md",
+            "objectives.yaml",
+        ],  # Coder should maintain these
+        "electronics_engineer": ["plan.md", "todo.md"],
+    }.get(node_type, [])
+
+    for req_file in required_files:
+        if req_file not in files_content_map or not files_content_map[req_file].strip():
+            errors.append(f"Missing required file: {req_file}")
+
+    # 2. Template placeholder check
+    for filename, content in files_content_map.items():
+        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        if found_placeholders:
+            placeholder_list = ", ".join(found_placeholders)
+            errors.append(
+                f"File '{filename}' contains template placeholders: {placeholder_list}"
+            )
+
+    # 3. Specific validation for known formats
+    for filename, content in files_content_map.items():
+        if filename == "plan.md":
+            plan_type = "engineering"  # Default to engineering for most nodes
+            if node_type == "planner" and "# Learning Objective" in content:
+                plan_type = "benchmark"
+
+            is_valid, plan_errors = validate_plan_md_structure(content, plan_type)
+            if not is_valid:
+                errors.extend([f"plan.md: {e}" for e in plan_errors])
+        elif filename == "todo.md":
+            from .markdown_validator import validate_todo_md
+
+            res = validate_todo_md(content)
+            if not res.is_valid:
+                errors.extend([f"todo.md: {e}" for e in res.violations])
+        elif filename == "objectives.yaml":
+            is_valid, obj_res = validate_objectives_yaml(content)
+            if not is_valid:
+                # obj_res is list[str] on failure
+                errors.extend([f"objectives.yaml: {e}" for e in obj_res])
+
+    return len(errors) == 0, errors
+
 
 def validate_plan_md_structure(
     content: str, plan_type: str = "benchmark"
@@ -240,7 +320,7 @@ def calculate_file_hash(path: Path) -> str:
     if not path.exists():
         return ""
     sha256_hash = hashlib.sha256()
-    with open(path, "rb") as f:
+    with path.open("rb") as f:
         # Read and update hash string value in blocks of 4K
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
