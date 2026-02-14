@@ -1,13 +1,35 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center } from '@react-three/drei'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { 
+  Layers, 
+  Play, 
+  Pause, 
+  RotateCcw, 
+  FastForward, 
+  Rewind,
+  Eye,
+  EyeOff
+} from "lucide-react"
+import { Button } from '../ui/button'
+import { Badge } from '../ui/badge'
+import { useEpisodes } from '../../context/EpisodeContext'
 import ConnectionError from '../shared/ConnectionError'
+import { cn } from '../../lib/utils'
 
-function GlbModel({ url }: { url: string }) {
+function GlbModel({ url, hiddenParts = [], onSelect }: { url: string, hiddenParts: string[], onSelect?: (partName: string) => void }) {
   const gltf = useLoader(GLTFLoader, url)
   const meshRef = useRef<THREE.Group>(null!)
+
+  useEffect(() => {
+    gltf.scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.visible = !hiddenParts.includes(child.uuid) && !hiddenParts.includes(child.name);
+      }
+    });
+  }, [gltf, hiddenParts]);
 
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
@@ -17,6 +39,12 @@ function GlbModel({ url }: { url: string }) {
           ref={meshRef}
           castShadow 
           receiveShadow 
+          onClick={(e: any) => {
+            e.stopPropagation();
+            if (e.object.name && onSelect) {
+              onSelect(e.object.name);
+            }
+          }}
         />
       </Center>
     </Float>
@@ -87,6 +115,11 @@ export default function ModelViewer({
   resetTrigger = 0 
 }: ModelViewerProps) {
   const controlsRef = useRef<any>(null)
+  const { addToContext } = useEpisodes();
+  const [hiddenParts, setHiddenParts] = useState<string[]>([])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [showTopology, setShowTopology] = useState(false)
 
   const urls = useMemo(() => {
     const all = [...assetUrls];
@@ -106,58 +139,165 @@ export default function ModelViewer({
   }, [resetTrigger])
 
   return (
-    <div className={`${className} relative`}>
+    <div className={cn(className, "relative group flex flex-col overflow-hidden")}>
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
-      <Canvas shadows dpr={[1, 2]}>
-        <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
-        <OrbitControls 
-          ref={controlsRef}
-          enableDamping 
-          dampingFactor={0.2}
-          minDistance={2}
-          maxDistance={10}
-          makeDefault
-        />
-        
-        <Environment preset="city" />
-        <ambientLight intensity={0.5} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
-        <pointLight position={[-10, -10, -10]} intensity={0.5} />
-        
-        {urls.length > 0 ? (
-            urls.map(url => <GlbModel key={url} url={url} />)
-        ) : (
-            <PlaceholderModel />
-        )}
+      
+      {/* Topology Overlay */}
+      {showTopology && (
+        <div className="absolute top-4 right-4 z-40 w-48 p-3 bg-background/80 backdrop-blur-md rounded-lg border border-border/50 shadow-xl animate-in fade-in slide-in-from-right-4">
+             <div className="flex items-center justify-between mb-3 border-b border-border/20 pb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Topology</span>
+                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setShowTopology(false)}>
+                   <EyeOff className="h-3 w-3" />
+                </Button>
+             </div>
+             <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                {/* Mock parts for now, in a real scenario we'd extract names from the scene */}
+                {['Body Shell', 'Internal Frame', 'Motor Mount', 'Electronics Housing'].map(part => (
+                    <button 
+                        key={part}
+                        onClick={() => {
+                            setHiddenParts(prev => 
+                                prev.includes(part) ? prev.filter(p => p !== part) : [...prev, part]
+                            )
+                        }}
+                        className="flex items-center justify-between w-full p-1.5 rounded hover:bg-muted/50 text-[11px] group/item"
+                    >
+                        <span className={cn(hiddenParts.includes(part) ? "text-muted-foreground line-through" : "text-foreground")}>{part}</span>
+                        {hiddenParts.includes(part) ? <EyeOff className="h-3 w-3 text-muted-foreground" /> : <Eye className="h-3 w-3 text-primary opacity-0 group-hover/item:opacity-100 transition-opacity" />}
+                    </button>
+                ))}
+             </div>
+        </div>
+      )}
 
-        {/* Render physical wires */}
-        {wireRoutes.map(route => (
-          <Wire 
-            key={route.wire_id} 
-            waypoints={route.waypoints} 
-            radius={route.gauge_awg ? 0.05 * (20 / route.gauge_awg) : 0.05}
-          />
-        ))}
-        
-        <Grid 
-          infiniteGrid 
-          fadeDistance={50} 
-          fadeStrength={5} 
-          cellSize={1} 
-          sectionSize={5} 
-          sectionThickness={1.5}
-          sectionColor="#3b82f6"
-          cellColor="#6b7280"
-        />
-        
-        <ContactShadows 
-          position={[0, -0.5, 0]} 
-          opacity={0.4} 
-          scale={10} 
-          blur={2} 
-          far={4.5} 
-        />
-      </Canvas>
+      {/* Main Viewport */}
+      <div className="flex-1 min-h-0 relative">
+        <Canvas shadows dpr={[1, 2]}>
+            <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
+            <OrbitControls 
+            ref={controlsRef}
+            enableDamping 
+            dampingFactor={0.2}
+            minDistance={2}
+            maxDistance={10}
+            makeDefault
+            />
+            
+            <Environment preset="city" />
+            <ambientLight intensity={0.5} />
+            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+            <pointLight position={[-10, -10, -10]} intensity={0.5} />
+            
+            {urls.length > 0 ? (
+                urls.map(url => (
+                    <GlbModel 
+                        key={url} 
+                        url={url} 
+                        hiddenParts={hiddenParts} 
+                        onSelect={(partName) => {
+                            addToContext({
+                                id: `cad-${partName}`,
+                                type: 'cad',
+                                label: partName,
+                                metadata: { part: partName }
+                            });
+                        }}
+                    />
+                ))
+            ) : (
+                <PlaceholderModel />
+            )}
+
+            {/* Render physical wires */}
+            {wireRoutes.map(route => (
+            <Wire 
+                key={route.wire_id} 
+                waypoints={route.waypoints} 
+                radius={route.gauge_awg ? 0.05 * (20 / route.gauge_awg) : 0.05}
+            />
+            ))}
+            
+            <Grid 
+            infiniteGrid 
+            fadeDistance={50} 
+            fadeStrength={5} 
+            cellSize={1} 
+            sectionSize={5} 
+            sectionThickness={1.5}
+            sectionColor="#3b82f6"
+            cellColor="#6b7280"
+            />
+            
+            <ContactShadows 
+            position={[0, -0.5, 0]} 
+            opacity={0.4} 
+            scale={10} 
+            blur={2} 
+            far={4.5} 
+            />
+        </Canvas>
+
+        {/* Viewport Buttons */}
+        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+            <Button 
+                variant="secondary" 
+                size="icon" 
+                className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20", showTopology && "bg-primary text-primary-foreground")}
+                onClick={() => setShowTopology(!showTopology)}
+            >
+                <Layers className="h-4 w-4" />
+            </Button>
+        </div>
+      </div>
+
+      {/* Simulation Controls Footer */}
+      <div className="shrink-0 p-3 bg-card/80 backdrop-blur-md border-t border-border/50 flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-primary shrink-0"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                  {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
+              </Button>
+              <div className="flex-1 relative flex items-center">
+                  <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={currentTime} 
+                      onChange={(e) => setCurrentTime(parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                  <div 
+                    className="absolute top-0 bottom-0 left-0 bg-primary/20 rounded-lg pointer-events-none" 
+                    style={{ width: `${currentTime}%` }} 
+                  />
+              </div>
+              <div className="flex items-center gap-1 shrink-0 px-2 font-mono text-[10px] text-muted-foreground w-20 justify-end">
+                  <span className="text-foreground font-bold">{(currentTime / 10).toFixed(1)}s</span>
+                  <span>/ 10.0s</span>
+              </div>
+          </div>
+          <div className="flex items-center justify-between px-1">
+              <div className="flex gap-2">
+                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                      <RotateCcw className="h-3 w-3" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                      <Rewind className="h-3 w-3" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                      <FastForward className="h-3 w-3" />
+                   </Button>
+              </div>
+              <Badge variant="outline" className="text-[8px] font-black tracking-widest uppercase border-primary/20 bg-primary/5 text-primary">
+                  Dynamics Enabled
+              </Badge>
+          </div>
+      </div>
     </div>
   )
 }

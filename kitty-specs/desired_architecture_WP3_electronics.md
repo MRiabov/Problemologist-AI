@@ -409,6 +409,8 @@ New domain events added to the event tracking system:
 3. **Script view**: Existing code artifact viewer shows the circuit definition scripts.
 4. (Extra) **Circuit timeline**: Show which motors were powered at which simulation timestep — a simple ON/OFF timeline chart.
 
+! The frontend uses `tscircuit`, and we need to pass a relevant data format to the frontend (which - I don't know).
+
 ---
 
 ## Future Work

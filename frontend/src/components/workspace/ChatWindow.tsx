@@ -15,7 +15,7 @@ import {
   Zap,
   Clock,
   Play,
-  Plus,
+  ChevronRight,
   ChevronUp,
   ChevronDown,
   Rocket
@@ -27,6 +27,8 @@ import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { ContextCards } from "./ContextCards";
+import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
 import { cn } from "../../lib/utils";
@@ -60,6 +62,32 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
 
 import { getFileIconInfo } from "../../lib/fileIcons";
 
+// Internal helper for rendering reasoning traces (expandable)
+const ReasoningTrace = ({ trace }: { trace: TraceResponse }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="space-y-1 group">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors uppercase font-bold tracking-widest"
+            >
+                {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                <Clock className="h-2.5 w-2.5 opacity-50" />
+                <span>{new Date(trace.created_at).toLocaleTimeString()} • {trace.trace_type}</span>
+            </button>
+            {isOpen && (
+                <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed pl-3 border-l border-border/30 ml-1.5 py-1">
+                    {trace.trace_type === 'llm_end' ? (
+                        <HighlightedContent content={trace.content || ''} language="markdown" />
+                    ) : (
+                        trace.content
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const ActionCard = ({ trace }: { trace: TraceResponse }) => {
     const { setActiveArtifactId, selectedEpisode } = useEpisodes();
     const isStart = trace.trace_type === 'tool_start';
@@ -88,7 +116,8 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
     }
 
     const isFileTool = ['write_file', 'read_file', 'replace_file_content', 'multi_replace_file_content', 'view_file', 'view_file_outline'].some(t => toolName.includes(t));
-    const filePath = args.TargetFile || args.AbsolutePath || args.path || args.TargetFile || "";
+    const isWriteTool = ['write_file', 'replace_file_content', 'multi_replace_file_content'].some(t => toolName.includes(t));
+    const filePath = args.TargetFile || args.AbsolutePath || args.path || "";
     const fileName = filePath.split('/').pop() || filePath;
 
     const handleActionClick = () => {
@@ -137,10 +166,11 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
             <div 
                 onClick={handleActionClick}
                 className={cn(
-                    "group flex items-center gap-2 p-1.5 px-2 rounded-md border border-border/50 transition-all mb-1 cursor-pointer",
-                    "bg-muted/30 hover:bg-muted/50 hover:border-primary/30"
+                  "group flex flex-col gap-1 p-1.5 px-2 rounded-md border border-border/50 transition-all mb-1 cursor-pointer",
+                  "bg-muted/30 hover:bg-muted/50 hover:border-primary/30"
                 )}
             >
+              <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                         {getLabel()}:
@@ -152,10 +182,13 @@ const ActionCard = ({ trace }: { trace: TraceResponse }) => {
                         </span>
                     </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[10px] text-green-500 font-bold opacity-70">+</span>
-                    <span className="text-[10px] text-red-500 font-bold opacity-70">-</span>
-                </div>
+                {isWriteTool && (
+                  <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-green-500 font-bold opacity-70">+24</span>
+                      <span className="text-[10px] text-red-500 font-bold opacity-70">-12</span>
+                  </div>
+                )}
+              </div>
             </div>
         );
     }
@@ -205,7 +238,9 @@ export default function ChatWindow({
       interruptAgent, 
       selectedEpisode, 
       updateObjectives, 
-      episodes 
+      episodes,
+      selectedContext,
+      clearContext
   } = useEpisodes();
   const [prompt, setPrompt] = useState("");
   const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
@@ -236,14 +271,16 @@ export default function ChatWindow({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim()) {
-      if (isCreationMode) {
-          const metadata = selectedBenchmarkId ? { benchmark_id: selectedBenchmarkId } : undefined;
-          startAgent(prompt, objectives, metadata);
-      } else {
-          startAgent(prompt);
-      }
+      const metadata = {
+        ...(selectedBenchmarkId ? { benchmark_id: selectedBenchmarkId } : {}),
+        ...(selectedContext.length > 0 ? { context_items: selectedContext } : {})
+      };
+      
+      startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
+      
       setPrompt("");
       setSelectedBenchmarkId("");
+      clearContext();
     }
   };
 
@@ -279,16 +316,6 @@ export default function ChatWindow({
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Chat Window</span>
           </div>
-          {isRunning && selectedEpisode && (
-              <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2 uppercase tracking-wider font-bold hover:bg-red-500/20 hover:text-red-400 bg-red-500/10 text-red-500 border border-red-500/20"
-                  onClick={() => interruptAgent(selectedEpisode.id)}
-              >
-                  <Square className="h-3 w-3 mr-1 fill-current" /> Stop
-              </Button>
-          )}
       </div>
 
       {/* Main Content Area */}
@@ -340,24 +367,7 @@ export default function ChatWindow({
                               return <ActionCard key={trace.id} trace={trace} />;
                           }
 
-                          return (
-                              <div key={trace.id} className="space-y-1 group">
-                                  <div className="flex justify-between text-[9px] text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity">
-                                      <div className="flex items-center gap-1">
-                                          <Clock className="h-2.5 w-2.5" />
-                                          <span>{new Date(trace.created_at).toLocaleTimeString()}</span>
-                                      </div>
-                                      <span className="uppercase">{trace.trace_type}</span>
-                                  </div>
-                                  <div className="text-muted-foreground break-words opacity-90 whitespace-pre-wrap text-[11px] leading-relaxed">
-                                      {trace.trace_type === 'llm_end' ? (
-                                          <HighlightedContent content={trace.content || ''} language="markdown" />
-                                      ) : (
-                                          trace.content
-                                      )}
-                                  </div>
-                              </div>
-                          );
+                          return <ReasoningTrace key={trace.id} trace={trace} />;
                       })
                   ) : (
                       <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-20 h-full">
@@ -438,6 +448,12 @@ export default function ChatWindow({
                         </div>
                     </div>
                 )}
+                {/* Session Feedback */}
+                {selectedEpisode?.status === 'completed' && (
+                    <div className="mt-8 mb-4">
+                        <FeedbackSystem episodeId={selectedEpisode.id} />
+                    </div>
+                )}
             </div>
         </ScrollArea>
 
@@ -487,6 +503,7 @@ export default function ChatWindow({
             )}
 
             <div className="p-4 pt-4">
+            <ContextCards />
             <form onSubmit={handleSubmit} className="relative group">
                 <Input 
                    id="chat-input"
@@ -496,12 +513,22 @@ export default function ChatWindow({
                    onChange={(e) => setPrompt(e.target.value)}
                 />
                 <Button 
-                   type="submit" 
+                   type={isRunning ? "button" : "submit"}
                    size="icon" 
-                   disabled={!prompt.trim()}
-                   className="absolute right-1 top-1 h-10 w-10 bg-transparent hover:bg-primary/10 text-primary transition-all disabled:opacity-0"
+                   disabled={!isRunning && !prompt.trim()}
+                   className={cn(
+                       "absolute right-1 top-1 h-10 w-10 bg-transparent transition-all",
+                       isRunning 
+                        ? "hover:bg-red-500/10 text-red-500" 
+                        : "hover:bg-primary/10 text-primary disabled:opacity-0"
+                   )}
+                   onClick={() => {
+                       if (isRunning && selectedEpisode) {
+                           interruptAgent(selectedEpisode.id);
+                       }
+                   }}
                 >
-                    <Send className="h-4 w-4" />
+                    {isRunning ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-4 w-4" />}
                 </Button>
             </form>
             <div className="mt-2 flex items-center justify-between px-1">
