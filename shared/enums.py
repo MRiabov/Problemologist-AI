@@ -11,6 +11,7 @@ class EpisodeStatus(StrEnum):
     """Status of an agent episode."""
 
     RUNNING = "running"
+    PLANNED = "planned"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"

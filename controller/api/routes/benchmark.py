@@ -64,6 +64,24 @@ async def generate_benchmark(
     }
 
 
+@router.post("/{session_id}/confirm")
+async def confirm_benchmark(session_id: uuid.UUID, background_tasks: BackgroundTasks):
+    """
+    Confirm and continue benchmark generation after planning.
+    """
+    from controller.agent.benchmark.graph import continue_generation_session
+
+    background_tasks.add_task(
+        continue_generation_session,
+        session_id=session_id,
+    )
+
+    return {
+        "status": ResponseStatus.ACCEPTED,
+        "message": "Benchmark generation proceeding",
+    }
+
+
 # Note: We might need an endpoint to get the status/result of a specific session
 # but run_generation_session returns the final state, so for now we rely on
 # direct DB access or existing episode endpoints if we wrapped it in an episode.

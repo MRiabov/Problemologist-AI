@@ -29,6 +29,27 @@ export class BenchmarkService {
         });
     }
     /**
+     * Confirm Benchmark
+     * Confirm and continue benchmark generation after planning.
+     * @param sessionId
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static confirmBenchmarkBenchmarkSessionIdConfirmPost(
+        sessionId: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/benchmark/{session_id}/confirm',
+            path: {
+                'session_id': sessionId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Get Session
      * @param sessionId
      * @returns any Successful Response

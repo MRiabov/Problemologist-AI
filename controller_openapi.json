@@ -375,6 +375,48 @@
         }
       }
     },
+    "/benchmark/{session_id}/confirm": {
+      "post": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Confirm Benchmark",
+        "description": "Confirm and continue benchmark generation after planning.",
+        "operationId": "confirm_benchmark_benchmark__session_id__confirm_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/benchmark/{session_id}": {
       "get": {
         "tags": [
@@ -1020,6 +1062,7 @@
         "type": "string",
         "enum": [
           "running",
+          "planned",
           "completed",
           "failed",
           "cancelled"

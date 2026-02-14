@@ -198,7 +198,15 @@ export default function ChatWindow({
   isConnected = true
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { isCreationMode, startAgent, interruptAgent, selectedEpisode, updateObjectives, episodes } = useEpisodes();
+  const { 
+      isCreationMode, 
+      startAgent, 
+      confirmBenchmark,
+      interruptAgent, 
+      selectedEpisode, 
+      updateObjectives, 
+      episodes 
+  } = useEpisodes();
   const [prompt, setPrompt] = useState("");
   const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
 
@@ -258,7 +266,8 @@ export default function ChatWindow({
 
   // Determine if we should show the Execution Plan card
   // It shows if there's a plan and the agent is not running (waiting for approval)
-  const showExecutionPlan = selectedEpisode?.plan && !isRunning && selectedEpisode.status !== 'completed';
+  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'planned';
+  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
   return (
     <div className="flex flex-col h-full bg-card/30 relative overflow-hidden">
@@ -375,9 +384,14 @@ export default function ChatWindow({
                                 <Button 
                                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20"
                                     onClick={async () => {
+                                        if (!selectedEpisode) return;
                                         try {
-                                            const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
-                                            await runSimulation(sessionId);
+                                            if (isPlanned) {
+                                                await confirmBenchmark(selectedEpisode.id);
+                                            } else {
+                                                const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
+                                                await runSimulation(sessionId);
+                                            }
                                         } catch (e) {
                                             console.error("Failed to start implementation", e);
                                         }

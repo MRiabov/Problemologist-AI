@@ -35,6 +35,7 @@ class GenerationSession(Base):
     status: Mapped[str | None] = mapped_column(
         sa.Enum(
             "planning",
+            "planned",
             "executing",
             "validating",
             "accepted",

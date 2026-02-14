@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 class SessionStatus(StrEnum):
     planning = "planning"
+    planned = "planned"
     executing = "executing"
     validating = "validating"
     accepted = "accepted"
