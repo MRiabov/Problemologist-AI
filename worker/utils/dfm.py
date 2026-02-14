@@ -194,6 +194,7 @@ def validate_and_price(
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=result.unit_cost,
+        weight_g=result.weight_g,
         violations=all_violations,
         metadata=result_metadata,
     )
