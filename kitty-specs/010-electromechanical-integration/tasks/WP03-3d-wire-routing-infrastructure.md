@@ -1,9 +1,13 @@
 ---
 work_package_id: WP03
 title: 3D Wire Routing Infrastructure
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 2e6528e1ea3012b40a0b47a1dd5180fa8771bc02
+created_at: '2026-02-15T08:51:59.988902+00:00'
 subtasks: [T010, T011, T012, T013]
+shell_pid: "46810"
 ---
 
 # WP03: 3D Wire Routing Infrastructure
