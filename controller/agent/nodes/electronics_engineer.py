@@ -43,27 +43,20 @@ class ElectronicsEngineerNode:
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the electronics engineer node logic."""
-        # 1. Check if electronics are needed
-        try:
-            # Emit handover event
-            await record_worker_events(
-                episode_id=state.session_id,
-                events=[
-                    ElecAgentHandoverEvent(
-                        from_agent="Mechanical Engineer",
-                        to_agent="Electronics Engineer",
-                        iteration_count=state.iteration,
-                    )
-                ],
-            )
+        # 1. Find next electronics task in TODO
+        todo = state.todo
+        current_step = self._get_next_electronics_step(todo)
 
-            objectives_content = await self.fs.read_file("objectives.yaml")
-            if "electronics_requirements" not in objectives_content:
-                # No specific requirements, check assembly_definition if needed
-                # For now, simple check as per original code
-                pass
-        except Exception:
-            pass
+        if not current_step:
+            # If no specific electronics tasks, check if objectives require it
+            try:
+                objectives_content = await self.fs.read_file("objectives.yaml")
+                if "electronics_requirements" not in objectives_content:
+                    # No specific requirements, just pass through
+                    return state
+                current_step = "Design circuit and route wires"
+            except Exception:
+                return state
 
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
@@ -75,9 +68,21 @@ class ElectronicsEngineerNode:
             pass
 
         # 3. Generate electronics implementation code
+        # Emit handover event
+        await record_worker_events(
+            episode_id=state.session_id,
+            events=[
+                ElecAgentHandoverEvent(
+                    from_agent="Mechanical Engineer",
+                    to_agent="Electronics Engineer",
+                    iteration_count=state.iteration,
+                )
+            ],
+        )
+
         prompt = self.pm.render(
             "electronics_engineer",
-            current_step="Design circuit and route wires",
+            current_step=current_step,
             plan=state.plan,
             assembly_context=assembly_context,
         )
@@ -86,7 +91,7 @@ class ElectronicsEngineerNode:
 
         max_retries = 3
         retry_count = 0
-        journal_entry = "\n[Electronics Engineer] Starting circuit design and routing."
+        journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
 
         while retry_count < max_retries:
             try:
@@ -98,7 +103,7 @@ class ElectronicsEngineerNode:
                 from worker.utils.file_validation import validate_node_output
 
                 all_files = {}
-                for f in ["plan.md", "todo.md"]:
+                for f in ["plan.md", "todo.md", "assembly_definition.yaml"]:
                     with suppress(Exception):
                         all_files[f] = await self.fs.read_file(f)
 
@@ -118,9 +123,14 @@ class ElectronicsEngineerNode:
                     continue
 
                 # Success
-                journal_entry += "\nCircuit and wiring implementation successful."
+                journal_entry += f"\nSuccessfully completed electronics task: {current_step}"
+                new_todo = todo
+                if current_step in todo:
+                     new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
+
                 return state.model_copy(
                     update={
+                        "todo": new_todo,
                         "journal": state.journal + journal_entry,
                         "turn_count": state.turn_count + 1,
                         "messages": messages,
@@ -135,7 +145,7 @@ class ElectronicsEngineerNode:
                 messages.append(HumanMessage(content=f"System error: {e}"))
                 retry_count += 1
 
-        journal_entry += f"\nFailed to complete step after {max_retries} retries."
+        journal_entry += f"\nFailed to complete task after {max_retries} retries."
         return state.model_copy(
             update={
                 "journal": state.journal + journal_entry,
@@ -143,6 +153,16 @@ class ElectronicsEngineerNode:
                 "messages": messages,
             }
         )
+
+    def _get_next_electronics_step(self, todo: str) -> str | None:
+        """Extract the first electronics-related '- [ ]' item."""
+        elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
+        for line in todo.split("\n"):
+            if line.strip().startswith("- [ ]"):
+                task = line.strip().replace("- [ ]", "").strip()
+                if any(kw in task.lower() for kw in elec_keywords):
+                    return task
+        return None
 
 
 # Factory function for LangGraph
