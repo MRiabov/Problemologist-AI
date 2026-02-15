@@ -1,16 +1,16 @@
 ---
 work_package_id: WP03
 title: Genesis FEM Implementation
-lane: "done"
+lane: "planned"
 dependencies: []
 base_branch: main
 base_commit: 796a208b00640600aa94c20604bb5a7ccf216a7e
 created_at: '2026-02-15T09:49:14.986957+00:00'
 subtasks: [T010, T011, T012, T013]
 shell_pid: "129707"
-agent: "Gemini"
+agent: "gemini-cli"
 reviewed_by: "MRiabov"
-review_status: "approved"
+review_status: "has_feedback"
 ---
 
 # WP03: Genesis FEM Implementation
@@ -64,3 +64,4 @@ This is the core physics implementation. We are moving from rigid-body to FEM. G
 - 2026-02-15T10:15:40Z – gemini-agent – shell_pid=102449 – lane=for_review – Ready for review: Genesis FEM implementation complete. Added scene loading for soft meshes, material model support, real-time stress extraction, and breakage detection. (Re-moving to for_review as requested)
 - 2026-02-15T10:24:37Z – Gemini – shell_pid=129707 – lane=doing – Started review via workflow command
 - 2026-02-15T10:42:00Z – Gemini – shell_pid=129707 – lane=done – Review passed: Genesis FEM implementation complete with scene loading, stress monitoring, and breakage detection. Material model support (Linear/Neo-Hookean) integrated based on material class.
+- 2026-02-15T10:47:45Z – gemini-cli – shell_pid=129707 – lane=planned – Moved to planned
