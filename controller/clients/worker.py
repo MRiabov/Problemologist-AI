@@ -96,13 +96,13 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def write_file(self, path: str, content: str) -> bool:
+    async def write_file(self, path: str, content: str, overwrite: bool = True) -> bool:
         """Write content to a file."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/write",
-                json={"path": path, "content": content},
+                json={"path": path, "content": content, "overwrite": overwrite},
                 headers=self.headers,
                 timeout=10.0,
             )

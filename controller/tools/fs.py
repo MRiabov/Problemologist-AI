@@ -15,6 +15,9 @@ class ReadInput(BaseModel):
 class WriteInput(BaseModel):
     path: StrictStr = Field(..., description="Path to the file to write.")
     content: StrictStr = Field(..., description="Content to write to the file.")
+    overwrite: bool = Field(
+        default=False, description="Whether to overwrite if file already exists."
+    )
 
 
 class ExecInput(BaseModel):

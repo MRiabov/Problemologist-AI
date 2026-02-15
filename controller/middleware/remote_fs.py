@@ -80,16 +80,20 @@ class RemoteFilesystemMiddleware:
 
         return await self.client.read_file(path)
 
-    async def write_file(self, path: str, content: str) -> bool:
+    async def write_file(self, path: str, content: str, overwrite: bool = True) -> bool:
         """Write file via the Worker client, enforcing read-only constraints."""
         if self._is_read_only(path):
             raise PermissionError(f"Path '{path}' is read-only.")
 
         await record_worker_events(
             episode_id=self.client.session_id,
-            events=[WriteFileToolEvent(path=path, content_snippet=content[:100])],
+            events=[
+                WriteFileToolEvent(
+                    path=path, content_snippet=content[:100], overwrite=overwrite
+                )
+            ],
         )
-        success = await self.client.write_file(path, content)
+        success = await self.client.write_file(path, content, overwrite=overwrite)
 
         if success:
             # Track library usage (new)
