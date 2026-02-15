@@ -1,9 +1,13 @@
 ---
 work_package_id: WP05
 title: Electrical Engineer Agent & Workflow
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 1472e7bc3d8d7a12f56ca01e975a236920a5b7d5
+created_at: '2026-02-15T10:17:49.427911+00:00'
 subtasks: [T019, T020, T021, T022, T023, T024]
+shell_pid: "121941"
 ---
 
 # WP05: Electrical Engineer Agent & Workflow
