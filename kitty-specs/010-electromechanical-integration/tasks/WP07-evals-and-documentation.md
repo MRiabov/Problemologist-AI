@@ -1,9 +1,13 @@
 ---
 work_package_id: WP07
 title: Evals & Documentation
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 6e47b397c3676cc4d84545bbca011b7552061196
+created_at: '2026-02-15T11:44:35.252713+00:00'
 subtasks: [T030, T031, T032, T033]
+shell_pid: "10429"
 ---
 
 # WP07: Evals & Documentation
