@@ -3,6 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
+from shared.simulation.schemas import SimulatorBackendType
 from worker.workbenches.models import ManufacturingMethod
 
 
@@ -101,6 +102,10 @@ class BenchmarkToolRequest(BaseModel):
     script_content: StrictStr | None = Field(
         default=None,
         description="Direct content of the script.",
+    )
+    backend: SimulatorBackendType = Field(
+        default=SimulatorBackendType.MUJOCO,
+        description="Physics backend to use.",
     )
     smoke_test_mode: bool = Field(
         default=False,

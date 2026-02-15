@@ -1,13 +1,8 @@
-from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 from pydantic import BaseModel
-
-
-class SimulatorBackendType(str, Enum):
-    MUJOCO = "mujoco"  # Rigid-body only, fast, no FEM/fluids
-    GENESIS = "genesis"  # FEM + MPM fluids, requires more compute
+from shared.simulation.schemas import SimulatorBackendType
 
 
 class BodyState(BaseModel):

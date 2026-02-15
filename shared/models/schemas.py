@@ -7,8 +7,8 @@ These models define the contracts for:
 """
 
 from typing import Literal
-
 from pydantic import BaseModel, Field, field_validator, model_validator
+from shared.simulation.schemas import SimulatorBackendType
 
 # =============================================================================
 # Common Types
@@ -204,7 +204,7 @@ class RandomizationMeta(BaseModel):
 class PhysicsConfig(BaseModel):
     """Configuration for the physics engine."""
 
-    backend: str = "mujoco"  # "mujoco" | "genesis"
+    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
     fem_enabled: bool = False
     compute_target: str = "auto"  # "auto" | "cpu" | "gpu"
 
