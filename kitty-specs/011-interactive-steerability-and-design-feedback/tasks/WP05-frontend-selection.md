@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP05"
 title: "Frontend Selection & Toggles"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T009"]
+agent: "Gemini"
+shell_pid: "132921"
 ---
 
 # WP05 - Frontend Selection & Toggles
@@ -35,3 +37,7 @@ Update the `three-cad-viewer` integration to support multiple selection levels (
 ## Definition of Done
 - Selection mode toggle is visible and functional in the CAD viewer.
 - Correct metadata is captured for each selection level.
+
+## Activity Log
+
+- 2026-02-15T10:26:55Z – Gemini – shell_pid=132921 – lane=doing – Started review via workflow command
