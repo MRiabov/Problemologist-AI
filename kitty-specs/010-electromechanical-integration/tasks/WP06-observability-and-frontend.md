@@ -1,14 +1,14 @@
 ---
 work_package_id: WP06
 title: Observability & Frontend
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 43f6ee1c33219f89f6f6bb567af9814f3208bcdf
 created_at: '2026-02-15T10:35:05.906139+00:00'
 subtasks: [T025, T026, T027, T028, T029]
-shell_pid: "142576"
-agent: "Gemini"
+shell_pid: "192451"
+agent: "gemini-cli"
 ---
 
 # WP06: Observability & Frontend
@@ -69,3 +69,4 @@ Users (and developers) need to see the electrical nets and 3D wires to verify th
 
 - 2026-02-15T10:35:06Z – Gemini – shell_pid=142576 – lane=doing – Assigned agent via workflow command
 - 2026-02-15T11:04:08Z – Gemini – shell_pid=142576 – lane=for_review – Implemented electromechanical observability events, schematic export API, 3D wire rendering, and tscircuit integration.
+- 2026-02-15T11:24:35Z – gemini-cli – shell_pid=192451 – lane=doing – Started review via workflow command
