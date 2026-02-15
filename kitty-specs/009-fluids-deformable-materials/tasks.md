@@ -75,10 +75,10 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Estimated Prompt Size**: ~400 lines
 **Subtasks**:
 
-- [ ] **T014**: Implement fluid particle definition and spawning in `GenesisBackend`.
-- [ ] **T015**: Implement fluid containment objective evaluation.
-- [ ] **T016**: Implement fluid flow-rate objective evaluation.
-- [ ] **T017**: Implement GPU OOM detection and particle count retry logic.
+- [x] T014: Implement fluid particle definition and spawning in `GenesisBackend`.
+- [x] T015: Implement fluid containment objective evaluation.
+- [x] T016: Implement fluid flow-rate objective evaluation.
+- [x] T017: Implement GPU OOM detection and particle count retry logic.
 
 **Dependencies**: WP03
 **Implementation Sketch**: Add fluid support to Genesis loading, then implement the particle-based objective metrics.
