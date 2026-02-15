@@ -1,0 +1,5 @@
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T11:34:25.973108Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771155265.973206}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T11:34:25.981558Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771155265.9816191}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T11:34:26.006130Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771155266.0061965}
+{"event_type": "fluid_containment_check", "timestamp": "2026-02-15T11:34:26.006630Z", "agent_id": null, "fluid_id": "water", "ratio": 1.0, "threshold": 0.9, "passed": true, "unix_timestamp": 1771155266.0066683}
+{"event_type": "fluid_containment_check", "timestamp": "2026-02-15T11:34:26.041364Z", "agent_id": null, "fluid_id": "water", "ratio": 0.5, "threshold": 0.9, "passed": false, "unix_timestamp": 1771155266.0414317}

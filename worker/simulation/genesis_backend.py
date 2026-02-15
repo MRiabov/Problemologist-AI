@@ -1,5 +1,6 @@
 import numpy as np
 import structlog
+from typing import Any
 
 try:
     import genesis as gs
@@ -16,6 +17,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.models.simulation import StressSummary, FluidMetricResult
 
 logger = structlog.get_logger(__name__)
 
@@ -92,22 +94,20 @@ class GenesisBackend(PhysicsBackend):
 
                         # Genesis Material
                         if ent_cfg["type"] == "soft_mesh":
-                            # T013: Choose material model based on material_class
-                            # Rigid/Soft typically uses Linear Elastic
-                            # Elastomer uses Hyperelastic (Neo-Hookean)
-                            if mat_props and mat_props.material_class == "elastomer":
+                            # FEM Material
+                            if mat_props and mat_props.material_class in ["soft", "elastomer"]:
                                 material = gs.materials.FEM.NeoHookean(
-                                    E=mat_props.youngs_modulus_pa,
-                                    nu=mat_props.poissons_ratio,
-                                    rho=mat_props.density_kg_m3,
+                                    E=mat_props.youngs_modulus_pa if mat_props.youngs_modulus_pa else 5e6,
+                                    nu=mat_props.poissons_ratio if mat_props.poissons_ratio else 0.49,
+                                    rho=mat_props.density_kg_m3 if mat_props.density_kg_m3 else 1100,
                                 )
                             else:
                                 material = gs.materials.FEM.Elastic(
-                                    E=mat_props.youngs_modulus_pa if mat_props else 1e7,
-                                    nu=mat_props.poissons_ratio if mat_props else 0.45,
-                                    rho=mat_props.density_kg_m3 if mat_props else 1000,
+                                    E=mat_props.youngs_modulus_pa if mat_props and mat_props.youngs_modulus_pa else 68.9e9,
+                                    nu=mat_props.poissons_ratio if mat_props and mat_props.poissons_ratio else 0.33,
+                                    rho=mat_props.density_kg_m3 if mat_props and mat_props.density_kg_m3 else 2700,
                                 )
-                            # Load MSH
+                            # Load MSH or OBJ (Genesis can tetrahedralize OBJ)
                             file_path = scene_dir / ent_cfg["file"]
                             entity = self.scene.add_entity(
                                 gs.morphs.Mesh(
@@ -120,10 +120,10 @@ class GenesisBackend(PhysicsBackend):
                         else:
                             # Rigid Material
                             material = gs.materials.Rigid(
-                                rho=mat_props.density_kg_m3 if mat_props else 1000,
-                                friction=mat_props.friction_coef if mat_props else 0.5,
+                                rho=mat_props.density_kg_m3 if mat_props and mat_props.density_kg_m3 else 2700,
+                                friction=mat_props.friction_coef if mat_props and mat_props.friction_coef else 0.5,
                                 coup_restitution=(
-                                    mat_props.restitution if mat_props else 0.5
+                                    mat_props.restitution if mat_props and mat_props.restitution else 0.5
                                 ),
                             )
                             # Load OBJ
@@ -188,27 +188,22 @@ class GenesisBackend(PhysicsBackend):
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
             self.scene.step()
-
+            
             # T012: Part Breakage Detection
             for name, entity in self.entities.items():
-                state = entity.get_state()
-                if hasattr(state, "von_mises"):
-                    stress = state.von_mises[0].cpu().numpy()
-                    max_stress = float(np.max(stress))
-
+                field = self.get_stress_field(name)
+                if field is not None and len(field.stress) > 0:
+                    max_stress = np.max(field.stress)
+                    
+                    # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
                     material_id = ent_cfg.get("material_id", "aluminum_6061")
-                    mat_props = (
-                        self.mfg_config.materials.get(material_id)
-                        if self.mfg_config
-                        else None
-                    )
-                    ultimate_stress = (
-                        mat_props.ultimate_stress_pa if mat_props else 310e6
-                    )
-
+                    mat_props = self.mfg_config.materials.get(material_id) if self.mfg_config else None
+                    ultimate_stress = mat_props.ultimate_stress_pa if mat_props and mat_props.ultimate_stress_pa else 310e6
+                    
                     if max_stress > ultimate_stress:
-                        logger.info("part_breakage_detected", part=name, stress=max_stress)
+                        max_idx = np.argmax(field.stress)
+                        loc = field.nodes[max_idx].tolist()
                         return StepResult(
                             time=self.current_time,
                             success=False,
@@ -245,6 +240,14 @@ class GenesisBackend(PhysicsBackend):
             angvel=entity.get_angvel().tolist(),
         )
 
+    def get_state(self) -> dict[str, Any]:
+        if self.scene is None:
+            return {"time": self.current_time}
+        return {
+            "time": self.current_time,
+            "n_entities": len(self.entities),
+        }
+
     def get_stress_field(self, body_id: str) -> StressField | None:
         if body_id not in self.entities:
             return None
@@ -261,47 +264,28 @@ class GenesisBackend(PhysicsBackend):
         return None
 
     def get_stress_summaries(self) -> list[StressSummary]:
-        """Calculates stress summaries for all FEM entities."""
-        from worker.simulation.loop import StressSummary
-
         summaries = []
-        for name, entity in self.entities.items():
-            state = entity.get_state()
-            if hasattr(state, "von_mises"):
-                stress = state.von_mises[0].cpu().numpy()
-                pos = state.pos[0].cpu().numpy()
-
-                max_stress = float(np.max(stress))
-                mean_stress = float(np.mean(stress))
-                max_idx = np.argmax(stress)
-                max_loc = tuple(pos[max_idx].tolist())
-
-                # Fetch material properties for safety factor
+        for name, _ in self.entities.items():
+            field = self.get_stress_field(name)
+            if field is not None:
+                max_stress = np.max(field.stress)
+                mean_stress = np.mean(field.stress)
+                max_idx = np.argmax(field.stress)
+                
                 ent_cfg = self.entity_configs.get(name, {})
                 material_id = ent_cfg.get("material_id", "aluminum_6061")
-                mat_props = (
-                    self.mfg_config.materials.get(material_id)
-                    if self.mfg_config
-                    else None
-                )
-
-                ultimate_stress = (
-                    mat_props.ultimate_stress_pa if mat_props else 310e6
-                )
-                yield_stress = (
-                    mat_props.yield_stress_pa if mat_props else 276e6
-                )
+                mat_props = self.mfg_config.materials.get(material_id) if self.mfg_config else None
+                ultimate_stress = mat_props.ultimate_stress_pa if mat_props and mat_props.ultimate_stress_pa else 310e6
+                yield_stress = mat_props.yield_stress_pa if mat_props and mat_props.yield_stress_pa else 276e6
 
                 summaries.append(
                     StressSummary(
                         part_label=name,
-                        max_von_mises_pa=max_stress,
-                        mean_von_mises_pa=mean_stress,
-                        safety_factor=yield_stress / max_stress
-                        if max_stress > 0
-                        else 100.0,
-                        location_of_max=max_loc,
-                        utilization_pct=max_stress / yield_stress * 100.0,
+                        max_von_mises_pa=float(max_stress),
+                        mean_von_mises_pa=float(mean_stress),
+                        safety_factor=ultimate_stress / max_stress if max_stress > 0 else 100.0,
+                        location_of_max=tuple(field.nodes[max_idx].tolist()),
+                        utilization_pct=max_stress / yield_stress * 100.0 if yield_stress > 0 else 0.0,
                     )
                 )
         return summaries
@@ -324,6 +308,13 @@ class GenesisBackend(PhysicsBackend):
             return None
 
         return np.concatenate(all_particles, axis=0)
+
+    def get_fluid_metrics(self) -> list[FluidMetricResult]:
+        return []
+
+    # Rendering & Visualization
+    def render(self) -> np.ndarray:
+        return self.render_camera("default", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         if not self.scene:
