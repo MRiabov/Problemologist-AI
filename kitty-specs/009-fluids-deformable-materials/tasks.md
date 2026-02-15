@@ -92,10 +92,10 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Estimated Prompt Size**: ~350 lines
 **Subtasks**:
 
-- [ ] **T018**: Implement `get_stress_report` python utility in `worker/utils/simulation_utils.py`.
-- [ ] **T019**: Implement `define_fluid` python utility for agents.
-- [ ] **T020**: Implement `preview_stress` python utility to generate heatmap visualizations.
-- [ ] **T021**: Update Engineer and Planner agent prompts for stress/fluid reasoning.
+- [x] T018: Implement `get_stress_report` python utility in `worker/utils/simulation_utils.py`.
+- [x] T019: Implement `define_fluid` python utility for agents.
+- [x] T020: Implement `preview_stress` python utility to generate heatmap visualizations.
+- [x] T021: Update Engineer and Planner agent prompts for stress/fluid reasoning.
 
 **Dependencies**: WP04
 **Implementation Sketch**: Build the python utility functions first, ensure they are importable in the agent's environment, then update the prompts to use them in the engineering loop.
