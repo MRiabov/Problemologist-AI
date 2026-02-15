@@ -131,7 +131,7 @@ export default function ArtifactView({
                 return (
                     <div className="p-6 space-y-8 bg-background min-h-full">
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <CircuitSchematic electronics={data.electronics} />
+                            <CircuitSchematic />
                             <WireView 
                                 assetUrl={getAssetUrl(assets.find(a => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
                                 wireRoutes={data.electronics.wiring || []} 
