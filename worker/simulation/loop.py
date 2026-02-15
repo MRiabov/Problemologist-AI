@@ -137,6 +137,16 @@ class SimulationLoop:
             elif name and name.startswith("zone_goal"):
                 self.goal_sites.append(name)
 
+        # Cache body and actuator names to avoid repeated FFI calls
+        self._cached_body_names = self.backend.get_all_body_names()
+        self._cached_actuator_names = self.backend.get_all_actuator_names()
+
+        # Pre-filter bodies for forbidden zone checks
+        self._collision_check_bodies = [
+            b for b in self._cached_body_names
+            if b != "world" and b != "0" and not (b and b.startswith("zone_forbid"))
+        ]
+
         logger.info(
             "SimulationLoop_init",
             goal_sites=self.goal_sites,
@@ -339,7 +349,7 @@ class SimulationLoop:
 
         # Find critical bodies
         target_body_name = "target_box"
-        all_bodies = self.backend.get_all_body_names()
+        all_bodies = self._cached_body_names
         if target_body_name not in all_bodies:
             target_body_name = None
             # Fallback: look for target_box OR any body with 'target' or 'bucket' in name
@@ -387,7 +397,7 @@ class SimulationLoop:
 
             # 2. Update Metrics
             # Energy proxy
-            actuator_names = self.backend.get_all_actuator_names()
+            actuator_names = self._cached_actuator_names
             power = 0.0
             for name in actuator_names:
                 state = self.backend.get_actuator_state(name)
@@ -717,7 +727,7 @@ class SimulationLoop:
         return fields
 
     def _check_motor_overload(self) -> str | None:
-        actuator_names = self.backend.get_all_actuator_names()
+        actuator_names = self._cached_actuator_names
         dt = 0.002  # matching our loop dt
 
         for name in actuator_names:
@@ -749,13 +759,7 @@ class SimulationLoop:
         return None
 
     def _check_forbidden_collision(self, target_body_name: str | None) -> bool:
-        all_bodies = self.backend.get_all_body_names()
-        for body_name in all_bodies:
-            if body_name == "world" or body_name == "0":
-                continue
-            if body_name and body_name.startswith("zone_forbid"):
-                continue
-
+        for body_name in self._collision_check_bodies:
             for zone_name in self.forbidden_sites:
                 if self.backend.check_collision(body_name, zone_name):
                     return True
