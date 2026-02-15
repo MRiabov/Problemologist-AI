@@ -25,7 +25,7 @@ def upgrade() -> None:
     # or just execute it directly. In PG, ADD VALUE cannot run inside a transaction
     # unless it's a new type.
     op.execute("COMMIT")  # Break out of transaction
-    op.execute("ALTER TYPE episodestatus ADD VALUE 'PLANNED'")
+    op.execute("ALTER TYPE episodestatus ADD VALUE IF NOT EXISTS 'PLANNED'")
 
 
 def downgrade() -> None:
