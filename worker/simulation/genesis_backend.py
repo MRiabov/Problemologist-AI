@@ -63,8 +63,36 @@ class GenesisBackend(PhysicsBackend):
             self.scene = scene.assets["gs_scene"]
             return
 
-        # Create new scene if not provided
+        # T017: GPU OOM Auto-Retry Logic
+        max_retries = 3
+        particle_reduction_factor = 0.75
+        self.current_particle_multiplier = 1.0
+
+        for attempt in range(max_retries):
+            try:
+                self._load_scene_internal(scene)
+                # If we get here, it succeeded
+                break
+            except Exception as e:
+                # Check for OOM
+                error_str = str(e).lower()
+                if "out of memory" in error_str or "cuda error: out of memory" in error_str:
+                    logger.warning("genesis_oom_detected", attempt=attempt+1, reduction=particle_reduction_factor)
+                    self.current_particle_multiplier *= particle_reduction_factor
+                    # Clean up and retry
+                    self.close()
+                    if attempt == max_retries - 1:
+                        logger.error("genesis_oom_persistent")
+                        raise
+                else:
+                    logger.error("failed_to_build_genesis_scene", error=str(e))
+                    raise
+
+    def _load_scene_internal(self, scene: SimulationScene) -> None:
+        """Internal helper to build the scene, allowing for retries on OOM."""
         self.scene = gs.Scene(show_viewer=False)
+        self.entities = {}
+        self.entity_configs = {}
 
         if scene.scene_path and scene.scene_path.endswith(".json"):
             import json
@@ -98,7 +126,7 @@ class GenesisBackend(PhysicsBackend):
                                 nu=mat_props.poissons_ratio if mat_props else 0.45,
                                 rho=mat_props.density_kg_m3 if mat_props else 1000,
                             )
-                            # Load MSH or OBJ (Genesis can tetrahedralize OBJ)
+                            # Load MSH or OBJ
                             file_path = scene_dir / ent_cfg["file"]
                             entity = self.scene.add_entity(
                                 gs.morphs.Mesh(
@@ -130,38 +158,45 @@ class GenesisBackend(PhysicsBackend):
 
                         self.entities[name] = entity
 
-                    # 2. Add Joints (if any)
-                    # Note: Genesis often adds joints via the morph or as part of the asset loading
-                    # For custom meshes, we might need to set them up.
-                    # Currently we assume the backend handles it via entity properties if supported.
-                    # Genesis 0.3.x uses links/joints for URDF, but for single meshes we can set dmp properties.
-
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+
+                    # T014: Fluid Spawning from FluidDefinition
                     for fluid_cfg in data.get("fluids", []):
+                        props = fluid_cfg.get("properties", {})
                         vol = fluid_cfg["initial_volume"]
+                        
+                        # MPM Material based on FluidDefinition
                         material = gs.materials.MPM.Liquid(
-                            rho=1000,
+                            rho=props.get("density_kg_m3", 1000),
+                            viscosity=props.get("viscosity_cp", 1.0) * 0.001, # Convert cP to Pa.s
                         )
 
+                        # Support Box and Sphere spawning volumes
                         if vol["type"] == "box":
                             self.scene.add_entity(
                                 gs.morphs.Box(
                                     pos=vol["center"],
-                                    size=vol["size"],
+                                    size=vol.get("size", [0.1, 0.1, 0.1]),
+                                ),
+                                material=material,
+                            )
+                        elif vol["type"] == "sphere":
+                            self.scene.add_entity(
+                                gs.morphs.Sphere(
+                                    pos=vol["center"],
+                                    radius=vol.get("radius", 0.05),
                                 ),
                                 material=material,
                             )
 
             except Exception as e:
-                logger.error("failed_to_build_genesis_scene", error=str(e))
+                logger.error("failed_to_parse_genesis_json", error=str(e))
+                raise
 
         # In Genesis, we must call build() before step()
         if self.scene and not getattr(self.scene, "is_built", False):
-            try:
-                self.scene.build()
-            except Exception as e:
-                logger.error("genesis_scene_build_failed", error=str(e))
+            self.scene.build()
 
     def step(self, dt: float) -> StepResult:
         if self.scene is None:
@@ -179,6 +214,16 @@ class GenesisBackend(PhysicsBackend):
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
             self.scene.step()
+
+            # T017: ELECTRONICS_FLUID_DAMAGE check
+            failure = self._check_electronics_fluid_damage()
+            if failure:
+                return StepResult(
+                    time=self.current_time,
+                    success=False,
+                    failure_reason=failure,
+                )
+
         except Exception as e:
             logger.error("genesis_step_failed", error=str(e))
             return StepResult(
@@ -187,6 +232,33 @@ class GenesisBackend(PhysicsBackend):
 
         self.current_time += dt
         return StepResult(time=self.current_time, success=True)
+
+    def _check_electronics_fluid_damage(self) -> str | None:
+        """Check if any fluid particles are touching electronic components."""
+        # WP3 Forward Compatibility: detect if particles are within bounding boxes
+        # of entities marked as electronics in the assembly definition.
+        particles = self.get_particle_positions()
+        if particles is None or len(particles) == 0:
+            return None
+
+        # We need to know which entities are electronics.
+        # This information would typically come from the assembly definition.
+        # For now, we'll check if the entity has 'is_electronics' in its config.
+        for name, entity in self.entities.items():
+            cfg = self.entity_configs.get(name, {})
+            if cfg.get("is_electronics"):
+                # Get bounding box of the entity
+                # This is simplified; ideally we use the mesh collision
+                state = entity.get_state()
+                if hasattr(state, "pos"):
+                    # Check distance from each particle to entity center
+                    # (Very rough approximation for MVP)
+                    center = np.mean(state.pos[0].cpu().numpy(), axis=0)
+                    dist = np.linalg.norm(particles - center, axis=1)
+                    if np.any(dist < 0.05): # 5cm threshold
+                        logger.info("electronics_fluid_damage", part=name)
+                        return f"ELECTRONICS_FLUID_DAMAGE:{name}"
+        return None
 
     def get_body_state(self, body_id: str) -> BodyState:
         if body_id not in self.entities:
