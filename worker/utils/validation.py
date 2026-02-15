@@ -126,7 +126,26 @@ def get_stress_report(part_label: str) -> dict | None:
 
     for summary in LAST_SIMULATION_RESULT.stress_summaries:
         if summary.part_label == part_label:
-            return summary.model_dump()
+            data = summary.model_dump()
+            # T018: Add diagnostic advice
+            sf = summary.safety_factor
+            if sf < 1.2:
+                data["advice"] = (
+                    "CRITICAL: Part is near or at yielding point. Add material or use stronger material."
+                )
+            elif sf < 1.5:
+                data["advice"] = (
+                    "WARNING: Safety factor below 1.5 target. Consider reinforcing high-stress areas."
+                )
+            elif sf > 5.0:
+                data["advice"] = (
+                    "OPTIMIZATION: Safety factor exceeds 5.0. Consider thinning parts to save cost and weight."
+                )
+            else:
+                data["advice"] = (
+                    "SUCCESS: Safety factor is within the ideal 1.5 - 5.0 range."
+                )
+            return data
 
     logger.warning("stress_report_part_not_found", part_label=part_label)
     return None
@@ -161,6 +180,7 @@ def preview_stress(
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     stress_renders_dir = working_dir / "renders" / "stress"
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir = working_dir / "assets"
 
     from .rendering import render_stress_heatmap
     from shared.simulation.backends import StressField
@@ -172,7 +192,13 @@ def preview_stress(
             nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
         )
         out_path = stress_renders_dir / f"stress_{part_label}.png"
-        render_stress_heatmap(field, out_path)
+
+        # T020: Use the exported mesh for better VLM visibility if available
+        mesh_path = assets_dir / f"{part_label}.obj"
+        if not mesh_path.exists():
+            mesh_path = None
+
+        render_stress_heatmap(field, out_path, mesh_path=mesh_path)
         render_paths.append(str(out_path))
 
     return render_paths
@@ -221,6 +247,29 @@ def define_fluid(
         obj_path.write_text(yaml.dump(objs.model_dump()), encoding="utf-8")
 
     return fluid.model_dump()
+
+
+def set_soft_mesh(
+    part_id: str, enabled: bool = True, output_dir: Path | None = None
+) -> bool:
+    """Explicitly enables FEM for the scene and marks intent for a specific part."""
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    obj_path = working_dir / "objectives.yaml"
+
+    if obj_path.exists():
+        try:
+            data = yaml.safe_load(obj_path.read_text())
+            objs = ObjectivesYaml(**data)
+            objs.physics.fem_enabled = enabled
+            if enabled:
+                objs.physics.backend = "genesis"  # FEM requires Genesis
+            obj_path.write_text(yaml.dump(objs.model_dump()), encoding="utf-8")
+            logger.info("set_soft_mesh_enabled", part_id=part_id, fem_enabled=enabled)
+            return True
+        except Exception as e:
+            logger.error("set_soft_mesh_failed", error=str(e))
+            return False
+    return False
 
 
 def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
@@ -379,10 +428,8 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = (
-                            lambda t, p=part.control: (
-                                sinusoidal(t, p.speed, p.frequency or 1.0)
-                            )
+                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            sinusoidal(t, p.speed, p.frequency or 1.0)
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
@@ -390,16 +437,23 @@ def simulate(
             logger.warning("failed_to_load_controllers", error=str(e))
 
     try:
+        video_path = renders_dir / "simulation.mp4"
         metrics = loop.step(
             control_inputs=control_inputs,
             duration=30.0,
             dynamic_controllers=dynamic_controllers,
+            video_path=video_path,
         )
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
 
-        render_paths = prerender_24_views(component, output_dir=str(renders_dir))
+        render_paths = prerender_24_views(
+            component, output_dir=str(renders_dir), backend_type=backend_type
+        )
+        if video_path.exists():
+            render_paths.append(str(video_path))
+
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
         cost, weight = calculate_assembly_totals(
@@ -421,6 +475,12 @@ def simulate(
             total_weight_g=weight,
             confidence=metrics.confidence,
         )
+
+        # T023: Generate stress heatmaps and append to render_paths
+        if metrics.stress_fields:
+            stress_renders = preview_stress(component, output_dir=working_dir)
+            LAST_SIMULATION_RESULT.render_paths.extend(stress_renders)
+
         try:
             LAST_SIMULATION_RESULT.save(working_dir / "simulation_result.json")
         except Exception as e:
@@ -473,7 +533,22 @@ def validate(
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
-        prerender_24_views(component, output_dir=renders_dir)
+        
+        # Heuristic: use MuJoCo for validation preview unless Genesis is requested
+        backend_type = SimulatorBackendType.MUJOCO
+        if output_dir:
+            obj_path = output_dir / "objectives.yaml"
+            if obj_path.exists():
+                try:
+                    data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+                    from shared.models.schemas import ObjectivesYaml
+                    objs = ObjectivesYaml(**data)
+                    if objs.physics and objs.physics.backend:
+                        backend_type = SimulatorBackendType(objs.physics.backend)
+                except Exception:
+                    pass
+
+        prerender_24_views(component, output_dir=renders_dir, backend_type=backend_type)
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))
 

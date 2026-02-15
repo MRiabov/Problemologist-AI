@@ -302,12 +302,18 @@ class SimulationLoop:
         duration: float = 10.0,
         dynamic_controllers: dict[str, callable] | None = None,
         render_callback=None,
+        video_path: Path | None = None,
     ) -> SimulationMetrics:
         """
         Runs the simulation for the specified duration.
         Returns metrics.
         """
         self.reset_metrics()
+
+        video_renderer = None
+        if video_path:
+            from worker.utils.rendering import VideoRenderer
+            video_renderer = VideoRenderer(video_path)
 
         # T012: Check validation hook before starting
         if self.validation_report and not getattr(
@@ -584,6 +590,18 @@ class SimulationLoop:
                 # This might need adjustment as render_callback usually takes model/data
                 # For now, we might skip it or pass the backend
                 pass
+
+            if video_renderer and step_idx % 15 == 0:  # ~33 fps with dt=0.002
+                # Setup a reasonable camera for video if not already set
+                # For MuJoCo we can use "free" or a named camera.
+                # For Genesis we use "main".
+                frame = self.backend.render_camera("main", 640, 480)
+                particles = self.backend.get_particle_positions()
+                video_renderer.add_frame(frame, particles=particles)
+
+        # Finalize video
+        if video_renderer:
+            video_renderer.save()
 
         # Final fluid objectives evaluation (eval_at='end')
         if self.objectives and self.objectives.objectives:

@@ -260,6 +260,41 @@ class GenesisBackend(PhysicsBackend):
 
         return rgb.astype(np.uint8)
 
+    def set_camera(
+        self,
+        camera_name: str,
+        pos: tuple[float, float, float] | None = None,
+        lookat: tuple[float, float, float] | None = None,
+        up: tuple[float, float, float] | None = None,
+        fov: float | None = None,
+    ) -> None:
+        if not self.scene:
+            return
+
+        if camera_name not in self.cameras:
+            # Create with default res, will be updated by render_camera if needed
+            cam = self.scene.add_camera(res=(640, 480))
+            self.cameras[camera_name] = cam
+        
+        cam = self.cameras[camera_name]
+        
+        # Genesis cameras use set_pose or similar
+        # Based on Genesis 0.3.x: cam.set_pose(pos=..., lookat=..., up=...)
+        kwargs = {}
+        if pos is not None:
+            kwargs["pos"] = pos
+        if lookat is not None:
+            kwargs["lookat"] = lookat
+        if up is not None:
+            kwargs["up"] = up
+        
+        if kwargs:
+            cam.set_pose(**kwargs)
+        
+        if fov is not None:
+            # cam.fov = fov
+            pass
+
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 

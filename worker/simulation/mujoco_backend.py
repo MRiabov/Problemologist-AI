@@ -18,6 +18,7 @@ class MuJoCoBackend(PhysicsBackend):
         self.model = None
         self.data = None
         self.renderer = None
+        self.custom_cameras = {}  # name -> mjvCamera
 
     def load_scene(self, scene: SimulationScene) -> None:
         if scene.scene_path:
@@ -85,8 +86,48 @@ class MuJoCoBackend(PhysicsBackend):
         if self.renderer is None:
             self.renderer = mujoco.Renderer(self.model, width, height)
 
-        self.renderer.update_scene(self.data, camera=camera_name)
+        cam = self.custom_cameras.get(camera_name, camera_name)
+        self.renderer.update_scene(self.data, camera=cam)
         return self.renderer.render()
+
+    def set_camera(
+        self,
+        camera_name: str,
+        pos: tuple[float, float, float] | None = None,
+        lookat: tuple[float, float, float] | None = None,
+        up: tuple[float, float, float] | None = None,
+        fov: float | None = None,
+    ) -> None:
+        if camera_name not in self.custom_cameras:
+            cam = mujoco.MjvCamera()
+            mujoco.mjv_defaultCamera(cam)
+            self.custom_cameras[camera_name] = cam
+        
+        cam = self.custom_cameras[camera_name]
+        if pos is not None:
+            # mjvCamera doesn't have direct pos, but lookat and distance/azimuth/elevation
+            # For exact pos, we might need a workaround or just use lookat/dist
+            # MuJoCo cameras usually look at something.
+            # If we want to set pos, we might need to calculate dist/azim/elev
+            # For simplicity, we'll support lookat and distance-based approach if pos is used.
+            # Or we can use mjv_setCamera (not available in all versions)
+            
+            # Simple heuristic: if pos is provided, assume it's for distance calculation if lookat is also there
+            if lookat is not None:
+                p = np.array(pos)
+                l = np.array(lookat)
+                diff = p - l
+                cam.distance = np.linalg.norm(diff)
+                # azim/elev calculation
+                cam.azimuth = np.rad2deg(np.arctan2(diff[0], diff[1]))
+                cam.elevation = np.rad2deg(np.arcsin(diff[2] / cam.distance))
+        
+        if lookat is not None:
+            cam.lookat = np.array(lookat)
+        
+        if fov is not None:
+            # fov is in model.cam_fovy usually, but MjvCamera doesn't have fov
+            pass
 
     def get_camera_matrix(self, camera_name: str) -> np.ndarray:
         # Return 4x4 projection * view matrix or similar

@@ -17,7 +17,14 @@ from .markdown_validator import (
     validate_plan_md,
     validate_todo_md,
 )
-from .validation import simulate, validate
+from .validation import (
+    define_fluid,
+    get_stress_report,
+    preview_stress,
+    set_soft_mesh,
+    simulate,
+    validate,
+)
 
 __all__ = [
     "HoleType",
@@ -28,10 +35,14 @@ __all__ = [
     "calculate_power_budget",
     "controllers",
     "create_circuit",
+    "define_fluid",
     "electronics",
     "fastener_hole",
     "get_docs_for",
+    "get_stress_report",
+    "preview_stress",
     "route_wire",
+    "set_soft_mesh",
     "simulate",
     "simulate_circuit_transient",
     "submit_for_review",

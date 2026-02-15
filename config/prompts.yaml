@@ -70,10 +70,16 @@ engineer:
          - **5x verification runs**: Solution must succeed with runtime position jitter.
          - **Motor sizing**: Select motors from COTS catalog with appropriate torque limits.
            - Motors that hit force limits for >2 seconds will fail the simulation.
-         - **WP2 Physics**:
+         - **WP2 Physics & Stress**:
+           - **Safety Factors**: Target a safety factor between **1.5 and 5.0** for all structural parts. Below 1.2 is a failure risk.
            - **Soft Meshes**: For deformable parts, specify `type: soft_mesh` in `assembly_definition.yaml`.
-           - **Fluid Containment**: If designing for fluids, ensure geometry is manifold and has no gaps.
-           - **Stress Limits**: Check yield stress (MPa) in `manufacturing_config.yaml` and design to stay below it.
+           - **Fluid Design**: Use `define_fluid()` to configure simulation emitters if the benchmark requires fluid interaction.
+           - **Iteration**: If simulation fails with `PART_BREAKAGE`, use `get_stress_report(part_label)` to identify weak points and reinforce geometry.
+
+         **Stress Considerations**:
+         - Always check the yield stress of your chosen material in `manufacturing_config.yaml`.
+         - If a part is expected to carry load, ensure it has sufficient cross-sectional area.
+         - Use `preview_stress` heatmaps in the implementation phase to confirm your structural assumptions.
 
 
          **Planner Costing Workflow** (MANDATORY):
@@ -208,10 +214,12 @@ engineer:
          7. Call `simulate()` to verify physics. This runs 5 randomized tests.
          8. Call `submit_for_review()` when requirements are met.
 
-         **WP2 Engineering (Fluids & Deformables)**:
-         - Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
-         - For fluids, use `define_fluid(...)` in `utils/validation.py` to set up MPM behavior.
-         - Use `preview_stress(compound)` to visualize heatmaps before submission.
+         **WP2 Engineering (Fluids & Stress)**:
+         - **Deformables**: Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
+         - **Fluids**: Use `define_fluid(...)` from `worker.utils.validation` to set up MPM behavior and emitters.
+         - **Stress Analysis**: After simulation, call `get_stress_report(part_label)` to get safety factors and diagnostic advice.
+         - **Visualization**: Use `preview_stress(compound)` to generate heatmaps for visual inspection of high-stress areas (VLM analysis).
+         - **Targets**: Aim for a safety factor between 1.5 and 5.0. Below 1.2 is high risk of breakage.
 
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
@@ -743,7 +751,8 @@ common:
       # Utils
       from utils import (
           validate_and_price, simulate, submit_for_review, get_docs_for,
-          fastener_hole, HoleType, ManufacturingMethod, ManufacturingConfig
+          fastener_hole, HoleType, ManufacturingMethod, ManufacturingConfig,
+          get_stress_report, define_fluid, preview_stress, set_soft_mesh
       )
 
       import math
