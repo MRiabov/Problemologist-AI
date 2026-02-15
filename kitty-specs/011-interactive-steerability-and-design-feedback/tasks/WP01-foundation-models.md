@@ -1,13 +1,13 @@
 ---
 work_package_id: WP01
 title: Foundation & Data Models
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 89a2d71d9c4ffab3699748b642fc061636c03c93
 created_at: '2026-02-15T09:14:19.310711+00:00'
 subtasks: [T001, T002, T013]
-shell_pid: "61843"
+shell_pid: "69990"
 agent: "Gemini"
 ---
 
@@ -62,3 +62,4 @@ Refer to the following documents:
 
 - 2026-02-15T09:14:19Z – Gemini – shell_pid=61843 – lane=doing – Assigned agent via workflow command
 - 2026-02-15T09:19:54Z – Gemini – shell_pid=61843 – lane=for_review – Ready for review: Foundation and data models implemented, including Pydantic models, DB schema, migration, and storage logic.
+- 2026-02-15T09:21:11Z – Gemini – shell_pid=69990 – lane=doing – Started review via workflow command
