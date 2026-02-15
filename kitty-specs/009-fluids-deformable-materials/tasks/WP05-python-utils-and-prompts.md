@@ -8,6 +8,7 @@ base_commit: b11638b77884f77afaa837eab3919085e67aece8
 created_at: '2026-02-15T12:31:20.264728+00:00'
 subtasks: [T018, T019, T020, T021]
 shell_pid: "83837"
+agent: "gemini"
 ---
 
 # WP05: Python Utils & Prompt Updates
@@ -62,3 +63,7 @@ The agents currently only understand rigid-body failure. We need to teach them a
 
 - Agents hallucinating arguments or import paths.
 - Circular dependencies if utilities import heavy backend modules at top level (ensure lazy imports where necessary).
+
+## Activity Log
+
+- 2026-02-15T12:31:20Z – gemini – shell_pid=83837 – lane=doing – Assigned agent via workflow command
