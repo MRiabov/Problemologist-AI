@@ -1,20 +1,21 @@
 import os
 import uuid
-import logging
 import tempfile
 from pathlib import Path
-from typing import List, Tuple
+
 import numpy as np
+import structlog
 import vtk
-from build123d import Compound, export_stl
+from build123d import export_stl
+
 from shared.observability.storage import S3Client, S3Config
 from worker.tools.topology import _load_component
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def render_selection_snapshot(
-    ids: List[str], view_matrix: List[List[float]], script_path: str = "script.py"
+    ids: list[str], view_matrix: list[list[float]], script_path: str = "script.py"
 ) -> str:
     """
     Renders a snapshot of the component with highlighted features using VTK.

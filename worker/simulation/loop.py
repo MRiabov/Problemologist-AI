@@ -195,8 +195,8 @@ class SimulationLoop:
                             self.is_powered_map[comp.assembly_part_ref] = is_powered
                 self._electronics_dirty = False
                 return
-            else:
-                logger.warning("electronics_validation_failed", errors=res.errors)
+
+            logger.warning("electronics_validation_failed", errors=res.errors)
         except Exception as e:
             logger.debug("electronics_simulation_failed_using_fallback", error=str(e))
 
@@ -241,9 +241,10 @@ class SimulationLoop:
 
         # 2. Add closed switches
         for comp in self.electronics.components:
-            if comp.type in ["switch", "relay"]:
-                if self.switch_states.get(comp.component_id, True):
-                    add_edge(f"{comp.component_id}_in", f"{comp.component_id}_out")
+            if comp.type in ["switch", "relay"] and self.switch_states.get(
+                comp.component_id, True
+            ):
+                add_edge(f"{comp.component_id}_in", f"{comp.component_id}_out")
 
         # 3. Traverse from supply_v+
         powered_nodes = set()
@@ -556,7 +557,7 @@ class SimulationLoop:
                     break
 
             # 3. Check Forbidden Zones
-            if self._check_forbidden_collision(target_body_name):
+            if self._check_forbidden_collision():
                 self.fail_reason = "collision_with_forbidden_zone"
                 logger.info("simulation_fail", reason="collision_with_forbidden_zone")
                 break
@@ -818,7 +819,7 @@ class SimulationLoop:
 
         return None
 
-    def _check_forbidden_collision(self, target_body_name: str | None) -> bool:
+    def _check_forbidden_collision(self) -> bool:
         all_bodies = self.backend.get_all_body_names()
         for body_name in all_bodies:
             if body_name == "world" or body_name == "0":
