@@ -76,9 +76,29 @@ class GenesisBackend(PhysicsBackend):
             except Exception as e:
                 # Check for OOM
                 error_str = str(e).lower()
-                if "out of memory" in error_str or "cuda error: out of memory" in error_str:
-                    logger.warning("genesis_oom_detected", attempt=attempt+1, reduction=particle_reduction_factor)
+                if (
+                    "out of memory" in error_str
+                    or "cuda error: out of memory" in error_str
+                ):
+                    from shared.observability.events import emit_event
+                    from shared.observability.schemas import GpuOomRetryEvent
+
+                    original_count = int(10000 * self.current_particle_multiplier)
                     self.current_particle_multiplier *= particle_reduction_factor
+                    reduced_count = int(10000 * self.current_particle_multiplier)
+
+                    emit_event(
+                        GpuOomRetryEvent(
+                            original_particles=original_count,
+                            reduced_particles=reduced_count,
+                        )
+                    )
+
+                    logger.warning(
+                        "genesis_oom_detected",
+                        attempt=attempt + 1,
+                        reduction=particle_reduction_factor,
+                    )
                     # Clean up and retry
                     self.close()
                     if attempt == max_retries - 1:
@@ -90,6 +110,10 @@ class GenesisBackend(PhysicsBackend):
 
     def _load_scene_internal(self, scene: SimulationScene) -> None:
         """Internal helper to build the scene, allowing for retries on OOM."""
+        # Genesis initialization check (T017: ensures backend is ready for particle reduction)
+        if gs is None:
+            raise ImportError("Genesis not installed")
+
         self.scene = gs.Scene(show_viewer=False)
         self.entities = {}
         self.entity_configs = {}
@@ -165,19 +189,25 @@ class GenesisBackend(PhysicsBackend):
                     for fluid_cfg in data.get("fluids", []):
                         props = fluid_cfg.get("properties", {})
                         vol = fluid_cfg["initial_volume"]
-                        
+
                         # MPM Material based on FluidDefinition
                         material = gs.materials.MPM.Liquid(
                             rho=props.get("density_kg_m3", 1000),
-                            viscosity=props.get("viscosity_cp", 1.0) * 0.001, # Convert cP to Pa.s
+                            viscosity=props.get("viscosity_cp", 1.0)
+                            * 0.001,  # Convert cP to Pa.s
                         )
 
                         # Support Box and Sphere spawning volumes
+                        # T017: Apply particle multiplier to fidelity
+                        n_particles = int(10000 * self.current_particle_multiplier)
+
                         if vol["type"] == "box":
                             self.scene.add_entity(
                                 gs.morphs.Box(
                                     pos=vol["center"],
                                     size=vol.get("size", [0.1, 0.1, 0.1]),
+                                    sampler="grid",
+                                    n_particles=n_particles,
                                 ),
                                 material=material,
                             )
@@ -186,6 +216,8 @@ class GenesisBackend(PhysicsBackend):
                                 gs.morphs.Sphere(
                                     pos=vol["center"],
                                     radius=vol.get("radius", 0.05),
+                                    sampler="grid",
+                                    n_particles=n_particles,
                                 ),
                                 material=material,
                             )
@@ -255,7 +287,7 @@ class GenesisBackend(PhysicsBackend):
                     # (Very rough approximation for MVP)
                     center = np.mean(state.pos[0].cpu().numpy(), axis=0)
                     dist = np.linalg.norm(particles - center, axis=1)
-                    if np.any(dist < 0.05): # 5cm threshold
+                    if np.any(dist < 0.05):  # 5cm threshold
                         logger.info("electronics_fluid_damage", part=name)
                         return f"ELECTRONICS_FLUID_DAMAGE:{name}"
         return None

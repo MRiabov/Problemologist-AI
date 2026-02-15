@@ -151,8 +151,20 @@ class SimulationLoop:
         self.actuator_clamp_duration = {}
 
         # T016: Persistent state for flow rate tracking
-        self.prev_particle_distances = {} # objective_id -> distances array
-        self.cumulative_crossed_count = {} # objective_id -> int
+        self.prev_particle_distances = {}  # objective_id -> distances array
+        self.cumulative_crossed_count = {}  # objective_id -> int
+
+        # Initial capture of distances for flow rate objectives
+        if self.objectives and self.objectives.objectives:
+            particles = self.backend.get_particle_positions()
+            if particles is not None and len(particles) > 0:
+                for fo in self.objectives.objectives.fluid_objectives:
+                    if fo.type == "flow_rate":
+                        p0 = np.array(fo.gate_plane_point)
+                        n = np.array(fo.gate_plane_normal)
+                        distances = np.dot(particles - p0, n)
+                        obj_id = f"{fo.fluid_id}_{fo.type}"
+                        self.prev_particle_distances[obj_id] = distances
 
         # T015: derive is_powered_map from electronics.circuit state
         self.is_powered_map = {}
@@ -493,7 +505,10 @@ class SimulationLoop:
 
                 # 2.2.2 Fluid Objectives (Continuous checks)
                 for fo in self.objectives.objectives.fluid_objectives:
-                    if getattr(fo, "eval_at", "end") == "continuous" or fo.type == "flow_rate":
+                    if (
+                        getattr(fo, "eval_at", "end") == "continuous"
+                        or fo.type == "flow_rate"
+                    ):
                         if fo.type == "fluid_containment":
                             particles = self.backend.get_particle_positions()
                             if particles is not None and len(particles) > 0:
@@ -516,22 +531,27 @@ class SimulationLoop:
                                 n = np.array(fo.gate_plane_normal)
                                 # Distance from plane: (p - p0) . n
                                 distances = np.dot(particles - p0, n)
-                                
+
                                 obj_id = f"{fo.fluid_id}_{fo.type}"
                                 if obj_id in self.prev_particle_distances:
                                     prev_dists = self.prev_particle_distances[obj_id]
                                     # Ensure same number of particles
                                     if len(prev_dists) == len(distances):
                                         # Crossed from negative to positive side
-                                        crossed_pos = np.sum((prev_dists <= 0) & (distances > 0))
-                                        # Crossed from positive to negative side
-                                        crossed_neg = np.sum((prev_dists > 0) & (distances <= 0))
-                                        
-                                        self.cumulative_crossed_count[obj_id] = (
-                                            self.cumulative_crossed_count.get(obj_id, 0) 
-                                            + int(crossed_pos) - int(crossed_neg)
+                                        crossed_pos = np.sum(
+                                            (prev_dists <= 0) & (distances > 0)
                                         )
-                                
+                                        # Crossed from positive to negative side
+                                        crossed_neg = np.sum(
+                                            (prev_dists > 0) & (distances <= 0)
+                                        )
+
+                                        self.cumulative_crossed_count[obj_id] = (
+                                            self.cumulative_crossed_count.get(obj_id, 0)
+                                            + int(crossed_pos)
+                                            - int(crossed_neg)
+                                        )
+
                                 self.prev_particle_distances[obj_id] = distances
 
                 if self.fail_reason:
@@ -666,7 +686,7 @@ class SimulationLoop:
                             # T016: Use cumulative crossed count for more accurate flow rate
                             obj_id = f"{fo.fluid_id}_{fo.type}"
                             passed_count = self.cumulative_crossed_count.get(obj_id, 0)
-                            
+
                             # Heuristic: 1 particle ~= 0.001L (1ml) for MVP
                             measured_volume_l = passed_count * 0.001
                             measured_rate = (
@@ -687,34 +707,45 @@ class SimulationLoop:
                             )
                             self.fluid_metrics.append(result)
 
-                                from shared.observability.schemas import (
-                                    FlowRateCheckEvent,
-                                )
+                            from shared.observability.schemas import (
+                                FlowRateCheckEvent,
+                            )
 
-                                emit_event(
-                                    FlowRateCheckEvent(
-                                        fluid_id=fo.fluid_id,
-                                        measured_rate=float(measured_rate),
-                                        target_rate=fo.target_rate_l_per_s,
-                                        passed=passed,
-                                    )
+                            emit_event(
+                                FlowRateCheckEvent(
+                                    fluid_id=fo.fluid_id,
+                                    measured_rate=float(measured_rate),
+                                    target_rate=fo.target_rate_l_per_s,
+                                    passed=passed,
                                 )
-                                if not passed:
-                                    self.fail_reason = (
-                                        self.fail_reason
-                                        or f"FLOW_RATE_FAILED:{fo.fluid_id}"
-                                    )
+                            )
+                            if not passed:
+                                self.fail_reason = (
+                                    self.fail_reason
+                                    or f"{SimulationFailureMode.FLUID_OBJECTIVE_FAILED}:{fo.fluid_id}"
+                                )
 
         # Final success determination:
-        # If any explicit failure was recorded, it's not a success.
+        # Success if no failures AND (goal achieved IF goals exist, or fluid/stress objectives passed)
+        has_other_objectives = False
+        if self.objectives and self.objectives.objectives:
+            if (
+                self.objectives.objectives.fluid_objectives
+                or self.objectives.objectives.stress_objectives
+            ):
+                has_other_objectives = True
+
         if self.fail_reason:
             is_success = False
-        elif target_body_name and self.goal_sites:
+        elif self.goal_sites:
             # If target object AND goals are required, success depends on goal achievement
             is_success = self.success
-        else:
-            # If no failures and either no target or no goal sites, it's a pass
+        elif has_other_objectives:
+            # If no failures and fluid/stress objectives passed, it's a success
             is_success = True
+        else:
+            # Stability test or goal-less benchmark (legacy behavior expects False if no goal)
+            is_success = False
 
         return SimulationMetrics(
             total_time=current_time,
