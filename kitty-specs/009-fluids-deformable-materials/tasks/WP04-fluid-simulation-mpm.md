@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP04"
-title: "Fluid Simulation (MPM)"
-lane: "planned"
-dependencies: ["WP03"]
-subtasks: ["T013", "T014", "T015"]
+work_package_id: WP04
+title: Fluid Simulation (MPM)
+lane: planned
+dependencies: []
+subtasks: [T013, T014, T015]
 ---
 
 # WP04: Fluid Simulation (MPM)

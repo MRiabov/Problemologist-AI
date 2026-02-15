@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP07"
-title: "Verification & Testing"
-lane: "planned"
-dependencies: ["WP06"]
-subtasks: ["T024", "T025", "T026"]
+work_package_id: WP07
+title: Verification & Testing
+lane: planned
+dependencies: []
+subtasks: [T024, T025, T026]
 ---
 
 # WP07: Verification & Testing
