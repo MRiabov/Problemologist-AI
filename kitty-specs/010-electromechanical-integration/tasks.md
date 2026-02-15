@@ -80,11 +80,11 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: Medium
 - **Success Criteria**: Users can see schematics and 3D wires in the dashboard.
 - **Subtasks**:
-    - [ ] T025: [P] Update `shared/observability/schemas.py` with electrical events.
-    - [ ] T026: [P] Update `controller/api/` to export circuit data for `tscircuit`.
-    - [ ] T027: [P] Implement 3D wire rendering in `frontend/src/viewer/`.
-    - [ ] T028: [P] Add "Electronics View" toggle in the dashboard.
-    - [ ] T029: [P] Integrate `tscircuit` component for schematic visualization.
+    - [x] T025: [P] Update `shared/observability/schemas.py` with electrical events.
+    - [x] T026: [P] Update `controller/api/` to export circuit data for `tscircuit`.
+    - [x] T027: [P] Implement 3D wire rendering in `frontend/src/viewer/`.
+    - [x] T028: [P] Add "Electronics View" toggle in the dashboard.
+    - [x] T029: [P] Integrate `tscircuit` component for schematic visualization.
 - **Implementation Sketch**: Add observability events first, then the API endpoints, and finally the frontend visualization components.
 - **Dependencies**: WP05
 - **Estimated Prompt Size**: ~350 lines
