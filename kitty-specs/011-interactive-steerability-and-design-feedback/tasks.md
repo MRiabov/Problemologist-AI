@@ -20,8 +20,8 @@ This document breaks down the implementation of the Steerability framework into 
 **Goal**: Create the async queue service and the API endpoints for receiving steered prompts.
 **Independent Test**: API integration tests verifying that `POST /steer` correctly populates the in-memory queue.
 
-- [ ] **T003**: Create `SteerabilityService` in `controller/services/steerability/service.py` with `asyncio.Queue` management for `TurnQueue`.
-- [ ] **T004**: Implement `POST /api/v1/sessions/{session_id}/steer` and `GET /api/v1/sessions/{session_id}/queue` in `controller/api/routes/steerability.py`.
+- [x] **T003**: Create `SteerabilityService` in `controller/services/steerability/service.py` with `asyncio.Queue` management for `TurnQueue`.
+- [x] **T004**: Implement `POST /api/v1/sessions/{session_id}/steer` and `GET /api/v1/sessions/{session_id}/queue` in `controller/api/routes/steerability.py`.
 
 **Estimated Prompt Size**: ~300 lines
 
