@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: LangGraph Integration
-lane: "doing"
+lane: "planned"
 dependencies: []
 base_branch: main
 base_commit: 35acbb99d47bea37eb74f4757408f6fe43a55180
@@ -9,6 +9,8 @@ created_at: '2026-02-15T11:25:19.422466+00:00'
 subtasks: [T008, T012]
 shell_pid: "193402"
 agent: "gemini"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP04 - LangGraph Integration
@@ -50,3 +52,4 @@ Inject the interaction queue into the LangGraph execution loop, allowing user fe
 ## Activity Log
 
 - 2026-02-15T11:25:19Z – gemini – shell_pid=193402 – lane=doing – Assigned agent via workflow command
+- 2026-02-15T18:12:53Z – gemini – shell_pid=193402 – lane=planned – Moved to planned
