@@ -223,3 +223,20 @@ class LintResponse(BaseModel):
     success: StrictBool
     errors: list[dict[StrictStr, Any]] = Field(default_factory=list)
     warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
+
+
+class InspectTopologyRequest(BaseModel):
+    """Request to inspect topological features."""
+
+    target_id: StrictStr = Field(..., description="Target ID (e.g. face_0, part_1).")
+    script_path: StrictStr = Field(
+        default="script.py", description="Path to the build script."
+    )
+
+
+class InspectTopologyResponse(BaseModel):
+    """Response from topology inspection."""
+
+    success: StrictBool
+    properties: dict[StrictStr, Any] | None = None
+    message: StrictStr | None = None
