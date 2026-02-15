@@ -33,9 +33,9 @@ This document breaks down the implementation of the Steerability framework into 
 **Goal**: Implement the headless rendering logic and topological inspection tools on the worker.
 **Independent Test**: Verify `inspect_topology` returns correct geometric data and `rendering.py` produces highlighted isometric snapshots.
 
-- [ ] **T005**: Add `inspect_topology` tool to `worker/tools/topology.py` to return geometric properties of selected features.
-- [ ] **T006**: Implement best-angle isometric view selection logic in `shared/simulation/view_utils.py`.
-- [ ] **T007**: Update `worker/activities/rendering.py` to support headless snapshots with highlighted features.
+- [x] T005: Add `inspect_topology` tool to `worker/tools/topology.py` to return geometric properties of selected features.
+- [x] T006: Implement best-angle isometric view selection logic in `shared/simulation/view_utils.py`.
+- [x] T007: Update `worker/activities/rendering.py` to support headless snapshots with highlighted features.
 
 **Estimated Prompt Size**: ~450 lines
 
