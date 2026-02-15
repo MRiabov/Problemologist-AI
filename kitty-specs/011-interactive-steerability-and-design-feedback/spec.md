@@ -9,17 +9,20 @@
 
 ### User Story 1 - Exact Pointing Feedback (Priority: P1)
 
-An engineer selects a specific face on a 3D part in the CAD viewer and provides a correction (e.g., "Make this flange wider"). The agent receives the exact geometric reference and a visual snapshot to ground the instruction.
+An engineer selects a specific geometric feature (face, edge, or vertex) on a 3D part in the CAD viewer and provides a correction. The system automatically determines the best viewing angle, highlights the feature, and provides structured metadata to the agent.
 
 **Why this priority**: Core of steerability; allows precise geometric intervention which is currently difficult with text only.
 
-**Independent Test**: User can select a face in the CAD viewer, see it highlighted, and send a message. The agent's next turn includes the face identifier, its world-space metadata, and a screenshot showing the highlighted face.
+**Independent Test**: User can select a face, edge, or vertex in the CAD viewer. The agent's next turn includes a YAML-formatted list of selections with geometric metadata (centers, normals, directions) and a screenshot from an automatically selected isometric view showing the highlighted feature.
 
 **Acceptance Scenarios**:
 
-1. **Given** a rendered 3D model in the CAD viewer, **When** the user clicks a face, **Then** the face is visually highlighted in a distinct color.
-2. **Given** a selected face, **When** the user submits a prompt, **Then** the system captures a screenshot of the current view with the highlight.
-3. **Given** a submitted prompt with a selection, **When** the agent receives the turn, **Then** the context contains `face_idx`, part name, and the visual snapshot.
+1. **Given** a rendered 3D model in the CAD viewer, **When** the user clicks a face, edge, or vertex, **Then** the feature is visually highlighted.
+2. **Given** one or more selected features, **When** the user submits a prompt, **Then** the system automatically selects the best viewing angle (from 8 standard isometric views) and captures a snapshot where the selected parts are rendered more brightly.
+3. **Given** a submitted prompt with selections, **When** the agent receives the turn, **Then** the context contains a YAML-like block with:
+    - **Faces**: index, center, and normal.
+    - **Edges**: center, direction, and arc/linear classification.
+    - **Vertices**: world position.
 
 ---
 
@@ -80,11 +83,11 @@ An engineer @-mentions a part or subassembly from the Bill of Materials (BOM) to
 ### Functional Requirements
 
 - **FR-001**: System MUST integrate `three-cad-viewer` to enable topological selection (faces, edges, volumes).
-- **FR-002**: System MUST capture and transmit "visual context" (screenshots with highlights) when geometric features are selected.
+- **FR-002**: System MUST capture and transmit "visual context" (screenshots with highlights). The system MUST automatically select the optimal viewing angle from 8 isometric views to showcase the selected features.
 - **FR-003**: System MUST parse `@filename:line-range` syntax in the chat interface and retrieve the corresponding source code.
 - **FR-004**: System MUST provide an autocomplete mechanism for @-mentioning parts from the active assembly BOM.
 - **FR-005**: System MUST implement a server-side (or persistent client-side) queue for user prompts sent during agent execution.
-- **FR-006**: The Agent MUST be equipped with tools to translate user face selections into robust semantic selectors (e.g. `faces().sort_by(Axis.Z)[-1]`).
+- **FR-006**: The Agent MUST be equipped with tools to translate user face selections into robust semantic selectors (e.g. `faces().sort_by(Axis.Z)[-1]`). Selection metadata MUST be provided in a YAML-like format including centers, normals, and directions.
 - **FR-007**: System MUST highlight the referenced code or parts in the UI when the agent acknowledges them in its response.
 - **FR-008**: System MUST support per-user steerability memory, allowing the agent to remember and apply user-specific design preferences across multiple turns or sessions.
 
