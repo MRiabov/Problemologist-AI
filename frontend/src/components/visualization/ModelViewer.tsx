@@ -261,6 +261,8 @@ interface ModelViewerProps {
   wireRoutes?: WireRoute[];
   isConnected?: boolean;
   resetTrigger?: number;
+  topologyNodes?: TopologyNode[];
+  onTopologyChange?: (nodes: TopologyNode[]) => void;
 }
 
 export default function ModelViewer({ 
@@ -270,6 +272,8 @@ export default function ModelViewer({
   wireRoutes = [], 
   isConnected = true, 
   resetTrigger = 0,
+  topologyNodes = [],
+  onTopologyChange,
   onRebuildModel
 }: ModelViewerProps & { onRebuildModel?: () => void }) {
   const controlsRef = useRef<any>(null)
@@ -279,7 +283,6 @@ export default function ModelViewer({
   const [currentTime, setCurrentTime] = useState(0)
   const [showTopology, setShowTopology] = useState(true) // Default to open for Model Browser
   const [isElectronicsView, setIsElectronicsView] = useState(false)
-  const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([])
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('PART')
 
   const urls = useMemo(() => {
@@ -346,7 +349,7 @@ export default function ModelViewer({
                         hiddenParts={hiddenParts} 
                         selectionMode={selectionMode}
                         isElectronicsView={isElectronicsView}
-                        onStructureParsed={setTopologyNodes}
+                        onStructureParsed={onTopologyChange}
                         onSelect={(name, level, metadata) => {
                             addToContext({
                                 id: `cad-${name}`,

@@ -340,6 +340,7 @@ async def execute_agent_task(
 async def continue_agent_task(
     episode_id: uuid.UUID,
     message: str,
+    metadata: dict | None = None,
 ):
     """
     Continue an existing agent task with a new user message.
@@ -404,7 +405,11 @@ async def continue_agent_task(
                     trace_type=TraceType.LOG,  # Or maybe a specialized USER_MESSAGE type?
                     content=f"User message: {message}",
                     langfuse_trace_id=trace_id,
-                    metadata_vars={"role": "user", "message": message},
+                    metadata_vars={
+                        "role": "user",
+                        "message": message,
+                        "metadata": metadata,
+                    },
                 )
                 db.add(user_trace)
                 await db.commit()
@@ -425,7 +430,12 @@ async def continue_agent_task(
                 thread_id = str(episode_id)
 
                 # LangGraph state update: append message to 'messages' key
-                input_update = {"messages": [HumanMessage(content=message)]}
+                # Support steerability metadata in additional_kwargs (Story 2 & 4)
+                human_message = HumanMessage(
+                    content=message,
+                    additional_kwargs={"steerability": metadata} if metadata else {},
+                )
+                input_update = {"messages": [human_message]}
 
                 result = await agent.ainvoke(
                     input_update,

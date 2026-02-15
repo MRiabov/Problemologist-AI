@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, continueEpisode, type Episode, type BenchmarkObjectives } from '../api/client';
+import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, continueEpisode, type Episode, type BenchmarkObjectives, steerAgent as apiSteerAgent } from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
+import type { TopologyNode } from "../components/visualization/ModelBrowser";
 
 export interface ContextItem {
   id: string;
   type: 'code' | 'cad' | 'circuit';
   label: string;
+  content?: string;
   metadata?: Record<string, any>;
 }
 
@@ -17,11 +19,14 @@ interface EpisodeContextType {
   isCreationMode: boolean;
   activeArtifactId: string | null;
   selectedContext: ContextItem[];
+  topologyNodes: TopologyNode[];
   setActiveArtifactId: (id: string | null) => void;
+  setTopologyNodes: (nodes: TopologyNode[]) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
-  continueAgent: (id: string, message: string) => Promise<void>;
+  continueAgent: (id: string, message: string, metadata?: Record<string, unknown>) => Promise<void>;
+  steerAgent: (id: string, text: string, metadata?: Record<string, any>) => Promise<void>;
   confirmBenchmark: (id: string) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
@@ -43,6 +48,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [isCreationMode, setIsCreationMode] = useState(false);
   const [isBenchmarkCreation, setIsBenchmarkCreation] = useState(false);
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
+  const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
 
   const refreshEpisodes = useCallback(async () => {
     try {
@@ -72,12 +78,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setSelectedEpisode(null);
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
+    setTopologyNodes([]);
   }, []);
 
   const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
     setSelectedEpisode(null);
     setIsCreationMode(true);
     setIsBenchmarkCreation(isBenchmark);
+    setTopologyNodes([]);
   }, []);
 
   const updateObjectives = useCallback(async (objectives: BenchmarkObjectives) => {
@@ -133,10 +141,10 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isCreationMode, refreshEpisodes, isBenchmarkCreation]);
 
-  const continueAgent = useCallback(async (id: string, message: string) => {
+  const continueAgent = useCallback(async (id: string, message: string, metadata?: Record<string, unknown>) => {
     setRunning(true);
     try {
-      await continueEpisode(id, message);
+      await continueEpisode(id, message, metadata);
       // Wait a bit then refresh to show new trace if polling didn't catch it
       await refreshEpisodes();
     } catch (e) {
@@ -144,6 +152,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       setRunning(false);
     }
   }, [refreshEpisodes]);
+
+  const steerAgent = useCallback(async (id: string, text: string, metadata?: Record<string, any>) => {
+    try {
+      await apiSteerAgent(id, text, metadata);
+    } catch (e) {
+      console.error("Failed to steer agent", e);
+    }
+  }, []);
 
   const confirmBenchmark = useCallback(async (id: string) => {
     setRunning(true);
@@ -219,6 +235,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       selectEpisode,
       startAgent,
       continueAgent,
+      steerAgent,
       confirmBenchmark,
       interruptAgent,
       setRunning,
@@ -230,7 +247,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       selectedContext,
       addToContext,
       removeFromContext,
-      clearContext
+      clearContext,
+      topologyNodes,
+      setTopologyNodes
     }}>
       {children}
     </EpisodeContext.Provider>

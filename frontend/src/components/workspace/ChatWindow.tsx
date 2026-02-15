@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import React, { useState, useRef, useEffect, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { 
@@ -28,74 +28,151 @@ import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
 import { cn } from "../../lib/utils";
+import type { TopologyNode } from "../visualization/ModelBrowser";
+import { getFileIconInfo } from "../../lib/fileIcons";
 
 // Internal helper for rendering highlighted content
 const HighlightedContent = ({ content, language = 'text' }: { content: string, language?: string }) => {
-    const { theme } = useTheme();
-    if (!content) return null;
-    // Basic detection for JSON strings
-    const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
-    
-    return (
-        <SyntaxHighlighter
-            language={lang}
-            style={theme === 'dark' ? vscDarkPlus : vs}
-            customStyle={{
-                margin: 0,
-                padding: '0.5rem',
-                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-                fontSize: '10px',
-                borderRadius: '4px',
-                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
-            }}
-            wrapLines={true}
-            wrapLongLines={true}
-        >
-            {content}
-        </SyntaxHighlighter>
-    );
+        const { theme } = useTheme();
+        const { addToContext, setActiveArtifactId, selectedEpisode } = useEpisodes();
+        
+        if (!content) return null;
+        
+        // Custom renderer for mentions in markdown/text
+        const renderWithMentions = (text: string) => {
+            const regex = /(@([a-zA-Z0-9_\-\.]+)(?::L?(\d+)(?:-L?(\d+))?)?)/g;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+            
+            while ((match = regex.exec(text)) !== null) {
+                const [full, , name, start, end] = match;
+                parts.push(text.substring(lastIndex, match.index));
+                
+                parts.push(
+                    <button
+                        key={match.index}
+                        className="text-primary hover:underline font-mono font-bold px-1 rounded bg-primary/10"
+                        onClick={() => {
+                            const asset = selectedEpisode?.assets?.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                            if (asset) {
+                                setActiveArtifactId(asset.id.toString());
+                                if (start) {
+                                    addToContext({
+                                        id: `steer-${asset.id}-${start}-${end || start}`,
+                                        type: 'code',
+                                        label: full.substring(1),
+                                        metadata: { 
+                                            path: asset.s3_path, 
+                                            start: parseInt(start), 
+                                            end: end ? parseInt(end) : parseInt(start) 
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Assume part mention
+                                addToContext({
+                                    id: `cad-${name}`,
+                                    type: 'cad',
+                                    label: name,
+                                    metadata: { part: name }
+                                });
+                            }
+                        }}
+                    >
+                        {full}
+                    </button>
+                );
+                lastIndex = regex.lastIndex;
+            }
+            parts.push(text.substring(lastIndex));
+            return parts;
+        };
+
+        // Basic detection for JSON strings
+        const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
+
+        if (lang === 'markdown' || lang === 'text') {
+            return (
+                <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
+                    {renderWithMentions(content)}
+                </div>
+            );
+        }
+
+        return (
+                <SyntaxHighlighter
+                        language={lang}
+                        style={theme === 'dark' ? vscDarkPlus : vs}
+                        customStyle={{
+                                margin: 0,
+                                padding: '0.5rem',
+                                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
+                                fontSize: '10px',
+                                borderRadius: '4px',
+                                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
+                        }}
+                        wrapLines={true}
+                        wrapLongLines={true}
+                >
+                        {content}
+                </SyntaxHighlighter>
+        );
 };
 
-
+interface Suggestion {
+  id: string;
+  name: string;
+  type: 'file' | 'part';
+  icon: React.ComponentType<{ className?: string }>;
+  original: any;
+}
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
   task?: string;
   isRunning?: boolean;
   isConnected?: boolean;
+  topologyNodes?: TopologyNode[];
 }
 
 export default function ChatWindow({
   traces,
   task,
   isRunning,
-  isConnected = true
+  isConnected = true,
+  topologyNodes = []
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { 
       isCreationMode, 
       startAgent, 
       continueAgent,
+      steerAgent,
       confirmBenchmark,
       interruptAgent, 
       selectedEpisode, 
       updateObjectives, 
-      episodes,
       selectedContext,
+      addToContext,
       clearContext
   } = useEpisodes();
   const [prompt, setPrompt] = useState("");
   const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
 
+  const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
 
 
-  // Reset objectives when episode changes (optional, or fetch from episode metadata)
+  // Reset objectives when episode changes
   useEffect(() => {
       if (selectedEpisode?.metadata_vars?.custom_objectives) {
           setObjectives(selectedEpisode.metadata_vars.custom_objectives as BenchmarkObjectives);
@@ -104,30 +181,181 @@ export default function ChatWindow({
       }
   }, [selectedEpisode, isCreationMode]);
 
-
-
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent | KeyboardEvent) => {
+    if (e) e.preventDefault();
     if (prompt.trim()) {
+      // 1. Extract mentions and code references from selectedContext
+      const mentions: string[] = [];
+      const code_references: any[] = [];
+      const selections: any[] = [];
+
+      selectedContext.forEach(item => {
+        if (item.type === 'cad') {
+          mentions.push(item.label);
+        } else if (item.type === 'code') {
+          code_references.push({
+            file_path: item.metadata?.path,
+            start_line: Number(item.metadata?.start || item.metadata?.line),
+            end_line: Number(item.metadata?.end || item.metadata?.line)
+          });
+        }
+      });
+
+      // 2. Parse line-range steering from text: @filename:L1-L2
+      const steeringRegex = /@([^:\n\s]+):L?(\d+)(?:-L?(\d+))?/g;
+      const matches = [...prompt.matchAll(steeringRegex)];
+      
+      const sessionAssets = selectedEpisode?.assets || [];
+      matches.forEach(match => {
+        const [, filename, start, end] = match;
+        const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
+        if (asset) {
+            const ref = {
+                file_path: asset.s3_path,
+                start_line: parseInt(start),
+                end_line: end ? parseInt(end) : parseInt(start)
+            };
+            // Avoid duplicates
+            if (!code_references.some(r => r.file_path === ref.file_path && r.start_line === ref.start_line && r.end_line === ref.end_line)) {
+                code_references.push(ref);
+            }
+        }
+      });
+
+      // 3. Extract simple mentions from text (e.g. @part_name)
+      const mentionRegex = /@([a-zA-Z0-9_\-\.]+)(?![:\d])/g;
+      const mentionMatches = [...prompt.matchAll(mentionRegex)];
+      mentionMatches.forEach(match => {
+        const m = match[1];
+        if (!mentions.includes(m)) {
+          mentions.push(m);
+        }
+      });
+
       const metadata = {
         ...(selectedBenchmarkId ? { benchmark_id: selectedBenchmarkId } : {}),
-        ...(selectedContext.length > 0 ? { context_items: selectedContext } : {})
+        mentions,
+        code_references,
+        selections,
+        context_items: selectedContext
       };
       
       if (selectedEpisode && !isCreationMode) {
-        continueAgent(selectedEpisode.id, prompt);
+        if (isRunning) {
+          await steerAgent(selectedEpisode.id, prompt, metadata);
+        } else {
+          await continueAgent(selectedEpisode.id, prompt, metadata);
+        }
       } else {
-        startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
+        await startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
       }
       
       setPrompt("");
       setSelectedBenchmarkId("");
       clearContext();
+      setShowSuggestions(false);
     }
   };
 
-  // Auto-scroll to bottom when new traces arrive, but only if the user is already at the bottom
+  const handleMention = (value: string, selectionStart: number) => {
+    // 1. Line range detection for immediate feedback (Story 4)
+    const lineRegex = /@([^:\n\s]+):L?(\d+)(?:-L?(\d+))?/g;
+    const matches = [...value.matchAll(lineRegex)];
+    
+    const sessionAssets = selectedEpisode?.assets || [];
+    matches.forEach(match => {
+        const [, filename, start, end] = match;
+        const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
+        if (asset) {
+            const contextId = `steer-${asset.id}-${start}-${end || start}`;
+            if (!selectedContext.find(i => i.id === contextId)) {
+                addToContext({
+                    id: contextId,
+                    type: 'code',
+                    label: `${filename}:${start}${end ? '-' + end : ''}`,
+                    metadata: { 
+                        path: asset.s3_path, 
+                        start: parseInt(start), 
+                        end: end ? parseInt(end) : parseInt(start) 
+                    }
+                });
+            }
+        }
+    });
+
+    // 2. Existing @-mention logic
+    const lastAt = value.lastIndexOf('@', selectionStart - 1);
+    const filter = value.substring(lastAt + 1, selectionStart);
+    
+    if (lastAt !== -1 && !/\s/.test(filter)) {
+        setShowSuggestions(true);
+        
+        // Populate suggestions from BOM and Assets
+        const items: Suggestion[] = [];
+        
+        // Add Assets (Files)
+        (selectedEpisode?.assets || []).forEach(asset => {
+            const name = asset.s3_path.split('/').pop() || asset.s3_path;
+            if (name.toLowerCase().includes(filter.toLowerCase())) {
+                const iconInfo = getFileIconInfo(name, asset.asset_type);
+                items.push({ id: `file-${asset.id}`, name, type: 'file', icon: iconInfo.icon, original: asset });
+            }
+        });
+
+        // Add BOM Nodes (Parts)
+        const collectParts = (nodes: TopologyNode[]) => {
+            nodes.forEach(node => {
+                if (node.name.toLowerCase().includes(filter.toLowerCase())) {
+                    items.push({ id: `part-${node.id}`, name: node.name, type: 'part', icon: Zap, original: node });
+                }
+                if (node.children) collectParts(node.children);
+            });
+        };
+        collectParts(topologyNodes);
+
+        setSuggestions(items.slice(0, 10)); // Limit to 10
+        setSelectedIndex(0);
+    } else {
+        setShowSuggestions(false);
+    }
+  };
+
+  const insertSuggestion = (suggestion: Suggestion) => {
+    const selectionStart = inputRef.current?.selectionStart || 0;
+    const lastAt = prompt.lastIndexOf('@', selectionStart - 1);
+    
+    const newPrompt = prompt.substring(0, lastAt + 1) + suggestion.name + prompt.substring(selectionStart);
+    setPrompt(newPrompt);
+    setShowSuggestions(false);
+    
+    // Auto-add to context for immediate feedback (Story 4)
+    if (suggestion.type === 'part') {
+        addToContext({
+            id: `cad-${suggestion.original.name}`,
+            type: 'cad',
+            label: suggestion.original.name,
+            metadata: { part: suggestion.original.name }
+        });
+    } else if (suggestion.type === 'file') {
+        addToContext({
+            id: `code-${suggestion.original.s3_path}`,
+            type: 'code',
+            label: suggestion.original.s3_path.split('/').pop() || suggestion.original.s3_path,
+            metadata: { path: suggestion.original.s3_path }
+        });
+    }
+
+    setTimeout(() => {
+        if (inputRef.current) {
+            const newPos = lastAt + 1 + suggestion.name.length;
+            inputRef.current.selectionStart = newPos;
+            inputRef.current.selectionEnd = newPos;
+            inputRef.current.focus();
+        }
+    }, 0);
+  };
+
+  // Auto-scroll to bottom when new traces arrive
   useEffect(() => {
     if (traces && traces.length > 0) {
       const timeout = setTimeout(() => {
@@ -144,8 +372,6 @@ export default function ChatWindow({
     }
   }, [traces]);
 
-  // Determine if we should show the Execution Plan card
-  // It shows if there's a plan and the agent is not running (waiting for approval)
   const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'planned';
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
@@ -215,9 +441,7 @@ export default function ChatWindow({
                           if (type === 'llm_end' && trace.content) {
                             return (
                                 <div key={trace.id} className="relative group/msg">
-                                    <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
-                                         <HighlightedContent content={trace.content} language="markdown" />
-                                    </div>
+                                    <HighlightedContent content={trace.content} language="markdown" />
                                     <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
                                         <button 
                                             onClick={() => setShowFeedbackModal(true)}
@@ -277,7 +501,6 @@ export default function ChatWindow({
                                     variant="outline"
                                     className="px-3 border-border/50 hover:bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground"
                                     onClick={() => {
-                                      // Logic for requesting changes - could just focus input
                                       const input = document.getElementById('chat-input');
                                       input?.focus();
                                     }}
@@ -321,7 +544,7 @@ export default function ChatWindow({
             </div>
         </ScrollArea>
 
-        {/* Steering / Input Area (Claude Inspired) */}
+        {/* Steering / Input Area */}
         <div className="p-4 max-w-3xl mx-auto w-full relative">
             <ContextCards />
             
@@ -332,19 +555,72 @@ export default function ChatWindow({
                        placeholder={isRunning ? "Steer the agent..." : "Ask anything (Ctrl+L), @ to mention, / for workflows"}
                        className="w-full bg-transparent border-none focus:ring-0 text-[14px] leading-relaxed resize-none min-h-[40px] max-h-48"
                        rows={1}
+                       ref={inputRef}
                        value={prompt}
-                       onChange={(e) => {
-                           setPrompt(e.target.value);
+                       onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                           const val = e.target.value;
+                           setPrompt(val);
+                           handleMention(val, e.target.selectionStart || 0);
                            e.target.style.height = 'auto';
                            e.target.style.height = e.target.scrollHeight + 'px';
                        }}
-                       onKeyDown={(e) => {
+                       onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+                           if (showSuggestions && suggestions.length > 0) {
+                               if (e.key === 'ArrowDown') {
+                                   e.preventDefault();
+                                   setSelectedIndex((prev: number) => (prev + 1) % suggestions.length);
+                                   return;
+                               }
+                               if (e.key === 'ArrowUp') {
+                                   e.preventDefault();
+                                   setSelectedIndex((prev: number) => (prev - 1 + suggestions.length) % suggestions.length);
+                                   return;
+                               }
+                               if (e.key === 'Tab' || e.key === 'Enter') {
+                                   e.preventDefault();
+                                   insertSuggestion(suggestions[selectedIndex]);
+                                   return;
+                               }
+                               if (e.key === 'Escape') {
+                                   setShowSuggestions(false);
+                                   return;
+                               }
+                           }
                            if (e.key === 'Enter' && !e.shiftKey) {
-                               e.preventDefault();
-                               handleSubmit(e);
+                                e.preventDefault();
+                                handleSubmit(e);
                            }
                        }}
                     />
+
+                    {/* Autocomplete Suggestions */}
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute bottom-[calc(100%+8px)] left-4 right-4 bg-card border border-border shadow-2xl rounded-xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2 duration-200">
+                            <div className="p-2 border-b border-border bg-muted/20">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-70">Suggestions</span>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto p-1">
+                                {suggestions.map((s, idx) => (
+                                    <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            insertSuggestion(s);
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[12px] transition-all",
+                                            idx === selectedIndex ? "bg-primary/20 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        <s.icon className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                        <span className="truncate flex-1">{s.name}</span>
+                                        <span className="text-[9px] font-mono opacity-30 uppercase">{s.type}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     
                     <div className="flex items-center justify-between mt-1">
                         <div className="flex items-center gap-1.5">

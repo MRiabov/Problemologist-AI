@@ -4,5 +4,9 @@
 /* eslint-disable */
 export type MessageRequest = {
     message: string;
+    /**
+     * Additional metadata for the message.
+     */
+    metadata_vars?: (Record<string, any> | null);
 };
 

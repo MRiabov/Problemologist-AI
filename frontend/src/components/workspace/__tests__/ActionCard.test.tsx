@@ -2,21 +2,23 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ActionCard } from '../ActionCard';
 import { EpisodeProvider } from '../../../context/EpisodeContext';
+import { TraceType } from '../../../api/generated/models/TraceType';
 
 // Mock getFileIconInfo to avoid complexity
 vi.mock('../../../lib/fileIcons', () => ({
-  getFileIconInfo: (fileName: string) => ({
+  getFileIconInfo: (_fileName: string) => ({
     icon: () => <div data-testid="file-icon" />,
     color: '#000'
   })
 }));
 
 describe('ActionCard', () => {
-  const mockTrace = (name: string, content: string = '{}') => ({
-    id: 'trace-1',
-    trace_type: 'tool_start',
+  const mockTrace = (name: string, content: string = '{}'): any => ({
+    id: 1,
+    trace_type: TraceType.TOOL_START,
     name,
     content,
+    langfuse_trace_id: 'test-lf-id',
     created_at: new Date().toISOString()
   });
 
