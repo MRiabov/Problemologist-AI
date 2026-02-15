@@ -8,6 +8,7 @@ base_commit: 62c53482cecdee76571b526d639b29a6a3949f4f
 created_at: '2026-02-15T10:45:15.043718+00:00'
 subtasks: [T014, T015, T016, T017]
 shell_pid: "156375"
+agent: "Gemini"
 ---
 
 # WP04: Fluid Simulation (MPM)
@@ -49,3 +50,7 @@ Fluids are simulated as particles. We need to track these particles against cont
 ## Risks
 - High memory consumption for large particle counts.
 - Difficulty in tuning MPM parameters for realistic water/oil behaviour.
+
+## Activity Log
+
+- 2026-02-15T10:45:15Z – Gemini – shell_pid=156375 – lane=doing – Assigned agent via workflow command
