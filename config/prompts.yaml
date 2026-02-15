@@ -160,7 +160,7 @@ engineer:
          **Python Utils** (import in your script):
          - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Validates manufacturability and price. For Compounds, warns if DOFs >= 4.
          - `simulate(compound: Compound)`: Runs 5x simulation with perturbed part/object spawns for robustness.
-         - `preview_design(compound: Compound, pitch: float = 0, yaw: float = 0)`: Renders vision inspection from specific angles.
+         - `preview_design(compound: Compound, pitch: float = -35.0, yaw: float = 45.0)`: Renders vision inspection (default - standard ISO view).
          - `submit_for_review(compound: Compound)`: Submits the whole assembly to the Reviewer agent.
          - `get_docs_for(type: str)`: Invokes documentation subagent for build123d/skill docs.
 

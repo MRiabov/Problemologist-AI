@@ -19,14 +19,14 @@ logger = structlog.get_logger(__name__)
 
 def preview_design(
     component: Part | Compound,
-    pitch: float = -45.0,
+    pitch: float = -35.0,
     yaw: float = 45.0,
     output_dir: Path | None = None,
     width: int = 640,
     height: int = 480,
 ) -> Path:
     """
-    Render a single view of a CAD component from specified camera angles.
+    Render a single view of a CAD component. Default (-35, 45) is ISO view.
 
     Args:
         component: The build123d Part or Compound to render
@@ -66,7 +66,7 @@ def preview_design(
         cam.distance = 2.0
 
         # Set camera angles
-        cam.elevation = pitch  # MuJoCo uses elevation (negative = looking down)
+        cam.elevation = pitch
         cam.azimuth = yaw
 
         # Render
