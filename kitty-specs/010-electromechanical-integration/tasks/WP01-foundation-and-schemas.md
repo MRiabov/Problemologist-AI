@@ -1,13 +1,13 @@
 ---
 work_package_id: WP01
 title: Foundation & Schemas
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: b0b8a776ea84e7a6a780c69c31bdcfaaa7ce8261
 created_at: '2026-02-15T07:28:28.680431+00:00'
 subtasks: [T001, T002, T003, T004]
-shell_pid: "339790"
+shell_pid: "347260"
 agent: "gemini"
 ---
 
@@ -69,3 +69,4 @@ We need to extend the existing `assembly_definition.yaml` (formerly `preliminary
 
 - 2026-02-15T07:28:29Z – gemini – shell_pid=339790 – lane=doing – Assigned agent via workflow command
 - 2026-02-15T07:32:49Z – gemini – shell_pid=339790 – lane=for_review – Electronics data models, enums, cross-reference validation, and COTS database seeding implemented.
+- 2026-02-15T07:36:18Z – gemini – shell_pid=347260 – lane=doing – Started review via workflow command
