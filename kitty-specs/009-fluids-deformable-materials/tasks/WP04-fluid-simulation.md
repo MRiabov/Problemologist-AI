@@ -1,14 +1,14 @@
 ---
 work_package_id: WP04
 title: Fluid Simulation (MPM)
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 62c53482cecdee76571b526d639b29a6a3949f4f
 created_at: '2026-02-15T10:45:15.043718+00:00'
 subtasks: [T014, T015, T016, T017]
-shell_pid: "156375"
-agent: "Gemini"
+shell_pid: "76728"
+agent: "gemini"
 ---
 
 # WP04: Fluid Simulation (MPM)
@@ -55,3 +55,4 @@ Fluids are simulated as particles. We need to track these particles against cont
 
 - 2026-02-15T10:45:15Z – Gemini – shell_pid=156375 – lane=doing – Assigned agent via workflow command
 - 2026-02-15T12:19:27Z – Gemini – shell_pid=156375 – lane=for_review – Ready for review: Implemented MPM fluid simulation, containment/flow-rate metrics, GPU OOM retries, and electronics damage detection.
+- 2026-02-15T12:26:25Z – gemini – shell_pid=76728 – lane=doing – Started review via workflow command
