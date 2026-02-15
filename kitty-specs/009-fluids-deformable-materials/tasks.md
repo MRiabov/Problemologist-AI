@@ -1,142 +1,119 @@
-# Tasks: Fluids & Deformable Materials
+# Tasks: Fluids & Deformable Materials (WP2)
 
-**Feature Directory**: `kitty-specs/009-fluids-deformable-materials`
+This document tracks the implementation of the WP2 Fluids and FEM system.
 
-## Status
+## Status Summary
 
-- [ ] WP01: Simulation Foundation & Abstraction <!-- id: WP01 -->
-- [ ] WP02: Advanced Asset Pipeline <!-- id: WP02 -->
-- [ ] WP03: Genesis FEM & Rigid Simulation <!-- id: WP03 -->
-- [ ] WP04: Fluid Simulation (MPM) <!-- id: WP04 -->
-- [ ] WP05: Agent Tools & Reasoning <!-- id: WP05 -->
-- [ ] WP06: Observability, Benchmarks & UI <!-- id: WP06 -->
-- [ ] WP07: Verification & Testing <!-- id: WP07 -->
+- **Foundation**: [ ]
+- **Asset Pipeline**: [ ]
+- **FEM Implementation**: [ ]
+- **Fluid Implementation**: [ ]
+- **Agent Integration**: [ ]
+- **Visualization**: [ ]
+- **Verification**: [ ]
+
+---
 
 ## Work Packages
 
-### WP01: Simulation Foundation & Abstraction
-
-**Goal**: Establish the `PhysicsBackend` protocol and update data models.
-
-- [ ] T001: Implement `PhysicsBackend` protocol in `shared/simulation/backends.py`.
-- [ ] T002: Refactor MuJoCo implementation to `worker/simulation/mujoco_backend.py`.
-- [ ] T003: Implement `GenesisBackend` skeleton in `worker/simulation/genesis_backend.py`.
-- [ ] T004: Update `manufacturing_config.yaml` and schema with FEM material fields.
-- [ ] T005: Update `SimulationResult` and shared schemas for stress/fluids.
-
-**Implementation**:
-1. Define Protocol.
-2. Move MuJoCo.
-3. Genesis Skeleton.
+### WP01: Simulation Foundation & Backend Abstraction
+**Goal**: Introduce the `PhysicsBackend` interface and support togglable backends (MuJoCo/Genesis) in the controller and worker.
+**Priority**: P1
+**Estimated Prompt Size**: ~350 lines
+**Subtasks**:
+- [ ] **T001**: Implement `PhysicsBackend` abstract base class in `shared/simulation/backends.py`.
+- [ ] **T002**: Refactor existing MuJoCo code into `MuJoCoBackend` in `worker/simulation/mujoco_backend.py`.
+- [ ] **T003**: Implement `GenesisBackend` skeleton in `worker/simulation/genesis_backend.py`.
+- [ ] **T004**: Update `SimulationRequest` and `SimulationResult` schemas (inc. `ELECTRONICS_FLUID_DAMAGE`).
+- [ ] **T005**: Update `controller/simulation/loop.py` to handle backend selection and validation.
 
 **Dependencies**: None
-**Prompt Size**: ~350 lines
+**Implementation Sketch**: Define the interface first, then move MuJoCo code, then update the controller to use the interface.
 
 ---
 
-### WP02: Advanced Asset Pipeline
-
-**Goal**: Support tetrahedralization and mesh repair for FEM.
-
-- [ ] T006: Enhance `worker/utils/mesh_utils.py` with `trimesh` repair logic.
-- [ ] T007: Implement tetrahedralization (Gmsh/TetGen) in `worker/utils/mesh_utils.py`.
-- [ ] T008: Integrate tetrahedralization into worker's asset pipeline.
-
-**Implementation**:
-1. Mesh repair.
-2. Gmsh/TetGen.
-3. Pipeline integration.
+### WP02: Asset Pipeline & FEM Material Config
+**Goal**: Prepare the system for FEM by extending material definitions and implementing volumetric meshing.
+**Priority**: P1
+**Estimated Prompt Size**: ~300 lines
+**Subtasks**:
+- [ ] **T006**: Extend `manufacturing_config.yaml` with FEM fields (Young's modulus, Poisson ratio, etc.).
+- [ ] **T007**: Implement `tetrahedralize_mesh` utility using Gmsh/TetGen in `worker/utils/mesh_utils.py`.
+- [ ] **T008**: Implement mesh repair logic in `worker/utils/mesh_utils.py` using `trimesh`.
+- [ ] **T009**: Update asset generation to produce `.msh` files for Genesis when `fem_enabled` is true.
 
 **Dependencies**: WP01
-**Prompt Size**: ~250 lines
+**Implementation Sketch**: Add fields to config, then build the mesh processing utilities, then hook them into the asset generator.
 
 ---
 
-### WP03: Genesis FEM & Rigid Simulation
-
-**Goal**: Implement core physics for rigid and deformable bodies in Genesis.
-
-- [ ] T009: Implement rigid-body support in `GenesisBackend`.
-- [ ] T010: Implement FEM support in `GenesisBackend` (SoftMesh, .msh loading).
-- [ ] T011: Implement stress computation and `StressSummary` reporting in Genesis.
-- [ ] T012: Implement breakage detection logic in simulation loop.
-
-**Implementation**:
-1. Rigid support.
-2. FEM support.
-3. Stress reporting.
-4. Breakage detection.
+### WP03: Genesis FEM Implementation
+**Goal**: Implement deformable body simulation, stress tracking, and breakage detection using the Genesis backend.
+**Priority**: P1
+**Estimated Prompt Size**: ~400 lines
+**Subtasks**:
+- [ ] **T010**: Implement scene loading for rigid and deformable bodies in `GenesisBackend`.
+- [ ] **T011**: Implement FEM stress calculation and `StressSummary` generation.
+- [ ] **T012**: Implement `PART_BREAKAGE` detection and simulation termination logic.
+- [ ] **T013**: Add support for linear and hyperelastic (Neo-Hookean) material models.
 
 **Dependencies**: WP02
-**Prompt Size**: ~400 lines
+**Implementation Sketch**: Implement scene setup, then the stepping logic with stress extraction, then the failure checks.
 
 ---
 
 ### WP04: Fluid Simulation (MPM)
-
-**Goal**: Add MPM fluid support and evaluation metrics.
-
-- [ ] T013: Implement MPM fluid support in `GenesisBackend`.
-- [ ] T014: Implement `fluid_containment` metric evaluation.
-- [ ] T015: Implement `flow_rate` metric evaluation.
-
-**Implementation**:
-1. MPM particles.
-2. Containment metric.
-3. Flow rate metric.
+**Goal**: Implement MPM-based fluid simulation and objective evaluation in the Genesis backend.
+**Priority**: P2
+**Estimated Prompt Size**: ~400 lines
+**Subtasks**:
+- [ ] **T014**: Implement fluid particle definition and spawning in `GenesisBackend`.
+- [ ] **T015**: Implement fluid containment objective evaluation.
+- [ ] **T016**: Implement fluid flow-rate objective evaluation.
+- [ ] **T017**: Implement GPU OOM detection and particle count retry logic.
 
 **Dependencies**: WP03
-**Prompt Size**: ~300 lines
+**Implementation Sketch**: Add fluid support to Genesis loading, then implement the particle-based objective metrics.
 
 ---
 
-### WP05: Agent Tools & Reasoning
+### WP05: Agent Tools & Prompt Updates
+**Goal**: Equip the agents with tools to reason about stress and fluids, and update their prompts for stress-aware design.
+**Priority**: P2
+**Estimated Prompt Size**: ~350 lines
+**Subtasks**:
+- [ ] **T018**: Implement `get_stress_report` tool in `controller/tools/simulation.py`.
+- [ ] **T019**: Implement `define_fluid` tool for agents.
+- [ ] **T020**: Implement `preview_stress` tool to generate heatmap visualizations.
+- [ ] **T021**: Update Engineer and Planner agent prompts for stress/fluid reasoning.
 
-**Goal**: Equip agents with tools to interact with the new physics.
-
-- [ ] T016: Implement `define_fluid` agent tool.
-- [ ] T017: Implement `get_stress_report` agent tool.
-- [ ] T018: Implement `preview_stress` agent tool.
-- [ ] T019: Update `simulate` tool for Genesis/FEM parameters.
-- [ ] T020: Update Agent prompts (Planner, CAD, Reviewer) for stress/fluid awareness.
-
-**Implementation**:
-1. Agent tools.
-2. Prompt updates.
-
-**Dependencies**: WP03
-**Prompt Size**: ~500 lines
+**Dependencies**: WP04
+**Implementation Sketch**: Build the tools first, then update the prompts to use them in the engineering loop.
 
 ---
 
-### WP06: Observability, Benchmarks & UI
-
-**Goal**: Finalize delivery with events, heatmaps, and benchmarking.
-
-- [ ] T021: Add observability events for breakage, metrics, and backend selection.
-- [ ] T022: Implement stress heatmap image generation in asset pipeline.
-- [ ] T023: Update benchmark generator for fluid and stress objectives.
-
-**Implementation**:
-1. Observability.
-2. Heatmaps.
-3. Benchmarks.
+### WP06: Visualization & Frontend Integration
+**Goal**: Render simulation results (particles and stress) and display them in the frontend UI.
+**Priority**: P3
+**Estimated Prompt Size**: ~300 lines
+**Subtasks**:
+- [ ] **T022**: Update simulation video rendering to include MPM particles.
+- [ ] **T023**: Implement stress heatmap image generation (static renders).
+- [ ] **T024**: Update frontend `DesignViewer` to display heatmaps and fluid metrics.
 
 **Dependencies**: WP05
-**Prompt Size**: ~300 lines
+**Implementation Sketch**: Update the worker's rendering code, then update the frontend to handle the new result fields.
 
 ---
 
-### WP07: Verification & Testing
-
-**Goal**: Ensure system reliability via comprehensive integration tests.
-
-- [ ] T024: Integration tests: Backend parity (MuJoCo vs Genesis).
-- [ ] T025: Integration tests: Part breakage detection.
-- [ ] T026: Integration tests: Fluid containment metrics.
-
-**Implementation**:
-1. Test suite.
+### WP07: Benchmark Planning & Integration Tests
+**Goal**: Create benchmarks for the new physics and verify the system end-to-end with automated tests.
+**Priority**: P2
+**Estimated Prompt Size**: ~300 lines
+**Subtasks**:
+- [ ] **T025**: Update benchmark planner to generate stress/fluid-based `objectives.yaml`.
+- [ ] **T026**: Implement integration tests for physics parity (MuJoCo vs Genesis).
+- [ ] **T027**: Implement integration tests for FEM breakage and fluid containment.
 
 **Dependencies**: WP06
-**Prompt Size**: ~250 lines
+**Implementation Sketch**: Update the planner logic, then write and run the integration test suite.
