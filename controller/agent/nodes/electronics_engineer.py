@@ -53,86 +53,108 @@ class ElectronicsEngineerNode:
                 # No specific requirements, but we might still have motors to wire
                 # if the planner put them in assembly_definition.yaml.
                 pass
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("electronics_engineer_check_requirements_failed", error=str(e))
 
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
         try:
             # Check assembly_definition.yaml (Assembly Definition)
-            with suppress(Exception):
-                assembly_context = await self.fs.read_file("assembly_definition.yaml")
-        except Exception:
-            pass
+            assembly_context = await self.fs.read_file("assembly_definition.yaml")
+        except Exception as e:
+            logger.warning("electronics_engineer_read_assembly_context_failed", error=str(e))
 
-        # 3. Generate electronics implementation code
-        prompt = self.pm.render(
-            "electronics_engineer",
-            current_step="Design circuit and route wires",
-            plan=state.plan,
-            assembly_context=assembly_context,
-        )
-        response = await self.llm.ainvoke([HumanMessage(content=prompt)])
-        code = self._extract_code(str(response.content))
-
-        if not code:
-            return state
-
-        # 4. Execute code
+        # 3. Generate electronics implementation code with retry loop
+        max_retries = 3
+        retry_count = 0
+        last_error = ""
         journal_entry = "\n[Electronics Engineer] Starting circuit design and routing."
-        try:
-            # Record tool invocation
-            await record_worker_events(
-                episode_id=state.session_id,
-                events=[RunCommandToolEvent(command=code)],
-            )
 
-            execution_result = await self.fs.run_command(code)
-            stdout = execution_result.get("stdout", "")
-            stderr = execution_result.get("stderr", "")
-            exit_code = execution_result.get("exit_code", 0)
-            events = execution_result.get("events", [])
+        while retry_count < max_retries:
+            try:
+                prompt = self.pm.render(
+                    "electronics_engineer",
+                    current_step="Design circuit and route wires",
+                    plan=state.plan,
+                    assembly_context=assembly_context,
+                    error=last_error,
+                )
+                response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+                code = self._extract_code(str(response.content))
 
-            # Record events for observability
-            if events:
+                if not code:
+                    # If LLM refuses to generate code (e.g., deemed unnecessary)
+                    if retry_count > 0:
+                        journal_entry += "\nAborted: LLM provided no code during retry."
+                        return state.model_copy(update={"journal": state.journal + journal_entry})
+                    return state
+
+                # 4. Execute code
+                # Record tool invocation
                 await record_worker_events(
                     episode_id=state.session_id,
-                    events=events,
+                    events=[RunCommandToolEvent(command=code)],
                 )
 
-            if exit_code == 0:
-                # T015: Validation Gate after successful execution
-                from worker.utils.file_validation import validate_node_output
+                execution_result = await self.fs.run_command(code)
+                stdout = execution_result.get("stdout", "")
+                stderr = execution_result.get("stderr", "")
+                exit_code = execution_result.get("exit_code", 0)
+                events = execution_result.get("events", [])
 
-                all_files = {}
-                for f in ["plan.md", "todo.md"]:
-                    with suppress(Exception):
-                        all_files[f] = await self.fs.read_file(f)
+                # Record events for observability
+                if events:
+                    await record_worker_events(
+                        episode_id=state.session_id,
+                        events=events,
+                    )
 
-                is_valid, validation_errors = validate_node_output(
-                    "electronics_engineer", all_files
-                )
-                if is_valid:
-                    journal_entry += "\nCircuit and wiring implementation successful."
+                if exit_code == 0:
+                    # T015: Validation Gate after successful execution
+                    from worker.utils.file_validation import validate_node_output
+
+                    all_files = {}
+                    for f in ["plan.md", "todo.md"]:
+                        with suppress(Exception):
+                            all_files[f] = await self.fs.read_file(f)
+
+                    is_valid, validation_errors = validate_node_output(
+                        "electronics_engineer", all_files
+                    )
+                    if is_valid:
+                        journal_entry += "\nCircuit and wiring implementation successful."
+                        # Success!
+                        return state.model_copy(
+                            update={
+                                "journal": state.journal + journal_entry,
+                                "turn_count": state.turn_count + 1,
+                            }
+                        )
+                    else:
+                        error_msg = f"Validation failed: {validation_errors}"
+                        journal_entry += f"\nCircuit implementation produced invalid output: {error_msg}"
+                        logger.warning(
+                            "electronics_engineer_validation_failed",
+                            errors=validation_errors,
+                        )
+                        last_error = error_msg
+                        retry_count += 1
                 else:
-                    journal_entry += (
-                        f"\nCircuit implementation produced invalid output: "
-                        f"{validation_errors}"
-                    )
-                    logger.warning(
-                        "electronics_engineer_validation_failed",
-                        errors=validation_errors,
-                    )
-                    # Note: Current implementation doesn't have a retry loop,
-                    # but we mark the failure in the journal.
-            else:
-                journal_entry += f"\nCircuit implementation failed: {stderr or stdout}"
-                logger.warning("electronics_engineer_failed", error=stderr or stdout)
+                    error_msg = stderr or stdout
+                    journal_entry += f"\nCircuit implementation failed (Attempt {retry_count + 1}): {error_msg}"
+                    logger.warning("electronics_engineer_failed", error=error_msg)
+                    last_error = error_msg
+                    retry_count += 1
 
-        except Exception as e:
-            journal_entry += f"\nSystem error during electronics implementation: {e}"
-            logger.error("electronics_engineer_system_error", error=str(e))
+            except Exception as e:
+                error_msg = str(e)
+                journal_entry += f"\nSystem error during electronics implementation: {error_msg}"
+                logger.error("electronics_engineer_system_error", error=error_msg)
+                last_error = error_msg
+                retry_count += 1
 
+        # If we exhausted retries
+        journal_entry += f"\nFailed to complete electronics implementation after {max_retries} retries."
         return state.model_copy(
             update={
                 "journal": state.journal + journal_entry,

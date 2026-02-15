@@ -58,6 +58,12 @@ Mechanical Assembly context:
 Execution Plan context:
 {{ plan }}
 
+{% if error %}
+Your previous attempt failed with this error:
+{{ error }}
+Please fix the code and try again.
+{% endif %}
+
 Instructions:
 1. Define the electrical netlist using PySpice in your code.
 2. Route physical wires using `route_wire` and `check_wire_clearance`.

@@ -80,7 +80,7 @@ def test_int_123_dynamic_power_gating():
     # 2. Mock a SimulationLoop
     # We use a real SimulationLoop but point to a minimal XML
     loop = SimulationLoop(
-        xml_path="/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/assets/empty_scene.xml",
+        xml_path="tests/assets/empty_scene.xml",
         electronics=electronics,
     )
 
