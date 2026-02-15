@@ -1,0 +1,12 @@
+{
+  "wp_id": "WP01",
+  "feature_slug": "010-electromechanical-integration",
+  "worktree_path": ".worktrees/010-electromechanical-integration-WP01",
+  "branch_name": "010-electromechanical-integration-WP01",
+  "base_branch": "main",
+  "base_commit": "b0b8a776ea84e7a6a780c69c31bdcfaaa7ce8261",
+  "dependencies": [],
+  "created_at": "2026-02-15T07:28:28.680431+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}
