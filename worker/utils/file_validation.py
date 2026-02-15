@@ -107,6 +107,28 @@ def validate_assembly_definition_yaml(
 
         estimation = AssemblyDefinition(**data)
 
+        # T003 (WP01): Cross-reference electronics component references
+        if estimation.electronics:
+            from shared.models.schemas import SubassemblyEstimate
+
+            all_part_names = {p.part_name for p in estimation.manufactured_parts}
+            # Also check final_assembly
+            for item in estimation.final_assembly:
+                if isinstance(item, SubassemblyEstimate):
+                    for p_dict in item.parts:
+                        all_part_names.update(p_dict.keys())
+                elif isinstance(item, dict):
+                    all_part_names.update(item.keys())
+
+            for comp in estimation.electronics.components:
+                if (
+                    comp.assembly_part_ref
+                    and comp.assembly_part_ref not in all_part_names
+                ):
+                    msg = f"Electronic component '{comp.component_id}' references unknown part '{comp.assembly_part_ref}'"
+                    logger.warning("electronics_reference_error", error=msg)
+                    return False, [msg]
+
         logger.info("cost_estimation_yaml_valid")
         return True, estimation
     except yaml.YAMLError as e:
