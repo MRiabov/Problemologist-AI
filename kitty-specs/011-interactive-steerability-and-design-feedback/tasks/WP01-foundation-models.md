@@ -8,6 +8,7 @@ base_commit: 89a2d71d9c4ffab3699748b642fc061636c03c93
 created_at: '2026-02-15T09:14:19.310711+00:00'
 subtasks: [T001, T002, T013]
 shell_pid: "61843"
+agent: "Gemini"
 ---
 
 # WP01 - Foundation & Data Models
@@ -56,3 +57,7 @@ Refer to the following documents:
 - Pydantic models are in `shared/models/`.
 - DB schema and migration are complete.
 - Basic CRUD for preferences is implemented.
+
+## Activity Log
+
+- 2026-02-15T09:14:19Z – Gemini – shell_pid=61843 – lane=doing – Assigned agent via workflow command
