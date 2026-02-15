@@ -1,9 +1,13 @@
 ---
 work_package_id: WP06
 title: Visualization & Frontend Integration
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 4fbd7b7e4c8a588d5e41972c9a20a1108af68409
+created_at: '2026-02-15T18:41:43.303631+00:00'
 subtasks: [T022, T023, T024]
+shell_pid: "191781"
 ---
 
 # WP06: Visualization & Frontend Integration
