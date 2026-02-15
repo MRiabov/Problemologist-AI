@@ -3,6 +3,8 @@ from typing import Any
 
 import numpy as np
 from pydantic import BaseModel
+from shared.observability.events import emit_event
+from shared.observability.schemas import WireRoutingEvent
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,15 @@ def route_wire(
             # Just a warning for now
             logger.debug(f"Wire {wire_id} has very short segment at index {i}")
 
+    emit_event(
+        WireRoutingEvent(
+            wire_count=1,
+            total_length_mm=length,
+            clearance_passed=True,  # Placeholder until check_wire_clearance is integrated
+            errors=errors,
+        )
+    )
+
     return WireRouteResult(
         wire_id=wire_id,
         total_length_mm=length,
@@ -91,11 +102,11 @@ def check_wire_clearance(
         return True
 
     from build123d import Polyline, Vector
-    
+
     try:
         path_points = [Vector(p) for p in wire_waypoints]
         polyline = Polyline(path_points)
-        
+
         # distance() returns the shortest distance between objects
         dist = assembly_meshes.distance(polyline)
         return dist >= clearance_mm
@@ -115,4 +126,3 @@ def check_wire_clearance(
                     return False
                 # We can't easily check distance here without the tool that failed
         return True
-

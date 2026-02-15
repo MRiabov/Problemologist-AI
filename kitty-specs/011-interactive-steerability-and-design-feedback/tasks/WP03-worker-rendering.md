@@ -1,9 +1,14 @@
 ---
-work_package_id: "WP03"
-title: "Worker Topology & Rendering"
-lane: "planned"
+work_package_id: WP03
+title: Worker Topology & Rendering
+lane: "doing"
 dependencies: []
-subtasks: ["T005", "T006", "T007"]
+base_branch: main
+base_commit: 1aefa54b0226d5e5187abdc79cf88b3d6caa06de
+created_at: '2026-02-15T10:16:25.819782+00:00'
+subtasks: [T005, T006, T007]
+shell_pid: "120025"
+agent: "Gemini"
 ---
 
 # WP03 - Worker Topology & Rendering
@@ -55,3 +60,7 @@ Enable the worker to provide high-fidelity geometric feedback by implementing to
 ## Definition of Done
 - `inspect_topology` tool is available to agents.
 - Worker can generate and upload "best-angle" snapshots of selected features.
+
+## Activity Log
+
+- 2026-02-15T10:16:25Z – Gemini – shell_pid=120025 – lane=doing – Assigned agent via workflow command
