@@ -1,11 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Simulation Foundation & Backend Abstraction"
-lane: "for_review"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
 agent: "Gemini"
-shell_pid: "350387"
+shell_pid: "70286"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -66,3 +66,4 @@ Currently, the worker's simulation logic is tightly coupled with MuJoCo. We need
 - 2026-02-15T07:23:58Z – gemini – shell_pid=328531 – lane=planned – Changes requested: missing fluid validation and incomplete failure modes
 - 2026-02-15T07:38:43Z – Gemini – shell_pid=350387 – lane=doing – Started implementation via workflow command
 - 2026-02-15T09:17:55Z – Gemini – shell_pid=350387 – lane=for_review – Completed Simulation Foundation & Backend Abstraction. Decoupled MuJoCo, introduced PhysicsBackend interface, added Genesis skeleton, and updated schemas and controller logic. Verified with backend tests.
+- 2026-02-15T09:21:25Z – Gemini – shell_pid=70286 – lane=doing – Started implementation via workflow command
