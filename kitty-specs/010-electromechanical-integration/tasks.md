@@ -22,11 +22,11 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: High
 - **Success Criteria**: Netlists can be generated and validated for shorts/overcurrent.
 - **Subtasks**:
-    - [ ] T005: [P] Implement `shared/pyspice_utils.py`: setup Ngspice, basic simulation wrapper, and result parsing.
-    - [ ] T006: [P] Implement `shared/circuit_builder.py`: netlist generation from `ElectronicsSection`.
-    - [ ] T007: [P] Implement `validate_circuit` function: detect shorts, overcurrent, floating nodes.
-    - [ ] T008: [P] Add `calculate_power_budget` utility.
-    - [ ] T009: [P] Add unit tests for circuit validation logic.
+    - [x] T005: [P] Implement `shared/pyspice_utils.py`: setup Ngspice, basic simulation wrapper, and result parsing.
+    - [x] T006: [P] Implement `shared/circuit_builder.py`: netlist generation from `ElectronicsSection`.
+    - [x] T007: [P] Implement `validate_circuit` function: detect shorts, overcurrent, floating nodes.
+    - [x] T008: [P] Add `calculate_power_budget` utility.
+    - [x] T009: [P] Add unit tests for circuit validation logic.
 - **Implementation Sketch**: Setup PySpice first, then build the netlist generator, then the validation logic, and finish with tests.
 - **Dependencies**: WP01
 - **Estimated Prompt Size**: ~350 lines
