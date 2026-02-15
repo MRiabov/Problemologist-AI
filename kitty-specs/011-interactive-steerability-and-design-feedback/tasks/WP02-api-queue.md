@@ -8,6 +8,7 @@ base_commit: 63b616d3d42dac8c1fc9f99ba52c94a2e544b896
 created_at: '2026-02-15T09:38:20.947190+00:00'
 subtasks: [T003, T004]
 shell_pid: "86870"
+agent: "gemini-cli"
 ---
 
 # WP02 - Steerability API & Queue Management
@@ -51,3 +52,7 @@ Create the `SteerabilityService` to manage the in-memory `asyncio.Queue` for int
 ## Definition of Done
 - `SteerabilityService` is functional in the controller.
 - REST endpoints are registered and passing basic integration tests.
+
+## Activity Log
+
+- 2026-02-15T09:38:21Z – gemini-cli – shell_pid=86870 – lane=doing – Assigned agent via workflow command
