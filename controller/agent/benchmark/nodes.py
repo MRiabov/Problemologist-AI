@@ -335,7 +335,24 @@ Validation Logs:
                     }
                 else:
                     # physics simulation
-                    sim_res = await client.simulate(script_path="script.py")
+                    backend = SimulatorBackendType.MUJOCO
+                    try:
+                        if objectives_yaml and not objectives_yaml.startswith("#"):
+                            obj_data = yaml.safe_load(objectives_yaml)
+                            if (
+                                obj_data
+                                and "physics" in obj_data
+                                and "backend" in obj_data["physics"]
+                            ):
+                                backend = SimulatorBackendType(
+                                    obj_data["physics"]["backend"]
+                                )
+                    except Exception:
+                        logger.warning("failed_to_parse_backend_from_objectives")
+
+                    sim_res = await client.simulate(
+                        script_path="script.py", backend=backend
+                    )
                     if not sim_res.success:
                         state["simulation_result"] = {
                             "valid": False,

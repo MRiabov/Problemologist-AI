@@ -1,3 +1,4 @@
+from typing import Any
 import mujoco
 import numpy as np
 
@@ -11,6 +12,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.models.simulation import StressSummary, FluidMetricResult
 
 
 class MuJoCoBackend(PhysicsBackend):
@@ -73,13 +75,38 @@ class MuJoCoBackend(PhysicsBackend):
             angvel=tuple(self.data.cvel[bid][:3].tolist()),
         )
 
+    def get_state(self) -> dict[str, Any]:
+        if self.data is None:
+            return {}
+        return {
+            "time": self.data.time,
+            "qpos": self.data.qpos.tolist(),
+            "qvel": self.data.qvel.tolist(),
+            "act": self.data.act.tolist() if self.model and self.model.na > 0 else [],
+        }
+
     def get_stress_field(self, body_id: str) -> StressField | None:
         # MuJoCo (rigid only) does not have stress fields
         return None
 
+    def get_stress_summaries(self) -> list[StressSummary]:
+        return []
+
     def get_particle_positions(self) -> np.ndarray | None:
         # MuJoCo (rigid only) does not have particles
         return None
+
+    def get_fluid_metrics(self) -> list[FluidMetricResult]:
+        return []
+
+    # Rendering & Visualization
+    def render(self) -> np.ndarray:
+        # Default render (e.g. from first camera or default view)
+        cam_name = None
+        if self.model and self.model.ncam > 0:
+            cam_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, 0)
+
+        return self.render_camera(cam_name or "fixed", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         if self.renderer is None:

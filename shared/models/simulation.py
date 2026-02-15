@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Any
 import numpy as np
+from shared.simulation.schemas import SimulationFailureMode
 
 
 class StressSummary(BaseModel):
@@ -26,6 +27,7 @@ class SimulationMetrics(BaseModel):
     max_velocity: float
     success: bool
     fail_reason: str | None = None
+    fail_mode: SimulationFailureMode | None = None
     stress_summaries: list[StressSummary] = []
     stress_fields: dict[str, dict] = {}  # part_label -> {"nodes": ..., "stress": ...}
     fluid_metrics: list[FluidMetricResult] = []
@@ -36,6 +38,7 @@ class SimulationResult(BaseModel):
     success: bool
     summary: str
     failure_reason: str | None = None
+    fail_mode: SimulationFailureMode | None = None
     render_paths: list[str] = Field(default_factory=list)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)

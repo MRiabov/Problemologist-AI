@@ -266,10 +266,14 @@ def simulate(
     fem_enabled: bool | None = None,
     particle_budget: int | None = None,
     smoke_test_mode: bool = False,
+    backend: SimulatorBackendType | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     logger.info(
-        "simulate_start", fem_enabled=fem_enabled, particle_budget=particle_budget
+        "simulate_start",
+        fem_enabled=fem_enabled,
+        particle_budget=particle_budget,
+        backend=backend,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     renders_dir = working_dir / "renders"
@@ -293,9 +297,11 @@ def simulate(
         except Exception as e:
             logger.warning("failed_to_load_assembly_definition", error=str(e))
 
-    backend_type = SimulatorBackendType.MUJOCO
-    if objectives and getattr(objectives, "physics", None):
-        backend_type = SimulatorBackendType(objectives.physics.backend)
+    backend_type = backend
+    if backend_type is None:
+        backend_type = SimulatorBackendType.MUJOCO
+        if objectives and getattr(objectives, "physics", None):
+            backend_type = SimulatorBackendType(objectives.physics.backend)
 
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
     moving_parts = assembly_definition.moving_parts if assembly_definition else []
