@@ -1,9 +1,13 @@
 ---
 work_package_id: WP06
 title: Chat Enhancements (@-mentions & Code Steering)
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: daef541770cc1f7e0367eefb41dcb82690465567
+created_at: '2026-02-15T12:46:12.399543+00:00'
 subtasks: [T010, T011]
+shell_pid: "102877"
 ---
 
 # WP06 - Chat Enhancements (@-mentions & Code Steering)
