@@ -36,10 +36,10 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: Medium
 - **Success Criteria**: Spline-based wire paths can be generated and checked for solid penetration.
 - **Subtasks**:
-    - [ ] T010: [P] Implement `shared/wire_utils.py`: spline interpolation for waypoints.
-    - [ ] T011: [P] Implement `check_wire_clearance` using `build123d`/`trimesh` to prevent volume intersection.
-    - [ ] T012: [P] Implement `route_wire` helper for agents to define splines and attachments.
-    - [ ] T013: [P] Add wire gauge property lookup (resistance per meter, tensile strength).
+    - [x] T010: [P] Implement `shared/wire_utils.py`: spline interpolation for waypoints.
+    - [x] T011: [P] Implement `check_wire_clearance` using `build123d`/`trimesh` to prevent volume intersection.
+    - [x] T012: [P] Implement `route_wire` helper for agents to define splines and attachments.
+    - [x] T013: [P] Add wire gauge property lookup (resistance per meter, tensile strength).
 - **Implementation Sketch**: Focus on the spline math first, then the collision/clearance logic using trimesh/build123d.
 - **Dependencies**: WP01
 - **Estimated Prompt Size**: ~300 lines
