@@ -8,6 +8,7 @@ base_commit: daef541770cc1f7e0367eefb41dcb82690465567
 created_at: '2026-02-15T12:46:12.399543+00:00'
 subtasks: [T010, T011]
 shell_pid: "102877"
+agent: "Antigravity"
 ---
 
 # WP06 - Chat Enhancements (@-mentions & Code Steering)
@@ -46,3 +47,7 @@ Implement @-mention autocomplete for parts and subassemblies and line-targeted c
 ## Definition of Done
 - @-mention autocomplete is functional with BOM data.
 - Code steering syntax is parsed and transmitted to the backend.
+
+## Activity Log
+
+- 2026-02-15T12:46:12Z – Antigravity – shell_pid=102877 – lane=doing – Assigned agent via workflow command
