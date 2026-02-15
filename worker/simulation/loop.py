@@ -10,8 +10,10 @@ from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
+    PartBreakageEvent,
     PhysicsInstabilityEvent,
     SimulationBackendSelectedEvent,
+    StressSummaryEvent,
 )
 from shared.simulation.backends import SimulationScene, SimulatorBackendType
 from worker.simulation.factory import get_physics_backend
@@ -436,10 +438,27 @@ class SimulationLoop:
                         )
                         self.stress_summaries.append(summary)
 
+                        emit_event(
+                            StressSummaryEvent(
+                                part_label=body_name,
+                                max_von_mises=max_stress,
+                                safety_factor=summary.safety_factor,
+                            )
+                        )
+
                         # F004: Part Breakage
                         if max_stress > ultimate_stress:
                             self.fail_reason = (
                                 f"{SimulationFailureMode.PART_BREAKAGE}:{body_name}"
+                            )
+                            emit_event(
+                                PartBreakageEvent(
+                                    part_label=body_name,
+                                    stress_mpa=max_stress / 1e6,
+                                    ultimate_mpa=ultimate_stress / 1e6,
+                                    location=tuple(max_loc.tolist()),
+                                    step=step_idx,
+                                )
                             )
                             logger.info(
                                 "simulation_fail",
