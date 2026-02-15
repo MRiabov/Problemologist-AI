@@ -50,7 +50,7 @@ def test_get_stress_report_with_advice(tmp_path, monkeypatch):
         report = get_stress_report("bracket")
         assert report is not None
         assert "advice" in report
-        assert "WARNING" in report["advice"]
+        assert "Safety factor low" in report["advice"]
     finally:
         os.chdir(orig_cwd)
 
