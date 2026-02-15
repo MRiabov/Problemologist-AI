@@ -1,9 +1,13 @@
 ---
 work_package_id: WP03
 title: Genesis FEM Implementation
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 796a208b00640600aa94c20604bb5a7ccf216a7e
+created_at: '2026-02-15T09:49:14.986957+00:00'
 subtasks: [T010, T011, T012, T013]
+shell_pid: "98628"
 ---
 
 # WP03: Genesis FEM Implementation
