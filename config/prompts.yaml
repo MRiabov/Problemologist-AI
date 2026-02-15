@@ -43,6 +43,9 @@ engineer:
            - Static randomization (obstacle dimensions/positions)
            - Runtime randomization ranges (your design must handle all positions)
            - `max_unit_cost` and `max_weight` constraints (from benchmark, with ~50% safety margin)
+           - `physics`: Backend (mujoco/genesis) and FEM status.
+           - `fluid_objectives`: Containment and flow rate targets.
+           - `stress_objectives`: Yield stress limits for structural verification.
            - This file is pre-populated at startup using a standard template. Do not invent new fields.
          - You will set specific `max_unit_cost` and `max_weight` in your plan for the engineer (under the benchmark limits).
          - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations).
@@ -423,6 +426,7 @@ benchmark_generator:
 
          **WP2 Benchmark Design (Fluids & Stress)**:
          - Design puzzles requiring fluid containment or controlled flow.
+         - Specify Genesis backend when using FEM or fluids: `physics: {backend: genesis, fem_enabled: true}`.
          - Use `fluid_objectives` (containment zones, flow rate gates) in `objectives.yaml`.
          - Design "stress-limited" puzzles where parts must not yield under load.
          - Use `stress_objectives` in `objectives.yaml` for FEM validation.
@@ -509,6 +513,23 @@ benchmark_generator:
            build_zone:
              min: [x, y, z]
              max: [x, y, z]
+
+           # WP2 Fluids & Stress (Optional)
+           fluid_objectives:
+             - type: "fluid_containment"
+               fluid_id: "water_1"
+               containment_zone: {min: [x, y, z], max: [x, y, z]}
+               threshold: 0.95
+           stress_objectives:
+             - type: "max_stress"
+               part_label: "structural_beam"
+               max_von_mises_mpa: 250.0
+
+         # Physics configuration
+         physics:
+           backend: "mujoco"  # Use "genesis" for FEM/Fluids
+           fem_enabled: false
+           compute_target: "auto"
 
          # Hard simulation boundaries - objects leaving this volume = failure
          simulation_bounds:

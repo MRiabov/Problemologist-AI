@@ -66,7 +66,26 @@ class GenesisBackend(PhysicsBackend):
         # Create new scene if not provided
         self.scene = gs.Scene(show_viewer=False)
 
-        if scene.scene_path and scene.scene_path.endswith(".json"):
+        if scene.scene_path and (
+            scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
+        ):
+            try:
+                # Load MJCF directly
+                mjcf_entity = self.scene.add_entity(
+                    gs.morphs.MJCF(file=scene.scene_path)
+                )
+                # Genesis loads all bodies from MJCF into a single entity
+                self.entities["mjcf_scene"] = mjcf_entity
+                logger.info("genesis_mjcf_loaded", path=scene.scene_path)
+                try:
+                    links = mjcf_entity.get_links()
+                    logger.info("genesis_mjcf_links", names=[l.name for l in links])
+                except Exception as e:
+                    logger.info("genesis_mjcf_get_links_failed", error=str(e))
+            except Exception as e:
+                logger.error("failed_to_load_mjcf_in_genesis", error=str(e))
+
+        elif scene.scene_path and scene.scene_path.endswith(".json"):
             import json
             from pathlib import Path
 
@@ -189,7 +208,58 @@ class GenesisBackend(PhysicsBackend):
         return StepResult(time=self.current_time, success=True)
 
     def get_body_state(self, body_id: str) -> BodyState:
+        logger.info("genesis_get_body_state_request", body_id=body_id)
         if body_id not in self.entities:
+            # Check links within MJCF entities
+            for ent in self.entities.values():
+                try:
+                    # In Genesis, if it's an MJCF entity, it's a RigidEntity
+                    # which has a .links attribute
+                    target_link = None
+                    if hasattr(ent, "links"):
+                        for link in ent.links:
+                            if link.name == body_id:
+                                target_link = link
+                                break
+
+                    if target_link:
+                        logger.info("genesis_link_found", body_id=body_id)
+                        # Use get_pos() etc. if they exist, or fallback to properties
+                        pos = (
+                            target_link.get_pos().tolist()
+                            if hasattr(target_link, "get_pos")
+                            else target_link.pos.tolist()
+                        )
+                        quat = (
+                            target_link.get_quat().tolist()
+                            if hasattr(target_link, "get_quat")
+                            else target_link.quat.tolist()
+                        )
+                        vel = (
+                            target_link.get_vel().tolist()
+                            if hasattr(target_link, "get_vel")
+                            else target_link.vel.tolist()
+                        )
+
+                        angvel = [0, 0, 0]
+                        if hasattr(target_link, "get_angvel"):
+                            angvel = target_link.get_angvel().tolist()
+                        elif hasattr(target_link, "angvel"):
+                            angvel = target_link.angvel.tolist()
+
+                        return BodyState(
+                            pos=pos,
+                            quat=quat,
+                            vel=vel,
+                            angvel=angvel,
+                        )
+                except Exception as e:
+                    logger.info(
+                        "genesis_get_link_failed", body_id=body_id, error=str(e)
+                    )
+                    continue
+
+            logger.info("genesis_body_not_found", body_id=body_id)
             return BodyState(
                 pos=(0, 0, 0), quat=(1, 0, 0, 0), vel=(0, 0, 0), angvel=(0, 0, 0)
             )
@@ -275,9 +345,9 @@ class GenesisBackend(PhysicsBackend):
             # Create with default res, will be updated by render_camera if needed
             cam = self.scene.add_camera(res=(640, 480))
             self.cameras[camera_name] = cam
-        
+
         cam = self.cameras[camera_name]
-        
+
         # Genesis cameras use set_pose or similar
         # Based on Genesis 0.3.x: cam.set_pose(pos=..., lookat=..., up=...)
         kwargs = {}
@@ -287,10 +357,10 @@ class GenesisBackend(PhysicsBackend):
             kwargs["lookat"] = lookat
         if up is not None:
             kwargs["up"] = up
-        
+
         if kwargs:
             cam.set_pose(**kwargs)
-        
+
         if fov is not None:
             # cam.fov = fov
             pass
@@ -381,7 +451,17 @@ class GenesisBackend(PhysicsBackend):
                         )
 
     def get_all_body_names(self) -> list[str]:
-        return list(self.entities.keys())
+        names = list(self.entities.keys())
+        for ent in self.entities.values():
+            try:
+                # Add link names if it's an articulated entity
+                if hasattr(ent, "links"):
+                    for link in ent.links:
+                        if link.name not in names:
+                            names.append(link.name)
+            except Exception:
+                continue
+        return names
 
     def get_all_actuator_names(self) -> list[str]:
         return [m["part_name"] for m in getattr(self, "motors", [])]
