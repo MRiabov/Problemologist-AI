@@ -21,6 +21,7 @@ import { useTheme } from "../../context/ThemeContext";
 import CircuitSchematic from "../visualization/CircuitSchematic";
 import CircuitTimeline from "../visualization/CircuitTimeline";
 import WireView from "../visualization/WireView";
+import { SimulationResults } from "../visualization/SimulationResults";
 // No unnecessary exports from client
 
 interface ArtifactViewProps {
@@ -154,6 +155,33 @@ export default function ArtifactView({
             }
         } catch (e) {
             console.error("Failed to parse assembly definition for electronics view", e);
+        }
+    }
+
+    // Special rendering for Simulation Result
+    if (activeAsset.name === 'simulation_result.json' && activeAsset.content) {
+        try {
+            const data = JSON.parse(activeAsset.content);
+            return (
+                <div className="bg-background min-h-full overflow-y-auto no-scrollbar">
+                    <SimulationResults 
+                        stressSummaries={data.stress_summaries} 
+                        fluidMetrics={data.fluid_metrics} 
+                    />
+                    <div className="p-6 border-t border-border/50">
+                        <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Simulation Data</h3>
+                        <SyntaxHighlighter
+                            language="json"
+                            style={theme === 'dark' ? vscDarkPlus : vs}
+                            customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
+                        >
+                            {activeAsset.content}
+                        </SyntaxHighlighter>
+                    </div>
+                </div>
+            );
+        } catch (e) {
+            console.error("Failed to parse simulation result", e);
         }
     }
 
