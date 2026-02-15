@@ -21,3 +21,9 @@
 {"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T19:52:13.731182Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771185133.73121}
 {"event_type": "fluid_containment_check", "timestamp": "2026-02-15T19:52:13.743044Z", "agent_id": null, "fluid_id": "water_1", "ratio": 0.9, "threshold": 0.8, "passed": true, "unix_timestamp": 1771185133.7430782}
 {"event_type": "gpu_oom_retry", "timestamp": "2026-02-15T19:52:13.749326Z", "agent_id": null, "original_particles": 100000, "reduced_particles": 75000, "unix_timestamp": 1771185133.7493558}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T19:54:29.598576Z", "agent_id": null, "backend": "mujoco", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771185269.5986261}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T19:54:30.979037Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771185270.979067}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T19:54:42.597690Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771185282.5977206}
+{"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T19:54:42.601673Z", "agent_id": null, "backend": "genesis", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771185282.6016998}
+{"event_type": "fluid_containment_check", "timestamp": "2026-02-15T19:54:42.611533Z", "agent_id": null, "fluid_id": "water_1", "ratio": 0.9, "threshold": 0.8, "passed": true, "unix_timestamp": 1771185282.611563}
+{"event_type": "gpu_oom_retry", "timestamp": "2026-02-15T19:54:42.617689Z", "agent_id": null, "original_particles": 100000, "reduced_particles": 75000, "unix_timestamp": 1771185282.617717}
