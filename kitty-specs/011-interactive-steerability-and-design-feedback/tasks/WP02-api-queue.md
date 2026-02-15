@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Steerability API & Queue Management
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 63b616d3d42dac8c1fc9f99ba52c94a2e544b896
@@ -56,3 +56,4 @@ Create the `SteerabilityService` to manage the in-memory `asyncio.Queue` for int
 ## Activity Log
 
 - 2026-02-15T09:38:21Z – gemini-cli – shell_pid=86870 – lane=doing – Assigned agent via workflow command
+- 2026-02-15T09:44:11Z – gemini-cli – shell_pid=86870 – lane=for_review – Implemented SteerabilityService with in-memory asyncio queues and REST endpoints for enqueuing and inspecting steered prompts. Added unit tests.
