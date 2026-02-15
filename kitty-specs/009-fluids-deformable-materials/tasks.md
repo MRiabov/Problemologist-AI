@@ -21,11 +21,11 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Priority**: P1
 **Estimated Prompt Size**: ~350 lines
 **Subtasks**:
-- [ ] **T001**: Implement `PhysicsBackend` abstract base class in `shared/simulation/backends.py`.
-- [ ] **T002**: Refactor existing MuJoCo code into `MuJoCoBackend` in `worker/simulation/mujoco_backend.py`.
-- [ ] **T003**: Implement `GenesisBackend` skeleton in `worker/simulation/genesis_backend.py`.
-- [ ] **T004**: Update `SimulationRequest` and `SimulationResult` schemas (inc. `ELECTRONICS_FLUID_DAMAGE`).
-- [ ] **T005**: Update `controller/simulation/loop.py` to handle backend selection and validation.
+- [x] T001: Implement `PhysicsBackend` abstract base class in `shared/simulation/backends.py`.
+- [x] T002: Refactor existing MuJoCo code into `MuJoCoBackend` in `worker/simulation/mujoco_backend.py`.
+- [x] T003: Implement `GenesisBackend` skeleton in `worker/simulation/genesis_backend.py`.
+- [x] T004: Update `SimulationRequest` and `SimulationResult` schemas (inc. `ELECTRONICS_FLUID_DAMAGE`).
+- [x] T005: Update `controller/simulation/loop.py` to handle backend selection and validation.
 
 **Dependencies**: None
 **Implementation Sketch**: Define the interface first, then move MuJoCo code, then update the controller to use the interface.
