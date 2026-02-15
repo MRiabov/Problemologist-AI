@@ -1,9 +1,13 @@
 ---
 work_package_id: WP06
 title: Observability & Frontend
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 43f6ee1c33219f89f6f6bb567af9814f3208bcdf
+created_at: '2026-02-15T10:35:05.906139+00:00'
 subtasks: [T025, T026, T027, T028, T029]
+shell_pid: "142576"
 ---
 
 # WP06: Observability & Frontend
