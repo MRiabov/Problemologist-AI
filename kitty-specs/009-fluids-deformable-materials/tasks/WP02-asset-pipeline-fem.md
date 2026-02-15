@@ -1,9 +1,13 @@
 ---
 work_package_id: WP02
 title: Asset Pipeline & FEM Material Config
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 553b96778af96acdadbb3f0ff3824a7703213be1
+created_at: '2026-02-15T08:26:11.005745+00:00'
 subtasks: [T006, T007, T008, T009]
+shell_pid: "25963"
 ---
 
 # WP02: Asset Pipeline & FEM Material Config
