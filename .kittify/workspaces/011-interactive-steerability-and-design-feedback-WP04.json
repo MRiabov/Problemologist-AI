@@ -1,0 +1,12 @@
+{
+  "wp_id": "WP04",
+  "feature_slug": "011-interactive-steerability-and-design-feedback",
+  "worktree_path": ".worktrees/011-interactive-steerability-and-design-feedback-WP04",
+  "branch_name": "011-interactive-steerability-and-design-feedback-WP04",
+  "base_branch": "main",
+  "base_commit": "35acbb99d47bea37eb74f4757408f6fe43a55180",
+  "dependencies": [],
+  "created_at": "2026-02-15T11:25:19.422466+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}
