@@ -1,0 +1,80 @@
+openapi: 3.0.0
+info:
+  title: Steerability API
+  version: 1.0.0
+paths:
+  /api/v1/sessions/{session_id}/steer:
+    post:
+      summary: Send a steered prompt to the agent (queued if agent is busy)
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SteerablePrompt'
+      responses:
+        '202':
+          description: Prompt accepted and queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string, example: "queued"}
+                  queue_position: {type: integer}
+
+  /api/v1/sessions/{session_id}/queue:
+    get:
+      summary: Get the current status of the interaction queue
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of queued prompts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SteerablePrompt'
+
+components:
+  schemas:
+    SteerablePrompt:
+      type: object
+      properties:
+        text: {type: string}
+        selections:
+          type: array
+          items: {$ref: '#/components/schemas/GeometricSelection'}
+        code_references:
+          type: array
+          items: {$ref: '#/components/schemas/CodeReference'}
+        mentions:
+          type: array
+          items: {type: string}
+
+    GeometricSelection:
+      type: object
+      properties:
+        level: {type: string, enum: [FACE, EDGE, VERTEX, PART, SUBASSEMBLY]}
+        target_id: {type: string}
+        center: {type: array, items: {type: number}, minItems: 3, maxItems: 3}
+        normal: {type: array, items: {type: number}}
+
+    CodeReference:
+      type: object
+      properties:
+        file_path: {type: string}
+        start_line: {type: integer}
+        end_line: {type: integer}
