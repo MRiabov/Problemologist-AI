@@ -1,9 +1,13 @@
 ---
 work_package_id: WP07
 title: Benchmark Planning & Integration Tests
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 6d83d6425a3faf5bd47da49d39daf21ff3340bf4
+created_at: '2026-02-15T19:21:55.248649+00:00'
 subtasks: [T025, T026, T027]
+shell_pid: "284334"
 ---
 
 # WP07: Benchmark Planning & Integration Tests
