@@ -150,6 +150,10 @@ class SimulationLoop:
         self.fluid_metrics = []
         self.actuator_clamp_duration = {}
 
+        # T016: Persistent state for flow rate tracking
+        self.prev_particle_distances = {} # objective_id -> distances array
+        self.cumulative_crossed_count = {} # objective_id -> int
+
         # T015: derive is_powered_map from electronics.circuit state
         self.is_powered_map = {}
         self.switch_states = {}
@@ -489,7 +493,7 @@ class SimulationLoop:
 
                 # 2.2.2 Fluid Objectives (Continuous checks)
                 for fo in self.objectives.objectives.fluid_objectives:
-                    if getattr(fo, "eval_at", "end") == "continuous":
+                    if getattr(fo, "eval_at", "end") == "continuous" or fo.type == "flow_rate":
                         if fo.type == "fluid_containment":
                             particles = self.backend.get_particle_positions()
                             if particles is not None and len(particles) > 0:
@@ -504,6 +508,32 @@ class SimulationLoop:
                                         f"FLUID_CONTAINMENT_FAILED:{fo.fluid_id}"
                                     )
                                     break
+                        elif fo.type == "flow_rate":
+                            # T016: Continuous flow rate tracking
+                            particles = self.backend.get_particle_positions()
+                            if particles is not None and len(particles) > 0:
+                                p0 = np.array(fo.gate_plane_point)
+                                n = np.array(fo.gate_plane_normal)
+                                # Distance from plane: (p - p0) . n
+                                distances = np.dot(particles - p0, n)
+                                
+                                obj_id = f"{fo.fluid_id}_{fo.type}"
+                                if obj_id in self.prev_particle_distances:
+                                    prev_dists = self.prev_particle_distances[obj_id]
+                                    # Ensure same number of particles
+                                    if len(prev_dists) == len(distances):
+                                        # Crossed from negative to positive side
+                                        crossed_pos = np.sum((prev_dists <= 0) & (distances > 0))
+                                        # Crossed from positive to negative side
+                                        crossed_neg = np.sum((prev_dists > 0) & (distances <= 0))
+                                        
+                                        self.cumulative_crossed_count[obj_id] = (
+                                            self.cumulative_crossed_count.get(obj_id, 0) 
+                                            + int(crossed_pos) - int(crossed_neg)
+                                        )
+                                
+                                self.prev_particle_distances[obj_id] = distances
+
                 if self.fail_reason:
                     break
 
@@ -633,33 +663,29 @@ class SimulationLoop:
                                     or f"{SimulationFailureMode.FLUID_OBJECTIVE_FAILED}:{fo.fluid_id}"
                                 )
                         elif fo.type == "flow_rate":
-                            # Flow rate at end: measure cumulative flow
-                            particles = self.backend.get_particle_positions()
-                            if particles is not None and len(particles) > 0:
-                                p0 = np.array(fo.gate_plane_point)
-                                n = np.array(fo.gate_plane_normal)
-                                # Distance from plane: (p - p0) . n
-                                distances = np.dot(particles - p0, n)
-                                passed_count = np.sum(distances > 0)
-                                # Heuristic: 1 particle ~= 0.001L (1ml) for MVP
-                                measured_volume_l = passed_count * 0.001
-                                measured_rate = (
-                                    measured_volume_l / current_time
-                                    if current_time > 0
-                                    else 0.0
-                                )
+                            # T016: Use cumulative crossed count for more accurate flow rate
+                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            passed_count = self.cumulative_crossed_count.get(obj_id, 0)
+                            
+                            # Heuristic: 1 particle ~= 0.001L (1ml) for MVP
+                            measured_volume_l = passed_count * 0.001
+                            measured_rate = (
+                                measured_volume_l / current_time
+                                if current_time > 0
+                                else 0.0
+                            )
 
-                                passed = measured_rate >= fo.target_rate_l_per_s * (
-                                    1.0 - fo.tolerance
-                                )
-                                result = FluidMetricResult(
-                                    metric_type="flow_rate",
-                                    fluid_id=fo.fluid_id,
-                                    measured_value=float(measured_rate),
-                                    target_value=fo.target_rate_l_per_s,
-                                    passed=passed,
-                                )
-                                self.fluid_metrics.append(result)
+                            passed = measured_rate >= fo.target_rate_l_per_s * (
+                                1.0 - fo.tolerance
+                            )
+                            result = FluidMetricResult(
+                                metric_type="flow_rate",
+                                fluid_id=fo.fluid_id,
+                                measured_value=float(measured_rate),
+                                target_value=fo.target_rate_l_per_s,
+                                passed=passed,
+                            )
+                            self.fluid_metrics.append(result)
 
                                 from shared.observability.schemas import (
                                     FlowRateCheckEvent,
