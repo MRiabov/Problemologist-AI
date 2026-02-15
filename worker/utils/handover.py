@@ -8,6 +8,7 @@ from build123d import Compound, export_step
 
 from shared.models.schemas import ObjectivesYaml
 from worker.utils.dfm import validate_and_price
+from worker.utils.rendering import prerender_24_views
 from worker.workbenches.config import load_config
 from worker.workbenches.models import ManufacturingMethod
 
@@ -145,7 +146,12 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
-    render_paths = []
+    try:
+        render_paths = prerender_24_views(component, output_dir=str(renders_dir))
+    except Exception as e:
+        logger.error("rendering_failed", error=str(e))
+        render_paths = []
+
     logger.info("renders_persisted", count=len(render_paths))
 
     cad_path = renders_dir / "model.step"

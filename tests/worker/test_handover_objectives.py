@@ -1,6 +1,6 @@
 import json
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from build123d import Box
@@ -75,17 +75,47 @@ totals:
     cost_file = temp_dir / "assembly_definition.yaml"
     cost_file.write_text(cost_content)
 
+    # Create valid plan.md
+    plan_content = """# Plan
+## 1. Solution Overview
+Solution...
+## 2. Parts List
+- Part A
+- Part B
+## 3. Assembly Strategy
+1. Step 1
+2. Step 2
+## 4. Cost & Weight Budget
+- Item 1: $10
+## 5. Risk Assessment
+- Risk 1: Low
+"""
+    (temp_dir / "plan.md").write_text(plan_content)
+
+    # Create valid todo.md
+    (temp_dir / "todo.md").write_text("- [x] Task 1")
+
+    # Create valid validation_results.json
+    (temp_dir / "validation_results.json").write_text("{}")
+
     # We need to run in the temp_dir context
     os.chdir(temp_dir)
 
     with (
         patch("worker.utils.handover.prerender_24_views", return_value=["img1.png"]),
         patch("worker.utils.handover.export_step"),
+        patch("worker.utils.handover.validate_and_price") as mock_dfm,
         patch.dict(
             os.environ,
             {"RENDERS_DIR": str(temp_dir / "renders"), "SESSION_ID": "test_session"},
         ),
     ):
+        mock_result = MagicMock()
+        mock_result.is_manufacturable = True
+        mock_result.unit_cost = 50.0
+        mock_result.metadata = {"weight_kg": 0.5}
+        mock_dfm.return_value = mock_result
+
         success = submit_for_review(component)
         assert success is True
 
