@@ -115,4 +115,12 @@
 {"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T10:47:43.361479Z", "agent_id": null, "backend": "mujoco", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771152463.3615441}
 {"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T10:47:44.207871Z", "agent_id": null, "backend": "mujoco", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771152464.2079244}
 {"event_type": "simulation_backend_selected", "timestamp": "2026-02-15T10:47:44.218044Z", "agent_id": null, "backend": "mujoco", "fem_enabled": false, "compute_target": "auto", "unix_timestamp": 1771152464.2180872}
+<<<<<<< HEAD
 >>>>>>> cd24db9 (feat(WP03): fix NameError in rendering activity and broken simulation loop, implement topology inspection and best-angle view selection)
+=======
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.115433Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 1. Solution Overview"], "unix_timestamp": 1771181261.1156938}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.115846Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 2. Parts List"], "unix_timestamp": 1771181261.1158652}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.115943Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 3. Assembly Strategy"], "unix_timestamp": 1771181261.1159596}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.116022Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 4. Cost & Weight Budget"], "unix_timestamp": 1771181261.116037}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.116095Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 5. Risk Assessment"], "unix_timestamp": 1771181261.1161098}
+>>>>>>> bfbe5cf ((spec) WP04 - LangGraph Integration for Steerability)

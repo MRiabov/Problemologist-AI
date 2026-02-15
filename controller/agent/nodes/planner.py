@@ -51,9 +51,41 @@ class PlannerNode:
 
         skills_context = "\n".join([f"- {s}" for s in skills])
 
+        # WP04: Extract steerability context from last message if present
+        steer_context = ""
+        if state.messages:
+            last_msg = state.messages[-1]
+            steer_data = (
+                last_msg.additional_kwargs.get("steerability")
+                if hasattr(last_msg, "additional_kwargs")
+                else None
+            )
+
+            if steer_data:
+                lines = []
+                if steer_data.get("selections"):
+                    lines.append("Geometric Selections:")
+                    for sel in steer_data["selections"]:
+                        center_str = ", ".join([f"{v:.2f}" for v in sel["center"]])
+                        lines.append(
+                            f"  - Level: {sel['level']}, ID: {sel['target_id']}, Center: ({center_str})"
+                        )
+
+                if steer_data.get("code_references"):
+                    lines.append("Code References:")
+                    for ref in steer_data["code_references"]:
+                        lines.append(
+                            f"  - File: {ref['file_path']}, Lines: {ref['start_line']}-{ref['end_line']}"
+                        )
+
+                if steer_data.get("mentions"):
+                    lines.append(f"Mentions: {', '.join(steer_data['mentions'])}")
+
+                steer_context = "\n".join(lines)
+
         # T005: Invoke LLM
         prompt_text = self.pm.render(
-            "architect", task=state.task, skills=skills_context
+            "architect", task=state.task, skills=skills_context, steer_context=steer_context
         )
         # Instruct agent to use tools to write files
         prompt_text += "\n\nIMPORTANT: You must use the 'write_file' tool to create 'plan.md' and 'todo.md' directly. Do not just output the content in the chat."

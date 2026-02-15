@@ -95,16 +95,19 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         tools = get_benchmark_tools(middleware, session_id)
         agent = create_react_agent(llm, tools)
 
-        # Prepare messages
-        messages = (
-            [SystemMessage(content=base_prompt)]
-            + state.get("messages", [])
-            + [
-                HumanMessage(
-                    content=f"User Request:\n{state['session'].prompt}\n\nPlease generate the randomization strategy JSON now."
+        # WP04: Support steering by including history in the planner prompt
+        history = state.get("messages", [])
+        messages = [
+            SystemMessage(content=base_prompt),
+            *history,
+            HumanMessage(
+                content=(
+                    f"Original User Request:\n{state['session'].prompt}\n\n"
+                    "Please generate the randomization strategy JSON now. "
+                    "Take into account any steering or feedback from the history above if present."
                 )
-            ]
-        )
+            ),
+        ]
 
         try:
             # Invoke Agent
@@ -330,14 +333,6 @@ Validation Logs:
 
 
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    return state  # No change needed, already used create_react_agent logic or similar?
-    # Actually checking previous implementation... it used create_react_agent inside!
-    # We should update it to use common tools potentially? Or leave as is if it's specific.
-    # The user request said "all agents".
-    # COTS search node in previous file lines 443-478 used create_react_agent manually.
-    # We can keep it or standardize tool loading.
-    # Let's standardize.
-
     # Re-implementing to ensure consistency
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
