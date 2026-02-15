@@ -1039,6 +1039,8 @@ The agent will also receive selection metadata (grouped per feature type):
 - With vertices:
   - position
 
+In addition, the user will be able to select macro features like parts and subassemblies. There will be a toggle in frontend that would allow switching between primitives (faces, vertices, edges), and parts and subassemblies (three buttons total). If the user selects a part or a subassembly, it gets attached to the prompt.
+
 The agents will receive the prompt in a yaml-like format:
 
 ```yaml
@@ -1048,6 +1050,11 @@ Selected faces:
       normal: ...
 Selected vertices:
     position: [10,10,10]
+Selected subassemblies:
+    wheel_assembly:
+        position: [20,20,20]
+        parts_list: [part names] # don't spam models with logs in here.
+        
 ```
 
 Notably, its not strictly a YAML, it's just a similar representation of it in the prompt.
