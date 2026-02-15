@@ -1,14 +1,14 @@
 ---
 work_package_id: WP07
 title: Benchmark Planning & Integration Tests
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 6d83d6425a3faf5bd47da49d39daf21ff3340bf4
 created_at: '2026-02-15T19:21:55.248649+00:00'
 subtasks: [T025, T026, T027]
-shell_pid: "410766"
-agent: "Gemini"
+shell_pid: "438305"
+agent: "gemini"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -55,3 +55,4 @@ We need automated ways to prove that Genesis and MuJoCo are consistent for rigid
 - 2026-02-15T20:48:22Z – Antigravity – shell_pid=284334 – lane=planned – Moved to planned
 - 2026-02-15T21:01:57Z – Gemini – shell_pid=410766 – lane=doing – Started implementation via workflow command
 - 2026-02-15T21:08:02Z – Gemini – shell_pid=410766 – lane=for_review – Ready for review: implemented benchmark planner updates for Genesis/FEM/Fluids, added integration tests for physics parity, FEM breakage, fluid containment, and GPU OOM retry logic. Verified with pytest.
+- 2026-02-15T21:20:08Z – gemini – shell_pid=438305 – lane=doing – Started review via workflow command
