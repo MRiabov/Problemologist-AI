@@ -49,11 +49,11 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: High
 - **Success Criteria**: Motors only spin when powered; wires can tear under tension.
 - **Subtasks**:
-    - [ ] T014: [P] Update `worker/simulation/builder.py`: inject `tendon` and `site` elements into MJCF for 3D wires.
-    - [ ] T015: [P] Update `worker/simulation/loop.py`: implement `is_powered` signal logic per actuator.
-    - [ ] T016: [P] Implement tension monitoring in `SimulationLoop`: check tendon force vs tensile strength.
-    - [ ] T017: [P] Implement mid-simulation failure handling for `electrical_failure` events.
-    - [ ] T018: [P] Add simulation tests for power gating (motor stops when wire "breaks").
+    - [x] T014: [P] Update `worker/simulation/builder.py`: inject `tendon` and `site` elements into MJCF for 3D wires.
+    - [x] T015: [P] Update `worker/simulation/loop.py`: implement `is_powered` signal logic per actuator.
+    - [x] T016: [P] Implement tension monitoring in `SimulationLoop`: check tendon force vs tensile strength.
+    - [x] T017: [P] Implement mid-simulation failure handling for `electrical_failure` events.
+    - [x] T018: [P] Add simulation tests for power gating (motor stops when wire "breaks").
 - **Implementation Sketch**: Inject tendons into MJCF first, then modify the simulation loop to modulate torque based on circuit state.
 - **Dependencies**: WP02, WP03
 - **Estimated Prompt Size**: ~400 lines
