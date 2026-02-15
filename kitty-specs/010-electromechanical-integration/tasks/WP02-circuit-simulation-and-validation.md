@@ -1,9 +1,13 @@
 ---
 work_package_id: WP02
 title: Circuit Simulation & Validation
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 0f015147c8010750ea277c85719f4e8cd6b83ccb
+created_at: '2026-02-15T07:39:25.526010+00:00'
 subtasks: [T005, T006, T007, T008, T009]
+shell_pid: "351162"
 ---
 
 # WP02: Circuit Simulation & Validation
