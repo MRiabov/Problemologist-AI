@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: LangGraph Integration
-lane: "doing"
+lane: "done"
 dependencies: []
 base_branch: main
 base_commit: 35acbb99d47bea37eb74f4757408f6fe43a55180
@@ -56,3 +56,4 @@ Inject the interaction queue into the LangGraph execution loop, allowing user fe
 - 2026-02-15T18:13:59Z – Antigravity – shell_pid=94233 – lane=doing – Started implementation via workflow command
 - 2026-02-15T18:52:51Z – Antigravity – shell_pid=94233 – lane=for_review – Integrated steerability into LangGraph loops for both agents. Verified with tests. Fixed duplicate task IDs in tasks.md.
 - 2026-02-15T18:54:30Z – gemini – shell_pid=228894 – lane=doing – Started review via workflow command
+- 2026-02-15T18:57:53Z – gemini – shell_pid=228894 – lane=done – Review passed. I fixed a bug in benchmark/graph.py where 'after_reviewer_logic' was used without being defined as a node. I also updated agent/graph.py's should_continue to be async and include a check_steering call for better responsiveness.
