@@ -1,108 +1,75 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Interactive Steerability and Design Feedback
+*Path: kitty-specs/011-interactive-steerability-and-design-feedback/plan.md*
 
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `011-interactive-steerability-and-design-feedback` | **Date**: 2026-02-15 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/kitty-specs/011-interactive-steerability-and-design-feedback/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement a multi-modal "Steerability" framework to transition the AI from a generator to a co-pilot. Key features include topological selection (faces, parts, subassemblies) via `three-cad-viewer` with optimal isometric snapshots rendered by workers, targeted code steering using `@filename:line-range`, BOM @-mentions with autocomplete, and an in-memory async interaction queue for graceful mid-turn feedback.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Python 3.12 (Backend), TypeScript 5+ (Frontend)
+**Primary Dependencies**: FastAPI (Controller), LangGraph/LangFuse (Agent logic), three-cad-viewer (Frontend), build123d (CAD Engine), Temporal (Orchestration)
+**Storage**: In-memory `asyncio.Queue` (TurnQueue), S3-compatible storage (Snapshots), Postgres (User Preferences/Memory)
+**Testing**: pytest (unit/integration), Playwright/Vitest (Frontend)
+**Target Platform**: Linux (Railway/Workers)
+**Project Type**: Full-stack (React Frontend + FastAPI Backend)
+**Performance Goals**: <500ms for queue delivery; <1s for reference resolution/autocomplete.
+**Constraints**: Snapshots must use worker-side headless rendering for consistency.
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Rule 1 (Microservice-first)**: Isolate TurnQueue in the Controller; worker-side rendering logic stays in Worker activities.
+- **Rule 2 (No Reinvention)**: Use `asyncio.Queue` for transient interaction queuing; use standard isometric projection math for snapshots.
+- **Rule 3 (Early Stopping)**: Fail fast if geometric indices are stale or code references are out of bounds.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/011-interactive-steerability-and-design-feedback/
+├── plan.md              # This file
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output
+├── quickstart.md        # Phase 1 output
+├── contracts/           # Phase 1 output
+└── tasks/               # (Placeholder for /spec-kitty.tasks)
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
+controller/
+├── api/
+│   ├── routes/
+│   │   └── steerability.py  # New: Steering & Queue endpoints
 ├── services/
-├── cli/
-└── lib/
+│   └── steerability/        # Logic for TurnQueue and Reference Resolution
+├── persistence/
+│   └── steering_memory.py   # User specific preferences
 
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+worker/
+├── activities/
+│   └── rendering.py         # New/Updated: Headless isometric snapshots
+├── simulation/
+│   └── builder.py           # Updated: Feature highlighting logic
 
 frontend/
 ├── src/
 │   ├── components/
-│   ├── pages/
+│   │   ├── CADViewer/       # Selection modes & Mode Toggle
+│   │   └── Chat/            # @-mention autocomplete & Queue status
 │   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+│       └── steerability.ts  # API clients
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Hybrid full-stack implementation across Controller (routing/state), Worker (heavy rendering), and Frontend (UX).
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+*No violations identified.*

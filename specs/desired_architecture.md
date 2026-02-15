@@ -1024,21 +1024,63 @@ The work here is the UI, the backend processing and prompt optimization.
 
 #### Steerability with exact pointing
 
-It's desired that agents are able to understand the exact face or volume that the engineer wants to fix. The engineer, in the UI, will select the set of faces, or edges, or corners, and "attach" them to the prompt, similar to how a programmer can attach faulty logic to code. Thus, the agents will get the name of the part (or set of) they need to edit, and whatever... features on them.
+It's desired that agents are able to understand the exact face or volume that the engineer wants to fix. The engineer, in the UI, will select the set of faces, or edges, or corners, and "attach" them to the prompt, similar to how a programmer can attach faulty logic to code. Thus, the agents will get the name of the part (or set of) they need to edit, and whatever features on them.
+
+If a user selects a particular feature, the system automatically determines the best angle to view the feature (one from 8 of isometric views) and render the image with this view selected part more brightly.
+If multiple features are selected, showcase one view.
+
+The agent will also receive selection metadata (grouped per feature type):
+
+- With faces:
+    1. Which face number this is in particular (notably, the agent should not try to use the exact face number in the code, rather, they will select it using proper methodology).
+    2. Where the face is located (center) and its normal.
+- With edges:
+  - Edge center and edge direction (if arc, specify that it is an arc)
+- With vertices:
+  - position
+
+The agents will receive the prompt in a yaml-like format:
+
+```yaml
+Selected faces:
+   face_1:
+      center: [1,2,3]
+      normal: ...
+Selected vertices:
+    position: [10,10,10]
+```
+
+Notably, its not strictly a YAML, it's just a similar representation of it in the prompt.
 
 <!-- Likely, if there are a large number of volumes, don't send them all at once? -->
 
 #### Steering code directly
 
-In addition, the engineers should be able to, just as in common software agentic environments, select some code and put it.
+In addition, the engineers should be able to, just as in common software agentic environments, select some code and ask to it. It should be in the format of:
+The user will see it as:
+
+```md
+@assembly_definition.yaml:136-139
+```
+
+While the LLM would see it as:
+
+```md
+@path/other_path/assembly_definition.yaml:136-139
+```
+
+The model should then, in 90% of cases at least, view the actual lines.
 
 #### Pointing in the chat
 
 Because we have a bill of materials/part tree, it should be very straightforward to "@-mention" the part or subassembly that one wants to edit.
 
-#### Other
+#### Steerability - Other
 
-Ideally, agents would have standard per-user memory sets.
+1. Ideally, agents would have standard per-user memory sets.
+
+2. The model should then, in 90% of cases at least, view the actual lines where the part, or direct code mention or whatever is defined; meaning that it doesn't ignore the user's output.
+
 <!-- per-org, per-project memory is a TODO later.-->
 
 ## Agent Evaluations
