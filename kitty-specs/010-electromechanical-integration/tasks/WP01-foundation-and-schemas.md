@@ -1,9 +1,13 @@
 ---
-work_package_id: "WP01"
-title: "Foundation & Schemas"
-lane: "planned"
+work_package_id: WP01
+title: Foundation & Schemas
+lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003", "T004"]
+base_branch: main
+base_commit: b0b8a776ea84e7a6a780c69c31bdcfaaa7ce8261
+created_at: '2026-02-15T07:28:28.680431+00:00'
+subtasks: [T001, T002, T003, T004]
+shell_pid: "339790"
 ---
 
 # WP01: Foundation & Schemas
