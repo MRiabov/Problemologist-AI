@@ -2,8 +2,8 @@ import logging
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
-from build123d import Compound, Solid
+from typing import Any, Dict
+from build123d import Compound, Solid, Face, Edge, Vertex, Vector
 
 logger = logging.getLogger(__name__)
 
