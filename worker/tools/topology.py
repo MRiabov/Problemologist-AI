@@ -2,8 +2,8 @@ import logging
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict
-from build123d import Compound, Solid, Face, Edge, Vertex, Vector
+from typing import Any
+from build123d import Compound, Solid
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def _load_component(script_path: str = "script.py") -> Compound:
     raise AttributeError("build() function not found in script.")
 
 
-def inspect_topology(target_id: str, script_path: str = "script.py") -> Dict[str, Any]:
+def inspect_topology(target_id: str, script_path: str = "script.py") -> dict[str, Any]:
     """
     Inspects a specific topological feature and returns its properties.
     target_id format: 'face_12', 'edge_5', 'part_0', etc.
