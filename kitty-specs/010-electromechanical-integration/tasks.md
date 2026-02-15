@@ -8,10 +8,10 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: High
 - **Success Criteria**: `assembly_definition.yaml` supports electronics; `parts.db` contains electrical components.
 - **Subtasks**:
-    - [ ] T001: [P] Update `shared/models/schemas.py` with `ElectronicsSection` (PSU, wiring, components) and update `ObjectivesYaml`.
-    - [ ] T002: [P] Create `shared/enums.py` extensions for electrical components and failure types (SHORT_CIRCUIT, WIRE_TORN).
-    - [ ] T003: [P] Update `assembly_definition.yaml` validation logic in `worker/utils/file_validation.py`.
-    - [ ] T004: [P] Add migration to `parts.db` for electrical component categories (power_supply, relay, connector, wire).
+    - [x] T001: [P] Update `shared/models/schemas.py` with `ElectronicsSection` (PSU, wiring, components) and update `ObjectivesYaml`.
+    - [x] T002: [P] Create `shared/enums.py` extensions for electrical components and failure types (SHORT_CIRCUIT, WIRE_TORN).
+    - [x] T003: [P] Update `assembly_definition.yaml` validation logic in `worker/utils/file_validation.py`.
+    - [x] T004: [P] Add migration to `parts.db` for electrical component categories (power_supply, relay, connector, wire).
 - **Implementation Sketch**: Start with Pydantic models, then update enums, then validation logic, and finally the DB migration.
 - **Dependencies**: None
 - **Estimated Prompt Size**: ~250 lines
