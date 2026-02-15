@@ -60,6 +60,8 @@ from .schema import (
     ReadFileResponse,
     StatusResponse,
     WriteFileRequest,
+    InspectTopologyRequest,
+    InspectTopologyResponse,
 )
 
 logger = structlog.get_logger(__name__)
@@ -73,6 +75,28 @@ async def get_router(x_session_id: str = Header(...)):
     except Exception as e:
         logger.error("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
+
+
+@router.post("/topology/inspect", response_model=InspectTopologyResponse)
+async def api_inspect_topology(
+    request: InspectTopologyRequest,
+    fs_router=Depends(get_router),
+):
+    """Inspect topological features of the component."""
+    try:
+        from worker.tools.topology import inspect_topology
+
+        # Resolve script path
+        try:
+            local_p = fs_router.local_backend._resolve(request.script_path)
+        except Exception:
+            local_p = Path(request.script_path)
+
+        props = inspect_topology(target_id=request.target_id, script_path=str(local_p))
+        return InspectTopologyResponse(success=True, properties=props)
+    except Exception as e:
+        logger.error("api_inspect_topology_failed", error=str(e))
+        return InspectTopologyResponse(success=False, message=str(e))
 
 
 def _load_component(fs_router, script_path: str, script_content: str | None = None):
