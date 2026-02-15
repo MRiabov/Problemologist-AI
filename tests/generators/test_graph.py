@@ -28,6 +28,7 @@ async def test_run_generation_session_mocked():
     ):
         # Configure mock DB context manager
         mock_db_session = AsyncMock()
+        mock_db_session.add = MagicMock()
         mock_get_sessionmaker.return_value.return_value.__aenter__.return_value = (
             mock_db_session
         )
@@ -45,7 +46,7 @@ async def test_run_generation_session_mocked():
         async def mock_astream_gen(input_state, **kwargs):
             # Yield a state chunk
             yield {
-                "planner": {
+                "reviewer": {
                     "session": MagicMock(status=SessionStatus.accepted),
                     "plan": mock_plan,
                     "current_script": mock_script,
@@ -76,6 +77,7 @@ async def test_run_generation_session_rejected():
     ):
         # Configure mock DB context manager
         mock_db_session = AsyncMock()
+        mock_db_session.add = MagicMock()
         mock_get_sessionmaker.return_value.return_value.__aenter__.return_value = (
             mock_db_session
         )

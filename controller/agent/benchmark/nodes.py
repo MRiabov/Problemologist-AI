@@ -8,6 +8,7 @@ import httpx
 import structlog
 import yaml
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
@@ -144,6 +145,8 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             # We use the LLM directly as the planner doesn't currently need complex tools
             messages = [
                 SystemMessage(content=base_prompt),
+                # Include context from previous nodes (e.g. COTS search)
+                *state.get("messages", []),
                 HumanMessage(
                     content=f"User Request:\n{state['session'].prompt}\n\nPlease generate the randomization strategy JSON now."
                 ),
@@ -421,7 +424,7 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
 
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Skills node for benchmark generation: Identifies patterns.
+    Skills node for benchmark generation: Identifies patterns and suggests skills.
     """
     session_id = str(state["session"].session_id)
     # Langfuse tracing
@@ -430,13 +433,85 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
     )
     db_callback = DatabaseCallbackHandler(episode_id=session_id)
 
-    # Simple implementation for now
+    callbacks = [db_callback]
+    if langfuse_callback:
+        callbacks.append(langfuse_callback)
+
     logger.info(
         "skills_node_start",
         session_id=session_id,
         db_enabled=db_callback is not None,
         tracing_enabled=langfuse_callback is not None,
     )
+
+    try:
+        base_prompt = get_prompt("subagents.skill_learner.system")
+    except Exception as e:
+        logger.error("skills_prompt_load_failed", error=str(e))
+        return state
+
+    # Construct context from session
+    # We don't have a linear journal, so we construct one from messages and results
+    journal_content = f"Task: {state['session'].prompt}\n\nExecution Logs:\n"
+
+    # Add validation logs
+    if state["session"].validation_logs:
+        journal_content += "Validation Logs:\n" + "\n".join(state["session"].validation_logs) + "\n"
+
+    # Add simulation result summary
+    if state.get("simulation_result"):
+        sim = state["simulation_result"]
+        journal_content += f"\nSimulation Result: {'Valid' if sim.get('valid') else 'Invalid'}\n"
+        if sim.get("logs"):
+            journal_content += "Simulation Logs:\n" + "\n".join(sim["logs"]) + "\n"
+
+    # Add tool outputs from messages
+    journal_content += "\nTool Interactions:\n"
+    for msg in state.get("messages", []):
+        if hasattr(msg, "content") and msg.content:
+            # Simplify content to avoid huge logs
+            content_preview = str(msg.content)[:500]
+            journal_content += f"- {msg.type}: {content_preview}...\n"
+
+    llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+
+    messages = [
+        SystemMessage(content=base_prompt),
+        HumanMessage(content=f"Please analyze this execution journal:\n{journal_content}")
+    ]
+
+    try:
+        response = await llm.ainvoke(messages, config={"callbacks": callbacks})
+        content = str(response.content)
+
+        # Parse for skills
+        if "SKILL:" in content and "CONTENT:" in content:
+            parts = content.split("CONTENT:")
+            raw_title = parts[0].replace("SKILL:", "").strip().lower()
+            # Sanitize title to prevent path traversal
+            title = re.sub(r"[^a-z0-9_]", "_", raw_title)
+            title = re.sub(r"_+", "_", title).strip("_")
+
+            if not title:
+                title = "untitled_skill"
+
+            skill_content = parts[1].strip()
+
+            # Save locally to suggested_skills
+            skills_dir = Path("suggested_skills")
+            skills_dir.mkdir(exist_ok=True)
+
+            file_path = skills_dir / f"{title}.md"
+            with file_path.open("w") as f:
+                f.write(skill_content)
+
+            logger.info("suggested_new_skill", title=title, path=str(file_path))
+        else:
+            logger.info("no_new_skills_identified")
+
+    except Exception as e:
+        logger.error("skills_node_failed", error=str(e))
+
     return state
 
 

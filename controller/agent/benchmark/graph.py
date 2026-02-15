@@ -45,10 +45,11 @@ def define_graph():
     workflow.add_node("skills", skills_node)
 
     # Define transitions
-    def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
+    def route_start(state: BenchmarkGeneratorState) -> Literal["cots_search", "coder"]:
         if state["session"].status == SessionStatus.executing:
             return "coder"
-        return "planner"
+        # Always run COTS search before planning
+        return "cots_search"
 
     workflow.add_conditional_edges(START, route_start)
     workflow.add_edge("planner", "coder")
