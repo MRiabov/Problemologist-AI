@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP02"
-title: "Advanced Asset Pipeline"
-lane: "planned"
-dependencies: ["WP01"]
-subtasks: ["T006", "T007", "T008"]
+work_package_id: WP02
+title: Advanced Asset Pipeline
+lane: planned
+dependencies: []
+subtasks: [T006, T007, T008]
 ---
 
 # WP02: Advanced Asset Pipeline

@@ -1,9 +1,9 @@
 ---
-work_package_id: "WP06"
-title: "Observability, Benchmarks & UI"
-lane: "planned"
-dependencies: ["WP05"]
-subtasks: ["T021", "T022", "T023"]
+work_package_id: WP06
+title: Observability, Benchmarks & UI
+lane: planned
+dependencies: []
+subtasks: [T021, T022, T023]
 ---
 
 # WP06: Observability, Benchmarks & UI

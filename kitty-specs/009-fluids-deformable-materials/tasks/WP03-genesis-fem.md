@@ -1,0 +1,50 @@
+---
+work_package_id: WP03
+title: Genesis FEM Implementation
+lane: planned
+dependencies: []
+subtasks: [T010, T011, T012, T013]
+---
+
+# WP03: Genesis FEM Implementation
+
+## Objective
+Implement deformable body simulation in Genesis, including real-time stress monitoring and part breakage detection.
+
+## Context
+This is the core physics implementation. We are moving from rigid-body to FEM. Genesis provides the solver; we need to hook it into our reward/failure system.
+
+## Guidance
+
+### T010: Scene Loading in Genesis
+- Implement `load_scene` in `GenesisBackend`.
+- Support both rigid (MuJoCo-like) and deformable (`.msh` + FEM) entities.
+- Assign material properties (Young's modulus, etc.) from the assembly definition to Genesis entities.
+
+### T011: Stress Calculation & Summary
+- During simulation steps, extract von Mises stress from the Genesis FEM solver.
+- Aggregate per-part `StressSummary`:
+  - `max_von_mises_pa`
+  - `mean_von_mises_pa`
+  - `safety_factor` (Ultimate Stress / Max Stress)
+  - `utilization_pct`
+
+### T012: Part Breakage Detection
+- Compare `max_von_mises_pa` against the material's `ultimate_stress_pa` every timestep.
+- If exceeded, stop simulation immediately.
+- Return `failure_reason: PART_BREAKAGE` with part label and location.
+
+### T013: Material Model Support
+- Support linear FEM for `rigid` materials.
+- Support hyperelastic (Neo-Hookean) for `soft` and `elastomer` materials.
+- Verify stability for large deformations.
+
+## Definition of Done
+- [ ] Simulation shows visible deformation for load-bearing parts.
+- [ ] Exceeding ultimate stress triggers `PART_BREAKAGE` failure.
+- [ ] `SimulationResult` contains valid `StressSummary` for all deformable parts.
+- [ ] Both linear and hyperelastic models are active based on material class.
+
+## Risks
+- Numerical instability in the FEM solver (NaNs).
+- Significant slowdown compared to rigid-body simulation.
