@@ -533,7 +533,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "title": "Response Get Session Benchmark  Session Id  Get"
+                }
               }
             }
           },
