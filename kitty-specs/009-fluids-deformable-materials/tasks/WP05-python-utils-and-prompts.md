@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Python Utils & Prompt Updates
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: b11638b77884f77afaa837eab3919085e67aece8
@@ -67,3 +67,4 @@ The agents currently only understand rigid-body failure. We need to teach them a
 ## Activity Log
 
 - 2026-02-15T12:31:20Z – gemini – shell_pid=83837 – lane=doing – Assigned agent via workflow command
+- 2026-02-15T19:04:28Z – gemini – shell_pid=83837 – lane=for_review – Implemented get_stress_report, define_fluid, preview_stress, and set_soft_mesh. Updated agent prompts to use these utilities for stress and fluid reasoning. Added unit tests.
