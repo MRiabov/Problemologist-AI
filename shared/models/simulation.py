@@ -35,6 +35,7 @@ class SimulationMetrics(BaseModel):
 class SimulationResult(BaseModel):
     success: bool
     summary: str
+    failure_reason: str | None = None
     render_paths: list[str] = Field(default_factory=list)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)

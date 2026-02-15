@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from shared.simulation.backends import PhysicsBackend, SimulatorBackendType
+from shared.simulation.backends import PhysicsBackend
+from shared.simulation.schemas import SimulatorBackendType
 
 
 def get_physics_backend(backend_type: SimulatorBackendType) -> PhysicsBackend:
