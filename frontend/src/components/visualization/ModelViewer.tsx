@@ -9,7 +9,10 @@ import {
   Pause, 
   RotateCcw, 
   FastForward, 
-  Rewind
+  Rewind,
+  MousePointer2,
+  Box,
+  Component
 } from "lucide-react"
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -18,14 +21,19 @@ import ConnectionError from '../shared/ConnectionError'
 import { cn } from '../../lib/utils'
 import { ModelBrowser, type TopologyNode } from './ModelBrowser'
 
-function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: { 
+export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
+
+function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', onSelect, onStructureParsed }: { 
     url: string, 
     hiddenParts: string[], 
-    onSelect?: (partName: string) => void,
+    selectionMode?: SelectionMode,
+    onSelect?: (partName: string, level: SelectionMode, metadata?: any) => void,
     onStructureParsed?: (nodes: TopologyNode[]) => void
 }) {
   const gltf = useLoader(GLTFLoader, url)
   const meshRef = useRef<THREE.Group>(null!)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
     if (gltf.scene && onStructureParsed) {
@@ -76,9 +84,74 @@ function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: {
             p = p.parent;
         }
         child.visible = !isParentHidden;
+
+        // Apply Highlighting
+        if (child.visible) {
+            const target = findTarget(child);
+            const isSelected = selected === target.id;
+            const isHovered = hovered === target.id;
+
+            if (isSelected) {
+                child.material = new THREE.MeshStandardMaterial({ 
+                    color: '#3b82f6', 
+                    emissive: '#3b82f6', 
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.8
+                });
+            } else if (isHovered) {
+                child.material = new THREE.MeshStandardMaterial({ 
+                    color: '#60a5fa', 
+                    emissive: '#60a5fa', 
+                    emissiveIntensity: 0.2,
+                    transparent: true,
+                    opacity: 0.9
+                });
+            } else {
+                // Restore original material
+                if (child.userData.originalMaterial) {
+                    child.material = child.userData.originalMaterial;
+                }
+            }
+        }
       }
     });
-  }, [gltf, hiddenParts]);
+  }, [gltf, hiddenParts, selected, hovered, selectionMode]);
+
+  // Initial capture of materials
+  useEffect(() => {
+    gltf.scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && !child.userData.originalMaterial) {
+            child.userData.originalMaterial = child.material;
+        }
+    });
+  }, [gltf]);
+
+  // Handle Selection Traversal
+  const findTarget = (mesh: THREE.Mesh): { object: THREE.Object3D, id: string, type: SelectionMode } => {
+    if (selectionMode === 'FACE') {
+        return { object: mesh, id: mesh.name || mesh.uuid, type: 'FACE' };
+    }
+
+    if (selectionMode === 'PART') {
+        let p: THREE.Object3D = mesh;
+        while (p.parent && p.parent !== gltf.scene && !p.name.includes('part')) {
+            p = p.parent;
+        }
+        return { object: p, id: p.name || p.uuid, type: 'PART' };
+    }
+
+    if (selectionMode === 'SUBASSEMBLY') {
+        let p: THREE.Object3D = mesh;
+        // Traverse up to find top-level group or group with children
+        while (p.parent && p.parent !== gltf.scene) {
+            p = p.parent;
+        }
+        return { object: p, id: p.name || p.uuid, type: 'SUBASSEMBLY' };
+    }
+
+    return { object: mesh, id: mesh.name || mesh.uuid, type: 'PART' };
+  };
 
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
@@ -90,10 +163,22 @@ function GlbModel({ url, hiddenParts = [], onSelect, onStructureParsed }: {
           receiveShadow 
           onClick={(e: any) => {
             e.stopPropagation();
-            if (e.object.name && onSelect) {
-              onSelect(e.object.name);
+            if (e.object instanceof THREE.Mesh) {
+              const target = findTarget(e.object);
+              setSelected(target.id);
+              if (onSelect) {
+                onSelect(target.id, target.type, { uuid: target.object.uuid });
+              }
             }
           }}
+          onPointerOver={(e: any) => {
+            e.stopPropagation();
+            if (e.object instanceof THREE.Mesh) {
+                const target = findTarget(e.object);
+                setHovered(target.id);
+            }
+          }}
+          onPointerOut={() => setHovered(null)}
         />
       </Center>
     </Float>
@@ -171,6 +256,7 @@ export default function ModelViewer({
   const [currentTime, setCurrentTime] = useState(0)
   const [showTopology, setShowTopology] = useState(true) // Default to open for Model Browser
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([])
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('PART')
 
   const urls = useMemo(() => {
     const all = [...assetUrls];
@@ -234,13 +320,18 @@ export default function ModelViewer({
                         key={url} 
                         url={url} 
                         hiddenParts={hiddenParts} 
+                        selectionMode={selectionMode}
                         onStructureParsed={setTopologyNodes}
-                        onSelect={(partName) => {
+                        onSelect={(name, level, metadata) => {
                             addToContext({
-                                id: `cad-${partName}`,
+                                id: `cad-${name}`,
                                 type: 'cad',
-                                label: partName,
-                                metadata: { part: partName }
+                                label: name,
+                                metadata: { 
+                                    part: name,
+                                    level: level,
+                                    ...metadata
+                                }
                             });
                         }}
                     />
@@ -303,11 +394,42 @@ export default function ModelViewer({
             <Button 
                 variant="secondary" 
                 size="icon" 
+                title="Toggle Model Browser"
                 className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20", showTopology && "bg-primary text-primary-foreground")}
                 onClick={() => setShowTopology(!showTopology)}
             >
                 <Layers className="h-4 w-4" />
             </Button>
+
+            <div className="flex flex-col gap-1 bg-slate-900/80 backdrop-blur border border-slate-700 p-1 rounded-full shadow-xl mt-2">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    title="Face Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'FACE' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('FACE')}
+                >
+                    <MousePointer2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    title="Part Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'PART' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('PART')}
+                >
+                    <Box className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    title="Subassembly Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'SUBASSEMBLY' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('SUBASSEMBLY')}
+                >
+                    <Component className="h-3.5 w-3.5" />
+                </Button>
+            </div>
         </div>
       </div>
 
