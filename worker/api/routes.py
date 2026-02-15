@@ -22,7 +22,7 @@ from shared.enums import ResponseStatus
 from worker.workbenches.config import load_config
 from worker.workbenches.models import WorkbenchResult
 
-from ..filesystem.backend import FileInfo
+from ..filesystem.backend import FileInfo, SandboxFilesystemBackend, cleanup_session
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
 from ..utils import simulate, submit_for_review, validate, validate_and_price
@@ -384,6 +384,26 @@ async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
         success=False,
         message="Failed to complete merge (conflicts might remain)",
     )
+
+
+@router.delete("/session", response_model=StatusResponse)
+async def delete_session(
+    x_session_id: str = Header(...),
+):
+    """Delete the current session workspace and S3 data."""
+    # Cleanup S3
+    try:
+        # Create S3 backend just for deletion
+        # Note: We don't need a router here, just direct backend access
+        s3_backend = SandboxFilesystemBackend.create(x_session_id)
+        s3_backend.delete_session()
+    except Exception as e:
+        logger.warning("s3_session_cleanup_failed", error=str(e))
+
+    # Cleanup Local
+    cleanup_session(x_session_id)
+
+    return StatusResponse(status=ResponseStatus.SUCCESS)
 
 
 @router.post("/runtime/execute", response_model=ExecuteResponse)

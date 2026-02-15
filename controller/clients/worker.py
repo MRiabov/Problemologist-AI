@@ -304,6 +304,20 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def cleanup_session(self) -> bool:
+        """Cleanup session resources (workspace and S3 data)."""
+        client = await self._get_client()
+        try:
+            response = await client.delete(
+                f"{self.base_url}/session",
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
     async def git_status(self) -> GitStatusResponse:
         """Get repository status."""
         client = await self._get_client()

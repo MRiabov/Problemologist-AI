@@ -123,7 +123,11 @@ def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
     """Test the benchmark simulate endpoint."""
     mock_load.return_value = MagicMock()
     mock_simulate.return_value = MagicMock(
-        success=True, summary="stable", render_paths=[], mjcf_content="<mjcf/>"
+        success=True,
+        summary="stable",
+        render_paths=[],
+        mjcf_content="<mjcf/>",
+        confidence="high",
     )
 
     # Create a dummy events.jsonl to test collection

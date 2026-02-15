@@ -380,6 +380,14 @@ class SandboxFilesystemBackend(BackendProtocol):
             raise FileNotFoundError(f"Path not found: {path}")
         self._fs.rm(s3_path, recursive=True)
 
+    def delete_session(self) -> None:
+        """Delete the entire session directory in S3."""
+        session_id = self._session_manager.get_session_id()
+        path = f"{self._bucket}/{session_id}/"
+        if self._fs.exists(path):
+            self._fs.rm(path, recursive=True)
+            logger.info("s3_session_deleted", session_id=session_id)
+
 
 # Global registry to keep TemporaryDirectory objects alive for the duration of the worker process.
 # This ensures that session directories persist across multiple requests but are cleaned up on exit.
@@ -396,6 +404,14 @@ def get_session_root(session_id: str) -> Path:
         logger.info("session_directory_created", session_id=session_id, path=td.name)
 
     return Path(_SESSION_DIR_REGISTRY[session_id].name)
+
+
+def cleanup_session(session_id: str) -> None:
+    """Cleanup session resources (temporary directory)."""
+    if session_id in _SESSION_DIR_REGISTRY:
+        td = _SESSION_DIR_REGISTRY.pop(session_id)
+        td.cleanup()
+        logger.info("session_directory_cleaned_up", session_id=session_id)
 
 
 @type_check

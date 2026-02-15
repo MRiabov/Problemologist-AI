@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
@@ -307,6 +308,27 @@ async def delete_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_d
     episode = result.scalar_one_or_none()
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
+
+    # Determine session ID for worker cleanup
+    worker_session_id = None
+    if episode.metadata_vars:
+        worker_session_id = episode.metadata_vars.get("worker_session_id")
+    if not worker_session_id:
+        worker_session_id = str(episode_id)
+
+    # Cleanup worker session (best effort)
+    try:
+        worker_url = settings.worker_url
+        async with httpx.AsyncClient() as http_client:
+            client = WorkerClient(worker_url, worker_session_id, http_client)
+            await client.cleanup_session()
+    except Exception as e:
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.warning(
+            "worker_cleanup_failed", episode_id=str(episode_id), error=str(e)
+        )
 
     await db.delete(episode)
     await db.commit()
