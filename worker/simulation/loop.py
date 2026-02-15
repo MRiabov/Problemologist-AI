@@ -15,37 +15,13 @@ from shared.observability.schemas import (
 )
 from shared.simulation.backends import SimulationScene, SimulatorBackendType
 from worker.simulation.factory import get_physics_backend
+from shared.models.simulation import (
+    StressSummary,
+    FluidMetricResult,
+    SimulationMetrics,
+)
 
 logger = structlog.get_logger(__name__)
-
-
-class StressSummary(BaseModel):
-    part_label: str
-    max_von_mises_pa: float
-    mean_von_mises_pa: float
-    safety_factor: float  # yield_stress / max_von_mises
-    location_of_max: tuple[float, float, float]
-    utilization_pct: float  # max_stress / yield_stress * 100
-
-
-class FluidMetricResult(BaseModel):
-    metric_type: str  # "fluid_containment" | "flow_rate"
-    fluid_id: str
-    measured_value: float
-    target_value: float
-    passed: bool
-
-
-class SimulationMetrics(BaseModel):
-    total_time: StrictFloat
-    total_energy: StrictFloat
-    max_velocity: StrictFloat
-    success: StrictBool
-    fail_reason: StrictStr | None = None
-    stress_summaries: list[StressSummary] = []
-    stress_fields: dict[str, dict] = {}  # part_label -> {"nodes": ..., "stress": ...}
-    fluid_metrics: list[FluidMetricResult] = []
-    confidence: StrictStr = "high"
 
 
 # Hard cap on simulation time per architecture spec
@@ -591,6 +567,9 @@ class SimulationLoop:
                 # This might need adjustment as render_callback usually takes model/data
                 # For now, we might skip it or pass the backend
                 pass
+
+        # Final stress evaluation
+        self.stress_summaries = self.backend.get_stress_summaries()
 
         # Final fluid objectives evaluation (eval_at='end')
         if self.objectives and self.objectives.objectives:
