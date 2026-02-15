@@ -155,6 +155,33 @@ class SkillsNode:
             skill_content = parts[1].strip()
 
             file_path = self.suggested_skills_dir / f"{title}.md"
+
+            # T023: Skill Safety Toggle - limit deletions to 15 lines
+            if file_path.exists():
+                from difflib import unified_diff
+
+                old_content = file_path.read_text().splitlines()
+                new_content = skill_content.splitlines()
+
+                diff = list(unified_diff(old_content, new_content, lineterm="", n=0))
+                # Count lines starting with '-' but skip the header '---'
+                deleted_lines = [
+                    line
+                    for line in diff
+                    if line.startswith("-") and not line.startswith("---")
+                ]
+
+                if len(deleted_lines) > 15:
+                    logger.warning(
+                        f"Skill update for {title} blocked: too many deletions ({len(deleted_lines)} > 15)"
+                    )
+                    return state.model_copy(
+                        update={
+                            "journal": state.journal
+                            + f"\nSidecar Learner: Update to skill '{title}' blocked due to safety toggle (too many deletions)."
+                        }
+                    )
+
             with file_path.open("w") as f:
                 f.write(skill_content)
             suggested_skill = title

@@ -15,6 +15,13 @@ from .nodes.cots_search import cots_search_node
 from .state import AgentState, AgentStatus
 
 
+def should_skip_to_reviewer(state: AgentState) -> str:
+    """Route directly to reviewer if plan is refused."""
+    if state.status == AgentStatus.PLAN_REFUSED:
+        return "reviewer"
+    return "electronics_engineer"
+
+
 def should_continue(state: AgentState) -> str:
     """Route after reviewer based on approval status."""
     if state.turn_count >= settings.max_agent_turns:
@@ -50,7 +57,14 @@ builder.add_node("skills", skills_node)
 # Set the entry point and edges
 builder.add_edge(START, "planner")
 builder.add_edge("planner", "coder")
-builder.add_edge("coder", "electronics_engineer")
+builder.add_conditional_edges(
+    "coder",
+    should_skip_to_reviewer,
+    {
+        "reviewer": "reviewer",
+        "electronics_engineer": "electronics_engineer",
+    },
+)
 builder.add_edge("electronics_engineer", "reviewer")
 
 # Conditional routing from reviewer

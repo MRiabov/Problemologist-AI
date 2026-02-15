@@ -22,6 +22,8 @@ class CriticDecision(StrEnum):
     APPROVE = "APPROVE"
     REJECT_PLAN = "REJECT_PLAN"
     REJECT_CODE = "REJECT_CODE"
+    CONFIRM_PLAN_REFUSAL = "CONFIRM_PLAN_REFUSAL"
+    REJECT_PLAN_REFUSAL = "REJECT_PLAN_REFUSAL"
 
 
 @type_check
@@ -54,6 +56,7 @@ class ReviewerNode:
             if sim_report
             else "No simulation report found.",
             mfg_report=mfg_report or "No manufacturability report found.",
+            status=state.status,
         )
 
         response = await self.llm.ainvoke([HumanMessage(content=prompt)])
@@ -87,6 +90,10 @@ class ReviewerNode:
                     decision = CriticDecision.REJECT_PLAN
                 elif decision_str == "REJECT_CODE":
                     decision = CriticDecision.REJECT_CODE
+                elif decision_str == "CONFIRM_PLAN_REFUSAL":
+                    decision = CriticDecision.CONFIRM_PLAN_REFUSAL
+                elif decision_str == "REJECT_PLAN_REFUSAL":
+                    decision = CriticDecision.REJECT_PLAN_REFUSAL
 
                 required_fixes = data.get("required_fixes", [])
                 if required_fixes:
@@ -105,6 +112,8 @@ class ReviewerNode:
             CriticDecision.APPROVE: AgentStatus.APPROVED,
             CriticDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
             CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+            CriticDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.PLAN_REJECTED,
+            CriticDecision.REJECT_PLAN_REFUSAL: AgentStatus.CODE_REJECTED,
         }
 
         # Emit ReviewDecisionEvent for observability

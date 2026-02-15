@@ -56,7 +56,21 @@ class CoderNode:
                 "engineer", current_step=current_step, error=last_error, plan=state.plan
             )
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
-            code = self._extract_code(str(response.content))
+            content = str(response.content)
+
+            # T019: Plan Refusal Logic
+            if "[REFUSE_PLAN]" in content:
+                logger.info("plan_refused_by_coder", session_id=state.session_id)
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.PLAN_REFUSED,
+                        "journal": state.journal
+                        + f"\n[Coder] Refused plan at step '{current_step}':\n{content}",
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
+
+            code = self._extract_code(content)
 
             # 2. Execute code (T012)
             # Note: T012 mentions Temporal, but since WP06 is planned,

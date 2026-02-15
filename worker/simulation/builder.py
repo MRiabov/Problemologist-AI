@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
-import logging
+
+import structlog
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from pathlib import Path
+import lxml.etree as LET
 from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
@@ -23,7 +25,7 @@ from shared.cots.parts.motors import ServoMotor
 if TYPE_CHECKING:
     from shared.models.schemas import MovingPart, ObjectivesYaml
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class MeshProcessor:
@@ -178,7 +180,7 @@ class SceneCompiler:
 
         # Basic configuration
         self.compiler = ET.SubElement(
-            self.root, "compiler", angle="degree", coordinate="local", assetdir="assets"
+            self.root, "compiler", angle="degree", coordinate="local", meshdir="assets"
         )
         ET.SubElement(self.root, "option", integrator="RK4", timestep="0.002")
         self.actuators = ET.SubElement(self.root, "actuator")
@@ -418,6 +420,36 @@ class SceneCompiler:
     def save(self, path: Path):
         """Saves the MJCF XML to a file."""
         xml_str = ET.tostring(self.root, encoding="utf-8")
+
+        # T004: MJCF XML Schema Validation
+        try:
+            # Locate schema relative to this file
+            schema_path = (
+                Path(__file__).parent.parent.parent
+                / "shared"
+                / "assets"
+                / "schemas"
+                / "mjcf"
+                / "mujoco.xsd"
+            )
+            if schema_path.exists():
+                schema = LET.XMLSchema(LET.parse(str(schema_path)))
+                parser = LET.XMLParser(schema=schema)
+                LET.fromstring(xml_str, parser)
+                logger.info("mjcf_xml_validation_passed")
+            else:
+                logger.warning(
+                    "mjcf_schema_not_found_skipping_validation", path=str(schema_path)
+                )
+        except LET.XMLSyntaxError as e:
+            logger.error("mjcf_xml_syntax_error", error=str(e))
+            raise ValueError(f"Generated MJCF has syntax errors: {e}")
+        except LET.XMLSchemaError as e:
+            logger.error("mjcf_xml_validation_failed", error=str(e))
+            raise ValueError(f"Generated MJCF failed schema validation: {e}")
+        except Exception as e:
+            logger.warning("mjcf_xml_validation_skipped_due_to_error", error=str(e))
+
         pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:

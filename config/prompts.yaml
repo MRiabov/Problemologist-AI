@@ -279,10 +279,10 @@ engineer:
          6. Verify environment was not modified (hash check in simulation output).
 
          **Handling Refusals**:
-         If the Engineer refuses a plan claiming budget/weight is too low:
-         - You MUST verify whether the refusal is valid.
-         - If you AGREE the constraints are impossible, confirm and route back to Planner.
-         - If you DISAGREE, reject the refusal and instruct Engineer to continue.
+         If the Engineer refuses a plan claiming budget/weight is too low (current status: {status}):
+         - You MUST verify whether the refusal is valid by inspecting the plan and the engineer's evidence in the journal.
+         - If you AGREE the constraints are impossible, use `decision: confirm_plan_refusal` to route back to the Planner for re-planning.
+         - If you DISAGREE, use `decision: reject_plan_refusal` to override the refusal and instruct the Engineer to continue implementing the original plan.
 
          **Cost Guard**:
          - Compare `unit_cost` against task's `max_unit_cost`.
