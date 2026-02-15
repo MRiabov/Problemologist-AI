@@ -58,7 +58,7 @@ This document breaks down the implementation of the Steerability framework into 
 **Goal**: Add multi-level selection modes and the mode toggle to the CAD viewer.
 **Independent Test**: UI verification that toggling modes correctly changes selection behavior in `three-cad-viewer`.
 
-- [ ] **T010**: Update frontend `CADViewer` component to support selection modes (Face, Part, Subassembly) and UI toggle.
+- [x] **T010**: Update frontend `CADViewer` component to support selection modes (Face, Part, Subassembly) and UI toggle.
 
 **Estimated Prompt Size**: ~350 lines
 
