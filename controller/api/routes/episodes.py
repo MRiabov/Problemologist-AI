@@ -145,6 +145,9 @@ class ReviewRequest(BaseModel):
 
 class MessageRequest(BaseModel):
     message: StrictStr
+    metadata_vars: dict | None = Field(
+        None, description="Additional metadata for the message."
+    )
 
     @field_validator("message")
     @classmethod
@@ -216,6 +219,7 @@ async def continue_episode(
         continue_agent_task(
             episode_id,
             request.message,
+            metadata=request.metadata_vars,
         )
     )
     task_tracker.register_task(episode_id, task)
