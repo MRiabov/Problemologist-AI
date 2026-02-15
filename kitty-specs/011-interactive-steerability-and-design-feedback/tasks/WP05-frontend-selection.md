@@ -1,10 +1,10 @@
 ---
 work_package_id: "WP05"
 title: "Frontend Selection & Toggles"
-lane: "doing"
+lane: "for_review"
 dependencies: []
 subtasks: ["T009"]
-agent: "Gemini"
+agent: "gemini-cli"
 shell_pid: "132921"
 ---
 
@@ -41,3 +41,4 @@ Update the `three-cad-viewer` integration to support multiple selection levels (
 ## Activity Log
 
 - 2026-02-15T10:26:55Z – Gemini – shell_pid=132921 – lane=doing – Started review via workflow command
+- 2026-02-15T10:55:21Z – gemini-cli – shell_pid=132921 – lane=for_review – Implemented multi-level selection (FACE, PART, SUBASSEMBLY) in ModelViewer. Added floating UI toggle for selection modes. Implemented automatic scene graph traversal for hierarchical selection and visual highlighting of selected groups.
