@@ -8,31 +8,44 @@ import trimesh
 logger = logging.getLogger(__name__)
 
 
-def repair_mesh(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
+class MeshProcessingError(Exception):
+    """Raised when mesh processing (repair or tetrahedralization) fails."""
+
+    pass
+
+
+def repair_mesh(mesh: trimesh.Trimesh, max_attempts: int = 3) -> trimesh.Trimesh:
     """Repairs a mesh to ensure it is watertight and manifold.
 
     Args:
         mesh: Input trimesh object.
+        max_attempts: Number of times to try repairing the mesh.
 
     Returns:
         Repaired trimesh object.
+
+    Raises:
+        MeshProcessingError: If the mesh cannot be repaired after max_attempts.
     """
-    if mesh.is_watertight and mesh.is_winding_consistent:
-        return mesh
+    for attempt in range(max_attempts):
+        if mesh.is_watertight and mesh.is_winding_consistent:
+            return mesh
 
-    logger.info("Mesh is not watertight or has inconsistent winding, attempting repair")
+        logger.info(
+            f"Attempt {attempt + 1}/{max_attempts}: Mesh is not watertight or has inconsistent winding, attempting repair"
+        )
 
-    # Remove duplicate/unreferenced parts
-    mesh.remove_duplicate_faces()
-    mesh.remove_infinite_values()
-    mesh.remove_unreferenced_vertices()
+        # process() merges vertices, removes duplicate/degenerate faces and unreferenced vertices
+        mesh.process()
 
-    # Repair normals and fill holes
-    mesh.fix_normals()
-    mesh.fill_holes()
+        # Repair normals and fill holes
+        mesh.fix_normals()
+        mesh.fill_holes()
 
-    # If still not watertight, try a more aggressive approach if needed
-    # but for now, these are the standard safe repairs.
+    if not mesh.is_watertight:
+        raise MeshProcessingError(
+            "Mesh failed to become watertight after multiple repair attempts."
+        )
 
     return mesh
 
@@ -72,17 +85,23 @@ def tetrahedralize(
 
     Returns:
         Path to the generated .msh file.
+
+    Raises:
+        MeshProcessingError: If tetrahedralization fails.
     """
     if not input_path.exists():
         raise FileNotFoundError(f"Input mesh not found: {input_path}")
 
-    if method == "gmsh":
-        return _tetrahedralize_gmsh(input_path, output_msh_path, refine_level)
-    elif method == "tetgen":
-        # Fallback to T006 implementation if gmsh is unavailable or fails
-        return _tetrahedralize_tetgen(input_path, output_msh_path)
-    else:
-        raise ValueError(f"Unknown tetrahedralization method: {method}")
+    try:
+        if method == "gmsh":
+            return _tetrahedralize_gmsh(input_path, output_msh_path, refine_level)
+        elif method == "tetgen":
+            return _tetrahedralize_tetgen(input_path, output_msh_path)
+        else:
+            raise ValueError(f"Unknown tetrahedralization method: {method}")
+    except Exception as e:
+        logger.error(f"Tetrahedralization failed using {method}: {e}")
+        raise MeshProcessingError(f"Tetrahedralization failed: {e}") from e
 
 
 def _tetrahedralize_gmsh(
@@ -111,7 +130,7 @@ def _tetrahedralize_gmsh(
         loop_tag = gmsh.model.geo.addSurfaceLoop(surface_tags)
 
         # Add a volume
-        volume_tag = gmsh.model.geo.addVolume([loop_tag])
+        gmsh.model.geo.addVolume([loop_tag])
         gmsh.model.geo.synchronize()
 
         # Optional: refine mesh size
@@ -125,43 +144,36 @@ def _tetrahedralize_gmsh(
         # Optimize 3D mesh for better quality
         gmsh.model.mesh.optimize("Netgen")
 
-        # Save as .msh (Genesis usually prefers Version 4 ASCII)
+        # Save as .msh
         output_msh_path.parent.mkdir(parents=True, exist_ok=True)
         gmsh.write(str(output_msh_path))
 
         return output_msh_path
-    except Exception as e:
-        logger.error(f"Gmsh tetrahedralization failed: {e}")
-        raise RuntimeError(f"Gmsh failed: {e}") from e
     finally:
         if gmsh.isInitialized():
             gmsh.finalize()
 
 
 def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
-    """Fallback implementation using TetGen CLI (if installed)."""
+    """Fallback implementation using TetGen CLI."""
     import subprocess
 
-    # Existing TetGen logic...
-    # (Simplified for now as Gmsh is preferred)
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_stl = Path(tmpdir) / input_path.name
         tmp_stl.write_bytes(input_path.read_bytes())
 
+        # -p: Tetrahedralize a piecewise linear complex
+        # -q: Quality mesh generation. A minimum radius-edge ratio may be specified.
         cmd = ["tetgen", "-pq1.2", str(tmp_stl)]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
             raise RuntimeError(f"TetGen failed: {result.stderr}")
 
-        node_file = tmp_stl.with_suffix(".1.node")
-        ele_file = tmp_stl.with_suffix(".1.ele")
-
-        # TetGen to MSH conversion would go here if needed.
-        # For now, we favor Gmsh which produces .msh directly.
-        output_msh_path.parent.mkdir(parents=True, exist_ok=True)
-        # Note: This is a placeholder for real conversion if Gmsh fails.
-        node_file.rename(output_msh_path.with_suffix(".node"))
-        ele_file.rename(output_msh_path.with_suffix(".ele"))
-
-        return output_msh_path
+        # TetGen produces .node and .ele files.
+        # This is just a placeholder to show where we'd handle TetGen output.
+        # For Genesis, we really want .msh format which Gmsh provides natively.
+        # If we must use TetGen, we'd need a converter.
+        raise NotImplementedError(
+            "TetGen to MSH conversion is not yet implemented. Use Gmsh."
+        )
