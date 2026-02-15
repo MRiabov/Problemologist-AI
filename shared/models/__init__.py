@@ -8,6 +8,12 @@ from .schemas import (
     ObjectivesYaml,
     ReviewFrontmatter,
 )
+from .steerability import (
+    CodeReference,
+    GeometricSelection,
+    SelectionLevel,
+    SteerablePrompt,
+)
 
 __all__ = [
     "BoundingBox",
@@ -17,4 +23,8 @@ __all__ = [
     "ObjectivesSection",
     "ObjectivesYaml",
     "ReviewFrontmatter",
+    "CodeReference",
+    "GeometricSelection",
+    "SelectionLevel",
+    "SteerablePrompt",
 ]
