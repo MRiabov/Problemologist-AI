@@ -16,6 +16,11 @@ Your goal is to plan the following task: {{ task }}
 Available skills:
 {{ skills }}
 
+{% if steer_context %}
+User Interaction / Steering:
+{{ steer_context }}
+{% endif %}
+
 Instructions:
 1. Analyze the task and available skills.
 2. If there are electronics requirements (motors, power supplies), ensure the plan includes circuit design and wire routing steps.
