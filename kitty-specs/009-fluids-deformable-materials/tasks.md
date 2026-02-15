@@ -37,10 +37,10 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Priority**: P1
 **Estimated Prompt Size**: ~300 lines
 **Subtasks**:
-- [ ] **T006**: Extend `manufacturing_config.yaml` with FEM fields (Young's modulus, Poisson ratio, etc.).
-- [ ] **T007**: Implement `tetrahedralize_mesh` utility using Gmsh/TetGen in `worker/utils/mesh_utils.py`.
-- [ ] **T008**: Implement mesh repair logic in `worker/utils/mesh_utils.py` using `trimesh`.
-- [ ] **T009**: Update asset generation to produce `.msh` files for Genesis when `fem_enabled` is true.
+- [x] T006: Extend `manufacturing_config.yaml` with FEM fields (Young's modulus, Poisson ratio, etc.).
+- [x] T007: Implement `tetrahedralize_mesh` utility using Gmsh/TetGen in `worker/utils/mesh_utils.py`.
+- [x] T008: Implement mesh repair logic in `worker/utils/mesh_utils.py` using `trimesh`.
+- [x] T009: Update asset generation to produce `.msh` files for Genesis when `fem_enabled` is true.
 
 **Dependencies**: WP01
 **Implementation Sketch**: Add fields to config, then build the mesh processing utilities, then hook them into the asset generator.
