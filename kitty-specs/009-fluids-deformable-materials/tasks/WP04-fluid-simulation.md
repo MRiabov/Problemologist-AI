@@ -1,9 +1,13 @@
 ---
 work_package_id: WP04
 title: Fluid Simulation (MPM)
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: 62c53482cecdee76571b526d639b29a6a3949f4f
+created_at: '2026-02-15T10:45:15.043718+00:00'
 subtasks: [T014, T015, T016, T017]
+shell_pid: "156375"
 ---
 
 # WP04: Fluid Simulation (MPM)
