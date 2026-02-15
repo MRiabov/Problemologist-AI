@@ -8,6 +8,7 @@ base_commit: 796a208b00640600aa94c20604bb5a7ccf216a7e
 created_at: '2026-02-15T09:49:14.986957+00:00'
 subtasks: [T010, T011, T012, T013]
 shell_pid: "98628"
+agent: "Gemini"
 ---
 
 # WP03: Genesis FEM Implementation
@@ -52,3 +53,7 @@ This is the core physics implementation. We are moving from rigid-body to FEM. G
 ## Risks
 - Numerical instability in the FEM solver (NaNs).
 - Significant slowdown compared to rigid-body simulation.
+
+## Activity Log
+
+- 2026-02-15T09:49:15Z – Gemini – shell_pid=98628 – lane=doing – Assigned agent via workflow command
