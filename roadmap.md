@@ -76,6 +76,7 @@ We focus on more rigid body than softer materials, i.e. plastic over foam.
       - And how do we do it?
    - However obviously, in production systems, all fluids are in pumps, they are not flowing freely.
 4. (extra, not strictly required) Goals based on fluids? E.g. a fluid would reach a particular part of the screen, or would be connected to it.
+5. Adding CAD to be able to design pipes and other vessels.
 
 #### Agents
 
@@ -231,24 +232,24 @@ This is out of scope and will not be considered.
 
 ### Work package 4 - Adaptability
 
-Just like we can prompt the Cursor or Claude code to make edits, we have to be able to allow engineers propmt too.
-Up until now, all we did was a closed-loop system - we generate benchmarks from a prompt, it gets generated, then sent to an engineering LLM to be solved, it tries until succeeds/fails, and then further.
-
-Basically, we need to hone the model to use CAD so well that it would be able to make changes to CAD on the fly (e.g. - move this part 20cm backwards and constrain it with 4 M5 bolts). Right now, it fails.
-
-it's not necessarily a difficult piece of work, but, it'll need to plan it's changes, and execute on it.
+Enabling iterative refinement where engineers act as a "Co-pilot". This is the **Human-in-the-loop** steerability feature, allowing users to guide the agent through direct intervention.
 
 #### Work necessary
 
-1. New prompts
-2. Adding CAD to be able to design pipes and other vessels.
-3. Tuning the agent
-4. A dataset of improvements. Notably, this is pretty easy to do, as we have a Critic model that would suggest improvements from day 1.
-5. Extra: users can click on a certain face and say "move something on this face". The issue is that it would require, again, propmts, and a CAD viewer in frontend (4-8 hours of work?). But it's a *good* extra.
+1. **Hybrid Interface**: Integrate `three-cad-viewer` (topology/selection) and a Mesh viewer (R3F for simulation/stress).
+2. **Steerability with Exact Pointing**:
+    - Allow users to select faces, edges, or volumes in the UI and "attach" them to prompts.
+    - Implement "@-mention" support for the assembly tree to target specific parts.
+3. **Steering Code Directly**: Enable referencing specific code lines (e.g., `@model.py:120-125`) in chat for targeted edits.
+4. **Prompt Intervention**: Optimize backend/prompts so the agent correctly interprets human corrections to its previous plans or traces.
+5. **Semantic Selector Generation**: Train the agent to translate interactive `face_idx` selections into robust `build123d` code (e.g. `faces().sort_by(Axis.Z)[-1]`).
 
-#### Tech stack
+#### Technology stack
 
-1. New prompts. LangFuse for evaluation.
+1. **three-cad-viewer**: Primary for topological selection, metadata inspection, and exact pointing.
+2. **@react-three/fiber**: (Existing) Reserved for high-fidelity simulation playback, stress heatmaps, and fluid visualization.
+3. **Redis/Session Store**: High-performance persistence for design state across multi-turn refinement.
+4. **Line-targetted Edits**: Logic for parsing and fetching requested code ranges for the agent.
 
 ### Work package 4 - Topology optimization (extra cool)
 
