@@ -20,58 +20,57 @@ from worker.simulation.factory import get_simulation_builder
 logger = structlog.get_logger(__name__)
 
 
-def prerender_24_views(component: Compound, output_dir: str | None = None) -> list[str]:
+def prerender_24_views(
+    component: Compound,
+    output_dir: str | None = None,
+    backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+) -> list[str]:
     """
-    Generates 24 renders (8 angles x 3 elevation levels) of the component using MuJoCo.
+    Generates 24 renders (8 angles x 3 elevation levels) of the component.
     Saves to output_dir.
     """
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
 
     output_path = Path(output_dir)
-    logger.info("prerender_24_views_start", output_dir=str(output_path))
+    logger.info(
+        "prerender_24_views_start", output_dir=str(output_path), backend=backend_type
+    )
     output_path.mkdir(parents=True, exist_ok=True)
 
     saved_files = []
 
     try:
-        # 1. Build MJCF using get_simulation_builder
+        # 1. Build Scene using get_simulation_builder
         with TemporaryDirectory() as temp_build_dir:
             build_dir = Path(temp_build_dir)
             builder = get_simulation_builder(
-                output_dir=build_dir, backend_type=SimulatorBackendType.MUJOCO
+                output_dir=build_dir, backend_type=backend_type
             )
             scene_path = builder.build_from_assembly(component)
 
-            # 2. Load into MuJoCo
-            import mujoco
+            # 2. Initialize Backend
+            from shared.simulation.backends import SimulationScene
+            from worker.simulation.factory import get_physics_backend
 
-            model = mujoco.MjModel.from_xml_path(str(scene_path))
-            data = mujoco.MjData(model)
+            backend = get_physics_backend(backend_type)
+            scene = SimulationScene(scene_path=str(scene_path))
+            backend.load_scene(scene)
 
-            # Step once to initialize positions
-            mujoco.mj_step(model, data)
+            # Step once if needed to initialize positions
+            backend.step(0.002)
 
-            # 3. Initialize Renderer
-            width, height = 640, 480
-            renderer = mujoco.Renderer(model, height, width)
-
-            # 4. Setup Camera
-            cam = mujoco.MjvCamera()
-            mujoco.mjv_defaultCamera(cam)
-
-            # Center the camera on the object
+            # 3. Setup Camera Parameters
             bbox = component.bounding_box()
-            center = [
+            center = (
                 (bbox.min.X + bbox.max.X) / 2,
                 (bbox.min.Y + bbox.max.Y) / 2,
                 (bbox.min.Z + bbox.max.Z) / 2,
-            ]
-            cam.lookat = np.array(center)
+            )
 
             # Distance based on bbox size
             diag = np.sqrt(bbox.size.X**2 + bbox.size.Y**2 + bbox.size.Z**2)
-            cam.distance = max(diag * 1.5, 0.5)
+            distance = max(diag * 1.5, 0.5)
 
             # 8 horizontal angles
             angles = [0, 45, 90, 135, 180, 225, 270, 315]
@@ -82,22 +81,37 @@ def prerender_24_views(component: Compound, output_dir: str | None = None) -> li
                 -75,
             ]  # MuJoCo uses negative elevation for looking down
 
+            width, height = 640, 480
+
             for elevation in elevations:
                 for angle in angles:
                     filename = f"render_e{abs(elevation)}_a{angle}.png"
                     filepath = output_path / filename
 
-                    cam.elevation = elevation
-                    cam.azimuth = angle
+                    # Calculate camera position from orbit
+                    # azim=angle, elev=elevation
+                    # MuJoCo orbit logic:
+                    rad_azim = np.deg2rad(angle)
+                    rad_elev = np.deg2rad(elevation)
+
+                    # Simplified orbit calculation
+                    x = center[0] + distance * np.cos(rad_elev) * np.sin(rad_azim)
+                    y = center[1] - distance * np.cos(rad_elev) * np.cos(rad_azim)
+                    z = center[2] - distance * np.sin(rad_elev)
+
+                    backend.set_camera(
+                        "prerender", pos=(x, y, z), lookat=center, up=(0, 0, 1)
+                    )
 
                     # Render
-                    renderer.update_scene(data, camera=cam)
-                    frame = renderer.render()
+                    frame = backend.render_camera("prerender", width, height)
 
                     # Save using PIL
                     img = Image.fromarray(frame)
                     img.save(filepath, "PNG")
                     saved_files.append(str(filepath))
+
+            backend.close()
 
         logger.info("prerender_complete", count=len(saved_files))
         return saved_files

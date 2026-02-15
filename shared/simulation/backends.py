@@ -75,6 +75,16 @@ class PhysicsBackend(Protocol):
     def render_camera(
         self, camera_name: str, width: int, height: int
     ) -> np.ndarray: ...
+
+    def set_camera(
+        self,
+        camera_name: str,
+        pos: tuple[float, float, float] | None = None,
+        lookat: tuple[float, float, float] | None = None,
+        up: tuple[float, float, float] | None = None,
+        fov: float | None = None,
+    ) -> None: ...
+
     def get_camera_matrix(self, camera_name: str) -> np.ndarray: ...
 
     # Advanced interactions (superset of MuJoCo)
