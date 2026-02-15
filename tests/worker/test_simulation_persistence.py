@@ -47,6 +47,9 @@ def mock_simulation_dependencies():
             max_velocity=1.0,
             success=True,
             stress_summaries=[stress_summary],
+            stress_fields={
+                "part1": {"nodes": [[0, 0, 0], [1, 1, 1]], "stress": [100.0, 50.0]}
+            },
             fluid_metrics=[],
         )
         mock_loop.step.return_value = mock_metrics
@@ -100,7 +103,7 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
     # Mock output_dir for preview_stress to be tmp_path
     paths = preview_stress(component, output_dir=tmp_path)
     assert len(paths) > 0
-    assert "stress_placeholder.png" in paths[0]
+    assert "stress_part1.png" in paths[0]
 
     # Verify global state is restored
     assert validation.LAST_SIMULATION_RESULT is not None

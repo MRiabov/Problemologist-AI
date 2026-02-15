@@ -64,9 +64,34 @@ class GenesisBackend(PhysicsBackend):
             return
 
         # Create new scene if not provided
-        self.scene = gs.Scene(show_viewer=False)
+        self.scene = gs.Scene(
+            show_viewer=False,
+            vis_options=gs.options.VisOptions(
+                particle_size=0.01,
+                render_particle=True,
+            ),
+        )
 
-        if scene.scene_path and scene.scene_path.endswith(".json"):
+        if scene.scene_path and (
+            scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
+        ):
+            try:
+                # Load MJCF directly
+                mjcf_entity = self.scene.add_entity(
+                    gs.morphs.MJCF(file=scene.scene_path)
+                )
+                # Genesis loads all bodies from MJCF into a single entity
+                self.entities["mjcf_scene"] = mjcf_entity
+                logger.debug("genesis_mjcf_loaded", path=scene.scene_path)
+                try:
+                    links = mjcf_entity.get_links()
+                    logger.debug("genesis_mjcf_links", names=[l.name for l in links])
+                except Exception as e:
+                    logger.debug("genesis_mjcf_get_links_failed", error=str(e))
+            except Exception as e:
+                logger.error("failed_to_load_mjcf_in_genesis", error=str(e))
+
+        elif scene.scene_path and scene.scene_path.endswith(".json"):
             import json
             from pathlib import Path
 
@@ -140,6 +165,10 @@ class GenesisBackend(PhysicsBackend):
                     self.motors = data.get("motors", [])
                     for fluid_cfg in data.get("fluids", []):
                         vol = fluid_cfg["initial_volume"]
+                        color = fluid_cfg.get("color", [0, 0, 200])
+                        # Convert 0-255 to 0-1 and add alpha for transparency
+                        color_f = tuple([c / 255.0 for c in color] + [0.8])
+
                         material = gs.materials.MPM.Liquid(
                             rho=1000,
                         )
@@ -149,6 +178,7 @@ class GenesisBackend(PhysicsBackend):
                                 gs.morphs.Box(
                                     pos=vol["center"],
                                     size=vol["size"],
+                                    color=color_f,
                                 ),
                                 material=material,
                             )
@@ -189,7 +219,28 @@ class GenesisBackend(PhysicsBackend):
         return StepResult(time=self.current_time, success=True)
 
     def get_body_state(self, body_id: str) -> BodyState:
+        logger.debug("genesis_get_body_state_request", body_id=body_id)
         if body_id not in self.entities:
+            # Check links within MJCF entities
+            for ent in self.entities.values():
+                try:
+                    # In Genesis, if it's an MJCF entity, we can search links by name
+                    link = ent.get_link(body_id)
+                    if link:
+                        logger.debug("genesis_link_state_found", body_id=body_id)
+                        return BodyState(
+                            pos=link.get_pos().tolist(),
+                            quat=link.get_quat().tolist(),
+                            vel=link.get_vel().tolist(),
+                            angvel=link.get_angvel().tolist(),
+                        )
+                except Exception as e:
+                    logger.debug(
+                        "genesis_get_link_failed", body_id=body_id, error=str(e)
+                    )
+                    continue
+
+            logger.debug("genesis_body_not_found", body_id=body_id)
             return BodyState(
                 pos=(0, 0, 0), quat=(1, 0, 0, 0), vel=(0, 0, 0), angvel=(0, 0, 0)
             )
@@ -275,9 +326,9 @@ class GenesisBackend(PhysicsBackend):
             # Create with default res, will be updated by render_camera if needed
             cam = self.scene.add_camera(res=(640, 480))
             self.cameras[camera_name] = cam
-        
+
         cam = self.cameras[camera_name]
-        
+
         # Genesis cameras use set_pose or similar
         # Based on Genesis 0.3.x: cam.set_pose(pos=..., lookat=..., up=...)
         kwargs = {}
@@ -287,10 +338,10 @@ class GenesisBackend(PhysicsBackend):
             kwargs["lookat"] = lookat
         if up is not None:
             kwargs["up"] = up
-        
+
         if kwargs:
             cam.set_pose(**kwargs)
-        
+
         if fov is not None:
             # cam.fov = fov
             pass
@@ -381,7 +432,22 @@ class GenesisBackend(PhysicsBackend):
                         )
 
     def get_all_body_names(self) -> list[str]:
-        return list(self.entities.keys())
+        names = list(self.entities.keys())
+        for ent in self.entities.values():
+            try:
+                # Add link names if it's an articulated entity
+                for link in ent.get_links():
+                    logger.debug(
+                        "genesis_link_found",
+                        entity=ent.name if hasattr(ent, "name") else "unknown",
+                        link=link.name,
+                    )
+                    if link.name not in names:
+                        names.append(link.name)
+            except Exception as e:
+                logger.debug("genesis_get_links_failed", error=str(e))
+                continue
+        return names
 
     def get_all_actuator_names(self) -> list[str]:
         return [m["part_name"] for m in getattr(self, "motors", [])]
