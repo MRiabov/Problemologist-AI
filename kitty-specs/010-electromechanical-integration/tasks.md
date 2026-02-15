@@ -64,12 +64,12 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: High
 - **Success Criteria**: The agent can design circuits and route wires autonomously in the graph.
 - **Subtasks**:
-    - [ ] T019: [P] Create `controller/agent/nodes/electronics_engineer.py` node.
-    - [ ] T020: [P] Define Electrical Engineer system prompt in `config/prompts.yaml`.
-    - [ ] T021: [P] Implement tools for Electrical Engineer: `validate_circuit`, `route_wire`, `search_electrical_cots`.
-    - [ ] T022: [P] Update `controller/agent/graph.py` with handover logic (Mech -> Elec -> Reviewer).
-    - [ ] T023: [P] Implement `todo.md` checklist generation for electrical tasks.
-    - [ ] T024: [P] Add integration tests for the Mech+Elec agent loop.
+    - [x] T019: [P] Create `controller/agent/nodes/electronics_engineer.py` node.
+    - [x] T020: [P] Define Electrical Engineer system prompt in `config/prompts.yaml`.
+    - [x] T021: [P] Implement tools for Electrical Engineer: `validate_circuit`, `route_wire`, `search_electrical_cots`.
+    - [x] T022: [P] Update `controller/agent/graph.py` with handover logic (Mech -> Elec -> Reviewer).
+    - [x] T023: [P] Implement `todo.md` checklist generation for electrical tasks.
+    - [x] T024: [P] Add integration tests for the Mech+Elec agent loop.
 - **Implementation Sketch**: Define the node and prompt first, then the tools, and finally wire them into the LangGraph.
 - **Dependencies**: WP02, WP03, WP04
 - **Estimated Prompt Size**: ~450 lines
