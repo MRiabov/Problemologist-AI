@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Worker Topology & Rendering
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 1aefa54b0226d5e5187abdc79cf88b3d6caa06de
@@ -64,3 +64,4 @@ Enable the worker to provide high-fidelity geometric feedback by implementing to
 ## Activity Log
 
 - 2026-02-15T10:16:25Z – Gemini – shell_pid=120025 – lane=doing – Assigned agent via workflow command
+- 2026-02-15T10:31:14Z – Gemini – shell_pid=120025 – lane=for_review – Implemented worker-side topology inspection tool and best-angle isometric snapshot rendering with VTK. Added unit tests for topology inspection and view selection.
