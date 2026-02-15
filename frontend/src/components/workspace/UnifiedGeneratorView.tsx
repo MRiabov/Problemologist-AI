@@ -189,7 +189,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     modelUrls={modelUrls}
                     videoUrl={videoAsset ? getAssetUrl(videoAsset) : null}
                     heatmapUrls={selectedEpisode?.assets
-                      ?.filter(a => a.asset_type === 'image' || (a.s3_path && a.s3_path.includes('stress_')))
+                      ?.filter(a => (a.s3_path && a.s3_path.includes('stress_')))
                       .map(getAssetUrl)
                       .filter(Boolean) as string[]
                     }
