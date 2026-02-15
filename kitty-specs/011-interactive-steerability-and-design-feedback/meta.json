@@ -1,0 +1,10 @@
+{
+  "feature_number": "011",
+  "slug": "011-interactive-steerability-and-design-feedback",
+  "friendly_name": "Interactive Steerability and Design Feedback",
+  "mission": "software-dev",
+  "source_description": "Feature "steerability"/"adaptability" (steerability is more correct). @roadmap.md package 4 explains it, there was also a research done on how the current version of it is implemented'/home/maksym/Work/proj/Problemologist/Problemologist-AI/specs/wp4_research_report.md. There is also, probably most importantly, lines 1016 to 1100 or so in @specs/desired_architecture.md about "steerability". We need everything listed in the desired architecture document about steerability.",
+  "created_at": "2026-02-15T12:00:00Z",
+  "target_branch": "main",
+  "vcs": "git"
+}
