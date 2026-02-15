@@ -35,26 +35,25 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
         if agent_name.startswith("benchmark"):
             url = f"{CONTROLLER_URL}/benchmark/generate"
             payload = {"prompt": task_description}
-        else:
-            # Fallback for other agents if endpoints exist
-            print(
-                f"Warning: Non-benchmark agent {agent_name} not yet fully supported via API evals."
-            )
-            return
 
-        resp = await client.post(url, json=payload)
-        if resp.status_code >= 400:
-            print(
-                f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
-            )
-            return
+            resp = await client.post(url, json=payload)
+            if resp.status_code >= 400:
+                print(
+                    f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
+                )
+                return
 
-        data = resp.json()
-        session_id = data["session_id"]
-        print(f"  [{task_id}] Session started: {session_id}")
+            data = resp.json()
+            if "session_id" in data:
+                session_id = data["session_id"]
+                status_endpoint = f"benchmark/{session_id}"
+            else:
+                # Generic agent run returns episode_id
+                session_id = data["episode_id"]
+                status_endpoint = f"episodes/{session_id}"
 
         # 2. Poll for completion
-        status_url = f"{CONTROLLER_URL}/benchmark/{session_id}"
+        status_url = f"{CONTROLLER_URL}/{status_endpoint}"
         max_attempts = 120  # 10 minutes at 5s interval
         attempt = 0
 
