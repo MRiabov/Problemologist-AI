@@ -42,6 +42,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         return await fs.grep(pattern, path, glob)
 
     @tool
+<<<<<<< HEAD
     async def execute_command(command: str):
         """Execute a shell command in the workspace."""
         # Record the command execution event
@@ -50,6 +51,14 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
             events=[RunCommandToolEvent(command=command)],
         )
         return await fs.run_command(command)
+=======
+    async def inspect_topology(target_id: str, script_path: str = "script.py") -> dict:
+        """
+        Inspect geometric properties of a selected feature (face, edge, part).
+        Returns center, normal, area, and bounding box.
+        """
+        return await fs.inspect_topology(target_id, script_path)
+>>>>>>> ec37567 (feat(WP03): implement worker topology inspection and snapshot rendering)
 
     @tool
     async def inspect_topology(target_id: str, script_path: str = "script.py") -> dict:
@@ -63,6 +72,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         list_files,
         read_file,
         write_file,
+<<<<<<< HEAD
         edit_file,
         grep,
         execute_command,
@@ -79,3 +89,9 @@ def get_engineer_tools(
     Now uses the common toolset.
     """
     return get_common_tools(fs, session_id)
+=======
+        grep,
+        inspect_topology,
+        search_cots_catalog,
+    ]
+>>>>>>> ec37567 (feat(WP03): implement worker topology inspection and snapshot rendering)
