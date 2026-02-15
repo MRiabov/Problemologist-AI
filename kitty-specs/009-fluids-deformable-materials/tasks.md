@@ -109,9 +109,9 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Estimated Prompt Size**: ~300 lines
 **Subtasks**:
 
-- [ ] **T022**: Update simulation video rendering to include MPM particles.
-- [ ] **T023**: Implement stress heatmap image generation (static renders).
-- [ ] **T024**: Update frontend `DesignViewer` to display heatmaps and fluid metrics.
+- [x] **T022**: Update simulation video rendering to include MPM particles.
+- [x] **T023**: Implement stress heatmap image generation (static renders).
+- [x] **T024**: Update frontend `DesignViewer` to display heatmaps and fluid metrics.
 
 **Dependencies**: WP05
 **Implementation Sketch**: Update the worker's rendering code, then update the frontend to handle the new result fields.
