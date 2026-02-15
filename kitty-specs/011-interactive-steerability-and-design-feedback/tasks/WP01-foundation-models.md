@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Foundation & Data Models
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 89a2d71d9c4ffab3699748b642fc061636c03c93
@@ -67,3 +67,4 @@ Refer to the following documents:
 - 2026-02-15T09:21:11Z – Gemini – shell_pid=69990 – lane=doing – Started review via workflow command
 - 2026-02-15T09:23:01Z – Gemini – shell_pid=69990 – lane=planned – Changes requested: Missing tests for models and persistence logic.
 - 2026-02-15T09:31:28Z – Gemini – shell_pid=79713 – lane=doing – Started implementation via workflow command
+- 2026-02-15T09:34:06Z – Gemini – shell_pid=79713 – lane=for_review – Addressed review feedback: Added unit tests for steerability Pydantic models and CRUD tests for user steering preferences using an in-memory DB. Verified all tests pass.
