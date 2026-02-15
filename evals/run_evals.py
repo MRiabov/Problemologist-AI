@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
 
 
-async def run_single_eval(item: dict[str, Any], agent_name: str):
+async def run_single_eval(item: dict[str, Any], agent_name: str, verbose: bool = False):
     """
     Runs a single evaluation task for a specific agent via the Controller API.
     """
@@ -31,41 +32,56 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
     print(f"Running eval: {task_id} for agent: {agent_name}")
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        # 1. Trigger generation via API
+        # 1. Trigger generation/run via API
         if agent_name.startswith("benchmark"):
             url = f"{CONTROLLER_URL}/benchmark/generate"
             payload = {"prompt": task_description}
+            status_prefix = "benchmark"
+        else:
+            url = f"{CONTROLLER_URL}/agent/run"
+            payload = {
+                "task": task_description,
+                "agent_name": agent_name,
+                "session_id": f"eval-{task_id}-{uuid.uuid4().hex[:8]}",
+            }
+            status_prefix = "episodes"
 
-            resp = await client.post(url, json=payload)
-            if resp.status_code >= 400:
-                print(
-                    f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
-                )
-                return
+        resp = await client.post(url, json=payload)
+        if resp.status_code >= 400:
+            print(
+                f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
+            )
+            return
 
-            data = resp.json()
-            if "session_id" in data:
-                session_id = data["session_id"]
-                status_endpoint = f"benchmark/{session_id}"
-            else:
-                # Generic agent run returns episode_id
-                session_id = data["episode_id"]
-                status_endpoint = f"episodes/{session_id}"
+        data = resp.json()
+        session_id = data.get("session_id") or data.get("episode_id")
 
         # 2. Poll for completion
-        status_url = f"{CONTROLLER_URL}/{status_endpoint}"
+        status_url = f"{CONTROLLER_URL}/{status_prefix}/{session_id}"
         max_attempts = 120  # 10 minutes at 5s interval
         attempt = 0
+        seen_trace_ids = set()
 
         while attempt < max_attempts:
             await asyncio.sleep(5)
             attempt += 1
 
             try:
+                if verbose:
+                    print(f"  [{task_id}] Polling {status_url}...")
                 status_resp = await client.get(status_url)
                 if status_resp.status_code == 200:
                     status_data = status_resp.json()
                     status = status_data.get("status")
+
+                    if verbose:
+                        print(
+                            f"  [{task_id}] Status: {status}, Keys: {list(status_data.keys())}"
+                        )
+                        if "traces" in status_data:
+                            print(
+                                f"  [{task_id}] Traces count: {len(status_data['traces'])}"
+                            )
 
                     if status == EpisodeStatus.COMPLETED:
                         print(f"  [{task_id}] PASSED: Session completed successfully")
@@ -74,6 +90,28 @@ async def run_single_eval(item: dict[str, Any], agent_name: str):
                     if status == EpisodeStatus.FAILED:
                         print(f"  [{task_id}] FAILED: Session failed in controller")
                         break
+
+                    if status == EpisodeStatus.CANCELLED:
+                        print(f"  [{task_id}] CANCELLED: Session was cancelled")
+                        break
+
+                    if verbose:
+                        traces = status_data.get("traces", [])
+                        for trace in sorted(traces, key=lambda t: t["id"]):
+                            if trace["id"] not in seen_trace_ids:
+                                print(f"    [{task_id}] LOG: {trace.get('content')}")
+                                seen_trace_ids.add(trace["id"])
+
+                    if status == EpisodeStatus.PLANNED and agent_name.startswith(
+                        "benchmark"
+                    ):
+                        print(f"  [{task_id}] PLANNED state detected. Confirming...")
+                        confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
+                        confirm_resp = await client.post(confirm_url)
+                        if confirm_resp.status_code >= 400:
+                            print(
+                                f"  [{task_id}] Warning: Confirmation failed: {confirm_resp.status_code}"
+                            )
 
                     if attempt % 6 == 0:  # Log every 30s
                         print(f"  [{task_id}] Still running (status: {status})...")
@@ -139,7 +177,30 @@ async def main():
     parser.add_argument(
         "--task-id", type=str, default=None, help="Run only a specific task ID"
     )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Print backend traces during polling"
+    )
     args = parser.parse_args()
+
+    # Check controller health before proceeding
+    print(f"Checking controller health at {CONTROLLER_URL}...")
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            health_resp = await client.get(f"{CONTROLLER_URL}/health")
+            if (
+                health_resp.status_code != 200
+                or health_resp.json().get("status") != "healthy"
+            ):
+                print(f"Error: Controller is unhealthy: {health_resp.text}")
+                sys.exit(1)
+        except Exception as e:
+            print(
+                f"Error: Could not connect to controller at {CONTROLLER_URL}.\n"
+                "Is the controller service running?"
+            )
+            print(f"Details: {e}")
+            sys.exit(1)
+    print("Controller is reachable and healthy.")
 
     # Check worker health before proceeding
     print(f"Checking worker health at {WORKER_URL}...")
@@ -182,10 +243,11 @@ async def main():
             print(f"Warning: No dataset found for {agent} at {json_path}")
 
     tasks = []
+    # Sort tasks to ensure bp-011 is not skipped if it's there
     for agent, dataset in datasets.items():
         print(f"Starting evals for {agent}. Count: {len(dataset)}")
         for item in dataset:
-            tasks.append(run_single_eval(item, agent))
+            tasks.append(run_single_eval(item, agent, verbose=args.verbose))
 
     if tasks:
         await asyncio.gather(*tasks)
