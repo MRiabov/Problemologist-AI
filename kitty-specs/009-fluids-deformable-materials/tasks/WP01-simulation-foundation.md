@@ -1,9 +1,13 @@
 ---
 work_package_id: "WP01"
 title: "Simulation Foundation & Backend Abstraction"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
+agent: "Gemini"
+shell_pid: "350387"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP01: Simulation Foundation & Backend Abstraction
@@ -50,3 +54,14 @@ Currently, the worker's simulation logic is tightly coupled with MuJoCo. We need
 ## Risks
 - Breaking existing MuJoCo simulations during refactoring.
 - Performance overhead from the abstraction layer.
+
+## Activity Log
+
+- 2026-02-15T07:11:25Z – Gemini – shell_pid=313658 – lane=doing – Started review via workflow command
+- 2026-02-15T07:19:08Z – Gemini – shell_pid=313658 – lane=planned – Changes requested: missing schema fields and failing tests
+- 2026-02-15T07:20:39Z – gemini – shell_pid=328531 – lane=doing – Started implementation via workflow command
+- 2026-02-15T07:21:42Z – gemini – shell_pid=328531 – lane=planned – Changes requested: missing schema fields and failing tests
+- 2026-02-15T07:21:53Z – gemini – shell_pid=328531 – lane=planned – Changes requested: missing schema fields and failing tests
+- 2026-02-15T07:22:50Z – gemini – shell_pid=328531 – lane=planned – Changes requested: missing schema fields and failing tests
+- 2026-02-15T07:23:58Z – gemini – shell_pid=328531 – lane=planned – Changes requested: missing fluid validation and incomplete failure modes
+- 2026-02-15T07:38:43Z – Gemini – shell_pid=350387 – lane=doing – Started implementation via workflow command

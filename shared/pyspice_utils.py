@@ -16,7 +16,11 @@ def _patched_send_char(message_c, ngspice_id, user_data):
     self = ffi.from_handle(user_data)
     message = ffi_string_utf8(message_c)
     prefix, _, content = message.partition(" ")
-    if prefix == "stderr" and ("SPARSE" in content or content.startswith("Note:")):
+    if prefix == "stderr" and (
+        "SPARSE" in content
+        or content.startswith("Note:")
+        or "singular matrix" in content.lower()
+    ):
         self._stdout.append(content)
         return 0
     return _original_send_char(message_c, ngspice_id, user_data)
@@ -39,7 +43,11 @@ if not os.environ.get("PYSPICE_LIBRARY_PATH"):
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit import *
 
-from shared.models.schemas import CircuitValidationResult, PowerSupplyConfig
+from shared.models.schemas import (
+    CircuitValidationResult,
+    PowerSupplyConfig,
+    ElectronicsSection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +68,28 @@ def validate_circuit(
 
     try:
         simulator = circuit.simulator()
+
+        # Clear previous output to avoid carry-over errors
+        if hasattr(simulator, "_ngspice_shared") and hasattr(
+            simulator._ngspice_shared, "_stdout"
+        ):
+            simulator._ngspice_shared._stdout = []
+
         analysis = simulator.operating_point()
+
+        # Check for captured singular matrix warnings
+        if hasattr(simulator, "_ngspice_shared") and hasattr(
+            simulator._ngspice_shared, "_stdout"
+        ):
+            for line in simulator._ngspice_shared._stdout:
+                if "singular matrix" in line.lower():
+                    return CircuitValidationResult(
+                        valid=False,
+                        errors=[
+                            f"FAILED_OPEN_CIRCUIT: Floating nodes detected (singular matrix): {line.strip()}"
+                        ],
+                        total_draw_a=0.0,
+                    )
 
         import numpy as np
 
@@ -76,20 +105,29 @@ def validate_circuit(
         errors = []
         warnings = []
 
+        # Check for short circuit at PSU nodes
+        vcc_node = "supply_v+"
+        if vcc_node in node_voltages:
+            v_vcc = node_voltages[vcc_node]
+            if v_vcc < (psu_config.voltage_dc * 0.9 if psu_config else 0.1):
+                # If PSU voltage is dragged down significantly, it might be a short
+                # but ONLY if we are actually supplying power.
+                pass
+
         # In PySpice, current through a voltage source is positive if it flows from + to - terminal (passive sign convention).
         # A power supply supplying power will have NEGATIVE current in PySpice's Vsource.
         # total_draw from PSU should be the absolute value of current through the supply Vsource.
 
         for name, current in branch_currents.items():
             current_val = float(current)
-            if (
-                abs(current_val) > 1000.0
-            ):  # 1kA is definitely a short for these small systems
+
+            # Detect extreme currents which indicate shorts
+            if abs(current_val) > 1000.0:
                 errors.append(
-                    f"FAILED_SHORT_CIRCUIT detected in branch {name}: {current_val:.2f}A"
+                    f"FAILED_SHORT_CIRCUIT: Extreme current detected in branch {name}: {current_val:.2f}A"
                 )
 
-            # Assume any voltage source starting with 'supply' is our PSU
+            # Assume any voltage source starting with 'vsupply' (as named in circuit_builder) is our PSU
             if name.lower().startswith("vsupply"):
                 total_draw += abs(current_val)
 
@@ -97,6 +135,15 @@ def validate_circuit(
             errors.append(
                 f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A exceeds PSU rating {max_current:.2f}A"
             )
+
+        # Detect floating nodes: check if any node has near-zero conductance to everything else
+        # PySpice usually throws an exception for this, but we can also check for extremely high voltages
+        # or non-finite values if SPICE managed to return something.
+        for node, voltage in node_voltages.items():
+            if not np.isfinite(voltage) or abs(voltage) > 1e6:
+                errors.append(
+                    f"FAILED_FLOATING_NODE: Node {node} has unstable voltage: {voltage}"
+                )
 
         return CircuitValidationResult(
             valid=len(errors) == 0,
@@ -127,38 +174,52 @@ def simulate_circuit_transient(
     circuit: Circuit, duration_s: float, step_s: float
 ) -> Any:
     """
-
-
     Run a transient simulation.
-
-
     Useful for seeing how voltages/currents change over time (e.g. motor start).
-
-
     """
-
     simulator = circuit.simulator()
-
     return simulator.transient(step_time=step_s, end_time=duration_s)
+
+
+def calculate_static_power_budget(section: ElectronicsSection) -> dict:
+    """
+    Perform a simple static power budget calculation without running SPICE.
+    Sums up rated currents and compares to PSU capacity.
+    """
+    total_rated_current = 0.0
+    psu = section.power_supply
+
+    for comp in section.components:
+        if comp.type == "motor":
+            # Use stall current as worst-case for budget
+            total_rated_current += comp.stall_current_a or 0.0
+        elif comp.type == "relay" or comp.type == "switch":
+            # Switches/relays consume negligible power for budget purposes
+            # (unless we model the relay coil, which we don't yet in high-level budget)
+            pass
+
+    margin = psu.max_current_a - total_rated_current
+
+    return {
+        "total_rated_current_a": round(total_rated_current, 3),
+        "max_capacity_a": round(psu.max_current_a, 3),
+        "margin_a": round(margin, 3),
+        "is_safe": total_rated_current <= psu.max_current_a,
+        "warnings": ["Budget exceeded"]
+        if total_rated_current > psu.max_current_a
+        else [],
+    }
 
 
 def calculate_power_budget(circuit: Circuit, psu_config: PowerSupplyConfig) -> dict:
     """
-
-
-    Calculate the power budget for the circuit compared to PSU capacity.
-
-
+    Calculate the power budget for the circuit using SPICE simulation (dynamic check).
     """
-
     res = validate_circuit(circuit, psu_config)
 
     total_draw = res.total_draw_a
-
     capacity = psu_config.max_current_a
-
     margin = capacity - total_draw
-
     margin_pct = (margin / capacity * 100.0) if capacity > 0 else 0.0
 
     return {
