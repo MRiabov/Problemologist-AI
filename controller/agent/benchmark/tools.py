@@ -16,9 +16,9 @@ def get_benchmark_tools(fs: RemoteFilesystemMiddleware):
         return await fs.read_file(path)
 
     @tool
-    async def write_file(path: str, content: str) -> bool:
+    async def write_file(path: str, content: str, overwrite: bool = False) -> bool:
         """Write content to a file."""
-        return await fs.write_file(path, content)
+        return await fs.write_file(path, content, overwrite=overwrite)
 
     @tool
     async def edit_file(path: str, old_string: str, new_string: str) -> bool:

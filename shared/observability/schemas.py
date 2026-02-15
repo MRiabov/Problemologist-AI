@@ -240,6 +240,7 @@ class WriteFileToolEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.TOOL_WRITE_FILE
     path: str
     content_snippet: str | None = None  # First 100 chars or so
+    overwrite: bool = True
 
 
 class EditFileToolEvent(BaseEvent):

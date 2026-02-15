@@ -215,7 +215,7 @@ class SandboxFilesystemBackend(BackendProtocol):
         s3_path = self._resolve_path(file_path)
         if not overwrite and self._fs.exists(s3_path):
             return WriteResult(
-                error=f"Cannot write to {file_path} because it already exists."
+                error=f"Cannot write to {file_path} because it already exists. Use 'overwrite=True' if you intend to overwrite it."
             )
 
         try:
@@ -556,7 +556,7 @@ class LocalFilesystemBackend(BackendProtocol):
         local_path = self._resolve(file_path)
         if local_path.exists() and not overwrite:
             return WriteResult(
-                error=f"Cannot write to {file_path} because it already exists."
+                error=f"Cannot write to {file_path} because it already exists. Use 'overwrite=True' if you intend to overwrite it."
             )
 
         try:
