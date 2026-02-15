@@ -410,15 +410,6 @@ def simulate(
         electronics=electronics,
     )
 
-    loop = SimulationLoop(
-        str(scene_path),
-        component=component,
-        backend_type=backend_type,
-        electronics=electronics,
-        objectives=objectives,
-        smoke_test_mode=smoke_test_mode,
-    )
-
     dynamic_controllers = {}
     control_inputs = {}
     if assembly_definition and assembly_definition.moving_parts:
@@ -428,25 +419,84 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
+                            )
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
+    # WP2: GPU OOM Retry Logic
+    max_retries = 2
+    current_particle_budget = particle_budget or (5000 if smoke_test_mode else 100000)
+    metrics = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            loop = SimulationLoop(
+                str(scene_path),
+                component=component,
+                backend_type=backend_type,
+                electronics=electronics,
+                objectives=objectives,
+                smoke_test_mode=smoke_test_mode,
+            )
+            # Override particle budget if needed (Genesis backend uses it)
+            if hasattr(loop, "particle_budget"):
+                loop.particle_budget = current_particle_budget
+
+            video_path = renders_dir / "simulation.mp4"
+            metrics = loop.step(
+                control_inputs=control_inputs,
+                duration=30.0,
+                dynamic_controllers=dynamic_controllers,
+                video_path=video_path,
+            )
+            break  # Success or normal failure
+        except Exception as e:
+            error_str = str(e).lower()
+            is_oom = (
+                "out of memory" in error_str or "cuda_error_out_of_memory" in error_str
+            )
+
+            if is_oom and attempt < max_retries:
+                old_budget = current_particle_budget
+                current_particle_budget = int(current_particle_budget * 0.75)
+                logger.warning(
+                    "gpu_oom_retry",
+                    attempt=attempt + 1,
+                    old_budget=old_budget,
+                    new_budget=current_particle_budget,
+                )
+
+                from shared.observability.events import emit_event
+                from shared.observability.schemas import GpuOomRetryEvent
+
+                emit_event(
+                    GpuOomRetryEvent(
+                        original_particles=old_budget,
+                        reduced_particles=current_particle_budget,
+                    )
+                )
+                continue
+            else:
+                logger.error("simulation_error", error=str(e))
+                return SimulationResult(False, f"Simulation error: {e!s}")
+
+    if metrics is None:
+        return SimulationResult(False, "Simulation failed to start.")
+
     try:
-        video_path = renders_dir / "simulation.mp4"
-        metrics = loop.step(
-            control_inputs=control_inputs,
-            duration=30.0,
-            dynamic_controllers=dynamic_controllers,
-            video_path=video_path,
-        )
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
+
+        confidence = metrics.confidence
+        if current_particle_budget < (particle_budget or 100000):
+            confidence = "approximate"
 
         render_paths = prerender_24_views(
             component, output_dir=str(renders_dir), backend_type=backend_type
@@ -533,7 +583,7 @@ def validate(
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
-        
+
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
         backend_type = SimulatorBackendType.MUJOCO
         if output_dir:
@@ -542,6 +592,7 @@ def validate(
                 try:
                     data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
                     from shared.models.schemas import ObjectivesYaml
+
                     objs = ObjectivesYaml(**data)
                     if objs.physics and objs.physics.backend:
                         backend_type = SimulatorBackendType(objs.physics.backend)
