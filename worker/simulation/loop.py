@@ -371,6 +371,10 @@ class SimulationLoop:
             # Step backend
             res = self.backend.step(dt)
             current_time = res.time
+
+            # Collect stress summaries if FEM enabled
+            self.stress_summaries = self.backend.get_stress_summaries()
+
             if not res.success:
                 if res.failure_reason == "instability_detected":
                     self.fail_reason = "PHYSICS_INSTABILITY"
@@ -381,6 +385,9 @@ class SimulationLoop:
                             step=step_idx,
                         )
                     )
+                elif res.failure_reason and "PART_BREAKAGE" in res.failure_reason:
+                    self.fail_reason = res.failure_reason
+                    logger.info("simulation_fail", reason=res.failure_reason)
                 else:
                     self.fail_reason = res.failure_reason
                 break
