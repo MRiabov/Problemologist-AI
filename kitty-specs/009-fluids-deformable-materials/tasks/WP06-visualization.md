@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Visualization & Frontend Integration
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: 4fbd7b7e4c8a588d5e41972c9a20a1108af68409
@@ -47,3 +47,4 @@ A simulation isn't useful if the user can't see the stress or the fluid. We need
 ## Activity Log
 
 - 2026-02-15T18:41:43Z – Gemini – shell_pid=191781 – lane=doing – Assigned agent via workflow command
+- 2026-02-15T20:47:02Z – Gemini – shell_pid=191781 – lane=for_review – Ready for review: implemented Genesis particle rendering, stress heatmaps, and updated frontend visualization components.
