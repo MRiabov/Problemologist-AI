@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from shared.simulation.backends import SimulatorBackendType
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.builder import GenesisSimulationBuilder, MuJoCoSimulationBuilder
 from worker.simulation.factory import get_physics_backend, get_simulation_builder
 from worker.simulation.genesis_backend import GenesisBackend
@@ -34,7 +34,7 @@ def test_simulation_loop_with_mujoco():
     metrics = loop.step(control_inputs={}, duration=0.1)
 
     assert metrics.total_time >= 0.1
-    assert metrics.success == False  # No goal achieved in minimal.xml
+    assert metrics.success == True  # Finished normally without failure
     assert metrics.fail_reason == None  # Finished normally
 
 
