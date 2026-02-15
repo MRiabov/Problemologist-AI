@@ -44,6 +44,13 @@ class SimulationLoop:
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool = False,
     ):
+        # WP2: Validate that fluids are NOT requested if using MuJoCo
+        if backend_type == SimulatorBackendType.MUJOCO:
+            if objectives and objectives.fluids:
+                raise ValueError(
+                    "MuJoCo backend does not support fluids. Use Genesis instead."
+                )
+
         self.backend = get_physics_backend(backend_type)
         self.smoke_test_mode = smoke_test_mode
         self.particle_budget = 5000 if smoke_test_mode else 100000
