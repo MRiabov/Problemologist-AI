@@ -12,7 +12,8 @@ import {
   Rewind,
   MousePointer2,
   Box,
-  Component
+  Component,
+  Zap
 } from "lucide-react"
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -23,10 +24,11 @@ import { ModelBrowser, type TopologyNode } from './ModelBrowser'
 
 export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
 
-function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', onSelect, onStructureParsed }: { 
+function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronicsView = false, onSelect, onStructureParsed }: { 
     url: string, 
     hiddenParts: string[], 
     selectionMode?: SelectionMode,
+    isElectronicsView?: boolean,
     onSelect?: (partName: string, level: SelectionMode, metadata?: any) => void,
     onStructureParsed?: (nodes: TopologyNode[]) => void
 }) {
@@ -73,6 +75,20 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', onSelect, onS
   useEffect(() => {
     gltf.scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        // Handle transparency for electronics view
+        if (isElectronicsView) {
+            child.material.transparent = true;
+            child.material.opacity = 0.2;
+        } else {
+            if (child.userData.originalMaterial) {
+                child.material.transparent = child.userData.originalMaterial.transparent;
+                child.material.opacity = child.userData.originalMaterial.opacity;
+            } else {
+                child.material.transparent = false;
+                child.material.opacity = 1.0;
+            }
+        }
+
         // Check if the part itself is hidden, or if any of its parents are hidden
         let isParentHidden = false;
         let p: THREE.Object3D | null = child;
@@ -86,7 +102,7 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', onSelect, onS
         child.visible = !isParentHidden;
 
         // Apply Highlighting
-        if (child.visible) {
+        if (child.visible && !isElectronicsView) {
             const target = findTarget(child);
             const isSelected = selected === target.id;
             const isHovered = hovered === target.id;
@@ -116,13 +132,13 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', onSelect, onS
         }
       }
     });
-  }, [gltf, hiddenParts, selected, hovered, selectionMode]);
+  }, [gltf, hiddenParts, selected, hovered, selectionMode, isElectronicsView]);
 
   // Initial capture of materials
   useEffect(() => {
     gltf.scene.traverse((child) => {
         if (child instanceof THREE.Mesh && !child.userData.originalMaterial) {
-            child.userData.originalMaterial = child.material;
+            child.userData.originalMaterial = child.material.clone();
         }
     });
   }, [gltf]);
@@ -189,9 +205,10 @@ interface WireProps {
   waypoints: [number, number, number][];
   color?: string;
   radius?: number;
+  highlighted?: boolean;
 }
 
-function Wire({ waypoints, color = "#ef4444", radius = 0.05 }: WireProps) {
+function Wire({ waypoints, color = "#ef4444", radius = 0.05, highlighted = false }: WireProps) {
   const curve = useMemo(() => {
     const points = waypoints.map(wp => new THREE.Vector3(...wp));
     return new THREE.CatmullRomCurve3(points);
@@ -199,8 +216,13 @@ function Wire({ waypoints, color = "#ef4444", radius = 0.05 }: WireProps) {
 
   return (
     <mesh castShadow>
-      <tubeGeometry args={[curve, waypoints.length * 4, radius, 8, false]} />
-      <meshStandardMaterial color={color} roughness={0.5} />
+      <tubeGeometry args={[curve, waypoints.length * 4, highlighted ? radius * 2 : radius, 8, false]} />
+      <meshStandardMaterial 
+        color={highlighted ? "#fbbf24" : color} 
+        roughness={0.5} 
+        emissive={highlighted ? "#fbbf24" : "#000000"}
+        emissiveIntensity={highlighted ? 0.5 : 0}
+      />
     </mesh>
   );
 }
@@ -229,6 +251,7 @@ interface WireRoute {
   wire_id: string;
   waypoints: [number, number, number][];
   gauge_awg?: number;
+  color?: string;
 }
 
 interface ModelViewerProps {
@@ -255,6 +278,7 @@ export default function ModelViewer({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [showTopology, setShowTopology] = useState(true) // Default to open for Model Browser
+  const [isElectronicsView, setIsElectronicsView] = useState(false)
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([])
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('PART')
 
@@ -321,6 +345,7 @@ export default function ModelViewer({
                         url={url} 
                         hiddenParts={hiddenParts} 
                         selectionMode={selectionMode}
+                        isElectronicsView={isElectronicsView}
                         onStructureParsed={setTopologyNodes}
                         onSelect={(name, level, metadata) => {
                             addToContext({
@@ -361,13 +386,26 @@ export default function ModelViewer({
             )}
 
             {/* Render physical wires */}
-            {wireRoutes.map(route => (
-            <Wire 
-                key={route.wire_id} 
-                waypoints={route.waypoints} 
-                radius={route.gauge_awg ? 0.05 * (20 / route.gauge_awg) : 0.05}
-            />
-            ))}
+            {wireRoutes.map(route => {
+                // Determine wire color based on ID/metadata if available, 
+                // fallback to default red
+                let color = route.color || "#ef4444";
+                if (route.wire_id.toLowerCase().includes("gnd") || route.wire_id.toLowerCase().includes("ground")) {
+                    color = "#171717"; // Black
+                } else if (route.wire_id.toLowerCase().includes("vcc") || route.wire_id.toLowerCase().includes("power")) {
+                    color = "#dc2626"; // Red
+                }
+
+                return (
+                    <Wire 
+                        key={route.wire_id} 
+                        waypoints={route.waypoints} 
+                        color={color}
+                        radius={route.gauge_awg ? 0.05 * (20 / route.gauge_awg) : 0.05}
+                        highlighted={isElectronicsView}
+                    />
+                );
+            })}
             
             <Grid 
             infiniteGrid 
@@ -399,6 +437,15 @@ export default function ModelViewer({
                 onClick={() => setShowTopology(!showTopology)}
             >
                 <Layers className="h-4 w-4" />
+            </Button>
+            <Button 
+                variant="secondary" 
+                size="icon" 
+                className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20", isElectronicsView && "bg-yellow-500 text-yellow-950")}
+                onClick={() => setIsElectronicsView(!isElectronicsView)}
+                title="Toggle Electronics View"
+            >
+                <Zap className="h-4 w-4" />
             </Button>
 
             <div className="flex flex-col gap-1 bg-slate-900/80 backdrop-blur border border-slate-700 p-1 rounded-full shadow-xl mt-2">
