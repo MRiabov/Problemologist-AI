@@ -8,6 +8,7 @@ base_commit: b0b8a776ea84e7a6a780c69c31bdcfaaa7ce8261
 created_at: '2026-02-15T07:28:28.680431+00:00'
 subtasks: [T001, T002, T003, T004]
 shell_pid: "339790"
+agent: "gemini"
 ---
 
 # WP01: Foundation & Schemas
@@ -63,3 +64,7 @@ We need to extend the existing `assembly_definition.yaml` (formerly `preliminary
 
 ## Risks
 - Breaking backward compatibility with existing `assembly_definition.yaml` files. Ensure the `electronics` section is optional.
+
+## Activity Log
+
+- 2026-02-15T07:28:29Z – gemini – shell_pid=339790 – lane=doing – Assigned agent via workflow command
