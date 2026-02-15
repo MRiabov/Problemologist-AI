@@ -58,7 +58,9 @@ async def run_simulation(request: RunSimulationRequest):
         import asyncio
 
         asyncio.create_task(
-            run_generation_session(prompt=prompt, session_id=real_session_id)
+            run_generation_session(
+                prompt=prompt, session_id=real_session_id, backend=request.backend
+            )
         )
 
         return {
