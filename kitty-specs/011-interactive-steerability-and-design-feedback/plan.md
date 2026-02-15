@@ -4,9 +4,26 @@
 **Branch**: `011-interactive-steerability-and-design-feedback` | **Date**: 2026-02-15 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/kitty-specs/011-interactive-steerability-and-design-feedback/spec.md`
 
+## Mandatory Reading
+
+- **Roadmap (Package 4)**: [roadmap.md](../../roadmap.md)
+- **WP4 Research Report**: [specs/wp4_research_report.md](../../specs/wp4_research_report.md)
+- **Desired Architecture (Steerability)**: [specs/desired_architecture.md](../../specs/desired_architecture.md) (Lines 1016-1100)
+
 ## Summary
 
 Implement a multi-modal "Steerability" framework to transition the AI from a generator to a co-pilot. Key features include topological selection (faces, parts, subassemblies) via `three-cad-viewer` with optimal isometric snapshots rendered by workers, targeted code steering using `@filename:line-range`, BOM @-mentions with autocomplete, and an in-memory async interaction queue for graceful mid-turn feedback.
+
+## Identified Planning Gaps & Challenges
+
+1.  **View Selection Logic**: We need a deterministic mapping between a selection's normal vector and the "best" of the 8 isometric views.
+    - *Gap*: No utility currently exists in `worker/simulation/builder.py` to calculate the camera matrix from a face normal.
+2.  **Agent Discovery Tool**: For the agent to translate `face_12` into a robust semantic selector, it needs a "Topological Inspector" tool that returns the face's properties (normal, center, area) without running a full simulation.
+    - *Gap*: The `SimulationBuilder` needs a lightweight "inspection mode" that doesn't trigger MJCF generation.
+3.  **Queue Injection into LangGraph**: The `asyncio.Queue` in the Controller must be checked at the end of every node execution in the LangGraph.
+    - *Gap*: Current LangGraph implementation assumes a single user input at the start. We need a custom `Checkpointer` or a "Queue-Peeking" node that updates the state between tool calls.
+4.  **ID Synchronization**: The names exported in the GLB (e.g., `face_12`) must be traceable back to the specific `build123d` object instance in the worker's memory.
+    - *Gap*: Naming is currently transient during export; we need a way to "pin" a model version to a specific selection state to avoid index-shift bugs.
 
 ## Technical Context
 
