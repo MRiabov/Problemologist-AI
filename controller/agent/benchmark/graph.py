@@ -109,7 +109,7 @@ async def _execute_graph_streaming(
             final_state.update(state)
 
             # Determine new status
-            new_status = SessionStatus.executing
+            new_status = final_state["session"].status
 
             should_stop = False
             if node_name == "planner":
@@ -126,8 +126,12 @@ async def _execute_graph_streaming(
                     new_status = SessionStatus.accepted
                 else:
                     new_status = SessionStatus.rejected
-            elif node_name == "skills":
-                pass
+            elif (
+                node_name == "skills"
+                and final_state["session"].status == SessionStatus.accepted
+            ):
+                # If we've approved everything, skills is the final step
+                new_status = SessionStatus.accepted
 
             # Update internal session status
             final_state["session"].status = new_status
