@@ -52,10 +52,10 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Priority**: P1
 **Estimated Prompt Size**: ~400 lines
 **Subtasks**:
-- [ ] **T010**: Implement scene loading for rigid and deformable bodies in `GenesisBackend`.
-- [ ] **T011**: Implement FEM stress calculation and `StressSummary` generation.
-- [ ] **T012**: Implement `PART_BREAKAGE` detection and simulation termination logic.
-- [ ] **T013**: Add support for linear and hyperelastic (Neo-Hookean) material models.
+- [x] T010: Implement scene loading for rigid and deformable bodies in `GenesisBackend`.
+- [x] T011: Implement FEM stress calculation and `StressSummary` generation.
+- [x] T012: Implement `PART_BREAKAGE` detection and simulation termination logic.
+- [x] T013: Add support for linear and hyperelastic (Neo-Hookean) material models.
 
 **Dependencies**: WP02
 **Implementation Sketch**: Implement scene setup, then the stepping logic with stress extraction, then the failure checks.
