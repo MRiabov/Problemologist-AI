@@ -13,7 +13,8 @@ from shared.observability.schemas import (
     PhysicsInstabilityEvent,
     SimulationBackendSelectedEvent,
 )
-from shared.simulation.backends import SimulationScene, SimulatorBackendType
+from shared.simulation.backends import SimulationScene
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_physics_backend
 
 logger = structlog.get_logger(__name__)
