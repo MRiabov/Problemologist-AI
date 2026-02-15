@@ -1,5 +1,6 @@
 import numpy as np
 import structlog
+from typing import Any
 
 try:
     import genesis as gs
@@ -16,6 +17,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.models.simulation import StressSummary, FluidMetricResult
 
 logger = structlog.get_logger(__name__)
 
@@ -209,6 +211,14 @@ class GenesisBackend(PhysicsBackend):
             angvel=entity.get_angvel().tolist(),
         )
 
+    def get_state(self) -> dict[str, Any]:
+        if self.scene is None:
+            return {"time": self.current_time}
+        return {
+            "time": self.current_time,
+            "n_entities": len(self.entities),
+        }
+
     def get_stress_field(self, body_id: str) -> StressField | None:
         if body_id not in self.entities:
             return None
@@ -223,6 +233,27 @@ class GenesisBackend(PhysicsBackend):
             return StressField(nodes=nodes, stress=stress)
 
         return None
+
+    def get_stress_summaries(self) -> list[StressSummary]:
+        summaries = []
+        for name, _ in self.entities.items():
+            field = self.get_stress_field(name)
+            if field is not None:
+                max_stress = np.max(field.stress)
+                mean_stress = np.mean(field.stress)
+                max_idx = np.argmax(field.stress)
+
+                summaries.append(
+                    StressSummary(
+                        part_label=name,
+                        max_von_mises_pa=float(max_stress),
+                        mean_von_mises_pa=float(mean_stress),
+                        safety_factor=2.0,  # Placeholder
+                        location_of_max=tuple(field.nodes[max_idx].tolist()),
+                        utilization_pct=50.0,  # Placeholder
+                    )
+                )
+        return summaries
 
     def get_particle_positions(self) -> np.ndarray | None:
         # For MPM fluids
@@ -242,6 +273,13 @@ class GenesisBackend(PhysicsBackend):
             return None
 
         return np.concatenate(all_particles, axis=0)
+
+    def get_fluid_metrics(self) -> list[FluidMetricResult]:
+        return []
+
+    # Rendering & Visualization
+    def render(self) -> np.ndarray:
+        return self.render_camera("default", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         if not self.scene:

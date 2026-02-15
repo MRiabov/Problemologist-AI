@@ -10,6 +10,7 @@ from worker.api.schema import (
     GitStatusResponse,
     GrepMatch,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from worker.filesystem.backend import FileInfo
 from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
 
@@ -178,12 +179,15 @@ class WorkerClient:
             await self._close_client(client)
 
     async def simulate(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         client = await self._get_client()
         try:
-            payload = {"script_path": script_path}
+            payload = {"script_path": script_path, "backend": backend}
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
