@@ -8,6 +8,7 @@ base_commit: 1472e7bc3d8d7a12f56ca01e975a236920a5b7d5
 created_at: '2026-02-15T10:17:49.427911+00:00'
 subtasks: [T019, T020, T021, T022, T023, T024]
 shell_pid: "121941"
+agent: "gemini-cli"
 ---
 
 # WP05: Electrical Engineer Agent & Workflow
@@ -74,3 +75,7 @@ The Engineering workflow currently has a Mechanical Engineer (who handles geomet
 ## Risks
 - Loops between Mech and Elec agents if wiring always fails clearance.
 - Token overhead of two engineers communicating.
+
+## Activity Log
+
+- 2026-02-15T10:17:49Z – gemini-cli – shell_pid=121941 – lane=doing – Assigned agent via workflow command
