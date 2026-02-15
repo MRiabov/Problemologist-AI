@@ -16,8 +16,11 @@ from .state import AgentState, AgentStatus
 logger = structlog.get_logger(__name__)
 
 
-def should_continue(state: AgentState) -> str:
+async def should_continue(state: AgentState) -> str:
     """Route after reviewer based on approval status."""
+    if await check_steering(state) == "steer":
+        return "steer"
+
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 

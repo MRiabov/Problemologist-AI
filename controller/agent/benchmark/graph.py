@@ -64,9 +64,13 @@ def define_graph():
     )
 
     # Conditional edges for reviewer
-    def after_reviewer(
+    async def reviewer_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal["coder", "planner", "skills"]:
+    ) -> Literal["steer", "coder", "planner", "skills"]:
+        # Check for steering first
+        if await check_steering(state) == "steer":
+            return "steer"
+
         feedback = state.get("review_feedback", "")
         if feedback == "Approved":
             return "skills"
@@ -76,14 +80,8 @@ def define_graph():
 
     workflow.add_conditional_edges(
         "reviewer",
-        check_steering,
-        {"steer": "steer", "next": "after_reviewer_logic"},
-    )
-
-    workflow.add_conditional_edges(
-        "after_reviewer_logic",
-        after_reviewer,
-        {"coder": "coder", "planner": "planner", "skills": "skills"},
+        reviewer_router,
+        {"steer": "steer", "coder": "coder", "planner": "planner", "skills": "skills"},
     )
 
     workflow.add_edge("skills", END)

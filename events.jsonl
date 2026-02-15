@@ -123,4 +123,22 @@
 {"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.115943Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 3. Assembly Strategy"], "unix_timestamp": 1771181261.1159596}
 {"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.116022Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 4. Cost & Weight Budget"], "unix_timestamp": 1771181261.116037}
 {"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:47:41.116095Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 5. Risk Assessment"], "unix_timestamp": 1771181261.1161098}
+<<<<<<< HEAD
 >>>>>>> bfbe5cf ((spec) WP04 - LangGraph Integration for Steerability)
+=======
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:55:18.897282Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 1. Solution Overview"], "unix_timestamp": 1771181718.8973253}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:55:18.897727Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 2. Parts List"], "unix_timestamp": 1771181718.8977542}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:55:18.897865Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 3. Assembly Strategy"], "unix_timestamp": 1771181718.8978837}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:55:18.897956Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 4. Cost & Weight Budget"], "unix_timestamp": 1771181718.897972}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:55:18.898038Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 5. Risk Assessment"], "unix_timestamp": 1771181718.8980546}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:15.783905Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 1. Solution Overview"], "unix_timestamp": 1771181835.7839732}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:15.784377Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 2. Parts List"], "unix_timestamp": 1771181835.7844117}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:15.784540Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 3. Assembly Strategy"], "unix_timestamp": 1771181835.78456}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:15.784659Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 4. Cost & Weight Budget"], "unix_timestamp": 1771181835.7846768}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:15.784765Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 5. Risk Assessment"], "unix_timestamp": 1771181835.7847958}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:16.224129Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 1. Solution Overview"], "unix_timestamp": 1771181836.224174}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:16.224354Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 2. Parts List"], "unix_timestamp": 1771181836.2243772}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:16.224487Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 3. Assembly Strategy"], "unix_timestamp": 1771181836.2245052}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:16.224614Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 4. Cost & Weight Budget"], "unix_timestamp": 1771181836.2246327}
+{"event_type": "lint_failure_docs", "timestamp": "2026-02-15T18:57:16.224722Z", "agent_id": null, "file_path": "plan.md", "errors": ["Missing required section: ## 5. Risk Assessment"], "unix_timestamp": 1771181836.2247396}
+>>>>>>> 75f3aa9 (fix: resolve benchmark graph compilation error and improve responsiveness)
