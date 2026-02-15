@@ -9,10 +9,18 @@ logger = logging.getLogger(__name__)
 
 
 def build_circuit_from_section(
-    section: ElectronicsSection, switch_states: dict[str, bool] | None = None
+    section: ElectronicsSection,
+    switch_states: dict[str, bool] | None = None,
+    add_shunts: bool = False,
 ) -> Circuit:
     """
     Build a PySpice Circuit from an ElectronicsSection definition.
+
+    Args:
+        section: The electronics definition.
+        switch_states: Optional map of switch/relay states.
+        add_shunts: If True, add high-impedance paths to ground for all nodes
+                    to ensure simulation stability. Default is False for validation.
     """
     circuit = Circuit("AssemblyCircuit")
     switch_states = switch_states or {}
@@ -66,14 +74,18 @@ def build_circuit_from_section(
                 return vcc_node
             if term == "0" or (comp_id == "supply" and term == "0"):
                 return gnd_node
-            
+
             # Normalization for motor terminals in this builder
-            if term == "a": term = "+"
-            if term == "b": term = "-"
-            
+            if term == "a":
+                term = "+"
+            if term == "b":
+                term = "-"
+
             return f"{comp_id}_{term}"
 
-        node_from = resolve_node(wire.from_terminal.component, wire.from_terminal.terminal)
+        node_from = resolve_node(
+            wire.from_terminal.component, wire.from_terminal.terminal
+        )
         node_to = resolve_node(wire.to_terminal.component, wire.to_terminal.terminal)
 
         # Model wire as a small resistor
@@ -87,8 +99,9 @@ def build_circuit_from_section(
 
     # 4. Add high-impedance shunt to ground for all nodes to prevent singular matrix
     # This ensures every node has a DC path to ground.
-    for node in circuit.nodes:
-        if node != circuit.gnd:
-            circuit.R(f"shunt_{node}", node, circuit.gnd, 1000 @ u_MOhm)
+    if add_shunts:
+        for node in circuit.nodes:
+            if node != circuit.gnd:
+                circuit.R(f"shunt_{node}", node, circuit.gnd, 1000 @ u_MOhm)
 
     return circuit
