@@ -48,6 +48,14 @@ class RemoteFilesystemMiddleware:
         )
         return await self.client.list_files(path)
 
+    async def inspect_topology(
+        self, target_id: str, script_path: str = "script.py"
+    ) -> dict[str, Any]:
+        """Inspect topological features via the Worker client."""
+        # We could add a specific event type for this if needed
+        result = await self.client.inspect_topology(target_id, script_path)
+        return result.model_dump()
+
     async def read_file(self, path: str) -> str:
         """Read file via the Worker client."""
         events = [ReadFileToolEvent(path=path)]
