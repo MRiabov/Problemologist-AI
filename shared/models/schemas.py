@@ -10,6 +10,9 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 from shared.simulation.schemas import SimulatorBackendType
 
+from shared.enums import ElectronicComponentType
+
+
 # =============================================================================
 # Common Types
 # =============================================================================
@@ -425,7 +428,7 @@ class ElectronicComponent(BaseModel):
     """A component in the electronic circuit."""
 
     component_id: str
-    type: Literal["power_supply", "motor", "relay", "connector", "switch"]
+    type: ElectronicComponentType
     cots_part_id: str | None = None
     assembly_part_ref: str | None = None
     rated_voltage: float | None = None

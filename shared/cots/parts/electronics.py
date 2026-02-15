@@ -88,3 +88,81 @@ class ElectronicRelay(COTSPart):
         body.color = Color("blue")
 
         super().__init__(category="relay", part_number=size, data=data, children=[body])
+
+
+class Connector(COTSPart):
+    """
+    Represents a COTS Electrical Connector.
+    """
+
+    connector_data = {
+        "XT60": {
+            "max_current_a": 60.0,
+            "weight_g": 7.0,
+            "dims": (15.0, 16.0, 8.0),
+            "price": 0.80,
+        },
+        "JST-XH-2P": {
+            "max_current_a": 3.0,
+            "weight_g": 1.0,
+            "dims": (10.0, 6.0, 6.0),
+            "price": 0.10,
+        },
+    }
+
+    def __init__(self, size: str = "XT60", **kwargs):
+        if size not in self.connector_data:
+            super().__init__(
+                category="connector", part_number="UNKNOWN", data={}, children=[]
+            )
+            return
+
+        data = self.connector_data[size]
+        l, w, h = data["dims"]
+        body = Box(l, w, h)
+        body.color = Color("yellow")
+        super().__init__(
+            category="connector", part_number=size, data=data, children=[body]
+        )
+
+
+class Wire(COTSPart):
+    """
+    Represents a COTS Electrical Wire.
+    """
+
+    wire_data = {
+        "AWG18-RED": {
+            "gauge_awg": 18,
+            "max_current_a": 16.0,
+            "weight_g_per_m": 20.0,
+            "price_per_m": 0.50,
+            "color": "red",
+        },
+        "AWG24-BLACK": {
+            "gauge_awg": 24,
+            "max_current_a": 3.5,
+            "weight_g_per_m": 5.0,
+            "price_per_m": 0.20,
+            "color": "black",
+        },
+    }
+
+    def __init__(self, size: str = "AWG18-RED", **kwargs):
+        if size not in self.wire_data:
+            super().__init__(
+                category="wire", part_number="UNKNOWN", data={}, children=[]
+            )
+            return
+
+        data = self.wire_data[size]
+        # Wire doesn't have fixed dims in the same way, but we can give it a small spool or representation
+        body = Box(10.0, 10.0, 2.0)
+        body.color = Color(data["color"])
+
+        # Cost and weight for COTS items in DB are usually PER UNIT.
+        # For wire, let's treat it as 1m unit for indexing.
+        data["weight_g"] = data["weight_g_per_m"]
+        data["price"] = data["price_per_m"]
+
+        super().__init__(category="wire", part_number=size, data=data, children=[body])
