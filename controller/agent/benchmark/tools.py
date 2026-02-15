@@ -35,9 +35,13 @@ def get_benchmark_tools(fs: RemoteFilesystemMiddleware):
         return await fs.grep(pattern, path, glob)
 
     @tool
-    async def simulate(script_path: str) -> dict:
-        """Run physics simulation for the benchmark."""
-        return await fs.simulate(script_path)
+    async def simulate(
+        script_path: str, backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+    ) -> dict:
+        """Run physics simulation for the benchmark.
+        Use MUJOCO for rigid body only, GENESIS for fluids or FEM.
+        """
+        return await fs.simulate(script_path, backend=backend)
 
     @tool
     async def validate(script_path: str) -> dict:
