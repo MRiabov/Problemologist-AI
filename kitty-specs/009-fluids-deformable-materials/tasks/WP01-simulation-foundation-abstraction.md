@@ -1,9 +1,11 @@
 ---
 work_package_id: "WP01"
 title: "Simulation Foundation & Abstraction"
-lane: "planned"
+lane: "doing"
 dependencies: []
 subtasks: ["T001", "T002", "T003", "T004", "T005"]
+agent: "Antigravity"
+shell_pid: "239163"
 ---
 
 # WP01: Simulation Foundation & Abstraction
@@ -61,3 +63,7 @@ Currently, the system is hardcoded to use MuJoCo. We need to introduce an abstra
 ## Risks
 - Regressions in existing rigid-body simulations.
 - Schema mismatches between controller and worker.
+
+## Activity Log
+
+- 2026-02-15T06:26:23Z – Antigravity – shell_pid=239163 – lane=doing – Started review via workflow command
