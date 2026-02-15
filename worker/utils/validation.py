@@ -145,9 +145,9 @@ def get_stress_report(part_label: str) -> dict | None:
                 "Safety factor low (below 1.5). "
                 "Consider adding material to reach target range (1.5 - 5.0)."
             )
-        elif sf > 10.0:
+        elif sf > 5.0:
             res["advice"] = (
-                "Safety factor very high (over 10.0). Part might be over-engineered. "
+                "Safety factor high (over 5.0). Part might be over-engineered. "
                 "Consider removing material to reduce cost and weight."
             )
         else:
@@ -442,8 +442,10 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
+                            )
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
@@ -545,7 +547,7 @@ def validate(
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
-        
+
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
         backend_type = SimulatorBackendType.MUJOCO
         if output_dir:
@@ -554,6 +556,7 @@ def validate(
                 try:
                     data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
                     from shared.models.schemas import ObjectivesYaml
+
                     objs = ObjectivesYaml(**data)
                     if objs.physics and objs.physics.backend:
                         backend_type = SimulatorBackendType(objs.physics.backend)
