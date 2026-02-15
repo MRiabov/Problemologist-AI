@@ -1,0 +1,65 @@
+---
+work_package_id: WP04
+title: Physics Simulation Integration
+lane: planned
+dependencies: []
+subtasks: [T014, T015, T016, T017, T018]
+---
+
+# WP04: Physics Simulation Integration
+
+## Objective
+Couple the electrical circuit state with the physics simulation engine (MuJoCo/Genesis) to enforce power gating and wire breakage.
+
+## Context
+A motor should only exert torque if it is powered. If a wire is torn mid-simulation, the motor should stop. We use MuJoCo `tendons` to represent physical wires.
+
+## Detailed Guidance
+
+### T014: Update `worker/simulation/builder.py` (MJCF Injection)
+**Purpose**: Represent wires in the physics engine.
+
+**Steps**:
+1. For each `WireConfig`, create a `tendon` in the MJCF.
+2. Inject `site` elements at the waypoints.
+3. Set tendon properties (stiffness, damping) based on wire material.
+
+### T015: Update `worker/simulation/loop.py` (Power Gating)
+**Purpose**: Modulate motor torque based on circuit state.
+
+**Steps**:
+1. In each `step()`, query the circuit simulation (or a pre-calculated state).
+2. Multiply the requested actuator control input by `is_powered` (0 or 1).
+3. If a wire is torn (see T016), `is_powered` must drop to 0 permanently.
+
+### T016: Implement tension monitoring
+**Purpose**: Detect wire breakage.
+
+**Steps**:
+1. Read the tension (force) on each tendon from the physics engine (`mj_data.ten_force`).
+2. Compare with the wire's `tensile_strength_n`.
+3. If exceeded, mark the wire as "torn" and emit an event.
+
+### T017: Implement mid-simulation failure handling
+**Purpose**: Report electrical failures during runtime.
+
+**Steps**:
+1. Capture `wire_torn` events.
+2. If a critical wire is torn, the simulation should potentially fail (depending on objective).
+
+### T018: Add simulation tests
+**Purpose**: Verify the "powered" logic.
+
+**Steps**:
+1. Create a test scene with a motor and a wire.
+2. Pull the motor away until the wire tears.
+3. Verify the motor stops spinning immediately.
+
+## Definition of Done
+- Motors in simulation respect electrical power status.
+- Wire tearing is detected and causes motor stoppage.
+- MJCF correctly includes tendons for all defined wires.
+
+## Risks
+- MuJoCo tendons being unstable if waypoints are too close or paths too complex.
+- Performance overhead of monitoring every wire every timestep.
