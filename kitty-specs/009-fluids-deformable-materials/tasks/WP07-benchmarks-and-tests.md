@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: Benchmark Planning & Integration Tests
-lane: "doing"
+lane: "done"
 dependencies: []
 base_branch: main
 base_commit: 6d83d6425a3faf5bd47da49d39daf21ff3340bf4
@@ -56,3 +56,4 @@ We need automated ways to prove that Genesis and MuJoCo are consistent for rigid
 - 2026-02-15T21:01:57Z – Gemini – shell_pid=410766 – lane=doing – Started implementation via workflow command
 - 2026-02-15T21:08:02Z – Gemini – shell_pid=410766 – lane=for_review – Ready for review: implemented benchmark planner updates for Genesis/FEM/Fluids, added integration tests for physics parity, FEM breakage, fluid containment, and GPU OOM retry logic. Verified with pytest.
 - 2026-02-15T21:20:08Z – gemini – shell_pid=438305 – lane=doing – Started review via workflow command
+- 2026-02-15T21:24:05Z – gemini – shell_pid=438305 – lane=done – Review passed: Integration tests for physics parity, FEM breakage, fluid containment, and GPU OOM retry logic are implemented and passing. Benchmark planner prompts updated to support Genesis/FEM/Fluids. Note: Physics parity tolerance set to 15% due to solver differences.
