@@ -1,14 +1,14 @@
 ---
 work_package_id: WP04
 title: LangGraph Integration
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: 35acbb99d47bea37eb74f4757408f6fe43a55180
 created_at: '2026-02-15T11:25:19.422466+00:00'
 subtasks: [T008, T012]
-shell_pid: "94233"
-agent: "Antigravity"
+shell_pid: "228894"
+agent: "gemini"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -55,3 +55,4 @@ Inject the interaction queue into the LangGraph execution loop, allowing user fe
 - 2026-02-15T18:12:53Z – gemini – shell_pid=193402 – lane=planned – Moved to planned
 - 2026-02-15T18:13:59Z – Antigravity – shell_pid=94233 – lane=doing – Started implementation via workflow command
 - 2026-02-15T18:52:51Z – Antigravity – shell_pid=94233 – lane=for_review – Integrated steerability into LangGraph loops for both agents. Verified with tests. Fixed duplicate task IDs in tasks.md.
+- 2026-02-15T18:54:30Z – gemini – shell_pid=228894 – lane=doing – Started review via workflow command
