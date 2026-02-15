@@ -8,9 +8,9 @@ This document breaks down the implementation of the Steerability framework into 
 **Goal**: Define the core data structures and persistence for steering metadata and user preferences.
 **Independent Test**: Unit tests for Pydantic models and SQLAlchemy schema migrations.
 
-- [ ] **T001**: Implement `GeometricSelection` and `SteerablePrompt` Pydantic models in `shared/models/steerability.py`. [P]
-- [ ] **T002**: Implement `UserSteeringPreference` model and SQLAlchemy schema in `controller/persistence/steering_memory.py`.
-- [ ] **T013**: Implement persistent user preference storage logic in `controller/persistence/steering_memory.py`.
+- [x] T001: Implement `GeometricSelection` and `SteerablePrompt` Pydantic models in `shared/models/steerability.py`. [P]
+- [x] T002: Implement `UserSteeringPreference` model and SQLAlchemy schema in `controller/persistence/steering_memory.py`.
+- [x] T013: Implement persistent user preference storage logic in `controller/persistence/steering_memory.py`.
 
 **Estimated Prompt Size**: ~250 lines
 
