@@ -11,13 +11,13 @@ repos:
     hooks:
       - id: generate-openapi
         name: generate-openapi
-        entry: uv run python scripts/generate_openapi.py
+        entry: bash -c "uv run python scripts/generate_openapi.py && git add controller_openapi.json worker_openapi.json"
         language: system
         pass_filenames: false
         files: \.py$
       - id: generate-frontend-client
         name: generate-frontend-client
-        entry: bash -c "cd frontend && npm run gen:api"
+        entry: bash -c "cd frontend && npm run gen:api && git add src/api/generated"
         language: system
         pass_filenames: false
         files: \.py$
