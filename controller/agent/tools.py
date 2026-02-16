@@ -1,30 +1,72 @@
-from typing import List, Optional
+from collections.abc import Callable
+
 from langchain_core.tools import tool
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+
+from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
+from controller.observability.tracing import record_worker_events
 from shared.cots.agent import search_cots_catalog
+from shared.observability.schemas import RunCommandToolEvent
 
 
-def get_engineer_tools(fs: RemoteFilesystemMiddleware):
+def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Callable]:
+    """
+    Get the set of common tools available to all agents (Engineer, Benchmark, etc.).
+    Includes filesystem operations and COTS catalog search.
+    """
+
     @tool
-    async def list_files(path: str = "/") -> List[dict]:
-        """List files in the workspace."""
+    async def list_files(path: str = "/"):
+        """List files in the workspace (filesystem)."""
         return await fs.list_files(path)
 
     @tool
-    async def read_file(path: str) -> str:
-        """Read a file's content."""
+    async def read_file(path: str):
+        """Read a file's content from the workspace."""
         return await fs.read_file(path)
 
     @tool
-    async def write_file(path: str, content: str, overwrite: bool = False) -> bool:
-        """Write content to a file."""
+    async def write_file(path: str, content: str, overwrite: bool = False):
+        """Write content to a file in the workspace."""
         return await fs.write_file(path, content, overwrite=overwrite)
 
     @tool
-    async def grep(
-        pattern: str, path: Optional[str] = None, glob: Optional[str] = None
-    ) -> List[dict]:
+    async def edit_file(path: str, old_string: str, new_string: str):
+        """Edit a file by replacing old_string with new_string."""
+        return await fs.edit_file(
+            path, [EditOp(old_string=old_string, new_string=new_string)]
+        )
+
+    @tool
+    async def grep(pattern: str, path: str | None = None, glob: str | None = None):
         """Search for a pattern in files."""
         return await fs.grep(pattern, path, glob)
 
-    return [list_files, read_file, write_file, grep, search_cots_catalog]
+    @tool
+    async def execute_command(command: str):
+        """Execute a shell command in the workspace."""
+        # Record the command execution event
+        await record_worker_events(
+            episode_id=session_id,
+            events=[RunCommandToolEvent(command=command)],
+        )
+        return await fs.run_command(command)
+
+    return [
+        list_files,
+        read_file,
+        write_file,
+        edit_file,
+        grep,
+        execute_command,
+        search_cots_catalog,
+    ]
+
+
+def get_engineer_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """
+    Get the tools for the Engineer agent.
+    Now uses the common toolset.
+    """
+    return get_common_tools(fs, session_id)

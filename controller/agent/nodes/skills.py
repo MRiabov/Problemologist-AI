@@ -1,11 +1,14 @@
 import logging
 import os
+import uuid
 from pathlib import Path
 
 from git import GitCommandError, Repo
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
 
 from controller.observability.tracing import sync_asset
 from shared.type_checking import type_check
@@ -13,6 +16,9 @@ from shared.type_checking import type_check
 from ..config import settings
 from ..prompt_manager import PromptManager
 from ..state import AgentState
+from ..tools import get_engineer_tools
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +27,7 @@ logger = logging.getLogger(__name__)
 class SkillsNode:
     """
     Skills node: Analyzes the journal to suggest new skills.
-    Includes Git synchronization for skill persistence.
+    Refactored to use create_react_agent.
     """
 
     def __init__(self, suggested_skills_dir: str = "suggested_skills"):
@@ -58,7 +64,6 @@ class SkillsNode:
                 self.repo = Repo.clone_from(auth_url, self.suggested_skills_dir)
                 logger.info("Skills repo cloned successfully.")
 
-            # Configure user if not present (needed for commits)
             with self.repo.config_writer() as git_config:
                 if not git_config.has_option("user", "email"):
                     git_config.set_value("user", "email", "agent@problemologist.ai")
@@ -70,7 +75,6 @@ class SkillsNode:
 
     async def _resolve_conflicts(self):
         """Resolve git conflicts using LLM."""
-        # Get list of unmerged files
         unmerged = self.repo.git.diff("--name-only", "--diff-filter=U").splitlines()
 
         for file_path in unmerged:
@@ -85,13 +89,10 @@ class SkillsNode:
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
             resolved_content = str(response.content)
 
-            # Strip potential markdown blocks if LLM wraps it
             if "```" in resolved_content:
                 lines = resolved_content.splitlines()
-                # Remove starting block
                 if lines and lines[0].strip().startswith("```"):
                     lines = lines[1:]
-                # Remove ending block
                 if lines and lines[-1].strip().startswith("```"):
                     lines = lines[:-1]
                 resolved_content = "\n".join(lines)
@@ -108,7 +109,6 @@ class SkillsNode:
             self.repo.git.add(A=True)
             self.repo.index.commit(commit_message)
 
-            # Pull with rebase to handle concurrent updates
             try:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
@@ -132,51 +132,89 @@ class SkillsNode:
     async def __call__(
         self, state: AgentState, config: RunnableConfig | None = None
     ) -> AgentState:
-        """Execute the sidecar node logic."""
-        # T021: Parse Journal for patterns
-        prompt = self.pm.render("sidecar", journal=state.journal, task=state.task)
+        """Execute the sidecar node logic using ReAct agent."""
+        session_id = state.session_id or settings.default_session_id
+        worker_url = settings.spec_001_api_url
+        client = WorkerClient(base_url=worker_url, session_id=session_id)
+        fs = RemoteFilesystemMiddleware(client)
 
-        # Pass callbacks from config if available
-        callbacks = config.get("callbacks") if config else None
-        response = await self.llm.ainvoke(
-            [HumanMessage(content=prompt)], config={"callbacks": callbacks}
-        )
-        content = str(response.content)
+        # Define the specialized tool for suggesting skills
+        @tool
+        async def save_suggested_skill(title: str, content: str) -> str:
+            """
+            Saves a new suggested skill to the repository.
+            Args:
+                title: A concise title for the skill (e.g., 'motor_initialization').
+                content: The markdown content describing the skill.
+            """
+            clean_title = title.strip().lower().replace(" ", "_").replace(".md", "")
+            file_path = self.suggested_skills_dir / f"{clean_title}.md"
 
-        # T022: Skill extraction logic
-        # Expecting format:
-        # SKILL: <Title>
-        # CONTENT: <Markdown content>
-
-        suggested_skill = None
-        if "SKILL:" in content and "CONTENT:" in content:
-            parts = content.split("CONTENT:")
-            title = parts[0].replace("SKILL:", "").strip().lower().replace(" ", "_")
-            skill_content = parts[1].strip()
-
-            file_path = self.suggested_skills_dir / f"{title}.md"
-            with file_path.open("w") as f:
-                f.write(skill_content)
-            suggested_skill = title
-            logger.info(f"Suggested new skill: {title}")
-
-            # Sync to Database as Asset
             try:
-                import uuid
+                with file_path.open("w") as f:
+                    f.write(content)
 
-                episode_id = uuid.UUID(state.session_id)
-                await sync_asset(
-                    episode_id, f"suggested_skills/{title}.md", skill_content
-                )
+                # Sync to Database as Asset
+                try:
+                    episode_uuid = uuid.UUID(session_id)
+                    await sync_asset(
+                        episode_uuid, f"suggested_skills/{clean_title}.md", content
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to sync skill asset: {e}")
+
+                # Sync to Git
+                await self._sync_git(f"Add skill: {clean_title}")
+
+                return f"Skill '{clean_title}' saved and synced successfully."
             except Exception as e:
-                logger.warning(f"Failed to sync skill asset: {e}")
+                return f"Error saving skill: {e}"
 
-            # Sync to Git
-            await self._sync_git(f"Add skill: {title}")
+        # Get common tools + specialized tool
+        common_tools = get_engineer_tools(fs, session_id)
+        tools = common_tools + [save_suggested_skill]
 
-        journal_entry = f"\nSidecar Learner: {'Suggested skill ' + suggested_skill if suggested_skill else 'No new skills identified.'}"
+        agent = create_react_agent(self.llm, tools)
 
-        return state.model_copy(update={"journal": state.journal + journal_entry})
+        prompt = self.pm.render("sidecar", journal=state.journal, task=state.task)
+        # Add explicit direction to use the tool
+        prompt += "\n\nIf you identify a valuable skill or pattern, use the `save_suggested_skill` tool to record it."
+
+        messages = [SystemMessage(content=prompt)]
+
+        try:
+            # Pass callbacks from config if available
+            agent_callbacks = config.get("callbacks") if config else None
+            result = await agent.ainvoke(
+                {"messages": messages}, config={"callbacks": agent_callbacks}
+            )
+            final_messages = result["messages"]
+
+            # Check if any skills were suggested by looking for tool calls
+            suggested_count = 0
+            for msg in final_messages:
+                if hasattr(msg, "tool_calls"):
+                    for tc in msg.tool_calls:
+                        if tc["name"] == "save_suggested_skill":
+                            suggested_count += 1
+
+            journal_entry = (
+                f"\nSidecar Learner: Identified and recorded {suggested_count} new skills."
+                if suggested_count > 0
+                else "\nSidecar Learner: No new skills identified."
+            )
+
+            return state.model_copy(
+                update={
+                    "journal": state.journal + journal_entry,
+                    "messages": state.messages + final_messages,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Skills agent failed: {e}")
+            return state.model_copy(
+                update={"journal": state.journal + f"\n[Skills] System error: {e}"}
+            )
 
 
 # Factory function for LangGraph

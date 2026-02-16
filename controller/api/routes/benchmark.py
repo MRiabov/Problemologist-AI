@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Annotated, Any
+from typing import Annotated
 
 import httpx
 import yaml
@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
+from controller.api.schemas import EpisodeResponse
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
@@ -89,13 +90,11 @@ async def confirm_benchmark(session_id: uuid.UUID, background_tasks: BackgroundT
 # We should probably expose a getter for that.
 
 
-@router.get("/{session_id}", response_model=Any)
+@router.get("/{session_id}", response_model=EpisodeResponse)
 async def get_session(
     session_id: uuid.UUID, db: Annotated[AsyncSession, Depends(get_db)]
 ):
     from sqlalchemy.orm import selectinload
-
-    from controller.api.routes.episodes import EpisodeResponse
 
     stmt = (
         select(Episode)

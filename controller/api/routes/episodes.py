@@ -14,12 +14,13 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from pydantic import BaseModel, StrictStr, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.api.schemas import AssetResponse, EpisodeResponse, TraceResponse
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
@@ -219,49 +220,6 @@ async def continue_episode(
     return {"status": ResponseStatus.ACCEPTED, "message": "Message sent to agent"}
 
 
-class TraceResponse(BaseModel):
-    id: int
-    langfuse_trace_id: str | None
-    trace_type: TraceType
-    name: str | None
-    content: str | None
-    metadata: dict | None = Field(None, alias="metadata_vars")
-    feedback_score: int | None = None
-    feedback_comment: str | None = None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-
-class AssetResponse(BaseModel):
-    id: int
-    asset_type: AssetType
-    s3_path: str
-    content: str | None = None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class EpisodeResponse(BaseModel):
-    id: uuid.UUID
-    task: StrictStr
-    status: EpisodeStatus
-    created_at: datetime
-    updated_at: datetime
-    skill_git_hash: str | None = None
-    template_versions: dict | None = None
-    metadata_vars: dict | None = None
-    todo_list: dict | None = None
-    journal: str | None = None
-    plan: str | None = None
-    validation_logs: list[str] | None = None
-    traces: list[TraceResponse] = []
-    assets: list[AssetResponse] = []
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 @router.get("/", response_model=list[EpisodeResponse])
 async def list_episodes(
     limit: Annotated[int, Query(ge=0, lt=2**63)] = 100,
@@ -283,7 +241,9 @@ async def list_episodes(
 
         logger = structlog.get_logger(__name__)
         logger.error("list_episodes_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal Server Error: {e!s}"
+        ) from e
 
 
 @router.get("/{episode_id}", response_model=EpisodeResponse)
