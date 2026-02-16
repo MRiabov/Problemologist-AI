@@ -61,9 +61,10 @@ app.include_router(benchmark.router)
 app.include_router(skills.router)
 app.include_router(ops.router)
 app.include_router(cots.router)
-from controller.api.routes import simulation
+from controller.api.routes import simulation, steerability
 
 app.include_router(simulation.router)
+app.include_router(steerability.router, prefix="/api/v1")
 
 
 from controller.api.tasks import AgentRunRequest, execute_agent_task
