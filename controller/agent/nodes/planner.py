@@ -1,4 +1,4 @@
-import logging
+import structlog
 from pathlib import Path
 from contextlib import suppress
 
@@ -19,7 +19,7 @@ from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @type_check

@@ -1,4 +1,5 @@
 import ast
+import hashlib
 import json
 import uuid
 from typing import Any
@@ -21,7 +22,12 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         langfuse_callback: Any | None = None,
     ):
         if isinstance(episode_id, str):
-            self.episode_id = uuid.UUID(episode_id)
+            try:
+                self.episode_id = uuid.UUID(episode_id)
+            except ValueError:
+                # If not a valid UUID, create a deterministic UUID from the string
+                hash_val = hashlib.md5(episode_id.encode()).digest()
+                self.episode_id = uuid.UUID(bytes=hash_val)
         else:
             self.episode_id = episode_id
         self.session_factory = get_sessionmaker()

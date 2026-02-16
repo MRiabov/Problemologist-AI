@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from controller.clients.worker import WorkerClient
+from shared.simulation.schemas import SimulatorBackendType
 from worker.api.schema import EditOp, ExecuteResponse
 from worker.filesystem.backend import FileInfo
 
@@ -83,7 +84,7 @@ async def test_write_file(mock_httpx_client):
     assert result is True
     mock_httpx_client.post.assert_called_once_with(
         "http://worker:8000/fs/write",
-        json={"path": "test.txt", "content": "content"},
+        json={"path": "test.txt", "content": "content", "overwrite": True},
         headers={"X-Session-ID": "test-session"},
         timeout=10.0,
     )
@@ -179,7 +180,10 @@ async def test_simulate(mock_httpx_client):
 
     mock_httpx_client.post.assert_called_once_with(
         "http://worker:8000/benchmark/simulate",
-        json={"script_path": "script.py"},
+        json={
+            "script_path": "script.py",
+            "backend": SimulatorBackendType.MUJOCO,
+        },
         headers={"X-Session-ID": "test-session"},
         timeout=60.0,
     )

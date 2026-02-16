@@ -2,22 +2,28 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.reviewer import ReviewerNode
 from controller.agent.state import AgentState, AgentStatus
 
 
 @pytest.fixture
-def mock_llm():
-    with patch("controller.agent.nodes.reviewer.ChatOpenAI") as mock:
+def mock_agent():
+    with patch("controller.agent.nodes.reviewer.ChatOpenAI"), \
+         patch("controller.agent.nodes.reviewer.create_react_agent") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
-        instance.ainvoke.return_value = MagicMock(
-            content="""---
+        instance.ainvoke.return_value = {
+            "messages": [
+                AIMessage(
+                    content="""---
 decision: approve
 ---
 Looks good."""
-        )
+                )
+            ]
+        }
         yield instance
 
 
@@ -30,7 +36,7 @@ def mock_worker():
 
 
 @pytest.mark.asyncio
-async def test_critic_node_approve(mock_llm, mock_worker):
+async def test_critic_node_approve(mock_agent, mock_worker):
     # Mock reports
     mock_worker.read_file.side_effect = [
         json.dumps({"status": "success", "results": "passed"}),  # sim report
@@ -48,13 +54,17 @@ async def test_critic_node_approve(mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-async def test_critic_node_reject(mock_llm, mock_worker):
-    mock_llm.ainvoke.return_value = MagicMock(
-        content="""---
+async def test_critic_node_reject(mock_agent, mock_worker):
+    mock_agent.ainvoke.return_value = {
+        "messages": [
+            AIMessage(
+                content="""---
 decision: reject_code
 ---
 Simulation failed."""
-    )
+            )
+        ]
+    }
     mock_worker.read_file.side_effect = [
         json.dumps({"status": "error", "message": "collision"}),
         "Too expensive.",
@@ -71,7 +81,7 @@ Simulation failed."""
 
 
 @pytest.mark.asyncio
-async def test_critic_node_no_artifacts(mock_llm, mock_worker):
+async def test_critic_node_no_artifacts(mock_agent, mock_worker):
     mock_worker.read_file.side_effect = Exception("File not found")
 
     node = ReviewerNode()
@@ -81,4 +91,4 @@ async def test_critic_node_no_artifacts(mock_llm, mock_worker):
 
     # Even without artifacts, LLM decides based on journal
     assert result.status
-    mock_llm.ainvoke.assert_called_once()
+    mock_agent.ainvoke.assert_called_once()

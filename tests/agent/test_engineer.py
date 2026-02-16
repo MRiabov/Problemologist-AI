@@ -1,19 +1,23 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.coder import CoderNode
 from controller.agent.state import AgentState
 
 
 @pytest.fixture
-def mock_llm():
-    with patch("controller.agent.nodes.coder.ChatOpenAI") as mock:
+def mock_agent():
+    with patch("controller.agent.nodes.coder.ChatOpenAI"), \
+         patch("controller.agent.nodes.coder.create_react_agent") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
-        instance.ainvoke.return_value = MagicMock(
-            content="```python\nprint('hello')\n```"
-        )
+        instance.ainvoke.return_value = {
+            "messages": [
+                AIMessage(content="```python\nprint('hello')\n```")
+            ]
+        }
         yield instance
 
 
@@ -40,23 +44,17 @@ def mock_worker():
 
 @pytest.fixture
 def mock_record_events():
-    with (
-        patch(
-            "controller.agent.nodes.coder.record_worker_events",
-            new_callable=AsyncMock,
-        ) as mock1,
-        patch(
-            "controller.middleware.remote_fs.record_worker_events",
-            new_callable=AsyncMock,
-        ) as mock2,
-    ):
-        yield mock1
+    with patch(
+        "controller.middleware.remote_fs.record_worker_events",
+        new_callable=AsyncMock,
+    ) as mock:
+        yield mock
 
 
 @pytest.mark.asyncio
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_success(
-    mock_validate, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_agent, mock_worker, mock_record_events
 ):
     node = CoderNode()
     state = AgentState(
@@ -68,19 +66,18 @@ async def test_engineer_node_success(
     assert "Step 1" in result.current_step
     assert "- [x] Step 1" in result.todo
     assert "Successfully executed step: Step 1" in result.journal
-    mock_worker.execute_python.assert_called_once()
 
 
 @pytest.mark.asyncio
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_retry_then_success(
-    mock_validate, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_agent, mock_worker, mock_record_events
 ):
-    # Mock failure then success
-    mock_worker.execute_python.side_effect = [
-        ExecuteResponse(stdout="", stderr="SyntaxError", exit_code=1),
-        ExecuteResponse(stdout="fixed", stderr="", exit_code=0),
-    ]
+    # Mock failure then success is handled by the agent internally in ReAct,
+    # but CoderNode also has a retry loop for validation failures.
+
+    # We mock a validation failure followed by success
+    mock_validate.side_effect = [(False, ["error"]), (True, [])]
 
     node = CoderNode()
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
@@ -88,22 +85,16 @@ async def test_engineer_node_retry_then_success(
     result = await node(state)
 
     assert "- [x] Step 1" in result.todo
-    assert "Execution failed (Attempt 1): SyntaxError" in result.journal
+    assert "Validation failed (Attempt 1): ['error']" in result.journal
     assert "Successfully executed step: Step 1" in result.journal
-    assert mock_worker.execute_python.call_count == 2
 
 
 @pytest.mark.asyncio
-async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events):
-    mock_worker.execute_python.return_value = ExecuteResponse(
-        stdout="", stderr="Persistent Error", exit_code=1
-    )
+async def test_engineer_node_all_fail(mock_agent, mock_worker, mock_record_events):
+    with patch("worker.utils.file_validation.validate_node_output", return_value=(False, ["persistent error"])):
+        node = CoderNode()
+        state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
-    node = CoderNode()
-    state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
+        result = await node(state)
 
-    result = await node(state)
-
-    assert result.iteration > 0
-    assert "Failed to complete step after 3 retries" in result.journal
-    assert mock_worker.execute_python.call_count == 3
+        assert "Failed to complete step after 3 retries" in result.journal
