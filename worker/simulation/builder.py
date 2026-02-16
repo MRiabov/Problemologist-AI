@@ -194,11 +194,11 @@ class MeshProcessor:
 
         # Export build123d object to a temporary STL file
         temp_stl = filepath.with_suffix(".tmp.stl")
-        export_stl(part, str(temp_stl))
+        export_stl(part, temp_stl)
 
         output_paths = []
         try:
-            mesh = trimesh.load(str(temp_stl))
+            mesh = trimesh.load(temp_stl)
 
             # If trimesh loaded a Scene, merge it into a single mesh
             if isinstance(mesh, trimesh.Scene):
@@ -219,8 +219,8 @@ class MeshProcessor:
                                 # Export both OBJ and GLB for each decomposed part
                                 obj_sub = filepath.with_name(f"{filepath.stem}_{i}.obj")
                                 glb_sub = filepath.with_name(f"{filepath.stem}_{i}.glb")
-                                dm.export(str(obj_sub), file_type="obj")
-                                dm.export(str(glb_sub), file_type="glb")
+                                dm.export(obj_sub, file_type="obj")
+                                dm.export(glb_sub, file_type="glb")
                                 output_paths.extend([obj_sub, glb_sub])
                             return output_paths
                     except Exception:
@@ -233,7 +233,7 @@ class MeshProcessor:
             obj_path = filepath.with_suffix(".obj")
             glb_path = filepath.with_suffix(".glb")
 
-            mesh.export(str(obj_path), file_type="obj")
+            mesh.export(obj_path, file_type="obj")
 
             # Custom topology-preserving export for frontend viewer
             try:
@@ -241,7 +241,7 @@ class MeshProcessor:
             except Exception as e:
                 logger.warning("topology_export_failed", error=str(e))
                 # Fallback to simple mesh export
-                mesh.export(str(glb_path), file_type="glb")
+                mesh.export(glb_path, file_type="glb")
 
             output_paths.extend([obj_path, glb_path])
         finally:
@@ -262,11 +262,11 @@ class MeshProcessor:
             faces = part.faces()
             for i, face in enumerate(faces):
                 fname = tmp_path / f"face_{i}.stl"
-                export_stl(face, str(fname))
+                export_stl(face, fname)
 
                 try:
                     # Load the face mesh
-                    face_mesh = trimesh.load(str(fname))
+                    face_mesh = trimesh.load(fname)
                     if isinstance(face_mesh, trimesh.Scene):
                         face_mesh = face_mesh.dump(concatenate=True)
 
@@ -279,7 +279,7 @@ class MeshProcessor:
                     logger.warning(f"failed_to_export_face_{i}", error=str(e))
 
         # Export the scene to GLB
-        scene.export(str(filepath), file_type="glb")
+        scene.export(filepath, file_type="glb")
 
     def _recenter_mesh(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
         """Recenter mesh to origin (0,0,0) based on its centroid."""

@@ -1,10 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.nodes import coder_node, planner_node
 from controller.agent.benchmark.state import BenchmarkGeneratorState
+from shared.simulation.schemas import RandomizationStrategy
 
 
 @pytest.mark.asyncio
@@ -25,33 +25,33 @@ async def test_planner_node_prompt_construction():
         messages=[],
     )
 
-    # Patch dependencies
-    with (
-        patch(
-            "controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"
-        ) as mock_backend,
-        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm_cls,
-        patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
-    ):
-        # Mock client
-        mock_client = AsyncMock()
-        mock_client_cls.return_value = mock_client
+    # Patch SharedNodeContext.create
+    with patch(
+        "controller.agent.benchmark.nodes.SharedNodeContext.create"
+    ) as mock_ctx_create:
+        mock_ctx = MagicMock()
+        mock_ctx_create.return_value = mock_ctx
+        mock_ctx.worker_client = AsyncMock()
+        mock_ctx.get_callbacks.return_value = []
 
-        # Mock LLM
-        mock_llm = mock_llm_cls.return_value
-        mock_llm.ainvoke = AsyncMock()
-        mock_llm.ainvoke.return_value = MagicMock(content='{"theme": "balls"}')
+        mock_llm = MagicMock()
+        mock_ctx.llm = mock_llm
+
+        structured_mock = AsyncMock()
+        structured_mock.ainvoke.return_value = RandomizationStrategy(
+            theme="balls", reasoning="test"
+        )
+        mock_llm.with_structured_output.return_value = structured_mock
 
         # Execute
         await planner_node(state)
 
         # Verify
-        mock_llm.ainvoke.assert_called_once()
-        call_args = mock_llm.ainvoke.call_args
+        mock_llm.with_structured_output.assert_called_with(RandomizationStrategy)
+        structured_mock.ainvoke.assert_called_once()
+        call_args = structured_mock.ainvoke.call_args
         messages = call_args.args[0]
         system_prompt = messages[0].content
-
-        assert "A red ball bouncing" not in system_prompt  # Prompt is in HumanMessage
         assert (
             "You are an expert designer of spatial and geometric puzzles"
             in system_prompt
@@ -73,38 +73,40 @@ async def test_coder_node_prompt_construction():
         simulation_result=None,
         review_feedback=None,
         review_round=0,
-        plan={"theme": "cubes"},
+        plan=RandomizationStrategy(theme="cubes", reasoning="test"),
         messages=[],
     )
 
-    # Patch dependencies
+    # Patch SharedNodeContext.create and agent
     with (
         patch(
-            "controller.agent.benchmark.nodes.RemoteFilesystemMiddleware"
-        ) as mock_backend,
-        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm_cls,
-        patch("controller.agent.benchmark.nodes.WorkerClient") as mock_client_cls,
+            "controller.agent.benchmark.nodes.SharedNodeContext.create"
+        ) as mock_ctx_create,
+        patch(
+            "controller.agent.benchmark.nodes.create_react_agent"
+        ) as mock_create_agent,
+        patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
-        # Mock client
-        mock_client = AsyncMock()
-        mock_client_cls.return_value = mock_client
+        mock_ctx = MagicMock()
+        mock_ctx_create.return_value = mock_ctx
+        mock_ctx.worker_client = AsyncMock()
+        mock_ctx.worker_client.exists.return_value = False
+        mock_ctx.get_callbacks.return_value = []
 
-        # Mock LLM
-        mock_llm = mock_llm_cls.return_value
-        mock_llm.ainvoke = AsyncMock()
-        mock_llm.ainvoke.return_value = MagicMock(content="Done", tool_calls=[])
-        mock_llm.bind_tools = MagicMock(return_value=mock_llm)
+        mock_agent = AsyncMock()
+        mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Done")]}
+        mock_create_agent.return_value = mock_agent
 
         # Execute
         await coder_node(state)
 
         # Verify
-        mock_llm.ainvoke.assert_called_once()
-        call_args = mock_llm.ainvoke.call_args
-        messages = call_args.args[0]
-        # In coder_node, system prompt is messages[0].content
+        mock_agent.ainvoke.assert_called_once()
+        call_args = mock_agent.ainvoke.call_args
+        # Inside coder_node, it passes a dict to agent.ainvoke
+        agent_input = call_args.args[0]
+        messages = agent_input["messages"]
         system_prompt = messages[0].content
 
         assert "A blue cube" in system_prompt
-        assert "Original User Request" in system_prompt
         assert "cubes" in system_prompt

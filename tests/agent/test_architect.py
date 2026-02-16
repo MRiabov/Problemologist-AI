@@ -8,7 +8,7 @@ from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.planner.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock(
             return_value=MagicMock(
@@ -31,8 +31,8 @@ Test Overview
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.planner.WorkerClient")
-@patch("controller.agent.nodes.planner.RemoteFilesystemMiddleware")
+@patch("controller.agent.nodes.base.WorkerClient")
+@patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
 async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
     state = AgentState(task="Build a robot")
 
@@ -59,8 +59,8 @@ async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.planner.WorkerClient")
-@patch("controller.agent.nodes.planner.RemoteFilesystemMiddleware")
+@patch("controller.agent.nodes.base.WorkerClient")
+@patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
 async def test_architect_node_fallback(mock_fs, mock_worker, mock_llm):
     # Mock fallback response (missing sections)
     mock_llm.ainvoke.return_value = MagicMock(content="Just some text without sections")

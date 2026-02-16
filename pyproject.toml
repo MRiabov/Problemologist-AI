@@ -76,7 +76,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 # keep it paralel. no point in disabling globally.
 # set to -n0 in integration tests though!
-addopts = "-n4 -m 'not (integration or integration_p0 or integration_p1 or integration_p2)'"
+addopts = "-n2 -m 'not (integration or integration_p0 or integration_p1 or integration_p2)'"
 filterwarnings = [
     "ignore::DeprecationWarning:ezdxf.queryparser",
     "ignore::DeprecationWarning:build123d.objects_curve",

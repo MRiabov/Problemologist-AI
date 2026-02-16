@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -16,8 +17,9 @@ async def test_define_graph_compiles():
 async def test_run_generation_session_mocked():
     prompt = "A simple gear pair"
 
-    # Mock return values that match BenchmarkGeneratorState structure
-    mock_plan = {"theme": "gears"}
+    from shared.simulation.schemas import RandomizationStrategy
+
+    mock_plan = RandomizationStrategy(theme="gears", reasoning="test")
     mock_script = "print('hello')"
 
     with (
@@ -46,7 +48,12 @@ async def test_run_generation_session_mocked():
             # Yield a state chunk
             yield {
                 "planner": {
-                    "session": MagicMock(status=SessionStatus.accepted),
+                    "session": {
+                        "session_id": uuid4(),
+                        "prompt": prompt,
+                        "status": SessionStatus.accepted,
+                        "validation_logs": [],
+                    },
                     "plan": mock_plan,
                     "current_script": mock_script,
                     "simulation_result": {"valid": True},
@@ -59,9 +66,9 @@ async def test_run_generation_session_mocked():
 
         final_state = await run_generation_session(prompt)
 
-        assert final_state["session"].status == SessionStatus.accepted
-        assert final_state["plan"]["theme"] == "gears"
-        assert final_state["current_script"] == "print('hello')"
+        assert final_state.session.status == SessionStatus.planned
+        assert final_state.plan.theme == "gears"
+        assert final_state.current_script == "print('hello')"
 
 
 @pytest.mark.asyncio
@@ -92,8 +99,13 @@ async def test_run_generation_session_rejected():
         async def mock_astream_gen(input_state, **kwargs):
             yield {
                 "reviewer": {
-                    "session": MagicMock(status=SessionStatus.planning),
-                    "plan": {},
+                    "session": {
+                        "session_id": uuid4(),
+                        "prompt": prompt,
+                        "status": SessionStatus.planning,
+                        "validation_logs": [],
+                    },
+                    "plan": {"theme": "complex"},
                     "current_script": "",
                     "simulation_result": None,
                     "review_feedback": "Rejected: Too complex",
@@ -106,4 +118,4 @@ async def test_run_generation_session_rejected():
         final_state = await run_generation_session(prompt)
 
         # Verify status update logic in run_generation_session
-        assert final_state["session"].status == SessionStatus.rejected
+        assert final_state.session.status == SessionStatus.rejected

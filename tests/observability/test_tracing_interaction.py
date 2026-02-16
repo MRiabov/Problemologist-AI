@@ -8,8 +8,11 @@ from controller.agent.benchmark.nodes import (
     coder_node,
     cots_search_node,
     planner_node,
+    reviewer_node,
     skills_node,
 )
+from controller.agent.benchmark.state import BenchmarkGeneratorState
+from shared.simulation.schemas import ValidationResult
 
 
 @pytest.mark.asyncio
@@ -21,32 +24,40 @@ async def test_nodes_call_get_langfuse_callback():
     mock_session.session_id = str(uuid.uuid4())
     mock_session.prompt = "test prompt"
     mock_session.custom_objectives = {}
+    mock_session.status = MagicMock()
 
-    state = {
-        "session": mock_session,
-        "messages": [],
-        "plan": {"theme": "test"},
-        "simulation_result": {},
-    }
+    state = BenchmarkGeneratorState(
+        session=mock_session,
+        messages=[],
+        plan={"theme": "test"},
+        simulation_result=ValidationResult(valid=True),
+    )
 
     # Use nested with blocks for maximum compatibility
     with patch(
-        "controller.agent.benchmark.nodes.get_langfuse_callback"
+        "controller.agent.nodes.base.get_langfuse_callback"
     ) as mock_get_callback:
         with patch("controller.agent.benchmark.nodes.DatabaseCallbackHandler"):
-            with patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm_cls:
+            with patch("controller.agent.nodes.base.ChatOpenAI") as mock_llm_base_cls:
                 with patch(
-                    "controller.agent.benchmark.nodes.create_react_agent"
-                ) as mock_create_agent:
+                    "controller.agent.benchmark.nodes.ChatOpenAI"
+                ) as mock_llm_cls:
                     with patch(
-                        "controller.agent.benchmark.nodes.WorkerClient"
-                    ) as mock_worker_cls:
+                        "controller.agent.benchmark.nodes.create_react_agent"
+                    ) as mock_create_agent:
                         with patch(
-                            "controller.agent.benchmark.nodes.httpx.AsyncClient"
-                        ):
-                            # Setup mock LLM
-                            mock_llm = mock_llm_cls.return_value
-                            mock_llm.ainvoke = AsyncMock(return_value=MagicMock())
+                            "controller.agent.benchmark.nodes.WorkerClient"
+                        ) as mock_worker_cls:
+                            with patch(
+                                "controller.agent.benchmark.nodes.httpx.AsyncClient"
+                            ):
+                                # Setup mock LLMs
+                                mock_llm = mock_llm_cls.return_value
+                                mock_llm.ainvoke = AsyncMock(return_value=MagicMock())
+                                mock_llm.with_structured_output = MagicMock(
+                                    return_value=mock_llm
+                                )
+                                mock_llm_base_cls.return_value = mock_llm
 
                             # Setup mock agent
                             mock_agent = AsyncMock()
@@ -95,14 +106,15 @@ async def test_graph_initializes_langfuse_callback():
     mock_session.session_id = str(uuid.uuid4())
     mock_session.prompt = "test prompt"
     mock_session.validation_logs = []
+    mock_session.status = MagicMock()
 
-    state = {
-        "session": mock_session,
-        "messages": [],
-        "plan": {"theme": "test"},
-        "simulation_result": {},
-        "current_script": "print(1)",
-    }
+    state = BenchmarkGeneratorState(
+        session=mock_session,
+        messages=[],
+        plan={"theme": "test"},
+        simulation_result=ValidationResult(valid=True),
+        current_script="print(1)",
+    )
 
     with patch(
         "controller.agent.benchmark.graph.get_langfuse_callback"

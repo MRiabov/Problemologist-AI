@@ -1,4 +1,4 @@
-import pathlib
+from pathlib import Path
 
 import structlog
 import yaml
@@ -21,9 +21,9 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
     """
     if config_path is None:
         # Default path relative to this file
-        config_path = pathlib.Path(__file__).parent / "manufacturing_config.yaml"
+        config_path = Path(__file__).parent / "manufacturing_config.yaml"
     else:
-        config_path = pathlib.Path(config_path)
+        config_path = Path(config_path)
 
     logger.info("loading_manufacturing_config", path=str(config_path))
 
@@ -32,7 +32,7 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     try:
-        with open(config_path) as f:
+        with config_path.open() as f:
             data = yaml.safe_load(f)
     except Exception as e:
         logger.error("config_load_failed", error=str(e))

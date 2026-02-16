@@ -3,6 +3,8 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 from build123d import Box
 
 from worker.simulation.loop import SimulationMetrics, StressSummary

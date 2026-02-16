@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 
@@ -33,18 +34,18 @@ def test_docker_compose_style_env_loading():
 
 def test_env_files_consistency():
     """Verify that .env and .env.example have the same keys."""
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    env_path = os.path.join(base_dir, ".env")
-    example_path = os.path.join(base_dir, ".env.example")
+    base_dir = Path(__file__).parent.parent
+    env_path = base_dir / ".env"
+    example_path = base_dir / ".env.example"
 
-    if not os.path.exists(env_path):
+    if not env_path.exists():
         # If .env doesn't exist (e.g. in CI), we might want to skip or just pass
         # But for this task, we assume it exists as per user request
         return
 
-    def get_keys(path):
+    def get_keys(path: Path):
         keys = set()
-        with open(path) as f:
+        with path.open() as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):
