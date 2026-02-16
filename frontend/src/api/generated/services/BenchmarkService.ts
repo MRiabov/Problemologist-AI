@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BenchmarkGenerateRequest } from '../models/BenchmarkGenerateRequest';
+import type { EpisodeResponse } from '../models/EpisodeResponse';
 import type { UpdateObjectivesRequest } from '../models/UpdateObjectivesRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -52,12 +53,12 @@ export class BenchmarkService {
     /**
      * Get Session
      * @param sessionId
-     * @returns any Successful Response
+     * @returns EpisodeResponse Successful Response
      * @throws ApiError
      */
     public static getSessionBenchmarkSessionIdGet(
         sessionId: string,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/benchmark/{session_id}',

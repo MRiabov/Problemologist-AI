@@ -1,5 +1,7 @@
 from typing import Any
 
+import structlog
+import httpx
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient

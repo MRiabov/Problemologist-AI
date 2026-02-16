@@ -1,17 +1,21 @@
+import logging
 import structlog
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from contextlib import suppress
 
+from typing import cast
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+
+from controller.agent.config import settings
+from controller.agent.prompt_manager import PromptManager
+from controller.agent.state import AgentState
+from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.observability.schemas import ElecAgentHandoverEvent
 from controller.observability.tracing import record_worker_events
-from shared.observability.schemas import ElecAgentHandoverEvent, RunCommandToolEvent
 from shared.type_checking import type_check
-
-from contextlib import suppress
-from ..config import settings
-from ..prompt_manager import PromptManager
-from ..state import AgentState
 
 logger = structlog.get_logger(__name__)
 
@@ -20,6 +24,7 @@ logger = structlog.get_logger(__name__)
 class ElectronicsEngineerNode:
     """
     Electronics Engineer node: Designs circuits and routes wires.
+    Refactored to use LangGraph's prebuilt ReAct agent.
     """
 
     def __init__(
@@ -31,6 +36,10 @@ class ElectronicsEngineerNode:
         self.llm = ChatOpenAI(model=settings.llm_model, temperature=0)
         self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
         self.fs = RemoteFilesystemMiddleware(self.worker_client)
+
+        # Initialize tools and agent
+        self.tools = get_engineer_tools(self.fs, session_id)
+        self.agent = create_react_agent(self.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the electronics engineer node logic."""
@@ -50,8 +59,8 @@ class ElectronicsEngineerNode:
 
             objectives_content = await self.fs.read_file("objectives.yaml")
             if "electronics_requirements" not in objectives_content:
-                # No specific requirements, but we might still have motors to wire
-                # if the planner put them in assembly_definition.yaml.
+                # No specific requirements, check assembly_definition if needed
+                # For now, simple check as per original code
                 pass
         except Exception:
             pass
@@ -72,36 +81,20 @@ class ElectronicsEngineerNode:
             plan=state.plan,
             assembly_context=assembly_context,
         )
-        response = await self.llm.ainvoke([HumanMessage(content=prompt)])
-        code = self._extract_code(str(response.content))
 
-        if not code:
-            return state
+        messages = [SystemMessage(content=prompt)]
 
-        # 4. Execute code
+        max_retries = 3
+        retry_count = 0
         journal_entry = "\n[Electronics Engineer] Starting circuit design and routing."
-        try:
-            # Record tool invocation
-            await record_worker_events(
-                episode_id=state.session_id,
-                events=[RunCommandToolEvent(command=code)],
-            )
 
-            execution_result = await self.fs.run_command(code)
-            stdout = execution_result.get("stdout", "")
-            stderr = execution_result.get("stderr", "")
-            exit_code = execution_result.get("exit_code", 0)
-            events = execution_result.get("events", [])
+        while retry_count < max_retries:
+            try:
+                # Invoke agent
+                result = await self.agent.ainvoke({"messages": messages})
+                messages = result["messages"]
 
-            # Record events for observability
-            if events:
-                await record_worker_events(
-                    episode_id=state.session_id,
-                    events=events,
-                )
-
-            if exit_code == 0:
-                # T015: Validation Gate after successful execution
+                # 4. Validate output
                 from worker.utils.file_validation import validate_node_output
 
                 all_files = {}
@@ -112,41 +105,44 @@ class ElectronicsEngineerNode:
                 is_valid, validation_errors = validate_node_output(
                     "electronics_engineer", all_files
                 )
-                if is_valid:
-                    journal_entry += "\nCircuit and wiring implementation successful."
-                else:
-                    journal_entry += (
-                        f"\nCircuit implementation produced invalid output: "
-                        f"{validation_errors}"
-                    )
+
+                if not is_valid:
+                    error_msg = f"Circuit implementation produced invalid output: {validation_errors}"
+                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
                     logger.warning(
                         "electronics_engineer_validation_failed",
                         errors=validation_errors,
                     )
-                    # Note: Current implementation doesn't have a retry loop,
-                    # but we mark the failure in the journal.
-            else:
-                journal_entry += f"\nCircuit implementation failed: {stderr or stdout}"
-                logger.warning("electronics_engineer_failed", error=stderr or stdout)
+                    messages.append(HumanMessage(content=error_msg))
+                    retry_count += 1
+                    continue
 
-        except Exception as e:
-            journal_entry += f"\nSystem error during electronics implementation: {e}"
-            logger.error("electronics_engineer_system_error", error=str(e))
+                # Success
+                journal_entry += "\nCircuit and wiring implementation successful."
+                return state.model_copy(
+                    update={
+                        "journal": state.journal + journal_entry,
+                        "turn_count": state.turn_count + 1,
+                        "messages": messages,
+                    }
+                )
 
+            except Exception as e:
+                journal_entry += (
+                    f"\nSystem error during electronics implementation: {e}"
+                )
+                logger.error("electronics_engineer_system_error", error=str(e))
+                messages.append(HumanMessage(content=f"System error: {e}"))
+                retry_count += 1
+
+        journal_entry += f"\nFailed to complete step after {max_retries} retries."
         return state.model_copy(
             update={
                 "journal": state.journal + journal_entry,
                 "turn_count": state.turn_count + 1,
+                "messages": messages,
             }
         )
-
-    def _extract_code(self, content: str) -> str:
-        """Extract Python code from markdown block if present."""
-        if "```python" in content:
-            return content.split("```python")[1].split("```")[0].strip()
-        if "```" in content:
-            return content.split("```")[1].split("```")[0].strip()
-        return content.strip()
 
 
 # Factory function for LangGraph

@@ -58,6 +58,9 @@ services:
       timeout: 5s
       retries: 5
 
+    # note to coding agents: bloody STOP putting hot reload servers into this config. They burn my CPU and crash the IDE with OOM.
+    # use `docker compose up --build` instead - it's 3 seconds.
+    
   migrations:
     image: problemologist-ai-controller:latest
     command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
@@ -91,6 +94,10 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+
+    # note to coding agents: bloody STOP putting hot reload servers into this config. They burn my CPU and crash the IDE with OOM.
+    # use docker compose up --build instead - it's 3 seconds.
+    
     # develop:
     #   watch:
     #     - action: sync+restart

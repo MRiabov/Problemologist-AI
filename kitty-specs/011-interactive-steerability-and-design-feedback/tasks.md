@@ -74,7 +74,7 @@ This document breaks down the implementation of the Steerability framework into 
 **Goal**: Implement @-mentions, autocomplete, and line-targeted code steering in the chat interface.
 **Independent Test**: Verification of autocomplete suggestions from BOM and visual highlighting of code references.
 
-- [ ] **T011**: Implement @-mention autocomplete in frontend `Chat` component using the BOM tree.
-- [ ] **T012**: Implement line-range parsing and UI highlighting for code steering in frontend `Chat` and `CodeViewer`.
+- [x] **T011**: Implement @-mention autocomplete in frontend `Chat` component using the BOM tree.
+- [x] **T012**: Implement line-range parsing and UI highlighting for code steering in frontend `Chat` and `CodeViewer`.
 
 **Estimated Prompt Size**: ~400 lines

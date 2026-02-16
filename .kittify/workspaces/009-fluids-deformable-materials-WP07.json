@@ -1,0 +1,12 @@
+{
+  "wp_id": "WP07",
+  "feature_slug": "009-fluids-deformable-materials",
+  "worktree_path": ".worktrees/009-fluids-deformable-materials-WP07",
+  "branch_name": "009-fluids-deformable-materials-WP07",
+  "base_branch": "main",
+  "base_commit": "6d83d6425a3faf5bd47da49d39daf21ff3340bf4",
+  "dependencies": [],
+  "created_at": "2026-02-15T19:21:55.248649+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}

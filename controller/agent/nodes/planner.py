@@ -1,106 +1,148 @@
+import logging
 from pathlib import Path
+from contextlib import suppress
 
-from langchain_core.messages import HumanMessage
+from typing import cast
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
 
+from controller.agent.config import settings
+from controller.agent.prompt_manager import PromptManager
+from controller.agent.state import AgentState, AgentStatus
+from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
 
-from ..config import settings
-from ..prompt_manager import PromptManager
-from ..state import AgentState, AgentStatus
+logger = logging.getLogger(__name__)
 
 
 @type_check
-async def planner_node(state: AgentState) -> AgentState:
+class PlannerNode:
     """
-    Planner node: Analyzes the task and creates plan.md and todo.md.
+    Planner node: Analyzes the task and creates plan.md and todo.md using tools.
+    Refactored to use LangGraph's prebuilt ReAct agent.
     """
-    pm = PromptManager()
 
-    # T006: Read skills (local controller FS is fine for skills)
-    skills_dir = Path(".agent/skills")
-    skills = []
-    if skills_dir.exists():
-        skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
+    def __init__(
+        self,
+        worker_url: str = "http://worker:8001",
+        session_id: str = "default-session",
+    ):
+        self.pm = PromptManager()
+        self.llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+        self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
+        self.fs = RemoteFilesystemMiddleware(self.worker_client)
 
-    skills_context = "\n".join([f"- {s}" for s in skills])
+        # Initialize tools and agent
+        self.tools = get_engineer_tools(self.fs, session_id)
+        self.agent = create_react_agent(self.llm, self.tools)
 
-    # T005: Invoke LLM
-    prompt_text = pm.render("architect", task=state.task, skills=skills_context)
+    async def __call__(self, state: AgentState) -> AgentState:
+        """Execute the planner node logic."""
+        # T006: Read skills (local controller FS is fine for skills)
+        skills_dir = Path(".agent/skills")
+        skills = []
+        if skills_dir.exists():
+            skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
 
-    # Using a standard LLM configuration for the agent
-    llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+        skills_context = "\n".join([f"- {s}" for s in skills])
 
-    # We pass the prompt as a human message for simplicity in this skeleton
-    response = await llm.ainvoke([HumanMessage(content=prompt_text)])
-    content = str(response.content)
-
-    # T007 & T008: Parse output and create artifacts
-    plan_content = ""
-    todo_content = ""
-
-    if "# PLAN" in content and "# TODO" in content:
-        parts = content.split("# TODO")
-        plan_content = parts[0].replace("# PLAN", "").strip()
-        todo_content = parts[1].strip()
-    else:
-        # Fallback if LLM doesn't follow instructions perfectly
-        plan_content = content
-        todo_content = "- [ ] Implement the plan"
-
-    # Write files to the worker session workspace
-    session_id = state.session_id or settings.default_session_id
-    worker_client = WorkerClient(
-        base_url=settings.spec_001_api_url, session_id=session_id
-    )
-    fs = RemoteFilesystemMiddleware(worker_client)
-
-    # Validation Gate
-    from worker.utils.file_validation import validate_node_output
-
-    is_valid, validation_errors = validate_node_output(
-        "planner", {"plan.md": plan_content, "todo.md": todo_content}
-    )
-
-    if not is_valid:
-        feedback = "Planner output validation failed:\n" + "\n".join(
-            [f"- {e}" for e in validation_errors]
+        # T005: Invoke LLM
+        prompt_text = self.pm.render(
+            "architect", task=state.task, skills=skills_context
         )
+        # Instruct agent to use tools to write files
+        prompt_text += "\n\nIMPORTANT: You must use the 'write_file' tool to create 'plan.md' and 'todo.md' directly. Do not just output the content in the chat."
+
+        messages = [SystemMessage(content=prompt_text)]
+
+        max_retries = 3
+        retry_count = 0
+        journal_entry = "\n[Planner] Starting planning phase."
+
+        while retry_count < max_retries:
+            try:
+                # Invoke agent
+                result = await self.agent.ainvoke({"messages": messages})
+                messages = result["messages"]
+
+                # Validation Gate
+                from worker.utils.file_validation import validate_node_output
+
+                # Read artifacts to validate
+                artifacts = {}
+                for f in ["plan.md", "todo.md"]:
+                    with suppress(Exception):
+                        content = await self.fs.read_file(f)
+                        artifacts[f] = content
+
+                is_valid, validation_errors = validate_node_output("planner", artifacts)
+
+                if not is_valid:
+                    error_msg = f"Planner output validation failed: {validation_errors}"
+                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
+                    messages.append(HumanMessage(content=error_msg))
+
+                    if retry_count == max_retries - 1:
+                        # Last attempt failed
+                        return state.model_copy(
+                            update={
+                                "status": AgentStatus.PLAN_REJECTED,
+                                "feedback": error_msg,
+                                "journal": state.journal + journal_entry,
+                                "messages": messages,
+                            }
+                        )
+
+                    retry_count += 1
+                    continue
+
+                # Success
+                # Emit SubmissionValidationEvent
+                await record_worker_events(
+                    episode_id=state.session_id,
+                    events=[
+                        SubmissionValidationEvent(
+                            artifacts_present=list(artifacts.keys()),
+                            verification_passed=True,
+                            reasoning_trace_quality=1.0,  # Placeholder
+                            errors=[],
+                        )
+                    ],
+                )
+
+                return state.model_copy(
+                    update={
+                        "plan": artifacts.get("plan.md", ""),
+                        "todo": artifacts.get("todo.md", ""),
+                        "status": AgentStatus.EXECUTING,
+                        "journal": state.journal + journal_entry,
+                        "messages": messages,
+                    }
+                )
+
+            except Exception as e:
+                journal_entry += f"\nSystem error during planning: {e}"
+                messages.append(HumanMessage(content=f"System error: {e}"))
+                retry_count += 1
+
         return state.model_copy(
             update={
-                "status": AgentStatus.PLAN_REJECTED,
-                "feedback": feedback,
-                "journal": state.journal
-                + f"\n[Planner] Validation failed: {validation_errors}",
+                "status": AgentStatus.FAILED,
+                "journal": state.journal + journal_entry,
+                "messages": messages,
             }
         )
 
-    await fs.write_file("plan.md", plan_content)
-    await fs.write_file("todo.md", todo_content)
 
-    # Emit SubmissionValidationEvent
-    artifacts_present = ["plan.md", "todo.md"]
-
-    await record_worker_events(
-        episode_id=session_id,
-        events=[
-            SubmissionValidationEvent(
-                artifacts_present=artifacts_present,
-                verification_passed=True,
-                reasoning_trace_quality=1.0,  # Placeholder
-                errors=[],
-            )
-        ],
-    )
-
-    return state.model_copy(
-        update={
-            "plan": plan_content,
-            "todo": todo_content,
-            "status": AgentStatus.EXECUTING,
-        }
-    )
+# Factory function for LangGraph
+@type_check
+async def planner_node(state: AgentState) -> AgentState:
+    # Use session_id from state, fallback to default if not set (e.g. tests)
+    session_id = state.session_id or settings.default_session_id
+    node = PlannerNode(worker_url=settings.spec_001_api_url, session_id=session_id)
+    return await node(state)

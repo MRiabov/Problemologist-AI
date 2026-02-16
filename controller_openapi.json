@@ -534,7 +534,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Session Benchmark  Session Id  Get"
+                  "$ref": "#/components/schemas/EpisodeResponse"
                 }
               }
             }

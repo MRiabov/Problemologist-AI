@@ -1977,7 +1977,24 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 #### "Agent-native" tools (callable by LangChain)
 
-(Experiment:) The agent only has a minimal set of tools appropriate for a coding agent: `ls`, `view_file`, `edit_file` (edit some lines in a file), `write file` (write/overwrite the entire file), and works in the filesystem (the filesystem is described as above), `execute` (runs a shell command, e.g. python -m ...) and `wait` for waiting for the agent. The (engineering) agent will validate, cost-estimate, verify, submit; the benchmark generator agent will create, test, render (visually view) its environment *only via script calls*.
+The following agents have the exact same set of tools: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`.
+
+1. Benchmark Planner: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+2. Benchmark Generator: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+3. Benchmark Reviewer: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+4. Engineering Planner: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+5. Mechanical Engineer: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+6. Electrical Engineer: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+7. Engineering Reviewer: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+8. Documentation: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+9. Orchestrator: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
+
+The following agents have specialized tools:
+
+1. Skill Creator
+2. COTS Search
+
+ Tool definitions:
 
 - `execute` Execute a command in the sandbox and return ExecuteResponse.
 - `ls_info` Structured listing with file metadata using os.scandir.
@@ -1992,6 +2009,8 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
+
+Note: we use Langchain `create_agent` (or the deprecated `LangGraph.prebuilt.create_react_agent`) for the implementation. We don't write our own loops.
 
 #### The "tools" as Python functions - Utils
 
