@@ -134,9 +134,9 @@ async def test_int_028_strict_api_schema_contract():
             # Simple validation: required fields
             if "required" in health_schema:
                 for req in health_schema["required"]:
-                    assert req in health_resp.json(), (
-                        f"Missing required field {req} in /health response"
-                    )
+                    assert (
+                        req in health_resp.json()
+                    ), f"Missing required field {req} in /health response"
 
             # Check 'status' field presence if defined in properties
             properties = health_schema.get("properties", {})
