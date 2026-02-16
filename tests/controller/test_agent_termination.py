@@ -39,7 +39,8 @@ async def test_engineer_node_increments_turn_count():
     from controller.agent.nodes.coder import coder_node as engineer_node
 
     # Mock dependencies
-    with patch("controller.agent.nodes.coder.CoderNode") as MockNodeClass:
+    with patch("controller.agent.nodes.base.ChatOpenAI"), \
+         patch("controller.agent.nodes.coder.CoderNode") as MockNodeClass:
         mock_instance = MockNodeClass.return_value
 
         # Scenario 1: Success

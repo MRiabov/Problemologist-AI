@@ -110,8 +110,33 @@ class WorkerClient:
                 headers=self.headers,
                 timeout=10.0,
             )
+            if response.status_code == 404:
+                return f"Error: File '{path}' not found."
             response.raise_for_status()
             return response.json()["content"]
+        finally:
+            await self._close_client(client)
+
+    async def exists(self, path: str) -> bool:
+        """Check if a file exists."""
+        from pathlib import Path
+
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/ls",
+                json={"path": str(Path(path).parent)},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            if response.status_code == 404:
+                return False
+            response.raise_for_status()
+            files = response.json()["files"]
+            filename = Path(path).name
+            return any(f["path"].endswith(filename) for f in files)
+        except Exception:
+            return False
         finally:
             await self._close_client(client)
 

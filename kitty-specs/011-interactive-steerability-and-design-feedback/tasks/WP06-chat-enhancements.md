@@ -1,14 +1,14 @@
 ---
 work_package_id: WP06
 title: Chat Enhancements (@-mentions & Code Steering)
-lane: "for_review"
+lane: "done"
 dependencies: []
 base_branch: main
 base_commit: daef541770cc1f7e0367eefb41dcb82690465567
 created_at: '2026-02-15T12:46:12.399543+00:00'
 subtasks: [T010, T011]
-shell_pid: "558136"
-agent: "gemini"
+shell_pid: "699268"
+agent: "Gemini"
 review_status: "has_feedback"
 reviewed_by: "MRiabov"
 ---
@@ -56,3 +56,5 @@ Implement @-mention autocomplete for parts and subassemblies and line-targeted c
 - 2026-02-16T07:10:28Z – Antigravity – shell_pid=102877 – lane=planned – Moved to planned
 - 2026-02-16T07:18:35Z – gemini – shell_pid=558136 – lane=doing – Started implementation via workflow command
 - 2026-02-16T07:31:00Z – gemini – shell_pid=558136 – lane=for_review – Implemented @-mentions and code steering with lint fixes and UX improvements. Verified with tests. Resolved rebase conflicts.
+- 2026-02-16T09:48:25Z – Gemini – shell_pid=699268 – lane=doing – Started review via workflow command
+- 2026-02-16T10:05:01Z – Gemini – shell_pid=699268 – lane=done – Review passed: @-mentions and code steering implemented with full frontend/backend integration and verified with tests.

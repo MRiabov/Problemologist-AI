@@ -107,11 +107,14 @@ export async function confirmBenchmark(sessionId: string): Promise<any> {
     });
 }
 
-export async function continueEpisode(id: string, message: string): Promise<any> {
+export async function continueEpisode(id: string, message: string, metadata?: Record<string, unknown>): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',
         url: `/episodes/${id}/messages`,
-        body: { message },
+        body: {
+            message,
+            metadata_vars: metadata
+        },
         mediaType: 'application/json',
     });
 }
@@ -122,6 +125,20 @@ export async function rebuildModel(scriptPath: string): Promise<any> {
         url: '/benchmark/build',
         body: {
             script_path: scriptPath
+        },
+        mediaType: 'application/json',
+    });
+}
+
+export async function steerAgent(sessionId: string, text: string, metadata?: Record<string, any>): Promise<any> {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: `/sessions/${sessionId}/steer`,
+        body: {
+            text,
+            selections: metadata?.selections || [],
+            code_references: metadata?.code_references || [],
+            mentions: metadata?.mentions || []
         },
         mediaType: 'application/json',
     });

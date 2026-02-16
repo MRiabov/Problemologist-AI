@@ -12,7 +12,7 @@ from shared.type_checking import type_check
 
 @pytest.fixture
 def mock_agent_call():
-    with patch("controller.agent.nodes.skills.ChatOpenAI"), \
+    with patch("controller.agent.nodes.base.ChatOpenAI"), \
          patch("controller.agent.nodes.skills.create_react_agent") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
@@ -54,9 +54,14 @@ async def test_sidecar_node_suggest_skill(mock_agent_call):
 
     # Mock git repo to avoid actual git operations
     with patch("controller.agent.nodes.skills.Repo"), \
-         patch("controller.agent.nodes.skills.WorkerClient"), \
-         patch("controller.agent.nodes.skills.RemoteFilesystemMiddleware"):
-        node = SkillsNode(suggested_skills_dir=str(test_dir))
+         patch("controller.agent.nodes.base.WorkerClient"), \
+         patch("controller.agent.nodes.base.RemoteFilesystemMiddleware"):
+        from controller.agent.nodes.base import SharedNodeContext
+        ctx = SharedNodeContext.create("http://worker:8001", "default-session")
+        node = SkillsNode(context=ctx)
+        node.suggested_skills_dir = test_dir
+        node.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
+
         state = AgentState(
             task="Test task",
             journal="I struggled with Box until I imported it correctly.",
@@ -80,9 +85,14 @@ async def test_sidecar_node_no_skill(mock_agent_call):
     test_dir = Path("test_suggested_skills")
     # Mock git repo
     with patch("controller.agent.nodes.skills.Repo"), \
-         patch("controller.agent.nodes.skills.WorkerClient"), \
-         patch("controller.agent.nodes.skills.RemoteFilesystemMiddleware"):
-        node = SkillsNode(suggested_skills_dir=str(test_dir))
+         patch("controller.agent.nodes.base.WorkerClient"), \
+         patch("controller.agent.nodes.base.RemoteFilesystemMiddleware"):
+        from controller.agent.nodes.base import SharedNodeContext
+        ctx = SharedNodeContext.create("http://worker:8001", "default-session")
+        node = SkillsNode(context=ctx)
+        node.suggested_skills_dir = test_dir
+        node.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
+
         state = AgentState(task="Easy task", journal="Everything worked perfectly.")
 
         result = await node(state)

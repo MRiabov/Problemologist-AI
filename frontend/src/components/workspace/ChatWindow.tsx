@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useState, useRef, useEffect } from 'react';
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { 
@@ -7,13 +7,7 @@ import {
   AlertCircle,
   Zap,
   Play,
-  ChevronUp,
-  ChevronDown,
-  Rocket,
-  Plus,
-  Mic,
-  ArrowRight,
-  Square
+  Rocket
 } from "lucide-react";
 import { ThoughtBlock } from "./ThoughtBlock";
 import { ActionCard } from "./ActionCard";
@@ -27,75 +21,149 @@ import { ContextCards } from "./ContextCards";
 import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
-import { cn } from "../../lib/utils";
+import type { TopologyNode } from "../visualization/ModelBrowser";
+import { ChatInput } from "../Chat/ChatInput";
 
 // Internal helper for rendering highlighted content
 const HighlightedContent = ({ content, language = 'text' }: { content: string, language?: string }) => {
-    const { theme } = useTheme();
-    if (!content) return null;
-    // Basic detection for JSON strings
-    const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
-    
-    return (
-        <SyntaxHighlighter
-            language={lang}
-            style={theme === 'dark' ? vscDarkPlus : vs}
-            customStyle={{
-                margin: 0,
-                padding: '0.5rem',
-                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-                fontSize: '10px',
-                borderRadius: '4px',
-                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
-            }}
-            wrapLines={true}
-            wrapLongLines={true}
-        >
-            {content}
-        </SyntaxHighlighter>
-    );
+        const { theme } = useTheme();
+        const { addToContext, setActiveArtifactId, selectedEpisode } = useEpisodes();
+
+        if (!content) return null;
+
+        // Custom renderer for mentions in markdown/text
+        const renderWithMentions = (text: string) => {
+            const regex = /(@([a-zA-Z0-9_\-.]+)(?::L?(\d+)(?:-L?(\d+))?)?)/g;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+
+            while ((match = regex.exec(text)) !== null) {
+                const [full, , name, start, end] = match;
+                parts.push(text.substring(lastIndex, match.index));
+
+                parts.push(
+                    <button
+                        key={match.index}
+                        className="text-primary hover:underline font-mono font-bold px-1 rounded bg-primary/10"
+                        onClick={() => {
+                            const asset = selectedEpisode?.assets?.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                            if (asset) {
+                                setActiveArtifactId(asset.id.toString());
+                                if (start) {
+                                    addToContext({
+                                        id: `steer-${asset.id}-${start}-${end || start}`,
+                                        type: 'code',
+                                        label: full.substring(1),
+                                        metadata: {
+                                            path: asset.s3_path,
+                                            start: parseInt(start),
+                                            end: end ? parseInt(end) : parseInt(start)
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Assume part mention
+                                addToContext({
+                                    id: `cad-${name}`,
+                                    type: 'cad',
+                                    label: name,
+                                    metadata: { part: name }
+                                });
+                            }
+                        }}
+                    >
+                        {full}
+                    </button>
+                );
+                lastIndex = regex.lastIndex;
+            }
+            parts.push(text.substring(lastIndex));
+            return parts;
+        };
+
+        // Basic detection for JSON strings
+        const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
+
+        if (lang === 'markdown' || lang === 'text') {
+            return (
+                <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
+                    {renderWithMentions(content)}
+                </div>
+            );
+        }
+
+        return (
+                <SyntaxHighlighter
+                        language={lang}
+                        style={theme === 'dark' ? vscDarkPlus : vs}
+                        customStyle={{
+                                margin: 0,
+                                padding: '0.5rem',
+                                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
+                                fontSize: '10px',
+                                borderRadius: '4px',
+                                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
+                        }}
+                        wrapLines={true}
+                        wrapLongLines={true}
+                >
+                        {content}
+                </SyntaxHighlighter>
+        );
 };
-
-
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
   task?: string;
   isRunning?: boolean;
   isConnected?: boolean;
+  topologyNodes?: TopologyNode[];
 }
 
 export default function ChatWindow({
   traces,
   task,
   isRunning,
-  isConnected = true
+  isConnected = true,
+  topologyNodes = []
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { 
       isCreationMode, 
       startAgent, 
       continueAgent,
+      steerAgent,
       confirmBenchmark,
       interruptAgent, 
       selectedEpisode, 
       updateObjectives, 
-      episodes,
       selectedContext,
-      clearContext
+      addToContext
   } = useEpisodes();
-  const [prompt, setPrompt] = useState("");
-  const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<string>("");
 
+  const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
 
+  const handleSendMessage = async (prompt: string, metadata: any) => {
+    // Add objectives to startAgent if needed
+    if (selectedEpisode && !isCreationMode) {
+        if (isRunning) {
+            await steerAgent(selectedEpisode.id, prompt, metadata);
+        } else {
+            await continueAgent(selectedEpisode.id, prompt, metadata);
+        }
+    } else {
+        await startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
+    }
+  };
 
-  // Reset objectives when episode changes (optional, or fetch from episode metadata)
+
+  // Reset objectives when episode changes
   useEffect(() => {
       if (selectedEpisode?.metadata_vars?.custom_objectives) {
           setObjectives(selectedEpisode.metadata_vars.custom_objectives as BenchmarkObjectives);
@@ -106,28 +174,7 @@ export default function ChatWindow({
 
 
 
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (prompt.trim()) {
-      const metadata = {
-        ...(selectedBenchmarkId ? { benchmark_id: selectedBenchmarkId } : {}),
-        ...(selectedContext.length > 0 ? { context_items: selectedContext } : {})
-      };
-      
-      if (selectedEpisode && !isCreationMode) {
-        continueAgent(selectedEpisode.id, prompt);
-      } else {
-        startAgent(prompt, objectives, Object.keys(metadata).length > 0 ? metadata : undefined);
-      }
-      
-      setPrompt("");
-      setSelectedBenchmarkId("");
-      clearContext();
-    }
-  };
-
-  // Auto-scroll to bottom when new traces arrive, but only if the user is already at the bottom
+  // Auto-scroll to bottom when new traces arrive
   useEffect(() => {
     if (traces && traces.length > 0) {
       const timeout = setTimeout(() => {
@@ -144,8 +191,6 @@ export default function ChatWindow({
     }
   }, [traces]);
 
-  // Determine if we should show the Execution Plan card
-  // It shows if there's a plan and the agent is not running (waiting for approval)
   const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'planned';
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
@@ -207,7 +252,8 @@ export default function ChatWindow({
                       traces.map(trace => {
                           const type = trace.trace_type as string;
                           if (type === 'llm_thought' || type === 'thought') {
-                            return <ThoughtBlock key={trace.id} duration={Math.floor(Math.random() * 5) + 1} content={trace.content || ""} />;
+                            const stableDuration = (trace.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 5) + 1;
+                            return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
                           }
                           if (type === 'tool_start') {
                               return <ActionCard key={trace.id} trace={trace} />;
@@ -215,9 +261,7 @@ export default function ChatWindow({
                           if (type === 'llm_end' && trace.content) {
                             return (
                                 <div key={trace.id} className="relative group/msg">
-                                    <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
-                                         <HighlightedContent content={trace.content} language="markdown" />
-                                    </div>
+                                    <HighlightedContent content={trace.content} language="markdown" />
                                     <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
                                         <button 
                                             onClick={() => setShowFeedbackModal(true)}
@@ -277,7 +321,6 @@ export default function ChatWindow({
                                     variant="outline"
                                     className="px-3 border-border/50 hover:bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground"
                                     onClick={() => {
-                                      // Logic for requesting changes - could just focus input
                                       const input = document.getElementById('chat-input');
                                       input?.focus();
                                     }}
@@ -321,90 +364,21 @@ export default function ChatWindow({
             </div>
         </ScrollArea>
 
-        {/* Steering / Input Area (Claude Inspired) */}
+        {/* Steering / Input Area */}
         <div className="p-4 max-w-3xl mx-auto w-full relative">
             <ContextCards />
             
-            <div className="bg-muted/30 border border-white/5 rounded-2xl p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-                <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-                    <textarea 
-                       id="chat-input"
-                       placeholder={isRunning ? "Steer the agent..." : "Ask anything (Ctrl+L), @ to mention, / for workflows"}
-                       className="w-full bg-transparent border-none focus:ring-0 text-[14px] leading-relaxed resize-none min-h-[40px] max-h-48"
-                       rows={1}
-                       value={prompt}
-                       onChange={(e) => {
-                           setPrompt(e.target.value);
-                           e.target.style.height = 'auto';
-                           e.target.style.height = e.target.scrollHeight + 'px';
-                       }}
-                       onKeyDown={(e) => {
-                           if (e.key === 'Enter' && !e.shiftKey) {
-                               e.preventDefault();
-                               handleSubmit(e);
-                           }
-                       }}
-                    />
-                    
-                    <div className="flex items-center justify-between mt-1">
-                        <div className="flex items-center gap-1.5">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-white/5">
-                                <Plus className="h-4 w-4 opacity-40" />
-                            </Button>
-                            
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setShowObjectives(!showObjectives);
-                                }}
-                            >
-                                <Zap className="h-3 w-3 opacity-40" />
-                                Planning
-                                {showObjectives ? <ChevronDown className="h-3 w-3 ml-0.5 opacity-40" /> : <ChevronUp className="h-3 w-3 ml-0.5 opacity-40" />}
-                            </Button>
-
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
-                            >
-                                <Rocket className="h-3 w-3 opacity-40" />
-                                Claude Opus 4.6
-                            </Button>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/5">
-                                <Mic className="h-4 w-4 opacity-40" />
-                            </Button>
-                            
-                            <Button 
-                               type={isRunning ? "button" : "submit"}
-                               size="icon" 
-                               disabled={!isRunning && !prompt.trim()}
-                               className={cn(
-                                   "h-8 w-8 rounded-full transition-all flex items-center justify-center",
-                                   isRunning 
-                                    ? "bg-red-500/20 text-red-500 hover:bg-red-500/30" 
-                                    : "bg-foreground text-background hover:opacity-90 disabled:bg-muted/20 disabled:text-muted-foreground"
-                               )}
-                               aria-label={isRunning ? "Stop Agent" : "Send Message"}
-                               onClick={(e) => {
-                                   if (isRunning && selectedEpisode) {
-                                       e.preventDefault();
-                                       interruptAgent(selectedEpisode.id);
-                                   }
-                               }}
-                            >
-                                {isRunning ? <Square className="h-3.5 w-3.5 fill-current" aria-label="Stop Icon" /> : <ArrowRight className="h-4 w-4" aria-label="Send Icon" />}
-                            </Button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+            <ChatInput
+                onSendMessage={handleSendMessage}
+                isRunning={!!isRunning}
+                onInterrupt={() => selectedEpisode && interruptAgent(selectedEpisode.id)}
+                selectedEpisode={selectedEpisode}
+                selectedContext={selectedContext}
+                topologyNodes={topologyNodes}
+                addToContext={addToContext}
+                showObjectives={showObjectives}
+                setShowObjectives={setShowObjectives}
+            />
 
             {showObjectives && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 px-4 animate-in slide-in-from-bottom-2 duration-200">

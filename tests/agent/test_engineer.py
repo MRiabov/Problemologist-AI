@@ -9,7 +9,7 @@ from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_agent():
-    with patch("controller.agent.nodes.coder.ChatOpenAI"), \
+    with patch("controller.agent.nodes.base.ChatOpenAI"), \
          patch("controller.agent.nodes.coder.create_react_agent") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
@@ -26,7 +26,7 @@ from worker.api.schema import ExecuteResponse
 
 @pytest.fixture
 def mock_worker():
-    with patch("controller.agent.nodes.coder.WorkerClient") as mock:
+    with patch("controller.agent.nodes.base.WorkerClient") as mock:
         instance = mock.return_value
         instance.execute_python = AsyncMock()
         instance.execute_python.return_value = ExecuteResponse(
@@ -56,7 +56,9 @@ def mock_record_events():
 async def test_engineer_node_success(
     mock_validate, mock_agent, mock_worker, mock_record_events
 ):
-    node = CoderNode()
+    from controller.agent.nodes.base import SharedNodeContext
+    ctx = SharedNodeContext.create("http://worker:8001", "default-session")
+    node = CoderNode(context=ctx)
     state = AgentState(
         todo="- [ ] Step 1\n- [ ] Step 2", plan="The plan", journal="Old logs"
     )
@@ -73,13 +75,12 @@ async def test_engineer_node_success(
 async def test_engineer_node_retry_then_success(
     mock_validate, mock_agent, mock_worker, mock_record_events
 ):
-    # Mock failure then success is handled by the agent internally in ReAct,
-    # but CoderNode also has a retry loop for validation failures.
-
-    # We mock a validation failure followed by success
+    # Mock a validation failure followed by success
     mock_validate.side_effect = [(False, ["error"]), (True, [])]
 
-    node = CoderNode()
+    from controller.agent.nodes.base import SharedNodeContext
+    ctx = SharedNodeContext.create("http://worker:8001", "default-session")
+    node = CoderNode(context=ctx)
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
     result = await node(state)
@@ -92,7 +93,9 @@ async def test_engineer_node_retry_then_success(
 @pytest.mark.asyncio
 async def test_engineer_node_all_fail(mock_agent, mock_worker, mock_record_events):
     with patch("worker.utils.file_validation.validate_node_output", return_value=(False, ["persistent error"])):
-        node = CoderNode()
+        from controller.agent.nodes.base import SharedNodeContext
+        ctx = SharedNodeContext.create("http://worker:8001", "default-session")
+        node = CoderNode(context=ctx)
         state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
         result = await node(state)

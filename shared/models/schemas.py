@@ -349,6 +349,13 @@ class AssemblyPartConfig(BaseModel):
     control: MotorControl | None = None
 
 
+class PartConfig(BaseModel):
+    """Configuration for a part in an assembly, including motion metadata."""
+
+    name: str
+    config: AssemblyPartConfig
+
+
 class JointEstimate(BaseModel):
     """Estimate for a joint in the assembly."""
 
@@ -361,7 +368,7 @@ class SubassemblyEstimate(BaseModel):
     """Estimate for a subassembly within the final assembly."""
 
     subassembly_id: str
-    parts: list[dict[str, AssemblyPartConfig]]
+    parts: list[PartConfig]
     joints: list[JointEstimate] = []
 
 
@@ -455,7 +462,7 @@ class AssemblyDefinition(BaseModel):
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
     electronics: ElectronicsSection | None = None
-    final_assembly: list[SubassemblyEstimate | dict[str, AssemblyPartConfig]] = []
+    final_assembly: list[SubassemblyEstimate | PartConfig] = []
     totals: CostTotals
 
     @property
@@ -465,28 +472,30 @@ class AssemblyDefinition(BaseModel):
 
         def process_item(item):
             if isinstance(item, SubassemblyEstimate):
-                for p_dict in item.parts:
-                    for name, config in p_dict.items():
-                        if config.dofs:
-                            parts.append(
-                                MovingPart(
-                                    part_name=name,
-                                    type=("motor" if config.control else "passive"),
-                                    dofs=config.dofs,
-                                    control=config.control,
-                                )
-                            )
-            elif isinstance(item, dict):
-                for name, config in item.items():
-                    if config.dofs:
+                for p_config in item.parts:
+                    if p_config.config.dofs:
                         parts.append(
                             MovingPart(
-                                part_name=name,
-                                type=("motor" if config.control else "passive"),
-                                dofs=config.dofs,
-                                control=config.control,
+                                part_name=p_config.name,
+                                type=(
+                                    "motor" if p_config.config.control else "passive"
+                                ),
+                                dofs=p_config.config.dofs,
+                                control=p_config.config.config
+                                if hasattr(p_config.config, "config")
+                                else p_config.config.control,
                             )
                         )
+            elif isinstance(item, PartConfig):
+                if item.config.dofs:
+                    parts.append(
+                        MovingPart(
+                            part_name=item.name,
+                            type=("motor" if item.config.control else "passive"),
+                            dofs=item.config.dofs,
+                            control=item.config.control,
+                        )
+                    )
 
         for item in self.final_assembly:
             process_item(item)

@@ -1456,6 +1456,19 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "metadata_vars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Vars",
+            "description": "Additional metadata for the message."
           }
         },
         "type": "object",

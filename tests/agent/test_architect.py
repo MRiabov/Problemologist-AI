@@ -9,7 +9,7 @@ from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_agent():
-    with patch("controller.agent.nodes.planner.ChatOpenAI"), \
+    with patch("controller.agent.nodes.base.ChatOpenAI"), \
          patch("controller.agent.nodes.planner.create_react_agent") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock(
@@ -37,8 +37,8 @@ Test Overview
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.planner.WorkerClient")
-@patch("controller.agent.nodes.planner.RemoteFilesystemMiddleware")
+@patch("controller.agent.nodes.base.WorkerClient")
+@patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
 async def test_architect_node_logic(mock_fs, mock_worker, mock_agent):
     state = AgentState(task="Build a robot")
 
@@ -71,15 +71,10 @@ Test Overview
     assert "Test Overview" in result.plan
     assert "Test Todo" in result.todo
 
-    # Check mock file creation
-    # In this test, we don't care if the agent actually called write_file,
-    # because we are mocking the agent. The node reads back files from FS
-    # after agent execution to validate them.
-
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.planner.WorkerClient")
-@patch("controller.agent.nodes.planner.RemoteFilesystemMiddleware")
+@patch("controller.agent.nodes.base.WorkerClient")
+@patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
 async def test_architect_node_fallback(mock_fs, mock_worker, mock_agent):
     # Mock fallback response (missing sections)
     mock_agent.ainvoke.return_value = {
