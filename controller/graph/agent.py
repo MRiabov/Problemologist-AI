@@ -27,7 +27,7 @@ def create_agent_graph(
     # In the new LangGraph-based architecture, we generally use unified graphs.
     # We map the legacy agent names to the new graphs.
 
-    if agent_name.startswith("engineer"):
+    if agent_name.startswith("engineer") or agent_name == "electronics_engineer":
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, langfuse_callback
 

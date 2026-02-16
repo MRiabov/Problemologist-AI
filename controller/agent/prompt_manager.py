@@ -17,8 +17,6 @@ class PromptManager:
             "engineer": data["engineer"]["engineer"]["system"],
             "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
             "critic": data["engineer"]["critic"]["system"],
-            # Sidecar and git_resolver might not be in prompts.yaml yet,
-            # so we keep them as fallbacks or add them there.
         }
 
         # Add fallbacks for things not in prompts.yaml yet
