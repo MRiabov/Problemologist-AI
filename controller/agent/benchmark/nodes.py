@@ -63,7 +63,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         langfuse_callback = get_langfuse_callback(
             name="benchmark_planner", session_id=session_id
         )
-        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+        db_callback = DatabaseCallbackHandler(
+            episode_id=session_id, langfuse_callback=langfuse_callback
+        )
         callbacks = [db_callback]
         if langfuse_callback:
             callbacks.append(langfuse_callback)
@@ -71,11 +73,14 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
 
         # Init Git
+        logger.info("planner_git_init_start", session_id=session_id)
         await client.git_init()
+        logger.info("planner_git_init_complete", session_id=session_id)
 
         # Custom Objectives Logic (Legacy)
         custom_objectives = state["session"].custom_objectives
         if custom_objectives:
+            logger.info("planner_updating_objectives", session_id=session_id)
             try:
                 obj_content = await client.read_file("objectives.yaml")
                 obj_data = yaml.safe_load(obj_content)
@@ -87,8 +92,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                         obj_data["constraints"][key] = custom_objectives[key]
                 new_content = yaml.dump(obj_data, sort_keys=False)
                 await client.write_file("objectives.yaml", new_content)
-            except Exception:
-                pass
+                logger.info("planner_objectives_updated", session_id=session_id)
+            except Exception as e:
+                logger.warning("planner_objectives_update_failed", error=str(e))
 
         # Setup Agent
         middleware = RemoteFilesystemMiddleware(client)
@@ -111,25 +117,40 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
         try:
             # Invoke Agent
+            logger.info(
+                "planner_agent_invoke_start",
+                session_id=session_id,
+                model=settings.llm_model,
+            )
             result = await agent.ainvoke(
                 {"messages": messages}, config={"callbacks": callbacks}
             )
+            logger.info("planner_agent_invoke_complete", session_id=session_id)
             state["messages"].extend(result["messages"])
             final_content = str(result["messages"][-1].content)
 
             # Parse JSON plan
+            logger.info("planner_parsing_plan", session_id=session_id)
             json_match = re.search(r"\{.*\}", final_content, re.DOTALL)
             if json_match:
                 try:
                     plan = json.loads(json_match.group(0))
                     state["plan"] = plan
+                    logger.info(
+                        "planner_plan_parsed_successfully", session_id=session_id
+                    )
                 except json.JSONDecodeError:
                     logger.warning("planner_json_parse_failed", content=final_content)
                     state["plan"] = {"error": "JSON parse failed"}
             else:
+                logger.warning("planner_json_not_found", content=final_content)
                 state["plan"] = {"error": "JSON not found"}
 
-            logger.info("planner_node_complete", plan=state.get("plan"))
+            logger.info(
+                "planner_node_complete",
+                session_id=session_id,
+                plan_keys=list(state.get("plan", {}).keys()),
+            )
 
         except Exception as e:
             logger.error(
@@ -203,7 +224,9 @@ Validation Logs:
         langfuse_callback = get_langfuse_callback(
             name="benchmark_coder", session_id=session_id
         )
-        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+        db_callback = DatabaseCallbackHandler(
+            episode_id=session_id, langfuse_callback=langfuse_callback
+        )
         callbacks = [db_callback]
         if langfuse_callback:
             callbacks.append(langfuse_callback)
@@ -220,9 +243,11 @@ Validation Logs:
 
         # Invoke Agent
         try:
+            logger.info("coder_agent_invoke_start", session_id=session_id)
             result = await agent.ainvoke(
                 {"messages": messages}, config={"callbacks": callbacks}
             )
+            logger.info("coder_agent_invoke_complete", session_id=session_id)
             state["messages"] = result[
                 "messages"
             ]  # Update logic slightly different here, we replace messages? or extend?
@@ -354,16 +379,20 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         langfuse_callback = get_langfuse_callback(
             name="benchmark_cots_search", session_id=session_id
         )
-        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+        db_callback = DatabaseCallbackHandler(
+            episode_id=session_id, langfuse_callback=langfuse_callback
+        )
         callbacks = [db_callback]
         if langfuse_callback:
             callbacks.append(langfuse_callback)
 
         prompt = f"Find components for the benchmark: {state['session'].prompt}"
+        logger.info("cots_search_agent_invoke_start", session_id=session_id)
         result = await agent.ainvoke(
             {"messages": [HumanMessage(content=prompt)]},
             config={"callbacks": callbacks},
         )
+        logger.info("cots_search_agent_invoke_complete", session_id=session_id)
         state["messages"].extend(result["messages"])
 
     return state
@@ -459,7 +488,9 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         langfuse_callback = get_langfuse_callback(
             name="benchmark_reviewer", session_id=session_id
         )
-        db_callback = DatabaseCallbackHandler(episode_id=session_id)
+        db_callback = DatabaseCallbackHandler(
+            episode_id=session_id, langfuse_callback=langfuse_callback
+        )
         callbacks = [db_callback]
         if langfuse_callback:
             callbacks.append(langfuse_callback)
@@ -478,9 +509,11 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         ]
 
         try:
+            logger.info("reviewer_agent_invoke_start", session_id=session_id)
             result = await agent.ainvoke(
                 {"messages": messages}, config={"callbacks": callbacks}
             )
+            logger.info("reviewer_agent_invoke_complete", session_id=session_id)
             # Check violations
             if violations:
                 state["review_feedback"] = (

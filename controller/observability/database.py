@@ -50,7 +50,12 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
     async def on_chain_start(
         self, serialized: dict[str, Any], inputs: dict[str, Any], **_kwargs: Any
     ) -> None:
-        pass
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.info(
+            "chain_start", name=serialized.get("name"), episode_id=str(self.episode_id)
+        )
 
     def _get_langfuse_id(self) -> str | None:
         if self.langfuse_callback and hasattr(self.langfuse_callback, "get_trace_id"):
@@ -59,6 +64,34 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 return None
         return None
+
+    async def on_llm_start(
+        self, serialized: dict[str, Any], prompts: list[str], **_kwargs: Any
+    ) -> None:
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.info(
+            "llm_start", model=serialized.get("name"), episode_id=str(self.episode_id)
+        )
+
+        try:
+            async with self.session_factory() as db:
+                trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.LLM_START,
+                    name=serialized.get("name"),
+                    content=prompts[0] if prompts else "",
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace)
+                await db.commit()
+                await db.refresh(trace)
+                await self._broadcast_trace(trace)
+        except Exception as e:
+            logger.warning(
+                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
+            )
 
     async def on_tool_start(
         self, serialized: dict[str, Any], input_str: str, **_kwargs: Any
@@ -77,6 +110,16 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                     clean_content = json.dumps(data)
             except Exception:
                 pass
+
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.info(
+            "tool_start",
+            name=serialized.get("name"),
+            input=clean_content,
+            episode_id=str(self.episode_id),
+        )
 
         try:
             async with self.session_factory() as db:
@@ -119,6 +162,11 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 content = str(output)
 
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.info("tool_end", output=content, episode_id=str(self.episode_id))
+
         try:
             async with self.session_factory() as db:
                 trace = Trace(
@@ -143,13 +191,18 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         pass
 
     async def on_llm_end(self, response: LLMResult, **_kwargs: Any) -> None:
+        # Extract content from the first generation
+        content = ""
+        if response.generations and response.generations[0]:
+            content = response.generations[0][0].text
+
+        import structlog
+
+        logger = structlog.get_logger(__name__)
+        logger.info("llm_end", content=content, episode_id=str(self.episode_id))
+
         try:
             async with self.session_factory() as db:
-                # Extract content from the first generation
-                content = ""
-                if response.generations and response.generations[0]:
-                    content = response.generations[0][0].text
-
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.LLM_END,

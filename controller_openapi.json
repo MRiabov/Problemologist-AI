@@ -239,6 +239,48 @@
         }
       }
     },
+    "/episodes/{episode_id}/electronics/schematic": {
+      "get": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Get Episode Schematic",
+        "description": "Get the electronics schematic for an episode in a format compatible with tscircuit.",
+        "operationId": "get_episode_schematic_episodes__episode_id__electronics_schematic_get",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/episodes/": {
       "get": {
         "tags": [

@@ -13,8 +13,10 @@ from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from shared.observability.schemas import ElecAgentHandoverEvent
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from controller.observability.tracing import record_worker_events
+from shared.observability.schemas import ElecAgentHandoverEvent
 from shared.type_checking import type_check
 
 logger = structlog.get_logger(__name__)
@@ -93,10 +95,29 @@ class ElectronicsEngineerNode:
         retry_count = 0
         journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
 
+        # Observability
+        langfuse_callback = get_langfuse_callback(
+            name="electronics_engineer", session_id=state.session_id
+        )
+        db_callback = DatabaseCallbackHandler(
+            episode_id=state.session_id, langfuse_callback=langfuse_callback
+        )
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         while retry_count < max_retries:
             try:
                 # Invoke agent
-                result = await self.agent.ainvoke({"messages": messages})
+                logger.info(
+                    "electronics_agent_invoke_start", session_id=state.session_id
+                )
+                result = await self.agent.ainvoke(
+                    {"messages": messages}, config={"callbacks": callbacks}
+                )
+                logger.info(
+                    "electronics_agent_invoke_complete", session_id=state.session_id
+                )
                 messages = result["messages"]
 
                 # 4. Validate output
@@ -123,10 +144,14 @@ class ElectronicsEngineerNode:
                     continue
 
                 # Success
-                journal_entry += f"\nSuccessfully completed electronics task: {current_step}"
+                journal_entry += (
+                    f"\nSuccessfully completed electronics task: {current_step}"
+                )
                 new_todo = todo
                 if current_step in todo:
-                     new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
+                    new_todo = todo.replace(
+                        f"- [ ] {current_step}", f"- [x] {current_step}"
+                    )
 
                 return state.model_copy(
                     update={

@@ -13,6 +13,8 @@ from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
@@ -83,9 +85,23 @@ class PlannerNode:
 
                 steer_context = "\n".join(lines)
 
+        # Observability
+        langfuse_callback = get_langfuse_callback(
+            name="planner", session_id=state.session_id
+        )
+        db_callback = DatabaseCallbackHandler(
+            episode_id=state.session_id, langfuse_callback=langfuse_callback
+        )
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         # T005: Invoke LLM
         prompt_text = self.pm.render(
-            "architect", task=state.task, skills=skills_context, steer_context=steer_context
+            "architect",
+            task=state.task,
+            skills=skills_context,
+            steer_context=steer_context,
         )
         # Instruct agent to use tools to write files
         prompt_text += "\n\nIMPORTANT: You must use the 'write_file' tool to create 'plan.md' and 'todo.md' directly. Do not just output the content in the chat."
@@ -99,7 +115,13 @@ class PlannerNode:
         while retry_count < max_retries:
             try:
                 # Invoke agent
-                result = await self.agent.ainvoke({"messages": messages})
+                logger.info("planner_agent_invoke_start", session_id=state.session_id)
+                result = await self.agent.ainvoke(
+                    {"messages": messages}, config={"callbacks": callbacks}
+                )
+                logger.info(
+                    "planner_agent_invoke_complete", session_id=state.session_id
+                )
                 messages = result["messages"]
 
                 # Validation Gate
