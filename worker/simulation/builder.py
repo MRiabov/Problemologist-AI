@@ -824,15 +824,26 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
             if is_deformable:
                 msh_path = mesh_path_base.with_suffix(".msh")
-                # process_geometry saves to .obj, but also produces a .tmp.stl internally.
-                # We might need to export STL explicitly for tetrahedralize.
                 stl_path = mesh_path_base.with_suffix(".stl")
-                from worker.simulation.builder import export_stl
+                repaired_stl_path = mesh_path_base.with_suffix(".repaired.stl")
 
+                # Export to STL for processing
                 export_stl(child, str(stl_path))
-                from worker.utils.mesh_utils import tetrahedralize
 
-                tetrahedralize(stl_path, msh_path)
+                from worker.utils.mesh_utils import repair_mesh_file, tetrahedralize
+
+                try:
+                    # T008: Repair mesh before tetrahedralization
+                    repair_mesh_file(stl_path, repaired_stl_path)
+                    # T007: Tetrahedralize the repaired mesh
+                    tetrahedralize(repaired_stl_path, msh_path)
+                finally:
+                    # Cleanup intermediate files
+                    if stl_path.exists():
+                        stl_path.unlink()
+                    if repaired_stl_path.exists():
+                        repaired_stl_path.unlink()
+
                 entity_info["type"] = "soft_mesh"
                 entity_info["file"] = str(msh_path.relative_to(self.assets_dir.parent))
             else:
