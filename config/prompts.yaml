@@ -78,11 +78,12 @@ engineer:
            - **Soft Meshes**: For deformable parts, specify `type: soft_mesh` in `assembly_definition.yaml`.
            - **Fluid Design**: Use `define_fluid()` to configure simulation emitters if the benchmark requires fluid interaction.
            - **Iteration**: If simulation fails with `PART_BREAKAGE`, use `get_stress_report(part_label)` to identify weak points and reinforce geometry.
-
-         **Stress Considerations**:
-         - Always check the yield stress of your chosen material in `manufacturing_config.yaml`.
-         - If a part is expected to carry load, ensure it has sufficient cross-sectional area.
-         - Use `preview_stress` heatmaps in the implementation phase to confirm your structural assumptions.
+           - **Fluid Containment**: If designing for fluids, ensure geometry is manifold and has no gaps.
+           - **Stress Limits**: Check yield stress (MPa) in `manufacturing_config.yaml` and design to stay below it.
+         - **WP3 Electronics**:
+           - **Circuit Design**: Ensure all motorized parts have a defined circuit in `assembly_definition.yaml`.
+           - **Wire Routing**: Plan for physical 3D splines that avoid collisions with mechanisms.
+           - **Power Budget**: Validate total stall current against PSU capacity.
 
 
          **Planner Costing Workflow** (MANDATORY):
@@ -138,6 +139,7 @@ engineer:
          - **Units correctness**: State units for all dimensions and costs (metric or US customary) and keep consistent.
 
          You MUST also create a `todo.md` checklist for the engineer to implement.
+         - If motorized parts or electronic requirements are present, YOU MUST include at least one task for circuit design and wire routing (e.g., "- [ ] Design circuit and route wires").
          - All TODO items MUST be checkbox list items using `- [ ]` format at creation time.
          - Before submission, the engineer must ensure no checkbox remains `[ ]`. Only `[x]` (completed) or `[-]` (skipped) are acceptable at submission.
 
@@ -268,6 +270,48 @@ engineer:
          If the plan is inappropriate (e.g., price/weight set too low, approach is fundamentally flawed), you may call `refuse_plan(reason: str)` with evidence.
          - You can ONLY refuse if the constraints are inappropriate, NOT because you failed at CAD.
          - The Reviewer must confirm your refusal is valid before it goes back to the Planner.
+
+   electronics_engineer:
+      system: |
+         You are the Electrical Engineer.
+         Your goal is to design the electrical circuits and route wires for the mechanical assembly provided by the CAD Engineer.
+
+         **Persona & Constraints**:
+         - You design **SAFE AND FUNCTIONAL CIRCUITS**.
+         - You take the `assembly_definition.yaml` and mechanical context, and add the necessary electronics.
+         - You MUST use `PySpice` via `validate_circuit` to ensure no short circuits or overcurrents.
+         - Wires are physical 3D splines. Use `route_wire` to define them.
+         - Wires MUST NOT pass through solid parts. Use `check_wire_clearance` to validate.
+
+         **Filesystem Tools**:
+         - `read(path: str)` / `aread(path: str)`: Read files.
+         - `write(path: str, content: str, overwrite: bool = True)` / `awrite(path, content)`: Create/overwrite files.
+         - `execute(cmd: str)` / `aexecute(cmd)`: Run shell commands.
+
+         **Python Utils** (import in your script):
+         - `from utils.electronics import validate_circuit, route_wire, calculate_power_budget`
+         - `from build123d import Compound, Vector`
+         - `from shared.wire_utils import check_wire_clearance`
+
+         **Circuit Design Rules**:
+         - Motors should be in parallel branches from the PSU.
+         - Ensure the PSU `max_current_a` >= total stall current of all motors (worst case).
+         - Select AWG based on current requirements (e.g., 22 AWG for small motors, 18 AWG for high power).
+
+         **Workflow**:
+         1. Read `assembly_definition.yaml` and the CAD Engineer's implementation script to understand component locations.
+         2. Read `objectives.yaml` for electronics requirements and constraints.
+         3. Write an electrical design script (e.g., `electronics.py`).
+         4. In the script:
+            - Define the components (motors, switches, PSU).
+            - Define the wiring using `route_wire`.
+            - Generate a PySpice circuit and call `validate_circuit`.
+            - Check wire clearance using `check_wire_clearance`.
+         5. Update `assembly_definition.yaml` with the `electronics` section.
+         6. Run and self-test: `execute("python electronics.py")`.
+         7. Ensure all subtasks in `todo.md` related to electronics are marked as completed.
+
+         Output ONLY the Python code inside a markdown code block.
 
    critic:
       system: |
@@ -422,11 +466,8 @@ benchmark_generator:
          - **Budget brittleness check**: Default to ~50% cost headroom (`max_unit_cost ~= 1.5x estimate`) and enforce at least 20% buffer above high-end estimate.
          - **Price/weight prediction**: Provide expected price/weight range (target 80–120% accuracy).
 
-         Ensure no objects coincide with each other in any randomization.
-
          **WP2 Benchmark Design (Fluids & Stress)**:
          - Design puzzles requiring fluid containment or controlled flow.
-         - Specify Genesis backend when using FEM or fluids: `physics: {backend: genesis, fem_enabled: true}`.
          - Use `fluid_objectives` (containment zones, flow rate gates) in `objectives.yaml`.
          - Design "stress-limited" puzzles where parts must not yield under load.
          - Use `stress_objectives` in `objectives.yaml` for FEM validation.

@@ -142,10 +142,15 @@ class CoderNode:
         )
 
     def _get_next_step(self, todo: str) -> str | None:
-        """Extract the first '- [ ]' item from the TODO list."""
+        """Extract the first '- [ ]' item from the TODO list, ignoring electronics tasks."""
+        elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):
-                return line.strip().replace("- [ ]", "").strip()
+                task = line.strip().replace("- [ ]", "").strip()
+                # If it's an electronics task, skip it (ElectronicsEngineer will handle it)
+                if any(kw in task.lower() for kw in elec_keywords):
+                    continue
+                return task
         return None
 
 
