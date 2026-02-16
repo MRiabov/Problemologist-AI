@@ -205,6 +205,7 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
     def _resolve(self, virtual_path: str) -> Path:
         rel = virtual_path.lstrip("/")
         path = (self.root / rel).resolve()
+        # Verify that the resolved path is still within the root directory
         if not str(path).startswith(str(self.root.resolve())):
             raise PermissionError(f"Path traversal attempted: {virtual_path}")
         return path

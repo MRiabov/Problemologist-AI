@@ -17,3 +17,9 @@ trigger: always_on
 1. **Data Transfer**: Define Pydantic models for any structured data passed between components.
 2. **Persistence**: Use **SQLAlchemy** (not Pydantic) for defining persistent database schema checks/storage.
 3. **Refactoring**: If you encounter code using `dict` for structured data, refactor it to use a Pydantic model.
+
+## Additional strict typing guidelines
+
+1. Enums over strings where possible,
+2. `pathlib.Path` over string paths.
+3.

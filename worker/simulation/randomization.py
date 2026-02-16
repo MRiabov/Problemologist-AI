@@ -7,6 +7,7 @@ Implements material randomization per architecture spec:
 """
 
 import random
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -137,10 +138,10 @@ def apply_material_to_mjcf_geom(
 
 
 def apply_randomization_to_xml(
-    xml_path: str,
+    xml_path: str | Path,
     assignments: dict[str, MaterialAssignment],
-    output_path: str | None = None,
-) -> str:
+    output_path: str | Path | None = None,
+) -> Path:
     """Applies material assignments to an MJCF XML file.
 
     Args:
@@ -153,7 +154,8 @@ def apply_randomization_to_xml(
     """
     import xml.etree.ElementTree as ET
 
-    tree = ET.parse(xml_path)
+    xml_p = Path(xml_path)
+    tree = ET.parse(xml_p)
     root = tree.getroot()
     worldbody = root.find("worldbody")
     if worldbody is None:
@@ -176,6 +178,6 @@ def apply_randomization_to_xml(
                 for k, v in attribs.items():
                     geom.set(k, v)
 
-    out = output_path if output_path else xml_path
+    out = Path(output_path) if output_path else xml_p
     tree.write(out, encoding="utf-8")
     return out

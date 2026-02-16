@@ -1,48 +1,17 @@
-import logging
-import importlib.util
-import sys
 from pathlib import Path
-from typing import Any, Dict
-from build123d import Compound, Solid, Face, Edge, Vertex, Vector
-
-logger = logging.getLogger(__name__)
-
-
-def _load_component(script_path: str = "script.py") -> Compound:
-    """Loads the component from the specified script."""
-    path = Path(script_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Script not found at {path.absolute()}")
-
-    # Add directory to sys.path
-    if str(path.parent) not in sys.path:
-        sys.path.insert(0, str(path.parent))
-
-    spec = importlib.util.spec_from_file_location("dynamic_build", str(path))
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load spec for {path}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    if hasattr(module, "build"):
-        return module.build()
-
-    # Try finding build in local scope if it's a script
-    for attr in dir(module):
-        val = getattr(module, attr)
-        if callable(val) and attr == "build":
-            return val()
-
-    raise AttributeError("build() function not found in script.")
+from typing import Any
+from build123d import Compound, Solid
+from ..utils.loader import load_component_from_script
 
 
-def inspect_topology(target_id: str, script_path: str = "script.py") -> dict[str, Any]:
+def inspect_topology(
+    target_id: str, script_path: str | Path = "script.py"
+) -> dict[str, Any]:
     """
     Inspects a specific topological feature and returns its properties.
     target_id format: 'face_12', 'edge_5', 'part_0', etc.
     """
-    component = _load_component(script_path)
+    component = load_component_from_script(Path(script_path))
 
     # parts = component.solids()
     # if not parts:

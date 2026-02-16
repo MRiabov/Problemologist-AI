@@ -1,6 +1,7 @@
 import asyncio
 import mimetypes
 from datetime import datetime
+from pathlib import Path
 
 import boto3
 import structlog
@@ -45,20 +46,20 @@ class S3Client:
         )
         self.bucket = config.bucket_name
 
-    def upload_file(self, local_path: str, object_key: str) -> str:
+    def upload_file(self, local_path: str | Path, object_key: str) -> str:
         """
         Upload a local file to S3.
         Automatically detects MIME type.
         Returns the object key.
         """
-        content_type, _ = mimetypes.guess_type(local_path)
+        content_type, _ = mimetypes.guess_type(str(local_path))
         extra_args = {}
         if content_type:
             extra_args["ContentType"] = content_type
 
         try:
             self.client.upload_file(
-                local_path, self.bucket, object_key, ExtraArgs=extra_args
+                str(local_path), self.bucket, object_key, ExtraArgs=extra_args
             )
             logger.info(
                 "file_uploaded",
@@ -74,16 +75,16 @@ class S3Client:
             )
             raise
 
-    async def aupload_file(self, local_path: str, object_key: str) -> str:
+    async def aupload_file(self, local_path: str | Path, object_key: str) -> str:
         """Async version of upload_file."""
         return await asyncio.to_thread(self.upload_file, local_path, object_key)
 
-    def download_file(self, object_key: str, local_path: str):
+    def download_file(self, object_key: str, local_path: str | Path):
         """
         Download a file from S3 to a local path.
         """
         try:
-            self.client.download_file(self.bucket, object_key, local_path)
+            self.client.download_file(self.bucket, object_key, str(local_path))
             logger.info(
                 "file_downloaded", bucket=self.bucket, key=object_key, path=local_path
             )
@@ -93,7 +94,7 @@ class S3Client:
             )
             raise
 
-    async def adownload_file(self, object_key: str, local_path: str):
+    async def adownload_file(self, object_key: str, local_path: str | Path):
         """Async version of download_file."""
         return await asyncio.to_thread(self.download_file, object_key, local_path)
 

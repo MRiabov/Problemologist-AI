@@ -2,6 +2,7 @@ import mujoco
 import numpy as np
 from build123d import Box, Compound
 
+from shared.models.schemas import PartMetadata
 from worker.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
 
 
@@ -42,6 +43,7 @@ def test_simulation_builder(tmp_path):
     # Create a small assembly
     box1 = Box(0.1, 0.1, 0.1)
     box1.label = "part_1"
+    box1.metadata = PartMetadata(material_id="aluminum_6061")
 
     # zone_goal
     box2 = Box(0.2, 0.2, 0.2)
@@ -78,6 +80,7 @@ def test_vhacd_decomposition(tmp_path):
     # Actually build123d Compound/Solid combination
     part = b1 + b2
     part.label = "concave_part"
+    part.metadata = PartMetadata(material_id="steel")
 
     assembly = Compound(children=[part])
 
@@ -97,3 +100,20 @@ def test_vhacd_decomposition(tmp_path):
 
     model = mujoco.MjModel.from_xml_path(str(scene_path))
     assert model.nmesh >= 1
+
+
+def test_simulation_builder_missing_metadata_fails(tmp_path):
+    import pytest
+
+    box1 = Box(0.1, 0.1, 0.1)
+    box1.label = "bad_part"
+    # No metadata attached
+
+    assembly = Compound(children=[box1])
+    builder = SimulationBuilder(tmp_path)
+
+    with pytest.raises(ValueError) as excinfo:
+        builder.build_from_assembly(assembly)
+
+    assert "missing required metadata" in str(excinfo.value)
+    assert "bad_part" in str(excinfo.value)

@@ -7,16 +7,14 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-import yaml
-
+import httpx
 from dotenv import load_dotenv
 
-load_dotenv()
-
-import httpx
+from controller.clients.worker import WorkerClient
 from shared.enums import EpisodeStatus
 from shared.utils.evaluation import analyze_electronics_metrics
-from controller.clients.worker import WorkerClient
+
+load_dotenv()
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
@@ -68,7 +66,8 @@ async def run_single_eval(
             resp = await client.post(url, json=payload)
             if resp.status_code >= 400:
                 print(
-                    f"Error: Failed to trigger eval for {task_id}: {resp.status_code} - {resp.text}"
+                    f"Error: Failed to trigger eval for {task_id}: "
+                    f"{resp.status_code} - {resp.text}"
                 )
                 return
 
@@ -126,7 +125,8 @@ async def run_single_eval(
                         print(f"  [{task_id}] Still running (status: {status})...")
                 else:
                     print(
-                        f"  [{task_id}] Warning: Error checking status: {status_resp.status_code}"
+                        f"  [{task_id}] Warning: Error checking status: "
+                        f"{status_resp.status_code}"
                     )
             except Exception as e:
                 print(f"  [{task_id}] Warning: Exception during status check: {e}")
@@ -221,7 +221,7 @@ async def main():
     for agent in agents_to_run:
         json_path = evals_root / f"{agent}.json"
         if json_path.exists():
-            with open(json_path) as f:
+            with json_path.open() as f:
                 try:
                     data = json.load(f)
                     if args.limit > 0:

@@ -3,26 +3,22 @@ from pathlib import Path
 import numpy as np
 import structlog
 from build123d import Compound, Part
-from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
+
 
 from shared.enums import SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
+from shared.models.simulation import FluidMetricResult
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
-    PhysicsInstabilityEvent,
     SimulationBackendSelectedEvent,
 )
 from shared.simulation.backends import SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.factory import get_physics_backend
-from shared.models.simulation import (
-    StressSummary,
-    FluidMetricResult,
-)
 from worker.simulation.electronics import ElectronicsManager
-from worker.simulation.metrics import MetricCollector, SimulationMetrics
 from worker.simulation.evaluator import SuccessEvaluator
+from worker.simulation.factory import get_physics_backend
+from worker.simulation.metrics import MetricCollector, SimulationMetrics
 
 logger = structlog.get_logger(__name__)
 
@@ -36,7 +32,7 @@ MOTOR_OVERLOAD_THRESHOLD_SECONDS = 2.0
 class SimulationLoop:
     def __init__(
         self,
-        xml_path: str,
+        xml_path: str | Path,
         component: Part | Compound | None = None,
         max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
         backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
@@ -86,7 +82,7 @@ class SimulationLoop:
             working_dir = Path(xml_path).parent
             custom_config_path = working_dir / "manufacturing_config.yaml"
             if custom_config_path.exists():
-                self.config = load_config(str(custom_config_path))
+                self.config = load_config(custom_config_path)
             else:
                 self.config = load_config()
 
