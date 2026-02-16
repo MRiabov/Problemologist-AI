@@ -228,6 +228,9 @@ class SceneCompiler:
             material="grid",
         )
 
+        # Body lookup cache
+        self.body_elements: dict[str, ET.Element] = {}
+
         # Equality constraints
         self.equality = ET.SubElement(self.root, "equality")
 
@@ -235,22 +238,10 @@ class SceneCompiler:
         """Registers a mesh file in the MJCF assets."""
         ET.SubElement(self.assets, "mesh", name=name, file=file_name)
 
-    def add_site(
-        self,
-        name: str,
-        pos: list[float],
-        parent_body_name: str | None = None,
-        size: float = 0.001,
-        rgba: str | None = None,
-    ):
-        """Adds a site to a body or worldbody."""
         parent = self.worldbody
         if parent_body_name:
-            # Simple linear search for the body in worldbody
-            for body in self.worldbody.iter("body"):
-                if body.get("name") == parent_body_name:
-                    parent = body
-                    break
+            if parent_body_name in self.body_elements:
+                parent = self.body_elements[parent_body_name]
 
         attrs = {"name": name, "pos": " ".join(map(str, pos)), "size": str(size)}
         if rgba:
@@ -265,6 +256,8 @@ class SceneCompiler:
         rgba: str = "0.1 0.1 0.8 1",
         limited: bool = False,
         range: list[float] | None = None,
+        stiffness: float | None = None,
+        damping: float | None = None,
     ):
         """Adds a spatial tendon connecting a sequence of sites."""
         if not hasattr(self, "tendon_element"):
@@ -274,6 +267,10 @@ class SceneCompiler:
         if limited and range:
             attrs["limited"] = "true"
             attrs["range"] = " ".join(map(str, range))
+        if stiffness is not None:
+            attrs["stiffness"] = str(stiffness)
+        if damping is not None:
+            attrs["damping"] = str(damping)
 
         spatial = ET.SubElement(self.tendon_element, "spatial", **attrs)
         for site_name in site_names:
@@ -320,6 +317,7 @@ class SceneCompiler:
         body = ET.SubElement(
             self.worldbody, "body", name=name, pos=" ".join(map(str, pos))
         )
+        self.body_elements[name] = body
         if any(v != 0 for v in euler):
             body.set("euler", " ".join(map(str, euler)))
 
@@ -661,9 +659,26 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 if waypoints:
                     for j, pt in enumerate(waypoints):
                         site_name = f"site_{wire.wire_id}_{j}"
-                        # For now, treat all waypoints as world-relative
-                        # A more advanced version would find the closest body
-                        self.compiler.add_site(name=site_name, pos=list(pt))
+                        parent = None
+                        local_pos = list(pt)
+
+                        # Heuristic: first waypoint attached to from_comp, last to to_comp
+                        if j == 0:
+                            comp_id = wire.from_terminal.component
+                            if comp_id in body_locations:
+                                parent = comp_id
+                                b_pos, _ = body_locations[comp_id]
+                                local_pos = [pt[k] - b_pos[k] for k in range(3)]
+                        elif j == len(waypoints) - 1:
+                            comp_id = wire.to_terminal.component
+                            if comp_id in body_locations:
+                                parent = comp_id
+                                b_pos, _ = body_locations[comp_id]
+                                local_pos = [pt[k] - b_pos[k] for k in range(3)]
+
+                        self.compiler.add_site(
+                            name=site_name, pos=local_pos, parent_body_name=parent
+                        )
                         site_names.append(site_name)
                 else:
                     # Fallback: connect from/to components directly
@@ -686,10 +701,15 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     # Width scaling: AWG 10 is ~2.5mm, AWG 20 is ~0.8mm
                     # Simple linear approx:
                     width = 0.001 + (20 - wire.gauge_awg) * 0.0001
+                    # Wire material properties: Copper has high stiffness, but tendons are 1D
+                    # We use a value that prevents too much stretching
+                    stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
                     self.compiler.add_spatial_tendon(
                         name=wire.wire_id,
                         site_names=site_names,
                         width=max(0.0005, width),
+                        stiffness=stiffness,
+                        damping=stiffness * 0.1,
                     )
 
         scene_path = self.output_dir / "scene.xml"

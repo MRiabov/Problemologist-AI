@@ -9,6 +9,90 @@ from shared.observability.schemas import WireRoutingEvent
 logger = logging.getLogger(__name__)
 
 
+# T013: Map AWG to physical properties (Industrial standard values for Copper)
+# Resistance at 20C (Ohm/km -> Ohm/m), Max Current (A, chassis wiring), Diameter (mm)
+# Tensile strength (N) assumes annealed copper (~220 MPa)
+AWG_PROPERTIES = {
+    10: {
+        "resistance_ohm_m": 0.00327,
+        "max_current_a": 55.0,
+        "diameter_mm": 2.588,
+        "tensile_strength_n": 1150,
+    },
+    12: {
+        "resistance_ohm_m": 0.00521,
+        "max_current_a": 41.0,
+        "diameter_mm": 2.053,
+        "tensile_strength_n": 720,
+    },
+    14: {
+        "resistance_ohm_m": 0.00828,
+        "max_current_a": 32.0,
+        "diameter_mm": 1.628,
+        "tensile_strength_n": 450,
+    },
+    16: {
+        "resistance_ohm_m": 0.01317,
+        "max_current_a": 22.0,
+        "diameter_mm": 1.291,
+        "tensile_strength_n": 280,
+    },
+    18: {
+        "resistance_ohm_m": 0.02095,
+        "max_current_a": 16.0,
+        "diameter_mm": 1.024,
+        "tensile_strength_n": 180,
+    },
+    20: {
+        "resistance_ohm_m": 0.03331,
+        "max_current_a": 11.0,
+        "diameter_mm": 0.812,
+        "tensile_strength_n": 110,
+    },
+    22: {
+        "resistance_ohm_m": 0.05296,
+        "max_current_a": 7.0,
+        "diameter_mm": 0.644,
+        "tensile_strength_n": 70,
+    },
+    24: {
+        "resistance_ohm_m": 0.08422,
+        "max_current_a": 3.5,
+        "diameter_mm": 0.511,
+        "tensile_strength_n": 45,
+    },
+    26: {
+        "resistance_ohm_m": 0.1339,
+        "max_current_a": 2.2,
+        "diameter_mm": 0.405,
+        "tensile_strength_n": 28,
+    },
+}
+
+
+def get_awg_properties(gauge: int) -> dict:
+    """Lookup AWG properties, with fallback for unknown sizes."""
+    if gauge in AWG_PROPERTIES:
+        return AWG_PROPERTIES[gauge]
+
+    import math
+
+    # Heuristic fallback: d = 0.127 * 92^((36-AWG)/39)
+    diameter = 0.127 * (92 ** ((36 - gauge) / 39.0))
+    area_mm2 = math.pi * (diameter / 2) ** 2
+    # Resistance approx: 0.0172 (rho copper) / area
+    resistance = 0.0172 / area_mm2
+    # Strength approx: 220 MPa * area
+    strength = 220 * area_mm2
+
+    return {
+        "resistance_ohm_m": round(resistance, 6),
+        "max_current_a": round(area_mm2 * 10, 1),  # Very rough heuristic
+        "diameter_mm": round(diameter, 3),
+        "tensile_strength_n": round(strength, 1),
+    }
+
+
 class WireRouteResult(BaseModel):
     wire_id: str
     total_length_mm: float
