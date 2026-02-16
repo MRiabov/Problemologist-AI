@@ -68,9 +68,9 @@ constraints:
 
         # Verify event emission
         event_types = [e.get("event_type") for e in events]
-        assert "simulation_backend_selected" in event_types, (
-            "Missing simulation_backend_selected event"
-        )
+        assert (
+            "simulation_backend_selected" in event_types
+        ), "Missing simulation_backend_selected event"
 
         event = next(
             e for e in events if e["event_type"] == "simulation_backend_selected"

@@ -65,9 +65,9 @@ async def test_benchmark_planner_cad_reviewer_path():
         print(f"Found artifacts: {artifact_paths}")
 
         assert any(p.endswith("plan.md") for p in artifact_paths), "plan.md missing"
-        assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
-            "objectives.yaml missing"
-        )
+        assert any(
+            p.endswith("objectives.yaml") for p in artifact_paths
+        ), "objectives.yaml missing"
         # Check for reviews (assuming reviews are stored in a reviews/ folder)
         assert any("reviews/" in p for p in artifact_paths), "Reviews missing"
 

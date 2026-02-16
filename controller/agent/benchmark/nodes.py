@@ -422,7 +422,8 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
         review_filename = f"reviews/review-round-{current_round}/review.md"
 
         # Vision inputs
-        render_data = state.get("simulation_result", {}).get("render_data", [])
+        sim_result = state.get("simulation_result")
+        render_data = sim_result.get("render_data", []) if sim_result else []
         image_contents = []
         for img_bytes in (render_data or [])[:8]:
             try:
