@@ -21,6 +21,7 @@ export type { MessageRequest } from './models/MessageRequest';
 export type { ReviewRequest } from './models/ReviewRequest';
 export type { RunSimulationRequest } from './models/RunSimulationRequest';
 export { SelectionLevel } from './models/SelectionLevel';
+export { SimulatorBackendType } from './models/SimulatorBackendType';
 export type { Skill } from './models/Skill';
 export type { SteerablePrompt_Input } from './models/SteerablePrompt_Input';
 export type { SteerablePrompt_Output } from './models/SteerablePrompt_Output';
