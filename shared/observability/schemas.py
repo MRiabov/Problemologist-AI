@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.enums import SimulationFailureMode
+from shared.enums import SimulationFailureMode as SimulationFailureReason
 
 
 class ObservabilityEventType(StrEnum):
@@ -304,6 +305,7 @@ class ReviewEvidenceStats(BaseModel):
     has_sim_report: bool = False
     has_mfg_report: bool = False
     num_renders: int = 0
+    simulations_run: int = 0
 
 
 class ReviewDecisionEvent(BaseEvent):

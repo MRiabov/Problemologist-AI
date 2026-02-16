@@ -70,7 +70,7 @@ class TestMotorOverload:
 
         assert not metrics.success
         assert metrics.fail_reason is not None
-        assert "motor_overload" in metrics.fail_reason
+        assert "overcurrent" in metrics.fail_reason
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""
@@ -81,18 +81,24 @@ class TestMotorOverload:
         metrics = no_limit_loop.step({}, duration=2.0, dynamic_controllers=controllers)
 
         # Should not fail due to overload
-        assert metrics.fail_reason is None or "motor_overload" not in str(
+        assert metrics.fail_reason is None or "overcurrent" not in str(
             metrics.fail_reason
         )
 
     def test_overload_resets_on_unclamp(self, overload_loop):
         """Test that clamp counter resets if motor becomes unclamped."""
         # This tests that overload requires CONTINUOUS clamping
-        assert overload_loop.actuator_clamp_duration.get("servo", 0.0) == 0.0
+        assert (
+            overload_loop.success_evaluator.motor_overload_timer.get("servo", 0.0)
+            == 0.0
+        )
 
         # After reset, should be zero
         overload_loop.reset_metrics()
-        assert overload_loop.actuator_clamp_duration.get("servo", 0.0) == 0.0
+        assert (
+            overload_loop.success_evaluator.motor_overload_timer.get("servo", 0.0)
+            == 0.0
+        )
 
     def test_threshold_constant_is_2_seconds(self):
         """Verify the overload threshold matches architecture spec."""

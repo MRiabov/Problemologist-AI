@@ -16,10 +16,10 @@ from shared.models.schemas import (
 )
 from shared.simulation.backends import (
     BodyState,
-    SimulatorBackendType,
     StepResult,
     StressField,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
 
 # Shared mock to avoid "already initialized" errors if multiple backends are created

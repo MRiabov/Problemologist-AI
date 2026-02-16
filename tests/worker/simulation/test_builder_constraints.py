@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 
 from build123d import Box, Compound, Part
 
+from shared.models.schemas import PartMetadata
 from worker.simulation.builder import SimulationBuilder
 
 
@@ -12,9 +13,11 @@ def test_weld_constraint_generation(tmp_path):
     # Create parts
     part1 = Part(Box(10, 10, 10))
     part1.label = "base_part"
+    part1.metadata = PartMetadata(material_id="aluminum")
 
     part2 = Part(Box(5, 5, 5))
     part2.label = "welded_part"
+    part2.metadata = PartMetadata(material_id="aluminum")
     # Set the constraint attribute
     part2.constraint = "weld:base_part"
 

@@ -14,9 +14,9 @@ from shared.models.schemas import (
 )
 from shared.simulation.backends import (
     SimulationScene,
-    SimulatorBackendType,
     StepResult,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.genesis_backend import GenesisBackend
 from worker.simulation.loop import SimulationLoop
 
