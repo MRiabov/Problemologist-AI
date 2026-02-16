@@ -1,6 +1,6 @@
 """Filesystem router with read-only restrictions.
 
-Provides a unified filesystem view that overlays S3-backed workspace
+Provides a unified filesystem view that overlays local session-isolated workspace
 with local read-only directories (utils/, skills/, reviews/).
 """
 

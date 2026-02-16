@@ -538,7 +538,7 @@
           "worker"
         ],
         "summary": "Git Commit",
-        "description": "Commit changes and sync to S3.",
+        "description": "Commit changes to the local repository.",
         "operationId": "git_commit_git_commit_post",
         "parameters": [
           {

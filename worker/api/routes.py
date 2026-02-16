@@ -322,32 +322,20 @@ async def git_init(fs_router=Depends(get_router)):
 
 @router.post("/git/commit", response_model=GitCommitResponse)
 async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
-    """Commit changes and sync to S3."""
+    """Commit changes to the local repository."""
     try:
         commit_hash = commit_all(fs_router.local_backend.root, request.message)
-
-        # Sync to S3
-        try:
-            fs_router.local_backend.sync_to_s3()
-        except Exception as e:
-            logger.warning("api_git_commit_sync_failed", error=str(e))
-            # We don't fail the commit if sync fails, but we note it
-            return GitCommitResponse(
-                success=True,
-                commit_hash=commit_hash,
-                message=f"Commit successful but S3 sync failed: {e}",
-            )
 
         if commit_hash:
             return GitCommitResponse(
                 success=True,
                 commit_hash=commit_hash,
-                message="Commit successful and synced to S3",
+                message="Commit successful",
             )
         return GitCommitResponse(
             success=True,
             commit_hash=None,
-            message="No changes to commit, but synced to S3",
+            message="No changes to commit",
         )
     except Exception as e:
         logger.error("api_git_commit_failed", error=str(e))
@@ -388,17 +376,6 @@ async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
     """Complete a merge."""
     commit_hash = complete_merge(fs_router.local_backend.root, request.message)
     if commit_hash:
-        # Sync to S3 as well? Probably yes, to keep backup.
-        try:
-            fs_router.local_backend.sync_to_s3()
-        except Exception as e:
-            logger.warning("api_git_merge_sync_failed", error=str(e))
-            return GitCommitResponse(
-                success=True,
-                commit_hash=commit_hash,
-                message=f"Merge successful but S3 sync failed: {e}",
-            )
-
         return GitCommitResponse(
             success=True,
             commit_hash=commit_hash,

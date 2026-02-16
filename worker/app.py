@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from shared.logging import configure_logging
 
 from .api.routes import router as api_router
-from .filesystem.watchdog import start_watchdog
 from .skills.sync import sync_skills
 
 # Configure structured logging
@@ -21,15 +20,8 @@ async def lifespan(app: FastAPI):
     # Startup: Sync skills
     sync_skills()
 
-    # Startup: Start the filesystem watchdog
-    # We watch the current directory as it's likely the workspace root in the container
-    observer = start_watchdog(".")
     yield
-    # Shutdown: Stop the watchdog
-    if observer:
-        observer.stop()
-        observer.join()
-        logger.info("watchdog_stopped")
+    # Shutdown
 
 
 app = FastAPI(
