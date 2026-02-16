@@ -49,7 +49,7 @@ def define_graph():
 
     # Define transitions
     def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
-        if state["session"].status == SessionStatus.executing:
+        if state.session.status == SessionStatus.executing:
             return "coder"
         return "planner"
 
@@ -71,7 +71,7 @@ def define_graph():
         if await check_steering(state) == "steer":
             return "steer"
 
-        feedback = state.get("review_feedback", "")
+        feedback = state.review_feedback or ""
         if feedback == "Approved":
             return "skills"
         if feedback.startswith("Steering:"):
@@ -91,65 +91,6 @@ def define_graph():
     workflow.add_edge("cots_search", "planner")
 
     return workflow.compile()
-
-
-async def _execute_graph_streaming(
-    app: Any,
-    initial_state: BenchmarkGeneratorState,
-    session_id: uuid.UUID,
-    prompt: str,
-) -> BenchmarkGeneratorState:
-    """Helper to run the graph with streaming and persistence."""
-
-
-def _map_session_to_episode_status(s: SessionStatus) -> EpisodeStatus:
-    """Maps internal SessionStatus to EpisodeStatus enum."""
-    if s == SessionStatus.accepted:
-        return EpisodeStatus.COMPLETED
-    if s == SessionStatus.failed:
-        return EpisodeStatus.FAILED
-    if s == SessionStatus.planned:
-        return EpisodeStatus.PLANNED
-    return EpisodeStatus.RUNNING
-
-
-async def _update_episode_persistence(
-    session_id: uuid.UUID,
-    new_status: SessionStatus,
-    validation_logs: list[str],
-    prompt: str,
-    plan: Any | None = None,
-):
-    """Handles DB updates for an episode."""
-    session_factory = get_sessionmaker()
-    async with session_factory() as db:
-        episode_status = _map_session_to_episode_status(new_status)
-
-        stmt_select = select(Episode).where(Episode.id == session_id)
-        res = await db.execute(stmt_select)
-        ep = res.scalar_one_or_none()
-
-        if ep:
-            new_metadata = (ep.metadata_vars or {}).copy()
-            new_metadata.update(
-                {
-                    "detailed_status": new_status,
-                    "validation_logs": validation_logs or [],
-                    "prompt": prompt,
-                }
-            )
-
-            ep.status = episode_status
-            ep.metadata_vars = new_metadata
-
-            # Update plan if it exists in state
-            if plan:
-                import json
-
-                plan_data = plan.model_dump() if hasattr(plan, "model_dump") else plan
-                ep.plan = json.dumps(plan_data, indent=2)
-
-            await db.commit()
 
 
 async def _execute_graph_streaming(
@@ -180,14 +121,38 @@ async def _execute_graph_streaming(
                 node_name=node_name,
                 keys=list(state_update.keys()) if hasattr(state_update, "keys") else [],
             )
-            final_state.update(state_update)
+
+            # Update final_state (Pydantic model)
+            if isinstance(state_update, dict):
+                # Update field by field to avoid losing objects not in state_update
+                for key, value in state_update.items():
+                    if hasattr(final_state, key):
+                        # Special handling for plan which is a RandomizationStrategy model
+                        if key == "plan" and isinstance(value, dict):
+                            from shared.simulation.schemas import RandomizationStrategy
+
+                            try:
+                                value = RandomizationStrategy.model_validate(value)
+                            except Exception:
+                                pass
+                        # Special handling for session which is a GenerationSession model
+                        if key == "session" and isinstance(value, dict):
+                            from .models import GenerationSession
+
+                            try:
+                                value = GenerationSession.model_validate(value)
+                            except Exception:
+                                pass
+                        setattr(final_state, key, value)
+            elif isinstance(state_update, BenchmarkGeneratorState):
+                final_state = state_update
 
             # Determine new status
-            new_status = final_state["session"].status
+            new_status = final_state.session.status
             should_stop = False
 
             if node_name == "planner":
-                if final_state.get("plan") and final_state["plan"].theme != "error":
+                if final_state.plan and final_state.plan.theme != "error":
                     new_status = SessionStatus.planned
                     should_stop = True
                 else:
@@ -195,28 +160,31 @@ async def _execute_graph_streaming(
             elif node_name == "coder":
                 new_status = SessionStatus.validating
             elif node_name == "reviewer":
-                feedback = final_state.get("review_feedback") or ""
+                feedback = final_state.review_feedback or ""
                 if feedback == "Approved":
                     new_status = SessionStatus.accepted
                 else:
                     new_status = SessionStatus.rejected
             elif (
                 node_name == "skills"
-                and final_state["session"].status == SessionStatus.accepted
+                and final_state.session.status == SessionStatus.accepted
             ):
                 new_status = SessionStatus.accepted
 
             # Update internal session status
-            final_state["session"].status = new_status
+            final_state.session.status = new_status
 
             # Update Persistence
-            await _update_episode_persistence(
-                session_id=session_id,
-                new_status=new_status,
-                validation_logs=final_state["session"].validation_logs,
-                prompt=prompt,
-                plan=final_state.get("plan"),
-            )
+            try:
+                await _update_episode_persistence(
+                    session_id=session_id,
+                    new_status=new_status,
+                    validation_logs=final_state.session.validation_logs,
+                    prompt=prompt,
+                    plan=final_state.plan,
+                )
+            except Exception as e:
+                logger.warning("failed_to_update_episode_persistence", error=str(e))
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
@@ -288,7 +256,7 @@ async def run_generation_session(
         )
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
-        initial_state["session"].status = SessionStatus.failed
+        initial_state.session.status = SessionStatus.failed
         # Update DB (Episode) to failed
         async with session_factory() as db:
             episode = await db.get(Episode, session_id)
@@ -311,7 +279,7 @@ async def run_generation_session(
     logger.info(
         "generation_session_complete",
         session_id=session_id,
-        status=final_state["session"].status,
+        status=final_state.session.status,
     )
     return final_state
 
@@ -320,7 +288,7 @@ async def _persist_session_assets(
     final_state: BenchmarkGeneratorState, session_id: uuid.UUID
 ):
     """Helper to persist final assets after a successful session."""
-    if final_state["session"].status != SessionStatus.accepted:
+    if final_state.session.status != SessionStatus.accepted:
         return
 
     session_factory = get_sessionmaker()
@@ -328,19 +296,21 @@ async def _persist_session_assets(
         async with session_factory() as db:
             storage = BenchmarkStorage()
 
-            sim_result = final_state.get("simulation_result", {})
-            images = sim_result.get("render_data", []) or []
+            sim_result = final_state.simulation_result or {}
+            if hasattr(sim_result, "model_dump"):
+                sim_result = sim_result.model_dump()
+            render_data = sim_result.get("render_data", []) or []
 
-            mjcf_content = final_state.get(
-                "mjcf_content", "<!-- MJCF content missing in state -->"
+            mjcf_content = (
+                final_state.mjcf_content or "<!-- MJCF content missing in state -->"
             )
 
             await storage.save_asset(
                 benchmark_id=session_id,
-                script=final_state["current_script"],
+                script=final_state.current_script,
                 mjcf=mjcf_content,
-                images=images,
-                metadata=final_state.get("plan", {}),
+                images=render_data,
+                metadata=final_state.plan.model_dump() if final_state.plan else {},
                 db=db,
             )
             logger.info("asset_persisted", session_id=session_id)
@@ -391,6 +361,36 @@ async def _persist_session_assets(
                 logger.error("failed_to_sync_assets_to_db", error=str(e))
     except Exception as e:
         logger.error("asset_persistence_failed", error=str(e))
+
+
+async def _update_episode_persistence(
+    session_id: uuid.UUID,
+    new_status: str,
+    validation_logs: list[str],
+    prompt: str,
+    plan: Any = None,
+):
+    """Updates the Episode in DB for real-time monitoring."""
+    from controller.agent.benchmark.models import SessionStatus
+    from controller.persistence.models import Episode
+    from shared.enums import EpisodeStatus
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, session_id)
+        if episode:
+            episode.status = EpisodeStatus.RUNNING
+            metadata = (episode.metadata_vars or {}).copy()
+            metadata.update(
+                {
+                    "detailed_status": new_status,
+                    "validation_logs": validation_logs,
+                    "prompt": prompt,
+                    "plan": plan.model_dump() if hasattr(plan, "model_dump") else plan,
+                }
+            )
+            episode.metadata_vars = metadata
+            await db.commit()
 
 
 async def continue_generation_session(
