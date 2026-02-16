@@ -57,7 +57,7 @@ steps.id/
 # Outputs
 /renders/
 MUJOCO_LOG.TXT
-.jsonl 
+*.jsonl
 # ^event outputs
 
 # Simulation assets

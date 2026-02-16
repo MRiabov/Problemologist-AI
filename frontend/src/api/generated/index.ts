@@ -18,6 +18,7 @@ export type { HTTPValidationError } from './models/HTTPValidationError';
 export type { MessageRequest } from './models/MessageRequest';
 export type { ReviewRequest } from './models/ReviewRequest';
 export type { RunSimulationRequest } from './models/RunSimulationRequest';
+export { SimulatorBackendType } from './models/SimulatorBackendType';
 export type { Skill } from './models/Skill';
 export type { TraceResponse } from './models/TraceResponse';
 export { TraceType } from './models/TraceType';

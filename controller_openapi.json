@@ -1237,6 +1237,10 @@
             "type": "string",
             "title": "Compound Json",
             "default": "{}"
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "default": "mujoco"
           }
         },
         "type": "object",
@@ -1244,6 +1248,14 @@
           "session_id"
         ],
         "title": "RunSimulationRequest"
+      },
+      "SimulatorBackendType": {
+        "type": "string",
+        "enum": [
+          "mujoco",
+          "genesis"
+        ],
+        "title": "SimulatorBackendType"
       },
       "Skill": {
         "properties": {

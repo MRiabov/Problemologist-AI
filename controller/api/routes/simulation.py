@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from controller.agent.benchmark.graph import run_generation_session
 from shared.enums import ResponseStatus
+from shared.simulation.schemas import SimulatorBackendType
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
 
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/simulation", tags=["simulation"])
 class RunSimulationRequest(BaseModel):
     session_id: str
     compound_json: str = "{}"
+    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
 
 
 @router.post("/run", status_code=202)
@@ -56,7 +58,9 @@ async def run_simulation(request: RunSimulationRequest):
         import asyncio
 
         asyncio.create_task(
-            run_generation_session(prompt=prompt, session_id=real_session_id)
+            run_generation_session(
+                prompt=prompt, session_id=real_session_id, backend=request.backend
+            )
         )
 
         return {

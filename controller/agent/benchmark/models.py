@@ -1,8 +1,8 @@
 from enum import StrEnum
-from typing import Any
 from uuid import UUID
-
+from typing import Any
 from pydantic import BaseModel, Field, HttpUrl
+from shared.simulation.schemas import SimulatorBackendType
 
 
 class SessionStatus(StrEnum):
@@ -30,5 +30,6 @@ class GenerationSession(BaseModel):
     session_id: UUID
     prompt: str
     status: SessionStatus = SessionStatus.planning
+    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
     validation_logs: list[str] = Field(default_factory=list)
     custom_objectives: dict[str, Any] = Field(default_factory=dict)

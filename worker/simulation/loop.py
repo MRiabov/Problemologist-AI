@@ -13,39 +13,18 @@ from shared.observability.schemas import (
     PhysicsInstabilityEvent,
     SimulationBackendSelectedEvent,
 )
-from shared.simulation.backends import SimulationScene, SimulatorBackendType
+from shared.simulation.backends import SimulationScene
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_physics_backend
 
 logger = structlog.get_logger(__name__)
 
 
-class StressSummary(BaseModel):
-    part_label: str
-    max_von_mises_pa: float
-    mean_von_mises_pa: float
-    safety_factor: float  # yield_stress / max_von_mises
-    location_of_max: tuple[float, float, float]
-    utilization_pct: float  # max_stress / yield_stress * 100
-
-
-class FluidMetricResult(BaseModel):
-    metric_type: str  # "fluid_containment" | "flow_rate"
-    fluid_id: str
-    measured_value: float
-    target_value: float
-    passed: bool
-
-
-class SimulationMetrics(BaseModel):
-    total_time: StrictFloat
-    total_energy: StrictFloat
-    max_velocity: StrictFloat
-    success: StrictBool
-    fail_reason: StrictStr | None = None
-    stress_summaries: list[StressSummary] = []
-    stress_fields: dict[str, dict] = {}  # part_label -> {"nodes": ..., "stress": ...}
-    fluid_metrics: list[FluidMetricResult] = []
-    confidence: StrictStr = "high"
+from shared.models.simulation import (
+    FluidMetricResult,
+    SimulationMetrics,
+    StressSummary,
+)
 
 
 # Hard cap on simulation time per architecture spec
@@ -65,6 +44,13 @@ class SimulationLoop:
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool = False,
     ):
+        # WP2: Validate that fluids are NOT requested if using MuJoCo
+        if backend_type == SimulatorBackendType.MUJOCO:
+            if objectives and objectives.fluids:
+                raise ValueError(
+                    "MuJoCo backend does not support fluids. Use Genesis instead."
+                )
+
         self.backend = get_physics_backend(backend_type)
         self.smoke_test_mode = smoke_test_mode
         self.particle_budget = 5000 if smoke_test_mode else 100000
@@ -313,6 +299,7 @@ class SimulationLoop:
         video_renderer = None
         if video_path:
             from worker.utils.rendering import VideoRenderer
+
             video_renderer = VideoRenderer(video_path)
 
         # T012: Check validation hook before starting

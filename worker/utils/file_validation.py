@@ -23,6 +23,7 @@ from shared.models.schemas import (
     ObjectivesYaml,
     ReviewFrontmatter,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 
@@ -51,6 +52,14 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
             return False, ["objectives.yaml still contains template placeholders"]
 
         objectives = ObjectivesYaml(**data)
+
+        # WP2: Validate that fluids are NOT requested if using MuJoCo
+        if objectives.physics.backend == SimulatorBackendType.MUJOCO:
+            if objectives.fluids:
+                return False, [
+                    "MuJoCo backend does not support fluids. Use Genesis instead."
+                ]
+
         logger.info("objectives_yaml_valid")
         return True, objectives
     except yaml.YAMLError as e:
