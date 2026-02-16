@@ -127,3 +127,35 @@ servos:
     kv: 2.0
     max_speed_rad_s: 31.4 # ~300 RPM typical
     cost: 15.00
+
+# =============================================================================
+# ELECTRONICS (COTS)
+# =============================================================================
+power_supplies:
+  lrs_350_24:
+    voltage_dc: 24.0
+    max_current_a: 14.6
+    cost: 35.00
+  dr_120_24:
+    voltage_dc: 24.0
+    max_current_a: 5.0
+    cost: 45.00
+
+relays:
+  srd_05vdc_sl_c:
+    coil_voltage_v: 5.0
+    contact_rating_a: 10.0
+    cost: 1.50
+
+connectors:
+  xt60:
+    max_current_a: 60.0
+    cost: 0.80
+
+wires:
+  awg18:
+    gauge_awg: 18
+    cost_per_m: 0.50
+  awg24:
+    gauge_awg: 24
+    cost_per_m: 0.20
