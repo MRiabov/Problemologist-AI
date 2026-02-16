@@ -379,20 +379,53 @@ class GenesisBackend(PhysicsBackend):
     def get_body_state(self, body_id: str) -> BodyState:
         logger.debug("genesis_get_body_state_request", body_id=body_id)
         if body_id not in self.entities:
-            # Check links within MJCF entities
+            # Check links within MJCF entities (from WP07)
             for ent in self.entities.values():
                 try:
-                    # In Genesis, if it's an MJCF entity, we can search links by name
-                    link = ent.get_link(body_id)
-                    if link:
+                    # In Genesis, if it's an MJCF entity, it's a RigidEntity
+                    # which has a .links attribute
+                    target_link = None
+                    if hasattr(ent, "links"):
+                        for link in ent.links:
+                            if link.name == body_id:
+                                target_link = link
+                                break
+
+                    if target_link:
                         logger.debug("genesis_link_state_found", body_id=body_id)
-                        return BodyState(
-                            pos=link.get_pos().tolist(),
-                            quat=link.get_quat().tolist(),
-                            vel=link.get_vel().tolist(),
-                            angvel=link.get_angvel().tolist(),
+                        # Use get_pos() etc. if they exist, or fallback to properties
+                        pos = (
+                            target_link.get_pos().tolist()
+                            if hasattr(target_link, "get_pos")
+                            else target_link.pos.tolist()
                         )
-                except Exception:
+                        quat = (
+                            target_link.get_quat().tolist()
+                            if hasattr(target_link, "get_quat")
+                            else target_link.quat.tolist()
+                        )
+                        vel = (
+                            target_link.get_vel().tolist()
+                            if hasattr(target_link, "get_vel")
+                            else target_link.vel.tolist()
+                        )
+
+                        angvel = [0, 0, 0]
+                        if hasattr(target_link, "get_angvel"):
+                            angvel = target_link.get_angvel().tolist()
+                        elif hasattr(target_link, "angvel"):
+                            angvel = target_link.angvel.tolist()
+
+                        return BodyState(
+                            pos=pos,
+                            quat=quat,
+                            vel=vel,
+                            angvel=angvel,
+                        )
+                except Exception as e:
+                    logger.debug(
+                        "genesis_get_link_failed", body_id=body_id, error=str(e)
+                    )
                     continue
 
             logger.debug("genesis_body_not_found", body_id=body_id)
@@ -648,10 +681,11 @@ class GenesisBackend(PhysicsBackend):
         names = list(self.entities.keys())
         for ent in self.entities.values():
             try:
-                # Add link names if it's an articulated entity
-                for link in ent.get_links():
-                    if link.name not in names:
-                        names.append(link.name)
+                # Add link names if it's an articulated entity (from WP07)
+                if hasattr(ent, "links"):
+                    for link in ent.links:
+                        if link.name not in names:
+                            names.append(link.name)
             except Exception:
                 continue
         return names
