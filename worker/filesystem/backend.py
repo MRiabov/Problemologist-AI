@@ -364,19 +364,6 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
 
     # --- Legacy methods ---
 
-    def ls(self, path: str = "/") -> list[FileInfo]:
-        """List contents of a directory (Legacy)."""
-        infos = self.ls_info(path)
-        return [
-            FileInfo(
-                path=i["path"],
-                name=i["path"].rstrip("/").split("/")[-1] or "/",
-                is_dir=i["is_dir"],
-                size=i["size"],
-            )
-            for i in infos
-        ]
-
     def exists(self, path: str) -> bool:
         """Check if a path exists."""
         try:

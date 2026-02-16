@@ -6,8 +6,14 @@ These models define the contracts for:
 - Review frontmatter: YAML frontmatter for reviewer decisions
 """
 
-from typing import Literal
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Annotated, Any, Literal
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    Field,
+    field_validator,
+    model_validator,
+)
 from shared.simulation.schemas import SimulatorBackendType
 
 from shared.enums import ElectronicComponentType
@@ -18,19 +24,24 @@ from shared.enums import ElectronicComponentType
 # =============================================================================
 
 
+def _coerce_to_tuple(v: Any) -> Any:
+    """Validator to coerce lists to tuples for consistent hashing and immutability."""
+    if isinstance(v, list):
+        return tuple(v)
+    return v
+
+
+CoercedTuple3D = Annotated[
+    tuple[float, float, float], BeforeValidator(_coerce_to_tuple)
+]
+CoercedTuple2D = Annotated[tuple[float, float], BeforeValidator(_coerce_to_tuple)]
+
+
 class BoundingBox(BaseModel):
     """Axis-aligned bounding box with min/max coordinates."""
 
-    min: tuple[float, float, float]
-    max: tuple[float, float, float]
-
-    @field_validator("min", "max", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        """Allow lists to be passed and convert to tuples."""
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    min: CoercedTuple3D
+    max: CoercedTuple3D
 
 
 # =============================================================================
@@ -46,33 +57,23 @@ class FluidProperties(BaseModel):
 
 class FluidVolume(BaseModel):
     type: Literal["cylinder", "box", "sphere"]
-    center: tuple[float, float, float]
+    center: CoercedTuple3D
     # For cylinder
     radius: float | None = None
     height: float | None = None
     # For box
-    size: tuple[float, float, float] | None = None
-
-    @field_validator("center", "size", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    size: CoercedTuple3D | None = None
 
 
 class FluidDefinition(BaseModel):
     fluid_id: str
     properties: FluidProperties = FluidProperties()
     initial_volume: FluidVolume
-    color: tuple[int, int, int] = (0, 0, 200)
-
-    @field_validator("color", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    color: Annotated[tuple[int, int, int], BeforeValidator(_coerce_to_tuple)] = (
+        0,
+        0,
+        200,
+    )
 
 
 class FluidContainmentObjective(BaseModel):
@@ -86,17 +87,10 @@ class FluidContainmentObjective(BaseModel):
 class FlowRateObjective(BaseModel):
     type: Literal["flow_rate"] = "flow_rate"
     fluid_id: str
-    gate_plane_point: tuple[float, float, float]
-    gate_plane_normal: tuple[float, float, float]
+    gate_plane_point: CoercedTuple3D
+    gate_plane_normal: CoercedTuple3D
     target_rate_l_per_s: float
     tolerance: float = 0.2
-
-    @field_validator("gate_plane_point", "gate_plane_normal", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
 
 
 class MaxStressObjective(BaseModel):
@@ -114,15 +108,8 @@ class ForbidZone(BaseModel):
     """A zone that the moved object must not enter."""
 
     name: str
-    min: tuple[float, float, float]
-    max: tuple[float, float, float]
-
-    @field_validator("min", "max", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    min: CoercedTuple3D
+    max: CoercedTuple3D
 
 
 class ObjectivesSection(BaseModel):
@@ -138,14 +125,7 @@ class ObjectivesSection(BaseModel):
 class StaticRandomization(BaseModel):
     """Per-benchmark-run randomization of object properties."""
 
-    radius: tuple[float, float] | None = None
-
-    @field_validator("radius", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    radius: CoercedTuple2D | None = None
 
 
 class MovedObject(BaseModel):
@@ -154,15 +134,8 @@ class MovedObject(BaseModel):
     label: str
     shape: str
     static_randomization: StaticRandomization = StaticRandomization()
-    start_position: tuple[float, float, float]
-    runtime_jitter: tuple[float, float, float]
-
-    @field_validator("start_position", "runtime_jitter", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    start_position: CoercedTuple3D
+    runtime_jitter: CoercedTuple3D
 
 
 class MotorControl(BaseModel):
@@ -223,14 +196,7 @@ class PowerSupplyConfig(BaseModel):
     type: str = "mains_ac_rectified"
     voltage_dc: float
     max_current_a: float
-    location: tuple[float, float, float] | None = None
-
-    @field_validator("location", mode="before")
-    @classmethod
-    def coerce_list_to_tuple(cls, v):
-        if isinstance(v, list):
-            return tuple(v)
-        return v
+    location: CoercedTuple3D | None = None
 
 
 class WiringConstraint(BaseModel):

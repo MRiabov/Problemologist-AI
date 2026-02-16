@@ -1,51 +1,46 @@
 import asyncio
-from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable, TypedDict
+from typing import Any, Protocol, runtime_checkable
+from pydantic import BaseModel, Field
 
 
-class FileInfo(TypedDict):
+class FileInfo(BaseModel):
     path: str
     is_dir: bool
     size: int
-    modified_at: str | None
+    modified_at: str | None = None
 
 
-@dataclass
-class WriteResult:
+class WriteResult(BaseModel):
     path: str | None = None
     error: str | None = None
     files_update: Any | None = None
 
 
-@dataclass
-class EditResult:
+class EditResult(BaseModel):
     path: str | None = None
     error: str | None = None
     files_update: Any | None = None
     occurrences: int = 0
 
 
-@dataclass
-class FileUploadResponse:
+class FileUploadResponse(BaseModel):
     path: str
     error: str | None = None
 
 
-@dataclass
-class FileDownloadResponse:
+class FileDownloadResponse(BaseModel):
     path: str
     content: bytes | None = None
     error: str | None = None
 
 
-@dataclass
-class ExecuteResponse:
+class ExecuteResponse(BaseModel):
     output: str
     exit_code: int | None = None
     truncated: bool = False
 
 
-class GrepMatch(TypedDict):
+class GrepMatch(BaseModel):
     path: str
     line: int
     text: str

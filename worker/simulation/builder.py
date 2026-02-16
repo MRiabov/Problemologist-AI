@@ -23,12 +23,14 @@ from shared.cots.parts.motors import ServoMotor
 if TYPE_CHECKING:
     from shared.models.schemas import MovingPart, ObjectivesYaml
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class AssemblyPartData(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     label: str
-    part: Any  # build123d.Solid | Compound
+    part: Solid | Compound | Any
     pos: list[float]
     euler: list[float]
     is_fixed: bool = False
@@ -57,63 +59,13 @@ class CommonAssemblyTraverser:
         for i, child in enumerate(children):
             label = getattr(child, "label", None) or f"part_{i}"
 
-            # Position/Euler from child.location
-            pos = [
-                child.location.position.X,
-                child.location.position.Y,
-                child.location.position.Z,
-            ]
-            euler = [
-                child.location.orientation.X,
-                child.location.orientation.Y,
-                child.location.orientation.Z,
-            ]
-
-            # Metadata resolution (T006: centralized metadata check)
-            constraint = getattr(child, "constraint", None)
-            is_fixed = getattr(child, "fixed", False)
-            material_id = getattr(child, "material_id", "aluminum_6061")
-
-            # Joint parsing logic
-            joint_type, joint_axis, joint_range = None, None, None
-            if isinstance(constraint, str) and constraint.startswith(
-                ("hinge", "slide")
-            ):
-                parts = constraint.split(":")
-                joint_type = parts[0]
-                if len(parts) > 1:
-                    ax = parts[1]
-                    if ax == "x":
-                        joint_axis = [1, 0, 0]
-                    elif ax == "y":
-                        joint_axis = [0, 1, 0]
-                    elif ax == "z":
-                        joint_axis = [0, 0, 1]
-                    elif "," in ax:
-                        joint_axis = [float(x) for x in ax.split(",")]
-
-                for p in parts[2:]:
-                    if p.startswith("range="):
-                        val = p.split("=")[1]
-                        joint_range = [float(x) for x in val.split(",")]
-
-            # Zone detection
-            is_zone = False
-            zone_type = None
-            zone_size = None
-            if label.startswith("zone_"):
-                is_zone = True
-                zone_type = "goal" if "goal" in label else "forbid"
-                bb = child.bounding_box()
-                zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
-
-            # Electronics mapping
-            is_electronics = False
-            if electronics and hasattr(electronics, "components"):
-                for comp in electronics.components:
-                    if getattr(comp, "assembly_part_ref", None) == label:
-                        is_electronics = True
-                        break
+            pos, euler = CommonAssemblyTraverser._resolve_location(child)
+            metadata = CommonAssemblyTraverser._resolve_metadata(child)
+            joint_info = CommonAssemblyTraverser._parse_joint(child)
+            zone_info = CommonAssemblyTraverser._detect_zone(child, label)
+            is_electronics = CommonAssemblyTraverser._map_electronics(
+                label, electronics
+            )
 
             parts_data.append(
                 AssemblyPartData(
@@ -121,18 +73,84 @@ class CommonAssemblyTraverser:
                     part=child,
                     pos=pos,
                     euler=euler,
-                    is_fixed=is_fixed,
-                    joint_type=joint_type,
-                    joint_axis=joint_axis,
-                    joint_range=joint_range,
-                    material_id=material_id,
+                    is_fixed=metadata["is_fixed"],
+                    material_id=metadata["material_id"],
+                    joint_type=joint_info["type"],
+                    joint_axis=joint_info["axis"],
+                    joint_range=joint_info["range"],
                     is_electronics=is_electronics,
-                    is_zone=is_zone,
-                    zone_type=zone_type,
-                    zone_size=zone_size,
+                    is_zone=zone_info["is_zone"],
+                    zone_type=zone_info["type"],
+                    zone_size=zone_info["size"],
                 )
             )
         return parts_data
+
+    @staticmethod
+    def _resolve_location(child: Any) -> tuple[list[float], list[float]]:
+        pos = [
+            child.location.position.X,
+            child.location.position.Y,
+            child.location.position.Z,
+        ]
+        euler = [
+            child.location.orientation.X,
+            child.location.orientation.Y,
+            child.location.orientation.Z,
+        ]
+        return pos, euler
+
+    @staticmethod
+    def _resolve_metadata(child: Any) -> dict[str, Any]:
+        return {
+            "constraint": getattr(child, "constraint", None),
+            "is_fixed": getattr(child, "fixed", False),
+            "material_id": getattr(child, "material_id", "aluminum_6061"),
+        }
+
+    @staticmethod
+    def _parse_joint(child: Any) -> dict[str, Any]:
+        constraint = getattr(child, "constraint", None)
+        joint_type, joint_axis, joint_range = None, None, None
+        if isinstance(constraint, str) and constraint.startswith(("hinge", "slide")):
+            parts = constraint.split(":")
+            joint_type = parts[0]
+            if len(parts) > 1:
+                ax = parts[1]
+                if ax == "x":
+                    joint_axis = [1, 0, 0]
+                elif ax == "y":
+                    joint_axis = [0, 1, 0]
+                elif ax == "z":
+                    joint_axis = [0, 0, 1]
+                elif "," in ax:
+                    joint_axis = [float(x) for x in ax.split(",")]
+
+            for p in parts[2:]:
+                if p.startswith("range="):
+                    val = p.split("=")[1]
+                    joint_range = [float(x) for x in val.split(",")]
+        return {"type": joint_type, "axis": joint_axis, "range": joint_range}
+
+    @staticmethod
+    def _detect_zone(child: Any, label: str) -> dict[str, Any]:
+        is_zone = False
+        zone_type = None
+        zone_size = None
+        if label.startswith("zone_"):
+            is_zone = True
+            zone_type = "goal" if "goal" in label else "forbid"
+            bb = child.bounding_box()
+            zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
+        return {"is_zone": is_zone, "type": zone_type, "size": zone_size}
+
+    @staticmethod
+    def _map_electronics(label: str, electronics: Any | None) -> bool:
+        if electronics and hasattr(electronics, "components"):
+            for comp in electronics.components:
+                if getattr(comp, "assembly_part_ref", None) == label:
+                    return True
+        return False
 
 
 logger = logging.getLogger(__name__)
@@ -481,47 +499,27 @@ class SceneCompiler:
         kv: float | None = None,
         forcerange: tuple[float, float] | None = None,
         actuator_type: str = "position",
+        cots_id: str | None = None,
     ):
-        """Adds an actuator (motor/servo) to control a joint.
-
-        Args:
-            name: Unique name for the actuator.
-            joint: Name of the joint to control.
-            kp: Proportional gain for position control.
-            kv: Derivative gain for position control.
-            forcerange: (min, max) torque limits in N·m. From COTS servo specs.
-            actuator_type: "position" for servos, "motor" for direct torque.
-        """
+        """Adds an actuator (motor/servo) to control a joint."""
         # Default gains if not derived
         final_kp = kp if kp is not None else 10.0
         final_kv = kv if kv is not None else 1.0
         final_forcerange = forcerange
 
         # Try to derive from COTS if missing parameters
-        if kp is None or forcerange is None:
-            # Attempt to extract COTS model name from actuator name
-            # Assuming format "name" or "Servo_SG90_..."
-            # Simple heuristic: check if any COTS model name is in the string
-            found_model = None
-            for model_name, data in ServoMotor.motor_data.items():
-                if model_name in name or model_name in joint:
-                    found_model = model_name
-                    # Parse data
-                    torque = data["torque_nm"]
+        if cots_id:
+            from shared.cots.parts.motors import retrieve_cots_physics
 
-                    if forcerange is None:
-                        final_forcerange = (-torque, torque)
-
-                    if kp is None:
-                        # Heuristic: kp = torque / saturation_error (rad)
-                        # Assume saturation at ~0.2 rad (~11 deg)
-                        saturation_error = 0.2
-                        final_kp = torque / saturation_error
-
-                        if kv is None:
-                            # Critical damping approx or small damping
-                            final_kv = final_kp * 0.1
-                    break
+            physics = retrieve_cots_physics(cots_id)
+            if physics:
+                if forcerange is None:
+                    torque = physics["torque"]
+                    final_forcerange = (-torque, torque)
+                if kp is None:
+                    final_kp = physics["kp"]
+                    if kv is None:
+                        final_kv = physics["kv"]
 
         attrs = {
             "name": name,

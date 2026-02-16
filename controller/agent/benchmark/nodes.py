@@ -32,6 +32,9 @@ from .tools import get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
 
+OBJECTIVES_FILE = "objectives.yaml"
+SCRIPT_FILE = "script.py"
+
 
 def extract_python_code(text: str) -> str:
     """Extracts python code block from markdown."""
@@ -74,9 +77,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     custom_objectives = state["session"].custom_objectives
     if custom_objectives:
         logger.info("planner_updating_objectives", session_id=session_id)
-        if await ctx.worker_client.exists("objectives.yaml"):
+        if await ctx.worker_client.exists(OBJECTIVES_FILE):
             try:
-                obj_content = await ctx.worker_client.read_file("objectives.yaml")
+                obj_content = await ctx.worker_client.read_file(OBJECTIVES_FILE)
                 obj_data = yaml.safe_load(obj_content)
                 if not isinstance(obj_data, dict):
                     obj_data = {}
@@ -95,7 +98,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                     )
 
                 new_content = yaml.dump(obj_data, sort_keys=False)
-                await ctx.worker_client.write_file("objectives.yaml", new_content)
+                await ctx.worker_client.write_file(OBJECTIVES_FILE, new_content)
                 logger.info("planner_objectives_updated", session_id=session_id)
             except Exception as e:
                 logger.warning("planner_objectives_update_failed", error=str(e))
@@ -166,8 +169,8 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
     objectives_yaml = "# No objectives.yaml found."
     try:
-        if await ctx.worker_client.exists("objectives.yaml"):
-            resp = await ctx.worker_client.read_file("objectives.yaml")
+        if await ctx.worker_client.exists(OBJECTIVES_FILE):
+            resp = await ctx.worker_client.read_file(OBJECTIVES_FILE)
             objectives_yaml = resp
     except Exception:
         pass
@@ -219,7 +222,7 @@ Validation Logs:
 
     # Retrieve script
     try:
-        state["current_script"] = await ctx.worker_client.read_file("script.py")
+        state["current_script"] = await ctx.worker_client.read_file(SCRIPT_FILE)
     except Exception:
         pass
 
@@ -228,7 +231,7 @@ Validation Logs:
         from worker.utils.file_validation import validate_node_output
 
         is_valid, errors = validate_node_output(
-            "coder", {"script.py": state["current_script"]}
+            "coder", {SCRIPT_FILE: state["current_script"]}
         )
         if not is_valid:
             logger.warning("benchmark_coder_validation_failed", errors=errors)
@@ -241,7 +244,7 @@ Validation Logs:
     if script:
         logger.info("running_integrated_validation", session_id=session_id)
         try:
-            val_res = await ctx.worker_client.validate(script_path="script.py")
+            val_res = await ctx.worker_client.validate(script_path=SCRIPT_FILE)
             if not val_res.success:
                 state["simulation_result"] = {
                     "valid": False,
@@ -268,7 +271,7 @@ Validation Logs:
                     logger.warning("failed_to_parse_backend_from_objectives")
 
                 sim_res = await ctx.worker_client.simulate(
-                    script_path="script.py", backend=backend
+                    script_path=SCRIPT_FILE, backend=backend
                 )
                 if not sim_res.success:
                     state["simulation_result"] = {
@@ -412,7 +415,7 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
 You are an agentic reviewer with access to the CAD workspace.
 YOU MUST:
 1. Inspect the renders provided in the vision message.
-2. Inspect the generated code ('script.py').
+2. Inspect the generated code ('{SCRIPT_FILE}').
 3. Use the 'write_review_file' tool to persist your review ONLY to '{review_filename}'.
 4. The review file MUST start with a YAML frontmatter...
 YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
