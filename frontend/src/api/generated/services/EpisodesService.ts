@@ -113,6 +113,27 @@ export class EpisodesService {
         });
     }
     /**
+     * Get Episode Schematic
+     * Get the electronics schematic for an episode in a format compatible with tscircuit.
+     * @param episodeId
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeSchematicEpisodesEpisodeIdElectronicsSchematicGet(
+        episodeId: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/episodes/{episode_id}/electronics/schematic',
+            path: {
+                'episode_id': episodeId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * List Episodes
      * List all agent episodes.
      * @param limit

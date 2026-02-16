@@ -15,11 +15,14 @@ from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from controller.observability.tracing import record_worker_events
+import structlog
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class CriticDecision(StrEnum):
@@ -65,9 +68,24 @@ class ReviewerNode:
 
         messages = [SystemMessage(content=prompt)]
 
+        # Observability
+        langfuse_callback = get_langfuse_callback(
+            name="reviewer", session_id=state.session_id
+        )
+        db_callback = DatabaseCallbackHandler(
+            episode_id=state.session_id, langfuse_callback=langfuse_callback
+        )
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         try:
             # Invoke agent
-            result = await self.agent.ainvoke({"messages": messages})
+            logger.info("reviewer_agent_invoke_start", session_id=state.session_id)
+            result = await self.agent.ainvoke(
+                {"messages": messages}, config={"callbacks": callbacks}
+            )
+            logger.info("reviewer_agent_invoke_complete", session_id=state.session_id)
             messages = result["messages"]
             content = str(messages[-1].content)  # Final response
 

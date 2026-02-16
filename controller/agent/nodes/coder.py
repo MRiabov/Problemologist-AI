@@ -12,9 +12,12 @@ from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import get_langfuse_callback
 from shared.type_checking import type_check
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @type_check
@@ -67,10 +70,25 @@ class CoderNode:
         # The previous implementation was one-shot. ReAct allows multi-turn.
         # Let's stick to fresh start per task to avoid context pollution, as the system prompt contains all necessary info.
 
+        # Observability
+        langfuse_callback = get_langfuse_callback(
+            name="coder", session_id=state.session_id
+        )
+        db_callback = DatabaseCallbackHandler(
+            episode_id=state.session_id, langfuse_callback=langfuse_callback
+        )
+        callbacks = [db_callback]
+        if langfuse_callback:
+            callbacks.append(langfuse_callback)
+
         while retry_count < max_retries:
             try:
                 # Invoke the agent
-                result = await self.agent.ainvoke({"messages": messages})
+                logger.info("coder_agent_invoke_start", session_id=state.session_id)
+                result = await self.agent.ainvoke(
+                    {"messages": messages}, config={"callbacks": callbacks}
+                )
+                logger.info("coder_agent_invoke_complete", session_id=state.session_id)
 
                 # Update messages with the conversation trace
                 messages = result["messages"]
