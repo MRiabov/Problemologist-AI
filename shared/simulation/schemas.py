@@ -1,8 +1,10 @@
 from enum import Enum
 
+
 class SimulatorBackendType(str, Enum):
     MUJOCO = "mujoco"
     GENESIS = "genesis"
+
 
 class SimulationFailureMode(str, Enum):
     PART_BREAKAGE = "FAILED_PART_BREAKAGE"

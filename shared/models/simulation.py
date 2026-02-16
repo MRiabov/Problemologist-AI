@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Any, List, Optional, Dict
 from shared.simulation.schemas import SimulationFailureMode
 
+
 class StressSummary(BaseModel):
     part_label: str
     max_von_mises_pa: float
@@ -10,12 +11,14 @@ class StressSummary(BaseModel):
     location_of_max: tuple[float, float, float]
     utilization_pct: float  # max_stress / yield_stress * 100
 
+
 class FluidMetricResult(BaseModel):
     metric_type: str  # "fluid_containment" | "flow_rate"
     fluid_id: str
     measured_value: float
     target_value: float
     passed: bool
+
 
 class SimulationMetrics(BaseModel):
     total_time: float
@@ -24,9 +27,12 @@ class SimulationMetrics(BaseModel):
     success: bool
     fail_reason: Optional[str] = None
     stress_summaries: List[StressSummary] = Field(default_factory=list)
-    stress_fields: Dict[str, Dict] = Field(default_factory=dict) # part_label -> {"nodes": ..., "stress": ...}
+    stress_fields: Dict[str, Dict] = Field(
+        default_factory=dict
+    )  # part_label -> {"nodes": ..., "stress": ...}
     fluid_metrics: List[FluidMetricResult] = Field(default_factory=list)
     confidence: str = "high"
+
 
 class SimulationResult(BaseModel):
     success: bool
