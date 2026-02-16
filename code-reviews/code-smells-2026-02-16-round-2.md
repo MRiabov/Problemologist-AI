@@ -78,7 +78,7 @@ This round of review focused on the interaction between the `worker`, `controlle
 **Suggested Fix**: Centralize the mapping of COTS components to simulation parameters in `shared/cots`.
 
 **User Review**:
-<!-- Fill here -->
+We should have a cots ID in cots parts. It should resolve from cots ID, not from the name of it. We can set it in part metadata.
 
 ---
 
