@@ -10,6 +10,10 @@ class COTSCategory(str, Enum):
     GEAR = "gear"
     BEARING = "bearing"
     ELECTRONIC = "electronic"
+    POWER_SUPPLY = "power_supply"
+    RELAY = "relay"
+    CONNECTOR = "connector"
+    WIRE = "wire"
 
 
 class COTSItem(BaseModel):

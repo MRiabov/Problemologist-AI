@@ -54,3 +54,22 @@ class TraceType(StrEnum):
 
 
 from shared.simulation.schemas import SimulationFailureMode
+
+
+class ElectricalFailureType(StrEnum):
+    """Standard electrical failure categories."""
+
+    SHORT_CIRCUIT = "short_circuit"
+    OVERCURRENT = "overcurrent"
+    WIRE_TORN = "wire_torn"
+    OPEN_CIRCUIT = "open_circuit"
+
+
+class ElectronicComponentType(StrEnum):
+    """Types of electronic components supported in the netlist."""
+
+    MOTOR = "motor"
+    POWER_SUPPLY = "power_supply"
+    RELAY = "relay"
+    SWITCH = "switch"
+    CONNECTOR = "connector"

@@ -6,7 +6,12 @@ from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from shared.cots.parts.electronics import ElectronicRelay, PowerSupply
+from shared.cots.parts.electronics import (
+    Connector,
+    ElectronicRelay,
+    PowerSupply,
+    Wire,
+)
 from shared.cots.parts.motors import ServoMotor
 from shared.type_checking import type_check
 
@@ -44,6 +49,8 @@ class Indexer:
             ServoMotor,
             PowerSupply,
             ElectronicRelay,
+            Connector,
+            Wire,
         ]
 
     def extract_metadata(self, part_class: type, size: str) -> dict[str, Any] | None:
@@ -61,10 +68,15 @@ class Indexer:
             part = part_class(**kwargs)
 
             bb = part.bounding_box()
-            bb = part.bounding_box()
             volume = part.volume
 
-            if class_name in ["ServoMotor", "PowerSupply", "ElectronicRelay"]:
+            if class_name in [
+                "ServoMotor",
+                "PowerSupply",
+                "ElectronicRelay",
+                "Connector",
+                "Wire",
+            ]:
                 # Use provided weight from metadata
                 weight = part.metadata.get("weight_g", volume * STEEL_DENSITY_G_MM3)
                 unit_cost = part.metadata.get("price", 0.0)
@@ -82,6 +94,10 @@ class Indexer:
                 category = "power_supply"
             elif class_name == "ElectronicRelay":
                 category = "relay"
+            elif class_name == "Connector":
+                category = "connector"
+            elif class_name == "Wire":
+                category = "wire"
             elif "Gear" in class_name:
                 category = "gear"
 
@@ -144,6 +160,10 @@ class Indexer:
                     sizes = list(part_class.psu_data.keys())
                 elif hasattr(part_class, "relay_data"):
                     sizes = list(part_class.relay_data.keys())
+                elif hasattr(part_class, "connector_data"):
+                    sizes = list(part_class.connector_data.keys())
+                elif hasattr(part_class, "wire_data"):
+                    sizes = list(part_class.wire_data.keys())
                 else:
                     logger.warning(f"No size data found for {class_name}, skipping.")
                     continue
