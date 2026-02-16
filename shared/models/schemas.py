@@ -349,6 +349,13 @@ class AssemblyPartConfig(BaseModel):
     control: MotorControl | None = None
 
 
+class PartConfig(BaseModel):
+    """Configuration for a part in an assembly, including motion metadata."""
+
+    name: str
+    config: AssemblyPartConfig
+
+
 class JointEstimate(BaseModel):
     """Estimate for a joint in the assembly."""
 
@@ -361,7 +368,7 @@ class SubassemblyEstimate(BaseModel):
     """Estimate for a subassembly within the final assembly."""
 
     subassembly_id: str
-    parts: list[dict[str, AssemblyPartConfig]]
+    parts: list[PartConfig]
     joints: list[JointEstimate] = []
 
 

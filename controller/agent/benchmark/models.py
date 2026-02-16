@@ -1,8 +1,11 @@
 from enum import StrEnum
 from uuid import UUID
-from typing import Any
 from pydantic import BaseModel, Field, HttpUrl
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    AssetMetadata,
+    CustomObjectives,
+)
 
 
 class SessionStatus(StrEnum):
@@ -23,7 +26,7 @@ class BenchmarkAsset(BaseModel):
     # Links to specific seeded variations
     random_variants: list[UUID] = Field(default_factory=list)
     difficulty_score: float = 0.0
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: AssetMetadata = Field(default_factory=AssetMetadata)
 
 
 class GenerationSession(BaseModel):
@@ -32,4 +35,4 @@ class GenerationSession(BaseModel):
     status: SessionStatus = SessionStatus.planning
     backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
     validation_logs: list[str] = Field(default_factory=list)
-    custom_objectives: dict[str, Any] = Field(default_factory=dict)
+    custom_objectives: CustomObjectives = Field(default_factory=CustomObjectives)
