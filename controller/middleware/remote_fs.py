@@ -56,6 +56,10 @@ class RemoteFilesystemMiddleware:
         result = await self.client.inspect_topology(target_id, script_path)
         return result.model_dump()
 
+    async def exists(self, path: str) -> bool:
+        """Check if a file exists via the Worker client."""
+        return await self.client.exists(path)
+
     async def read_file(self, path: str) -> str:
         """Read file via the Worker client."""
         events = [ReadFileToolEvent(path=path)]

@@ -78,23 +78,28 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         logger.info("planner_git_init_complete", session_id=session_id)
 
         # Custom Objectives Logic (Legacy)
-        custom_objectives = state["session"].custom_objectives
+        custom_objectives = (state.get("session") or state["session"]).custom_objectives
         if custom_objectives:
             logger.info("planner_updating_objectives", session_id=session_id)
-            try:
-                obj_content = await client.read_file("objectives.yaml")
-                obj_data = yaml.safe_load(obj_content)
-                if "constraints" not in obj_data:
-                    obj_data["constraints"] = {}
-                # Update constraints based on custom objectives
-                for key in ["max_unit_cost", "max_weight", "target_quantity"]:
-                    if key in custom_objectives:
-                        obj_data["constraints"][key] = custom_objectives[key]
-                new_content = yaml.dump(obj_data, sort_keys=False)
-                await client.write_file("objectives.yaml", new_content)
-                logger.info("planner_objectives_updated", session_id=session_id)
-            except Exception as e:
-                logger.warning("planner_objectives_update_failed", error=str(e))
+            if await client.exists("objectives.yaml"):
+                try:
+                    obj_content = await client.read_file("objectives.yaml")
+                    obj_data = yaml.safe_load(obj_content)
+                    if not isinstance(obj_data, dict):
+                        obj_data = {}
+                    if "constraints" not in obj_data:
+                        obj_data["constraints"] = {}
+                    # Update constraints based on custom objectives
+                    for key in ["max_unit_cost", "max_weight", "target_quantity"]:
+                        if key in custom_objectives:
+                            obj_data["constraints"][key] = custom_objectives[key]
+                    new_content = yaml.dump(obj_data, sort_keys=False)
+                    await client.write_file("objectives.yaml", new_content)
+                    logger.info("planner_objectives_updated", session_id=session_id)
+                except Exception as e:
+                    logger.warning("planner_objectives_update_failed", error=str(e))
+            else:
+                logger.info("planner_objectives_not_found_skipping_update")
 
         # Setup Agent
         middleware = RemoteFilesystemMiddleware(client)
@@ -149,7 +154,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             logger.info(
                 "planner_node_complete",
                 session_id=session_id,
-                plan_keys=list(state.get("plan", {}).keys()),
+                plan_keys=list((state.get("plan") or {}).keys()),
             )
 
         except Exception as e:
@@ -499,7 +504,7 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         user_content = [
             {
                 "type": "text",
-                "text": f"Please review the benchmark for theme: {state.get('plan', {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}",
+                "text": f"Please review the benchmark for theme: {(state.get('plan') or {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}",
             }
         ]
         user_content.extend(image_contents)

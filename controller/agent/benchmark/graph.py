@@ -123,8 +123,19 @@ async def _execute_graph_streaming(
         callbacks.append(langfuse_callback)
 
     async for output in app.astream(initial_state, config={"callbacks": callbacks}):
-        for node_name, state in output.items():
-            final_state.update(state)
+        for node_name, state_update in output.items():
+            if state_update is None:
+                logger.warning("node_returned_none", node_name=node_name)
+                continue
+            logger.info(
+                "node_output_received",
+                node_name=node_name,
+                keys=list(state_update.keys()) if hasattr(state_update, "keys") else [],
+            )
+            final_state.update(state_update)
+
+            # Use local reference to update for logic
+            state = state_update
 
             # Determine new status
             new_status = final_state["session"].status
@@ -139,7 +150,7 @@ async def _execute_graph_streaming(
             elif node_name == "coder":
                 new_status = SessionStatus.validating
             elif node_name == "reviewer":
-                feedback = state.get("review_feedback", "")
+                feedback = state.get("review_feedback") or ""
                 if feedback == "Approved":
                     new_status = SessionStatus.accepted
                 else:
