@@ -297,6 +297,7 @@ class GenesisBackend(PhysicsBackend):
                 failure_reason="Scene is not built yet.",
             )
 
+        global_max_stress = 0.0
         try:
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
@@ -306,7 +307,8 @@ class GenesisBackend(PhysicsBackend):
             for name, entity in self.entities.items():
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
-                    max_stress = np.max(field.stress)
+                    max_stress = float(np.max(field.stress))
+                    global_max_stress = max(global_max_stress, max_stress)
 
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
@@ -329,6 +331,7 @@ class GenesisBackend(PhysicsBackend):
                             time=self.current_time,
                             success=False,
                             failure_reason=f"PART_BREAKAGE:{name}",
+                            max_stress=global_max_stress,
                         )
 
             # T017: ELECTRONICS_FLUID_DAMAGE check
@@ -338,6 +341,7 @@ class GenesisBackend(PhysicsBackend):
                     time=self.current_time,
                     success=False,
                     failure_reason=failure,
+                    max_stress=global_max_stress,
                 )
 
         except Exception as e:
@@ -347,7 +351,9 @@ class GenesisBackend(PhysicsBackend):
             )
 
         self.current_time += dt
-        return StepResult(time=self.current_time, success=True)
+        return StepResult(
+            time=self.current_time, success=True, max_stress=global_max_stress
+        )
 
     def _check_electronics_fluid_damage(self) -> str | None:
         """Check if any fluid particles are touching electronic components."""

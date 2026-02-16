@@ -45,6 +45,7 @@ class StepResult(BaseModel):
     time: float
     success: bool
     failure_reason: str | None = None
+    max_stress: float = 0.0
 
 
 class SimulationScene(BaseModel):
