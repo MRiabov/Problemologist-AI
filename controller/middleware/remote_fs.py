@@ -7,6 +7,7 @@ from temporalio.client import Client
 from controller.clients.worker import WorkerClient
 from controller.observability.tracing import record_worker_events, sync_asset
 from controller.workflows.execution import ScriptExecutionWorkflow
+from shared.simulation.schemas import SimulatorBackendType
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -199,7 +200,11 @@ class RemoteFilesystemMiddleware:
         results = await self.client.grep(pattern, path=path, glob=glob)
         return [match.model_dump() for match in results]
 
-    async def simulate(self, script_path: str) -> dict[str, Any]:
+    async def simulate(
+        self,
+        script_path: str,
+        backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+    ) -> dict[str, Any]:
         """Trigger physics simulation via worker client."""
         # Record request
         await record_worker_events(
@@ -207,7 +212,7 @@ class RemoteFilesystemMiddleware:
             events=[SimulationRequestEvent(script_path=script_path)],
         )
 
-        result = await self.client.simulate(script_path)
+        result = await self.client.simulate(script_path, backend=backend)
         res_dict = result.model_dump()
 
         # Record result

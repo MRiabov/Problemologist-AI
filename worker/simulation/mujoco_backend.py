@@ -1,3 +1,4 @@
+from typing import Any
 import mujoco
 import numpy as np
 
@@ -11,6 +12,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.models.simulation import StressSummary, FluidMetricResult
 
 
 class MuJoCoBackend(PhysicsBackend):
@@ -74,13 +76,38 @@ class MuJoCoBackend(PhysicsBackend):
             angvel=tuple(self.data.cvel[bid][:3].tolist()),
         )
 
+    def get_state(self) -> dict[str, Any]:
+        if self.data is None:
+            return {}
+        return {
+            "time": self.data.time,
+            "qpos": self.data.qpos.tolist(),
+            "qvel": self.data.qvel.tolist(),
+            "act": self.data.act.tolist() if self.model and self.model.na > 0 else [],
+        }
+
     def get_stress_field(self, body_id: str) -> StressField | None:
         # MuJoCo (rigid only) does not have stress fields
         return None
 
+    def get_stress_summaries(self) -> list[StressSummary]:
+        return []
+
     def get_particle_positions(self) -> np.ndarray | None:
         # MuJoCo (rigid only) does not have particles
         return None
+
+    def get_fluid_metrics(self) -> list[FluidMetricResult]:
+        return []
+
+    # Rendering & Visualization
+    def render(self) -> np.ndarray:
+        # Default render (e.g. from first camera or default view)
+        cam_name = None
+        if self.model and self.model.ncam > 0:
+            cam_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, 0)
+
+        return self.render_camera(cam_name or "fixed", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         if self.renderer is None:
@@ -102,7 +129,7 @@ class MuJoCoBackend(PhysicsBackend):
             cam = mujoco.MjvCamera()
             mujoco.mjv_defaultCamera(cam)
             self.custom_cameras[camera_name] = cam
-        
+
         cam = self.custom_cameras[camera_name]
         if pos is not None:
             # mjvCamera doesn't have direct pos, but lookat and distance/azimuth/elevation
@@ -111,7 +138,7 @@ class MuJoCoBackend(PhysicsBackend):
             # If we want to set pos, we might need to calculate dist/azim/elev
             # For simplicity, we'll support lookat and distance-based approach if pos is used.
             # Or we can use mjv_setCamera (not available in all versions)
-            
+
             # Simple heuristic: if pos is provided, assume it's for distance calculation if lookat is also there
             if lookat is not None:
                 p = np.array(pos)
@@ -121,10 +148,10 @@ class MuJoCoBackend(PhysicsBackend):
                 # azim/elev calculation
                 cam.azimuth = np.rad2deg(np.arctan2(diff[0], diff[1]))
                 cam.elevation = np.rad2deg(np.arcsin(diff[2] / cam.distance))
-        
+
         if lookat is not None:
             cam.lookat = np.array(lookat)
-        
+
         if fov is not None:
             # fov is in model.cam_fovy usually, but MjvCamera doesn't have fov
             pass

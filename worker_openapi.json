@@ -1255,6 +1255,11 @@
             "title": "Script Content",
             "description": "Direct content of the script."
           },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "mujoco"
+          },
           "smoke_test_mode": {
             "type": "boolean",
             "title": "Smoke Test Mode",
@@ -1299,6 +1304,11 @@
             ],
             "title": "Script Content",
             "description": "Direct content of the script."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "mujoco"
           },
           "smoke_test_mode": {
             "type": "boolean",
@@ -1920,6 +1930,14 @@
         ],
         "title": "ResponseStatus",
         "description": "Standard API response status values."
+      },
+      "SimulatorBackendType": {
+        "type": "string",
+        "enum": [
+          "mujoco",
+          "genesis"
+        ],
+        "title": "SimulatorBackendType"
       },
       "StatusResponse": {
         "properties": {

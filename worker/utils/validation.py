@@ -16,9 +16,14 @@ from shared.models.schemas import (
     FluidVolume,
     ObjectivesYaml,
 )
-from shared.simulation.backends import SimulatorBackendType
+from shared.models.simulation import (
+    FluidMetricResult,
+    SimulationResult,
+    StressSummary,
+)
+from shared.simulation.backends import SimulatorBackendType, StressField
 from worker.simulation.factory import get_simulation_builder
-from worker.simulation.loop import FluidMetricResult, SimulationLoop, StressSummary
+from worker.simulation.loop import SimulationLoop
 from worker.workbenches.config import load_config
 
 from .dfm import validate_and_price
@@ -27,80 +32,22 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
-class SimulationResult:
-    def __init__(
-        self,
-        success: bool,
-        summary: str,
-        render_paths: list[str] | None = None,
-        mjcf_content: str | None = None,
-        stress_summaries: list[StressSummary] | None = None,
-        stress_fields: dict[str, dict] | None = None,
-        fluid_metrics: list[FluidMetricResult] | None = None,
-        total_cost: float = 0.0,
-        total_weight_g: float = 0.0,
-        confidence: str = "high",
-    ):
-        self.success = success
-        self.summary = summary
-        self.render_paths = render_paths or []
-        self.mjcf_content = mjcf_content
-        self.stress_summaries = stress_summaries or []
-        self.stress_fields = stress_fields or {}
-        self.fluid_metrics = fluid_metrics or []
-        self.total_cost = total_cost
-        self.total_weight_g = total_weight_g
-        self.confidence = confidence
-
-    def to_dict(self) -> dict:
-        return {
-            "success": self.success,
-            "summary": self.summary,
-            "render_paths": self.render_paths,
-            "mjcf_content": self.mjcf_content,
-            "stress_summaries": [s.model_dump() for s in self.stress_summaries],
-            "stress_fields": self.stress_fields,
-            "fluid_metrics": [f.model_dump() for f in self.fluid_metrics],
-            "total_cost": self.total_cost,
-            "total_weight_g": self.total_weight_g,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "SimulationResult":
-        return cls(
-            success=data["success"],
-            summary=data["summary"],
-            render_paths=data.get("render_paths", []),
-            mjcf_content=data.get("mjcf_content"),
-            stress_summaries=[
-                StressSummary(**s) for s in data.get("stress_summaries", [])
-            ],
-            stress_fields=data.get("stress_fields", {}),
-            fluid_metrics=[
-                FluidMetricResult(**f) for f in data.get("fluid_metrics", [])
-            ],
-            total_cost=data.get("total_cost", 0.0),
-            total_weight_g=data.get("total_weight_g", 0.0),
-        )
-
-    def save(self, path: Path):
-        path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
-
-    @classmethod
-    def load(cls, path: Path) -> "SimulationResult | None":
-        if not path.exists():
-            return None
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return cls.from_dict(data)
-        except Exception as e:
-            logger.warning(
-                "failed_to_load_simulation_result", path=str(path), error=str(e)
-            )
-            return None
-
-
 LAST_SIMULATION_RESULT: SimulationResult | None = None
+
+
+def load_simulation_result(path: Path) -> SimulationResult | None:
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return SimulationResult.model_validate(data)
+    except Exception as e:
+        logger.warning("failed_to_load_simulation_result", path=str(path), error=str(e))
+        return None
+
+
+def save_simulation_result(result: SimulationResult, path: Path):
+    path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
 
 def get_stress_report(part_label: str) -> dict | None:
@@ -115,7 +62,7 @@ def get_stress_report(part_label: str) -> dict | None:
             )
 
         for p in candidates:
-            res = SimulationResult.load(p)
+            res = load_simulation_result(p)
             if res:
                 LAST_SIMULATION_RESULT = res
                 break
@@ -165,7 +112,7 @@ def preview_stress(
         candidates.append(working_dir / "simulation_result.json")
 
         for p in candidates:
-            res = SimulationResult.load(p)
+            res = load_simulation_result(p)
             if res:
                 LAST_SIMULATION_RESULT = res
                 break
@@ -368,10 +315,14 @@ def simulate(
     fem_enabled: bool | None = None,
     particle_budget: int | None = None,
     smoke_test_mode: bool = False,
+    backend: SimulatorBackendType | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     logger.info(
-        "simulate_start", fem_enabled=fem_enabled, particle_budget=particle_budget
+        "simulate_start",
+        fem_enabled=fem_enabled,
+        particle_budget=particle_budget,
+        backend=backend,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     renders_dir = working_dir / "renders"
@@ -395,9 +346,11 @@ def simulate(
         except Exception as e:
             logger.warning("failed_to_load_assembly_definition", error=str(e))
 
-    backend_type = SimulatorBackendType.MUJOCO
-    if objectives and getattr(objectives, "physics", None):
-        backend_type = SimulatorBackendType(objectives.physics.backend)
+    backend_type = backend
+    if backend_type is None:
+        backend_type = SimulatorBackendType.MUJOCO
+        if objectives and getattr(objectives, "physics", None):
+            backend_type = SimulatorBackendType(objectives.physics.backend)
 
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
     moving_parts = assembly_definition.moving_parts if assembly_definition else []
@@ -428,8 +381,10 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
+                            )
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
@@ -464,10 +419,10 @@ def simulate(
 
         global LAST_SIMULATION_RESULT
         LAST_SIMULATION_RESULT = SimulationResult(
-            metrics.success,
-            status_msg,
-            render_paths,
-            mjcf_content,
+            success=metrics.success,
+            summary=status_msg,
+            render_paths=render_paths,
+            mjcf_content=mjcf_content,
             stress_summaries=metrics.stress_summaries,
             stress_fields=metrics.stress_fields,
             fluid_metrics=getattr(metrics, "fluid_metrics", []),
@@ -482,14 +437,16 @@ def simulate(
             LAST_SIMULATION_RESULT.render_paths.extend(stress_renders)
 
         try:
-            LAST_SIMULATION_RESULT.save(working_dir / "simulation_result.json")
+            save_simulation_result(
+                LAST_SIMULATION_RESULT, working_dir / "simulation_result.json"
+            )
         except Exception as e:
             logger.warning("failed_to_save_simulation_result", error=str(e))
 
         return LAST_SIMULATION_RESULT
     except Exception as e:
         logger.error("simulation_error", error=str(e))
-        return SimulationResult(False, f"Simulation error: {e!s}")
+        return SimulationResult(success=False, summary=f"Simulation error: {e!s}")
 
 
 def validate(
@@ -533,7 +490,7 @@ def validate(
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
-        
+
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
         backend_type = SimulatorBackendType.MUJOCO
         if output_dir:
@@ -542,6 +499,7 @@ def validate(
                 try:
                     data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
                     from shared.models.schemas import ObjectivesYaml
+
                     objs = ObjectivesYaml(**data)
                     if objs.physics and objs.physics.backend:
                         backend_type = SimulatorBackendType(objs.physics.backend)

@@ -435,6 +435,7 @@ async def api_simulate(
                 component,
                 output_dir=fs_router.local_backend.root,
                 smoke_test_mode=request.smoke_test_mode,
+                backend=request.backend,
             )
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(

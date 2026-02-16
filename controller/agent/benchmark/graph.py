@@ -16,6 +16,7 @@ from controller.observability.langfuse import get_langfuse_callback
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
+from shared.simulation.schemas import SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -177,12 +178,18 @@ async def run_generation_session(
     prompt: str,
     session_id: uuid.UUID | None = None,
     custom_objectives: dict | None = None,
+    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
     """
     session_id = session_id or uuid4()
-    logger.info("running_generation_session", session_id=session_id, prompt=prompt)
+    logger.info(
+        "running_generation_session",
+        session_id=session_id,
+        prompt=prompt,
+        backend=backend,
+    )
 
     # 1. Create DB entry (Episode)
     session_factory = get_sessionmaker()
@@ -196,6 +203,7 @@ async def run_generation_session(
                 "validation_logs": [],
                 "prompt": prompt,
                 "custom_objectives": custom_objectives,
+                "backend": backend,
             },
         )
         db.add(episode)
@@ -207,6 +215,7 @@ async def run_generation_session(
         prompt=prompt,
         status=SessionStatus.planning,
         custom_objectives=custom_objectives or {},
+        backend=backend,
     )
 
     initial_state = BenchmarkGeneratorState(
