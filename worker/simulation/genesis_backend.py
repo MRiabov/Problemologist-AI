@@ -27,6 +27,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []  # list of dict (from json)
         self.current_time = 0.0
         self.mfg_config = None
         if gs is not None:
@@ -138,6 +139,7 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+                    self.cables = data.get("cables", [])
                     for fluid_cfg in data.get("fluids", []):
                         vol = fluid_cfg["initial_volume"]
                         material = gs.materials.MPM.Liquid(

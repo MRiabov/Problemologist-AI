@@ -714,7 +714,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         """Converts an assembly of parts into a Genesis scene descriptor (JSON)."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
-        scene_data = {"entities": [], "fluids": [], "objectives": []}
+        scene_data = {"entities": [], "fluids": [], "objectives": [], "cables": []}
 
         # 1. Add zones from objectives
         if objectives:
@@ -757,6 +757,8 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         from worker.workbenches.config import load_config
 
         mfg_config = load_config()
+
+        body_locations = {}  # Track bodies for cable attachment
 
         for i, child in enumerate(children):
             label = getattr(child, "label", None) or f"part_{i}"
@@ -822,6 +824,8 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 "joint": joint_info,
             }
 
+            body_locations[label] = True
+
             if is_deformable:
                 msh_path = mesh_path_base.with_suffix(".msh")
                 # process_geometry saves to .obj, but also produces a .tmp.stl internally.
@@ -854,7 +858,56 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())
 
-        # 4. Add Fluid Objectives
+        # 4. Add Electronics (Cables)
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                # Calculate radius from AWG
+                # d = 0.127 * 92^((36-AWG)/39) mm
+                diameter_mm = 0.127 * (92 ** ((36 - wire.gauge_awg) / 39.0))
+                # Convert to meters and radius
+                radius = (diameter_mm / 1000.0) / 2.0
+
+                points = []
+                waypoints = getattr(wire, "waypoints", [])
+
+                if waypoints:
+                    for pt in waypoints:
+                        # Convert tuple/list to list
+                        points.append({
+                            "type": "world",
+                            "pos": list(pt)
+                        })
+                else:
+                    # Fallback: connect endpoints
+                    from_comp = wire.from_terminal.component
+                    to_comp = wire.to_terminal.component
+
+                    for comp_id in [from_comp, to_comp]:
+                        if comp_id in body_locations:
+                            # Attached to body at local origin
+                            points.append({
+                                "type": "entity",
+                                "name": comp_id,
+                                "pos": [0, 0, 0]
+                            })
+                        else:
+                            # Fallback to world origin if not found
+                            points.append({
+                                "type": "world",
+                                "pos": [0, 0, 0]
+                            })
+
+                if len(points) >= 2:
+                    scene_data["cables"].append({
+                        "name": wire.wire_id,
+                        "radius": radius,
+                        "points": points
+                    })
+
+        # 5. Add Fluid Objectives
         if (
             objectives
             and hasattr(objectives.objectives, "fluid_objectives")
