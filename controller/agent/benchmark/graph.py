@@ -17,6 +17,7 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
+from controller.graph.steerability_node import steerability_node, check_steering
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -44,6 +45,7 @@ def define_graph():
     workflow.add_node("reviewer", reviewer_node)
     workflow.add_node("cots_search", cots_search_node)
     workflow.add_node("skills", skills_node)
+    workflow.add_node("steer", steerability_node)
 
     # Define transitions
     def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
@@ -55,20 +57,35 @@ def define_graph():
     workflow.add_edge("planner", "coder")
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
-    workflow.add_edge("coder", "reviewer")
+    workflow.add_conditional_edges(
+        "coder",
+        check_steering,
+        {"steer": "steer", "next": "reviewer"},
+    )
 
     # Conditional edges for reviewer
-    def after_reviewer(state: BenchmarkGeneratorState) -> Literal["coder", "skills"]:
+    async def reviewer_router(
+        state: BenchmarkGeneratorState,
+    ) -> Literal["steer", "coder", "planner", "skills"]:
+        # Check for steering first
+        if await check_steering(state) == "steer":
+            return "steer"
+
         feedback = state.get("review_feedback", "")
         if feedback == "Approved":
             return "skills"
+        if feedback.startswith("Steering:"):
+            return "planner"
         return "coder"
 
     workflow.add_conditional_edges(
-        "reviewer", after_reviewer, {"coder": "coder", "skills": "skills"}
+        "reviewer",
+        reviewer_router,
+        {"steer": "steer", "coder": "coder", "planner": "planner", "skills": "skills"},
     )
 
     workflow.add_edge("skills", END)
+    workflow.add_edge("steer", "planner")
 
     # cots_search can be reached from planner or coder if we add those edges
     workflow.add_edge("cots_search", "planner")

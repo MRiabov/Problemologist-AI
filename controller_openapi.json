@@ -533,9 +533,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EpisodeResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -758,6 +756,108 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{session_id}/steer": {
+      "post": {
+        "tags": [
+          "steerability"
+        ],
+        "summary": "Steer Agent",
+        "description": "Enqueue a steered prompt for the agent.\nIf the agent is idle, it will be picked up immediately (implemented in WP04).",
+        "operationId": "steer_agent_api_v1_sessions__session_id__steer_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The agent session ID",
+              "title": "Session Id"
+            },
+            "description": "The agent session ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteerablePrompt-Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{session_id}/queue": {
+      "get": {
+        "tags": [
+          "steerability"
+        ],
+        "summary": "Get Steering Queue",
+        "description": "Return all currently queued prompts for this session.",
+        "operationId": "get_steering_queue_api_v1_sessions__session_id__queue_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The agent session ID",
+              "title": "Session Id"
+            },
+            "description": "The agent session ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SteerablePrompt-Output"
+                  },
+                  "title": "Response Get Steering Queue Api V1 Sessions  Session Id  Queue Get"
+                }
               }
             }
           },
@@ -1018,6 +1118,29 @@
         ],
         "title": "BenchmarkGenerateRequest"
       },
+      "CodeReference": {
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line"
+          },
+          "end_line": {
+            "type": "integer",
+            "title": "End Line"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_path",
+          "start_line",
+          "end_line"
+        ],
+        "title": "CodeReference"
+      },
       "EpisodeResponse": {
         "properties": {
           "id": {
@@ -1188,6 +1311,89 @@
         ],
         "title": "FeedbackRequest"
       },
+      "GeometricSelection": {
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/SelectionLevel"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "center": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Center"
+          },
+          "normal": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normal"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "target_id",
+          "center"
+        ],
+        "title": "GeometricSelection"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1237,10 +1443,6 @@
             "type": "string",
             "title": "Compound Json",
             "default": "{}"
-          },
-          "backend": {
-            "$ref": "#/components/schemas/SimulatorBackendType",
-            "default": "mujoco"
           }
         },
         "type": "object",
@@ -1249,13 +1451,16 @@
         ],
         "title": "RunSimulationRequest"
       },
-      "SimulatorBackendType": {
+      "SelectionLevel": {
         "type": "string",
         "enum": [
-          "mujoco",
-          "genesis"
+          "FACE",
+          "EDGE",
+          "VERTEX",
+          "PART",
+          "SUBASSEMBLY"
         ],
-        "title": "SimulatorBackendType"
+        "title": "SelectionLevel"
       },
       "Skill": {
         "properties": {
@@ -1274,6 +1479,74 @@
           "description"
         ],
         "title": "Skill"
+      },
+      "SteerablePrompt-Input": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/GeometricSelection"
+            },
+            "type": "array",
+            "title": "Selections"
+          },
+          "code_references": {
+            "items": {
+              "$ref": "#/components/schemas/CodeReference"
+            },
+            "type": "array",
+            "title": "Code References"
+          },
+          "mentions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Mentions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SteerablePrompt"
+      },
+      "SteerablePrompt-Output": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/GeometricSelection"
+            },
+            "type": "array",
+            "title": "Selections"
+          },
+          "code_references": {
+            "items": {
+              "$ref": "#/components/schemas/CodeReference"
+            },
+            "type": "array",
+            "title": "Code References"
+          },
+          "mentions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Mentions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SteerablePrompt"
       },
       "TraceResponse": {
         "properties": {
