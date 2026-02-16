@@ -18,7 +18,7 @@ class AgentSettings(BaseSettings):
     db_connection_string: str | None = None
 
     # Default session/thread ID for the agent
-    default_session_id: str = "default-agent-session"
+    default_session_id: str = "00000000-0000-0000-0000-000000000000"
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

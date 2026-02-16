@@ -39,7 +39,12 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         langfuse_callback: Any | None = None,
     ):
         if isinstance(episode_id, str):
-            self.episode_id = uuid.UUID(episode_id)
+            try:
+                self.episode_id = uuid.UUID(episode_id)
+            except ValueError:
+                # Fallback: create a deterministic UUID from the string
+                # This ensures we don't crash and maintain consistency for the same string
+                self.episode_id = uuid.uuid5(uuid.NAMESPACE_DNS, episode_id)
         else:
             self.episode_id = episode_id
         self.session_factory = get_sessionmaker()

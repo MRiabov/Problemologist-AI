@@ -50,7 +50,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     Breaks down the user prompt into a randomization strategy using a LangGraph node.
     Refactored to use with_structured_output for robustness.
     """
-    session_id = str(state["session"].session_id)
+    session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
@@ -60,7 +60,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         base_prompt = get_prompt("benchmark_generator.planner.system")
     except Exception as e:
         logger.error("planner_prompt_load_failed", error=str(e))
-        state["plan"] = RandomizationStrategy(
+        state.plan = RandomizationStrategy(
             theme="error", reasoning=f"Failed to load planner prompt: {e}"
         )
         return state
@@ -74,7 +74,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     logger.info("planner_git_init_complete", session_id=session_id)
 
     # Custom Objectives Logic (Legacy)
-    custom_objectives = state["session"].custom_objectives
+    custom_objectives = state.session.custom_objectives
     if custom_objectives:
         logger.info("planner_updating_objectives", session_id=session_id)
         if await ctx.worker_client.exists(OBJECTIVES_FILE):
@@ -106,13 +106,13 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             logger.info("planner_objectives_not_found_skipping_update")
 
     # Support steering by including history in the planner prompt
-    history = state.get("messages", [])
+    history = state.messages or []
     messages = [
         SystemMessage(content=base_prompt),
         *history,
         HumanMessage(
             content=(
-                f"Original User Request:\n{state['session'].prompt}\n\n"
+                f"Original User Request:\n{state.session.prompt}\n\n"
                 "Please generate the randomization strategy now. "
                 "Take into account any steering or feedback from the history above if present."
             )
@@ -130,8 +130,8 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         plan = await structured_llm.ainvoke(messages, config={"callbacks": callbacks})
         logger.info("planner_agent_invoke_complete", session_id=session_id)
 
-        state["plan"] = plan
-        state["messages"].append(HumanMessage(content=f"Generated plan: {plan.theme}"))
+        state.plan = plan
+        state.messages.append(HumanMessage(content=f"Generated plan: {plan.theme}"))
 
         logger.info(
             "planner_node_complete",
@@ -141,7 +141,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
     except Exception as e:
         logger.error("planner_agent_run_failed", error=str(e), session_id=session_id)
-        state["plan"] = RandomizationStrategy(theme="error", reasoning=str(e))
+        state.plan = RandomizationStrategy(theme="error", reasoning=str(e))
 
     return state
 
@@ -151,7 +151,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     Generates build123d script and validates it.
     Refactored to use create_react_agent.
     """
-    session_id = str(state["session"].session_id)
+    session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
@@ -163,9 +163,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         base_prompt = "Error loading prompt."
 
     # Context construction
-    validation_logs = "\n".join(state["session"].validation_logs)
-    if state.get("simulation_result") and not state["simulation_result"]["valid"]:
-        validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
+    validation_logs = "\n".join(state.session.validation_logs)
+    if state.simulation_result and not state.simulation_result.valid:
+        validation_logs += "\n" + "\n".join(state.simulation_result.logs)
 
     objectives_yaml = "# No objectives.yaml found."
     try:
@@ -179,16 +179,16 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
 ### Context
 Original User Request:
-{state["session"].prompt}
+{state.session.prompt}
 
 Plan:
-{json.dumps(state.get("plan"), indent=2)}
+{state.plan.model_dump_json(indent=2) if state.plan else "None"}
 
 ### Draft Objectives (YAML):
 {objectives_yaml}
 
 Review Feedback:
-{state.get("review_feedback", "No feedback provided.")}
+{state.review_feedback or "No feedback provided."}
 
 Validation Logs:
 {validation_logs}
@@ -203,9 +203,9 @@ Validation Logs:
 
     messages = [
         SystemMessage(content=system_prompt),
-        *state.get("messages", []),
+        *(state.messages or []),
         HumanMessage(
-            content=f"Implement the benchmark script for: {state['session'].prompt}"
+            content=f"Implement the benchmark script for: {state.session.prompt}"
         ),
     ]
 
@@ -216,43 +216,43 @@ Validation Logs:
             {"messages": messages}, config={"callbacks": callbacks}
         )
         logger.info("coder_agent_invoke_complete", session_id=session_id)
-        state["messages"] = result["messages"]
+        state.messages = result["messages"]
     except Exception as e:
         logger.error("coder_agent_failed", error=str(e))
 
     # Retrieve script
     try:
-        state["current_script"] = await ctx.worker_client.read_file(SCRIPT_FILE)
+        state.current_script = await ctx.worker_client.read_file(SCRIPT_FILE)
     except Exception:
         pass
 
     # Validation Logic (Same as before)
-    if state.get("current_script"):
+    if state.current_script:
         from worker.utils.file_validation import validate_node_output
 
         is_valid, errors = validate_node_output(
-            "coder", {SCRIPT_FILE: state["current_script"]}
+            "coder", {SCRIPT_FILE: state.current_script}
         )
         if not is_valid:
             logger.warning("benchmark_coder_validation_failed", errors=errors)
-            state["session"].validation_logs.append(
-                f"Output validation failed: {errors}"
-            )
+            state.session.validation_logs.append(f"Output validation failed: {errors}")
 
     # Run Verification (Geometric + Physics)
-    script = state.get("current_script")
+    script = state.current_script
     if script:
         logger.info("running_integrated_validation", session_id=session_id)
         try:
             val_res = await ctx.worker_client.validate(script_path=SCRIPT_FILE)
             if not val_res.success:
-                state["simulation_result"] = {
-                    "valid": False,
-                    "cost": 0,
-                    "logs": [f"Geometric validation failed: {val_res.message}"],
-                    "render_paths": [],
-                    "render_data": [],
-                }
+                from shared.simulation.schemas import ValidationResult
+
+                state.simulation_result = ValidationResult(
+                    valid=False,
+                    cost=0,
+                    logs=[f"Geometric validation failed: {val_res.message}"],
+                    render_paths=[],
+                    render_data=[],
+                )
             else:
                 # physics simulation
                 backend = SimulatorBackendType.MUJOCO
@@ -274,13 +274,15 @@ Validation Logs:
                     script_path=SCRIPT_FILE, backend=backend
                 )
                 if not sim_res.success:
-                    state["simulation_result"] = {
-                        "valid": False,
-                        "cost": 0,
-                        "logs": [f"Physics simulation failed: {sim_res.message}"],
-                        "render_paths": [],
-                        "render_data": [],
-                    }
+                    from shared.simulation.schemas import ValidationResult
+
+                    state.simulation_result = ValidationResult(
+                        valid=False,
+                        cost=0,
+                        logs=[f"Physics simulation failed: {sim_res.message}"],
+                        render_paths=[],
+                        render_data=[],
+                    )
                 else:
                     # Download Renders
                     render_paths = (
@@ -305,13 +307,15 @@ Validation Logs:
                     results = await asyncio.gather(*tasks)
                     render_data = [r for r in results if r is not None]
 
-                    state["simulation_result"] = {
-                        "valid": True,
-                        "cost": 0,
-                        "logs": ["Validation passed."],
-                        "render_paths": render_paths,
-                        "render_data": render_data,
-                    }
+                    from shared.simulation.schemas import ValidationResult
+
+                    state.simulation_result = ValidationResult(
+                        valid=True,
+                        cost=0,
+                        logs=["Validation passed."],
+                        render_paths=render_paths,
+                        render_data=render_data,
+                    )
         except Exception as e:
             logger.error("integrated_validation_error", error=str(e))
 
@@ -320,7 +324,7 @@ Validation Logs:
 
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     # Re-implementing to ensure consistency
-    session_id = str(state["session"].session_id)
+    session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
@@ -332,14 +336,14 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     # Observability
     callbacks = ctx.get_callbacks(name="benchmark_cots_search", session_id=session_id)
 
-    prompt = f"Find components for the benchmark: {state['session'].prompt}"
+    prompt = f"Find components for the benchmark: {state.session.prompt}"
     logger.info("cots_search_agent_invoke_start", session_id=session_id)
     result = await agent.ainvoke(
         {"messages": [HumanMessage(content=prompt)]},
         config={"callbacks": callbacks},
     )
     logger.info("cots_search_agent_invoke_complete", session_id=session_id)
-    state["messages"].extend(result["messages"])
+    state.messages.extend(result["messages"])
 
     return state
 
@@ -354,19 +358,19 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     Agentic review of the generated benchmark.
     Refactored to use create_react_agent.
     """
-    session_id = str(state["session"].session_id)
+    session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
-    logger.info("reviewer_node_start", round=state.get("review_round", 0))
+    logger.info("reviewer_node_start", round=state.review_round)
 
-    state["review_round"] = state.get("review_round", 0) + 1
-    current_round = state["review_round"]
+    state.review_round = state.review_round + 1
+    current_round = state.review_round
     review_filename = f"reviews/review-round-{current_round}/review.md"
 
     # Vision inputs
-    sim_result = state.get("simulation_result")
-    render_data = sim_result.get("render_data", []) if sim_result else []
+    sim_result = state.simulation_result
+    render_data = sim_result.render_data if sim_result else []
     image_contents = []
     for img_bytes in (render_data or [])[:8]:
         try:
@@ -432,8 +436,8 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
             "type": "text",
             "text": (
                 f"Please review the benchmark for theme: "
-                f"{(state.get('plan') or {}).get('theme', 'Unknown')}\n"
-                f"Prompt: {state['session'].prompt}"
+                f"{state.plan.theme if state.plan else 'Unknown'}\n"
+                f"Prompt: {state.session.prompt}"
             ),
         }
     ]
@@ -452,7 +456,7 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
         logger.info("reviewer_agent_invoke_complete", session_id=session_id)
         # Check violations
         if violations:
-            state["review_feedback"] = (
+            state.review_feedback = (
                 f"Reviewer security violation: {', '.join(violations)}"
             )
             return state
@@ -468,11 +472,11 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
                     HumanMessage(content=result["messages"][-1].content),
                 ]
             )
-            state["review_feedback"] = (
+            state.review_feedback = (
                 f"{review_parsed.decision.value}: {review_parsed.reason}"
             )
             if review_parsed.required_fixes:
-                state["review_feedback"] += "\nFixes: " + ", ".join(
+                state.review_feedback += "\nFixes: " + ", ".join(
                     review_parsed.required_fixes
                 )
         except Exception as e:
@@ -482,11 +486,11 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
             )
             # Fallback check for file existence
             if await ctx.worker_client.exists(review_filename):
-                state["review_feedback"] = "Review completed (parsed via fallback)."
+                state.review_feedback = "Review completed (parsed via fallback)."
             else:
-                state["review_feedback"] = f"Error: Review file not created. {e}"
+                state.review_feedback = f"Error: Review file not created. {e}"
 
     except Exception as e:
-        state["review_feedback"] = f"Error executing reviewer: {e}"
+        state.review_feedback = f"Error executing reviewer: {e}"
 
     return state
