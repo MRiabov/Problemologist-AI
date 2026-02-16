@@ -533,7 +533,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeResponse"
+                }
               }
             }
           },
@@ -1443,6 +1445,10 @@
             "type": "string",
             "title": "Compound Json",
             "default": "{}"
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "default": "mujoco"
           }
         },
         "type": "object",
@@ -1461,6 +1467,14 @@
           "SUBASSEMBLY"
         ],
         "title": "SelectionLevel"
+      },
+      "SimulatorBackendType": {
+        "type": "string",
+        "enum": [
+          "mujoco",
+          "genesis"
+        ],
+        "title": "SimulatorBackendType"
       },
       "Skill": {
         "properties": {

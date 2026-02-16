@@ -73,6 +73,7 @@ class SimulationLoop:
         self.objectives = objectives
         self.is_powered_map = {}
         self.validation_report = None
+        self.electronics_validation_error = None
 
         if self.component:
             from worker.utils.dfm import validate_and_price
@@ -183,6 +184,7 @@ class SimulationLoop:
                 logger.debug(
                     "electronics_simulation_success", total_draw=res.total_draw_a
                 )
+                self.electronics_validation_error = None
                 for comp in self.electronics.components:
                     if comp.type == "motor":
                         v_diff = abs(
@@ -195,10 +197,28 @@ class SimulationLoop:
                             self.is_powered_map[comp.assembly_part_ref] = is_powered
                 self._electronics_dirty = False
                 return
-
-            logger.warning("electronics_validation_failed", errors=res.errors)
+            if res.valid:
+                for comp_id, is_powered in res.node_voltages.items():
+                    # Map back to assembly part if possible
+                    # This assumes component_id or assembly_part_ref can be matched
+                    for comp in self.assembly.electronics.components:
+                        if comp.component_id == comp_id and comp.assembly_part_ref:
+                            self.is_powered_map[comp.assembly_part_ref] = is_powered
+                self._electronics_dirty = False
+                return
+            else:
+                error_msg = (
+                    res.errors[0] if res.errors else "electronics_validation_failed"
+                )
+                self.electronics_validation_error = error_msg
+                logger.warning("electronics_validation_failed", errors=res.errors)
+                # If validation failed (Short/Overcurrent/etc), do NOT perform fallback.
+                # Mark as not dirty so we don't retry same invalid state repeatedly
+                self._electronics_dirty = False
+                return
         except Exception as e:
             logger.debug("electronics_simulation_failed_using_fallback", error=str(e))
+            # Only fallback on EXCEPTION (simulation/solver error), not VALIDATION error.
 
         # Fallback: Simple connectivity-based power gating
         self._fallback_electronics_update()
@@ -334,8 +354,27 @@ class SimulationLoop:
                 fail_reason=self.fail_reason,
             )
 
+        # Check electronics validation status
+        if self.electronics_validation_error:
+            self.fail_reason = self.electronics_validation_error
+            return SimulationMetrics(
+                total_time=0.0,
+                total_energy=0.0,
+                max_velocity=0.0,
+                success=False,
+                fail_reason=self.fail_reason,
+                confidence="high",
+            )
+
         # Apply initial static controls
-        self.backend.apply_control(control_inputs)
+        # T015: Power gate initial controls
+        gated_controls = {}
+        for name, val in control_inputs.items():
+            if self.electronics:
+                power_scale = self.is_powered_map.get(name, 0.0)
+                val *= power_scale
+            gated_controls[name] = val
+        self.backend.apply_control(gated_controls)
 
         # We assume backend has a fixed or default timestep
         # For MuJoCo it's usually 0.002
@@ -364,6 +403,16 @@ class SimulationLoop:
             # T015: Update electronics if state changed
             if self.electronics and self._electronics_dirty:
                 self._update_electronics()
+                # Re-apply static controls with new power status
+                re_gated = {}
+                for name, val in control_inputs.items():
+                    power_scale = self.is_powered_map.get(name, 0.0)
+                    re_gated[name] = val * power_scale
+                self.backend.apply_control(re_gated)
+
+                if self.electronics_validation_error:
+                    self.fail_reason = self.electronics_validation_error
+                    break
 
             # Apply dynamic controllers
             if dynamic_controllers:
@@ -590,16 +639,16 @@ class SimulationLoop:
 
             # 7. Check Wire Failure (T015)
             if self.electronics:
+                from shared.wire_utils import get_awg_properties
+
                 wire_broken = False
                 for wire in self.electronics.wiring:
                     if getattr(wire, "routed_in_3d", False):
                         try:
                             tension = self.backend.get_tendon_tension(wire.wire_id)
-                            # Heuristic for tensile strength: AWG 18 ~200N, AWG 24 ~50N
-                            # Limit = (Area in mm2) * (Tensile strength in MPa)
-                            # Copper is ~200-250 MPa.
-                            # Using a conservative limit for now.
-                            limit = 100.0 * (1.26 ** (18 - wire.gauge_awg))
+                            # T016: Use accurate tensile strength from AWG lookup
+                            props = get_awg_properties(wire.gauge_awg)
+                            limit = props["tensile_strength_n"]
                             if tension > limit:
                                 self.fail_reason = (
                                     f"{SimulationFailureMode.WIRE_TORN}:{wire.wire_id}"
