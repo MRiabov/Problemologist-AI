@@ -4,6 +4,7 @@ This module provides a filesystem abstraction that maps virtual paths
 to S3 storage with session-based isolation.
 """
 
+import asyncio
 import re
 import shutil
 import tempfile
@@ -11,7 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
+import s3fs
 import structlog
 from shared.backend.protocol import (
     BackendProtocol,
@@ -78,6 +80,11 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
         """Write raw file content."""
         ...
 
+    @abstractmethod
+    def exists(self, path: str) -> bool:
+        """Check if a path exists."""
+        ...
+
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
         """Read file content with line numbers."""
         try:
@@ -134,13 +141,26 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
         infos = self.ls_info(path)
         return [
             FileInfo(
-                path=i["path"],
-                name=i["path"].rstrip("/").split("/")[-1] or "/",
-                is_dir=i["is_dir"],
-                size=i["size"],
+                path=i.path,
+                name=i.path.rstrip("/").split("/")[-1] or "/",
+                is_dir=i.is_dir,
+                size=i.size,
             )
             for i in infos
         ]
+
+    def write(
+        self, file_path: str, content: str, overwrite: bool = False
+    ) -> WriteResult:
+        if self.exists(file_path) and not overwrite:
+            return WriteResult(
+                error=f"Cannot write to {file_path} because it already exists. Use 'overwrite=True' if you intend to overwrite it."
+            )
+        try:
+            self._write_raw(file_path, content)
+            return WriteResult(path=file_path, files_update=None)
+        except Exception as e:
+            return WriteResult(error=f"Error writing file '{file_path}': {e!s}")
 
     def _grep_in_content(
         self, content: str, pattern: str, virtual_path: str
@@ -151,6 +171,65 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
             if regex.search(line):
                 matches.append({"path": virtual_path, "line": line_num, "text": line})
         return matches
+
+    def grep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        base_virt = path or "/"
+        try:
+            files = self.glob_info(glob or "**/*", path=base_virt)
+            matches: list[GrepMatch] = []
+            for f_info in files:
+                if f_info.is_dir:
+                    continue
+                try:
+                    content = self._read_raw(f_info.path)
+                    matches.extend(
+                        self._grep_in_content(content, pattern, f_info.path)
+                    )
+                except:
+                    continue
+            return matches
+        except Exception as e:
+            return f"Error during grep: {e!s}"
+
+    async def als_info(self, path: str) -> list[ProtocolFileInfo]:
+        return await asyncio.to_thread(self.ls_info, path)
+
+    async def aread(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
+        return await asyncio.to_thread(self.read, file_path, offset, limit)
+
+    async def awrite(
+        self, file_path: str, content: str, overwrite: bool = False
+    ) -> WriteResult:
+        return await asyncio.to_thread(self.write, file_path, content, overwrite)
+
+    async def aedit(
+        self,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ) -> EditResult:
+        return await asyncio.to_thread(
+            self.edit, file_path, old_string, new_string, replace_all
+        )
+
+    async def agrep_raw(
+        self, pattern: str, path: str | None = None, glob: str | None = None
+    ) -> list[GrepMatch] | str:
+        return await asyncio.to_thread(self.grep_raw, pattern, path, glob)
+
+    async def aglob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
+        return await asyncio.to_thread(self.glob_info, pattern, path)
+
+    async def aupload_files(
+        self, files: list[tuple[str, bytes]]
+    ) -> list[FileUploadResponse]:
+        return await asyncio.to_thread(self.upload_files, files)
+
+    async def adownload_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        return await asyncio.to_thread(self.download_files, paths)
 
 
 # Global registry to keep TemporaryDirectory objects alive for the duration of the worker process.
@@ -168,6 +247,133 @@ def get_session_root(session_id: str) -> Path:
         logger.info("session_directory_created", session_id=session_id, path=td.name)
 
     return Path(_SESSION_DIR_REGISTRY[session_id].name)
+
+
+@type_check
+class SandboxFilesystemBackend(BaseFilesystemBackend):
+    """S3-backed filesystem with session-based isolation."""
+
+    def __init__(
+        self,
+        fs: Any,
+        bucket: str,
+        session_manager: SessionManager,
+    ) -> None:
+        self.fs = fs
+        self.bucket = bucket
+        self.session_manager = session_manager
+
+    @property
+    def session_prefix(self) -> str:
+        return f"{self.bucket}/{self.session_manager.get_session_id()}"
+
+    def _resolve(self, virtual_path: str) -> str:
+        rel = virtual_path.lstrip("/")
+        return f"{self.session_prefix}/{rel}"
+
+    def _read_raw(self, virtual_path: str) -> str:
+        s3_path = self._resolve(virtual_path)
+        with self.fs.open(s3_path, "rb") as f:
+            return f.read().decode("utf-8")
+
+    def _write_raw(self, virtual_path: str, content: str) -> None:
+        s3_path = self._resolve(virtual_path)
+        with self.fs.open(s3_path, "wb") as f:
+            f.write(content.encode("utf-8"))
+
+    def ls_info(self, path: str) -> list[ProtocolFileInfo]:
+        s3_path = self._resolve(path)
+        try:
+            entries = self.fs.ls(s3_path, detail=True)
+        except FileNotFoundError:
+            return []
+
+        results = []
+        for entry in entries:
+            name = entry["name"].split("/")[-1]
+            if not name:
+                continue
+
+            is_dir = entry["type"] == "directory"
+            virt = path.rstrip("/") + "/" + name
+            if is_dir:
+                virt += "/"
+
+            results.append(
+                ProtocolFileInfo(
+                    path=virt,
+                    is_dir=is_dir,
+                    size=entry["size"],
+                    modified_at=entry.get("LastModified", "").isoformat()
+                    if hasattr(entry.get("LastModified"), "isoformat")
+                    else str(entry.get("LastModified", "")),
+                )
+            )
+        return results
+
+    def exists(self, path: str) -> bool:
+        s3_path = self._resolve(path)
+        return self.fs.exists(s3_path)
+
+    def delete(self, path: str) -> None:
+        s3_path = self._resolve(path)
+        if self.fs.isdir(s3_path):
+            self.fs.rm(s3_path, recursive=True)
+        else:
+            self.fs.rm(s3_path)
+
+    def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
+        responses = []
+        for path, content in files:
+            try:
+                s3_path = self._resolve(path)
+                with self.fs.open(s3_path, "wb") as f:
+                    f.write(content)
+                responses.append(FileUploadResponse(path=path, error=None))
+            except Exception as e:
+                responses.append(FileUploadResponse(path=path, error=str(e)))
+        return responses
+
+    def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:
+        responses = []
+        for path in paths:
+            try:
+                s3_path = self._resolve(path)
+                with self.fs.open(s3_path, "rb") as f:
+                    content = f.read()
+                responses.append(
+                    FileDownloadResponse(path=path, content=content, error=None)
+                )
+            except Exception as e:
+                responses.append(FileDownloadResponse(path=path, error=str(e)))
+        return responses
+
+    def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
+        try:
+            s3_base = self._resolve(path)
+            full_pattern = f"{s3_base.rstrip('/')}/{pattern.lstrip('/')}"
+            matches = self.fs.glob(full_pattern)
+            results = []
+            for m in matches:
+                # m is full path
+                rel = m[len(self.session_prefix) :]
+                is_dir = self.fs.isdir(m)
+                if is_dir and not rel.endswith("/"):
+                    rel += "/"
+
+                info = self.fs.info(m)
+                results.append(
+                    ProtocolFileInfo(
+                        path=rel,
+                        is_dir=is_dir,
+                        size=info["size"],
+                        modified_at=str(info.get("LastModified", "")),
+                    )
+                )
+            return results
+        except Exception as e:
+            logger.error("glob_failed", error=str(e))
+            return []
 
 
 @type_check
@@ -236,27 +442,27 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
                 virt = self._virtual(entry)
                 if is_dir and not virt.endswith("/"):
                     virt += "/"
-                info: ProtocolFileInfo = {
-                    "path": virt,
-                    "is_dir": is_dir,
-                    "size": entry.stat().st_size if not is_dir else 0,
-                    "modified_at": datetime.fromtimestamp(
+                info = ProtocolFileInfo(
+                    path=virt,
+                    is_dir=is_dir,
+                    size=entry.stat().st_size if not is_dir else 0,
+                    modified_at=datetime.fromtimestamp(
                         entry.stat().st_mtime
                     ).isoformat(),
-                }
+                )
                 results.append(info)
         else:
             results.append(
-                {
-                    "path": self._virtual(local_path),
-                    "is_dir": False,
-                    "size": local_path.stat().st_size,
-                    "modified_at": datetime.fromtimestamp(
+                ProtocolFileInfo(
+                    path=self._virtual(local_path),
+                    is_dir=False,
+                    size=local_path.stat().st_size,
+                    modified_at=datetime.fromtimestamp(
                         local_path.stat().st_mtime
                     ).isoformat(),
-                }
+                )
             )
-        results.sort(key=lambda x: x["path"])
+        results.sort(key=lambda x: x.path)
         return results
 
     def write(
@@ -272,27 +478,6 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             return WriteResult(path=file_path, files_update=None)
         except Exception as e:
             return WriteResult(error=f"Error writing file '{file_path}': {e!s}")
-
-    def grep_raw(
-        self, pattern: str, path: str | None = None, glob: str | None = None
-    ) -> list[GrepMatch] | str:
-        base_virt = path or "/"
-        try:
-            files = self.glob_info(glob or "**/*", path=base_virt)
-            matches: list[GrepMatch] = []
-            for f_info in files:
-                if f_info["is_dir"]:
-                    continue
-                try:
-                    content = self._read_raw(f_info["path"])
-                    matches.extend(
-                        self._grep_in_content(content, pattern, f_info["path"])
-                    )
-                except:
-                    continue
-            return matches
-        except Exception as e:
-            return f"Error during grep: {e!s}"
 
     def glob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         """Find files matching a glob pattern."""
@@ -316,16 +501,16 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
                     virt += "/"
 
                 results.append(
-                    {
-                        "path": virt,
-                        "is_dir": is_dir,
-                        "size": entry.stat().st_size if not is_dir else 0,
-                        "modified_at": datetime.fromtimestamp(
+                    ProtocolFileInfo(
+                        path=virt,
+                        is_dir=is_dir,
+                        size=entry.stat().st_size if not is_dir else 0,
+                        modified_at=datetime.fromtimestamp(
                             entry.stat().st_mtime
                         ).isoformat(),
-                    }
+                    )
                 )
-            results.sort(key=lambda x: x["path"])
+            results.sort(key=lambda x: x.path)
             return results
         except Exception as e:
             logger.error("glob_failed", error=str(e))
