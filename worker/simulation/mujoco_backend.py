@@ -104,7 +104,7 @@ class MuJoCoBackend(PhysicsBackend):
         cam_name = None
         if self.model and self.model.ncam > 0:
             cam_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, 0)
-            
+
         return self.render_camera(cam_name or "fixed", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
