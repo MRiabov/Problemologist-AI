@@ -18,11 +18,11 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
+from controller.agent.nodes.reviewer import ReviewResult
 from controller.prompts import get_prompt
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
-    ValidationResult,
 )
 
 from ..config import settings
@@ -527,22 +527,37 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
                 )
                 return state
 
-            # Use same parsing logic as before (omitted for brevity, but functionally same)
-            # Re-implementing simplified parsing check
-            parent_dir = str(Path(review_filename).parent)
-            files = await client.list_files(parent_dir)
-            exists = any(f.path.endswith(Path(review_filename).name) for f in files)
-
-            if exists:
-                content = await client.read_file(review_filename)
-                frontmatter_match = re.search(
-                    r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL
+            # T018: Decision logic (Structured Parsing)
+            try:
+                parser_llm = llm.with_structured_output(ReviewResult)
+                review_parsed = await parser_llm.ainvoke(
+                    [
+                        SystemMessage(
+                            content="Extract the final review decision from the following text."
+                        ),
+                        HumanMessage(content=result["messages"][-1].content),
+                    ]
                 )
-                if frontmatter_match:
-                    state["review_feedback"] = "Review completed."  # Simplification
-                    # Real logic would parse YAML as before
-            else:
-                state["review_feedback"] = "Error: Review file not created."
+                state["review_feedback"] = (
+                    f"{review_parsed.decision.value}: {review_parsed.reason}"
+                )
+                if review_parsed.required_fixes:
+                    state["review_feedback"] += "\nFixes: " + ", ".join(
+                        review_parsed.required_fixes
+                    )
+            except Exception as e:
+                logger.warn(
+                    "Benchmark reviewer parsing failed, falling back to basic check",
+                    error=str(e),
+                )
+                # Fallback check for file existence
+                parent_dir = str(Path(review_filename).parent)
+                files = await client.list_files(parent_dir)
+                exists = any(f.path.endswith(Path(review_filename).name) for f in files)
+                if exists:
+                    state["review_feedback"] = "Review completed (parsed via fallback)."
+                else:
+                    state["review_feedback"] = f"Error: Review file not created. {e}"
 
         except Exception as e:
             state["review_feedback"] = f"Error executing reviewer: {e}"

@@ -2,46 +2,33 @@ import logging
 import structlog
 from contextlib import suppress
 
-from typing import cast
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from controller.agent.config import settings
-from controller.agent.prompt_manager import PromptManager
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
-from controller.clients.worker import WorkerClient
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import get_langfuse_callback
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import ElecAgentHandoverEvent
 from shared.type_checking import type_check
+
+from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
 
 
 @type_check
-class ElectronicsEngineerNode:
+class ElectronicsEngineerNode(BaseNode):
     """
     Electronics Engineer node: Designs circuits and routes wires.
     Refactored to use LangGraph's prebuilt ReAct agent.
     """
 
-    def __init__(
-        self,
-        worker_url: str = "http://worker:8001",
-        session_id: str = "default-session",
-    ):
-        self.pm = PromptManager()
-        self.llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
-        self.fs = RemoteFilesystemMiddleware(self.worker_client)
-
+    def __init__(self, context: SharedNodeContext):
+        super().__init__(context)
         # Initialize tools and agent
-        self.tools = get_engineer_tools(self.fs, session_id)
-        self.agent = create_react_agent(self.llm, self.tools)
+        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
+        self.agent = create_react_agent(self.ctx.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the electronics engineer node logic."""
@@ -52,7 +39,7 @@ class ElectronicsEngineerNode:
         if not current_step:
             # If no specific electronics tasks, check if objectives require it
             try:
-                objectives_content = await self.fs.read_file("objectives.yaml")
+                objectives_content = await self.ctx.fs.read_file("objectives.yaml")
                 if "electronics_requirements" not in objectives_content:
                     # No specific requirements, just pass through
                     return state
@@ -65,7 +52,9 @@ class ElectronicsEngineerNode:
         try:
             # Check assembly_definition.yaml (Assembly Definition)
             with suppress(Exception):
-                assembly_context = await self.fs.read_file("assembly_definition.yaml")
+                assembly_context = await self.ctx.fs.read_file(
+                    "assembly_definition.yaml"
+                )
         except Exception:
             pass
 
@@ -82,7 +71,7 @@ class ElectronicsEngineerNode:
             ],
         )
 
-        prompt = self.pm.render(
+        prompt = self.ctx.pm.render(
             "electronics_engineer",
             current_step=current_step,
             plan=state.plan,
@@ -96,15 +85,9 @@ class ElectronicsEngineerNode:
         journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
 
         # Observability
-        langfuse_callback = get_langfuse_callback(
+        callbacks = self._get_callbacks(
             name="electronics_engineer", session_id=state.session_id
         )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=state.session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
 
         while retry_count < max_retries:
             try:
@@ -126,7 +109,7 @@ class ElectronicsEngineerNode:
                 all_files = {}
                 for f in ["plan.md", "todo.md", "assembly_definition.yaml"]:
                     with suppress(Exception):
-                        all_files[f] = await self.fs.read_file(f)
+                        all_files[f] = await self.ctx.fs.read_file(f)
 
                 is_valid, validation_errors = validate_node_output(
                     "electronics_engineer", all_files
@@ -195,7 +178,8 @@ class ElectronicsEngineerNode:
 async def electronics_engineer_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    node = ElectronicsEngineerNode(
+    ctx = SharedNodeContext.create(
         worker_url=settings.spec_001_api_url, session_id=session_id
     )
+    node = ElectronicsEngineerNode(context=ctx)
     return await node(state)
