@@ -2,6 +2,7 @@ from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 from pydantic import BaseModel
+
 from shared.simulation.schemas import SimulatorBackendType
 from shared.models.simulation import StressSummary, FluidMetricResult
 
