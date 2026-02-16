@@ -1,6 +1,51 @@
 defaults:
   currency: "USD"
 
+materials:
+  aluminum_6061:
+    name: "Aluminum 6061"
+    density_g_cm3: 2.7
+    density_kg_m3: 2700
+    color: "#C0C0C0"
+    cost_per_kg: 6.00
+    elongation_stress_mpa: 276.0
+    restitution: 0.5
+    friction_coef: 0.61
+    youngs_modulus_pa: 68900000000.0
+    poissons_ratio: 0.33
+    yield_stress_pa: 276000000.0
+    ultimate_stress_pa: 310000000.0
+    material_class: "rigid"
+
+  abs:
+    name: "ABS"
+    density_g_cm3: 1.04
+    density_kg_m3: 1040
+    color: "#FFFFFF"
+    cost_per_kg: 2.50
+    elongation_stress_mpa: 40.0
+    restitution: 0.6
+    friction_coef: 0.5
+    youngs_modulus_pa: 2300000000.0
+    poissons_ratio: 0.35
+    yield_stress_pa: 40000000.0
+    ultimate_stress_pa: 44000000.0
+    material_class: "rigid"
+
+  silicone_rubber:
+    name: "Silicone Rubber"
+    density_g_cm3: 1.1
+    density_kg_m3: 1100
+    color: "#FF0000"
+    cost_per_kg: 15.00
+    restitution: 0.1
+    friction_coef: 0.8
+    youngs_modulus_pa: 5000000.0
+    poissons_ratio: 0.49
+    yield_stress_pa: 7000000.0
+    ultimate_stress_pa: 10000000.0
+    material_class: "elastomer"
+
 cnc:
   materials:
     aluminum_6061:
