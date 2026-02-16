@@ -76,6 +76,7 @@ class SimulationLoop:
         self.is_powered_map = {}
         self.validation_report = None
         self.electronics_validation_error = None
+        self._electronics_dirty = False
 
         if self.component:
             from worker.utils.dfm import validate_and_price
@@ -173,6 +174,12 @@ class SimulationLoop:
         # Bridge back is_powered_map for existing code compatibility if needed,
         # but better to use electronics_manager.is_powered_map directly.
         self.is_powered_map = self.electronics_manager.is_powered_map
+
+        # T015: Sync validation errors
+        if self.electronics_manager.errors:
+            self.electronics_validation_error = "; ".join(
+                self.electronics_manager.errors
+            )
 
     def reset_metrics(self):
         self.metric_collector.reset()
@@ -306,20 +313,25 @@ class SimulationLoop:
 
             target_vel = 0.0
             target_pos = None
+            target_state_vel = np.zeros(3)
             if target_body_name:
-                state = self.backend.get_body_state(target_body_name)
-                target_vel = np.linalg.norm(state.vel)
-                target_pos = state.pos
+                target_state = self.backend.get_body_state(target_body_name)
+                target_vel = np.linalg.norm(target_state.vel)
+                target_pos = target_state.pos
+                target_state_vel = target_state.vel
 
             # TODO: Get max stress from backend
             max_stress = 0.0
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 3. Check for Failures
+            # SuccessEvaluator expects qpos (ndarray) and qvel (ndarray)
+            eval_qpos = np.array(target_pos) if target_pos is not None else np.zeros(3)
+            eval_qvel = np.array(target_state_vel)
             fail_reason = self.success_evaluator.check_failure(
                 current_time,
-                target_pos,
-                state.vel if target_pos is not None else np.zeros(3),
+                eval_qpos,
+                eval_qvel,
             )
             if fail_reason:
                 self.fail_reason = fail_reason
@@ -519,15 +531,6 @@ class SimulationLoop:
 
         metrics = self.metric_collector.get_metrics()
 
-        if fail_reason:
-            is_success = False
-        elif self.goal_sites:
-            is_success = self.success
-        elif has_other_objectives:
-            is_success = True
-        else:
-            is_success = False
-
         return SimulationMetrics(
             total_time=current_time,
             total_energy=metrics.total_energy,
@@ -556,13 +559,26 @@ class SimulationLoop:
 
     def _check_motor_overload(self) -> bool:
         # Delegate to SuccessEvaluator
-        # This requires more info from backend, so let's just use SuccessEvaluator check
         actuator_names = self.backend.get_all_actuator_names()
-        forces = [self.backend.get_actuator_state(n).force for n in actuator_names]
-        # Assuming forcerange[1] is the limit
-        limit = 1.0  # Placeholder
-        return self.success_evaluator.check_motor_overload(
-            actuator_names, forces, limit, 0.002
+        for name in actuator_names:
+            state = self.backend.get_actuator_state(name)
+            # Use forcerange[1] if available (Standard in MJCF and Genesis)
+            limit = (
+                state.forcerange[1]
+                if state.forcerange and len(state.forcerange) > 1
+                else 1.0
+            )
+            if self.success_evaluator.check_motor_overload(
+                [name], [state.force], limit, 0.002
+            ):
+                return True
+        return False
+
+    def check_goal_with_vertices(self, target_body_name: str) -> bool:
+        """Check if the target body is in any of the goal zones."""
+        return any(
+            self.backend.check_collision(target_body_name, g)
+            for g in self.goal_sites
         )
 
     def _check_forbidden_collision(self) -> bool:

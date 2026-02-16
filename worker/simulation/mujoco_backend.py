@@ -45,7 +45,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure_reason="PHYSICS_INSTABILITY",
                 )
 
             mujoco.mj_step(self.model, self.data)
@@ -55,7 +55,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure_reason="PHYSICS_INSTABILITY",
                 )
 
         return StepResult(time=self.data.time, success=True)
@@ -230,11 +230,18 @@ class MuJoCoBackend(PhysicsBackend):
         if hasattr(self.data, "actuator_velocity"):
             vel = self.data.actuator_velocity[aid]
 
+        limited = self.model.actuator_forcelimited[aid]
+        forcerange = (
+            tuple(self.model.actuator_forcerange[aid].tolist())
+            if limited
+            else (-1e9, 1e9)
+        )
+
         return ActuatorState(
             force=self.data.actuator_force[aid],
             velocity=vel,
             ctrl=self.data.ctrl[aid],
-            forcerange=tuple(self.model.actuator_forcerange[aid].tolist()),
+            forcerange=forcerange,
         )
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:

@@ -29,6 +29,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.electronics_config = None
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
@@ -234,6 +235,17 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+
+                    # 4. Load Electronics Configuration (WP3)
+                    electronics_data = data.get("electronics")
+                    if electronics_data:
+                        from shared.models.schemas import ElectronicsSection
+
+                        self.electronics_config = ElectronicsSection.model_validate(
+                            electronics_data
+                        )
+                    else:
+                        self.electronics_config = None
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -697,7 +709,9 @@ class GenesisBackend(PhysicsBackend):
         return []
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        if not self.electronics_config:
+            return []
+        return [w.wire_id for w in self.electronics_config.wiring]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -732,6 +746,9 @@ class GenesisBackend(PhysicsBackend):
         return False
 
     def get_tendon_tension(self, _tendon_name: str) -> float:
+        # Genesis doesn't yet support physical tendons for wires in this version
+        # Returning 0.0 to allow simulation to continue without failure.
+        # In a real engineering implementation, this would return actual tension.
         return 0.0
 
     def close(self) -> None:

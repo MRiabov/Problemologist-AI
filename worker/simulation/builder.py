@@ -38,6 +38,7 @@ class AssemblyPartData(BaseModel):
     joint_axis: list[float] | None = None
     joint_range: list[float] | None = None
     material_id: str | None = None
+    weld_to: str | None = None
     is_electronics: bool = False
     is_zone: bool = False
     zone_type: str | None = None
@@ -66,6 +67,7 @@ class CommonAssemblyTraverser:
             is_electronics = CommonAssemblyTraverser._map_electronics(
                 label, electronics
             )
+            weld_to = CommonAssemblyTraverser._parse_weld(child)
 
             parts_data.append(
                 AssemblyPartData(
@@ -75,6 +77,7 @@ class CommonAssemblyTraverser:
                     euler=euler,
                     is_fixed=metadata["is_fixed"],
                     material_id=metadata["material_id"],
+                    weld_to=weld_to,
                     joint_type=joint_info["type"],
                     joint_axis=joint_info["axis"],
                     joint_range=joint_info["range"],
@@ -107,6 +110,13 @@ class CommonAssemblyTraverser:
             "is_fixed": getattr(child, "fixed", False),
             "material_id": getattr(child, "material_id", "aluminum_6061"),
         }
+
+    @staticmethod
+    def _parse_weld(child: Any) -> str | None:
+        constraint = getattr(child, "constraint", None)
+        if isinstance(constraint, str) and constraint.startswith("weld:"):
+            return constraint.split(":")[1]
+        return None
 
     @staticmethod
     def _parse_joint(child: Any) -> dict[str, Any]:
@@ -508,6 +518,15 @@ class SceneCompiler:
         final_forcerange = forcerange
 
         # Try to derive from COTS if missing parameters
+        if not cots_id and name:
+            # Heuristic: look for COTS IDs in the name (T011)
+            from shared.cots.parts.motors import ServoMotor
+
+            for motor_id in ServoMotor.motor_data.keys():
+                if motor_id in name:
+                    cots_id = motor_id
+                    break
+
         if cots_id:
             from shared.cots.parts.motors import retrieve_cots_physics
 
@@ -664,10 +683,10 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     joint_range=data.joint_range,
                 )
                 body_locations[data.label] = (data.pos, data.euler)
+                if data.weld_to:
+                    weld_constraints.append((data.label, data.weld_to))
 
-        # Apply collected constraints (welds are handled as joints in traverse for now,
-        # but manual welds metadata can be added to traverse if needed)
-        # TODO: Unified weld resolution in traverse
+        # Apply collected constraints
         for body1, body2 in weld_constraints:
             self.compiler.add_weld(body1, body2)
 
@@ -675,12 +694,35 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         if moving_parts:
             for mp in moving_parts:
                 if mp.type == "motor":
+                    # Try to find COTS ID from electronics mapping
+                    cots_id = None
+                    if electronics:
+                        # electronics might be ElectronicsSection or dict (Genesis pass-through)
+                        components = getattr(electronics, "components", [])
+                        if not components and isinstance(electronics, dict):
+                            components = electronics.get("components", [])
+
+                        for comp in components:
+                            comp_ref = (
+                                getattr(comp, "assembly_part_ref", None)
+                                if hasattr(comp, "assembly_part_ref")
+                                else comp.get("assembly_part_ref")
+                            )
+                            if comp_ref == mp.part_name:
+                                cots_id = (
+                                    getattr(comp, "cots_part_id", None)
+                                    if hasattr(comp, "cots_part_id")
+                                    else comp.get("cots_part_id")
+                                )
+                                break
+
                     # We assume the joint name follows the convention {part_name}_joint
                     # which is what add_body uses.
                     self.compiler.add_actuator(
                         name=mp.part_name,
                         joint=f"{mp.part_name}_joint",
                         actuator_type="position",  # Defaulting to position for servos
+                        cots_id=cots_id,
                     )
 
         # 4. Add Electronics (Wires/Tendons)
@@ -895,6 +937,16 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         ):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
+
+        # 5. Add Electronics (Wires) - WP3
+        scene_data["electronics"] = None
+        if electronics:
+            # We want to export the electronics section to the JSON for Genesis to load
+            if hasattr(electronics, "model_dump"):
+                scene_data["electronics"] = electronics.model_dump(by_alias=True)
+            else:
+                # Handle cases where it might be a dict or other
+                scene_data["electronics"] = electronics
 
         scene_path = self.output_dir / "scene.json"
         with open(scene_path, "w") as f:
