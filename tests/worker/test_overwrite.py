@@ -1,11 +1,12 @@
-import pytest
+from unittest.mock import MagicMock
+
+import s3fs
+
 from worker.filesystem.backend import (
     LocalFilesystemBackend,
     SandboxFilesystemBackend,
     SimpleSessionManager,
 )
-from unittest.mock import MagicMock
-import s3fs
 
 
 def test_local_backend_overwrite(tmp_path):

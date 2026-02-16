@@ -6,10 +6,10 @@ from uuid import uuid4
 import httpx
 import structlog
 from langgraph.graph import END, START, StateGraph
-from sqlalchemy import select
 
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
+from controller.graph.steerability_node import check_steering, steerability_node
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
@@ -17,7 +17,6 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
-from controller.graph.steerability_node import steerability_node, check_steering
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -371,7 +370,6 @@ async def _update_episode_persistence(
     plan: Any = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
-    from controller.agent.benchmark.models import SessionStatus
     from controller.persistence.models import Episode
     from shared.enums import EpisodeStatus
 

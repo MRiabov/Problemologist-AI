@@ -1,9 +1,8 @@
-import logging
 from contextlib import suppress
 
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
-import structlog
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState

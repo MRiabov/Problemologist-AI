@@ -1,10 +1,11 @@
-import pytest
 import numpy as np
+import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 from unittest.mock import MagicMock, patch
-from worker.simulation.genesis_backend import GenesisBackend
+
 from shared.simulation.backends import SimulationScene
+from worker.simulation.genesis_backend import GenesisBackend
 
 
 @pytest.fixture

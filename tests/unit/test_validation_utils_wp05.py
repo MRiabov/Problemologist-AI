@@ -1,19 +1,11 @@
-import pytest
-from pathlib import Path
 import yaml
-import json
-from worker.utils.validation import (
-    get_stress_report,
-    define_fluid,
-    set_soft_mesh,
-    SimulationResult,
-)
+
 from worker.simulation.loop import StressSummary
-from shared.models.schemas import (
-    ObjectivesYaml,
-    BoundingBox,
-    MovedObject,
-    PhysicsConfig,
+from worker.utils.validation import (
+    SimulationResult,
+    define_fluid,
+    get_stress_report,
+    set_soft_mesh,
 )
 
 

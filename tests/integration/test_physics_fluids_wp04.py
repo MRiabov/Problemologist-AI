@@ -1,25 +1,24 @@
-import pytest
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import numpy as np
-from unittest.mock import MagicMock, patch, PropertyMock
-from shared.simulation.backends import (
-    BodyState,
-    SimulatorBackendType,
-    StepResult,
-    SimulationScene,
-)
-from worker.simulation.loop import SimulationLoop
-from worker.simulation.genesis_backend import GenesisBackend
+import pytest
+
 from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
     BoundingBox,
-    MovedObject,
     Constraints,
-    FluidDefinition,
-    FluidVolume,
     FlowRateObjective,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
     PhysicsConfig,
 )
+from shared.simulation.backends import (
+    SimulationScene,
+    SimulatorBackendType,
+    StepResult,
+)
+from worker.simulation.genesis_backend import GenesisBackend
+from worker.simulation.loop import SimulationLoop
 
 
 @pytest.fixture
@@ -71,9 +70,8 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
         # particles start below plane
         if mock_step.time == 0:
             return np.array([[0, 0, -0.1]] * 100)
-        else:
-            # move above plane
-            return np.array([[0, 0, 0.1]] * 100)
+        # move above plane
+        return np.array([[0, 0, 0.1]] * 100)
 
     # 3. Setup Loop with mocked backend
     with patch("worker.simulation.loop.get_physics_backend") as mock_get:
@@ -132,7 +130,6 @@ def test_gpu_oom_retry_logic(genesis_backend, tmp_path):
             assert genesis_backend.current_particle_multiplier == 0.75
 
             # Check if event was emitted
-            from shared.observability.schemas import ObservabilityEventType
 
             emitted_events = [args[0] for args, _ in mock_emit.call_args_list]
             assert any(e.event_type == "gpu_oom_retry" for e in emitted_events)

@@ -53,9 +53,6 @@ class TraceType(StrEnum):
     EVENT = "event"
 
 
-from shared.simulation.schemas import SimulationFailureMode
-
-
 class ElectricalFailureType(StrEnum):
     """Standard electrical failure categories."""
 

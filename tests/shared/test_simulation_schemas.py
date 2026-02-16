@@ -1,9 +1,8 @@
-import pytest
 from shared.models.simulation import (
-    StressSummary,
     FluidMetricResult,
     SimulationMetrics,
     SimulationResult,
+    StressSummary,
 )
 
 

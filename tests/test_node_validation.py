@@ -1,4 +1,3 @@
-import pytest
 from worker.utils.file_validation import validate_node_output
 
 # Valid plan content for engineering nodes

@@ -1,5 +1,6 @@
 import structlog
 from sqlalchemy import select
+
 from .db import get_sessionmaker
 from .models import UserSteeringPreference
 

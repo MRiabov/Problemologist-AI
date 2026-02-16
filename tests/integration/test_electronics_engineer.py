@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from controller.agent.state import AgentState
-from controller.agent.nodes.electronics_engineer import electronics_engineer_node
+
+import pytest
+
 from controller.agent.nodes.coder import coder_node
+from controller.agent.nodes.electronics_engineer import electronics_engineer_node
+from controller.agent.state import AgentState
 
 
 @pytest.mark.asyncio

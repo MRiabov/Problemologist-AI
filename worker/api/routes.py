@@ -50,6 +50,8 @@ from .schema import (
     GitStatusResponse,
     GrepMatch,
     GrepRequest,
+    InspectTopologyRequest,
+    InspectTopologyResponse,
     LintRequest,
     LintResponse,
     ListFilesRequest,
@@ -59,8 +61,6 @@ from .schema import (
     ReadFileResponse,
     StatusResponse,
     WriteFileRequest,
-    InspectTopologyRequest,
-    InspectTopologyResponse,
 )
 
 logger = structlog.get_logger(__name__)

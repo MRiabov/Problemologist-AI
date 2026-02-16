@@ -1,7 +1,7 @@
-import pytest
 import os
 from pathlib import Path
 
+import pytest
 from build123d import Box, BuildPart, Compound
 
 from tests.observability.test_observability_utils import (

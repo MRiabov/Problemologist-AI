@@ -1,8 +1,10 @@
 from typing import Any
+
 import structlog
 from langchain_core.messages import HumanMessage
-from controller.services.steerability.service import steerability_service
+
 from controller.agent.state import AgentStatus
+from controller.services.steerability.service import steerability_service
 
 logger = structlog.get_logger(__name__)
 

@@ -1,17 +1,17 @@
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-from build123d import Box, Compound
+from unittest.mock import patch
+
 import trimesh
-from worker.simulation.builder import GenesisSimulationBuilder
+from build123d import Box, Compound
+
 from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
     BoundingBox,
-    MovedObject,
     Constraints,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
     PhysicsConfig,
 )
+from worker.simulation.builder import GenesisSimulationBuilder
 
 
 def create_dummy_stl(part, file_path, *args, **kwargs):

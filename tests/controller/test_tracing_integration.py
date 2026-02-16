@@ -1,8 +1,9 @@
 import asyncio
 import uuid
-import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from unittest.mock import patch
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from controller.observability.tracing import record_worker_events
 from controller.persistence.db import Base

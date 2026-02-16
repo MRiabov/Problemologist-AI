@@ -1,8 +1,7 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from worker.activities.rendering import render_selection_snapshot
+
 from shared.simulation.view_utils import get_best_isometric_view
-import os
+from worker.activities.rendering import render_selection_snapshot
 
 
 def test_render_selection_snapshot(tmp_path):

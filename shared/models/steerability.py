@@ -1,8 +1,7 @@
 from enum import StrEnum
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
-
 
 Vector3 = Annotated[tuple[float, float, float], Field(min_length=3, max_length=3)]
 
@@ -19,8 +18,8 @@ class GeometricSelection(BaseModel):
     level: SelectionLevel
     target_id: str
     center: Vector3
-    normal: Optional[Vector3] = None
-    direction: Optional[Vector3] = None
+    normal: Vector3 | None = None
+    direction: Vector3 | None = None
 
 
 class CodeReference(BaseModel):
@@ -31,6 +30,6 @@ class CodeReference(BaseModel):
 
 class SteerablePrompt(BaseModel):
     text: str
-    selections: List[GeometricSelection] = Field(default_factory=list)
-    code_references: List[CodeReference] = Field(default_factory=list)
-    mentions: List[str] = Field(default_factory=list)
+    selections: list[GeometricSelection] = Field(default_factory=list)
+    code_references: list[CodeReference] = Field(default_factory=list)
+    mentions: list[str] = Field(default_factory=list)

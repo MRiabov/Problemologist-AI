@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
-import tempfile
 import trimesh
 from build123d import Compound, Solid, export_stl
 
@@ -18,13 +18,10 @@ from build123d import Compound, Solid, export_stl
 # except ImportError:
 #     export_all = None
 
-from shared.cots.parts.motors import ServoMotor
-
 if TYPE_CHECKING:
     from shared.models.schemas import (
         MovingPart,
         ObjectivesYaml,
-        PartMetadata,
     )
 
 from pydantic import BaseModel, ConfigDict

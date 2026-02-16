@@ -2,7 +2,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from controller.persistence.models import GenerationSession
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.agent.benchmark.models import SessionStatus

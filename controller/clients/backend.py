@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 import structlog
+
 from shared.backend.protocol import (
     BackendProtocol,
     EditResult,

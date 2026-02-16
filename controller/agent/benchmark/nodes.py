@@ -1,24 +1,16 @@
 import asyncio
 import base64
-import json
-import logging
 import os
 import re
-from pathlib import Path
 
 import httpx
 import structlog
 import yaml
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from controller.agent.nodes.base import SharedNodeContext
-from controller.clients.worker import WorkerClient
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import get_langfuse_callback
 from controller.agent.nodes.reviewer import ReviewResult
 from controller.prompts import get_prompt
 from shared.simulation.schemas import (

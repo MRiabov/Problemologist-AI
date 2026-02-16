@@ -1,17 +1,17 @@
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from langchain_core.messages import HumanMessage, BaseMessage
-from controller.agent.state import AgentState, AgentStatus
-from controller.agent.benchmark.state import BenchmarkGeneratorState
+import pytest
+from langchain_core.messages import HumanMessage
+
 from controller.agent.benchmark.models import GenerationSession
+from controller.agent.benchmark.state import BenchmarkGeneratorState
+from controller.agent.state import AgentState, AgentStatus
+from controller.graph.steerability_node import check_steering, steerability_node
 from shared.models.steerability import (
-    SteerablePrompt,
     GeometricSelection,
-    CodeReference,
+    SteerablePrompt,
 )
-from controller.graph.steerability_node import steerability_node, check_steering
 
 
 @pytest.mark.asyncio

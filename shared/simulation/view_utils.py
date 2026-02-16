@@ -1,9 +1,8 @@
 import numpy as np
-from typing import List, Tuple
 
 # Type alias for clarity
-Vector3 = Tuple[float, float, float]
-Matrix4x4 = List[List[float]]
+Vector3 = tuple[float, float, float]
+Matrix4x4 = list[list[float]]
 
 
 def get_best_isometric_view(normal: Vector3) -> Matrix4x4:

@@ -4,8 +4,6 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
-
-from shared.enums import SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import FluidMetricResult
 from shared.observability.events import emit_event
@@ -14,7 +12,7 @@ from shared.observability.schemas import (
     SimulationBackendSelectedEvent,
 )
 from shared.simulation.backends import SimulationScene
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import SimulationFailureMode, SimulatorBackendType
 from worker.simulation.electronics import ElectronicsManager
 from worker.simulation.evaluator import SuccessEvaluator
 from worker.simulation.factory import get_physics_backend

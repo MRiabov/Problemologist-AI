@@ -7,6 +7,7 @@ These models define the contracts for:
 """
 
 from typing import Annotated, Any, Literal
+
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -14,10 +15,9 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from shared.simulation.schemas import SimulatorBackendType
 
 from shared.enums import ElectronicComponentType
-
+from shared.simulation.schemas import SimulatorBackendType
 
 # =============================================================================
 # Common Types

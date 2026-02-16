@@ -1,6 +1,7 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
-from typing import Any, Optional, List, Dict
-import numpy as np
+
 from shared.simulation.schemas import SimulationFailureMode
 
 
@@ -26,26 +27,26 @@ class SimulationMetrics(BaseModel):
     total_energy: float
     max_velocity: float
     success: bool
-    fail_reason: Optional[str] = None
-    fail_mode: Optional[SimulationFailureMode] = None
-    stress_summaries: List[StressSummary] = Field(default_factory=list)
-    stress_fields: Dict[str, Dict] = Field(
+    fail_reason: str | None = None
+    fail_mode: SimulationFailureMode | None = None
+    stress_summaries: list[StressSummary] = Field(default_factory=list)
+    stress_fields: dict[str, dict] = Field(
         default_factory=dict
     )  # part_label -> {"nodes": ..., "stress": ...}
-    fluid_metrics: List[FluidMetricResult] = Field(default_factory=list)
+    fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     confidence: str = "high"
 
 
 class SimulationResult(BaseModel):
     success: bool
     summary: str
-    failure_reason: Optional[str] = None
-    fail_mode: Optional[SimulationFailureMode] = None
-    render_paths: List[str] = Field(default_factory=list)
-    mjcf_content: Optional[str] = None
-    stress_summaries: List[StressSummary] = Field(default_factory=list)
-    stress_fields: Dict[str, Any] = Field(default_factory=dict)
-    fluid_metrics: List[FluidMetricResult] = Field(default_factory=list)
+    failure_reason: str | None = None
+    fail_mode: SimulationFailureMode | None = None
+    render_paths: list[str] = Field(default_factory=list)
+    mjcf_content: str | None = None
+    stress_summaries: list[StressSummary] = Field(default_factory=list)
+    stress_fields: dict[str, Any] = Field(default_factory=dict)
+    fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     total_cost: float = 0.0
     total_weight_g: float = 0.0
     confidence: str = "high"

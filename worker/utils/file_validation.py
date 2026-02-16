@@ -23,9 +23,9 @@ from shared.models.schemas import (
     ObjectivesYaml,
     ReviewFrontmatter,
 )
-from shared.simulation.schemas import SimulatorBackendType
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
+from shared.simulation.schemas import SimulatorBackendType
 
 logger = structlog.get_logger(__name__)
 

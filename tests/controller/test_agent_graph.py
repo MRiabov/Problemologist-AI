@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from controller.graph.agent import create_agent_graph
 
 

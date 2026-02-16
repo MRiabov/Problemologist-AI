@@ -21,11 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
-from controller.clients.worker import WorkerClient
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
 
 logger = structlog.get_logger(__name__)

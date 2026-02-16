@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from controller.agent.benchmark.models import GenerationSession

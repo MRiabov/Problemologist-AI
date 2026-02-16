@@ -1,12 +1,14 @@
+from typing import Any
+
 import numpy as np
 import structlog
-from typing import Any
 
 try:
     import genesis as gs
 except ImportError:
     gs = None
 
+from shared.models.simulation import FluidMetricResult, StressSummary
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -17,7 +19,6 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
-from shared.models.simulation import StressSummary, FluidMetricResult
 
 logger = structlog.get_logger(__name__)
 

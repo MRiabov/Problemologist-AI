@@ -1,14 +1,13 @@
 import logging
 import math
-from typing import Any
 
 import numpy as np
 from build123d import Compound, Polyline, Spline, Vector
 from pydantic import BaseModel
-from shared.observability.events import emit_event
-from shared.observability.schemas import WireRoutingEvent
 
 from shared.models.schemas import WireConfig, WireTerminal
+from shared.observability.events import emit_event
+from shared.observability.schemas import WireRoutingEvent
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +233,7 @@ def calculate_path_length(
     try:
         if use_spline and len(waypoints) >= 2:
             return float(Spline(path_points).length)
-        else:
-            return float(Polyline(path_points).length)
+        return float(Polyline(path_points).length)
     except Exception:
         # Fallback to manual distance sum
         length = 0.0

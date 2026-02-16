@@ -3,14 +3,14 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from controller.config.settings import settings
-from controller.graph.steerability_node import steerability_node, check_steering
+from controller.graph.steerability_node import check_steering, steerability_node
 
+from .nodes.coder import coder_node
+from .nodes.cots_search import cots_search_node
+from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.planner import planner_node
 from .nodes.reviewer import reviewer_node
-from .nodes.coder import coder_node
-from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.skills import skills_node
-from .nodes.cots_search import cots_search_node
 from .state import AgentState, AgentStatus
 
 logger = structlog.get_logger(__name__)

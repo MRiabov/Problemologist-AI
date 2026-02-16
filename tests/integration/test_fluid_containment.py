@@ -1,9 +1,11 @@
-import pytest
-import numpy as np
 from unittest.mock import MagicMock, patch
-from worker.simulation.loop import SimulationLoop
-from shared.simulation.backends import SimulatorBackendType
+
+import numpy as np
+import pytest
+
 from shared.models.schemas import ObjectivesYaml
+from shared.simulation.schemas import SimulatorBackendType
+from worker.simulation.loop import SimulationLoop
 
 
 @pytest.mark.integration

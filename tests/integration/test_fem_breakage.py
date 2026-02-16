@@ -1,9 +1,11 @@
-import pytest
-import numpy as np
 from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+
+from shared.simulation.backends import StressField
+from shared.simulation.schemas import SimulationFailureMode, SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
-from shared.simulation.backends import SimulatorBackendType, StressField
-from shared.enums import SimulationFailureMode
 
 
 @pytest.mark.integration

@@ -2,22 +2,20 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Any
-from git import GitCommandError, Repo
-from langchain_core.messages import HumanMessage, SystemMessage
+
+from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
-from controller.observability.tracing import sync_asset
-from shared.type_checking import type_check
-
 from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
+from controller.observability.tracing import sync_asset
+from controller.utils.git import GitManager
+from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
-from controller.utils.git import GitManager
 
 logger = logging.getLogger(__name__)
 

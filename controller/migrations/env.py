@@ -9,9 +9,6 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, os.getcwd())
 
 from controller.persistence.db import Base
-from controller.persistence import (
-    models,
-)  # Ensure all models are registered for autogenerate
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

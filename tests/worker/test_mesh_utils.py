@@ -1,9 +1,10 @@
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+import pytest
 import trimesh
-import numpy as np
-from worker.utils.mesh_utils import repair_mesh, tetrahedralize, MeshProcessingError
+
+from worker.utils.mesh_utils import MeshProcessingError, repair_mesh, tetrahedralize
 
 
 def test_repair_mesh_already_watertight():
@@ -98,4 +99,4 @@ def test_tetrahedralize_invalid_method():
         MeshProcessingError,
         match="Tetrahedralization failed: Unknown tetrahedralization method",
     ):
-        tetrahedralize(Path("."), Path("."), method="invalid")
+        tetrahedralize(Path(), Path(), method="invalid")

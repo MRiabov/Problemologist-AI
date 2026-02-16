@@ -3,7 +3,8 @@ from typing import Annotated
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
-from shared.simulation.schemas import ValidationResult, RandomizationStrategy
+
+from shared.simulation.schemas import RandomizationStrategy, ValidationResult
 
 from .models import GenerationSession
 

@@ -12,6 +12,8 @@ class SimulatorBackendType(str, Enum):
 class SimulationFailureMode(str, Enum):
     """Specific failure modes for physics and electronics simulation."""
 
+    # FIXME why not mechanical? what about the, e.g. motor failure? out of bounds? hitting forbid zone? so many ways to fail...
+
     # WP3 Electronics failures
     SHORT_CIRCUIT = "FAILED_SHORT_CIRCUIT"
     OVERCURRENT_SUPPLY = "FAILED_OVERCURRENT_SUPPLY"
