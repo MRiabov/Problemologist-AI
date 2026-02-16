@@ -4,8 +4,11 @@ import pathlib
 import tempfile
 
 import numpy as np
+import structlog
 import trimesh
 from build123d import Compound, Part
+
+logger = structlog.get_logger()
 
 
 def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
@@ -95,6 +98,101 @@ def check_undercuts(
         undercut_indices.extend(occluded_indices.tolist())
 
     return list(set(undercut_indices))
+
+
+def check_wall_thickness(
+    mesh: trimesh.Trimesh, min_mm: float = 1.0, max_mm: float = 4.0
+) -> list[str]:
+    """
+    Functional check for wall thickness consistency using raycasting.
+    """
+    logger.debug("checking_wall_thickness", min_mm=min_mm, max_mm=max_mm)
+
+    violations = []
+
+    # Sample points on the mesh and cast rays along normals to find opposite wall
+    # For MVP, we sample a subset of faces to keep it fast
+    sample_size = min(len(mesh.faces), 1000)
+    face_indices = np.random.choice(len(mesh.faces), sample_size, replace=False)
+
+    centers = mesh.triangles_center[face_indices]
+    # Inward normals
+    normals = -mesh.face_normals[face_indices]
+
+    # Offset origins slightly to avoid self-intersection
+    origins = centers + normals * 1e-4
+
+    # Use mesh.ray to leverage cached BVH and potentially faster engine (pyembree)
+    locations, index_ray, _ = mesh.ray.intersects_location(
+        origins, normals, multiple_hits=False
+    )
+
+    if len(locations) > 0:
+        # Distance between origin and hit point
+        hit_origins = origins[index_ray]
+        distances = np.linalg.norm(locations - hit_origins, axis=1)
+
+        too_thin = np.where(distances < min_mm)[0]
+        too_thick = np.where(distances > max_mm)[0]
+
+        if len(too_thin) > 0:
+            violations.append(
+                f"Wall thickness too thin: {len(too_thin)} samples < {min_mm}mm"
+            )
+            logger.warning(
+                "wall_too_thin", count=len(too_thin), min_dist=float(distances.min())
+            )
+        if len(too_thick) > 0:
+            violations.append(
+                f"Wall thickness too thick: {len(too_thick)} samples > {max_mm}mm"
+            )
+            logger.warning(
+                "wall_too_thick", count=len(too_thick), max_dist=float(distances.max())
+            )
+
+    return violations
+
+
+def check_overhangs(
+    mesh: trimesh.Trimesh, critical_angle_deg: float = 45.0
+) -> list[int]:
+    """
+    Identifies faces that exceed the critical overhang angle.
+    A face is an overhang if the angle between its normal and the -Z axis is less than the critical angle.
+    (i.e., it points downwards more steeply than allowed).
+
+    Args:
+        mesh: The trimesh.Trimesh to check.
+        critical_angle_deg: The maximum safe angle from the vertical (default 45 degrees).
+                            Faces with an angle from vertical > critical_angle_deg (towards horizontal) are flagged.
+                            In terms of normal vector, if angle(N, -Z) < critical_angle_deg, it's an overhang.
+
+    Returns:
+        A list of face indices that are unsupported overhangs.
+    """
+    # Threshold for dot product with -Z axis
+    # dot(N, -Z) = cos(theta)
+    # We flag if theta < critical_angle_deg => cos(theta) > cos(critical_angle_deg)
+    # dot(N, -Z) = -N.z
+    # -N.z > cos(rad(critical_angle)) => N.z < -cos(rad(critical_angle))
+
+    threshold = np.cos(np.radians(critical_angle_deg))
+
+    # Identify faces pointing down too steeply
+    overhang_indices = np.where(mesh.face_normals[:, 2] < -threshold)[0]
+
+    if len(overhang_indices) > 0:
+        # Filter out faces that are at the very bottom (supported by build plate)
+        min_z = mesh.vertices[:, 2].min()
+        faces_vertices = mesh.vertices[mesh.faces[overhang_indices]]
+        # Check if all vertices of the face are at min_z (flat on bed)
+        faces_z = faces_vertices[:, :, 2]
+        is_at_bottom = np.all(np.abs(faces_z - min_z) < 0.01, axis=1)
+
+        real_overhangs = overhang_indices[~is_at_bottom]
+        return real_overhangs.tolist()
+
+    return []
 
 
 def compute_part_hash(part: Part | Compound) -> str:

@@ -4,7 +4,12 @@ import structlog
 from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
-from worker.workbenches.analysis_utils import compute_part_hash
+from worker.workbenches.analysis_utils import (
+    check_overhangs,
+    check_wall_thickness,
+    compute_part_hash,
+    part_to_trimesh,
+)
 from worker.workbenches.base import Workbench
 from worker.workbenches.models import (
     CostBreakdown,
@@ -121,7 +126,33 @@ def analyze_3dp(
     if len(solids) > 1:
         violations.append(f"Geometry must be a single body, found {len(solids)} solids")
 
-    # 4. Cost Calculation
+    # 4. Wall Thickness & Overhang Checks
+    three_dp_cfg = config.three_dp
+    if three_dp_cfg and hasattr(three_dp_cfg, "constraints"):
+        constraints = three_dp_cfg.constraints
+        min_wall = constraints.get("min_wall_thickness_mm", 0.8)
+        max_wall = constraints.get("max_wall_thickness_mm", 1000.0)
+        max_overhang = constraints.get("max_overhang_angle_deg", 45.0)
+
+        try:
+            mesh = part_to_trimesh(part)
+
+            # Wall Thickness
+            violations.extend(
+                check_wall_thickness(mesh, min_mm=min_wall, max_mm=max_wall)
+            )
+
+            # Overhangs
+            overhangs = check_overhangs(mesh, critical_angle_deg=max_overhang)
+            if overhangs:
+                msg = f"3DP Overhang Violation: {len(overhangs)} faces exceed critical angle {max_overhang} deg (needs support)."
+                violations.append(msg)
+                logger.warning("3dp_overhangs_detected", count=len(overhangs))
+
+        except Exception as e:
+            logger.error("3dp_mesh_analysis_failed", error=str(e))
+
+    # 5. Cost Calculation
     # We proceed with cost calculation even if there are violations, unless critical?
     # Usually cost is only valid if manufacturable, but giving an estimate is sometimes useful.
     # However, if it's not a valid solid, volume might be wrong.
@@ -133,7 +164,7 @@ def analyze_3dp(
         unit_cost = 0.0
         cost_breakdown = None
 
-    # 4. Weight Calculation
+    # 6. Weight Calculation
     material_name = config.defaults.get("material", "abs")
     three_dp_cfg = config.three_dp
     density = 1.04  # fallback (ABS)

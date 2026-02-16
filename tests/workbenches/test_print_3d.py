@@ -67,3 +67,33 @@ def test_3dp_reuse_discount(config):
 
     assert cost2.setup_cost < cost1.setup_cost
     assert cost2.is_reused is True
+
+
+def test_3dp_overhang_violation(config):
+    # T-shape: vertical post, horizontal bar on top.
+    # The horizontal bar has overhangs (faces pointing down not at min_z).
+    post = Pos(0, 0, 10) * Box(10, 10, 20)  # From z=0 to z=20
+    top = Pos(0, 0, 22.5) * Box(30, 10, 5)  # From z=20 to z=25
+
+    part = post + top
+
+    # Overhang angle check uses 45 degrees by default.
+    # The overhang is horizontal (90 degrees from vertical, 0 degrees from -Z), so it should fail.
+
+    result = analyze_3dp(part, config)
+    # Should have overhang violations
+    assert any("Overhang Violation" in v for v in result.violations)
+
+
+def test_3dp_wall_thickness_violation(config):
+    # Create a hollow box with thin walls
+    # Box 10x10x10. Hollow it out.
+    outer = Box(10, 10, 10)
+    inner = Box(9.8, 9.8, 9.8)  # 0.1mm wall roughly
+
+    part = outer - inner
+
+    # Constraint is 0.8mm
+    result = analyze_3dp(part, config)
+
+    assert any("Wall thickness too thin" in v for v in result.violations)
