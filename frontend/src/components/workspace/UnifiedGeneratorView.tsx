@@ -11,18 +11,17 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import ChatWindow from './ChatWindow';
 import ArtifactView from './ArtifactView';
-import ConnectionError from '../shared/ConnectionError';
-import { 
-  ResizableHandle, 
-  ResizablePanel, 
-  ResizablePanelGroup 
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup
 } from "../ui/resizable";
-import ModelViewer from '../visualization/ModelViewer';
 import { DesignViewer } from '../visualization/DesignViewer';
+import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 
 interface UnifiedGeneratorViewProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   headerIcon: React.ComponentType<{ className?: string }>;
   storageKeys: {
     cols: string;
@@ -41,7 +40,6 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   subtitle,
   headerIcon: HeaderIcon,
   storageKeys,
-  viewportBadgeText = "Live Viewport",
   viewportOverlays,
   viewportControls,
   resetTrigger,
@@ -50,7 +48,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
 }) => {
   const { 
     selectedEpisode, 
-    running
+    running,
+    topologyNodes,
+    setTopologyNodes
   } = useEpisodes();
   const { isConnected } = useConnection();
 
@@ -66,18 +66,14 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     return defaultVal;
   };
 
-  const getAssetUrl = (asset: any) => {
+  const getAssetUrl = (asset: AssetResponse) => {
     if (!asset || !selectedEpisode) return null;
     if (asset.s3_path.startsWith('http')) return asset.s3_path;
     return `/api/episodes/${selectedEpisode.id}/assets/${asset.s3_path}`;
   };
 
-  const hasMediaAssets = selectedEpisode?.assets && 
-    selectedEpisode.assets.filter(a => a.asset_type === 'video' || a.asset_type === 'image').length > 0;
-
-  const videoAsset = selectedEpisode?.assets?.find(a => a.asset_type === 'video');
-  const imageAsset = selectedEpisode?.assets?.find(a => a.asset_type === 'image');
-  const modelAssets = selectedEpisode?.assets?.filter(a => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
+  const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === 'video');
+  const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
   const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
 
   return (
@@ -89,14 +85,14 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
             <HeaderIcon className="h-6 w-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold tracking-tight">{title}</h2>
-              {!isConnected && (
-                <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-red-500/30 text-red-500 bg-red-500/5 gap-1">
-                  <SignalLow className="h-2 w-2" /> OFFLINE
-                </Badge>
-              )}
-            </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+                  {!isConnected && (
+                    <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-[8px] h-4 px-1.5 border-red-500/30 text-red-500 bg-red-500/5 gap-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <SignalLow className="h-2 w-2" /> OFFLINE
+                    </div>
+                  )}
+                </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-70">{subtitle}</span>
             </div>
@@ -157,6 +153,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
               task={selectedEpisode?.task}
               isRunning={running}
               isConnected={isConnected}
+              topologyNodes={topologyNodes}
             />
           </ResizablePanel>
 
@@ -195,9 +192,20 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     }
                     isConnected={isConnected}
                     resetTrigger={resetTrigger}
+                    topologyNodes={topologyNodes}
+                    onTopologyChange={setTopologyNodes}
+                    onRebuildModel={async () => {
+                        try {
+                            await rebuildModel("solution.py");
+                            window.location.reload(); 
+                        } catch (e) {
+                            console.error(e);
+                            alert("Failed to rebuild model: " + e);
+                        }
+                    }}
                   />
 
-                  {modelUrls.length === 0 && !videoAsset && !hasMediaAssets && (
+                  {modelUrls.length === 0 && !videoAsset && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
                         <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
                             <h3 className="text-sm font-bold text-slate-200">No Assets Loaded</h3>
@@ -230,7 +238,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
               <ResizablePanel defaultSize="50%" minSize="20%">
                 <div className="h-full flex-1 overflow-hidden">
                   <ArtifactView 
-                    plan={selectedEpisode?.plan}
+                    plan={selectedEpisode?.plan || ""}
                     assets={selectedEpisode?.assets}
                     isConnected={isConnected}
                   />

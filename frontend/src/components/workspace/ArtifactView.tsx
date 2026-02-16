@@ -6,6 +6,14 @@ import {
   VscProject,
   VscCode
 } from "react-icons/vsc";
+import { 
+  Download, 
+  ExternalLink, 
+  AlertCircle,
+  LayoutGrid,
+  Search,
+  File
+} from "lucide-react";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -14,7 +22,7 @@ import { cn } from "../../lib/utils";
 import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { useEpisodes } from "../../context/EpisodeContext";
+import { useEpisodes, type ContextItem } from "../../context/EpisodeContext";
 import { getFileIconInfo as getSharedIconInfo } from "../../lib/fileIcons";
 import { detectLanguage } from "../../lib/languageUtils";
 import { useTheme } from "../../context/ThemeContext";
@@ -22,7 +30,7 @@ import CircuitSchematic from "../visualization/CircuitSchematic";
 import CircuitTimeline from "../visualization/CircuitTimeline";
 import WireView from "../visualization/WireView";
 import { SimulationResults } from "../visualization/SimulationResults";
-// No unnecessary exports from client
+import { Badge } from "../ui/badge";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -35,8 +43,9 @@ export default function ArtifactView({
   assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext } = useEpisodes();
+  const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext, selectedContext } = useEpisodes();
   const [isTreeOpen, setIsTreeOpen] = useState(true);
+  const { theme } = useTheme();
 
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
@@ -77,7 +86,8 @@ export default function ArtifactView({
             iconColor: iconInfo.color,
             id: asset.id.toString(),
             content: asset.content,
-            asset_type: asset.asset_type
+            asset_type: asset.asset_type,
+            s3_path: asset.s3_path
         });
     });
 
@@ -104,14 +114,47 @@ export default function ArtifactView({
   }, [activeArtifactId, assets, plan]);
 
   const renderContent = () => {
-    const { theme } = useTheme();
     if (!activeAsset) {
         return (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground/30 gap-2">
-                <VscCode className="h-8 w-8 opacity-20" />
-                <span className="text-[10px] uppercase font-bold tracking-widest">No artifact selected</span>
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50">
+                <AlertCircle className="h-12 w-12 mb-4" />
+                <p>No artifact selected</p>
             </div>
         );
+    }
+
+    if (activeAsset.asset_type === 'circuit_data') {
+        try {
+            const data = typeof activeAsset.content === 'string' ? JSON.parse(activeAsset.content) : activeAsset.content;
+            return (
+                <div className="flex flex-col gap-6 p-6">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <VscCode className="text-primary" />
+                            Circuit Analysis: {activeAsset.name}
+                        </h3>
+                    </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <CircuitSchematic electronics={data.electronics} />
+                        <WireView 
+                            assetUrl={getAssetUrl(assets.find((a: AssetResponse) => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
+                            wireRoutes={data.electronics.wiring || []} 
+                        />
+                    </div>
+                </div>
+            );
+        } catch (e) {
+            return <div className="p-4 text-red-500">Failed to parse circuit data</div>;
+        }
+    }
+
+    if (activeAsset.asset_type === 'timeline') {
+        try {
+            const data = typeof activeAsset.content === 'string' ? JSON.parse(activeAsset.content) : activeAsset.content;
+            return <CircuitTimeline events={data.events} />;
+        } catch (e) {
+            return <div className="p-4 text-red-500">Failed to parse timeline data</div>;
+        }
     }
 
     // Special rendering for Assembly Definition with Electronics
@@ -188,123 +231,114 @@ export default function ArtifactView({
     const language = detectLanguage(activeAsset.name, activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text'));
 
     return (
-        <div className="flex-1 flex flex-col h-full min-h-0 bg-background">
-            {/* Plan header removed - moved to ChatWindow */}
-            <ScrollArea className="flex-1">
-                <div className="text-[13px] leading-6 p-0">
-                    {activeAsset.content ? (
-                        <SyntaxHighlighter
-                            language={language}
-                            style={theme === 'dark' ? vscDarkPlus : vs}
-                            customStyle={{
-                                margin: 0,
-                                padding: '1rem',
-                                background: 'transparent',
-                                fontSize: '13px',
-                                lineHeight: '1.6'
-                            }}
-                            showLineNumbers={true}
-                            wrapLines={true}
-                            wrapLongLines={true}
-                            lineProps={(lineNumber) => ({
-                                style: { display: 'block', cursor: 'pointer' },
-                                onClick: () => {
-                                    if (activeAsset) {
-                                        const assetPath = (activeAsset as any).s3_path || activeAsset.name;
-                                        addToContext({
-                                            id: `code-${assetPath}-${lineNumber}`,
-                                            type: 'code',
-                                            label: `${assetPath.split('/').pop()}:${lineNumber}`,
-                                            metadata: { path: assetPath, line: lineNumber }
-                                        });
-                                    }
-                                }
-                            })}
-                        >
-                            {activeAsset.content}
-                        </SyntaxHighlighter>
-                    ) : (
-                        <div className="text-muted-foreground/50 italic flex flex-col items-center justify-center h-40 gap-2">
-                          <VscCode className="h-8 w-8 opacity-20" />
-                          <span>No content available for this asset.</span>
-                          { (activeAsset as any).s3_path && <span className="text-[10px] opacity-70">{(activeAsset as any).s3_path}</span> }
-                        </div>
-                    )}
+        <div className="relative h-full overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">{activeAsset.name}</span>
+                    <Badge variant="outline" className="text-[10px] h-4 px-1">{language}</Badge>
                 </div>
-            </ScrollArea>
+                <div className="flex items-center gap-1">
+                    <button className="p-1 hover:bg-background rounded transition-colors text-muted-foreground">
+                        <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button className="p-1 hover:bg-background rounded transition-colors text-muted-foreground">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                    </button>
+                </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-muted/20">
+                <SyntaxHighlighter
+                    language={language}
+                    style={theme === 'dark' ? vscDarkPlus : vs}
+                    customStyle={{
+                        margin: 0,
+                        padding: '1rem',
+                        background: 'transparent',
+                        fontSize: '13px',
+                        lineHeight: '1.6'
+                    }}
+                    showLineNumbers={true}
+                    wrapLines={true}
+                    wrapLongLines={true}
+                    lineProps={(lineNumber: number) => {
+                        const assetPath = (activeAsset as any).s3_path || activeAsset.name;
+                        const isHighlighted = selectedContext.some((item: ContextItem) => 
+                            item.type === 'code' && 
+                            item.metadata?.path === assetPath && 
+                            lineNumber >= (Number(item.metadata?.start) || Number(item.metadata?.line)) && 
+                            lineNumber <= (Number(item.metadata?.end) || Number(item.metadata?.line))
+                        );
+                        
+                        return {
+                            style: { 
+                                display: 'block', 
+                                cursor: 'pointer',
+                                backgroundColor: isHighlighted ? (theme === 'dark' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(56, 189, 248, 0.1)') : 'transparent',
+                                borderLeft: isHighlighted ? '2px solid #38bdf8' : '2px solid transparent'
+                            },
+                            onClick: () => {
+                                if (activeAsset) {
+                                    addToContext({
+                                        id: `code-${assetPath}-${lineNumber}`,
+                                        type: 'code',
+                                        label: `${assetPath.split('/').pop()}:${lineNumber}`,
+                                        metadata: {
+                                            path: assetPath,
+                                            line: lineNumber
+                                        }
+                                    });
+                                }
+                            }
+                        };
+                    }}
+                >
+                    {activeAsset.content || ""}
+                </SyntaxHighlighter>
+            </div>
         </div>
     );
   };
 
   return (
-    <div className="flex h-full bg-background border-t border-border overflow-hidden relative text-foreground">
+    <div className="flex h-full w-full overflow-hidden border rounded-xl bg-card">
         {!isConnected && <ConnectionError className="absolute inset-0 z-[100]" />}
         
         {/* Artifact Sidebar (File Tree) */}
-        <div className="w-48 border-r border-border/50 flex flex-col bg-muted/5">
-            <div className="h-9 px-3 flex items-center border-b border-border/50 bg-muted/10">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Explorer</span>
+        <div className="w-64 border-r flex flex-col bg-muted/10 shrink-0">
+            <div className="p-3 border-b flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <LayoutGrid className="h-3.5 w-3.5" /> Resources
+                </span>
+                <div className="flex items-center gap-1">
+                    <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
             </div>
-            <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                    {fileTree.map((folder, idx) => (
-                        <div key={idx} className="space-y-0.5">
-                            <button 
-                                onClick={() => setIsTreeOpen(!isTreeOpen)}
-                                className="flex items-center gap-1.5 w-full text-left px-2 py-1 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                {isTreeOpen ? <VscChevronDown className="h-3 w-3" /> : <VscChevronRight className="h-3 w-3" />}
-                                <VscProject className="h-3 w-3 opacity-70" />
-                                {folder.name}
-                            </button>
-                            {isTreeOpen && folder.children && (
-                                <div className="pl-4 space-y-0.5 border-l border-border/50 ml-2.5">
-                                    {folder.children.map((file: any) => (
-                                         <button
-                                            key={file.id}
-                                            onClick={() => setActiveArtifactId(file.id)}
-                                            className={cn(
-                                                "flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-[11px] transition-all",
-                                                activeArtifactId === file.id 
-                                                    ? "bg-primary/20 text-primary font-medium" 
-                                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                            )}
-                                         >
-                                            <file.icon className="h-3.5 w-3.5" style={{ color: file.iconColor }} />
-                                            {file.name}
-                                         </button>
-                                    ))}
-                                </div>
+            <ScrollArea className="flex-1 p-2">
+                <div className="flex flex-col gap-0.5">
+                    {fileTree[0].children.map((item: any) => (
+                        <button
+                            key={item.id}
+                            className={cn(
+                                "group flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all duration-200",
+                                activeArtifactId === item.id 
+                                    ? "bg-primary/10 text-primary font-medium shadow-sm" 
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
-                        </div>
+                            onClick={() => setActiveArtifactId(item.id)}
+                        >
+                            <File className={cn("h-4 w-4 shrink-0", activeArtifactId === item.id ? "text-primary" : "text-muted-foreground")} />
+                            <span className="truncate">{item.name}</span>
+                            {item.asset_type === 'circuit_data' && <VscCode className="ml-auto h-3 w-3 opacity-50" />}
+                        </button>
                     ))}
                 </div>
             </ScrollArea>
         </div>
 
         {/* Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-            {/* Tabs Header */}
-            <div className="h-9 flex items-center bg-muted/5 border-b border-border/50 px-2 gap-1 overflow-x-auto no-scrollbar">
-                <VscCode className={cn(
-                    "h-3.5 w-3.5 mr-2",
-                    activeArtifactId === 'plan' ? "text-green-500" : "text-blue-500"
-                )} />
-                <span className="text-[11px] font-mono text-muted-foreground">
-                   {activeAsset?.name || 'Untitled'}
-                </span>
-                <div className="flex-1" />
-                <span className="text-[9px] text-muted-foreground/30 font-mono">UTF-8</span>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 flex overflow-hidden relative">
-                <ScrollArea className="flex-1">
-                    {renderContent()}
-                </ScrollArea>
-            </div>
+        <div className="flex-1 min-w-0 bg-background/50">
+            {renderContent()}
         </div>
     </div>
   );
 }
-
