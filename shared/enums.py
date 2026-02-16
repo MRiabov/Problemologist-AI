@@ -53,13 +53,32 @@ class TraceType(StrEnum):
     EVENT = "event"
 
 
-class ElectricalFailureType(StrEnum):
-    """Standard electrical failure categories."""
+class SimulationFailureMode(StrEnum):
+    """Unified failure modes for physics and electronics simulation."""
 
+    NONE = "none"
+    TIMEOUT = "timeout"
+    OUT_OF_BOUNDS = "out_of_bounds"
+    FORBID_ZONE_HIT = "forbid_zone_hit"
+    PART_BREAKAGE = "part_breakage"
+    STABILITY_ISSUE = "stability_issue"
+    PHYSICS_INSTABILITY = "physics_instability"
+
+    # Electronics failures
     SHORT_CIRCUIT = "short_circuit"
     OVERCURRENT = "overcurrent"
     WIRE_TORN = "wire_torn"
     OPEN_CIRCUIT = "open_circuit"
+
+    # WP2 Fluids & Physics failures
+    ASSET_GENERATION_FAILED = "asset_generation_failed"
+    FLUID_OBJECTIVE_FAILED = "fluid_objective_failed"
+    STRESS_OBJECTIVE_EXCEEDED = "stress_objective_exceeded"
+    ELECTRONICS_FLUID_DAMAGE = "electronics_fluid_damage"
+
+    # Validation failures
+    VALIDATION_FAILED = "validation_failed"
+    MANUFACTURABILITY_FAILED = "manufacturability_failed"
 
 
 class ElectronicComponentType(StrEnum):

@@ -1,6 +1,9 @@
 import numpy as np
 
 
+from shared.enums import SimulationFailureMode
+
+
 class SuccessEvaluator:
     """Evaluates simulation success or failure conditions."""
 
@@ -17,24 +20,24 @@ class SuccessEvaluator:
         qpos: np.ndarray,
         qvel: np.ndarray,
         contacts: list = None,
-    ) -> str | None:
+    ) -> SimulationFailureMode | None:
         """
         Check for various failure modes.
-        Returns failure reason string or None if still running.
+        Returns failure reason or None if still running.
         """
         # 1. Timeout
         if total_time >= self.max_simulation_time:
-            return "timeout_exceeded"
+            return SimulationFailureMode.TIMEOUT
 
         # 2. Physics Instability (NaNs)
         if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
-            return "PHYSICS_INSTABILITY"
+            return SimulationFailureMode.PHYSICS_INSTABILITY
 
         # 3. Fell off world
         # Heuristic: Z < -2.0
         # Assume free joint: qpos[2] is Z
         if len(qpos) >= 3 and qpos[2] < -2.0:
-            return "target_fell_off_world"
+            return SimulationFailureMode.OUT_OF_BOUNDS
 
         return None
 
