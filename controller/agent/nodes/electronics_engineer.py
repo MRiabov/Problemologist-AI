@@ -1,7 +1,6 @@
-import logging
-import structlog
 from contextlib import suppress
 
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 

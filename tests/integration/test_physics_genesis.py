@@ -1,6 +1,19 @@
-import pytest
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import numpy as np
-from unittest.mock import MagicMock, patch, PropertyMock
+import pytest
+
+from shared.models.schemas import (
+    BoundingBox,
+    Constraints,
+    FluidContainmentObjective,
+    FluidDefinition,
+    FluidVolume,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
+    PhysicsConfig,
+)
 from shared.simulation.backends import (
     BodyState,
     SimulatorBackendType,
@@ -8,17 +21,6 @@ from shared.simulation.backends import (
     StressField,
 )
 from worker.simulation.loop import SimulationLoop
-from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
-    BoundingBox,
-    MovedObject,
-    Constraints,
-    FluidDefinition,
-    FluidVolume,
-    FluidContainmentObjective,
-    PhysicsConfig,
-)
 
 # Shared mock to avoid "already initialized" errors if multiple backends are created
 _SHARED_BACKEND_MOCK = MagicMock()

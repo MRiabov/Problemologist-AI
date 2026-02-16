@@ -38,8 +38,6 @@ def apply_position_jitter(
     jitter_range: tuple[float, float, float],
     rng: np.random.Generator,
 ) -> None:
-    import mujoco
-
     """Apply random position jitter to a body.
 
     Args:

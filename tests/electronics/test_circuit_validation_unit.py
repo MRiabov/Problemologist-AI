@@ -1,17 +1,18 @@
 import pytest
 from PySpice.Unit import *
-from shared.pyspice_utils import (
-    validate_circuit,
-    calculate_static_power_budget,
-    create_circuit,
-)
+
 from shared.circuit_builder import build_circuit_from_section
 from shared.models.schemas import (
+    ElectronicComponent,
     ElectronicsSection,
     PowerSupplyConfig,
-    ElectronicComponent,
     WireConfig,
     WireTerminal,
+)
+from shared.pyspice_utils import (
+    calculate_static_power_budget,
+    create_circuit,
+    validate_circuit,
 )
 
 

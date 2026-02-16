@@ -17,14 +17,14 @@ from .steerability import (
 
 __all__ = [
     "BoundingBox",
+    "CodeReference",
     "Constraints",
+    "GeometricSelection",
     "MovedObject",
     "MovingPart",
     "ObjectivesSection",
     "ObjectivesYaml",
     "ReviewFrontmatter",
-    "CodeReference",
-    "GeometricSelection",
     "SelectionLevel",
     "SteerablePrompt",
 ]

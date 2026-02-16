@@ -7,12 +7,15 @@ to S3 storage with session-based isolation.
 import re
 import shutil
 import tempfile
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from abc import ABC, abstractmethod
 from typing import Protocol, runtime_checkable
+
 import structlog
+from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
+
 from shared.backend.protocol import (
     BackendProtocol,
     EditResult,
@@ -29,8 +32,6 @@ from shared.backend.utils import (
     format_content_with_line_numbers,
     perform_string_replacement,
 )
-from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
-
 from shared.type_checking import type_check
 
 logger = structlog.get_logger(__name__)

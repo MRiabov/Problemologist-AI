@@ -95,10 +95,9 @@ def tetrahedralize(
     try:
         if method == "gmsh":
             return _tetrahedralize_gmsh(input_path, output_msh_path, refine_level)
-        elif method == "tetgen":
+        if method == "tetgen":
             return _tetrahedralize_tetgen(input_path, output_msh_path)
-        else:
-            raise ValueError(f"Unknown tetrahedralization method: {method}")
+        raise ValueError(f"Unknown tetrahedralization method: {method}")
     except Exception as e:
         logger.error(f"Tetrahedralization failed using {method}: {e}")
         raise MeshProcessingError(f"Tetrahedralization failed: {e}") from e

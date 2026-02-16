@@ -1,8 +1,9 @@
 from typing import Any
+
 import mujoco
 import numpy as np
-from typing import Any
 
+from shared.models.simulation import FluidMetricResult, StressSummary
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -13,7 +14,6 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
-from shared.models.simulation import StressSummary, FluidMetricResult
 
 
 class MuJoCoBackend(PhysicsBackend):

@@ -1,8 +1,5 @@
-import structlog
-from langchain_openai import ChatOpenAI
-
-from controller.agent.graph import graph as engineering_graph
 from controller.agent.benchmark.graph import define_graph
+from controller.agent.graph import graph as engineering_graph
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_callback
 from shared.cots.agent import create_cots_search_agent
@@ -31,16 +28,13 @@ def create_agent_graph(
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, langfuse_callback
 
-    elif agent_name.startswith("benchmark"):
+    if agent_name.startswith("benchmark"):
         # Unified benchmark generation graph (Planner -> Coder -> Reviewer)
         return define_graph(), langfuse_callback
 
-    elif agent_name == "cots_search":
+    if agent_name == "cots_search":
         # Specialized COTS search agent
         return create_cots_search_agent(settings.llm_model), langfuse_callback
 
-    else:
-        logger.warning(
-            "unknown_agent_name_falling_back_to_engineer", agent_name=agent_name
-        )
-        return engineering_graph, langfuse_callback
+    logger.warning("unknown_agent_name_falling_back_to_engineer", agent_name=agent_name)
+    return engineering_graph, langfuse_callback

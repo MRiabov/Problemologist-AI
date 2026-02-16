@@ -1,17 +1,18 @@
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
-from pathlib import Path
+import xml.etree.ElementTree as ET
+
 from build123d import Box, Compound, Location
+
 from shared.models.schemas import (
+    ElectronicComponent,
     ElectronicsSection,
     PowerSupplyConfig,
-    ElectronicComponent,
     WireConfig,
     WireTerminal,
 )
 from worker.simulation.builder import MuJoCoSimulationBuilder
-import xml.etree.ElementTree as ET
 
 
 def test_builder_wire_tendons(tmp_path):

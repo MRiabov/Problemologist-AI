@@ -1,11 +1,11 @@
 import pytest
-import numpy as np
-from build123d import Box, Compound, Vector
+from build123d import Box, Compound
+
 from shared.wire_utils import (
-    get_awg_properties,
     calculate_path_length,
-    generate_spline_points,
     check_wire_clearance,
+    generate_spline_points,
+    get_awg_properties,
     route_wire,
 )
 

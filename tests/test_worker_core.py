@@ -7,8 +7,9 @@ These tests verify:
 - Dependency verification
 """
 
-from shared.type_checking import type_check
 import pytest
+
+from shared.type_checking import type_check
 from worker.runtime.executor import RuntimeConfig, run_python_code
 
 

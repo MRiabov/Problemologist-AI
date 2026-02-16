@@ -1,7 +1,8 @@
-import yaml
 import structlog
-from shared.models.schemas import AssemblyDefinition
+import yaml
+
 from controller.clients.worker import WorkerClient
+from shared.models.schemas import AssemblyDefinition
 
 logger = structlog.get_logger(__name__)
 

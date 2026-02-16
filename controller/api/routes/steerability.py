@@ -1,7 +1,7 @@
-from typing import List
 from fastapi import APIRouter, Path, status
-from shared.models.steerability import SteerablePrompt
+
 from controller.services.steerability.service import steerability_service
+from shared.models.steerability import SteerablePrompt
 
 router = APIRouter(prefix="/sessions/{session_id}", tags=["steerability"])
 
@@ -20,7 +20,7 @@ async def steer_agent(
     return {"status": "queued", "queue_position": queue_position}
 
 
-@router.get("/queue", response_model=List[SteerablePrompt])
+@router.get("/queue", response_model=list[SteerablePrompt])
 async def get_steering_queue(
     session_id: str = Path(..., description="The agent session ID"),
 ):

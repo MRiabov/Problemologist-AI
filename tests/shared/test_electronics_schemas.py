@@ -1,13 +1,8 @@
-import pytest
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import (
     AssemblyDefinition,
     ElectronicsSection,
-    PowerSupplyConfig,
-    ElectronicComponent,
-    WireConfig,
-    WireTerminal,
 )
-from shared.enums import ElectronicComponentType
 
 
 def test_electronics_section_validation():
@@ -86,8 +81,9 @@ def test_assembly_definition_with_electronics():
 
 
 def test_electronics_reference_validation():
-    from worker.utils.file_validation import validate_assembly_definition_yaml
     import yaml
+
+    from worker.utils.file_validation import validate_assembly_definition_yaml
 
     data = {
         "constraints": {

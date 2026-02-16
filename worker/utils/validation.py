@@ -17,11 +17,10 @@ from shared.models.schemas import (
     ObjectivesYaml,
 )
 from shared.models.simulation import (
-    FluidMetricResult,
     SimulationResult,
-    StressSummary,
 )
-from shared.simulation.backends import SimulatorBackendType, StressField
+from shared.simulation.backends import StressField
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
 from worker.simulation.loop import SimulationLoop
 from worker.workbenches.config import load_config
@@ -137,8 +136,6 @@ def preview_stress(
     assets_dir = working_dir / "assets"
 
     import numpy as np
-
-    from shared.simulation.backends import StressField
 
     from .rendering import render_stress_heatmap
 
@@ -395,10 +392,8 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = (
-                            lambda t, p=part.control: (
-                                sinusoidal(t, p.speed, p.frequency or 1.0)
-                            )
+                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            sinusoidal(t, p.speed, p.frequency or 1.0)
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed

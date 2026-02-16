@@ -39,8 +39,6 @@ def sim_loop(tmp_path):
 
 
 def test_initialization(sim_loop):
-    import mujoco
-
     assert sim_loop.backend.model is not None
     assert sim_loop.backend.data is not None
     # Check if name of forbidden zone is in the list

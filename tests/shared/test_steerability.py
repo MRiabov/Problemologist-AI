@@ -1,9 +1,10 @@
 import pytest
 from pydantic import ValidationError
+
 from shared.models.steerability import (
+    CodeReference,
     GeometricSelection,
     SelectionLevel,
-    CodeReference,
     SteerablePrompt,
 )
 

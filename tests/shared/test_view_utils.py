@@ -1,6 +1,6 @@
-import pytest
-from shared.simulation.view_utils import get_best_isometric_view
 import numpy as np
+
+from shared.simulation.view_utils import get_best_isometric_view
 
 
 def test_isometric_view_alignment():

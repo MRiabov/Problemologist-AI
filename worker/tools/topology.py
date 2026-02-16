@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any
-from build123d import Compound, Solid
+
+from build123d import Solid
+
 from ..utils.loader import load_component_from_script
 
 

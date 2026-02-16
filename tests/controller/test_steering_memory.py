@@ -1,6 +1,7 @@
+from unittest.mock import patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import patch
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -9,7 +10,6 @@ from controller.persistence.steering_memory import (
     get_user_preferences,
     set_user_preference,
 )
-from controller.persistence.models import UserSteeringPreference
 
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

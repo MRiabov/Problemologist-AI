@@ -1,5 +1,5 @@
-import logging
 import structlog
+
 from shared.models.schemas import ElectronicsSection
 
 logger = structlog.get_logger(__name__)

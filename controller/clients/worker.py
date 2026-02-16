@@ -2,6 +2,7 @@ from typing import Literal
 
 import httpx
 
+from shared.simulation.schemas import SimulatorBackendType
 from worker.api.schema import (
     BenchmarkToolResponse,
     EditOp,
@@ -11,7 +12,6 @@ from worker.api.schema import (
     GrepMatch,
     InspectTopologyResponse,
 )
-from shared.simulation.schemas import SimulatorBackendType
 from worker.filesystem.backend import FileInfo
 from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
 

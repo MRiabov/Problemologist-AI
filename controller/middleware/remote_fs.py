@@ -1,14 +1,11 @@
 from pathlib import Path
 from typing import Any
 
-import structlog
-import httpx
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
 from controller.observability.tracing import record_worker_events, sync_asset
 from controller.workflows.execution import ScriptExecutionWorkflow
-from shared.simulation.schemas import SimulatorBackendType
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -25,6 +22,7 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from worker.api.schema import EditOp
 
 

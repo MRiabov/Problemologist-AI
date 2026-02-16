@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from worker.utils.validation import simulate
-from shared.simulation.backends import SimulatorBackendType
+
+import pytest
 from build123d import Box
+
 from worker.simulation.loop import SimulationMetrics
+from worker.utils.validation import simulate
 
 
 @pytest.mark.integration

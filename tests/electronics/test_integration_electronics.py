@@ -1,19 +1,20 @@
 import pytest
-import numpy as np
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
-from build123d import Box, Compound
 from unittest.mock import MagicMock
-from shared.wire_utils import check_wire_clearance
-from shared.pyspice_utils import CircuitValidationResult
+
+from build123d import Box, Compound
+
 from shared.models.schemas import (
+    ElectronicComponent,
     ElectronicsSection,
     PowerSupplyConfig,
-    ElectronicComponent,
     WireConfig,
     WireTerminal,
 )
-from worker.simulation.loop import SimulationLoop, SimulationFailureMode
+from shared.pyspice_utils import CircuitValidationResult
+from shared.wire_utils import check_wire_clearance
+from worker.simulation.loop import SimulationLoop
 
 
 def test_int_135_wire_clearance_basic():

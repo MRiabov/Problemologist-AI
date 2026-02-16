@@ -1,6 +1,7 @@
 import asyncio
+
 import structlog
-from typing import Dict, List
+
 from shared.models.steerability import SteerablePrompt
 
 logger = structlog.get_logger(__name__)
@@ -13,7 +14,7 @@ class SteerabilityService:
     """
 
     def __init__(self):
-        self._queues: Dict[str, asyncio.Queue[SteerablePrompt]] = {}
+        self._queues: dict[str, asyncio.Queue[SteerablePrompt]] = {}
         self._lock = asyncio.Lock()
 
     async def _get_or_create_queue(
@@ -48,7 +49,7 @@ class SteerabilityService:
         )
         return prompt
 
-    async def get_queued_prompts(self, session_id: str) -> List[SteerablePrompt]:
+    async def get_queued_prompts(self, session_id: str) -> list[SteerablePrompt]:
         """
         Return a list of all currently queued prompts for a session (non-destructive).
         """

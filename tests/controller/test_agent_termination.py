@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from langgraph.graph import END
 
 from controller.agent.graph import should_continue
 from controller.agent.state import AgentState, AgentStatus

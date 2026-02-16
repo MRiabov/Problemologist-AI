@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
+import pytest
+
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
-from shared.simulation.backends import SimulatorBackendType
-from build123d import Box
 
 
 @pytest.mark.integration
@@ -47,6 +47,6 @@ def test_physics_parity_rigid_body(tmp_path):
     # Increase tolerance to 15% relative to initial height (1.0m)
     # Different solvers (MuJoCo vs Genesis) have different default contact models
     tolerance = 0.15
-    assert (
-        dist < tolerance
-    ), f"Parity mismatch: MuJoCo={pos_mujoco}, Genesis={pos_genesis}, dist={dist}"
+    assert dist < tolerance, (
+        f"Parity mismatch: MuJoCo={pos_mujoco}, Genesis={pos_genesis}, dist={dist}"
+    )
