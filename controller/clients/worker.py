@@ -9,6 +9,7 @@ from worker.api.schema import (
     GitCommitResponse,
     GitStatusResponse,
     GrepMatch,
+    InspectTopologyResponse,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from worker.filesystem.backend import FileInfo
@@ -47,6 +48,23 @@ class WorkerClient:
         """Helper to close a client only if it was created locally."""
         if not self.http_client:
             await client.aclose()
+
+    async def inspect_topology(
+        self, target_id: str, script_path: str = "script.py"
+    ) -> InspectTopologyResponse:
+        """Inspect topological features via worker."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/topology/inspect",
+                json={"target_id": target_id, "script_path": script_path},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return InspectTopologyResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
 
     async def list_files(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory."""

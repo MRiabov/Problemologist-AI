@@ -6,6 +6,59 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/topology/inspect": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "Api Inspect Topology",
+        "description": "Inspect topological features of the component.",
+        "operationId": "api_inspect_topology_topology_inspect_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectTopologyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectTopologyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/ls": {
       "post": {
         "tags": [
@@ -1739,6 +1792,64 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InspectTopologyRequest": {
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "title": "Target Id",
+            "description": "Target ID (e.g. face_0, part_1)."
+          },
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the build script.",
+            "default": "script.py"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_id"
+        ],
+        "title": "InspectTopologyRequest",
+        "description": "Request to inspect topological features."
+      },
+      "InspectTopologyResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Properties"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "InspectTopologyResponse",
+        "description": "Response from topology inspection."
       },
       "LintRequest": {
         "properties": {
