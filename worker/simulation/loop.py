@@ -204,24 +204,26 @@ class SimulationLoop:
                 self.validation_report, "violations", ["unknown error"]
             )
             msg = f"validation_failed: {', '.join(map(str, violations))}"
-            self.fail_reason = msg
+            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=self.fail_reason,
+                fail_reason=f"validation_failed: {', '.join(map(str, violations))}",
+                fail_mode=self.fail_reason,
             )
 
         # Check electronics validation status
         if self.electronics_validation_error:
-            self.fail_reason = self.electronics_validation_error
+            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=self.fail_reason,
+                fail_reason=self.electronics_validation_error,
+                fail_mode=self.fail_reason,
                 confidence="high",
             )
 
@@ -320,12 +322,16 @@ class SimulationLoop:
                 break
 
             if not res.success:
-                self.fail_reason = res.failure_reason or "backend_failure"
+                self.fail_reason = (
+                    res.failure_reason
+                    if isinstance(res.failure_reason, SimulationFailureMode)
+                    else SimulationFailureMode.PHYSICS_INSTABILITY
+                )
                 break
 
             # Check Forbidden Zones
             if self._check_forbidden_collision():
-                self.fail_reason = "collision_with_forbidden_zone"
+                self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
                 break
 
             # Check Goal Zone
@@ -335,7 +341,7 @@ class SimulationLoop:
 
             # Check Motor Overload
             if self._check_motor_overload():
-                self.fail_reason = "motor_overload"
+                self.fail_reason = SimulationFailureMode.OVERCURRENT
                 break
 
             # 7. Check Wire Failure (T015)
@@ -351,9 +357,7 @@ class SimulationLoop:
                             props = get_awg_properties(wire.gauge_awg)
                             limit = props["tensile_strength_n"]
                             if tension > limit:
-                                self.fail_reason = (
-                                    f"{SimulationFailureMode.WIRE_TORN}:{wire.wire_id}"
-                                )
+                                self.fail_reason = SimulationFailureMode.WIRE_TORN
                                 emit_event(
                                     ElectricalFailureEvent(
                                         failure_type="wire_torn",
@@ -444,7 +448,7 @@ class SimulationLoop:
                             if not passed:
                                 self.fail_reason = (
                                     self.fail_reason
-                                    or f"{SimulationFailureMode.FLUID_OBJECTIVE_FAILED}:{fo.fluid_id}"
+                                    or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
                                 )
                         elif fo.type == "flow_rate":
                             # T016: Use cumulative crossed count for more accurate flow rate
@@ -486,7 +490,7 @@ class SimulationLoop:
                             if not passed:
                                 self.fail_reason = (
                                     self.fail_reason
-                                    or f"{SimulationFailureMode.FLUID_OBJECTIVE_FAILED}:{fo.fluid_id}"
+                                    or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
                                 )
 
         # Final success determination:
@@ -527,7 +531,10 @@ class SimulationLoop:
             total_energy=metrics.total_energy,
             max_velocity=metrics.max_velocity,
             success=is_success,
-            fail_reason=self.fail_reason,
+            fail_reason=str(self.fail_reason) if self.fail_reason else None,
+            fail_mode=self.fail_reason
+            if isinstance(self.fail_reason, SimulationFailureMode)
+            else None,
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,

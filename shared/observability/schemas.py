@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from shared.enums import SimulationFailureMode
+
 
 class ObservabilityEventType(StrEnum):
     # 1. Component usage
@@ -84,15 +86,6 @@ class ObservabilityEventType(StrEnum):
     GPU_OOM_RETRY = "gpu_oom_retry"
 
 
-class SimulationFailureReason(StrEnum):
-    TIMEOUT = "timeout"
-    OUT_OF_BOUNDS = "out_of_bounds"
-    FORBID_ZONE_HIT = "forbid_zone_hit"
-    PART_BREAKAGE = "part_breakage"
-    STABILITY_ISSUE = "stability_issue"
-    NONE = "none"
-
-
 class BaseEvent(BaseModel):
     """Base class for all observability events."""
 
@@ -160,7 +153,7 @@ class SimulationMetadata(BaseModel):
 class SimulationResultEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.SIMULATION_RESULT
     success: bool
-    failure_reason: SimulationFailureReason = SimulationFailureReason.NONE
+    failure_reason: SimulationFailureMode = SimulationFailureMode.NONE
     time_elapsed_s: float
     compute_time_ms: float
     metadata: SimulationMetadata = Field(default_factory=SimulationMetadata)

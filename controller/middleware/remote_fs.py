@@ -15,7 +15,7 @@ from shared.observability.schemas import (
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
     RunCommandToolEvent,
-    SimulationFailureReason,
+    SimulationFailureMode,
     SimulationInstabilityEvent,
     SimulationRequestEvent,
     SimulationResultEvent,
@@ -226,18 +226,28 @@ class RemoteFilesystemMiddleware:
 
         # Record result
         # Map failure reason if present in metadata or result
-        failure_reason = SimulationFailureReason.NONE
+        failure_reason = SimulationFailureMode.NONE
         if not res_dict.get("success", True):
             # This is a guestimate mapping for now
             raw_reason = res_dict.get("failure_reason", "").lower()
             if "timeout" in raw_reason:
-                failure_reason = SimulationFailureReason.TIMEOUT
+                failure_reason = SimulationFailureMode.TIMEOUT
             elif "out of bounds" in raw_reason:
-                failure_reason = SimulationFailureReason.OUT_OF_BOUNDS
+                failure_reason = SimulationFailureMode.OUT_OF_BOUNDS
             elif "forbid" in raw_reason:
-                failure_reason = SimulationFailureReason.FORBID_ZONE_HIT
+                failure_reason = SimulationFailureMode.FORBID_ZONE_HIT
             elif "break" in raw_reason or "stress" in raw_reason:
-                failure_reason = SimulationFailureReason.PART_BREAKAGE
+                failure_reason = SimulationFailureMode.PART_BREAKAGE
+            elif "nan" in raw_reason or "instability" in raw_reason:
+                failure_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+            elif "short_circuit" in raw_reason:
+                failure_reason = SimulationFailureMode.SHORT_CIRCUIT
+            elif "overcurrent" in raw_reason:
+                failure_reason = SimulationFailureMode.OVERCURRENT
+            elif "wire_torn" in raw_reason:
+                failure_reason = SimulationFailureMode.WIRE_TORN
+            elif "open_circuit" in raw_reason:
+                failure_reason = SimulationFailureMode.OPEN_CIRCUIT
 
         await record_worker_events(
             episode_id=self.client.session_id,

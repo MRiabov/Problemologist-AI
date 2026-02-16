@@ -392,8 +392,10 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control: (
+                                sinusoidal(t, p.speed, p.frequency or 1.0)
+                            )
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
