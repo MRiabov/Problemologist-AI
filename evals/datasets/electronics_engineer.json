@@ -1,0 +1,52 @@
+[
+    {
+        "id": "ee-001",
+        "task": "Design a power system for a single DC motor. Connect a 12V power supply to the motor. Route the wires from the supply terminals to the motor terminals, ensuring they follow the frame geometry.",
+        "expected_criteria": "Circuit includes 12V PSU and DC motor. Wires are routed between components."
+    },
+    {
+        "id": "ee-002",
+        "task": "Design a dual-motor drive system. Connect a high-capacity 24V power supply to two identical DC motors in parallel. Route separate wire pairs for each motor and ensure proper grounding.",
+        "expected_criteria": "Circuit has one PSU and two motors in parallel. Four wires total routed in 3D."
+    },
+    {
+        "id": "ee-003",
+        "task": "Design a basic conveyor drive. Connect a 12V battery to a high-torque motor. The wires must be routed along the underside of the conveyor bed to avoid moving parts.",
+        "expected_criteria": "Circuit includes battery and motor. Wires avoid the top surface of the conveyor."
+    },
+    {
+        "id": "ee-004",
+        "task": "Design a vertical lift actuator. Connect a 12V power supply to a linear actuator motor. Route the wires with enough slack to allow for 50mm of vertical travel without tension failure.",
+        "expected_criteria": "Circuit includes PSU and motor. Wire waypoints provide sufficient slack for movement."
+    },
+    {
+        "id": "ee-005",
+        "task": "Design a heavy-duty winch system. Connect two 12V power supplies in series to provide 24V to a high-power winch motor. Use 10 AWG heavy-gauge wire for the power path.",
+        "expected_criteria": "Two PSUs in series, one motor. Thick wire gauge specified in assembly definition."
+    },
+    {
+        "id": "ee-006",
+        "task": "Design a rotating turret base. Connect a 5V power supply to a small gear motor. Route the wires through a central hollow shaft to prevent tangling during rotation.",
+        "expected_criteria": "Circuit includes 5V PSU and motor. Wire waypoints pass through the center of the assembly."
+    },
+    {
+        "id": "ee-007",
+        "task": "Design a three-motor robotic base. Connect a 12V supply to three DC motors. Each motor should have its own dedicated wiring run from a central distribution point.",
+        "expected_criteria": "Three motors in parallel from one PSU. Independent routing for each motor."
+    },
+    {
+        "id": "ee-008",
+        "task": "Design a cooling fan assembly. Connect a 12V PSU to a high-speed fan motor. Route wires along the outer shroud to keep the airflow path clear.",
+        "expected_criteria": "Circuit has PSU and motor. Wires do not intersect the fan blade volume."
+    },
+    {
+        "id": "ee-009",
+        "task": "Design a redundant power system for a critical actuator. Connect two independent 12V power supplies to a single motor. Ensure the wiring from both supplies reaches the motor.",
+        "expected_criteria": "Two PSUs connected to one motor. Dual wiring runs for redundancy."
+    },
+    {
+        "id": "ee-010",
+        "task": "Design a long-reach arm actuator. Connect a 24V supply to a motor at the end of a 500mm arm. Route the wires through internal channels in the arm segments.",
+        "expected_criteria": "Circuit includes 24V PSU and motor. Wires are routed internally through arm geometry."
+    }
+]
