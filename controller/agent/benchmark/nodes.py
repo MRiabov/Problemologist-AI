@@ -19,7 +19,11 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
 from controller.prompts import get_prompt
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    RandomizationStrategy,
+    SimulatorBackendType,
+    ValidationResult,
+)
 
 from ..config import settings
 from .state import BenchmarkGeneratorState
@@ -40,7 +44,7 @@ def extract_python_code(text: str) -> str:
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Breaks down the user prompt into a randomization strategy using a LangGraph node.
-    Refactored to use create_react_agent.
+    Refactored to use with_structured_output for robustness.
     """
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
@@ -56,7 +60,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             base_prompt = get_prompt("benchmark_generator.planner.system")
         except Exception as e:
             logger.error("planner_prompt_load_failed", error=str(e))
-            state["plan"] = {"error": f"Failed to load planner prompt: {e}"}
+            state["plan"] = RandomizationStrategy(
+                theme="error", reasoning=f"Failed to load planner prompt: {e}"
+            )
             return state
 
         # Observability
@@ -78,7 +84,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         logger.info("planner_git_init_complete", session_id=session_id)
 
         # Custom Objectives Logic (Legacy)
-        custom_objectives = (state.get("session") or state["session"]).custom_objectives
+        custom_objectives = state["session"].custom_objectives
         if custom_objectives:
             logger.info("planner_updating_objectives", session_id=session_id)
             if await client.exists("objectives.yaml"):
@@ -90,9 +96,19 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                     if "constraints" not in obj_data:
                         obj_data["constraints"] = {}
                     # Update constraints based on custom objectives
-                    for key in ["max_unit_cost", "max_weight", "target_quantity"]:
-                        if key in custom_objectives:
-                            obj_data["constraints"][key] = custom_objectives[key]
+                    if custom_objectives.max_unit_cost is not None:
+                        obj_data["constraints"]["max_unit_cost"] = (
+                            custom_objectives.max_unit_cost
+                        )
+                    if custom_objectives.max_weight is not None:
+                        obj_data["constraints"]["max_weight"] = (
+                            custom_objectives.max_weight
+                        )
+                    if custom_objectives.target_quantity is not None:
+                        obj_data["constraints"]["target_quantity"] = (
+                            custom_objectives.target_quantity
+                        )
+
                     new_content = yaml.dump(obj_data, sort_keys=False)
                     await client.write_file("objectives.yaml", new_content)
                     logger.info("planner_objectives_updated", session_id=session_id)
@@ -101,12 +117,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             else:
                 logger.info("planner_objectives_not_found_skipping_update")
 
-        # Setup Agent
-        middleware = RemoteFilesystemMiddleware(client)
-        tools = get_benchmark_tools(middleware, session_id)
-        agent = create_react_agent(llm, tools)
-
-        # WP04: Support steering by including history in the planner prompt
+        # Support steering by including history in the planner prompt
         history = state.get("messages", [])
         messages = [
             SystemMessage(content=base_prompt),
@@ -114,54 +125,43 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             HumanMessage(
                 content=(
                     f"Original User Request:\n{state['session'].prompt}\n\n"
-                    "Please generate the randomization strategy JSON now. "
+                    "Please generate the randomization strategy now. "
                     "Take into account any steering or feedback from the history above if present."
                 )
             ),
         ]
 
         try:
-            # Invoke Agent
+            # Use structured output
             logger.info(
                 "planner_agent_invoke_start",
                 session_id=session_id,
                 model=settings.llm_model,
             )
-            result = await agent.ainvoke(
-                {"messages": messages}, config={"callbacks": callbacks}
+            structured_llm = llm.with_structured_output(RandomizationStrategy)
+            plan = await structured_llm.ainvoke(
+                messages, config={"callbacks": callbacks}
             )
             logger.info("planner_agent_invoke_complete", session_id=session_id)
-            state["messages"].extend(result["messages"])
-            final_content = str(result["messages"][-1].content)
 
-            # Parse JSON plan
-            logger.info("planner_parsing_plan", session_id=session_id)
-            json_match = re.search(r"\{.*\}", final_content, re.DOTALL)
-            if json_match:
-                try:
-                    plan = json.loads(json_match.group(0))
-                    state["plan"] = plan
-                    logger.info(
-                        "planner_plan_parsed_successfully", session_id=session_id
-                    )
-                except json.JSONDecodeError:
-                    logger.warning("planner_json_parse_failed", content=final_content)
-                    state["plan"] = {"error": "JSON parse failed"}
-            else:
-                logger.warning("planner_json_not_found", content=final_content)
-                state["plan"] = {"error": "JSON not found"}
+            state["plan"] = plan
+            # Record plan as a message to keep history consistent?
+            # actually, structured output might not return a message easily, but let's append a dummy one if needed.
+            state["messages"].append(
+                HumanMessage(content=f"Generated plan: {plan.theme}")
+            )
 
             logger.info(
                 "planner_node_complete",
                 session_id=session_id,
-                plan_keys=list((state.get("plan") or {}).keys()),
+                theme=plan.theme,
             )
 
         except Exception as e:
             logger.error(
                 "planner_agent_run_failed", error=str(e), session_id=session_id
             )
-            state["plan"] = {"error": str(e)}
+            state["plan"] = RandomizationStrategy(theme="error", reasoning=str(e))
 
     return state
 

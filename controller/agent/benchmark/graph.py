@@ -100,18 +100,66 @@ async def _execute_graph_streaming(
     prompt: str,
 ) -> BenchmarkGeneratorState:
     """Helper to run the graph with streaming and persistence."""
-    session_factory = get_sessionmaker()
-    final_state = initial_state
 
-    # Helper to map internal status to EpisodeStatus
-    def map_status(s: SessionStatus) -> EpisodeStatus:
-        if s == SessionStatus.accepted:
-            return EpisodeStatus.COMPLETED
-        if s == SessionStatus.failed:
-            return EpisodeStatus.FAILED
-        if s == SessionStatus.planned:
-            return EpisodeStatus.PLANNED
-        return EpisodeStatus.RUNNING
+
+def _map_session_to_episode_status(s: SessionStatus) -> EpisodeStatus:
+    """Maps internal SessionStatus to EpisodeStatus enum."""
+    if s == SessionStatus.accepted:
+        return EpisodeStatus.COMPLETED
+    if s == SessionStatus.failed:
+        return EpisodeStatus.FAILED
+    if s == SessionStatus.planned:
+        return EpisodeStatus.PLANNED
+    return EpisodeStatus.RUNNING
+
+
+async def _update_episode_persistence(
+    session_id: uuid.UUID,
+    new_status: SessionStatus,
+    validation_logs: list[str],
+    prompt: str,
+    plan: Any | None = None,
+):
+    """Handles DB updates for an episode."""
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode_status = _map_session_to_episode_status(new_status)
+
+        stmt_select = select(Episode).where(Episode.id == session_id)
+        res = await db.execute(stmt_select)
+        ep = res.scalar_one_or_none()
+
+        if ep:
+            new_metadata = (ep.metadata_vars or {}).copy()
+            new_metadata.update(
+                {
+                    "detailed_status": new_status,
+                    "validation_logs": validation_logs or [],
+                    "prompt": prompt,
+                }
+            )
+
+            ep.status = episode_status
+            ep.metadata_vars = new_metadata
+
+            # Update plan if it exists in state
+            if plan:
+                import json
+
+                plan_data = plan.model_dump() if hasattr(plan, "model_dump") else plan
+                ep.plan = json.dumps(plan_data, indent=2)
+
+            await db.commit()
+
+
+async def _execute_graph_streaming(
+    app: Any,
+    initial_state: BenchmarkGeneratorState,
+    session_id: uuid.UUID,
+    prompt: str,
+) -> BenchmarkGeneratorState:
+    """Helper to run the graph with streaming and persistence."""
+    final_state = initial_state
 
     # Langfuse tracing
     langfuse_callback = get_langfuse_callback(
@@ -134,15 +182,12 @@ async def _execute_graph_streaming(
             )
             final_state.update(state_update)
 
-            # Use local reference to update for logic
-            state = state_update
-
             # Determine new status
             new_status = final_state["session"].status
-
             should_stop = False
+
             if node_name == "planner":
-                if state.get("plan") and "error" not in state["plan"]:
+                if final_state.get("plan") and final_state["plan"].theme != "error":
                     new_status = SessionStatus.planned
                     should_stop = True
                 else:
@@ -150,7 +195,7 @@ async def _execute_graph_streaming(
             elif node_name == "coder":
                 new_status = SessionStatus.validating
             elif node_name == "reviewer":
-                feedback = state.get("review_feedback") or ""
+                feedback = final_state.get("review_feedback") or ""
                 if feedback == "Approved":
                     new_status = SessionStatus.accepted
                 else:
@@ -159,41 +204,19 @@ async def _execute_graph_streaming(
                 node_name == "skills"
                 and final_state["session"].status == SessionStatus.accepted
             ):
-                # If we've approved everything, skills is the final step
                 new_status = SessionStatus.accepted
 
             # Update internal session status
             final_state["session"].status = new_status
 
-            # Update DB (Episode)
-            async with session_factory() as db:
-                episode_status = map_status(new_status)
-
-                stmt_select = select(Episode).where(Episode.id == session_id)
-                res = await db.execute(stmt_select)
-                ep = res.scalar_one_or_none()
-
-                if ep:
-                    new_metadata = (ep.metadata_vars or {}).copy()
-                    new_metadata.update(
-                        {
-                            "detailed_status": new_status,
-                            "validation_logs": final_state["session"].validation_logs
-                            or [],
-                            "prompt": prompt,
-                        }
-                    )
-
-                    ep.status = episode_status
-                    ep.metadata_vars = new_metadata
-
-                    # Update plan if it exists in state
-                    if final_state.get("plan"):
-                        import json
-
-                        ep.plan = json.dumps(final_state["plan"], indent=2)
-
-                    await db.commit()
+            # Update Persistence
+            await _update_episode_persistence(
+                session_id=session_id,
+                new_status=new_status,
+                validation_logs=final_state["session"].validation_logs,
+                prompt=prompt,
+                plan=final_state.get("plan"),
+            )
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
