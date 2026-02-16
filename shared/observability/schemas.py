@@ -149,13 +149,21 @@ class SimulationRequestEvent(BaseEvent):
     script_path: str
 
 
+class SimulationMetadata(BaseModel):
+    """Metadata for simulation results."""
+
+    num_steps: int | None = None
+    max_penetration: float | None = None
+    is_clipping: bool = False
+
+
 class SimulationResultEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.SIMULATION_RESULT
     success: bool
     failure_reason: SimulationFailureReason = SimulationFailureReason.NONE
     time_elapsed_s: float
     compute_time_ms: float
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: SimulationMetadata = Field(default_factory=SimulationMetadata)
 
 
 class COTSSearchEvent(BaseEvent):
@@ -297,11 +305,19 @@ class LibraryUsageEvent(BaseEvent):
     path: str
 
 
+class ReviewEvidenceStats(BaseModel):
+    """Stats for evidence used in a review."""
+
+    has_sim_report: bool = False
+    has_mfg_report: bool = False
+    num_renders: int = 0
+
+
 class ReviewDecisionEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
     decision: str  # "approve", "reject_plan", "reject_code"
     reason: str
-    evidence_stats: dict[str, Any] = Field(default_factory=dict)
+    evidence_stats: ReviewEvidenceStats = Field(default_factory=ReviewEvidenceStats)
 
 
 class ReviewEvent(BaseEvent):
