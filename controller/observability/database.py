@@ -1,15 +1,33 @@
 import ast
+import datetime
 import json
 import uuid
 from typing import Any
 
+import structlog
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
+from pydantic import BaseModel
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
 from shared.enums import TraceType
+
+logger = structlog.get_logger(__name__)
+
+
+class TraceBroadcast(BaseModel):
+    """Schema for broadcasting a trace event."""
+
+    type: str = "new_trace"
+    id: uuid.UUID
+    created_at: str
+    trace_type: TraceType
+    name: str | None
+    content: str | None
+    metadata: dict[str, Any] | None
+    langfuse_trace_id: str | None
 
 
 class DatabaseCallbackHandler(AsyncCallbackHandler):
@@ -30,29 +48,23 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
 
     async def _broadcast_trace(self, trace: Trace) -> None:
         """Helper to broadcast a new trace."""
-        import datetime
-
         created_at = trace.created_at or datetime.datetime.now(datetime.UTC)
+        payload = TraceBroadcast(
+            id=trace.id,
+            created_at=created_at.isoformat(),
+            trace_type=trace.trace_type,
+            name=trace.name,
+            content=trace.content,
+            metadata=trace.metadata_vars,
+            langfuse_trace_id=trace.langfuse_trace_id,
+        )
         await self.broadcaster.broadcast(
-            self.episode_id,
-            {
-                "type": "new_trace",
-                "id": trace.id,
-                "created_at": created_at.isoformat(),
-                "trace_type": trace.trace_type,
-                "name": trace.name,
-                "content": trace.content,
-                "metadata": trace.metadata_vars,
-                "langfuse_trace_id": trace.langfuse_trace_id,
-            },
+            self.episode_id, payload.model_dump(mode="json")
         )
 
     async def on_chain_start(
         self, serialized: dict[str, Any], inputs: dict[str, Any], **_kwargs: Any
     ) -> None:
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.info(
             "chain_start", name=serialized.get("name"), episode_id=str(self.episode_id)
         )
@@ -68,9 +80,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
     async def on_llm_start(
         self, serialized: dict[str, Any], prompts: list[str], **_kwargs: Any
     ) -> None:
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.info(
             "llm_start", model=serialized.get("name"), episode_id=str(self.episode_id)
         )
@@ -111,9 +120,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 pass
 
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.info(
             "tool_start",
             name=serialized.get("name"),
@@ -137,9 +143,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         except Exception as e:
             # Silently fail or log a warning if DB is unavailable/constraint fails
             # This is critical for standalone evals or transient issues
-            import structlog
-
-            logger = structlog.get_logger(__name__)
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
@@ -162,9 +165,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             except Exception:
                 content = str(output)
 
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.info("tool_end", output=content, episode_id=str(self.episode_id))
 
         try:
@@ -180,9 +180,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 await db.refresh(trace)
                 await self._broadcast_trace(trace)
         except Exception as e:
-            import structlog
-
-            logger = structlog.get_logger(__name__)
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
@@ -196,9 +193,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         if response.generations and response.generations[0]:
             content = response.generations[0][0].text
 
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.info("llm_end", content=content, episode_id=str(self.episode_id))
 
         try:
@@ -214,9 +208,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 await db.refresh(trace)
                 await self._broadcast_trace(trace)
         except Exception as e:
-            import structlog
-
-            logger = structlog.get_logger(__name__)
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
@@ -248,9 +239,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
 
                 await db.commit()
         except Exception as e:
-            import structlog
-
-            logger = structlog.get_logger(__name__)
             logger.warning(
                 "database_events_failed", error=str(e), episode_id=str(self.episode_id)
             )

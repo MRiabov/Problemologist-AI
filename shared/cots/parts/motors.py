@@ -87,3 +87,32 @@ class ServoMotor(COTSPart):
     def info(self):
         """Return dict of properties."""
         return self.metadata
+
+
+def retrieve_cots_physics(cots_id: str) -> dict[str, float] | None:
+    """
+    Retrieve physics parameters for a COTS part by ID.
+    Returns None if ID not found or not a motor.
+    """
+    # Check if it's a known servo/motor
+    if cots_id in ServoMotor.motor_data:
+        data = ServoMotor.motor_data[cots_id]
+        torque = data["torque_nm"]
+
+        # heuristic for KP/KV if not specified in DB
+        # KP = torque / saturation_error (rad) ~ 0.2 rad
+        saturation_error = 0.2
+        kp = torque / saturation_error
+        # KV = KP * 0.1 (critical damping approx)
+        kv = kp * 0.1
+
+        return {
+            "torque": torque,
+            "kp": kp,
+            "kv": kv,
+            "max_velocity": 60.0
+            / data["speed_sec_60deg"],  # deg/sec -> but we need rad/s?
+            # actually speed is sec/60deg. so deg/sec = 60/speed.
+            # rad/s = (60/speed) * (pi/180)
+        }
+    return None

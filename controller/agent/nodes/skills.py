@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from pathlib import Path
-
+from typing import Any
 from git import GitCommandError, Repo
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
@@ -17,6 +17,7 @@ from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 
 from .base import BaseNode, SharedNodeContext
+from controller.utils.git import GitManager
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class SkillsNode(BaseNode):
     """
     Skills node: Analyzes the journal to suggest new skills.
-    Refactored to use create_react_agent.
+    Refactored to use create_react_agent and GitManager.
     """
 
     def __init__(
@@ -34,99 +35,16 @@ class SkillsNode(BaseNode):
         super().__init__(context)
         self.suggested_skills_dir = Path(suggested_skills_dir)
         self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
-        self.repo_url = os.getenv("GIT_REPO_URL")
-        self.pat = os.getenv("GIT_PAT")
-        self.repo = None
-        self._ensure_repo()
-
-    def _get_auth_url(self) -> str | None:
-        """Inject PAT into URL if available."""
-        if not self.repo_url:
-            return None
-        if self.pat and "https://" in self.repo_url:
-            return self.repo_url.replace("https://", f"https://{self.pat}@")
-        return self.repo_url
-
-    def _ensure_repo(self):
-        """Ensure the skills directory is a git repository."""
-        if not self.repo_url:
-            logger.warning("GIT_REPO_URL not set, skipping git sync setup.")
-            return
-
-        try:
-            if (self.suggested_skills_dir / ".git").exists():
-                self.repo = Repo(self.suggested_skills_dir)
-                logger.info("Loaded existing git repo for skills.")
-            else:
-                auth_url = self._get_auth_url()
-                logger.info(f"Cloning skills repo from {self.repo_url}...")
-                self.repo = Repo.clone_from(auth_url, self.suggested_skills_dir)
-                logger.info("Skills repo cloned successfully.")
-
-            with self.repo.config_writer() as git_config:
-                if not git_config.has_option("user", "email"):
-                    git_config.set_value("user", "email", "agent@problemologist.ai")
-                    git_config.set_value("user", "name", "Problemologist Agent")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize git repo: {e}")
-            self.repo = None
-
-    async def _resolve_conflicts(self):
-        """Resolve git conflicts using LLM."""
-        unmerged = self.repo.git.diff("--name-only", "--diff-filter=U").splitlines()
-
-        for file_path in unmerged:
-            full_path = self.suggested_skills_dir / file_path
-            if not full_path.exists():
-                continue
-
-            content = full_path.read_text()
-            prompt = self.ctx.pm.render("git_resolver", content=content)
-
-            logger.info(f"Resolving conflict in {file_path}...")
-            response = await self.ctx.llm.ainvoke([HumanMessage(content=prompt)])
-            resolved_content = str(response.content)
-
-            if "```" in resolved_content:
-                lines = resolved_content.splitlines()
-                if lines and lines[0].strip().startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].strip().startswith("```"):
-                    lines = lines[:-1]
-                resolved_content = "\n".join(lines)
-
-            full_path.write_text(resolved_content)
-            self.repo.git.add(file_path)
+        self.git = GitManager(
+            repo_path=self.suggested_skills_dir,
+            repo_url=os.getenv("GIT_REPO_URL"),
+            pat=os.getenv("GIT_PAT"),
+        )
+        self.git.ensure_repo()
 
     async def _sync_git(self, commit_message: str):
-        """Commit and push changes with rebase strategy."""
-        if not self.repo:
-            return
-
-        try:
-            self.repo.git.add(A=True)
-            self.repo.index.commit(commit_message)
-
-            try:
-                self.repo.git.pull("--rebase")
-            except GitCommandError:
-                logger.warning("Rebase conflict during pull. Attempting to resolve...")
-                try:
-                    await self._resolve_conflicts()
-                    self.repo.git.rebase("--continue")
-                    logger.info("Conflict resolved and rebase continued.")
-                except Exception as ex:
-                    logger.error(f"Resolution failed: {ex}")
-                    self.repo.git.rebase("--abort")
-                    logger.error("Rebase aborted. Skills might be out of sync.")
-                    return
-
-            self.repo.git.push()
-            logger.info("Skills synced to git successfully.")
-
-        except GitCommandError as e:
-            logger.error(f"Git sync failed: {e}")
+        """Sync changes with git via GitManager."""
+        await self.git.sync_changes(commit_message, llm=self.ctx.llm, pm=self.ctx.pm)
 
     async def __call__(
         self, state: AgentState, config: RunnableConfig | None = None
