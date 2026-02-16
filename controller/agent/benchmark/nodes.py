@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import base64
 import json
@@ -43,6 +44,17 @@ def extract_python_code(text: str) -> str:
     if match:
         return match.group(1).strip()
     return text.strip()
+
+
+def verify_syntax(code: str) -> tuple[bool, str | None]:
+    """Verifies the syntax of the provided Python code."""
+    try:
+        ast.parse(code)
+        return True, None
+    except SyntaxError as e:
+        return False, str(e)
+    except Exception as e:
+        return False, str(e)
 
 
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:

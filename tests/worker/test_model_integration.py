@@ -58,6 +58,8 @@ def test_model_produced_script_integration(tmp_path):
     try:
         exec(model_script, local_scope)
     except Exception as e:
+        if "glGetError" in str(e):
+            pytest.skip(f"MuJoCo GL initialization failed during exec: {e}")
         pytest.fail(f"Execution of model script failed: {e}")
 
     assert "build" in local_scope

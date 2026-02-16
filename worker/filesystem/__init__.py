@@ -7,6 +7,7 @@ and read-only mount points for utils, skills, and reviews.
 from .backend import (
     FileInfo,
     LocalFilesystemBackend,
+    SandboxFilesystemBackend,
     SessionManager,
     SimpleSessionManager,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "FileInfo",
     "FilesystemRouter",
     "LocalFilesystemBackend",
+    "SandboxFilesystemBackend",
     "MountPoint",
     "SessionManager",
     "SimpleSessionManager",

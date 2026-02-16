@@ -27,6 +27,10 @@ class MuJoCoBackend(PhysicsBackend):
         if scene.scene_path:
             self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
             self.data = mujoco.MjData(self.model)
+            # Ensure offscreen framebuffer is large enough for 640x480 or slightly larger
+            if self.model is not None:
+                self.model.vis.global_.offwidth = max(self.model.vis.global_.offwidth, 800)
+                self.model.vis.global_.offheight = max(self.model.vis.global_.offheight, 800)
         else:
             raise ValueError("MuJoCoBackend requires scene_path")
 

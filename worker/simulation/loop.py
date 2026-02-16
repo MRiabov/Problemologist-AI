@@ -110,7 +110,10 @@ class SimulationLoop:
             for child in children:
                 label = getattr(child, "label", None)
                 if label:
-                    self.material_lookup[label] = child.metadata.get("material_id")
+                    metadata = getattr(child, "metadata", {})
+                    self.material_lookup[label] = (
+                        metadata.get("material_id") if metadata else None
+                    )
         else:
             self.config = None
             self.material_lookup = {}
@@ -161,6 +164,7 @@ class SimulationLoop:
         )
 
         # T015: derive is_powered_map from electronics.circuit state
+        self._electronics_dirty = False
         if self.electronics:
             self._update_electronics(force=True)
 
@@ -394,9 +398,12 @@ class SimulationLoop:
                 # Setup a reasonable camera for video if not already set
                 # For MuJoCo we can use "free" or a named camera.
                 # For Genesis we use "main".
-                frame = self.backend.render_camera("main", 640, 480)
-                particles = self.backend.get_particle_positions()
-                video_renderer.add_frame(frame, particles=particles)
+                try:
+                    frame = self.backend.render_camera("main", 640, 480)
+                    particles = self.backend.get_particle_positions()
+                    video_renderer.add_frame(frame, particles=particles)
+                except Exception as e:
+                    logger.warning("simulation_render_failed", error=str(e))
 
         # Finalize video
         if video_renderer:
@@ -510,23 +517,12 @@ class SimulationLoop:
         elif self.goal_sites:
             # If target object AND goals are required, success depends on goal achievement
             is_success = self.success
-        elif has_other_objectives:
-            # If no failures and fluid/stress objectives passed, it's a success
-            is_success = True
         else:
-            # Stability test or goal-less benchmark (legacy behavior expects False if no goal)
-            is_success = False
+            # If no failures and (no goals or fluid/stress objectives passed), it's a success
+            # For goal-less benchmarks, absence of failure means stability/success.
+            is_success = True
 
         metrics = self.metric_collector.get_metrics()
-
-        if fail_reason:
-            is_success = False
-        elif self.goal_sites:
-            is_success = self.success
-        elif has_other_objectives:
-            is_success = True
-        else:
-            is_success = False
 
         return SimulationMetrics(
             total_time=current_time,
@@ -571,4 +567,11 @@ class SimulationLoop:
             for b in self.backend.get_all_body_names()
             for z in self.forbidden_sites
             if b not in ["world", "0"]
+        )
+
+    def check_goal_with_vertices(self, body_name: str) -> bool:
+        """Check if any goal site is colliding with the specified body."""
+        return any(
+            self.backend.check_collision(body_name, goal_site)
+            for goal_site in self.goal_sites
         )

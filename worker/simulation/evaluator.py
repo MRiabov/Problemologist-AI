@@ -28,13 +28,16 @@ class SuccessEvaluator:
             return "timeout_exceeded"
 
         # 2. Physics Instability (NaNs)
-        if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
+        # Convert to arrays as they might be tuples, which np.isnan doesn't support in newer numpy
+        qpos_arr = np.asanyarray(qpos)
+        qvel_arr = np.asanyarray(qvel)
+        if np.any(np.isnan(qpos_arr)) or np.any(np.isnan(qvel_arr)):
             return "PHYSICS_INSTABILITY"
 
         # 3. Fell off world
         # Heuristic: Z < -2.0
         # Assume free joint: qpos[2] is Z
-        if len(qpos) >= 3 and qpos[2] < -2.0:
+        if len(qpos_arr) >= 3 and qpos_arr[2] < -2.0:
             return "target_fell_off_world"
 
         return None
