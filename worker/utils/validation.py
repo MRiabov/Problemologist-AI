@@ -22,7 +22,6 @@ from shared.models.simulation import (
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
-from worker.simulation.loop import SimulationLoop
 from worker.workbenches.config import load_config
 
 from .dfm import validate_and_price
@@ -373,6 +372,8 @@ def simulate(
         moving_parts=moving_parts,
         electronics=electronics,
     )
+
+    from worker.simulation.loop import SimulationLoop
 
     loop = SimulationLoop(
         str(scene_path),

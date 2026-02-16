@@ -4,6 +4,7 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
+from shared.enums import SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import FluidMetricResult
 from shared.observability.events import emit_event
@@ -12,11 +13,15 @@ from shared.observability.schemas import (
     SimulationBackendSelectedEvent,
 )
 from shared.simulation.backends import SimulationScene
-from shared.simulation.schemas import SimulationFailureMode, SimulatorBackendType
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.electronics import ElectronicsManager
 from worker.simulation.evaluator import SuccessEvaluator
 from worker.simulation.factory import get_physics_backend
 from worker.simulation.metrics import MetricCollector, SimulationMetrics
+from worker.utils.dfm import validate_and_price
+from worker.utils.rendering import VideoRenderer
+from worker.workbenches.config import load_config
+from worker.workbenches.models import ManufacturingMethod
 
 logger = structlog.get_logger(__name__)
 
@@ -25,6 +30,8 @@ logger = structlog.get_logger(__name__)
 MAX_SIMULATION_TIME_SECONDS = 30.0
 # Motor overload threshold: fail if clamped for this duration (seconds)
 MOTOR_OVERLOAD_THRESHOLD_SECONDS = 2.0
+# Standard simulation step for MuJoCo (2ms)
+SIMULATION_STEP_S = 0.002
 
 
 class SimulationLoop:
@@ -72,10 +79,6 @@ class SimulationLoop:
         self.electronics_validation_error = None
 
         if self.component:
-            from worker.utils.dfm import validate_and_price
-            from worker.workbenches.config import load_config
-            from worker.workbenches.models import ManufacturingMethod
-
             # WP2: Load custom configuration from working directory if present
             working_dir = Path(xml_path).parent
             custom_config_path = working_dir / "manufacturing_config.yaml"
@@ -192,17 +195,15 @@ class SimulationLoop:
 
         video_renderer = None
         if video_path:
-            from worker.utils.rendering import VideoRenderer
-
             video_renderer = VideoRenderer(video_path)
 
         # T012: Check validation hook before starting
         if self.validation_report and not getattr(
             self.validation_report, "is_manufacturable", False
         ):
-            violations = getattr(
-                self.validation_report, "violations", ["unknown error"]
-            )
+            violations = getattr(self.validation_report, "violations", None) or [
+                "unknown error"
+            ]
             msg = f"validation_failed: {', '.join(map(str, violations))}"
             self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
             return SimulationMetrics(
@@ -210,7 +211,7 @@ class SimulationLoop:
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=f"validation_failed: {', '.join(map(str, violations))}",
+                fail_reason=msg,
                 fail_mode=self.fail_reason,
             )
 
@@ -311,7 +312,7 @@ class SimulationLoop:
             max_stress = 0.0
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
-            # 3. Check for Failures
+            # 4. Check Success/Failure conditions
             fail_reason = self.success_evaluator.check_failure(
                 current_time,
                 target_pos,
@@ -556,14 +557,46 @@ class SimulationLoop:
         return fields
 
     def _check_motor_overload(self) -> bool:
-        # Delegate to SuccessEvaluator
-        # This requires more info from backend, so let's just use SuccessEvaluator check
+        # Check all position/torque actuators for saturation
+        from worker.simulation.loop import SIMULATION_STEP_S
+
         actuator_names = self.backend.get_all_actuator_names()
-        forces = [self.backend.get_actuator_state(n).force for n in actuator_names]
-        # Assuming forcerange[1] is the limit
-        limit = 1.0  # Placeholder
-        return self.success_evaluator.check_motor_overload(
-            actuator_names, forces, limit, 0.002
+
+        for name in actuator_names:
+            state = self.backend.get_actuator_state(name)
+            # MuJoCo actuators usually have a forcerange [low, high]
+            # We check if it's hitting EITHER limit
+            # For now, we assume the backend provides forcerange or we use a fallback
+            limit = 1.0  # default fallback
+
+            # Identify the motor limit from the model
+            try:
+                # MuJoCo model is in self.backend.model
+                import mujoco
+
+                idx = mujoco.mj_name2id(
+                    self.backend.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
+                )
+                if idx >= 0:
+                    if self.backend.model.actuator_forcelimited[idx]:
+                        limit = self.backend.model.actuator_forcerange[idx][1]
+                    else:
+                        # Not force limited, so no overload possible
+                        continue
+            except Exception:
+                pass
+
+            if self.success_evaluator.check_motor_overload(
+                [name], [state.force], limit, SIMULATION_STEP_S
+            ):
+                return True
+        return False
+
+    def check_goal_with_vertices(self, body_name: str) -> bool:
+        """Check if any vertices of body_name are inside any of the goal sites."""
+        return any(
+            self.backend.check_collision(body_name, goal_site)
+            for goal_site in self.goal_sites
         )
 
     def _check_forbidden_collision(self) -> bool:

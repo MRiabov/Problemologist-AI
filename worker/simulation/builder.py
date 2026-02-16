@@ -43,6 +43,7 @@ class AssemblyPartData(BaseModel):
     is_zone: bool = False
     zone_type: str | None = None
     zone_size: list[float] | None = None
+    constraint: str | None = None
 
 
 class CommonAssemblyTraverser:
@@ -82,6 +83,7 @@ class CommonAssemblyTraverser:
                     is_zone=zone_info["is_zone"],
                     zone_type=zone_info["type"],
                     zone_size=zone_info["size"],
+                    constraint=getattr(child, "constraint", None),
                 )
             )
         return parts_data
@@ -515,6 +517,15 @@ class SceneCompiler:
         final_forcerange = forcerange
 
         # Try to derive from COTS if missing parameters
+        if not cots_id:
+            # Heuristic: find known motor ID in name
+            from shared.cots.parts.motors import ServoMotor
+
+            for motor_id in ServoMotor.motor_data:
+                if motor_id in name:
+                    cots_id = motor_id
+                    break
+
         if cots_id:
             from shared.cots.parts.motors import retrieve_cots_physics
 
@@ -634,6 +645,11 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
+
+        for data in parts_data:
+            if data.constraint and data.constraint.startswith("weld:"):
+                target = data.constraint.split(":")[1]
+                weld_constraints.append((data.label, target))
 
         for data in parts_data:
             if data.is_zone:

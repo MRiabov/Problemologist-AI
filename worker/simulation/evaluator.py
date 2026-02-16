@@ -30,13 +30,14 @@ class SuccessEvaluator:
             return SimulationFailureMode.TIMEOUT
 
         # 2. Physics Instability (NaNs)
-        if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
-            return SimulationFailureMode.PHYSICS_INSTABILITY
+        if qpos is not None and qvel is not None:
+            if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
+                return SimulationFailureMode.PHYSICS_INSTABILITY
 
         # 3. Fell off world
         # Heuristic: Z < -2.0
         # Assume free joint: qpos[2] is Z
-        if len(qpos) >= 3 and qpos[2] < -2.0:
+        if qpos is not None and len(qpos) >= 3 and qpos[2] < -2.0:
             return SimulationFailureMode.OUT_OF_BOUNDS
 
         return None
