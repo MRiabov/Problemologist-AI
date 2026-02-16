@@ -137,7 +137,10 @@ async def execute_agent_task(
                     callbacks.append(langfuse_callback)
 
                 # Prepare initial state based on agent type
-                if agent_name.startswith("engineer"):
+                if (
+                    agent_name.startswith("engineer")
+                    or agent_name == "electronics_engineer"
+                ):
                     initial_input = {
                         "task": task,
                         "session_id": session_id,

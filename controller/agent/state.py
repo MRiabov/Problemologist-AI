@@ -20,7 +20,6 @@ class AgentStatus(StrEnum):
     CODE_REJECTED = "code_rejected"
 
 
-@type_check
 class AgentState(BaseModel):
     """The state of the agent passed between nodes in the graph."""
 
