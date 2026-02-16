@@ -248,7 +248,7 @@ def validate_node_output(
 
     # 1. Required files check
     required_files = {
-        "planner": ["plan.md", "todo.md"],
+        "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
         "coder": [
             "plan.md",
             "todo.md",

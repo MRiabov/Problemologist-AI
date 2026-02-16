@@ -17,3 +17,4 @@ class BenchmarkGeneratorState(BaseModel):
     review_round: int = 0  # Current review iteration
     plan: RandomizationStrategy | None = None  # The randomization strategy
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
+    next_node: str = ""

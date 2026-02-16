@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from langchain_core.tools import tool
 
+from controller.agent.state import AgentStatus
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.cots.agent import search_cots_catalog
@@ -59,6 +60,15 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    @tool
+    async def refuse_plan(reason: str):
+        """
+        Refuse the plan provided by the architect/planner.
+        Only use this if you can prove that the constraints (budget, weight, geometry) are impossible to meet.
+        """
+        # This is a signal to the reviewer and orchestrator
+        return f"PLAN_REFUSED: {reason}"
+
     return [
         list_files,
         read_file,
@@ -67,6 +77,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
+        refuse_plan,
         search_cots_catalog,
     ]
 

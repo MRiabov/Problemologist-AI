@@ -73,12 +73,23 @@ class PlannerNode(BaseNode):
 
                 # Read artifacts to validate
                 artifacts = {}
-                for f in ["plan.md", "todo.md"]:
+                for f in ["plan.md", "todo.md", "assembly_definition.yaml"]:
                     with suppress(Exception):
                         content = await self.ctx.fs.read_file(f)
                         artifacts[f] = content
 
                 is_valid, validation_errors = validate_node_output("planner", artifacts)
+
+                # WP3: Deeper validation for assembly_definition.yaml
+                if is_valid and "assembly_definition.yaml" in artifacts:
+                    from worker.utils.file_validation import validate_assembly_definition_yaml
+                    is_valid_yaml, yaml_res = validate_assembly_definition_yaml(artifacts["assembly_definition.yaml"])
+                    if not is_valid_yaml:
+                        is_valid = False
+                        validation_errors.extend(yaml_res)
+                    elif yaml_res.totals.estimated_unit_cost_usd <= 0:
+                        is_valid = False
+                        validation_errors.append("assembly_definition.yaml: Totals not populated. Did you run validate_and_price.py?")
 
                 if not is_valid:
                     error_msg = f"Planner output validation failed: {validation_errors}"

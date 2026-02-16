@@ -26,6 +26,7 @@ from .nodes import (
     planner_node,
     reviewer_node,
     skills_node,
+    compressor_node,
 )
 from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
@@ -45,6 +46,7 @@ def define_graph():
     workflow.add_node("reviewer", reviewer_node)
     workflow.add_node("cots_search", cots_search_node)
     workflow.add_node("skills", skills_node)
+    workflow.add_node("compressor", compressor_node)
     workflow.add_node("steer", steerability_node)
 
     # Define transitions
@@ -66,22 +68,45 @@ def define_graph():
     # Conditional edges for reviewer
     async def reviewer_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal["steer", "coder", "planner", "skills"]:
+    ) -> Literal["steer", "coder", "planner", "skills", "compressor"]:
         # Check for steering first
         if await check_steering(state) == "steer":
             return "steer"
 
+        # WP3: Determine intended next node
         feedback = state.get("review_feedback", "")
+        intended_next = "coder"
         if feedback == "Approved":
-            return "skills"
-        if feedback.startswith("Steering:"):
-            return "planner"
-        return "coder"
+            intended_next = "skills"
+        elif feedback.startswith("Steering:"):
+            intended_next = "planner"
+
+        # WP3: Token Compression Check
+        if len(state.get("messages", [])) > 20:
+            state["next_node"] = intended_next
+            return "compressor"
+
+        return intended_next
 
     workflow.add_conditional_edges(
         "reviewer",
         reviewer_router,
-        {"steer": "steer", "coder": "coder", "planner": "planner", "skills": "skills"},
+        {
+            "steer": "steer",
+            "coder": "coder",
+            "planner": "planner",
+            "skills": "skills",
+            "compressor": "compressor",
+        },
+    )
+
+    def route_after_compression(state: BenchmarkGeneratorState) -> str:
+        return state.get("next_node") or "reviewer"
+
+    workflow.add_conditional_edges(
+        "compressor",
+        route_after_compression,
+        {"coder": "coder", "planner": "planner", "skills": "skills", "reviewer": "reviewer"},
     )
 
     workflow.add_edge("skills", END)

@@ -9,6 +9,8 @@ from .nodes.planner import planner_node
 from .nodes.reviewer import reviewer_node
 from .nodes.coder import coder_node
 from .nodes.electronics_engineer import electronics_engineer_node
+from .nodes.electronics_reviewer import electronics_reviewer_node
+from .nodes.compressor import compressor_node
 from .nodes.skills import skills_node
 from .nodes.cots_search import cots_search_node
 from .state import AgentState, AgentStatus
@@ -21,23 +23,26 @@ async def should_continue(state: AgentState) -> str:
     if await check_steering(state) == "steer":
         return "steer"
 
+    # WP3: Determine intended next node
+    intended_next = "skills"
+    if state.status == AgentStatus.APPROVED:
+        if "- [ ]" in state.todo:
+            intended_next = "coder"
+    elif state.iteration < 5:
+        if state.status == AgentStatus.PLAN_REJECTED:
+            intended_next = "planner"
+        else:
+            intended_next = "coder"
+
+    # WP3: Token Compression Check
+    if len(state.messages) > 20 or state.turn_count > settings.max_agent_turns * 0.8:
+        state.next_node = intended_next
+        return "compressor"
+
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 
-    if state.status == AgentStatus.APPROVED:
-        # T010: Check if there are more steps in TODO before finishing
-        if "- [ ]" in state.todo:
-            logger.info("step_approved_continuing_to_next", todo=state.todo)
-            return "coder"
-        return "skills"
-
-    # If rejected and we haven't looped too many times
-    if state.iteration < 5:
-        if state.status == AgentStatus.PLAN_REJECTED:
-            return "planner"
-        return "coder"
-
-    return "skills"
+    return intended_next
 
 
 # Initialize the StateGraph with our AgentState
@@ -47,9 +52,11 @@ builder = StateGraph(AgentState)
 builder.add_node("planner", planner_node)
 builder.add_node("coder", coder_node)
 builder.add_node("electronics_engineer", electronics_engineer_node)
+builder.add_node("electronics_reviewer", electronics_reviewer_node)
 builder.add_node("reviewer", reviewer_node)
 builder.add_node("cots_search", cots_search_node)
 builder.add_node("skills", skills_node)
+builder.add_node("compressor", compressor_node)
 builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
@@ -65,6 +72,12 @@ builder.add_conditional_edges(
 builder.add_conditional_edges(
     "electronics_engineer",
     check_steering,
+    {"steer": "steer", "next": "electronics_reviewer"},
+)
+
+builder.add_conditional_edges(
+    "electronics_reviewer",
+    check_steering,
     {"steer": "steer", "next": "reviewer"},
 )
 
@@ -77,7 +90,17 @@ builder.add_conditional_edges(
         "planner": "planner",
         "skills": "skills",
         "steer": "steer",
+        "compressor": "compressor",
     },
+)
+
+def route_after_compression(state: AgentState) -> str:
+    return state.next_node or "reviewer"
+
+builder.add_conditional_edges(
+    "compressor",
+    route_after_compression,
+    {"coder": "coder", "planner": "planner", "skills": "skills", "reviewer": "reviewer"},
 )
 
 builder.add_edge("steer", "planner")

@@ -62,6 +62,8 @@ class RandomizationStrategy(BaseModel):
     environment_perturbations: dict[str, Any] = {}
     difficulty_score: float = 0.5
     reasoning: str | None = None
+    estimated_unit_cost_usd: float | None = None
+    estimated_weight_kg: float | None = None
 
 
 class ValidationResult(BaseModel):

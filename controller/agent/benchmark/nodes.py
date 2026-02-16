@@ -20,6 +20,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
 from controller.agent.nodes.reviewer import ReviewResult
+from controller.agent.nodes.compressor import compressor_node
 from controller.prompts import get_prompt
 from shared.simulation.schemas import (
     RandomizationStrategy,

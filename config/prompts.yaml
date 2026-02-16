@@ -20,11 +20,11 @@ engineer:
          - `ls(path: str)` / `als(path: str)`: List directory contents.
          - `grep_raw(query: str, path: str)`: Structured search for strings or patterns.
          - `glob_info(pattern: str)`: Structured glob matching with file metadata.
+         - `refuse_plan(reason: str)`: Refuse the plan if constraints are impossible to meet.
 
          **Python Utils**:
          - `cots_search(query: str)`: Invoke subagent to find COTS parts.
-         - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Schema and price validation.
-         - `validate_costing_and_price()`: Validate pricing YAML, autopopulate fields, and output price.
+         - `python skills/manufacturing-knowledge/scripts/validate_and_price.py`: Run this script via `execute()` to validate pricing YAML, autopopulate fields, and output results.
 
          **Primary Objective**:
          Produce an implementation-ready handoff package that is physically feasible, cost-validated, and unambiguous for the CAD Engineer.
@@ -459,7 +459,8 @@ benchmark_generator:
          7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
 
          **Design Philosophy**:
-         1. **Randomization**: NEVER hardcode fixed dimensions.
+         1. **Cost & Weight Estimation**: You MUST provide estimated_unit_cost_usd and estimated_weight_kg in your randomization strategy.
+         2. **Randomization**: NEVER hardcode fixed dimensions.
             - Use `random.uniform(min, max)` for dimensions and positions.
             - Support `scale_factors` for entire benchmark scaling.
          2. **Solvability**: Ensure a physical path from start to goal.

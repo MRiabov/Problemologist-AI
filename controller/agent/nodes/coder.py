@@ -6,7 +6,7 @@ from langgraph.prebuilt import create_react_agent
 import structlog
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState
+from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
 
@@ -64,6 +64,22 @@ class CoderNode(BaseNode):
 
                 # Update messages with the conversation trace
                 messages = result["messages"]
+
+                # WP3: Check if agent refused the plan via tool call
+                for msg in messages:
+                    if hasattr(msg, "tool_calls") and msg.tool_calls:
+                        for tc in msg.tool_calls:
+                            if tc["name"] == "refuse_plan":
+                                reason = tc["args"].get("reason", "No reason provided")
+                                logger.info("plan_refused_by_coder", reason=reason)
+                                return state.model_copy(
+                                    update={
+                                        "status": AgentStatus.PLAN_REJECTED,
+                                        "feedback": f"Agent refused plan: {reason}",
+                                        "journal": state.journal + f"\n[Coder] Plan Refused: {reason}",
+                                        "messages": messages,
+                                    }
+                                )
 
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
