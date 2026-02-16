@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
@@ -33,11 +34,14 @@ DEFAULT_COSTS = {
 }
 
 
+# ... (rest of imports)
+
+
 @type_check
 class Indexer:
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.engine = create_engine(f"sqlite:///{db_path}")
+    def __init__(self, db_path: str | Path):
+        self.db_path = Path(db_path)
+        self.engine = create_engine(f"sqlite:///{self.db_path}")
 
     def get_part_classes(self) -> list[type]:
         """MVP: Hardcoded list of useful classes to index."""

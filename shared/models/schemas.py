@@ -248,6 +248,27 @@ class ObjectivesYaml(BaseModel):
 
 
 # =============================================================================
+# CAD Metadata Models
+# =============================================================================
+
+
+class JointMetadata(BaseModel):
+    """Metadata for physical joints attached to parts."""
+
+    type: Literal["hinge", "slide"]
+    axis: CoercedTuple3D
+    range: CoercedTuple2D | None = None
+
+
+class PartMetadata(BaseModel):
+    """Metadata for individual parts in a CAD assembly."""
+
+    material_id: str
+    is_fixed: bool = False
+    joint: JointMetadata | None = None
+
+
+# =============================================================================
 # Review Frontmatter Schema
 # =============================================================================
 

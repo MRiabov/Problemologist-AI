@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -64,7 +65,7 @@ async def record_worker_events(
 
 async def sync_asset(
     episode_id: str | uuid.UUID,
-    path: str,
+    path: str | Path,
     content: str | None = None,
     asset_type: AssetType | None = None,
 ) -> None:
@@ -86,15 +87,17 @@ async def sync_asset(
         episode_uuid = episode_id
 
     if asset_type is None:
-        if path.endswith(".py"):
+        p = Path(path)
+        ext = p.suffix.lower()
+        if ext == ".py":
             asset_type = AssetType.PYTHON
-        elif path.endswith((".xml", ".mjcf")):
+        elif ext in (".xml", ".mjcf"):
             asset_type = AssetType.MJCF
-        elif path.endswith((".png", ".jpg", ".jpeg", ".webp")):
+        elif ext in (".png", ".jpg", ".jpeg", ".webp"):
             asset_type = AssetType.IMAGE
-        elif path.endswith(".glb"):
+        elif ext == ".glb":
             asset_type = AssetType.GLB
-        elif path.endswith(".stl"):
+        elif ext == ".stl":
             asset_type = AssetType.STL
         else:
             asset_type = AssetType.OTHER

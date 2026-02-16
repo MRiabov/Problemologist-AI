@@ -21,7 +21,11 @@ from build123d import Compound, Solid, export_stl
 from shared.cots.parts.motors import ServoMotor
 
 if TYPE_CHECKING:
-    from shared.models.schemas import MovingPart, ObjectivesYaml
+    from shared.models.schemas import (
+        MovingPart,
+        ObjectivesYaml,
+        PartMetadata,
+    )
 
 from pydantic import BaseModel, ConfigDict
 
@@ -60,8 +64,7 @@ class CommonAssemblyTraverser:
             label = getattr(child, "label", None) or f"part_{i}"
 
             pos, euler = CommonAssemblyTraverser._resolve_location(child)
-            metadata = CommonAssemblyTraverser._resolve_metadata(child)
-            joint_info = CommonAssemblyTraverser._parse_joint(child)
+            meta = CommonAssemblyTraverser._resolve_part_metadata(child)
             zone_info = CommonAssemblyTraverser._detect_zone(child, label)
             is_electronics = CommonAssemblyTraverser._map_electronics(
                 label, electronics
@@ -73,11 +76,11 @@ class CommonAssemblyTraverser:
                     part=child,
                     pos=pos,
                     euler=euler,
-                    is_fixed=metadata["is_fixed"],
-                    material_id=metadata["material_id"],
-                    joint_type=joint_info["type"],
-                    joint_axis=joint_info["axis"],
-                    joint_range=joint_info["range"],
+                    is_fixed=meta["is_fixed"],
+                    material_id=meta["material_id"],
+                    joint_type=meta["joint_type"],
+                    joint_axis=meta["joint_axis"],
+                    joint_range=meta["joint_range"],
                     is_electronics=is_electronics,
                     is_zone=zone_info["is_zone"],
                     zone_type=zone_info["type"],
@@ -101,36 +104,43 @@ class CommonAssemblyTraverser:
         return pos, euler
 
     @staticmethod
-    def _resolve_metadata(child: Any) -> dict[str, Any]:
-        return {
-            "constraint": getattr(child, "constraint", None),
-            "is_fixed": getattr(child, "fixed", False),
-            "material_id": getattr(child, "material_id", "aluminum_6061"),
-        }
+    def _resolve_part_metadata(child: Any) -> dict[str, Any]:
+        from shared.models.schemas import PartMetadata
 
-    @staticmethod
-    def _parse_joint(child: Any) -> dict[str, Any]:
-        constraint = getattr(child, "constraint", None)
+        metadata = getattr(child, "metadata", None)
+        if metadata is None:
+            # Check for legacy zone prefix - zones are handled separately
+            label = getattr(child, "label", "")
+            if label.startswith("zone_"):
+                return {
+                    "is_fixed": True,
+                    "material_id": None,
+                    "joint_type": None,
+                    "joint_axis": None,
+                    "joint_range": None,
+                }
+
+            raise ValueError(
+                f"Part '{label or 'unknown'}' is missing required metadata. "
+                "Every part must have a .metadata attribute (PartMetadata)."
+            )
+
+        if isinstance(metadata, dict):
+            metadata = PartMetadata(**metadata)
+
         joint_type, joint_axis, joint_range = None, None, None
-        if isinstance(constraint, str) and constraint.startswith(("hinge", "slide")):
-            parts = constraint.split(":")
-            joint_type = parts[0]
-            if len(parts) > 1:
-                ax = parts[1]
-                if ax == "x":
-                    joint_axis = [1, 0, 0]
-                elif ax == "y":
-                    joint_axis = [0, 1, 0]
-                elif ax == "z":
-                    joint_axis = [0, 0, 1]
-                elif "," in ax:
-                    joint_axis = [float(x) for x in ax.split(",")]
+        if metadata.joint:
+            joint_type = metadata.joint.type
+            joint_axis = list(metadata.joint.axis)
+            joint_range = list(metadata.joint.range) if metadata.joint.range else None
 
-            for p in parts[2:]:
-                if p.startswith("range="):
-                    val = p.split("=")[1]
-                    joint_range = [float(x) for x in val.split(",")]
-        return {"type": joint_type, "axis": joint_axis, "range": joint_range}
+        return {
+            "is_fixed": metadata.is_fixed,
+            "material_id": metadata.material_id,
+            "joint_type": joint_type,
+            "joint_axis": joint_axis,
+            "joint_range": joint_range,
+        }
 
     @staticmethod
     def _detect_zone(child: Any, label: str) -> dict[str, Any]:

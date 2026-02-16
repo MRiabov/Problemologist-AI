@@ -1085,10 +1085,16 @@ Because we have a bill of materials/part tree, it should be very straightforward
 #### Steerability - Other
 
 1. Ideally, agents would have standard per-user memory sets.
-
 2. The model should then, in 90% of cases at least, view the actual lines where the part, or direct code mention or whatever is defined; meaning that it doesn't ignore the user's output.
 
 <!-- per-org, per-project memory is a TODO later.-->
+
+#### Hard constraints on Agent output
+
+We should give agents less chances to fail (our) system, and fail the execution of our tasks.
+While we don't enforce strict Pydantic schemas, we effectively validate all inputs as such.
+
+E.g., if a part doesn't have a `material` custom property on it, we fail the script; we don't substitute to a default Aluminum.
 
 ## Agent Evaluations
 
@@ -2042,6 +2048,8 @@ Validated under all environment randomization.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: LangGraph supports subagents this is what we'll use here.-->
+
+####
 
 #### Planner tools
 

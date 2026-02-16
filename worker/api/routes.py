@@ -1,7 +1,5 @@
 import ast
-import importlib.util
 import json
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -19,6 +17,7 @@ from fastapi import (
 )
 
 from shared.enums import ResponseStatus
+from worker.utils.loader import load_component_from_script
 from worker.workbenches.config import load_config
 from worker.workbenches.models import WorkbenchResult
 
@@ -97,57 +96,6 @@ async def api_inspect_topology(
     except Exception as e:
         logger.error("api_inspect_topology_failed", error=str(e))
         return InspectTopologyResponse(success=False, message=str(e))
-
-
-def _load_component(fs_router, script_path: str, script_content: str | None = None):
-    """Utility to load the component from the agent's script."""
-    # 1. If content is provided, use it directly (stateless/memory execution)
-    if script_content:
-        logger.warning("load_component_using_script_content_deprecated")
-        local_scope = {}
-        try:
-            exec(script_content, local_scope)
-            build_func = local_scope.get("build")
-            if not build_func:
-                for val in local_scope.values():
-                    if callable(val) and getattr(val, "__name__", "") == "build":
-                        build_func = val
-                        break
-
-            if build_func:
-                return build_func()
-            raise AttributeError("build() function not found in script content.")
-        except Exception as e:
-            raise RuntimeError(f"Failed to execute script content: {e}")
-
-    # 2. Path loading from local storage
-    try:
-        local_p = fs_router.local_backend._resolve(script_path)
-    except Exception:
-        # Fallback to absolute or relative to CWD if resolve fails (e.g. traversal check)
-        local_p = Path(script_path)
-
-    if not local_p.exists():
-        raise FileNotFoundError(
-            f"Script not found at {local_p.absolute()}. "
-            "Ensure the agent has written the file before calling simulate/validate."
-        )
-
-    # Add session root to sys.path to allow local imports in the script
-    session_root = str(fs_router.local_backend.root)
-    if session_root not in sys.path:
-        sys.path.insert(0, session_root)
-
-    spec = importlib.util.spec_from_file_location("dynamic_build", str(local_p))
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load spec for {local_p}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    if hasattr(module, "build"):
-        return module.build()
-    raise AttributeError("build() function not found in script.")
 
 
 def _collect_events(fs_router) -> list[dict[str, Any]]:
@@ -425,8 +373,10 @@ async def api_simulate(
 ):
     """Physics-backed stability check in isolated session."""
     try:
-        component = _load_component(
-            fs_router, request.script_path, request.script_content
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+            script_content=request.script_content,
         )
 
         # Enforce single concurrent simulation
@@ -468,8 +418,10 @@ async def api_validate(
 ):
     """Geometric validity check in isolated session."""
     try:
-        component = _load_component(
-            fs_router, request.script_path, request.script_content
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+            script_content=request.script_content,
         )
         # Geometric validation
         is_valid, message = validate(component, output_dir=fs_router.local_backend.root)
@@ -538,8 +490,10 @@ async def api_analyze(
 ):
     """Manufacturing analysis using specified workbench."""
     try:
-        component = _load_component(
-            fs_router, request.script_path, request.script_content
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+            script_content=request.script_content,
         )
 
         # Load default configuration
@@ -600,8 +554,10 @@ async def api_submit(
 ):
     """Handover to reviewer in isolated session."""
     try:
-        component = _load_component(
-            fs_router, request.script_path, request.script_content
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+            script_content=request.script_content,
         )
         success = submit_for_review(component, cwd=fs_router.local_backend.root)
         events = _collect_events(fs_router)
@@ -679,7 +635,10 @@ async def api_preview(
 ):
     """Render a preview of the CAD design from specified camera angles."""
     try:
-        component = _load_component(fs_router, request.script_path)
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+        )
 
         image_path = preview_design(
             component,
@@ -784,7 +743,10 @@ async def api_build(
     """Rebuild simulation assets (GLB) from source without running full simulation."""
     try:
         # Load component
-        component = _load_component(fs_router, request.script_path)
+        component = load_component_from_script(
+            script_path=fs_router.local_backend._resolve(request.script_path),
+            session_root=fs_router.local_backend.root,
+        )
 
         # Get builder
         from worker.simulation.factory import get_simulation_builder

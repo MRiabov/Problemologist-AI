@@ -1,8 +1,7 @@
 import os
-import uuid
 import tempfile
+import uuid
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 import structlog
@@ -16,7 +15,9 @@ logger = structlog.get_logger(__name__)
 
 
 def render_selection_snapshot(
-    ids: list[str], view_matrix: list[list[float]], script_path: str = "script.py"
+    ids: list[str],
+    view_matrix: list[list[float]],
+    script_path: str | Path = "script.py",
 ) -> str:
     """
     Renders a snapshot of the component with highlighted features using VTK.
@@ -31,8 +32,9 @@ def render_selection_snapshot(
         S3 object key of the rendered PNG.
     """
     logger.info("rendering_selection_snapshot", ids=ids)
+    script_p = Path(script_path)
 
-    component = _load_component(script_path)
+    component = _load_component(script_p)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -44,7 +46,7 @@ def render_selection_snapshot(
 
         # 1. Add base geometry
         base_stl = tmp_path / "base.stl"
-        export_stl(component, str(base_stl))
+        export_stl(component, base_stl)
 
         reader = vtk.vtkSTLReader()
         reader.SetFileName(str(base_stl))
@@ -71,7 +73,7 @@ def render_selection_snapshot(
                     if idx < len(all_faces):
                         face = all_faces[idx]
                         face_stl = tmp_path / f"face_{idx}.stl"
-                        export_stl(face, str(face_stl))
+                        export_stl(face, face_stl)
 
                         f_reader = vtk.vtkSTLReader()
                         f_reader.SetFileName(str(face_stl))

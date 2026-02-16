@@ -6,14 +6,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from controller.api.main import app as controller_app
-from worker.app import app as worker_app
+from controller.api.main import app as controller_app  # noqa: E402
+from worker.app import app as worker_app  # noqa: E402
 
 
 def generate_schema(app, filename):
     schema = app.openapi()
     output_path = project_root / filename
-    with open(output_path, "w") as f:
+    with output_path.open("w") as f:
         json.dump(schema, f, indent=2)
     print(f"Generated {filename}")
 

@@ -1,6 +1,4 @@
 import logging
-import os
-from pathlib import Path
 from typing import Any
 
 from PySpice.Spice.Netlist import Circuit
@@ -112,16 +110,18 @@ def validate_circuit(
             # Detect extreme currents which indicate shorts
             if abs(current_val) > 1000.0:
                 errors.append(
-                    f"FAILED_SHORT_CIRCUIT: Extreme current detected in branch {name}: {current_val:.2f}A"
+                    f"FAILED_SHORT_CIRCUIT: Extreme current in branch {name}: "
+                    f"{current_val:.2f}A"
                 )
 
-            # Assume any voltage source starting with 'vsupply' (as named in circuit_builder) is our PSU
+            # Assume any voltage source starting with 'vsupply' is our PSU
             if name.lower().startswith("vsupply"):
                 total_draw += abs(current_val)
 
         if total_draw > max_current:
             errors.append(
-                f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A exceeds PSU rating {max_current:.2f}A"
+                f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A "
+                f"exceeds PSU rating {max_current:.2f}A"
             )
 
         # Detect floating nodes: check if any node has near-zero conductance to everything else
@@ -147,7 +147,8 @@ def validate_circuit(
             return CircuitValidationResult(
                 valid=False,
                 errors=[
-                    "FAILED_OPEN_CIRCUIT: Floating nodes or unconnected circuit components detected."
+                    "FAILED_OPEN_CIRCUIT: Floating nodes or unconnected "
+                    "circuit components detected."
                 ],
                 total_draw_a=0.0,
             )

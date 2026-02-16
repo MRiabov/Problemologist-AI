@@ -1,5 +1,5 @@
 import hashlib
-import os
+
 from pathlib import Path
 import tempfile
 
@@ -119,5 +119,6 @@ def compute_part_hash(part: Part | Compound) -> str:
             content = f.read()
         return hashlib.sha256(content).hexdigest()
     finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+        p = Path(tmp_path)
+        if p.exists():
+            p.unlink()

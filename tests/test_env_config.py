@@ -8,7 +8,8 @@ def test_env_var_loading():
     test_key = "TEST_API_KEY_123"
     with patch.dict(os.environ, {"OPENAI_API_KEY": test_key}):
         # In a real app, we might import the config object here
-        # For now, we simulate how controller/api/main.py might use it or how os.getenv works
+        # For now, we simulate how controller/api/main.py might use it or
+        # how os.getenv works
         loaded_key = os.getenv("OPENAI_API_KEY")
         assert loaded_key == test_key
 
@@ -48,10 +49,9 @@ def test_env_files_consistency():
         with path.open() as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith("#"):
-                    if "=" in line:
-                        key = line.split("=")[0].strip()
-                        keys.add(key)
+                if line and not line.startswith("#") and "=" in line:
+                    key = line.split("=")[0].strip()
+                    keys.add(key)
         return keys
 
     env_keys = get_keys(env_path)
