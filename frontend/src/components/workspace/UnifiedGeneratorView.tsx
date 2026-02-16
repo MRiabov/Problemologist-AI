@@ -3,7 +3,8 @@ import { useEpisodes } from '../../context/EpisodeContext';
 import { useConnection } from '../../context/ConnectionContext';
 import { 
   SignalLow,
-  AlertCircle
+  AlertCircle,
+  RotateCcw
 } from "lucide-react";
 import { rebuildModel } from "../../api/client";
 import { Button } from "../ui/button";
@@ -17,6 +18,7 @@ import {
   ResizablePanelGroup 
 } from "../ui/resizable";
 import ModelViewer from '../visualization/ModelViewer';
+import { DesignViewer } from '../visualization/DesignViewer';
 
 interface UnifiedGeneratorViewProps {
   title: string;
@@ -183,44 +185,40 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     </div>
                   )}
 
-                  {hasMediaAssets ? (
-                    <div className="w-full h-full flex items-center justify-center relative p-8">
-                      {!isConnected && <ConnectionError className="absolute inset-0 z-[60]" />}
-                      {videoAsset ? (
-                        <video 
-                          src={getAssetUrl(videoAsset) || ""} 
-                          controls 
-                          className="max-w-full max-h-full rounded-xl shadow-2xl border-4 border-card z-10"
-                        />
-                      ) : (
-                        <img 
-                          src={getAssetUrl(imageAsset) || ""} 
-                          className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border-4 border-card z-10"
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-full h-full relative">
-                      <ModelViewer 
-                        className="w-full h-full" 
-                        assetUrls={modelUrls}
-                        isConnected={isConnected}
-                        resetTrigger={resetTrigger}
-                        onRebuildModel={async () => {
-                            try {
-                                await rebuildModel("solution.py");
-                                window.location.reload(); 
-                            } catch (e) {
-                                console.error(e);
-                                alert("Failed to rebuild model: " + e);
-                            }
-                        }}
-                      />
-                      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Badge variant="outline" className="bg-background/50 backdrop-blur-sm text-[10px] uppercase font-bold tracking-widest px-3 py-1 border-primary/20 text-primary/70">
-                          {viewportBadgeText}
-                        </Badge>
-                      </div>
+                  <DesignViewer 
+                    modelUrls={modelUrls}
+                    videoUrl={videoAsset ? getAssetUrl(videoAsset) : null}
+                    heatmapUrls={selectedEpisode?.assets
+                      ?.filter(a => (a.s3_path && a.s3_path.includes('stress_')))
+                      .map(getAssetUrl)
+                      .filter(Boolean) as string[]
+                    }
+                    isConnected={isConnected}
+                    resetTrigger={resetTrigger}
+                  />
+
+                  {modelUrls.length === 0 && !videoAsset && !hasMediaAssets && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+                        <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                            <h3 className="text-sm font-bold text-slate-200">No Assets Loaded</h3>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={async () => {
+                                    try {
+                                        await rebuildModel("solution.py");
+                                        window.location.reload(); 
+                                    } catch (e) {
+                                        console.error(e);
+                                        alert("Failed to rebuild model: " + e);
+                                    }
+                                }}
+                                className="w-full gap-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+                            >
+                                <RotateCcw className="h-3 w-3" />
+                                Rebuild Assets
+                            </Button>
+                        </div>
                     </div>
                   )}
                 </div>

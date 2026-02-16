@@ -31,6 +31,7 @@ class GenesisBackend(PhysicsBackend):
         self.motors = []  # part_name -> dict
         self.current_time = 0.0
         self.mfg_config = None
+        self.current_particle_multiplier = 1.0
         if gs is not None:
             try:
                 # Use CPU for tests/CI if GPU not available, but prefer GPU
@@ -112,15 +113,34 @@ class GenesisBackend(PhysicsBackend):
 
     def _load_scene_internal(self, scene: SimulationScene) -> None:
         """Internal helper to build the scene, allowing for retries on OOM."""
-        # Genesis initialization check (T017: ensures backend is ready for particle reduction)
         if gs is None:
             raise ImportError("Genesis not installed")
 
-        self.scene = gs.Scene(show_viewer=False)
+        # T014: Particle visualization options from WP06
+        self.scene = gs.Scene(
+            show_viewer=False,
+            vis_options=gs.options.VisOptions(
+                particle_size=0.01,
+                render_particle=True,
+            ),
+        )
         self.entities = {}
         self.entity_configs = {}
 
-        if scene.scene_path and scene.scene_path.endswith(".json"):
+        if scene.scene_path and (
+            scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
+        ):
+            try:
+                # Load MJCF directly
+                mjcf_entity = self.scene.add_entity(
+                    gs.morphs.MJCF(file=scene.scene_path)
+                )
+                self.entities["mjcf_scene"] = mjcf_entity
+                logger.debug("genesis_mjcf_loaded", path=scene.scene_path)
+            except Exception as e:
+                logger.error("failed_to_load_mjcf_in_genesis", error=str(e))
+
+        elif scene.scene_path and scene.scene_path.endswith(".json"):
             import json
             from pathlib import Path
 
@@ -215,10 +235,13 @@ class GenesisBackend(PhysicsBackend):
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
 
-                    # T014: Fluid Spawning from FluidDefinition
+                    # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
                         props = fluid_cfg.get("properties", {})
                         vol = fluid_cfg["initial_volume"]
+                        color = fluid_cfg.get("color", [0, 0, 200])
+                        # Convert 0-255 to 0-1 and add alpha for transparency
+                        color_f = tuple([c / 255.0 for c in color] + [0.8])
 
                         # MPM Material based on FluidDefinition
                         material = gs.materials.MPM.Liquid(
@@ -238,6 +261,7 @@ class GenesisBackend(PhysicsBackend):
                                     size=vol.get("size", [0.1, 0.1, 0.1]),
                                     sampler="grid",
                                     n_particles=n_particles,
+                                    color=color_f,
                                 ),
                                 material=material,
                             )
@@ -248,6 +272,7 @@ class GenesisBackend(PhysicsBackend):
                                     radius=vol.get("radius", 0.05),
                                     sampler="grid",
                                     n_particles=n_particles,
+                                    color=color_f,
                                 ),
                                 material=material,
                             )
@@ -352,7 +377,25 @@ class GenesisBackend(PhysicsBackend):
         return None
 
     def get_body_state(self, body_id: str) -> BodyState:
+        logger.debug("genesis_get_body_state_request", body_id=body_id)
         if body_id not in self.entities:
+            # Check links within MJCF entities
+            for ent in self.entities.values():
+                try:
+                    # In Genesis, if it's an MJCF entity, we can search links by name
+                    link = ent.get_link(body_id)
+                    if link:
+                        logger.debug("genesis_link_state_found", body_id=body_id)
+                        return BodyState(
+                            pos=link.get_pos().tolist(),
+                            quat=link.get_quat().tolist(),
+                            vel=link.get_vel().tolist(),
+                            angvel=link.get_angvel().tolist(),
+                        )
+                except Exception:
+                    continue
+
+            logger.debug("genesis_body_not_found", body_id=body_id)
             return BodyState(
                 pos=(0, 0, 0), quat=(1, 0, 0, 0), vel=(0, 0, 0), angvel=(0, 0, 0)
             )
@@ -602,7 +645,16 @@ class GenesisBackend(PhysicsBackend):
                         )
 
     def get_all_body_names(self) -> list[str]:
-        return list(self.entities.keys())
+        names = list(self.entities.keys())
+        for ent in self.entities.values():
+            try:
+                # Add link names if it's an articulated entity
+                for link in ent.get_links():
+                    if link.name not in names:
+                        names.append(link.name)
+            except Exception:
+                continue
+        return names
 
     def get_all_actuator_names(self) -> list[str]:
         return [m["part_name"] for m in getattr(self, "motors", [])]
