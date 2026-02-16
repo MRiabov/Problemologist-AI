@@ -1,6 +1,7 @@
 from typing import Any
 import mujoco
 import numpy as np
+from typing import Any
 
 from shared.simulation.backends import (
     ActuatorState,

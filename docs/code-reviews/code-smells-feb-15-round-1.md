@@ -80,7 +80,8 @@ This document identifies **NEW** architectural smells and questionable decisions
 - **Better Alternatives**: Should use LangChain's `with_structured_output` or a proper recursive JSON parser.
 
 **User Review:**
-
+OMG, of course use the LangChain! It's literally made for that.
+Why aren't we using structured tool calls in the first place? this doesn't make sense
 ---
 
 ## 🟡 Minor Issues & Smells
@@ -99,7 +100,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 - **De-localization**: The definition of "success" for a benchmark should live with the benchmark dataset or within a dedicated verification module.
 
 **User Review:**
-
+At the moment, none of our evals are passing due to 500s and 404s, and even the script hasn't run once sucessfully. Good to know, but we have bugs to fix first
 ---
 
 ### 6. Empty Simulation Schemas
