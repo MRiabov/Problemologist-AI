@@ -39,7 +39,6 @@ def sim_loop(tmp_path):
 
 
 def test_initialization(sim_loop):
-    import mujoco
 
     assert sim_loop.backend.model is not None
     assert sim_loop.backend.data is not None
@@ -184,4 +183,4 @@ def test_instability_detection(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "PHYSICS_INSTABILITY"
+    assert metrics.fail_reason == "instability_detected"

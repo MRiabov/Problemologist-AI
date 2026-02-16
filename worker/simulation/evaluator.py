@@ -1,5 +1,4 @@
 import numpy as np
-from shared.enums import SimulationFailureMode
 
 
 class SuccessEvaluator:
@@ -15,8 +14,8 @@ class SuccessEvaluator:
     def check_failure(
         self,
         total_time: float,
-        qpos: np.ndarray,
-        qvel: np.ndarray,
+        qpos: np.ndarray | None,
+        qvel: np.ndarray | None,
         contacts: list = None,
     ) -> str | None:
         """
@@ -28,23 +27,30 @@ class SuccessEvaluator:
             return "timeout_exceeded"
 
         # 2. Physics Instability (NaNs)
-        if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
+        if (qpos is not None and np.any(np.isnan(qpos))) or (
+            qvel is not None and np.any(np.isnan(qvel))
+        ):
             return "PHYSICS_INSTABILITY"
 
         # 3. Fell off world
         # Heuristic: Z < -2.0
         # Assume free joint: qpos[2] is Z
-        if len(qpos) >= 3 and qpos[2] < -2.0:
+        if qpos is not None and len(qpos) >= 3 and qpos[2] < -2.0:
             return "target_fell_off_world"
 
         return None
 
     def check_motor_overload(
-        self, motor_names: list[str], forces: list[float], limit: float, dt: float
+        self,
+        motor_names: list[str],
+        forces: list[float],
+        limit: float | list[float],
+        dt: float,
     ) -> bool:
         """Identify motors stalled at their limit."""
         for i, name in enumerate(motor_names):
-            if abs(forces[i]) >= limit * 0.99:
+            lim = limit[i] if isinstance(limit, list) else limit
+            if abs(forces[i]) >= lim * 0.99:
                 self.motor_overload_timer[name] = (
                     self.motor_overload_timer.get(name, 0) + dt
                 )

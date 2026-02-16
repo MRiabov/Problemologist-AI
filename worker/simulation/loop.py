@@ -3,26 +3,23 @@ from pathlib import Path
 import numpy as np
 import structlog
 from build123d import Compound, Part
-from pydantic import BaseModel, StrictBool, StrictFloat, StrictStr
 
 from shared.enums import SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
+from shared.models.simulation import (
+    FluidMetricResult,
+)
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
-    PhysicsInstabilityEvent,
     SimulationBackendSelectedEvent,
 )
 from shared.simulation.backends import SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.factory import get_physics_backend
-from shared.models.simulation import (
-    StressSummary,
-    FluidMetricResult,
-)
 from worker.simulation.electronics import ElectronicsManager
-from worker.simulation.metrics import MetricCollector, SimulationMetrics
 from worker.simulation.evaluator import SuccessEvaluator
+from worker.simulation.factory import get_physics_backend
+from worker.simulation.metrics import MetricCollector, SimulationMetrics
 
 logger = structlog.get_logger(__name__)
 
@@ -164,6 +161,12 @@ class SimulationLoop:
         if self.electronics:
             self._update_electronics(force=True)
 
+        # Cache bodies and actuators to avoid repeated backend calls
+        self.cached_collidable_bodies = [
+            b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+        ]
+        self.cached_actuator_names = self.backend.get_all_actuator_names()
+
         # Reset metrics
         self.reset_metrics()
 
@@ -262,8 +265,6 @@ class SimulationLoop:
 
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
-        stress_report_interval = 1 if self.smoke_test_mode else 50
-
         for step_idx in range(steps):
             # T015: Update electronics if state changed
             if self.electronics and self._electronics_dirty:
@@ -295,7 +296,7 @@ class SimulationLoop:
             current_time = res.time
 
             # 2. Update Metrics
-            actuator_names = self.backend.get_all_actuator_names()
+            actuator_names = self.cached_actuator_names
             energy = sum(
                 abs(
                     self.backend.get_actuator_state(n).ctrl
@@ -498,12 +499,15 @@ class SimulationLoop:
         # Final success determination:
         # Success if no failures AND (goal achieved IF goals exist, or fluid/stress objectives passed)
         has_other_objectives = False
-        if self.objectives and self.objectives.objectives:
-            if (
+        if (
+            self.objectives
+            and self.objectives.objectives
+            and (
                 self.objectives.objectives.fluid_objectives
                 or self.objectives.objectives.stress_objectives
-            ):
-                has_other_objectives = True
+            )
+        ):
+            has_other_objectives = True
 
         if self.fail_reason:
             is_success = False
@@ -557,18 +561,34 @@ class SimulationLoop:
     def _check_motor_overload(self) -> bool:
         # Delegate to SuccessEvaluator
         # This requires more info from backend, so let's just use SuccessEvaluator check
-        actuator_names = self.backend.get_all_actuator_names()
-        forces = [self.backend.get_actuator_state(n).force for n in actuator_names]
-        # Assuming forcerange[1] is the limit
-        limit = 1.0  # Placeholder
+        actuator_names = self.cached_actuator_names
+        states = [self.backend.get_actuator_state(n) for n in actuator_names]
+        forces = [s.force for s in states]
+        # Use the max absolute value of forcerange as the limit
+        # If limit is 0, assume unlimited (MuJoCo default)
+        limits = []
+        for s in states:
+            limit = max(abs(s.forcerange[0]), abs(s.forcerange[1]))
+            if limit < 1e-6:
+                limit = float("inf")
+            limits.append(limit)
+
         return self.success_evaluator.check_motor_overload(
-            actuator_names, forces, limit, 0.002
+            actuator_names, forces, limits, 0.002
+        )
+
+    def check_goal_with_vertices(self, body_name: str) -> bool:
+        if not self.goal_sites:
+            return False
+        return any(
+            self.backend.check_collision(body_name, z) for z in self.goal_sites
         )
 
     def _check_forbidden_collision(self) -> bool:
+        if not self.forbidden_sites:
+            return False
         return any(
             self.backend.check_collision(b, z)
-            for b in self.backend.get_all_body_names()
+            for b in self.cached_collidable_bodies
             for z in self.forbidden_sites
-            if b not in ["world", "0"]
         )
