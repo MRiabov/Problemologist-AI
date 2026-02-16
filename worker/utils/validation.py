@@ -51,7 +51,7 @@ def save_simulation_result(result: SimulationResult, path: Path):
 
 
 def get_stress_report(part_label: str) -> dict | None:
-    """Returns the current stress summary for a simulated FEM part."""
+    """Returns the worst-case stress summary for a simulated FEM part."""
     global LAST_SIMULATION_RESULT
     if LAST_SIMULATION_RESULT is None:
         # Try to load from disk
@@ -71,36 +71,43 @@ def get_stress_report(part_label: str) -> dict | None:
         logger.warning("get_stress_report_called_before_simulation")
         return None
 
+    worst_summary = None
+    min_sf = float("inf")
+
     for summary in LAST_SIMULATION_RESULT.stress_summaries:
-        if summary.part_label == part_label:
-            data = summary.model_dump()
-            # T018: Add diagnostic advice
-            sf = summary.safety_factor
-            if sf < 1.2:
-                data["advice"] = (
-                    "CRITICAL: Part is near or at yielding point. Add material or use stronger material."
-                )
-            elif sf < 1.5:
-                data["advice"] = (
-                    "WARNING: Safety factor below 1.5 target. Consider reinforcing high-stress areas."
-                )
-            elif sf > 5.0:
-                data["advice"] = (
-                    "OPTIMIZATION: Safety factor exceeds 5.0. Consider thinning parts to save cost and weight."
-                )
-            else:
-                data["advice"] = (
-                    "SUCCESS: Safety factor is within the ideal 1.5 - 5.0 range."
-                )
-            return data
+        if summary.part_label == part_label and summary.safety_factor < min_sf:
+            min_sf = summary.safety_factor
+            worst_summary = summary
+
+    if worst_summary:
+        res = worst_summary.model_dump()
+        sf = res.get("safety_factor", 10.0)
+        if sf < 1.2:
+            res["advice"] = (
+                "Safety factor critical (below 1.2). Part will likely fail. "
+                "Reinforce geometry at the location of maximum stress."
+            )
+        elif sf < 1.5:
+            res["advice"] = (
+                "Safety factor low (below 1.5). "
+                "Consider adding material to reach target range (1.5 - 5.0)."
+            )
+        elif sf > 5.0:
+            res["advice"] = (
+                "Safety factor high (over 5.0). Part might be over-engineered. "
+                "Consider removing material to reduce cost and weight."
+            )
+        else:
+            res["advice"] = "Safety factor is within acceptable range (1.5 - 5.0)."
+        return res
 
     logger.warning("stress_report_part_not_found", part_label=part_label)
     return None
 
 
 def preview_stress(
-    component: Compound,
-    view_angles: list[tuple[float, float]] | None = None,
+    _component: Compound,
+    _view_angles: list[tuple[float, float]] | None = None,
     output_dir: Path | None = None,
 ) -> list[str]:
     """Renders the component with a von Mises stress heatmap overlay."""
@@ -129,9 +136,11 @@ def preview_stress(
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
     assets_dir = working_dir / "assets"
 
-    from .rendering import render_stress_heatmap
-    from shared.simulation.backends import StressField
     import numpy as np
+
+    from shared.simulation.backends import StressField
+
+    from .rendering import render_stress_heatmap
 
     render_paths = []
     for part_label, field_data in LAST_SIMULATION_RESULT.stress_fields.items():
@@ -140,7 +149,7 @@ def preview_stress(
         )
         out_path = stress_renders_dir / f"stress_{part_label}.png"
 
-        # T020: Use the exported mesh for better VLM visibility if available
+        # Use the exported mesh for better VLM visibility if available
         mesh_path = assets_dir / f"{part_label}.obj"
         if not mesh_path.exists():
             mesh_path = None
@@ -191,7 +200,9 @@ def define_fluid(
                 break
         if not updated:
             objs.fluids.append(fluid)
-        obj_path.write_text(yaml.dump(objs.model_dump()), encoding="utf-8")
+        obj_path.write_text(yaml.dump(objs.model_dump(mode="json")), encoding="utf-8")
+    else:
+        logger.warning("define_fluid_objectives_not_found", path=str(obj_path))
 
     return fluid.model_dump()
 
@@ -209,8 +220,11 @@ def set_soft_mesh(
             objs = ObjectivesYaml(**data)
             objs.physics.fem_enabled = enabled
             if enabled:
-                objs.physics.backend = "genesis"  # FEM requires Genesis
-            obj_path.write_text(yaml.dump(objs.model_dump()), encoding="utf-8")
+                # FEM currently requires Genesis backend
+                objs.physics.backend = "genesis"
+            obj_path.write_text(
+                yaml.dump(objs.model_dump(mode="json")), encoding="utf-8"
+            )
             logger.info("set_soft_mesh_enabled", part_id=part_id, fem_enabled=enabled)
             return True
         except Exception as e:
@@ -460,10 +474,8 @@ def validate(
             for j in range(i + 1, len(solids)):
                 intersection = solids[i].intersect(solids[j])
                 if intersection and intersection.volume > 0.1:
-                    return (
-                        False,
-                        f"Geometric intersection detected (volume: {intersection.volume:.2f})",
-                    )
+                    msg = f"Geometric intersection detected (volume: {intersection.volume:.2f})"
+                    return (False, msg)
 
     bbox = component.bounding_box()
     if build_zone:
