@@ -21,11 +21,11 @@ interface Suggestion {
   name: string;
   type: 'file' | 'part';
   icon: React.ComponentType<{ className?: string }>;
-  original: any;
+  original: Asset | TopologyNode;
 }
 
 interface ChatInputProps {
-  onSendMessage: (prompt: string, metadata: any) => Promise<void>;
+  onSendMessage: (prompt: string, metadata: Record<string, unknown>) => Promise<void>;
   isRunning: boolean;
   onInterrupt: () => void;
   selectedEpisode: { id: string; assets?: Asset[] } | null;
@@ -35,6 +35,17 @@ interface ChatInputProps {
   showObjectives: boolean;
   setShowObjectives: (show: boolean) => void;
 }
+
+const findNodeByName = (nodes: TopologyNode[], name: string): TopologyNode | undefined => {
+  for (const node of nodes) {
+    if (node.name === name) return node;
+    if (node.children) {
+      const found = findNodeByName(node.children, name);
+      if (found) return found;
+    }
+  }
+  return undefined;
+};
 
 export function ChatInput({
   onSendMessage,
@@ -52,14 +63,17 @@ export function ChatInput({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const sessionAssets = selectedEpisode?.assets || [];
 
   const handleSubmit = async (e?: FormEvent | KeyboardEvent) => {
     if (e) e.preventDefault();
     if (prompt.trim()) {
       // 1. Extract mentions and code references from selectedContext
       const mentions: string[] = [];
-      const code_references: any[] = [];
-      const selections: any[] = [];
+      const code_references: Record<string, unknown>[] = [];
+      const selections: Record<string, unknown>[] = [];
 
       selectedContext.forEach(item => {
         if (item.type === 'cad') {
@@ -77,7 +91,6 @@ export function ChatInput({
       const steeringRegex = /@([^:\n\s]+):L?(\d+)(?:-L?(\d+))?/g;
       const matches = [...prompt.matchAll(steeringRegex)];
       
-      const sessionAssets = selectedEpisode?.assets || [];
       matches.forEach(match => {
         const [, filename, start, end] = match;
         const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
@@ -95,12 +108,18 @@ export function ChatInput({
       });
 
       // 3. Extract simple mentions from text (e.g. @part_name)
-      const mentionRegex = /@([a-zA-Z0-9_\-\.]+)(?![:\d])/g;
+      const mentionRegex = /@([a-zA-Z0-9_\-.]+)(?![:\d])/g;
       const mentionMatches = [...prompt.matchAll(mentionRegex)];
       mentionMatches.forEach(match => {
-        const m = match[1];
-        if (!mentions.includes(m)) {
-          mentions.push(m);
+        const name = match[1];
+        const part = findNodeByName(topologyNodes, name);
+        const asset = sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+        
+        // Resolve ID if possible, otherwise use name
+        const id = part?.id || asset?.id.toString() || name;
+        
+        if (!mentions.includes(id)) {
+          mentions.push(id);
         }
       });
 
@@ -123,7 +142,6 @@ export function ChatInput({
     const lineRegex = /@([^:\n\s]+):L?(\d+)(?:-L?(\d+))?/g;
     const matches = [...value.matchAll(lineRegex)];
     
-    const sessionAssets = selectedEpisode?.assets || [];
     matches.forEach(match => {
         const [, filename, start, end] = match;
         const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
@@ -148,14 +166,16 @@ export function ChatInput({
     const lastAt = value.lastIndexOf('@', selectionStart - 1);
     const filter = value.substring(lastAt + 1, selectionStart);
     
-    if (lastAt !== -1 && !/\s/.test(filter)) {
+    const isAtStartOrAfterSpace = lastAt === 0 || (lastAt > 0 && /\s/.test(value[lastAt - 1]));
+
+    if (lastAt !== -1 && isAtStartOrAfterSpace && !/\s/.test(filter)) {
         setShowSuggestions(true);
         
         // Populate suggestions from BOM and Assets
         const items: Suggestion[] = [];
         
         // Add Assets (Files)
-        (selectedEpisode?.assets || []).forEach(asset => {
+        sessionAssets.forEach(asset => {
             const name = asset.s3_path.split('/').pop() || asset.s3_path;
             if (name.toLowerCase().includes(filter.toLowerCase())) {
                 const iconInfo = getFileIconInfo(name, asset.asset_type);
@@ -216,22 +236,83 @@ export function ChatInput({
     }, 0);
   };
 
+  // Sync scroll between textarea and highlighter
+  const handleScroll = () => {
+    if (inputRef.current && scrollRef.current) {
+        scrollRef.current.scrollTop = inputRef.current.scrollTop;
+    }
+  };
+
   return (
     <div className="bg-muted/30 border border-white/5 rounded-2xl p-3 shadow-sm focus-within:ring-1 focus-within:ring-primary/20 transition-all relative">
-        <form onSubmit={(e) => handleSubmit(e)} className="flex flex-col gap-2">
+        <form onSubmit={(e) => handleSubmit(e)} className="flex flex-col gap-2 relative">
+            
+            {/* Highlighter Layer */}
+            <div 
+                ref={scrollRef}
+                className="absolute inset-0 p-0 pointer-events-none text-[14px] leading-relaxed whitespace-pre-wrap break-words text-transparent overflow-hidden"
+                style={{ 
+                    padding: '0px',
+                    marginTop: '0px',
+                    marginLeft: '0px'
+                }}
+            >
+                <div className="w-full px-0 py-0 min-h-[40px]">
+                    {(() => {
+                        const combinedRegex = /(@([^:\n\s]+)(:L?(\d+)(?:-L?(\d+))?)?)/g;
+                        const parts = [];
+                        let lastIndex = 0;
+                        let match;
+                        
+                        while ((match = combinedRegex.exec(prompt)) !== null) {
+                            const [full, , name, isSteering] = match;
+                            parts.push(prompt.substring(lastIndex, match.index));
+                            
+                            let isValid = false;
+                            if (isSteering) {
+                                isValid = !!sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                            } else {
+                                const part = findNodeByName(topologyNodes, name);
+                                const asset = sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                                isValid = !!(part || asset);
+                            }
+
+                            parts.push(
+                                <span 
+                                    key={match.index} 
+                                    className={cn(
+                                        "rounded px-0.5 font-bold",
+                                        isValid 
+                                            ? "text-primary bg-primary/10" 
+                                            : "text-red-400 bg-red-400/10 underline decoration-dotted underline-offset-2"
+                                    )}
+                                >
+                                    {full}
+                                </span>
+                            );
+                            lastIndex = combinedRegex.lastIndex;
+                        }
+                        parts.push(prompt.substring(lastIndex));
+                        return parts;
+                    })()}
+                </div>
+            </div>
+
             <textarea 
                id="chat-input"
                placeholder={isRunning ? "Steer the agent..." : "Ask anything (Ctrl+L), @ to mention, / for workflows"}
-               className="w-full bg-transparent border-none focus:ring-0 text-[14px] leading-relaxed resize-none min-h-[40px] max-h-48"
+               className="w-full bg-transparent border-none focus:ring-0 text-[14px] leading-relaxed resize-none min-h-[40px] max-h-48 relative z-10"
                rows={1}
                ref={inputRef}
                value={prompt}
+               onScroll={handleScroll}
                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                    const val = e.target.value;
                    setPrompt(val);
                    handleMention(val, e.target.selectionStart || 0);
                    e.target.style.height = 'auto';
                    e.target.style.height = e.target.scrollHeight + 'px';
+                   handleScroll();
                }}
                onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
                    if (showSuggestions && suggestions.length > 0) {

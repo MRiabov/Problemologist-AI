@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { 
@@ -7,13 +7,7 @@ import {
   AlertCircle,
   Zap,
   Play,
-  ChevronUp,
-  ChevronDown,
-  Rocket,
-  Plus,
-  Mic,
-  ArrowRight,
-  Square
+  Rocket
 } from "lucide-react";
 import { ThoughtBlock } from "./ThoughtBlock";
 import { ActionCard } from "./ActionCard";
@@ -27,9 +21,7 @@ import { ContextCards } from "./ContextCards";
 import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
-import { cn } from "../../lib/utils";
 import type { TopologyNode } from "../visualization/ModelBrowser";
-import { getFileIconInfo } from "../../lib/fileIcons";
 import { ChatInput } from "../Chat/ChatInput";
 
 // Internal helper for rendering highlighted content
@@ -41,7 +33,7 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
         
         // Custom renderer for mentions in markdown/text
         const renderWithMentions = (text: string) => {
-            const regex = /(@([a-zA-Z0-9_\-\.]+)(?::L?(\d+)(?:-L?(\d+))?)?)/g;
+            const regex = /(@([a-zA-Z0-9_\-.]+)(?::L?(\d+)(?:-L?(\d+))?)?)/g;
             const parts = [];
             let lastIndex = 0;
             let match;
@@ -121,14 +113,6 @@ const HighlightedContent = ({ content, language = 'text' }: { content: string, l
         );
 };
 
-interface Suggestion {
-  id: string;
-  name: string;
-  type: 'file' | 'part';
-  icon: React.ComponentType<{ className?: string }>;
-  original: any;
-}
-
 interface ChatWindowProps {
   traces?: TraceResponse[];
   task?: string;
@@ -155,9 +139,9 @@ export default function ChatWindow({
       selectedEpisode, 
       updateObjectives, 
       selectedContext,
-      addToContext,
-      clearContext
+      addToContext
   } = useEpisodes();
+
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -268,7 +252,8 @@ export default function ChatWindow({
                       traces.map(trace => {
                           const type = trace.trace_type as string;
                           if (type === 'llm_thought' || type === 'thought') {
-                            return <ThoughtBlock key={trace.id} duration={Math.floor(Math.random() * 5) + 1} content={trace.content || ""} />;
+                            const stableDuration = (trace.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 5) + 1;
+                            return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
                           }
                           if (type === 'tool_start') {
                               return <ActionCard key={trace.id} trace={trace} />;

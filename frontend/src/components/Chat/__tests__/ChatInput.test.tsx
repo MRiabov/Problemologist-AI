@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChatInput } from '../ChatInput';
 import type { TopologyNode } from '../../visualization/ModelBrowser';
@@ -29,10 +29,10 @@ describe('ChatInput', () => {
         selectedEpisode: { 
             id: 'ep-1', 
             assets: [
-                { id: '1', s3_path: 'main.py', asset_type: 'file' },
-                { id: '2', s3_path: 'utils.py', asset_type: 'file' }
+                { id: 1, s3_path: 'main.py', asset_type: 'file' },
+                { id: 2, s3_path: 'utils.py', asset_type: 'file' }
             ] 
-        } as any,
+        } as unknown as { id: string; assets: { id: number; s3_path: string; asset_type: string }[] },
         selectedContext: [],
         topologyNodes: [
             { id: 'part-1', name: 'Bracket', type: 'part', children: [] }
@@ -128,8 +128,6 @@ describe('ChatInput', () => {
         // Need to match something to show list. 'a' matches main.py and Bracket
         await userEvent.type(input, 'a');
 
-        const suggestions = screen.getAllByRole('button');
-        
         // Ensure suggestions are present
         expect(screen.getByText('Bracket')).toBeInTheDocument();
         expect(screen.getByText('main.py')).toBeInTheDocument();
@@ -140,7 +138,7 @@ describe('ChatInput', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         // Verify value changed (it should not keep just @a)
-        expect(input.value).not.toBe('@a');
+        expect(input).not.toHaveValue('@a');
     });
 
     it('calls onInterrupt when stop button clicked', () => {
