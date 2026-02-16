@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 import httpx
+import structlog
 from fastapi import (
     APIRouter,
     Depends,
@@ -14,18 +15,20 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from pydantic import BaseModel, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
-from controller.api.schemas import AssetResponse, EpisodeResponse, TraceResponse
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
+from controller.clients.worker import WorkerClient
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
+
+logger = structlog.get_logger(__name__)
 
 
 class FeedbackRequest(BaseModel):
@@ -220,6 +223,129 @@ async def continue_episode(
     return {"status": ResponseStatus.ACCEPTED, "message": "Message sent to agent"}
 
 
+@router.get("/{episode_id}/electronics/schematic")
+async def get_episode_schematic(
+    episode_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the electronics schematic for an episode in a format compatible with tscircuit."""
+    result = await db.execute(select(Episode).where(Episode.id == episode_id))
+    episode = result.scalar_one_or_none()
+
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    worker_session_id = str(episode_id)
+    if episode.metadata_vars:
+        worker_session_id = (
+            episode.metadata_vars.get("worker_session_id") or worker_session_id
+        )
+
+    worker_url = settings.worker_url
+    client = WorkerClient(base_url=worker_url, session_id=worker_session_id)
+
+    try:
+        content = await client.read_file("assembly_definition.yaml")
+        import yaml
+
+        from shared.models.schemas import AssemblyDefinition
+
+        data = yaml.safe_load(content)
+        assembly = AssemblyDefinition(**data)
+
+        if not assembly.electronics:
+            return []
+
+        # Map to tscircuit Soup JSON format
+        soup = []
+        
+        # 1. Add components
+        for i, comp in enumerate(assembly.electronics.components):
+            # schematic_component
+            comp_id = f"comp_{comp.component_id}"
+            soup.append({
+                "type": "schematic_component",
+                "id": comp_id,
+                "name": comp.component_id,
+                "center": {"x": 10 + i * 40, "y": 10},
+                "rotation": 0,
+                "symbol_name": "resistor" if comp.type == "motor" else "generic_component"
+            })
+            
+            # Add some pins
+            soup.append({
+                "type": "schematic_pin",
+                "id": f"{comp_id}_p1",
+                "component_id": comp_id,
+                "name": "1",
+                "center": {"x": 10 + i * 40 - 10, "y": 10}
+            })
+            soup.append({
+                "type": "schematic_pin",
+                "id": f"{comp_id}_p2",
+                "component_id": comp_id,
+                "name": "2",
+                "center": {"x": 10 + i * 40 + 10, "y": 10}
+            })
+
+        # 2. Add traces (simplified)
+        for wire in assembly.electronics.wiring:
+            soup.append({
+                "type": "schematic_trace",
+                "id": f"trace_{wire.wire_id}",
+                "source": f"comp_{wire.from_terminal.component}_p1", # Simplified mapping
+                "target": f"comp_{wire.to_terminal.component}_p2"
+            })
+
+        return soup
+    except Exception as e:
+        logger.error("failed_to_get_schematic", episode_id=episode_id, error=str(e))
+        return []
+
+
+class TraceResponse(BaseModel):
+    id: int
+    langfuse_trace_id: str | None
+    trace_type: TraceType
+    name: str | None
+    content: str | None
+    metadata: dict | None = Field(None, alias="metadata_vars")
+    feedback_score: int | None = None
+    feedback_comment: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class AssetResponse(BaseModel):
+    id: int
+    asset_type: AssetType
+    s3_path: str
+    content: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EpisodeResponse(BaseModel):
+    id: uuid.UUID
+    task: StrictStr
+    status: EpisodeStatus
+    created_at: datetime
+    updated_at: datetime
+    skill_git_hash: str | None = None
+    template_versions: dict | None = None
+    metadata_vars: dict | None = None
+    todo_list: dict | None = None
+    journal: str | None = None
+    plan: str | None = None
+    validation_logs: list[str] | None = None
+    traces: list[TraceResponse] = []
+    assets: list[AssetResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 @router.get("/", response_model=list[EpisodeResponse])
 async def list_episodes(
     limit: Annotated[int, Query(ge=0, lt=2**63)] = 100,
@@ -237,9 +363,6 @@ async def list_episodes(
         )
         return result.scalars().all()
     except Exception as e:
-        import structlog
-
-        logger = structlog.get_logger(__name__)
         logger.error("list_episodes_failed", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Internal Server Error: {e!s}"
@@ -304,10 +427,6 @@ async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
 @router.post("/{episode_id}/interrupt")
 async def interrupt_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     """Interrupt a running episode."""
-    import structlog
-
-    logger = structlog.get_logger(__name__)
-
     # 1. Cancel the asyncio task
     task = task_tracker.get_task(episode_id)
     if task and not task.done():

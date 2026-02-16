@@ -70,6 +70,8 @@ class ObservabilityEventType(StrEnum):
     ELECTRICAL_FAILURE = "electrical_failure"
     ELEC_AGENT_HANDOVER = "elec_agent_handover"
     CIRCUIT_SIMULATION = "circuit_simulation"
+    WIRE_TORN = "wire_torn"
+    POWER_BUDGET_WARNING = "power_budget_warning"
 
     # 26. WP2 Fluids & Deformable Materials events
     SIMULATION_BACKEND_SELECTED = "simulation_backend_selected"
@@ -358,6 +360,27 @@ class CircuitSimulationEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_SIMULATION
     duration_s: float
     motor_states: dict[str, str]  # motor_id -> "on"/"off"
+
+
+class CircuitSimulatedEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.CIRCUIT_SIMULATION
+    duration_s: float
+    total_draw_a: float
+    is_stable: bool
+
+
+class WireTornEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.WIRE_TORN
+    wire_id: str
+    force_n: float
+    limit_n: float
+
+
+class PowerBudgetWarningEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.POWER_BUDGET_WARNING
+    current_draw_a: float
+    limit_a: float
+    margin_pct: float
 
 
 # =============================================================================
