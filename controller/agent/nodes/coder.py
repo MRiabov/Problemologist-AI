@@ -1,45 +1,32 @@
 import logging
 from contextlib import suppress
 
-from typing import cast
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
+import structlog
 
 from controller.agent.config import settings
-from controller.agent.prompt_manager import PromptManager
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
-from controller.clients.worker import WorkerClient
-from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import get_langfuse_callback
 from shared.type_checking import type_check
-import structlog
+
+from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
 
 
 @type_check
-class CoderNode:
+class CoderNode(BaseNode):
     """
     Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
     Refactored to use LangGraph's prebuilt ReAct agent.
     """
 
-    def __init__(
-        self,
-        worker_url: str = "http://worker:8001",
-        session_id: str = "default-session",
-    ):
-        self.pm = PromptManager()
-        self.llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        self.worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
-        self.fs = RemoteFilesystemMiddleware(self.worker_client)
-
+    def __init__(self, context: SharedNodeContext):
+        super().__init__(context)
         # Initialize tools and agent
-        self.tools = get_engineer_tools(self.fs, session_id)
-        self.agent = create_react_agent(self.llm, self.tools)
+        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
+        self.agent = create_react_agent(self.ctx.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the coder node logic."""
@@ -56,30 +43,15 @@ class CoderNode:
         journal_entry = f"\nStarting step: {current_step}"
 
         # Render system prompt
-        system_prompt = self.pm.render(
+        system_prompt = self.ctx.pm.render(
             "engineer", current_step=current_step, error="", plan=state.plan
         )
 
         # Initialize conversation with system prompt
         messages = [SystemMessage(content=system_prompt)]
-        # Add existing messages from state if needed, but for CoderNode we usually want persistent context?
-        # The state.messages might grow indefinitely if we just append.
-        # For now, we start fresh for each task to keep context clean, but maybe we should pass state.messages?
-        # Given the "task" based nature, starting fresh with relevant context (plan, todo) in system prompt is safer.
-        # But if we want conversation history, we should use state.messages.
-        # The previous implementation was one-shot. ReAct allows multi-turn.
-        # Let's stick to fresh start per task to avoid context pollution, as the system prompt contains all necessary info.
 
         # Observability
-        langfuse_callback = get_langfuse_callback(
-            name="coder", session_id=state.session_id
-        )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=state.session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
+        callbacks = self._get_callbacks(name="coder", session_id=state.session_id)
 
         while retry_count < max_retries:
             try:
@@ -105,7 +77,7 @@ class CoderNode:
                     "assembly_definition.yaml",
                 ]:
                     with suppress(Exception):
-                        all_files[f] = await self.fs.read_file(f)
+                        all_files[f] = await self.ctx.fs.read_file(f)
 
                 is_valid, validation_errors = validate_node_output("coder", all_files)
 
@@ -127,11 +99,6 @@ class CoderNode:
                 new_todo = todo.replace(
                     f"- [ ] {current_step}", f"- [x] {current_step}"
                 )
-
-                # Update state
-                # We update 'messages' in state to persist the trace?
-                # Or just keep it ephemeral? The state definition has 'messages'.
-                # Let's persist it to allow debugging/history.
 
                 return state.model_copy(
                     update={
@@ -177,5 +144,8 @@ class CoderNode:
 async def coder_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    node = CoderNode(worker_url=settings.spec_001_api_url, session_id=session_id)
+    ctx = SharedNodeContext.create(
+        worker_url=settings.spec_001_api_url, session_id=session_id
+    )
+    node = CoderNode(context=ctx)
     return await node(state)
