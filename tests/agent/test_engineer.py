@@ -2,13 +2,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from controller.agent.nodes.coder import CoderNode
+from controller.agent.nodes.coder import coder_node
 from controller.agent.state import AgentState
 
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.coder.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(
@@ -22,7 +22,7 @@ from worker.api.schema import ExecuteResponse
 
 @pytest.fixture
 def mock_worker():
-    with patch("controller.agent.nodes.coder.WorkerClient") as mock:
+    with patch("controller.agent.nodes.base.WorkerClient") as mock:
         instance = mock.return_value
         instance.execute_python = AsyncMock()
         instance.execute_python.return_value = ExecuteResponse(
@@ -42,15 +42,11 @@ def mock_worker():
 def mock_record_events():
     with (
         patch(
-            "controller.agent.nodes.coder.record_worker_events",
-            new_callable=AsyncMock,
-        ) as mock1,
-        patch(
             "controller.middleware.remote_fs.record_worker_events",
             new_callable=AsyncMock,
         ) as mock2,
     ):
-        yield mock1
+        yield mock2
 
 
 @pytest.mark.asyncio
@@ -58,12 +54,13 @@ def mock_record_events():
 async def test_engineer_node_success(
     mock_validate, mock_llm, mock_worker, mock_record_events
 ):
-    node = CoderNode()
+    from controller.agent.nodes.coder import coder_node
+
     state = AgentState(
         todo="- [ ] Step 1\n- [ ] Step 2", plan="The plan", journal="Old logs"
     )
 
-    result = await node(state)
+    result = await coder_node(state)
 
     assert "Step 1" in result.current_step
     assert "- [x] Step 1" in result.todo
@@ -82,10 +79,9 @@ async def test_engineer_node_retry_then_success(
         ExecuteResponse(stdout="fixed", stderr="", exit_code=0),
     ]
 
-    node = CoderNode()
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
-    result = await node(state)
+    result = await coder_node(state)
 
     assert "- [x] Step 1" in result.todo
     assert "Execution failed (Attempt 1): SyntaxError" in result.journal
@@ -99,10 +95,9 @@ async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events)
         stdout="", stderr="Persistent Error", exit_code=1
     )
 
-    node = CoderNode()
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
-    result = await node(state)
+    result = await coder_node(state)
 
     assert result.iteration > 0
     assert "Failed to complete step after 3 retries" in result.journal

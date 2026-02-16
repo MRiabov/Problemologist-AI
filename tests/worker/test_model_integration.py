@@ -2,6 +2,8 @@ import textwrap
 
 import pytest
 
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
+
 from controller.agent.benchmark.nodes import verify_syntax
 from worker.utils.validation import simulate, validate
 

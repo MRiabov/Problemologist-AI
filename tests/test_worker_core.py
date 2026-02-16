@@ -8,6 +8,7 @@ These tests verify:
 """
 
 from shared.type_checking import type_check
+import pytest
 from worker.runtime.executor import RuntimeConfig, run_python_code
 
 
@@ -94,6 +95,8 @@ class TestDependencyVerification:
         )
         assert result.exit_code == 0, f"build123d import failed: {result.stderr}"
 
+    @pytest.mark.integration
+    @pytest.mark.xdist_group(name="physics_sims")
     def test_mujoco_import(self):
         """Test that mujoco can be imported."""
         import sys

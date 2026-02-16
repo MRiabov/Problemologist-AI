@@ -1,6 +1,6 @@
 import hashlib
 import os
-import pathlib
+from pathlib import Path
 import tempfile
 
 import numpy as np
@@ -13,7 +13,7 @@ def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     Converts a build123d Part or Compound to a trimesh.Trimesh object.
     """
     # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
+    temp_dir = "/dev/shm" if Path("/dev/shm").exists() else None
     with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -27,8 +27,9 @@ def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
             mesh = mesh.dump(concatenate=True)
         return mesh
     finally:
-        if pathlib.Path(tmp_path).exists():
-            pathlib.Path(tmp_path).unlink()
+        p = Path(tmp_path)
+        if p.exists():
+            p.unlink()
 
 
 def check_undercuts(
@@ -41,7 +42,8 @@ def check_undercuts(
 
     Args:
         mesh: The trimesh.Trimesh to check.
-        approach_direction: The vector pointing towards the tool (e.g., (0,0,1) for +Z approach).
+        approach_direction: The vector pointing towards the tool
+                            (e.g., (0,0,1) for +Z approach).
 
     Returns:
         A list of face indices that are undercuts.
@@ -66,7 +68,8 @@ def check_undercuts(
         # Check if all vertices of a face are at min_z
         is_at_bottom = np.all(np.abs(faces_z - min_z) < 0.01, axis=1)
 
-        # Check if normal is pointing effectively straight down (opposite to Z if approach is Z)
+        # Check if normal is pointing effectively straight down
+        # (opposite to Z if approach is Z)
         is_pointing_down = dots[pointing_away] < -0.99
 
         # Identify base faces
@@ -87,8 +90,9 @@ def check_undercuts(
         origins = centers + normals * 1e-4
         directions = np.tile(approach_direction, (len(origins), 1))
 
-        # Use mesh.ray for raycasting, which automatically uses pyembree if available (faster)
-        # and caches the BVH structure on the mesh object for subsequent calls.
+        # Use mesh.ray for raycasting, which automatically uses pyembree
+        # if available (faster) and caches the BVH structure on the mesh
+        # object for subsequent calls.
         hits = mesh.ray.intersects_any(origins, directions)
 
         occluded_indices = pointing_towards[hits]
@@ -103,7 +107,7 @@ def compute_part_hash(part: Part | Compound) -> str:
     Uses STL export as a proxy for geometry.
     """
     # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if os.path.exists("/dev/shm") else None
+    temp_dir = "/dev/shm" if Path("/dev/shm").exists() else None
     with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -111,7 +115,7 @@ def compute_part_hash(part: Part | Compound) -> str:
         from build123d import export_stl
 
         export_stl(part, tmp_path)
-        with open(tmp_path, "rb") as f:
+        with Path(tmp_path).open("rb") as f:
             content = f.read()
         return hashlib.sha256(content).hexdigest()
     finally:

@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 from pathlib import Path
 from build123d import Box, Compound, Location
 from shared.models.schemas import (

@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from controller.agent.nodes.reviewer import ReviewerNode
+from controller.agent.nodes.reviewer import reviewer_node
 from controller.agent.state import AgentState, AgentStatus
 
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.reviewer.ChatOpenAI") as mock:
+    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = MagicMock(
@@ -18,12 +18,14 @@ decision: approve
 ---
 Looks good."""
         )
+        # Mock structured output for the parser
+        instance.with_structured_output = MagicMock(return_value=instance)
         yield instance
 
 
 @pytest.fixture
 def mock_worker():
-    with patch("controller.agent.nodes.reviewer.WorkerClient") as mock:
+    with patch("controller.agent.nodes.base.WorkerClient") as mock:
         instance = mock.return_value
         instance.read_file = AsyncMock()
         yield instance
@@ -37,10 +39,9 @@ async def test_critic_node_approve(mock_llm, mock_worker):
         "Part is manufacturable.",  # mfg report
     ]
 
-    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="Implementation details")
 
-    result = await node(state)
+    result = await reviewer_node(state)
 
     assert result.status == AgentStatus.APPROVED
     assert "Looks good" in result.feedback
@@ -60,10 +61,9 @@ Simulation failed."""
         "Too expensive.",
     ]
 
-    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="")
 
-    result = await node(state)
+    result = await reviewer_node(state)
 
     assert result.status == AgentStatus.CODE_REJECTED
     assert "Simulation failed" in result.feedback
@@ -74,10 +74,9 @@ Simulation failed."""
 async def test_critic_node_no_artifacts(mock_llm, mock_worker):
     mock_worker.read_file.side_effect = Exception("File not found")
 
-    node = ReviewerNode()
     state = AgentState(task="Build a part", journal="")
 
-    result = await node(state)
+    result = await reviewer_node(state)
 
     # Even without artifacts, LLM decides based on journal
     assert result.status

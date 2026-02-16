@@ -1,22 +1,26 @@
-import os
 from pathlib import Path
 
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.builder import GenesisSimulationBuilder, MuJoCoSimulationBuilder
+from worker.simulation.builder import (
+    GenesisSimulationBuilder,
+    MuJoCoSimulationBuilder,
+)
 from worker.simulation.factory import get_physics_backend, get_simulation_builder
 from worker.simulation.genesis_backend import GenesisBackend
 from worker.simulation.loop import SimulationLoop
 from worker.simulation.mujoco_backend import MuJoCoBackend
 
+pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
+
 
 def test_simulation_loop_with_mujoco():
     # Use the minimal XML created for testing
-    xml_path = "tests/worker/minimal.xml"
-    if not os.path.exists(xml_path):
+    xml_path = Path("tests/worker/minimal.xml")
+    if not xml_path.exists():
         # Recreate minimal.xml if it was also deleted
-        with open(xml_path, "w") as f:
+        with xml_path.open("w") as f:
             f.write("""<mujoco model="test_model">
     <worldbody>
         <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>

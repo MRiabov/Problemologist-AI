@@ -1,3 +1,4 @@
+import pytest
 import os
 from pathlib import Path
 
@@ -60,6 +61,8 @@ def test_plan_validation_events():
     assert_event_emitted("lint_failure_docs", file_path="plan.md")
 
 
+@pytest.mark.integration
+@pytest.mark.xdist_group(name="physics_sims")
 def test_simulation():
     # Valid stable box
     with BuildPart() as p:

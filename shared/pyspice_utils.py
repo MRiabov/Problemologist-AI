@@ -1,8 +1,17 @@
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
+from PySpice.Spice.Netlist import Circuit
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
+from PySpice.Unit import *
+
+from shared.models.schemas import (
+    CircuitValidationResult,
+    ElectronicsSection,
+    PowerSupplyConfig,
+)
 
 # NGSpice 42 compatibility monkeypatch
 # NGSpice 42 sends "Using SPARSE 1.3" to stderr, which PySpice treats as an error.
@@ -27,27 +36,6 @@ def _patched_send_char(message_c, ngspice_id, user_data):
 
 
 NgSpiceShared._send_char = _patched_send_char
-
-# Configure PySpice to find ngspice library
-if not os.environ.get("PYSPICE_LIBRARY_PATH"):
-    for path in [
-        "/usr/lib/x86_64-linux-gnu/libngspice.so.0",
-        "/usr/lib/libngspice.so.0",
-        "/usr/local/lib/libngspice.so.0",
-        "/usr/lib/x86_64-linux-gnu/libngspice.so",
-    ]:
-        if os.path.exists(path):
-            NgSpiceShared.LIBRARY_PATH = path
-            break
-
-from PySpice.Spice.Netlist import Circuit
-from PySpice.Unit import *
-
-from shared.models.schemas import (
-    CircuitValidationResult,
-    PowerSupplyConfig,
-    ElectronicsSection,
-)
 
 logger = logging.getLogger(__name__)
 

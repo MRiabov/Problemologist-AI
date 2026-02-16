@@ -25,11 +25,10 @@ def mock_dependencies():
 
     app.dependency_overrides[get_router] = lambda: router_mock
 
-    # Mock sync_skills and watchdog to avoid side effects during startup
+    # Mock sync_skills and git operations to avoid side effects during startup
     # Also mock git operations exposed via API
     with (
         patch("worker.app.sync_skills"),
-        patch("worker.app.start_watchdog"),
         patch("worker.api.routes.init_workspace_repo"),
         patch("worker.api.routes.commit_all", return_value="deadbeef"),
     ):
