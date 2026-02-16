@@ -14,6 +14,7 @@ from shared.simulation.backends import (
     StressField,
 )
 from shared.models.simulation import StressSummary, FluidMetricResult
+from shared.simulation.schemas import SimulationFailureMode
 
 
 class MuJoCoBackend(PhysicsBackend):
@@ -45,7 +46,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure_reason=SimulationFailureMode.PHYSICS_INSTABILITY,
                 )
 
             mujoco.mj_step(self.model, self.data)
@@ -55,7 +56,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure_reason=SimulationFailureMode.PHYSICS_INSTABILITY,
                 )
 
         return StepResult(time=self.data.time, success=True)

@@ -1,5 +1,6 @@
 import pytest
 
+from shared.simulation.schemas import SimulationFailureMode
 from worker.simulation.loop import SimulationLoop
 
 # Mock XML for testing
@@ -184,4 +185,4 @@ def test_instability_detection(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "PHYSICS_INSTABILITY"
+    assert metrics.fail_reason == SimulationFailureMode.PHYSICS_INSTABILITY

@@ -565,6 +565,13 @@ class SimulationLoop:
             actuator_names, forces, limit, 0.002
         )
 
+    def check_goal_with_vertices(self, body_name: str) -> bool:
+        """Check if the body is in any of the goal zones."""
+        for goal_site in self.goal_sites:
+            if self.backend.check_collision(body_name, goal_site):
+                return True
+        return False
+
     def _check_forbidden_collision(self) -> bool:
         return any(
             self.backend.check_collision(b, z)

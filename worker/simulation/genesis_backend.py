@@ -629,7 +629,19 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        if site_name in self.entity_configs:
+            cfg = self.entity_configs[site_name]
+            if cfg.get("is_zone"):
+                z_min = np.array(cfg.get("min", [0, 0, 0]), dtype=float)
+                z_max = np.array(cfg.get("max", [0, 0, 0]), dtype=float)
+                center = (z_min + z_max) / 2.0
+                size = (z_max - z_min) / 2.0
+                return SiteState(
+                    pos=tuple(center.tolist()),
+                    quat=(1, 0, 0, 0),
+                    size=tuple(size.tolist()),
+                )
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
@@ -694,7 +706,9 @@ class GenesisBackend(PhysicsBackend):
         return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
-        return []
+        return [
+            name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")
+        ]
 
     def get_all_tendon_names(self) -> list[str]:
         return []
