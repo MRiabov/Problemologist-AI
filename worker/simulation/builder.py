@@ -822,6 +822,13 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 "joint": joint_info,
             }
 
+            # WP3 Forward Compatibility: Mark as electronics if referenced
+            if electronics and hasattr(electronics, "components"):
+                for comp in electronics.components:
+                    if comp.assembly_part_ref == label:
+                        entity_info["is_electronics"] = True
+                        break
+
             if is_deformable:
                 msh_path = mesh_path_base.with_suffix(".msh")
                 stl_path = mesh_path_base.with_suffix(".stl")

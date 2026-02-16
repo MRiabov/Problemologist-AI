@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Chat Enhancements (@-mentions & Code Steering)
-lane: "doing"
+lane: "planned"
 dependencies: []
 base_branch: main
 base_commit: daef541770cc1f7e0367eefb41dcb82690465567
@@ -9,6 +9,8 @@ created_at: '2026-02-15T12:46:12.399543+00:00'
 subtasks: [T010, T011]
 shell_pid: "102877"
 agent: "Antigravity"
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
 ---
 
 # WP06 - Chat Enhancements (@-mentions & Code Steering)
@@ -51,3 +53,4 @@ Implement @-mention autocomplete for parts and subassemblies and line-targeted c
 ## Activity Log
 
 - 2026-02-15T12:46:12Z – Antigravity – shell_pid=102877 – lane=doing – Assigned agent via workflow command
+- 2026-02-16T07:10:28Z – Antigravity – shell_pid=102877 – lane=planned – Moved to planned
