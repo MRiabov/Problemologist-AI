@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ModelViewer from './ModelViewer';
 import { cn } from "../../lib/utils";
+import type { TopologyNode } from './ModelBrowser';
 
 interface DesignViewerProps {
   modelUrls?: string[];
@@ -18,6 +19,9 @@ interface DesignViewerProps {
   heatmapUrls?: string[];
   isConnected?: boolean;
   resetTrigger?: number;
+  topologyNodes?: TopologyNode[];
+  onTopologyChange?: (nodes: TopologyNode[]) => void;
+  onRebuildModel?: () => Promise<void>;
 }
 
 type ViewMode = '3d' | 'video' | 'heatmaps';
@@ -27,7 +31,10 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
   videoUrl,
   heatmapUrls = [],
   isConnected = true,
-  resetTrigger = 0
+  resetTrigger = 0,
+  topologyNodes = [],
+  onTopologyChange,
+  onRebuildModel
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>(videoUrl ? 'video' : '3d');
   const [activeHeatmapIdx, setActiveHeatmapIdx] = useState(0);
@@ -88,6 +95,9 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
             isConnected={isConnected} 
             resetTrigger={resetTrigger}
             className="w-full h-full"
+            topologyNodes={topologyNodes}
+            onTopologyChange={onTopologyChange}
+            onRebuildModel={onRebuildModel}
           />
         )}
 
