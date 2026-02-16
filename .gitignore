@@ -63,3 +63,4 @@ MUJOCO_LOG.TXT
 # Simulation assets
 assets/part_0.glb
 assets/part_0.obj
+events.jsonl
