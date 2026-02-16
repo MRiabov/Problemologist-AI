@@ -413,6 +413,19 @@ def simulate(
             dynamic_controllers=dynamic_controllers,
             video_path=video_path,
         )
+
+        # WP2: T017: GPU OOM Retry Logic
+        if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
+            logger.warning("gpu_oom_detected_retrying_smoke_mode")
+            loop.smoke_test_mode = True
+            loop.particle_budget = 5000
+            metrics = loop.step(
+                control_inputs=control_inputs,
+                duration=30.0,
+                dynamic_controllers=dynamic_controllers,
+                video_path=video_path,
+            )
+
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
