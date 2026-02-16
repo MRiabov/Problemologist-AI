@@ -51,6 +51,14 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         )
         return await fs.run_command(command)
 
+    @tool
+    async def inspect_topology(target_id: str, script_path: str = "script.py") -> dict:
+        """
+        Inspect geometric properties of a selected feature (face, edge, part).
+        Returns center, normal, area, and bounding box.
+        """
+        return await fs.inspect_topology(target_id, script_path)
+
     return [
         list_files,
         read_file,
@@ -58,6 +66,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         edit_file,
         grep,
         execute_command,
+        inspect_topology,
         search_cots_catalog,
     ]
 
