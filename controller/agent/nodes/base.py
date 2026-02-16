@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SharedNodeContext:
-    """Shared dependencies for agent nodes."""
+    """Consolidates shared dependencies for agent nodes."""
 
     worker_url: str
     session_id: str
@@ -39,22 +39,27 @@ class SharedNodeContext:
             fs=RemoteFilesystemMiddleware(worker_client),
         )
 
-
-class BaseNode:
-    """Base class for agent nodes with common utilities."""
-
-    def __init__(self, context: SharedNodeContext):
-        self.ctx = context
-
-    def _get_callbacks(self, name: str, session_id: str):
-        langfuse_callback = get_langfuse_callback(name=name, session_id=session_id)
+    def get_callbacks(self, name: str, session_id: str | None = None):
+        """Creates observability callbacks."""
+        sid = session_id or self.session_id
+        langfuse_callback = get_langfuse_callback(name=name, session_id=sid)
         db_callback = DatabaseCallbackHandler(
-            episode_id=session_id, langfuse_callback=langfuse_callback
+            episode_id=sid, langfuse_callback=langfuse_callback
         )
         callbacks = [db_callback]
         if langfuse_callback:
             callbacks.append(langfuse_callback)
         return callbacks
+
+
+class BaseNode:
+    """Base class for agent nodes providing common utilities."""
+
+    def __init__(self, context: SharedNodeContext):
+        self.ctx = context
+
+    def _get_callbacks(self, name: str, session_id: str):
+        return self.ctx.get_callbacks(name, session_id)
 
     def _get_skills_context(self) -> str:
         # Note: Skills are currently local to the controller

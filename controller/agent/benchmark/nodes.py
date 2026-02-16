@@ -14,6 +14,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
+from controller.agent.nodes.base import SharedNodeContext
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
@@ -49,119 +50,95 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
-    async with httpx.AsyncClient() as http_client:
-        client = WorkerClient(
-            base_url=worker_url, session_id=session_id, http_client=http_client
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    logger.info("planner_node_start", session_id=session_id)
+
+    try:
+        base_prompt = get_prompt("benchmark_generator.planner.system")
+    except Exception as e:
+        logger.error("planner_prompt_load_failed", error=str(e))
+        state["plan"] = RandomizationStrategy(
+            theme="error", reasoning=f"Failed to load planner prompt: {e}"
+        )
+        return state
+
+    # Observability
+    callbacks = ctx.get_callbacks(name="benchmark_planner", session_id=session_id)
+
+    # Init Git
+    logger.info("planner_git_init_start", session_id=session_id)
+    await ctx.worker_client.git_init()
+    logger.info("planner_git_init_complete", session_id=session_id)
+
+    # Custom Objectives Logic (Legacy)
+    custom_objectives = state["session"].custom_objectives
+    if custom_objectives:
+        logger.info("planner_updating_objectives", session_id=session_id)
+        if await ctx.worker_client.exists("objectives.yaml"):
+            try:
+                obj_content = await ctx.worker_client.read_file("objectives.yaml")
+                obj_data = yaml.safe_load(obj_content)
+                if not isinstance(obj_data, dict):
+                    obj_data = {}
+                if "constraints" not in obj_data:
+                    obj_data["constraints"] = {}
+                # Update constraints based on custom objectives
+                if custom_objectives.max_unit_cost is not None:
+                    obj_data["constraints"]["max_unit_cost"] = (
+                        custom_objectives.max_unit_cost
+                    )
+                if custom_objectives.max_weight is not None:
+                    obj_data["constraints"]["max_weight"] = custom_objectives.max_weight
+                if custom_objectives.target_quantity is not None:
+                    obj_data["constraints"]["target_quantity"] = (
+                        custom_objectives.target_quantity
+                    )
+
+                new_content = yaml.dump(obj_data, sort_keys=False)
+                await ctx.worker_client.write_file("objectives.yaml", new_content)
+                logger.info("planner_objectives_updated", session_id=session_id)
+            except Exception as e:
+                logger.warning("planner_objectives_update_failed", error=str(e))
+        else:
+            logger.info("planner_objectives_not_found_skipping_update")
+
+    # Support steering by including history in the planner prompt
+    history = state.get("messages", [])
+    messages = [
+        SystemMessage(content=base_prompt),
+        *history,
+        HumanMessage(
+            content=(
+                f"Original User Request:\n{state['session'].prompt}\n\n"
+                "Please generate the randomization strategy now. "
+                "Take into account any steering or feedback from the history above if present."
+            )
+        ),
+    ]
+
+    try:
+        # Use structured output
+        logger.info(
+            "planner_agent_invoke_start",
+            session_id=session_id,
+            model=settings.llm_model,
+        )
+        structured_llm = ctx.llm.with_structured_output(RandomizationStrategy)
+        plan = await structured_llm.ainvoke(messages, config={"callbacks": callbacks})
+        logger.info("planner_agent_invoke_complete", session_id=session_id)
+
+        state["plan"] = plan
+        state["messages"].append(HumanMessage(content=f"Generated plan: {plan.theme}"))
+
+        logger.info(
+            "planner_node_complete",
+            session_id=session_id,
+            theme=plan.theme,
         )
 
-        logger.info("planner_node_start", session_id=session_id)
-
-        try:
-            base_prompt = get_prompt("benchmark_generator.planner.system")
-        except Exception as e:
-            logger.error("planner_prompt_load_failed", error=str(e))
-            state["plan"] = RandomizationStrategy(
-                theme="error", reasoning=f"Failed to load planner prompt: {e}"
-            )
-            return state
-
-        # Observability
-        langfuse_callback = get_langfuse_callback(
-            name="benchmark_planner", session_id=session_id
-        )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
-
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-
-        # Init Git
-        logger.info("planner_git_init_start", session_id=session_id)
-        await client.git_init()
-        logger.info("planner_git_init_complete", session_id=session_id)
-
-        # Custom Objectives Logic (Legacy)
-        custom_objectives = state["session"].custom_objectives
-        if custom_objectives:
-            logger.info("planner_updating_objectives", session_id=session_id)
-            if await client.exists("objectives.yaml"):
-                try:
-                    obj_content = await client.read_file("objectives.yaml")
-                    obj_data = yaml.safe_load(obj_content)
-                    if not isinstance(obj_data, dict):
-                        obj_data = {}
-                    if "constraints" not in obj_data:
-                        obj_data["constraints"] = {}
-                    # Update constraints based on custom objectives
-                    if custom_objectives.max_unit_cost is not None:
-                        obj_data["constraints"]["max_unit_cost"] = (
-                            custom_objectives.max_unit_cost
-                        )
-                    if custom_objectives.max_weight is not None:
-                        obj_data["constraints"]["max_weight"] = (
-                            custom_objectives.max_weight
-                        )
-                    if custom_objectives.target_quantity is not None:
-                        obj_data["constraints"]["target_quantity"] = (
-                            custom_objectives.target_quantity
-                        )
-
-                    new_content = yaml.dump(obj_data, sort_keys=False)
-                    await client.write_file("objectives.yaml", new_content)
-                    logger.info("planner_objectives_updated", session_id=session_id)
-                except Exception as e:
-                    logger.warning("planner_objectives_update_failed", error=str(e))
-            else:
-                logger.info("planner_objectives_not_found_skipping_update")
-
-        # Support steering by including history in the planner prompt
-        history = state.get("messages", [])
-        messages = [
-            SystemMessage(content=base_prompt),
-            *history,
-            HumanMessage(
-                content=(
-                    f"Original User Request:\n{state['session'].prompt}\n\n"
-                    "Please generate the randomization strategy now. "
-                    "Take into account any steering or feedback from the history above if present."
-                )
-            ),
-        ]
-
-        try:
-            # Use structured output
-            logger.info(
-                "planner_agent_invoke_start",
-                session_id=session_id,
-                model=settings.llm_model,
-            )
-            structured_llm = llm.with_structured_output(RandomizationStrategy)
-            plan = await structured_llm.ainvoke(
-                messages, config={"callbacks": callbacks}
-            )
-            logger.info("planner_agent_invoke_complete", session_id=session_id)
-
-            state["plan"] = plan
-            # Record plan as a message to keep history consistent?
-            # actually, structured output might not return a message easily, but let's append a dummy one if needed.
-            state["messages"].append(
-                HumanMessage(content=f"Generated plan: {plan.theme}")
-            )
-
-            logger.info(
-                "planner_node_complete",
-                session_id=session_id,
-                theme=plan.theme,
-            )
-
-        except Exception as e:
-            logger.error(
-                "planner_agent_run_failed", error=str(e), session_id=session_id
-            )
-            state["plan"] = RandomizationStrategy(theme="error", reasoning=str(e))
+    except Exception as e:
+        logger.error("planner_agent_run_failed", error=str(e), session_id=session_id)
+        state["plan"] = RandomizationStrategy(theme="error", reasoning=str(e))
 
     return state
 
@@ -174,33 +151,28 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
-    async with httpx.AsyncClient() as http_client:
-        client = WorkerClient(
-            base_url=worker_url, session_id=session_id, http_client=http_client
-        )
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    logger.info("coder_node_start", session_id=session_id)
 
-        logger.info("coder_node_start", session_id=session_id)
+    try:
+        base_prompt = get_prompt("benchmark_generator.coder.system")
+    except Exception:
+        base_prompt = "Error loading prompt."
 
-        try:
-            base_prompt = get_prompt("benchmark_generator.coder.system")
-        except Exception:
-            base_prompt = "Error loading prompt."
+    # Context construction
+    validation_logs = "\n".join(state["session"].validation_logs)
+    if state.get("simulation_result") and not state["simulation_result"]["valid"]:
+        validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
 
-        # Context construction
-        validation_logs = "\n".join(state["session"].validation_logs)
-        if state.get("simulation_result") and not state["simulation_result"]["valid"]:
-            validation_logs += "\n" + "\n".join(state["simulation_result"]["logs"])
+    objectives_yaml = "# No objectives.yaml found."
+    try:
+        if await ctx.worker_client.exists("objectives.yaml"):
+            resp = await ctx.worker_client.read_file("objectives.yaml")
+            objectives_yaml = resp
+    except Exception:
+        pass
 
-        objectives_yaml = "# No objectives.yaml found."
-        try:
-            files = await client.list_files(".")
-            if any(f.path.endswith("objectives.yaml") for f in files):
-                resp = await client.read_file("objectives.yaml")
-                objectives_yaml = resp
-        except Exception:
-            pass
-
-        system_prompt = f"""{base_prompt}
+    system_prompt = f"""{base_prompt}
 
 ### Context
 Original User Request:
@@ -219,145 +191,126 @@ Validation Logs:
 {validation_logs}
 """
 
-        # Setup Agent
-        middleware = RemoteFilesystemMiddleware(client)
-        tools = get_benchmark_tools(middleware, session_id)
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        agent = create_react_agent(llm, tools)
+    # Setup Agent
+    tools = get_benchmark_tools(ctx.fs, session_id)
+    agent = create_react_agent(ctx.llm, tools)
 
-        # Observability
-        langfuse_callback = get_langfuse_callback(
-            name="benchmark_coder", session_id=session_id
-        )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
+    # Observability
+    callbacks = ctx.get_callbacks(name="benchmark_coder", session_id=session_id)
 
-        messages = (
-            [SystemMessage(content=system_prompt)]
-            + state.get("messages", [])
-            + [
-                HumanMessage(
-                    content=f"Implement the benchmark script for: {state['session'].prompt}"
-                )
-            ]
-        )
+    messages = [
+        SystemMessage(content=system_prompt),
+        *state.get("messages", []),
+        HumanMessage(
+            content=f"Implement the benchmark script for: {state['session'].prompt}"
+        ),
+    ]
 
-        # Invoke Agent
-        try:
-            logger.info("coder_agent_invoke_start", session_id=session_id)
-            result = await agent.ainvoke(
-                {"messages": messages}, config={"callbacks": callbacks}
+    # Invoke Agent
+    try:
+        logger.info("coder_agent_invoke_start", session_id=session_id)
+        result = await agent.ainvoke(
+            {"messages": messages}, config={"callbacks": callbacks}
+        )
+        logger.info("coder_agent_invoke_complete", session_id=session_id)
+        state["messages"] = result["messages"]
+    except Exception as e:
+        logger.error("coder_agent_failed", error=str(e))
+
+    # Retrieve script
+    try:
+        state["current_script"] = await ctx.worker_client.read_file("script.py")
+    except Exception:
+        pass
+
+    # Validation Logic (Same as before)
+    if state.get("current_script"):
+        from worker.utils.file_validation import validate_node_output
+
+        is_valid, errors = validate_node_output(
+            "coder", {"script.py": state["current_script"]}
+        )
+        if not is_valid:
+            logger.warning("benchmark_coder_validation_failed", errors=errors)
+            state["session"].validation_logs.append(
+                f"Output validation failed: {errors}"
             )
-            logger.info("coder_agent_invoke_complete", session_id=session_id)
-            state["messages"] = result[
-                "messages"
-            ]  # Update logic slightly different here, we replace messages? or extend?
-            # Creating a fresh list might lose context if not careful, but here we passed full context in system prompt.
-            # The agent returns the full conversation including input messages.
 
-        except Exception as e:
-            logger.error("coder_agent_failed", error=str(e))
-
-        # Retrieve script
+    # Run Verification (Geometric + Physics)
+    script = state.get("current_script")
+    if script:
+        logger.info("running_integrated_validation", session_id=session_id)
         try:
-            state["current_script"] = await client.read_file("script.py")
-        except Exception:
-            pass
+            val_res = await ctx.worker_client.validate(script_path="script.py")
+            if not val_res.success:
+                state["simulation_result"] = {
+                    "valid": False,
+                    "cost": 0,
+                    "logs": [f"Geometric validation failed: {val_res.message}"],
+                    "render_paths": [],
+                    "render_data": [],
+                }
+            else:
+                # physics simulation
+                backend = SimulatorBackendType.MUJOCO
+                try:
+                    if objectives_yaml and not objectives_yaml.startswith("#"):
+                        obj_data = yaml.safe_load(objectives_yaml)
+                        if (
+                            obj_data
+                            and "physics" in obj_data
+                            and "backend" in obj_data["physics"]
+                        ):
+                            backend = SimulatorBackendType(
+                                obj_data["physics"]["backend"]
+                            )
+                except Exception:
+                    logger.warning("failed_to_parse_backend_from_objectives")
 
-        # Validation Logic (Same as before)
-        if state.get("current_script"):
-            from worker.utils.file_validation import validate_node_output
-
-            is_valid, errors = validate_node_output(
-                "coder", {"script.py": state["current_script"]}
-            )
-            if not is_valid:
-                logger.warning("benchmark_coder_validation_failed", errors=errors)
-                state["session"].validation_logs.append(
-                    f"Output validation failed: {errors}"
+                sim_res = await ctx.worker_client.simulate(
+                    script_path="script.py", backend=backend
                 )
-
-        # Run Verification (Geometric + Physics)
-        script = state.get("current_script")
-        if script:
-            logger.info("running_integrated_validation", session_id=session_id)
-            try:
-                val_res = await client.validate(script_path="script.py")
-                if not val_res.success:
+                if not sim_res.success:
                     state["simulation_result"] = {
                         "valid": False,
                         "cost": 0,
-                        "logs": [f"Geometric validation failed: {val_res.message}"],
+                        "logs": [f"Physics simulation failed: {sim_res.message}"],
                         "render_paths": [],
                         "render_data": [],
                     }
                 else:
-                    # physics simulation
-                    backend = SimulatorBackendType.MUJOCO
-                    try:
-                        if objectives_yaml and not objectives_yaml.startswith("#"):
-                            obj_data = yaml.safe_load(objectives_yaml)
-                            if (
-                                obj_data
-                                and "physics" in obj_data
-                                and "backend" in obj_data["physics"]
-                            ):
-                                backend = SimulatorBackendType(
-                                    obj_data["physics"]["backend"]
-                                )
-                    except Exception:
-                        logger.warning("failed_to_parse_backend_from_objectives")
-
-                    sim_res = await client.simulate(
-                        script_path="script.py", backend=backend
+                    # Download Renders
+                    render_paths = (
+                        sim_res.artifacts.get("render_paths", [])
+                        if sim_res.artifacts
+                        else []
                     )
-                    if not sim_res.success:
-                        state["simulation_result"] = {
-                            "valid": False,
-                            "cost": 0,
-                            "logs": [f"Physics simulation failed: {sim_res.message}"],
-                            "render_paths": [],
-                            "render_data": [],
-                        }
-                    else:
-                        # Download Renders
-                        render_paths = (
-                            sim_res.artifacts.get("render_paths", [])
-                            if sim_res.artifacts
-                            else []
-                        )
 
-                        tasks = []
-                        for p in render_paths:
+                    async def _download(url_path):
+                        url = f"{worker_url}/assets/{url_path.lstrip('/')}"
+                        try:
+                            # We still need httpx for direct asset download
+                            async with httpx.AsyncClient() as http_client:
+                                r = await http_client.get(
+                                    url, headers={"X-Session-ID": session_id}
+                                )
+                                return r.content if r.status_code == 200 else None
+                        except Exception:
+                            return None
 
-                            async def _download(url_path):
-                                url = f"{worker_url}/assets/{url_path.lstrip('/')}"
-                                try:
-                                    r = await http_client.get(
-                                        url, headers={"X-Session-ID": session_id}
-                                    )
-                                    return r.content if r.status_code == 200 else None
-                                except:
-                                    return None
+                    tasks = [_download(p) for p in render_paths]
+                    results = await asyncio.gather(*tasks)
+                    render_data = [r for r in results if r is not None]
 
-                            tasks.append(_download(p))
-
-                        results = await asyncio.gather(*tasks)
-                        render_data = [r for r in results if r is not None]
-
-                        state["simulation_result"] = {
-                            "valid": True,
-                            "cost": 0,
-                            "logs": ["Validation passed."],
-                            "render_paths": render_paths,
-                            "render_data": render_data,
-                        }
-            except Exception as e:
-                logger.error("integrated_validation_error", error=str(e))
+                    state["simulation_result"] = {
+                        "valid": True,
+                        "cost": 0,
+                        "logs": ["Validation passed."],
+                        "render_paths": render_paths,
+                        "render_data": render_data,
+                    }
+        except Exception as e:
+            logger.error("integrated_validation_error", error=str(e))
 
     return state
 
@@ -367,38 +320,23 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
-    async with httpx.AsyncClient() as http_client:
-        client = WorkerClient(
-            base_url=worker_url, session_id=session_id, http_client=http_client
-        )
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    # Use benchmark tools which includes search_cots_catalog
+    tools = get_benchmark_tools(ctx.fs, session_id)
 
-        # Use common tools which includes search_cots_catalog
-        middleware = RemoteFilesystemMiddleware(client)
-        tools = get_benchmark_tools(middleware, session_id)
-        # Note: cots_search_node might strictly only need search_cots_catalog, but strict unification says "common set".
+    agent = create_react_agent(ctx.llm, tools)
 
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        agent = create_react_agent(llm, tools)
+    # Observability
+    callbacks = ctx.get_callbacks(name="benchmark_cots_search", session_id=session_id)
 
-        # Observability
-        langfuse_callback = get_langfuse_callback(
-            name="benchmark_cots_search", session_id=session_id
-        )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
-
-        prompt = f"Find components for the benchmark: {state['session'].prompt}"
-        logger.info("cots_search_agent_invoke_start", session_id=session_id)
-        result = await agent.ainvoke(
-            {"messages": [HumanMessage(content=prompt)]},
-            config={"callbacks": callbacks},
-        )
-        logger.info("cots_search_agent_invoke_complete", session_id=session_id)
-        state["messages"].extend(result["messages"])
+    prompt = f"Find components for the benchmark: {state['session'].prompt}"
+    logger.info("cots_search_agent_invoke_start", session_id=session_id)
+    result = await agent.ainvoke(
+        {"messages": [HumanMessage(content=prompt)]},
+        config={"callbacks": callbacks},
+    )
+    logger.info("cots_search_agent_invoke_complete", session_id=session_id)
+    state["messages"].extend(result["messages"])
 
     return state
 
@@ -416,67 +354,61 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     session_id = str(state["session"].session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
-    async with httpx.AsyncClient() as http_client:
-        client = WorkerClient(
-            base_url=worker_url, session_id=session_id, http_client=http_client
-        )
-        logger.info("reviewer_node_start", round=state.get("review_round", 0))
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    logger.info("reviewer_node_start", round=state.get("review_round", 0))
 
-        state["review_round"] = state.get("review_round", 0) + 1
-        current_round = state["review_round"]
-        review_filename = f"reviews/review-round-{current_round}/review.md"
+    state["review_round"] = state.get("review_round", 0) + 1
+    current_round = state["review_round"]
+    review_filename = f"reviews/review-round-{current_round}/review.md"
 
-        # Vision inputs
-        sim_result = state.get("simulation_result")
-        render_data = sim_result.get("render_data", []) if sim_result else []
-        image_contents = []
-        for img_bytes in (render_data or [])[:8]:
-            try:
-                if img_bytes:
-                    encoded = base64.b64encode(img_bytes).decode("utf-8")
-                    image_contents.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{encoded}"},
-                        }
-                    )
-            except Exception:
-                pass
-
-        # Setup Tools
-        middleware = RemoteFilesystemMiddleware(client)
-        all_tools = get_benchmark_tools(middleware, session_id)
-
-        # Security: Custom wrapper for write_file to restrict path
-        violations = []
-
-        @tool
-        async def write_review_file(path: str, content: str) -> str:
-            """Write the review to the review file."""
-            p = path.lstrip("/")
-            if p != review_filename.lstrip("/"):
-                violations.append(f"Attempted to write unauthorized path: {path}")
-                return "Error: Unauthorized path."
-            success = await middleware.write_file(path, content)
-            return (
-                "Review written successfully." if success else "Error writing review."
-            )
-
-        # Filter unsafe tools
-        safe_tools = [
-            t
-            for t in all_tools
-            if t.name not in ("write_file", "edit_file", "submit_for_review")
-        ]
-        safe_tools.append(write_review_file)
-
-        # Prompt
+    # Vision inputs
+    sim_result = state.get("simulation_result")
+    render_data = sim_result.get("render_data", []) if sim_result else []
+    image_contents = []
+    for img_bytes in (render_data or [])[:8]:
         try:
-            base_prompt = get_prompt("benchmark_generator.reviewer.system")
+            if img_bytes:
+                encoded = base64.b64encode(img_bytes).decode("utf-8")
+                image_contents.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{encoded}"},
+                    }
+                )
         except Exception:
-            base_prompt = "You are an agentic reviewer."
+            pass
 
-        system_prompt = f"""{base_prompt}
+    # Setup Tools
+    all_tools = get_benchmark_tools(ctx.fs, session_id)
+
+    # Security: Custom wrapper for write_file to restrict path
+    violations = []
+
+    @tool
+    async def write_review_file(path: str, content: str) -> str:
+        """Write the review to the review file."""
+        p = path.lstrip("/")
+        if p != review_filename.lstrip("/"):
+            violations.append(f"Attempted to write unauthorized path: {path}")
+            return "Error: Unauthorized path."
+        success = await ctx.worker_client.write_file(path, content)
+        return "Review written successfully." if success else "Error writing review."
+
+    # Filter unsafe tools
+    safe_tools = [
+        t
+        for t in all_tools
+        if t.name not in ("write_file", "edit_file", "submit_for_review")
+    ]
+    safe_tools.append(write_review_file)
+
+    # Prompt
+    try:
+        base_prompt = get_prompt("benchmark_generator.reviewer.system")
+    except Exception:
+        base_prompt = "You are an agentic reviewer."
+
+    system_prompt = f"""{base_prompt}
 You are an agentic reviewer with access to the CAD workspace.
 YOU MUST:
 1. Inspect the renders provided in the vision message.
@@ -486,80 +418,72 @@ YOU MUST:
 YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
 """
 
-        # Agent
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
-        agent = create_react_agent(llm, safe_tools)
+    # Agent
+    agent = create_react_agent(ctx.llm, safe_tools)
 
-        # Observability
-        langfuse_callback = get_langfuse_callback(
-            name="benchmark_reviewer", session_id=session_id
+    # Observability
+    callbacks = ctx.get_callbacks(name="benchmark_reviewer", session_id=session_id)
+
+    user_content = [
+        {
+            "type": "text",
+            "text": (
+                f"Please review the benchmark for theme: "
+                f"{(state.get('plan') or {}).get('theme', 'Unknown')}\n"
+                f"Prompt: {state['session'].prompt}"
+            ),
+        }
+    ]
+    user_content.extend(image_contents)
+
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_content),
+    ]
+
+    try:
+        logger.info("reviewer_agent_invoke_start", session_id=session_id)
+        result = await agent.ainvoke(
+            {"messages": messages}, config={"callbacks": callbacks}
         )
-        db_callback = DatabaseCallbackHandler(
-            episode_id=session_id, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
-
-        user_content = [
-            {
-                "type": "text",
-                "text": f"Please review the benchmark for theme: {(state.get('plan') or {}).get('theme', 'Unknown')}\nPrompt: {state['session'].prompt}",
-            }
-        ]
-        user_content.extend(image_contents)
-
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_content),
-        ]
-
-        try:
-            logger.info("reviewer_agent_invoke_start", session_id=session_id)
-            result = await agent.ainvoke(
-                {"messages": messages}, config={"callbacks": callbacks}
+        logger.info("reviewer_agent_invoke_complete", session_id=session_id)
+        # Check violations
+        if violations:
+            state["review_feedback"] = (
+                f"Reviewer security violation: {', '.join(violations)}"
             )
-            logger.info("reviewer_agent_invoke_complete", session_id=session_id)
-            # Check violations
-            if violations:
-                state["review_feedback"] = (
-                    f"Reviewer security violation: {', '.join(violations)}"
-                )
-                return state
+            return state
 
-            # T018: Decision logic (Structured Parsing)
-            try:
-                parser_llm = llm.with_structured_output(ReviewResult)
-                review_parsed = await parser_llm.ainvoke(
-                    [
-                        SystemMessage(
-                            content="Extract the final review decision from the following text."
-                        ),
-                        HumanMessage(content=result["messages"][-1].content),
-                    ]
+        # T018: Decision logic (Structured Parsing)
+        try:
+            parser_llm = ctx.llm.with_structured_output(ReviewResult)
+            review_parsed = await parser_llm.ainvoke(
+                [
+                    SystemMessage(
+                        content="Extract the final review decision from the following text."
+                    ),
+                    HumanMessage(content=result["messages"][-1].content),
+                ]
+            )
+            state["review_feedback"] = (
+                f"{review_parsed.decision.value}: {review_parsed.reason}"
+            )
+            if review_parsed.required_fixes:
+                state["review_feedback"] += "\nFixes: " + ", ".join(
+                    review_parsed.required_fixes
                 )
-                state["review_feedback"] = (
-                    f"{review_parsed.decision.value}: {review_parsed.reason}"
-                )
-                if review_parsed.required_fixes:
-                    state["review_feedback"] += "\nFixes: " + ", ".join(
-                        review_parsed.required_fixes
-                    )
-            except Exception as e:
-                logger.warn(
-                    "Benchmark reviewer parsing failed, falling back to basic check",
-                    error=str(e),
-                )
-                # Fallback check for file existence
-                parent_dir = str(Path(review_filename).parent)
-                files = await client.list_files(parent_dir)
-                exists = any(f.path.endswith(Path(review_filename).name) for f in files)
-                if exists:
-                    state["review_feedback"] = "Review completed (parsed via fallback)."
-                else:
-                    state["review_feedback"] = f"Error: Review file not created. {e}"
-
         except Exception as e:
-            state["review_feedback"] = f"Error executing reviewer: {e}"
+            logger.warn(
+                "Benchmark reviewer parsing failed, falling back to basic check",
+                error=str(e),
+            )
+            # Fallback check for file existence
+            if await ctx.worker_client.exists(review_filename):
+                state["review_feedback"] = "Review completed (parsed via fallback)."
+            else:
+                state["review_feedback"] = f"Error: Review file not created. {e}"
+
+    except Exception as e:
+        state["review_feedback"] = f"Error executing reviewer: {e}"
 
     return state

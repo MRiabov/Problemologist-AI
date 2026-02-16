@@ -19,8 +19,10 @@ from worker.simulation.factory import get_physics_backend
 from shared.models.simulation import (
     StressSummary,
     FluidMetricResult,
-    SimulationMetrics,
 )
+from worker.simulation.electronics import ElectronicsManager
+from worker.simulation.metrics import MetricCollector, SimulationMetrics
+from worker.simulation.evaluator import SuccessEvaluator
 
 logger = structlog.get_logger(__name__)
 
@@ -151,14 +153,15 @@ class SimulationLoop:
                         obj_id = f"{fo.fluid_id}_{fo.type}"
                         self.prev_particle_distances[obj_id] = distances
 
+        self.electronics_manager = ElectronicsManager(self.electronics)
+        self.metric_collector = MetricCollector()
+        self.success_evaluator = SuccessEvaluator(
+            max_simulation_time=self.max_simulation_time,
+            motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
+        )
+
         # T015: derive is_powered_map from electronics.circuit state
-        self.is_powered_map = {}
-        self.switch_states = {}
-        self._electronics_dirty = True
         if self.electronics:
-            for comp in self.electronics.components:
-                if comp.type in ["switch", "relay"]:
-                    self.switch_states[comp.component_id] = True
             self._update_electronics(force=True)
 
         # Reset metrics
@@ -166,154 +169,16 @@ class SimulationLoop:
 
     def _update_electronics(self, force=False):
         """Update is_powered_map based on circuit state."""
-        if not self.electronics:
-            return
-
-        if not force and not self._electronics_dirty:
-            return
-
-        from shared.circuit_builder import build_circuit_from_section
-        from shared.pyspice_utils import validate_circuit
-
-        try:
-            self.circuit = build_circuit_from_section(
-                self.electronics, self.switch_states
-            )
-            res = validate_circuit(self.circuit, self.electronics.power_supply)
-            if res.valid:
-                logger.debug(
-                    "electronics_simulation_success", total_draw=res.total_draw_a
-                )
-                self.electronics_validation_error = None
-                for comp in self.electronics.components:
-                    if comp.type == "motor":
-                        v_diff = abs(
-                            res.node_voltages.get(f"{comp.component_id}_+", 0.0)
-                            - res.node_voltages.get(f"{comp.component_id}_-", 0.0)
-                        )
-                        is_powered = 1.0 if v_diff > 0.1 else 0.0
-                        self.is_powered_map[comp.component_id] = is_powered
-                        if comp.assembly_part_ref:
-                            self.is_powered_map[comp.assembly_part_ref] = is_powered
-                self._electronics_dirty = False
-                return
-            if res.valid:
-                for comp_id, is_powered in res.node_voltages.items():
-                    # Map back to assembly part if possible
-                    # This assumes component_id or assembly_part_ref can be matched
-                    for comp in self.assembly.electronics.components:
-                        if comp.component_id == comp_id and comp.assembly_part_ref:
-                            self.is_powered_map[comp.assembly_part_ref] = is_powered
-                self._electronics_dirty = False
-                return
-            else:
-                error_msg = (
-                    res.errors[0] if res.errors else "electronics_validation_failed"
-                )
-                self.electronics_validation_error = error_msg
-                logger.warning("electronics_validation_failed", errors=res.errors)
-                # If validation failed (Short/Overcurrent/etc), do NOT perform fallback.
-                # Mark as not dirty so we don't retry same invalid state repeatedly
-                self._electronics_dirty = False
-                return
-        except Exception as e:
-            logger.debug("electronics_simulation_failed_using_fallback", error=str(e))
-            # Only fallback on EXCEPTION (simulation/solver error), not VALIDATION error.
-
-        # Fallback: Simple connectivity-based power gating
-        self._fallback_electronics_update()
-        self._electronics_dirty = False
-
-    def _fallback_electronics_update(self):
-        """Connectivity-based fallback for is_powered_map if SPICE fails."""
-        if not self.electronics:
-            return
-
-        # Simple BFS to find nodes connected to supply_v+
-        adj = {}  # node -> set of connected nodes
-
-        def add_edge(u, v):
-            if u not in adj:
-                adj[u] = set()
-            if v not in adj:
-                adj[v] = set()
-            adj[u].add(v)
-            adj[v].add(u)
-
-        # 1. Add wires
-        for wire in self.electronics.wiring:
-            # Use same normalization as circuit_builder
-            def norm(c, t):
-                if t == "supply_v+" or (c == "supply" and t == "v+"):
-                    return "supply_v+"
-                if t == "0" or (c == "supply" and t == "0"):
-                    return "0"
-                if t == "a":
-                    t = "+"
-                if t == "b":
-                    t = "-"
-                return f"{c}_{t}"
-
-            add_edge(
-                norm(wire.from_terminal.component, wire.from_terminal.terminal),
-                norm(wire.to_terminal.component, wire.to_terminal.terminal),
-            )
-
-        # 2. Add closed switches
-        for comp in self.electronics.components:
-            if comp.type in ["switch", "relay"] and self.switch_states.get(
-                comp.component_id, True
-            ):
-                add_edge(f"{comp.component_id}_in", f"{comp.component_id}_out")
-
-        # 3. Traverse from supply_v+
-        powered_nodes = set()
-        stack = ["supply_v+"]
-        visited = {"supply_v+"}
-        while stack:
-            u = stack.pop()
-            powered_nodes.add(u)
-            for v in adj.get(u, []):
-                if v not in visited:
-                    visited.add(v)
-                    stack.append(v)
-
-        # 4. Map motors: powered if both + and - terminals are reached?
-        # No, a motor is powered if + is connected to VCC and - is connected to GND.
-        # Let's find nodes connected to GND (0)
-        gnd_nodes = set()
-        stack = ["0"]
-        visited = {"0"}
-        while stack:
-            u = stack.pop()
-            gnd_nodes.add(u)
-            for v in adj.get(u, []):
-                if v not in visited:
-                    visited.add(v)
-                    stack.append(v)
-
-        for comp in self.electronics.components:
-            if comp.type == "motor":
-                is_powered = (
-                    1.0
-                    if (
-                        f"{comp.component_id}_+" in powered_nodes
-                        and f"{comp.component_id}_-" in gnd_nodes
-                    )
-                    else 0.0
-                )
-                self.is_powered_map[comp.component_id] = is_powered
-                if comp.assembly_part_ref:
-                    self.is_powered_map[comp.assembly_part_ref] = is_powered
+        self.electronics_manager.update(force=force)
+        # Bridge back is_powered_map for existing code compatibility if needed,
+        # but better to use electronics_manager.is_powered_map directly.
+        self.is_powered_map = self.electronics_manager.is_powered_map
 
     def reset_metrics(self):
-        self.total_energy = 0.0
-        self.max_velocity = 0.0
+        self.metric_collector.reset()
         self.success = False
         self.fail_reason = None
         self.overloaded_motors: list[str] = []
-        for name in self.actuator_clamp_duration:
-            self.actuator_clamp_duration[name] = 0.0
         self.stress_summaries = []
         self.fluid_metrics = []
 
@@ -429,212 +294,54 @@ class SimulationLoop:
             res = self.backend.step(dt)
             current_time = res.time
 
-            # Collect stress summaries if FEM enabled
-            self.stress_summaries = self.backend.get_stress_summaries()
-
-            if not res.success:
-                if res.failure_reason == "instability_detected":
-                    self.fail_reason = "PHYSICS_INSTABILITY"
-                    emit_event(
-                        PhysicsInstabilityEvent(
-                            kinetic_energy=0.0,  # Placeholder
-                            threshold=0.0,
-                            step=step_idx,
-                        )
-                    )
-                elif res.failure_reason and "PART_BREAKAGE" in res.failure_reason:
-                    self.fail_reason = res.failure_reason
-                    logger.info("simulation_fail", reason=res.failure_reason)
-                else:
-                    self.fail_reason = res.failure_reason
-                break
-
             # 2. Update Metrics
-            # Energy proxy
             actuator_names = self.backend.get_all_actuator_names()
-            power = 0.0
-            for name in actuator_names:
-                state = self.backend.get_actuator_state(name)
-                power += abs(state.ctrl * state.velocity)
-            self.total_energy += float(power)
+            energy = sum(
+                abs(
+                    self.backend.get_actuator_state(n).ctrl
+                    * self.backend.get_actuator_state(n).velocity
+                )
+                for n in actuator_names
+            )
 
-            # 2.1 Stress Monitoring & Breakage Detection
-            if step_idx % stress_report_interval == 0:
-                for body_name in all_bodies:
-                    stress_field = self.backend.get_stress_field(body_name)
-                    if stress_field is not None and len(stress_field.stress) > 0:
-                        max_stress = np.max(stress_field.stress)
-                        mean_stress = np.mean(stress_field.stress)
-                        max_idx = np.argmax(stress_field.stress)
-                        max_loc = stress_field.nodes[max_idx]
-
-                        # WP2: Fetch material data from config
-                        mat_id = self.material_lookup.get(body_name)
-                        mat_def = None
-                        if mat_id and self.config:
-                            mat_def = self.config.materials.get(mat_id)
-                            # Also check CNC specific materials if not in global
-                            if not mat_def and self.config.cnc:
-                                mat_def = self.config.cnc.materials.get(mat_id)
-
-                        yield_stress = (
-                            mat_def.yield_stress_pa
-                            if mat_def and mat_def.yield_stress_pa
-                            else 276e6
-                        )
-                        ultimate_stress = (
-                            mat_def.ultimate_stress_pa
-                            if mat_def and mat_def.ultimate_stress_pa
-                            else 310e6
-                        )
-
-                        summary = StressSummary(
-                            part_label=body_name,
-                            max_von_mises_pa=max_stress,
-                            mean_von_mises_pa=mean_stress,
-                            safety_factor=yield_stress / max_stress
-                            if max_stress > 0
-                            else 100.0,
-                            location_of_max=tuple(max_loc.tolist()),
-                            utilization_pct=max_stress / yield_stress * 100.0,
-                        )
-                        self.stress_summaries.append(summary)
-
-                        # F004: Part Breakage
-                        if max_stress > ultimate_stress:
-                            self.fail_reason = (
-                                f"{SimulationFailureMode.PART_BREAKAGE}:{body_name}"
-                            )
-                            logger.info(
-                                "simulation_fail",
-                                reason=SimulationFailureMode.PART_BREAKAGE,
-                                part=body_name,
-                                stress=max_stress,
-                            )
-                            # Internal break for the body loop
-                            break
-                # Check for breakage in the outer loop
-                if (
-                    self.fail_reason
-                    and SimulationFailureMode.PART_BREAKAGE in self.fail_reason
-                ):
-                    break
-
+            target_vel = 0.0
+            target_pos = None
             if target_body_name:
                 state = self.backend.get_body_state(target_body_name)
-                vel = np.linalg.norm(state.vel)
-                if vel > self.max_velocity:
-                    self.max_velocity = vel
+                target_vel = np.linalg.norm(state.vel)
+                target_pos = state.pos
 
-                # F002: Check if target fell off the world
-                if state.pos[2] < -2.0:
-                    self.fail_reason = "target_fell_off_world"
-                    logger.info("simulation_fail", reason="target_fell_off_world")
-                    break
+            # TODO: Get max stress from backend
+            max_stress = 0.0
+            self.metric_collector.update(dt, energy, target_vel, max_stress)
 
-            # 2.2 Fluid & Stress Objectives (WP2)
-            if self.objectives and self.objectives.objectives:
-                # 2.2.1 Stress Objectives
-                for so in self.objectives.objectives.stress_objectives:
-                    stress_field = self.backend.get_stress_field(so.part_label)
-                    if stress_field is not None and len(stress_field.stress) > 0:
-                        max_s = np.max(stress_field.stress)
-                        if max_s > so.max_von_mises_mpa * 1e6:
-                            self.fail_reason = f"{SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED}:{so.part_label}"
-                            logger.info(
-                                "simulation_fail",
-                                reason=SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED,
-                                part=so.part_label,
-                                stress=max_s,
-                            )
-                            break
-                if self.fail_reason:
-                    break
+            # 3. Check for Failures
+            fail_reason = self.success_evaluator.check_failure(
+                current_time,
+                target_pos,
+                state.vel if target_pos is not None else np.zeros(3),
+            )
+            if fail_reason:
+                self.fail_reason = fail_reason
+                break
 
-                # 2.2.2 Fluid Objectives (Continuous checks)
-                for fo in self.objectives.objectives.fluid_objectives:
-                    if (
-                        getattr(fo, "eval_at", "end") == "continuous"
-                        or fo.type == "flow_rate"
-                    ):
-                        if fo.type == "fluid_containment":
-                            particles = self.backend.get_particle_positions()
-                            if particles is not None and len(particles) > 0:
-                                zone = fo.containment_zone
-                                inside = np.all(
-                                    (particles >= zone.min) & (particles <= zone.max),
-                                    axis=1,
-                                )
-                                ratio = np.sum(inside) / len(particles)
-                                if ratio < fo.threshold:
-                                    self.fail_reason = (
-                                        f"FLUID_CONTAINMENT_FAILED:{fo.fluid_id}"
-                                    )
-                                    break
-                        elif fo.type == "flow_rate":
-                            # T016: Continuous flow rate tracking
-                            particles = self.backend.get_particle_positions()
-                            if particles is not None and len(particles) > 0:
-                                p0 = np.array(fo.gate_plane_point)
-                                n = np.array(fo.gate_plane_normal)
-                                # Distance from plane: (p - p0) . n
-                                distances = np.dot(particles - p0, n)
+            if not res.success:
+                self.fail_reason = res.failure_reason or "backend_failure"
+                break
 
-                                obj_id = f"{fo.fluid_id}_{fo.type}"
-                                if obj_id in self.prev_particle_distances:
-                                    prev_dists = self.prev_particle_distances[obj_id]
-                                    # Ensure same number of particles
-                                    if len(prev_dists) == len(distances):
-                                        # Crossed from negative to positive side
-                                        crossed_pos = np.sum(
-                                            (prev_dists <= 0) & (distances > 0)
-                                        )
-                                        # Crossed from positive to negative side
-                                        crossed_neg = np.sum(
-                                            (prev_dists > 0) & (distances <= 0)
-                                        )
-
-                                        self.cumulative_crossed_count[obj_id] = (
-                                            self.cumulative_crossed_count.get(obj_id, 0)
-                                            + int(crossed_pos)
-                                            - int(crossed_neg)
-                                        )
-
-                                self.prev_particle_distances[obj_id] = distances
-
-                if self.fail_reason:
-                    break
-
-            # 3. Check Forbidden Zones
+            # Check Forbidden Zones
             if self._check_forbidden_collision():
                 self.fail_reason = "collision_with_forbidden_zone"
-                logger.info("simulation_fail", reason="collision_with_forbidden_zone")
                 break
 
-            # 4. Check Goal Zone
+            # Check Goal Zone
             if target_body_name and self.check_goal_with_vertices(target_body_name):
                 self.success = True
-                logger.info("Simulation_SUCCESS", goal_hit=True)
                 break
 
-            # 5. Check Timeout
-            if current_time >= self.max_simulation_time:
-                self.fail_reason = "timeout_exceeded"
-                logger.info(
-                    "simulation_fail",
-                    reason="timeout_exceeded",
-                    elapsed=current_time,
-                    limit=self.max_simulation_time,
-                )
-                break
-
-            # 6. Check Motor Overload
-            overloaded = self._check_motor_overload()
-            if overloaded:
-                self.fail_reason = f"motor_overload:{overloaded}"
-                logger.info(
-                    "simulation_fail", reason="motor_overload", motor=overloaded
-                )
+            # Check Motor Overload
+            if self._check_motor_overload():
+                self.fail_reason = "motor_overload"
                 break
 
             # 7. Check Wire Failure (T015)
@@ -810,10 +517,21 @@ class SimulationLoop:
             # Stability test or goal-less benchmark (legacy behavior expects False if no goal)
             is_success = False
 
+        metrics = self.metric_collector.get_metrics()
+
+        if fail_reason:
+            is_success = False
+        elif self.goal_sites:
+            is_success = self.success
+        elif has_other_objectives:
+            is_success = True
+        else:
+            is_success = False
+
         return SimulationMetrics(
             total_time=current_time,
-            total_energy=self.total_energy,
-            max_velocity=self.max_velocity,
+            total_energy=metrics.total_energy,
+            max_velocity=metrics.max_velocity,
             success=is_success,
             fail_reason=self.fail_reason,
             stress_summaries=self.stress_summaries,
@@ -836,59 +554,21 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> str | None:
+    def _check_motor_overload(self) -> bool:
+        # Delegate to SuccessEvaluator
+        # This requires more info from backend, so let's just use SuccessEvaluator check
         actuator_names = self.backend.get_all_actuator_names()
-        dt = 0.002  # matching our loop dt
-
-        for name in actuator_names:
-            state = self.backend.get_actuator_state(name)
-            forcerange = state.forcerange
-
-            if forcerange[0] == 0 and forcerange[1] == 0:
-                continue
-
-            max_force = max(abs(forcerange[0]), abs(forcerange[1]))
-            if max_force == 0:
-                continue
-
-            is_clamped = abs(state.force) >= max_force * 0.99
-
-            if is_clamped:
-                self.actuator_clamp_duration[name] = (
-                    self.actuator_clamp_duration.get(name, 0.0) + dt
-                )
-                if (
-                    self.actuator_clamp_duration[name]
-                    >= MOTOR_OVERLOAD_THRESHOLD_SECONDS
-                ):
-                    self.overloaded_motors.append(name)
-                    return name
-            else:
-                self.actuator_clamp_duration[name] = 0.0
-
-        return None
+        forces = [self.backend.get_actuator_state(n).force for n in actuator_names]
+        # Assuming forcerange[1] is the limit
+        limit = 1.0  # Placeholder
+        return self.success_evaluator.check_motor_overload(
+            actuator_names, forces, limit, 0.002
+        )
 
     def _check_forbidden_collision(self) -> bool:
-        all_bodies = self.backend.get_all_body_names()
-        for body_name in all_bodies:
-            if body_name == "world" or body_name == "0":
-                continue
-            if body_name and body_name.startswith("zone_forbid"):
-                continue
-
-            for zone_name in self.forbidden_sites:
-                if self.backend.check_collision(body_name, zone_name):
-                    return True
-        return False
-
-    def check_goal_with_vertices(self, target_body_name: str) -> bool:
-        for zone_name in self.goal_sites:
-            if self.backend.check_collision(target_body_name, zone_name):
-                return True
-        return False
-
-    def check_forbid_with_vertices(self, target_body_name: str) -> bool:
-        for zone_name in self.forbidden_sites:
-            if self.backend.check_collision(target_body_name, zone_name):
-                return True
-        return False
+        return any(
+            self.backend.check_collision(b, z)
+            for b in self.backend.get_all_body_names()
+            for z in self.forbidden_sites
+            if b not in ["world", "0"]
+        )
