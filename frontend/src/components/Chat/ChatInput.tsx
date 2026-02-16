@@ -101,7 +101,10 @@ export function ChatInput({
                 end_line: end ? parseInt(end) : parseInt(start)
             };
             // Avoid duplicates
-            if (!code_references.some(r => r.file_path === ref.file_path && r.start_line === ref.start_line && r.end_line === ref.end_line)) {
+            if (!code_references.some(r => {
+                const refObj = r as { file_path: string; start_line: number; end_line: number };
+                return refObj.file_path === ref.file_path && refObj.start_line === ref.start_line && refObj.end_line === ref.end_line;
+            })) {
                 code_references.push(ref);
             }
         }
@@ -211,18 +214,20 @@ export function ChatInput({
     
     // Auto-add to context for immediate feedback (Story 4)
     if (suggestion.type === 'part') {
+        const node = suggestion.original as TopologyNode;
         addToContext({
-            id: `cad-${suggestion.original.name}`,
+            id: `cad-${node.name}`,
             type: 'cad',
-            label: suggestion.original.name,
-            metadata: { part: suggestion.original.name }
+            label: node.name,
+            metadata: { part: node.name }
         });
     } else if (suggestion.type === 'file') {
+        const asset = suggestion.original as Asset;
         addToContext({
-            id: `code-${suggestion.original.s3_path}`,
+            id: `code-${asset.s3_path}`,
             type: 'code',
-            label: suggestion.original.s3_path.split('/').pop() || suggestion.original.s3_path,
-            metadata: { path: suggestion.original.s3_path }
+            label: asset.s3_path.split('/').pop() || asset.s3_path,
+            metadata: { path: asset.s3_path }
         });
     }
 
