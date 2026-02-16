@@ -94,10 +94,10 @@ This feature enables the design and verification of electromechanical systems, b
 - **Priority**: Medium
 - **Success Criteria**: 10+ electromechanical benchmarks pass; documentation is up-to-date.
 - **Subtasks**:
-    - [ ] T030: [P] Generate 10+ electromechanical benchmarks in `evals/datasets/`.
-    - [ ] T031: [P] Implement `run_evals.py` extensions for electrical metrics.
-    - [ ] T032: [P] Perform prompt tuning for the Electrical Engineer node.
-    - [ ] T033: [P] Documentation: update `docs/electromechanical_integration.md`.
+    - [x] T030: [P] Generate 10+ electromechanical benchmarks in `evals/datasets/`.
+    - [x] T031: [P] Implement `run_evals.py` extensions for electrical metrics.
+    - [x] T032: [P] Perform prompt tuning for the Electrical Engineer node.
+    - [x] T033: [P] Documentation: update `docs/electromechanical_integration.md`.
 - **Implementation Sketch**: Generate benchmarks, run them, tune prompts based on results, and then write final docs.
 - **Dependencies**: WP05, WP06
 - **Estimated Prompt Size**: ~300 lines
