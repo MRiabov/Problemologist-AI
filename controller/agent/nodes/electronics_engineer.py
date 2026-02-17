@@ -1,10 +1,11 @@
-from contextlib import suppress
-
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+import dspy
+from contextlib import suppress
+from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
+from controller.agent.dspy_utils import init_dspy, wrap_tool_for_dspy
+from controller.agent.signatures import ElectronicsEngineerSignature
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
@@ -20,14 +21,19 @@ logger = structlog.get_logger(__name__)
 class ElectronicsEngineerNode(BaseNode):
     """
     Electronics Engineer node: Designs circuits and routes wires.
-    Refactored to use LangGraph's prebuilt ReAct agent.
+    Refactored to use DSPy CodeAct.
     """
 
     def __init__(self, context: SharedNodeContext):
         super().__init__(context)
-        # Initialize tools and agent
-        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        self.agent = create_react_agent(self.ctx.llm, self.tools)
+        # Initialize DSPy
+        init_dspy(session_id=self.ctx.session_id)
+        # Initialize tools
+        self.raw_tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
+        self.tools = [wrap_tool_for_dspy(t) for t in self.raw_tools]
+
+        # Define DSPy CodeAct module
+        self.agent = dspy.CodeAct(ElectronicsEngineerSignature, tools=self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the electronics engineer node logic."""
@@ -36,11 +42,9 @@ class ElectronicsEngineerNode(BaseNode):
         current_step = self._get_next_electronics_step(todo)
 
         if not current_step:
-            # If no specific electronics tasks, check if objectives require it
             try:
                 objectives_content = await self.ctx.fs.read_file("objectives.yaml")
                 if "electronics_requirements" not in objectives_content:
-                    # No specific requirements, just pass through
                     return state
                 current_step = "Design circuit and route wires"
             except Exception:
@@ -49,7 +53,6 @@ class ElectronicsEngineerNode(BaseNode):
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
         try:
-            # Check assembly_definition.yaml (Assembly Definition)
             with suppress(Exception):
                 assembly_context = await self.ctx.fs.read_file(
                     "assembly_definition.yaml"
@@ -57,8 +60,7 @@ class ElectronicsEngineerNode(BaseNode):
         except Exception:
             pass
 
-        # 3. Generate electronics implementation code
-        # Emit handover event
+        # 3. Generate electronics implementation
         await record_worker_events(
             episode_id=state.session_id,
             events=[
@@ -70,37 +72,28 @@ class ElectronicsEngineerNode(BaseNode):
             ],
         )
 
-        prompt = self.ctx.pm.render(
-            "electronics_engineer",
-            current_step=current_step,
-            plan=state.plan,
-            assembly_context=assembly_context,
-        )
-
-        messages = [SystemMessage(content=prompt)]
-
         max_retries = 3
         retry_count = 0
-        journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
-
-        # Observability
-        callbacks = self._get_callbacks(
-            name="electronics_engineer", session_id=state.session_id
-        )
+        journal_entry = f"\n[Elec Engineer] Starting task: {current_step}"
 
         while retry_count < max_retries:
             try:
-                # Invoke agent
                 logger.info(
-                    "electronics_agent_invoke_start", session_id=state.session_id
+                    "electronics_agent_dspy_invoke_start",
+                    session_id=state.session_id
                 )
-                result = await self.agent.ainvoke(
-                    {"messages": messages}, config={"callbacks": callbacks}
+
+                # Invoke DSPy CodeAct
+                self.agent(
+                    task=current_step,
+                    plan=state.plan,
+                    cad_implementation=assembly_context
                 )
+
                 logger.info(
-                    "electronics_agent_invoke_complete", session_id=state.session_id
+                    "electronics_agent_dspy_invoke_complete",
+                    session_id=state.session_id
                 )
-                messages = result["messages"]
 
                 # 4. Validate output
                 from worker.utils.file_validation import validate_node_output
@@ -115,13 +108,10 @@ class ElectronicsEngineerNode(BaseNode):
                 )
 
                 if not is_valid:
-                    error_msg = f"Circuit implementation produced invalid output: {validation_errors}"
-                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
-                    logger.warning(
-                        "electronics_engineer_validation_failed",
-                        errors=validation_errors,
+                    journal_entry += (
+                        f"\nValidation failed (Attempt {retry_count + 1}): "
+                        f"{validation_errors}"
                     )
-                    messages.append(HumanMessage(content=error_msg))
                     retry_count += 1
                     continue
 
@@ -135,12 +125,16 @@ class ElectronicsEngineerNode(BaseNode):
                         f"- [ ] {current_step}", f"- [x] {current_step}"
                     )
 
+                elec_msg = (
+                    f"Electronics Engineer successfully completed task: "
+                    f"{current_step} using DSPy CodeAct."
+                )
                 return state.model_copy(
                     update={
                         "todo": new_todo,
                         "journal": state.journal + journal_entry,
                         "turn_count": state.turn_count + 1,
-                        "messages": messages,
+                        "messages": [AIMessage(content=elec_msg)],
                     }
                 )
 
@@ -149,7 +143,6 @@ class ElectronicsEngineerNode(BaseNode):
                     f"\nSystem error during electronics implementation: {e}"
                 )
                 logger.error("electronics_engineer_system_error", error=str(e))
-                messages.append(HumanMessage(content=f"System error: {e}"))
                 retry_count += 1
 
         journal_entry += f"\nFailed to complete task after {max_retries} retries."
@@ -157,7 +150,6 @@ class ElectronicsEngineerNode(BaseNode):
             update={
                 "journal": state.journal + journal_entry,
                 "turn_count": state.turn_count + 1,
-                "messages": messages,
             }
         )
 
@@ -175,7 +167,7 @@ class ElectronicsEngineerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def electronics_engineer_node(state: AgentState) -> AgentState:
-    # Use session_id from state, fallback to default if not set (e.g. tests)
+    # Use session_id from state
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
         worker_url=settings.spec_001_api_url, session_id=session_id

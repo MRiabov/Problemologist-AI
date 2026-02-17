@@ -1,10 +1,12 @@
 from contextlib import suppress
 
+import dspy
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
+from controller.agent.dspy_utils import init_dspy, wrap_tool_for_dspy
+from controller.agent.signatures import CoderSignature
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
@@ -17,15 +19,20 @@ logger = structlog.get_logger(__name__)
 @type_check
 class CoderNode(BaseNode):
     """
-    Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
-    Refactored to use LangGraph's prebuilt ReAct agent.
+    Coder node: Picks a task from TODO, writes code, and executes it.
+    Refactored to use DSPy CodeAct.
     """
 
     def __init__(self, context: SharedNodeContext):
         super().__init__(context)
-        # Initialize tools and agent
-        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        self.agent = create_react_agent(self.ctx.llm, self.tools)
+        # Initialize DSPy
+        init_dspy(session_id=self.ctx.session_id)
+        # Initialize tools
+        self.raw_tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
+        self.tools = [wrap_tool_for_dspy(t) for t in self.raw_tools]
+
+        # Define DSPy CodeAct module
+        self.coder = dspy.CodeAct(CoderSignature, tools=self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the coder node logic."""
@@ -39,30 +46,21 @@ class CoderNode(BaseNode):
 
         max_retries = 3
         retry_count = 0
-        journal_entry = f"\nStarting step: {current_step}"
-
-        # Render system prompt
-        system_prompt = self.ctx.pm.render(
-            "engineer", current_step=current_step, error="", plan=state.plan
-        )
-
-        # Initialize conversation with system prompt
-        messages = [SystemMessage(content=system_prompt)]
-
-        # Observability
-        callbacks = self._get_callbacks(name="coder", session_id=state.session_id)
+        journal_entry = f"\nStarting step: {current_step} with DSPy CodeAct Coder."
+        last_error = ""
 
         while retry_count < max_retries:
             try:
-                # Invoke the agent
-                logger.info("coder_agent_invoke_start", session_id=state.session_id)
-                result = await self.agent.ainvoke(
-                    {"messages": messages}, config={"callbacks": callbacks}
-                )
-                logger.info("coder_agent_invoke_complete", session_id=state.session_id)
+                logger.info("coder_dspy_invoke_start", session_id=state.session_id)
 
-                # Update messages with the conversation trace
-                messages = result["messages"]
+                # Invoke DSPy CodeAct
+                self.coder(
+                    current_step=current_step,
+                    plan=state.plan,
+                    error=last_error
+                )
+
+                logger.info("coder_dspy_invoke_complete", session_id=state.session_id)
 
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
@@ -81,13 +79,13 @@ class CoderNode(BaseNode):
                 is_valid, validation_errors = validate_node_output("coder", all_files)
 
                 if not is_valid:
-                    error_msg = "Coder produced invalid output:\n" + "\n".join(
+                    last_error = "Coder produced invalid output:\n" + "\n".join(
                         [f"- {e}" for e in validation_errors]
                     )
-                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
-
-                    # Append error to messages for the next retry
-                    messages.append(HumanMessage(content=error_msg))
+                    journal_entry += (
+                        f"\nValidation failed (Attempt {retry_count + 1}): "
+                        f"{validation_errors}"
+                    )
                     retry_count += 1
                     continue
 
@@ -99,20 +97,20 @@ class CoderNode(BaseNode):
                     f"- [ ] {current_step}", f"- [x] {current_step}"
                 )
 
+                coder_msg = f"Coder successfully executed step: {current_step} using DSPy."
                 return state.model_copy(
                     update={
                         "todo": new_todo,
                         "journal": state.journal + journal_entry,
                         "current_step": current_step,
-                        "messages": messages,  # Persist the conversation
                         "turn_count": state.turn_count + 1,
+                        "messages": [AIMessage(content=coder_msg)],
                     }
                 )
 
             except Exception as e:
                 last_error = str(e)
                 journal_entry += f"\nSystem error during execution: {last_error}"
-                messages.append(HumanMessage(content=f"System error: {last_error}"))
                 retry_count += 1
 
         journal_entry += f"\nFailed to complete step after {max_retries} retries."
@@ -121,17 +119,16 @@ class CoderNode(BaseNode):
                 "journal": state.journal + journal_entry,
                 "iteration": state.iteration + 1,
                 "turn_count": state.turn_count + 1,
-                "messages": messages,
             }
         )
 
     def _get_next_step(self, todo: str) -> str | None:
-        """Extract the first '- [ ]' item from the TODO list, ignoring electronics tasks."""
+        """Extract the first '- [ ]' item from the TODO list."""
         elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):
                 task = line.strip().replace("- [ ]", "").strip()
-                # If it's an electronics task, skip it (ElectronicsEngineer will handle it)
+                # If it's an electronics task, skip it
                 if any(kw in task.lower() for kw in elec_keywords):
                     continue
                 return task
@@ -141,7 +138,7 @@ class CoderNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def coder_node(state: AgentState) -> AgentState:
-    # Use session_id from state, fallback to default if not set (e.g. tests)
+    # Use session_id from state
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
         worker_url=settings.spec_001_api_url, session_id=session_id
