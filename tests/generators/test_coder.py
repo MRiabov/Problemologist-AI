@@ -36,9 +36,8 @@ Hope it helps!"""
     assert code_no_block == "print('world')"
 
 
-@patch("controller.agent.benchmark.nodes.ChatOpenAI")
 @pytest.mark.asyncio
-async def test_coder_node_success(mock_llm_cls, mock_state):
+async def test_coder_node_success(mock_state):
     valid_script = textwrap.dedent("""
         import build123d as bd
         import mujoco
@@ -86,9 +85,8 @@ async def test_coder_node_success(mock_llm_cls, mock_state):
     assert mjcf == "<mujoco/>"
 
 
-@patch("controller.agent.benchmark.nodes.ChatOpenAI")
 @pytest.mark.asyncio
-async def test_coder_node_with_feedback(mock_llm_cls, mock_state):
+async def test_coder_node_with_feedback(mock_state):
     mock_state.review_feedback = "Make it larger"
     from shared.simulation.schemas import ValidationResult
 

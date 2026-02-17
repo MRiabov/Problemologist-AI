@@ -82,6 +82,10 @@ filterwarnings = [
     "ignore::DeprecationWarning:ezdxf.queryparser",
     "ignore::DeprecationWarning:build123d.objects_curve",
     "ignore::DeprecationWarning:multiprocessing.popen_fork",
+    "ignore::DeprecationWarning:gstaichi.*",
+    "ignore:Support for class-based `config` is deprecated:DeprecationWarning",
+    "ignore:.*torch.jit.script.*:DeprecationWarning:torch.jit.*",
+    "ignore:The truth value of an empty array is ambiguous:DeprecationWarning:worker.simulation.genesis_backend",
 ]
 markers = [
     "integration: marks tests as integration tests (may use real LLM)",

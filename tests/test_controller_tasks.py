@@ -32,11 +32,17 @@ async def test_execute_agent_task_success(
     mock_session.commit = AsyncMock()
 
     async def mock_refresh(obj):
-        if isinstance(obj, Trace) and obj.id is None:
-            obj.id = 1
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = uuid.uuid4()
         return None
 
     mock_session.refresh = AsyncMock(side_effect=mock_refresh)
+
+    def mock_add(obj):
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = uuid.uuid4()
+
+    mock_session.add = MagicMock(side_effect=mock_add)
     mock_session.get = AsyncMock()
 
     mock_session_factory = MagicMock()
@@ -85,11 +91,17 @@ async def test_execute_agent_task_without_langfuse_callback(
     mock_session.commit = AsyncMock()
 
     async def mock_refresh(obj):
-        if isinstance(obj, Trace) and obj.id is None:
-            obj.id = 1
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = uuid.uuid4()
         return None
 
     mock_session.refresh = AsyncMock(side_effect=mock_refresh)
+
+    def mock_add(obj):
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = uuid.uuid4()
+
+    mock_session.add = MagicMock(side_effect=mock_add)
 
     mock_session.get = AsyncMock(
         return_value=Episode(id=episode_id, task="task", status=EpisodeStatus.RUNNING)
@@ -110,6 +122,7 @@ async def test_execute_agent_task_without_langfuse_callback(
     await execute_agent_task(episode_id, "task", "session")
 
     # Verify callbacks were passed
+    assert mock_agent.ainvoke.called
     args, kwargs = mock_agent.ainvoke.call_args
     callbacks = kwargs["config"]["callbacks"]
     assert len(callbacks) >= 1

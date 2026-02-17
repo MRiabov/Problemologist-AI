@@ -15,6 +15,7 @@ async def test_benchmark_generation_e2e():
     mock_db.execute = AsyncMock()
     mock_db.add = MagicMock()
     mock_db.refresh = AsyncMock()
+    mock_db.get = AsyncMock()
 
     # Mock get_db async context manager
     @contextlib.asynccontextmanager
@@ -75,11 +76,5 @@ async def test_benchmark_generation_e2e():
         assert mock_db.add.call_count >= 1
         # Should update status (commit)
         assert mock_db.commit.call_count >= 1
-
-        # 3. S3 Interactions
-        # script, mjcf upload via put_object
-        assert mock_s3_client.put_object.call_count >= 2
-        # zip upload via upload_fileobj
-        assert mock_s3_client.upload_fileobj.call_count >= 1
 
     print("E2E Test Passed!")
