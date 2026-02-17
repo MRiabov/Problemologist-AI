@@ -27,27 +27,16 @@ def mock_worker():
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.reviewer.create_react_agent")
-async def test_critic_node_approve(mock_agent_factory, mock_llm, mock_worker):
-    # Mock agent
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [AIMessage(content="--- \ndecision: approved\n--- \nLooks good.")]
-    }
-    mock_agent_factory.return_value = mock_agent
-
-    # Mock structured parser return value
-    mock_llm.ainvoke.return_value = ReviewResult(
-        decision=CriticDecision.APPROVE, reason="Looks good."
+@patch("controller.agent.nodes.reviewer.dspy.CodeAct")
+async def test_critic_node_approve(mock_codeact_cls, mock_llm, mock_worker):
+    # Mock DSPy Program
+    mock_program = MagicMock()
+    mock_program.return_value = MagicMock(
+        review=ReviewResult(decision=CriticDecision.APPROVE, reason="Looks good.")
     )
+    mock_codeact_cls.return_value = mock_program
 
-    # Mock reports
-    mock_worker.read_file.side_effect = [
-        json.dumps({"status": "success", "results": "passed"}),  # sim report
-        "Part is manufacturable.",  # mfg report
-    ]
-
-    state = AgentState(task="Build a part", journal="Implementation details")
+    state = AgentState(task="Build a part", journal="Implementation details", session_id="test-session")
 
     result = await reviewer_node(state)
 
@@ -57,28 +46,16 @@ async def test_critic_node_approve(mock_agent_factory, mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.reviewer.create_react_agent")
-async def test_critic_node_reject(mock_agent_factory, mock_llm, mock_worker):
-    # Mock agent
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [
-            AIMessage(content="--- \ndecision: rejected\n--- \nSimulation failed.")
-        ]
-    }
-    mock_agent_factory.return_value = mock_agent
-
-    # Mock structured parser return value
-    mock_llm.ainvoke.return_value = ReviewResult(
-        decision=CriticDecision.REJECT_CODE, reason="Simulation failed."
+@patch("controller.agent.nodes.reviewer.dspy.CodeAct")
+async def test_critic_node_reject(mock_codeact_cls, mock_llm, mock_worker):
+    # Mock DSPy Program
+    mock_program = MagicMock()
+    mock_program.return_value = MagicMock(
+        review=ReviewResult(decision=CriticDecision.REJECT_CODE, reason="Simulation failed.")
     )
+    mock_codeact_cls.return_value = mock_program
 
-    mock_worker.read_file.side_effect = [
-        json.dumps({"status": "error", "message": "collision"}),
-        "Too expensive.",
-    ]
-
-    state = AgentState(task="Build a part", journal="")
+    state = AgentState(task="Build a part", journal="", session_id="test-session")
 
     result = await reviewer_node(state)
 
@@ -88,30 +65,19 @@ async def test_critic_node_reject(mock_agent_factory, mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.reviewer.create_react_agent")
-async def test_critic_node_no_artifacts(mock_agent_factory, mock_llm, mock_worker):
-    # Mock agent
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [
-            AIMessage(
-                content="--- \ndecision: approved\n--- \nNo artifacts but journal is fine."
-            )
-        ]
-    }
-    mock_agent_factory.return_value = mock_agent
-
-    # Mock structured parser return value
-    mock_llm.ainvoke.return_value = ReviewResult(
-        decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine."
+@patch("controller.agent.nodes.reviewer.dspy.CodeAct")
+async def test_critic_node_no_artifacts(mock_codeact_cls, mock_llm, mock_worker):
+    # Mock DSPy Program
+    mock_program = MagicMock()
+    mock_program.return_value = MagicMock(
+        review=ReviewResult(decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine.")
     )
+    mock_codeact_cls.return_value = mock_program
 
-    mock_worker.read_file.side_effect = Exception("File not found")
-
-    state = AgentState(task="Build a part", journal="")
+    state = AgentState(task="Build a part", journal="", session_id="test-session")
 
     result = await reviewer_node(state)
 
     # Even without artifacts, LLM decides based on journal
-    assert result.status
-    mock_agent.ainvoke.assert_called_once()
+    assert result.status == AgentStatus.APPROVED
+    mock_program.assert_called_once()
