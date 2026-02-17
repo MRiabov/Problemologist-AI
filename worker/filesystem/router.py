@@ -1,14 +1,10 @@
-"""Filesystem router with read-only restrictions.
-
-Provides a unified filesystem view that overlays local session-isolated workspace
-with local read-only directories (utils/, skills/, reviews/).
-"""
-
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
 import structlog
+
+from worker.config import settings
 
 from .backend import (
     FileDownloadResponse,
@@ -78,7 +74,7 @@ class FilesystemRouter:
                 ),
                 MountPoint(
                     virtual_prefix="/skills",
-                    local_path=base / "skills",
+                    local_path=settings.skills_dir,
                     access_mode=AccessMode.READ_ONLY,
                 ),
                 MountPoint(
