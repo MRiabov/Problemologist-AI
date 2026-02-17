@@ -5,7 +5,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.enums import SimulationFailureMode
-from shared.enums import SimulationFailureMode as SimulationFailureReason
 
 
 class ObservabilityEventType(StrEnum):

@@ -1,4 +1,3 @@
-from pathlib import Path
 import pytest
 
 from worker.filesystem.backend import (
@@ -10,9 +9,6 @@ from worker.filesystem.router import (
     MountPoint,
     WritePermissionError,
 )
-
-from unittest.mock import patch
-from shared.backend.protocol import FileInfo as ProtocolFileInfo
 
 
 def test_local_backend_operations(tmp_path):

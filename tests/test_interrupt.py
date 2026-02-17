@@ -49,7 +49,7 @@ async def test_execute_agent_task_cancelled(
     async def mock_refresh(obj):
         if getattr(obj, "id", None) is None:
             obj.id = uuid.uuid4()
-        return None
+        return
 
     mock_session.refresh = AsyncMock(side_effect=mock_refresh)
 

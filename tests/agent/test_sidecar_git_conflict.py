@@ -1,13 +1,12 @@
 import shutil
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from git import GitCommandError
 from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.skills import SkillsNode
-from controller.utils.git import GitManager
 from shared.type_checking import type_check
 
 

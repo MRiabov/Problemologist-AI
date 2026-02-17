@@ -3,7 +3,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 from shared.enums import SimulationFailureMode
 
 

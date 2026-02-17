@@ -182,7 +182,6 @@ def validate_and_price(
                 ]
 
     # Add DOF warning to metadata (for reviewer notification)
-    from worker.workbenches.models import WorkbenchMetadata
 
     result_metadata = result.metadata.model_copy(
         update={

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from controller.api.tasks import execute_agent_task
-from controller.persistence.models import Episode, Trace
+from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus
 
 
@@ -34,7 +34,7 @@ async def test_execute_agent_task_success(
     async def mock_refresh(obj):
         if hasattr(obj, "id") and obj.id is None:
             obj.id = uuid.uuid4()
-        return None
+        return
 
     mock_session.refresh = AsyncMock(side_effect=mock_refresh)
 
@@ -93,7 +93,7 @@ async def test_execute_agent_task_without_langfuse_callback(
     async def mock_refresh(obj):
         if hasattr(obj, "id") and obj.id is None:
             obj.id = uuid.uuid4()
-        return None
+        return
 
     mock_session.refresh = AsyncMock(side_effect=mock_refresh)
 
