@@ -11,12 +11,13 @@ from typing import Annotated, Any, Literal
 from pydantic import (
     BaseModel,
     BeforeValidator,
+    ConfigDict,
     Field,
     field_validator,
     model_validator,
 )
 
-from shared.enums import ElectronicComponentType
+from shared.enums import ElectronicComponentType, ManufacturingMethod
 from shared.simulation.schemas import SimulatorBackendType
 
 # =============================================================================
@@ -263,9 +264,27 @@ class JointMetadata(BaseModel):
 class PartMetadata(BaseModel):
     """Metadata for individual parts in a CAD assembly."""
 
-    material_id: str
-    is_fixed: bool = False
+    material_id: str | None = None
+    cots_id: str | None = None
+    is_fixed: bool = Field(default=False, alias="fixed")
+    manufacturing_method: ManufacturingMethod | None = None
     joint: JointMetadata | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> "PartMetadata":
+        if not self.material_id and not self.cots_id:
+            raise ValueError("PartMetadata must have either material_id or cots_id")
+        return self
+
+
+class CompoundMetadata(BaseModel):
+    """Metadata for compounds (assemblies) in a CAD hierarchy."""
+
+    is_fixed: bool = Field(default=False, alias="fixed")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 # =============================================================================

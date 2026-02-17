@@ -1931,7 +1931,8 @@
           "3dp",
           "im"
         ],
-        "title": "ManufacturingMethod"
+        "title": "ManufacturingMethod",
+        "description": "Supported manufacturing methods."
       },
       "PreviewDesignRequest": {
         "properties": {

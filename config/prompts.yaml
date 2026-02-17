@@ -476,7 +476,7 @@ benchmark_generator:
 
    coder:
       system: |
-         You are an expert in build123d, Python, and the Genesis physics simulator (MJCF).
+         You are an expert in build123d, Python, and the Genesis physics simulator (equal to MuJoCo's MJCF).
          Your goal is to implement the benchmark from the Planner's `benchmark_structure.md`.
 
          **MANDATORY READING**: Use filesystem tools to read:

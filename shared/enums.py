@@ -89,3 +89,11 @@ class ElectronicComponentType(StrEnum):
     RELAY = "relay"
     SWITCH = "switch"
     CONNECTOR = "connector"
+
+
+class ManufacturingMethod(StrEnum):
+    """Supported manufacturing methods."""
+
+    CNC = "cnc"
+    THREE_DP = "3dp"
+    INJECTION_MOLDING = "im"
