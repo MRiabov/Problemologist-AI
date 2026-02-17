@@ -1,11 +1,11 @@
+import structlog
 from contextlib import suppress
 
-import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+import dspy
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState
+from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import ElecAgentHandoverEvent
@@ -16,18 +16,25 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
+class ElectronicsSignature(dspy.Signature):
+    """
+    Electronics Engineer node: Designs circuits and routes wires.
+    You must use the provided tools to implement the current step in 'script.py'.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    current_step = dspy.InputField()
+    plan = dspy.InputField()
+    assembly_context = dspy.InputField()
+    journal = dspy.OutputField(desc="A summary of the electronics work done")
+
+
 @type_check
 class ElectronicsEngineerNode(BaseNode):
     """
     Electronics Engineer node: Designs circuits and routes wires.
-    Refactored to use LangGraph's prebuilt ReAct agent.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
-
-    def __init__(self, context: SharedNodeContext):
-        super().__init__(context)
-        # Initialize tools and agent
-        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        self.agent = create_react_agent(self.ctx.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the electronics engineer node logic."""
@@ -36,11 +43,9 @@ class ElectronicsEngineerNode(BaseNode):
         current_step = self._get_next_electronics_step(todo)
 
         if not current_step:
-            # If no specific electronics tasks, check if objectives require it
             try:
                 objectives_content = await self.ctx.fs.read_file("objectives.yaml")
                 if "electronics_requirements" not in objectives_content:
-                    # No specific requirements, just pass through
                     return state
                 current_step = "Design circuit and route wires"
             except Exception:
@@ -49,7 +54,6 @@ class ElectronicsEngineerNode(BaseNode):
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
         try:
-            # Check assembly_definition.yaml (Assembly Definition)
             with suppress(Exception):
                 assembly_context = await self.ctx.fs.read_file(
                     "assembly_definition.yaml"
@@ -57,8 +61,7 @@ class ElectronicsEngineerNode(BaseNode):
         except Exception:
             pass
 
-        # 3. Generate electronics implementation code
-        # Emit handover event
+        # 3. Handover event
         await record_worker_events(
             episode_id=state.session_id,
             events=[
@@ -70,43 +73,41 @@ class ElectronicsEngineerNode(BaseNode):
             ],
         )
 
-        prompt = self.ctx.pm.render(
-            "electronics_engineer",
-            current_step=current_step,
-            plan=state.plan,
-            assembly_context=assembly_context,
+        from controller.agent.dspy_utils import WorkerInterpreter
+
+        # Use WorkerInterpreter for remote execution
+        interpreter = WorkerInterpreter(
+            worker_client=self.ctx.worker_client, session_id=state.session_id
         )
 
-        messages = [SystemMessage(content=prompt)]
+        # Get tool signatures for DSPy
+        tool_fns = self._get_tool_functions(get_engineer_tools)
+
+        program = dspy.CodeAct(
+            ElectronicsSignature, tools=list(tool_fns.values()), interpreter=interpreter
+        )
 
         max_retries = 3
         retry_count = 0
         journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
 
-        # Observability
-        callbacks = self._get_callbacks(
-            name="electronics_engineer", session_id=state.session_id
-        )
-
         while retry_count < max_retries:
             try:
-                # Invoke agent
-                logger.info(
-                    "electronics_agent_invoke_start", session_id=state.session_id
-                )
-                result = await self.agent.ainvoke(
-                    {"messages": messages}, config={"callbacks": callbacks}
-                )
-                logger.info(
-                    "electronics_agent_invoke_complete", session_id=state.session_id
-                )
-                messages = result["messages"]
+                # Invoke DSPy
+                with dspy.settings.context(lm=self.ctx.dspy_lm):
+                    logger.info("electronics_dspy_invoke_start", session_id=state.session_id)
+                    prediction = program(
+                        current_step=current_step,
+                        plan=state.plan,
+                        assembly_context=assembly_context,
+                    )
+                    logger.info("electronics_dspy_invoke_complete", session_id=state.session_id)
 
                 # 4. Validate output
                 from worker.utils.file_validation import validate_node_output
 
                 all_files = {}
-                for f in ["plan.md", "todo.md", "assembly_definition.yaml"]:
+                for f in ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]:
                     with suppress(Exception):
                         all_files[f] = await self.ctx.fs.read_file(f)
 
@@ -115,20 +116,13 @@ class ElectronicsEngineerNode(BaseNode):
                 )
 
                 if not is_valid:
-                    error_msg = f"Circuit implementation produced invalid output: {validation_errors}"
-                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
-                    logger.warning(
-                        "electronics_engineer_validation_failed",
-                        errors=validation_errors,
-                    )
-                    messages.append(HumanMessage(content=error_msg))
+                    logger.warning("electronics_engineer_validation_failed", errors=validation_errors)
                     retry_count += 1
                     continue
 
                 # Success
-                journal_entry += (
-                    f"\nSuccessfully completed electronics task: {current_step}"
-                )
+                summary = getattr(prediction, "journal", f"Successfully completed electronics task: {current_step}")
+                journal_entry += f"\n[Electronics] {summary}"
                 new_todo = todo
                 if current_step in todo:
                     new_todo = todo.replace(
@@ -140,24 +134,21 @@ class ElectronicsEngineerNode(BaseNode):
                         "todo": new_todo,
                         "journal": state.journal + journal_entry,
                         "turn_count": state.turn_count + 1,
-                        "messages": messages,
+                        "messages": state.messages + [AIMessage(content=f"Electronics summary: {summary}")],
                     }
                 )
 
             except Exception as e:
-                journal_entry += (
-                    f"\nSystem error during electronics implementation: {e}"
-                )
-                logger.error("electronics_engineer_system_error", error=str(e))
-                messages.append(HumanMessage(content=f"System error: {e}"))
+                logger.error("electronics_dspy_failed", error=str(e))
+                journal_entry += f"\n[System Error] {e}"
                 retry_count += 1
+            finally:
+                interpreter.shutdown()
 
-        journal_entry += f"\nFailed to complete task after {max_retries} retries."
         return state.model_copy(
             update={
-                "journal": state.journal + journal_entry,
+                "journal": state.journal + journal_entry + "\nMax retries reached.",
                 "turn_count": state.turn_count + 1,
-                "messages": messages,
             }
         )
 

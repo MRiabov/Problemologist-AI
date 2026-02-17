@@ -1,8 +1,8 @@
-import logging
+import structlog
 from contextlib import suppress
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+import dspy
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
@@ -13,44 +13,49 @@ from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+
+class PlannerSignature(dspy.Signature):
+    """
+    Planner node: Analyzes the task and creates plan.md and todo.md using tools.
+    You must use the provided tools to create 'plan.md' and 'todo.md' directly.
+    When done, use SUBMIT to provide a summary of your plan.
+    """
+
+    task = dspy.InputField()
+    skills = dspy.InputField()
+    steer_context = dspy.InputField()
+    summary = dspy.OutputField(desc="A summary of the plan created")
 
 
 @type_check
 class PlannerNode(BaseNode):
     """
     Planner node: Analyzes the task and creates plan.md and todo.md using tools.
-    Refactored to use LangGraph's prebuilt ReAct agent.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
-
-    def __init__(self, context: SharedNodeContext):
-        super().__init__(context)
-        # Initialize tools and agent
-        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        self.agent = create_react_agent(self.ctx.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the planner node logic."""
-        # T006: Read skills (local controller FS is fine for skills)
+        # T006: Read skills
         skills_context = self._get_skills_context()
-
-        # WP04: Extract steerability context from last message if present
+        # WP04: Extract steerability context
         steer_context = self._get_steer_context(state.messages)
 
-        # Observability
-        callbacks = self._get_callbacks(name="planner", session_id=state.session_id)
+        from controller.agent.dspy_utils import WorkerInterpreter
 
-        # T005: Invoke LLM
-        prompt_text = self.ctx.pm.render(
-            "architect",
-            task=state.task,
-            skills=skills_context,
-            steer_context=steer_context,
+        # Use WorkerInterpreter for remote execution
+        interpreter = WorkerInterpreter(
+            worker_client=self.ctx.worker_client, session_id=state.session_id
         )
-        # Instruct agent to use tools to write files
-        prompt_text += "\n\nIMPORTANT: You must use the 'write_file' tool to create 'plan.md' and 'todo.md' directly. Do not just output the content in the chat."
 
-        messages = [SystemMessage(content=prompt_text)]
+        # Get tool signatures for DSPy
+        tool_fns = self._get_tool_functions(get_engineer_tools)
+
+        program = dspy.CodeAct(
+            PlannerSignature, tools=list(tool_fns.values()), interpreter=interpreter
+        )
 
         max_retries = 3
         retry_count = 0
@@ -58,20 +63,20 @@ class PlannerNode(BaseNode):
 
         while retry_count < max_retries:
             try:
-                # Invoke agent
-                logger.info("planner_agent_invoke_start", session_id=state.session_id)
-                result = await self.agent.ainvoke(
-                    {"messages": messages}, config={"callbacks": callbacks}
-                )
-                logger.info(
-                    "planner_agent_invoke_complete", session_id=state.session_id
-                )
-                messages = result["messages"]
+                with dspy.settings.context(lm=self.ctx.dspy_lm):
+                    logger.info("planner_dspy_invoke_start", session_id=state.session_id)
+                    prediction = program(
+                        task=state.task,
+                        skills=skills_context,
+                        steer_context=steer_context,
+                    )
+                    logger.info(
+                        "planner_dspy_invoke_complete", session_id=state.session_id
+                    )
 
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
 
-                # Read artifacts to validate
                 artifacts = {}
                 for f in ["plan.md", "todo.md"]:
                     with suppress(Exception):
@@ -81,58 +86,45 @@ class PlannerNode(BaseNode):
                 is_valid, validation_errors = validate_node_output("planner", artifacts)
 
                 if not is_valid:
-                    error_msg = f"Planner output validation failed: {validation_errors}"
-                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
-                    messages.append(HumanMessage(content=error_msg))
-
-                    if retry_count == max_retries - 1:
-                        # Last attempt failed
-                        return state.model_copy(
-                            update={
-                                "status": AgentStatus.PLAN_REJECTED,
-                                "feedback": error_msg,
-                                "journal": state.journal + journal_entry,
-                                "messages": messages,
-                            }
-                        )
-
+                    logger.warning("planner_validation_failed", errors=validation_errors)
                     retry_count += 1
                     continue
 
                 # Success
-                # Emit SubmissionValidationEvent
                 await record_worker_events(
                     episode_id=state.session_id,
                     events=[
                         SubmissionValidationEvent(
                             artifacts_present=list(artifacts.keys()),
                             verification_passed=True,
-                            reasoning_trace_quality=1.0,  # Placeholder
+                            reasoning_trace_quality=1.0,
                             errors=[],
                         )
                     ],
                 )
 
+                summary = getattr(prediction, "summary", "No summary provided.")
                 return state.model_copy(
                     update={
                         "plan": artifacts.get("plan.md", ""),
                         "todo": artifacts.get("todo.md", ""),
                         "status": AgentStatus.EXECUTING,
-                        "journal": state.journal + journal_entry,
-                        "messages": messages,
+                        "journal": state.journal + f"\n[Planner] {summary}",
+                        "messages": state.messages
+                        + [AIMessage(content=f"Plan summary: {summary}")],
                     }
                 )
 
             except Exception as e:
-                journal_entry += f"\nSystem error during planning: {e}"
-                messages.append(HumanMessage(content=f"System error: {e}"))
+                logger.error("planner_dspy_failed", error=str(e))
                 retry_count += 1
+            finally:
+                interpreter.shutdown()
 
         return state.model_copy(
             update={
                 "status": AgentStatus.FAILED,
-                "journal": state.journal + journal_entry,
-                "messages": messages,
+                "journal": state.journal + journal_entry + "\nMax retries reached.",
             }
         )
 
