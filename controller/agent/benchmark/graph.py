@@ -126,22 +126,24 @@ async def _execute_graph_streaming(
                 # Update field by field to avoid losing objects not in state_update
                 for key, value in state_update.items():
                     if hasattr(final_state, key):
-                        # Special handling for plan which is a RandomizationStrategy model
+                        # Special handling for plan which is a
+                        # RandomizationStrategy model
                         if key == "plan" and isinstance(value, dict):
                             from shared.simulation.schemas import RandomizationStrategy
 
-                            try:
+                            import contextlib
+
+                            with contextlib.suppress(Exception):
                                 value = RandomizationStrategy.model_validate(value)
-                            except Exception:
-                                pass
-                        # Special handling for session which is a GenerationSession model
+                        # Special handling for session which is a
+                        # GenerationSession model
                         if key == "session" and isinstance(value, dict):
                             from .models import GenerationSession
 
-                            try:
+                            import contextlib
+
+                            with contextlib.suppress(Exception):
                                 value = GenerationSession.model_validate(value)
-                            except Exception:
-                                pass
                         setattr(final_state, key, value)
             elif isinstance(state_update, BenchmarkGeneratorState):
                 final_state = state_update
@@ -196,7 +198,7 @@ async def run_generation_session(
     prompt: str,
     session_id: uuid.UUID | None = None,
     custom_objectives: dict | None = None,
-    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.

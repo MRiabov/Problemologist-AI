@@ -106,7 +106,8 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             content=(
                 f"Original User Request:\n{state.session.prompt}\n\n"
                 "Please generate the randomization strategy now. "
-                "Take into account any steering or feedback from the history above if present."
+                "Take into account any steering or feedback from the "
+                "history above if present."
             )
         ),
     ]
@@ -213,10 +214,10 @@ Validation Logs:
         logger.error("coder_agent_failed", error=str(e))
 
     # Retrieve script
-    try:
+    import contextlib
+
+    with contextlib.suppress(Exception):
         state.current_script = await ctx.worker_client.read_file(SCRIPT_FILE)
-    except Exception:
-        pass
 
     # Validation Logic (Same as before)
     if state.current_script:
@@ -247,7 +248,7 @@ Validation Logs:
                 )
             else:
                 # physics simulation
-                backend = SimulatorBackendType.MUJOCO
+                backend = SimulatorBackendType.GENESIS
                 try:
                     if objectives_yaml and not objectives_yaml.startswith("#"):
                         obj_data = yaml.safe_load(objectives_yaml)
@@ -459,7 +460,9 @@ YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
             review_parsed = await parser_llm.ainvoke(
                 [
                     SystemMessage(
-                        content="Extract the final review decision from the following text."
+                        content=(
+                            "Extract the final review decision from the following text."
+                        )
                     ),
                     HumanMessage(content=result["messages"][-1].content),
                 ]

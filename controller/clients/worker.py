@@ -225,7 +225,7 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
-        backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         client = await self._get_client()

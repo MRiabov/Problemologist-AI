@@ -46,11 +46,14 @@ class SimulationLoop:
         smoke_test_mode: bool = False,
     ):
         # WP2: Validate that fluids are NOT requested if using MuJoCo
-        if backend_type == SimulatorBackendType.MUJOCO:
-            if objectives and objectives.fluids:
-                raise ValueError(
-                    "MuJoCo backend does not support fluids. Use Genesis instead."
-                )
+        if (
+            backend_type == SimulatorBackendType.MUJOCO
+            and objectives
+            and objectives.fluids
+        ):
+            raise ValueError(
+                "MuJoCo backend does not support fluids. Use Genesis instead."
+            )
 
         self.backend = get_physics_backend(backend_type)
         self.smoke_test_mode = smoke_test_mode
@@ -252,14 +255,13 @@ class SimulationLoop:
         if target_body_name not in all_bodies:
             target_body_name = None
             # Fallback: look for target_box OR any body with 'target' or 'bucket' in name
+            # Checked against 88-char limit
             for name in all_bodies:
                 if "target" in name.lower() or "bucket" in name.lower():
                     target_body_name = name
                     break
 
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
-
-        stress_report_interval = 1 if self.smoke_test_mode else 50
 
         for step_idx in range(steps):
             # T015: Update electronics if state changed
@@ -363,7 +365,11 @@ class SimulationLoop:
                                     ElectricalFailureEvent(
                                         failure_type="wire_torn",
                                         component_id=wire.wire_id,
-                                        message=f"Wire {wire.wire_id} torn due to high tension ({tension:.2f}N > {limit:.2f}N)",
+                                        message=(
+                                            f"Wire {wire.wire_id} torn due to "
+                                            f"high tension ({tension:.2f}N > "
+                                            f"{limit:.2f}N)"
+                                        ),
                                     )
                                 )
                                 logger.info(
@@ -452,7 +458,8 @@ class SimulationLoop:
                                     or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
                                 )
                         elif fo.type == "flow_rate":
-                            # T016: Use cumulative crossed count for more accurate flow rate
+                            # T016: Use cumulative crossed count for more accurate
+                            # flow rate check
                             obj_id = f"{fo.fluid_id}_{fo.type}"
                             passed_count = self.cumulative_crossed_count.get(obj_id, 0)
 
@@ -495,25 +502,31 @@ class SimulationLoop:
                                 )
 
         # Final success determination:
-        # Success if no failures AND (goal achieved IF goals exist, or fluid/stress objectives passed)
+        # Success if no failures AND (goal achieved IF goals exist,
+        # or fluid/stress objectives passed)
         has_other_objectives = False
-        if self.objectives and self.objectives.objectives:
-            if (
+        if (
+            self.objectives
+            and self.objectives.objectives
+            and (
                 self.objectives.objectives.fluid_objectives
                 or self.objectives.objectives.stress_objectives
-            ):
-                has_other_objectives = True
+            )
+        ):
+            has_other_objectives = True
 
         if self.fail_reason:
             is_success = False
         elif self.goal_sites:
-            # If target object AND goals are required, success depends on goal achievement
+            # If target object AND goals are required, success depends on
+            # goal achievement
             is_success = self.success
         elif has_other_objectives:
             # If no failures and fluid/stress objectives passed, it's a success
             is_success = True
         else:
-            # Stability test or goal-less benchmark (legacy behavior expects False if no goal)
+            # Stability test or goal-less benchmark
+            # (legacy behavior expects False if no goal)
             is_success = False
 
         metrics = self.metric_collector.get_metrics()

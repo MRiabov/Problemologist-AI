@@ -236,7 +236,7 @@ def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     builder = get_simulation_builder(
-        output_dir=renders_dir, backend_type=SimulatorBackendType.MUJOCO
+        output_dir=renders_dir, backend_type=SimulatorBackendType.GENESIS
     )
     scene_path = builder.build_from_assembly(component)
     return scene_path.read_text()
@@ -308,12 +308,12 @@ def calculate_assembly_totals(
             # Weight is not always in CotsPartEstimate, but we can try to find it
             # if we had a more detailed catalog access here.
             # For now, we'll try to use metadata if we can find it in shared catalog.
-            try:
+            import contextlib
+
+            with contextlib.suppress(Exception):
                 # Heuristic: try to look up weight if not provided
                 # In current schema CotsPartEstimate doesn't have weight_g
                 # But the indexer extracts it.
-                pass
-            except Exception:
                 pass
 
     return total_cost, total_weight
@@ -358,7 +358,7 @@ def simulate(
 
     backend_type = backend
     if backend_type is None:
-        backend_type = SimulatorBackendType.MUJOCO
+        backend_type = SimulatorBackendType.GENESIS
         if objectives and getattr(objectives, "physics", None):
             backend_type = SimulatorBackendType(objectives.physics.backend)
 
@@ -485,7 +485,10 @@ def validate(
             for j in range(i + 1, len(solids)):
                 intersection = solids[i].intersect(solids[j])
                 if intersection and intersection.volume > 0.1:
-                    msg = f"Geometric intersection detected (volume: {intersection.volume:.2f})"
+                    msg = (
+                        f"Geometric intersection detected "
+                        f"(volume: {intersection.volume:.2f})"
+                    )
                     return (False, msg)
 
     bbox = component.bounding_box()
@@ -515,7 +518,7 @@ def validate(
         renders_dir = str(output_dir / "renders") if output_dir else None
 
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
-        backend_type = SimulatorBackendType.MUJOCO
+        backend_type = SimulatorBackendType.GENESIS
         if output_dir:
             obj_path = output_dir / "objectives.yaml"
             if obj_path.exists():
