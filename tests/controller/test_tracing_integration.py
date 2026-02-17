@@ -28,7 +28,8 @@ async def test_record_worker_events():
     episode_id = uuid.uuid4()
 
     with patch(
-        "controller.persistence.db.get_sessionmaker", return_value=session_factory
+        "controller.observability.tracing.get_sessionmaker",
+        return_value=session_factory,
     ):
         # Create a dummy episode first to satisfy foreign key constraint
         async with session_factory() as db:

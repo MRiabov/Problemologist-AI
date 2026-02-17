@@ -1,6 +1,6 @@
 import yaml
 
-from worker.simulation.loop import StressSummary
+from shared.models.simulation import StressSummary
 from worker.utils.validation import (
     SimulationResult,
     define_fluid,
