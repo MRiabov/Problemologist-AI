@@ -21,9 +21,8 @@ def mock_state():
     )
 
 
-@patch("controller.agent.benchmark.nodes.ChatOpenAI")
 @pytest.mark.asyncio
-async def test_coder_node_injects_objectives_yaml(mock_llm_cls, mock_state):
+async def test_coder_node_injects_objectives_yaml(mock_state):
     valid_script = "def build(seed, scale=1.0): return None, ''"
     objectives_content = "theme: bracket\nobjectives:\n  zone_goal:\n    min: [0,0,0]"
 

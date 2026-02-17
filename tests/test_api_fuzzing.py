@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 import pytest
 import schemathesis
@@ -12,25 +13,66 @@ schema = schemathesis.openapi.from_asgi("/openapi.json", app)
 
 
 @pytest.fixture(autouse=True)
-def mock_dependencies():
+def mock_dependencies(tmp_path):
     """Mock external dependencies to prevent side effects."""
     # Mock FilesystemRouter
     router_mock = MagicMock(spec=FilesystemRouter)
     router_mock.ls.return_value = []
     router_mock.read.return_value = b""
     router_mock.exists.return_value = True
-    router_mock.edit.return_value = True
+    router_mock.edit.return_value = MagicMock()
     router_mock.upload_files.return_value = []
-    router_mock.local_backend = MagicMock()
+
+    # Provide a real path for local_backend.root to avoid Repo(MagicMock) errors
+    local_backend_mock = MagicMock()
+    local_backend_mock.root = tmp_path
+    # Mock _resolve to return a real path within tmp_path
+    local_backend_mock._resolve.side_effect = lambda p: tmp_path / p
+    router_mock.local_backend = local_backend_mock
 
     app.dependency_overrides[get_router] = lambda: router_mock
 
-    # Mock sync_skills and git operations to avoid side effects during startup
-    # Also mock git operations exposed via API
+    # Mock all heavy utilities and those involving git or subprocesses
     with (
         patch("worker.app.sync_skills"),
         patch("worker.api.routes.init_workspace_repo"),
         patch("worker.api.routes.commit_all", return_value="deadbeef"),
+        patch("worker.api.routes.resolve_conflict_ours", return_value=True),
+        patch("worker.api.routes.resolve_conflict_theirs", return_value=True),
+        patch("worker.api.routes.abort_merge", return_value=True),
+        patch("worker.api.routes.complete_merge", return_value="deadbeef"),
+        patch(
+            "worker.api.routes.get_repo_status",
+            return_value={
+                "branch": "main",
+                "is_dirty": False,
+                "is_merging": False,
+                "conflicts": [],
+            },
+        ),
+        patch(
+            "worker.api.routes.simulate",
+            return_value=MagicMock(
+                success=True, summary="OK", artifacts={}, message="OK"
+            ),
+        ),
+        patch("worker.api.routes.validate", return_value=(True, None)),
+        patch(
+            "worker.api.routes.validate_and_price",
+            return_value=MagicMock(
+                is_manufacturable=True,
+                total_cost=10.0,
+                total_weight_g=100.0,
+                metadata={},
+            ),
+        ),
+        patch(
+            "worker.api.routes.run_python_code_async",
+            return_value=MagicMock(
+                exit_code=0, stdout="OK", stderr="", timed_out=False
+            ),
+        ),
+        patch("worker.api.routes.load_component_from_script", return_value=MagicMock()),
     ):
         yield
 

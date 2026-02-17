@@ -25,6 +25,7 @@ client = TestClient(app)
 
 @pytest.mark.asyncio
 @patch("controller.api.tasks.get_sessionmaker")
+@patch("controller.observability.database.get_sessionmaker")
 @patch("controller.api.tasks.get_worker_client")
 @patch("controller.api.tasks.create_agent_graph")
 @patch("controller.api.tasks.RemoteFilesystemBackend")
@@ -34,6 +35,7 @@ async def test_execute_agent_task_cancelled(
     mock_backend_cls,
     mock_create_graph,
     mock_get_worker,
+    mock_db_sessionmaker,
     mock_get_sessionmaker,
 ):
     # Setup mocks
@@ -43,12 +45,26 @@ async def test_execute_agent_task_cancelled(
 
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
+
+    async def mock_refresh(obj):
+        if getattr(obj, "id", None) is None:
+            obj.id = uuid.uuid4()
+        return None
+
+    mock_session.refresh = AsyncMock(side_effect=mock_refresh)
+
+    def mock_add(obj):
+        if getattr(obj, "id", None) is None:
+            obj.id = uuid.uuid4()
+
+    mock_session.add = MagicMock(side_effect=mock_add)
+
     mock_session.get = AsyncMock()
-    mock_session.add = MagicMock()
 
     mock_session_factory = MagicMock()
     mock_session_factory.return_value.__aenter__.return_value = mock_session
     mock_get_sessionmaker.return_value = mock_session_factory
+    mock_db_sessionmaker.return_value = mock_session_factory
 
     mock_episode = Episode(id=episode_id, task=task, status=EpisodeStatus.RUNNING)
     mock_session.get.return_value = mock_episode

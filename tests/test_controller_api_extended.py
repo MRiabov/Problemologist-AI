@@ -80,6 +80,10 @@ def test_trigger_backup_invalid_secret():
 @patch("controller.api.ops.os.getenv")
 def test_trigger_backup_no_temporal(mock_getenv):
     mock_getenv.return_value = "secret"
+    # Ensure temporal_client is missing
+    if hasattr(app.state, "temporal_client"):
+        del app.state.temporal_client
+
     # We need to bypass the secret check
     with patch("controller.api.ops.BACKUP_SECRET", "secret"):
         response = client.post("/ops/backup", headers={"x-backup-secret": "secret"})
