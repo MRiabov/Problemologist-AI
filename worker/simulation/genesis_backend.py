@@ -120,10 +120,7 @@ class GenesisBackend(PhysicsBackend):
         # T014: Particle visualization options from WP06
         self.scene = gs.Scene(
             show_viewer=False,
-            vis_options=gs.options.VisOptions(
-                particle_size=0.01,
-                render_particle=True,
-            ),
+            vis_options=gs.options.VisOptions(),
         )
         self.entities = {}
         self.entity_configs = {}

@@ -32,9 +32,13 @@ TEST_XML = """
 
 @pytest.fixture
 def sim_loop(tmp_path):
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
-    loop = SimulationLoop(str(xml_path))
+    loop = SimulationLoop(
+        str(xml_path), backend_type=SimulatorBackendType.MUJOCO
+    )
     return loop
 
 
@@ -111,13 +115,18 @@ def test_validation_hook_failure(tmp_path):
     # Mock validate_and_price to return invalid
     with patch("worker.simulation.loop.validate_and_price") as mock_val:
         from unittest.mock import MagicMock
+        from shared.simulation.schemas import SimulatorBackendType
 
         mock_val.return_value = MagicMock(
             is_manufacturable=False, violations=["Part too large"]
         )
 
         # Pass a dummy component to trigger validation
-        loop = SimulationLoop(str(xml_path), component=Box(1, 1, 1))
+        loop = SimulationLoop(
+            str(xml_path),
+            component=Box(1, 1, 1),
+            backend_type=SimulatorBackendType.MUJOCO,
+        )
 
         metrics = loop.step({})
         assert metrics.success is False
@@ -129,11 +138,17 @@ def test_validation_hook_failure(tmp_path):
 
 def test_timeout_configurable(tmp_path):
     """Test that configurable timeout works."""
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
 
     # Set a very short timeout (0.05s = 50ms)
-    loop = SimulationLoop(str(xml_path), max_simulation_time=0.05)
+    loop = SimulationLoop(
+        str(xml_path),
+        max_simulation_time=0.05,
+        backend_type=SimulatorBackendType.MUJOCO,
+    )
 
     # Run for longer than timeout
     metrics = loop.step({}, duration=1.0)
@@ -147,12 +162,17 @@ def test_timeout_configurable(tmp_path):
 def test_timeout_capped_at_30s(tmp_path):
     """Test that timeout cannot exceed 30 seconds (hard cap)."""
     from worker.simulation.loop import MAX_SIMULATION_TIME_SECONDS
+    from shared.simulation.schemas import SimulatorBackendType
 
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
 
     # Try to set a timeout longer than 30s
-    loop = SimulationLoop(str(xml_path), max_simulation_time=60.0)
+    loop = SimulationLoop(
+        str(xml_path),
+        max_simulation_time=60.0,
+        backend_type=SimulatorBackendType.MUJOCO,
+    )
 
     # Should be capped at 30s
     assert loop.max_simulation_time == MAX_SIMULATION_TIME_SECONDS

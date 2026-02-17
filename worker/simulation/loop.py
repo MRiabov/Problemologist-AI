@@ -125,10 +125,42 @@ class SimulationLoop:
             elif name and name.startswith("zone_goal"):
                 self.goal_sites.append(name)
 
+        # Cache dynamic names to avoid repeated API/FFI calls in loop (Performance)
+        self.actuator_names = self.backend.get_all_actuator_names()
+        self.body_names = [
+            b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+        ]
+
+        # Pre-calculate actuator limits for overload check
+        self.actuators_to_monitor = []
+        for name in self.actuator_names:
+            limit = 1.0  # default fallback
+            try:
+                # MuJoCo optimization: check if force limited and get range
+                import mujoco
+
+                if hasattr(self.backend, "model") and self.backend.model:
+                    idx = mujoco.mj_name2id(
+                        self.backend.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
+                    )
+                    if idx >= 0:
+                        if self.backend.model.actuator_forcelimited[idx]:
+                            limit = self.backend.model.actuator_forcerange[idx][1]
+                            self.actuators_to_monitor.append((name, limit))
+                        # If not limited, we don't monitor it (consistent with original logic)
+                        continue
+            except Exception:
+                # Genesis or other backend: monitor all with default limit
+                pass
+
+            # Fallback for non-MuJoCo or failed lookup
+            self.actuators_to_monitor.append((name, limit))
+
         logger.info(
             "SimulationLoop_init",
             goal_sites=self.goal_sites,
             forbidden_sites=self.forbidden_sites,
+            monitored_actuators=len(self.actuators_to_monitor),
         )
 
         # Configurable timeout (capped at hard limit)
@@ -252,12 +284,13 @@ class SimulationLoop:
 
         # Find critical bodies
         target_body_name = "target_box"
-        all_bodies = self.backend.get_all_body_names()
-        if target_body_name not in all_bodies:
+        # Use cached body names + world/0 (which we filtered out but might need for target search?)
+        # Actually 'target_box' is usually a moving body so it should be in self.body_names
+        if target_body_name not in self.body_names:
             target_body_name = None
             # Fallback: look for target_box OR
             # any body with 'target' or 'bucket' in name
-            for name in all_bodies:
+            for name in self.body_names:
                 if "target" in name.lower() or "bucket" in name.lower():
                     target_body_name = name
                     break
@@ -295,13 +328,12 @@ class SimulationLoop:
             current_time = res.time
 
             # 2. Update Metrics
-            actuator_names = self.backend.get_all_actuator_names()
             energy = sum(
                 abs(
                     self.backend.get_actuator_state(n).ctrl
                     * self.backend.get_actuator_state(n).velocity
                 )
-                for n in actuator_names
+                for n in self.actuator_names
             )
 
             target_vel = 0.0
@@ -334,7 +366,7 @@ class SimulationLoop:
                 break
 
             # Check Forbidden Zones
-            if self._check_forbidden_collision():
+            if self.forbidden_sites and self._check_forbidden_collision():
                 self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
                 break
 
@@ -574,32 +606,9 @@ class SimulationLoop:
         # Check all position/torque actuators for saturation
         from worker.simulation.loop import SIMULATION_STEP_S
 
-        actuator_names = self.backend.get_all_actuator_names()
-
-        for name in actuator_names:
+        # Use pre-calculated monitor list
+        for name, limit in self.actuators_to_monitor:
             state = self.backend.get_actuator_state(name)
-            # MuJoCo actuators usually have a forcerange [low, high]
-            # We check if it's hitting EITHER limit
-            # For now, we assume the backend provides forcerange or we use a fallback
-            limit = 1.0  # default fallback
-
-            # Identify the motor limit from the model
-            try:
-                # MuJoCo model is in self.backend.model
-                import mujoco
-
-                idx = mujoco.mj_name2id(
-                    self.backend.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
-                )
-                if idx >= 0:
-                    if self.backend.model.actuator_forcelimited[idx]:
-                        limit = self.backend.model.actuator_forcerange[idx][1]
-                    else:
-                        # Not force limited, so no overload possible
-                        continue
-            except Exception:
-                pass
-
             if self.success_evaluator.check_motor_overload(
                 [name], [state.force], limit, SIMULATION_STEP_S
             ):
@@ -614,9 +623,9 @@ class SimulationLoop:
         )
 
     def _check_forbidden_collision(self) -> bool:
+        # Use cached body names (already filtered)
         return any(
             self.backend.check_collision(b, z)
-            for b in self.backend.get_all_body_names()
+            for b in self.body_names
             for z in self.forbidden_sites
-            if b not in ["world", "0"]
         )
