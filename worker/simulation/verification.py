@@ -89,9 +89,11 @@ def verify_with_jitter(
     results: list[SimulationMetrics] = []
     rng = np.random.default_rng(seed)
 
+    from shared.simulation.schemas import SimulatorBackendType
+
     for run_idx in range(num_runs):
         # Create fresh simulation state for each run
-        loop = SimulationLoop(xml_path)
+        loop = SimulationLoop(xml_path, backend_type=SimulatorBackendType.MUJOCO)
 
         # Find target body for jittering
         import mujoco

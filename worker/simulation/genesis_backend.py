@@ -30,6 +30,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []  # list of cable dicts from json
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
@@ -239,6 +240,9 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+
+                    # 4. Add Cables (T015)
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -605,8 +609,16 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        if site_name in self.entity_configs:
+            self.entity_configs[site_name]["pos"] = pos.tolist()
+        else:
+            # Create a new zone if it doesn't exist
+            self.entity_configs[site_name] = {
+                "name": site_name,
+                "is_zone": True,
+                "pos": pos.tolist(),
+            }
 
     def get_contact_forces(self) -> list[ContactForce]:
         if not self.scene:
@@ -639,7 +651,14 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        if site_name in self.entity_configs:
+            cfg = self.entity_configs[site_name]
+            return SiteState(
+                pos=tuple(cfg.get("pos", [0, 0, 0])),
+                quat=(1, 0, 0, 0),
+                size=tuple(cfg.get("size", [0.01, 0.01, 0.01])),
+            )
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
@@ -707,7 +726,7 @@ class GenesisBackend(PhysicsBackend):
         return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        return [c["wire_id"] for c in getattr(self, "cables", [])]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -751,6 +770,9 @@ class GenesisBackend(PhysicsBackend):
         return False
 
     def get_tendon_tension(self, _tendon_name: str) -> float:
+        # Placeholder for physical tendon tension in Genesis.
+        # Currently, cables are tracked for metadata and future physical simulation.
+        # For now, return 0.0 to avoid crashing wire failure checks.
         return 0.0
 
     def close(self) -> None:

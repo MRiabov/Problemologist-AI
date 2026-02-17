@@ -813,7 +813,13 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         """Converts an assembly of parts into a Genesis scene descriptor (JSON)."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
-        scene_data = {"entities": [], "fluids": [], "objectives": []}
+        scene_data = {
+            "entities": [],
+            "fluids": [],
+            "objectives": [],
+            "motors": [],
+            "cables": [],
+        }
 
         # 1. Add zones from objectives
         if objectives:
@@ -922,10 +928,31 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             scene_data["entities"].append(entity_info)
 
         # 3. Add moving parts (Motors)
-        scene_data["motors"] = []
         if moving_parts:
             for mp in moving_parts:
                 scene_data["motors"].append(mp.model_dump())
+
+        # 4. Add Electronics (Cables)
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                if getattr(wire, "routed_in_3d", False):
+                    # In Genesis, we can represent cables with their waypoints
+                    # and radius derived from AWG.
+                    # radius scaling: AWG 10 is ~1.25mm, AWG 20 is ~0.4mm
+                    radius = 0.0005 + (20 - wire.gauge_awg) * 0.00005
+                    # Stiffness scaling
+                    stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
+
+                    scene_data["cables"].append(
+                        {
+                            "wire_id": wire.wire_id,
+                            "gauge_awg": wire.gauge_awg,
+                            "radius": max(0.00025, radius),
+                            "stiffness": stiffness,
+                            "path": [list(pt) for pt in wire.waypoints],
+                        }
+                    )
+
         if objectives and hasattr(objectives, "fluids") and objectives.fluids:
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())

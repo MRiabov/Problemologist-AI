@@ -29,9 +29,11 @@ TEST_POSITION_XML = """
 
 @pytest.fixture
 def sim_loop_position(tmp_path):
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test_position.xml"
     xml_path.write_text(TEST_POSITION_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 class TestWaypointController:

@@ -44,16 +44,20 @@ TEST_NO_LIMIT_XML = """
 
 @pytest.fixture
 def overload_loop(tmp_path):
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test_overload.xml"
     xml_path.write_text(TEST_OVERLOAD_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 @pytest.fixture
 def no_limit_loop(tmp_path):
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test_no_limit.xml"
     xml_path.write_text(TEST_NO_LIMIT_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 class TestMotorOverload:

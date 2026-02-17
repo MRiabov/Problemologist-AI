@@ -313,8 +313,11 @@ class SimulationLoop:
                 target_vel = np.linalg.norm(state.vel)
                 target_pos = state.pos
 
-            # TODO: Get max stress from backend
+            # Real-time stress tracking (WP2)
+            summaries = self.backend.get_stress_summaries()
             max_stress = 0.0
+            if summaries:
+                max_stress = max(s.max_von_mises_pa for s in summaries)
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 4. Check Success/Failure conditions
@@ -577,36 +580,25 @@ class SimulationLoop:
         from worker.simulation.loop import SIMULATION_STEP_S
 
         actuator_names = self.backend.get_all_actuator_names()
+        forces = []
+        limits = []
+        names_to_check = []
 
         for name in actuator_names:
             state = self.backend.get_actuator_state(name)
-            # MuJoCo actuators usually have a forcerange [low, high]
-            # We check if it's hitting EITHER limit
-            # For now, we assume the backend provides forcerange or we use a fallback
-            limit = 1.0  # default fallback
+            # Use forcerange from state, fallback to 1.0 if not set
+            limit = state.forcerange[1] if state.forcerange and state.forcerange[1] > 0 else 1.0
 
-            # Identify the motor limit from the model
-            try:
-                # MuJoCo model is in self.backend.model
-                import mujoco
+            names_to_check.append(name)
+            forces.append(state.force)
+            limits.append(limit)
 
-                idx = mujoco.mj_name2id(
-                    self.backend.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
-                )
-                if idx >= 0:
-                    if self.backend.model.actuator_forcelimited[idx]:
-                        limit = self.backend.model.actuator_forcerange[idx][1]
-                    else:
-                        # Not force limited, so no overload possible
-                        continue
-            except Exception:
-                pass
+        if not names_to_check:
+            return False
 
-            if self.success_evaluator.check_motor_overload(
-                [name], [state.force], limit, SIMULATION_STEP_S
-            ):
-                return True
-        return False
+        return self.success_evaluator.check_motor_overload(
+            names_to_check, forces, limits, SIMULATION_STEP_S
+        )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
         """Check if any vertices of body_name are inside any of the goal sites."""

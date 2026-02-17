@@ -32,9 +32,11 @@ TEST_XML = """
 
 @pytest.fixture
 def sim_loop(tmp_path):
+    from shared.simulation.schemas import SimulatorBackendType
+
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
-    loop = SimulationLoop(str(xml_path))
+    loop = SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
     return loop
 
 
