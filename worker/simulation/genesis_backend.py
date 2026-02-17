@@ -303,11 +303,14 @@ class GenesisBackend(PhysicsBackend):
             # Ideally dt matches what was configured in gs.Scene
             self.scene.step()
 
+            global_max_stress = 0.0
+
             # T012: Part Breakage Detection
             for name, entity in self.entities.items():
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
-                    max_stress = np.max(field.stress)
+                    part_max_stress = np.max(field.stress)
+                    global_max_stress = max(global_max_stress, float(part_max_stress))
 
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
@@ -323,13 +326,14 @@ class GenesisBackend(PhysicsBackend):
                         else 310e6
                     )
 
-                    if max_stress > ultimate_stress:
+                    if part_max_stress > ultimate_stress:
                         max_idx = np.argmax(field.stress)
                         loc = field.nodes[max_idx].tolist()
                         return StepResult(
                             time=self.current_time,
                             success=False,
                             failure_reason=f"PART_BREAKAGE:{name}",
+                            max_stress=global_max_stress,
                         )
 
             # T017: ELECTRONICS_FLUID_DAMAGE check
@@ -348,7 +352,9 @@ class GenesisBackend(PhysicsBackend):
             )
 
         self.current_time += dt
-        return StepResult(time=self.current_time, success=True)
+        return StepResult(
+            time=self.current_time, success=True, max_stress=global_max_stress
+        )
 
     def _check_electronics_fluid_damage(self) -> str | None:
         """Check if any fluid particles are touching electronic components."""

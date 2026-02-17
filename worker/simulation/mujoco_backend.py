@@ -58,7 +58,7 @@ class MuJoCoBackend(PhysicsBackend):
                     failure_reason="instability_detected",
                 )
 
-        return StepResult(time=self.data.time, success=True)
+        return StepResult(time=self.data.time, success=True, max_stress=0.0)
 
     def get_body_state(self, body_id: str) -> BodyState:
         # MuJoCo uses integer IDs or names

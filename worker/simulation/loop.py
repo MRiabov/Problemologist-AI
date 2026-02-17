@@ -307,8 +307,7 @@ class SimulationLoop:
                 target_vel = np.linalg.norm(state.vel)
                 target_pos = state.pos
 
-            # TODO: Get max stress from backend
-            max_stress = 0.0
+            max_stress = res.max_stress
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 3. Check for Failures
@@ -572,4 +571,9 @@ class SimulationLoop:
             for b in self.backend.get_all_body_names()
             for z in self.forbidden_sites
             if b not in ["world", "0"]
+        )
+
+    def check_goal_with_vertices(self, target_body_name: str) -> bool:
+        return any(
+            self.backend.check_collision(target_body_name, z) for z in self.goal_sites
         )

@@ -11,10 +11,8 @@ import trimesh
 from build123d import Compound
 from PIL import Image
 
-from shared.simulation.backends import (
-    SimulatorBackendType,
-    StressField,
-)
+from shared.simulation.backends import StressField
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
 
 logger = structlog.get_logger(__name__)

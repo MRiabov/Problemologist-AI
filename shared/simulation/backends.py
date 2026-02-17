@@ -43,6 +43,7 @@ class SiteState(BaseModel):
 class StepResult(BaseModel):
     time: float
     success: bool
+    max_stress: float = 0.0
     failure_reason: str | None = None
 
 

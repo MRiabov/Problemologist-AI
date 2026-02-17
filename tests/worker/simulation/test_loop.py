@@ -97,10 +97,13 @@ def test_forbidden_zone_trigger(sim_loop):
     # Collision detection relies on contacts.
     # Just setting position might not generate contacts immediately if no step is running?
     # mj_step computes contacts.
-    assert metrics.fail_reason == "collision_with_forbidden_zone"
+    assert metrics.fail_reason == "forbid_zone_hit"
 
 
 def test_validation_hook_failure(tmp_path):
+    # Ensure worker.utils.dfm is importable before patching
+    import worker.utils.dfm  # noqa
+
     from unittest.mock import patch
 
     from build123d import Box
@@ -140,7 +143,7 @@ def test_timeout_configurable(tmp_path):
 
     # Should timeout before reaching goal
     assert metrics.success is False
-    assert metrics.fail_reason == "timeout_exceeded"
+    assert metrics.fail_reason == "timeout"
     assert metrics.total_time >= 0.05  # At least ran until timeout
 
 
@@ -168,7 +171,7 @@ def test_target_fell_off_world(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "target_fell_off_world"
+    assert metrics.fail_reason == "out_of_bounds"
 
 
 def test_instability_detection(sim_loop):
@@ -182,4 +185,4 @@ def test_instability_detection(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "PHYSICS_INSTABILITY"
+    assert metrics.fail_reason == "physics_instability"
