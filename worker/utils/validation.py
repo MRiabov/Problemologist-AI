@@ -260,14 +260,20 @@ def calculate_assembly_totals(
         children = [component]
 
     for child in children:
-        if not hasattr(child, "metadata") or not child.metadata:
+        metadata = getattr(child, "metadata", None)
+        if not metadata:
             continue
 
-        method_str = child.metadata.get("manufacturing_method")
+        method = getattr(metadata, "manufacturing_method", None)
         from worker.workbenches.models import ManufacturingMethod
 
         try:
-            method = ManufacturingMethod(method_str)
+            if isinstance(method, str):
+                method = ManufacturingMethod(method)
+
+            if not method:
+                continue
+
             res = validate_and_price(child, method, config)
             total_cost += res.unit_cost
             total_weight += res.weight_g
@@ -282,8 +288,8 @@ def calculate_assembly_totals(
 
                 try:
                     psu = PowerSupply(size=comp.cots_part_id)
-                    total_cost += psu.metadata.get("price", 0.0)
-                    total_weight += psu.metadata.get("weight_g", 0.0)
+                    total_cost += getattr(psu, "price", 0.0)
+                    total_weight += getattr(psu, "weight_g", 0.0)
                 except Exception:
                     pass
             elif comp.type == "motor" and comp.cots_part_id:
@@ -291,8 +297,8 @@ def calculate_assembly_totals(
 
                 try:
                     motor = ServoMotor(size=comp.cots_part_id)
-                    total_cost += motor.metadata.get("price", 0.0)
-                    total_weight += motor.metadata.get("weight_g", 0.0)
+                    total_cost += getattr(motor, "price", 0.0)
+                    total_weight += getattr(motor, "weight_g", 0.0)
                 except Exception:
                     pass
 

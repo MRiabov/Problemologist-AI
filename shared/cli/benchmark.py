@@ -22,7 +22,7 @@ async def _run_generate(prompt: str):
         print(f"Session ID: {session.session_id}")
         print(f"Status: {session.status}")
 
-        if session.status == SessionStatus.accepted:
+        if session.status == SessionStatus.ACCEPTED:
             print("Asset generated successfully.")
         else:
             print("Generation failed or rejected.")

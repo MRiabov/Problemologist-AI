@@ -149,7 +149,8 @@ def validate_and_price(
     # WP2: FEM Material Field Validation (INT-111)
     fem_violations: list[str] = []
     if fem_required:
-        material_id = getattr(part, "metadata", {}).get("material_id")
+        metadata = getattr(part, "metadata", None)
+        material_id = getattr(metadata, "material_id", None)
         # Check global materials and method-specific materials
         mat_def = config.materials.get(material_id)
         if not mat_def and method == ManufacturingMethod.CNC and config.cnc:
@@ -181,9 +182,14 @@ def validate_and_price(
                 ]
 
     # Add DOF warning to metadata (for reviewer notification)
-    result_metadata = dict(result.metadata)
-    result_metadata["dof_count"] = dof_count
-    result_metadata["dof_warning"] = dof_warning
+    from worker.workbenches.models import WorkbenchMetadata
+
+    result_metadata = result.metadata.model_copy(
+        update={
+            "dof_count": dof_count,
+            "dof_warning": dof_warning,
+        }
+    )
 
     # Combine all violations
     all_violations = list(result.violations) + build_zone_violations + fem_violations

@@ -49,7 +49,7 @@ def validate_and_price(part: Part | Compound, quantity: int = 1) -> DFMReport:
 
 **Input**:
 
-- `part`: `build123d` object. Must have `part.metadata["manufacturing_method"]` set (e.g., "CNC", "IM").
+- `part`: `build123d` object. Must have `part.metadata` set (using `PartMetadata` or `CompoundMetadata`).
 - `quantity`: Production volume for cost amortisation.
 
 **Output (DFMReport Pydantic Model)**:

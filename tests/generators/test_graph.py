@@ -51,7 +51,7 @@ async def test_run_generation_session_mocked():
                     "session": {
                         "session_id": uuid4(),
                         "prompt": prompt,
-                        "status": SessionStatus.accepted,
+                        "status": SessionStatus.ACCEPTED,
                         "validation_logs": [],
                     },
                     "plan": mock_plan,
@@ -66,7 +66,7 @@ async def test_run_generation_session_mocked():
 
         final_state = await run_generation_session(prompt)
 
-        assert final_state.session.status == SessionStatus.planned
+        assert final_state.session.status == SessionStatus.PLANNED
         assert final_state.plan.theme == "gears"
         assert final_state.current_script == "print('hello')"
 
@@ -102,7 +102,7 @@ async def test_run_generation_session_rejected():
                     "session": {
                         "session_id": uuid4(),
                         "prompt": prompt,
-                        "status": SessionStatus.planning,
+                        "status": SessionStatus.PLANNING,
                         "validation_logs": [],
                     },
                     "plan": {"theme": "complex"},
@@ -118,4 +118,4 @@ async def test_run_generation_session_rejected():
         final_state = await run_generation_session(prompt)
 
         # Verify status update logic in run_generation_session
-        assert final_state.session.status == SessionStatus.rejected
+        assert final_state.session.status == SessionStatus.REJECTED

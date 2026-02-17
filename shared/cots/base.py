@@ -3,6 +3,7 @@ from typing import Any
 
 from build123d import Compound
 
+from shared.models.schemas import PartMetadata
 from shared.observability.events import emit_event
 from shared.observability.schemas import ComponentUsageEvent
 
@@ -35,8 +36,12 @@ class COTSPart(Compound, ABC):
 
         self.category = category
         self.part_number = part_number
-        self.metadata = data.copy()
-        self.metadata["part_number"] = part_number
+
+        # Refactor to use PartMetadata instead of dict
+        self.metadata = PartMetadata(
+            cots_id=part_number,
+            material_id=data.get("material_id", "cots-generic"),
+        )
 
         # Ensure label exists for identification
 

@@ -256,14 +256,21 @@ engineer:
          - At submission time, NO checkbox may remain `[ ]`.
          - Use `[x]` for completed and `[-]` for skipped items.
 
-         **Part Metadata**:
-         Each part MUST have:
+         **Part & Compound Metadata (MANDATORY)**:
+         Every part and assembly (Compound) MUST have a `.metadata` attribute. Validation will FAIL without it.
          ```python
-         part.label = "descriptive_name"
-         part.metadata = {
-             "manufacturing_method": ManufacturingMethod.CNC,  # or INJECTION_MOLDING, 3D_PRINT
-             "material_id": "aluminum-6061"
-         }
+         from shared.models.schemas import PartMetadata, CompoundMetadata
+         from shared.enums import ManufacturingMethod
+
+         # Individual parts: require material_id OR cots_id
+         # NOTE: Engineers must NOT use fixed=True; parts must be grounded by joints/fasteners.
+         part.metadata = PartMetadata(
+             manufacturing_method=ManufacturingMethod.CNC,
+             material_id="aluminum-6061"
+         )
+
+         # Assemblies/Compounds:
+         assembly.metadata = CompoundMetadata()
          ```
 
          **Refusing a Plan**:
@@ -451,6 +458,10 @@ benchmark_generator:
             - `estimated_unit_cost_usd`, `max_unit_cost`, `budget_leeway_pct`
             - `estimated_weight_kg`, `max_weight`, `weight_leeway_pct`
             - Short rationale for why these caps are challenging but non-brittle.
+         9. **Part Metadata**:
+            - All parts and assemblies MUST have metadata.
+            - `PartMetadata` (for parts): requires `material_id` or `cots_id`.
+            - `CompoundMetadata` (for assemblies): can use `fixed=True` for static environment geometry.
 
          **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
          - `benchmark_structure.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
@@ -497,6 +508,20 @@ benchmark_generator:
          2. **Scaling**: Use `scale(obj, by=scale_factors)` FUNCTION for non-uniform. The `.scale()` METHOD only takes a single float.
          3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
          4. **Labels**: Apply correct labels per the labeling convention.
+         5. **Part & Compound Metadata (MANDATORY)**:
+            Every part and assembly (Compound) MUST have a `.metadata` attribute.
+            ```python
+            from shared.models.schemas import PartMetadata, CompoundMetadata
+            
+            # Environment parts (can be fixed):
+            obstacle.metadata = PartMetadata(material_id="abs", fixed=True)
+            
+            # Moved Object (physics-bound):
+            ball.metadata = PartMetadata(material_id="pla", fixed=False)
+            
+            # Grouped Assemblies:
+            env_group.metadata = CompoundMetadata(fixed=True)
+            ```
 
          **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
          - `objectives.yaml`: Using the template below. This is REQUIRED.

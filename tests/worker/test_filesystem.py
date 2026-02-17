@@ -15,9 +15,6 @@ from unittest.mock import patch
 from shared.backend.protocol import FileInfo as ProtocolFileInfo
 
 
-@pytest.mark.skip(
-    reason="Fails due to beartype violation or prod bug (FileInfo is not subscriptable)"
-)
 def test_local_backend_operations(tmp_path):
     session_dir = tmp_path / "sessions"
     backend = LocalFilesystemBackend.create("session-123", base_dir=session_dir)
@@ -39,20 +36,11 @@ def test_local_backend_operations(tmp_path):
     assert (session_dir / "session-123" / "test.txt").read_text() == "hello universe"
 
     # Test LS
-    # Patch ls_info to avoid beartype violation in prod code
-    with patch.object(LocalFilesystemBackend, "ls_info") as mock_ls_info:
-        mock_ls_info.return_value = [
-            ProtocolFileInfo(
-                path="/test.txt",
-                is_dir=False,
-                size=14,
-                modified_at="2026-02-17T00:00:00",
-            )
-        ]
-        files = backend.ls("/")
-        assert len(files) >= 1
-        names = [f.name for f in files]
-        assert "test.txt" in names
+    files = backend.ls("/")
+    assert len(files) >= 1
+    # LocalFilesystemBackend.create might add objectives.yaml automatically
+    names = [f.name for f in files]
+    assert "test.txt" in names
 
 
 def test_local_backend_isolation(tmp_path):
@@ -103,9 +91,6 @@ def test_filesystem_router_logic(tmp_path):
         router.write("/utils/new.py", "content")
 
 
-@pytest.mark.skip(
-    reason="Fails due to beartype violation in production code (ls_info returns dict instead of FileInfo)"
-)
 def test_router_ls_merged(tmp_path):
     session_dir = tmp_path / "sessions"
     backend = LocalFilesystemBackend.create("sess", base_dir=session_dir)

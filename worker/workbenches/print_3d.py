@@ -150,16 +150,14 @@ def analyze_3dp(
         violations=len(violations),
     )
 
-    metadata = {}
-    if cost_breakdown:
-        metadata["cost_breakdown"] = cost_breakdown.model_dump()
+    from worker.workbenches.models import WorkbenchMetadata
 
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=unit_cost,
         weight_g=weight_g,
         violations=violations,
-        metadata=metadata,
+        metadata=WorkbenchMetadata(cost_breakdown=cost_breakdown),
     )
 
 
