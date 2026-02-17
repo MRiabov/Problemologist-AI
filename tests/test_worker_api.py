@@ -117,13 +117,17 @@ def test_execute_runtime_timeout():
     assert data["exit_code"] == -1
 
 
-@patch("worker.api.routes._load_component")
+@patch("worker.api.routes.load_component_from_script")
 @patch("worker.api.routes.simulate")
 def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
     """Test the benchmark simulate endpoint."""
     mock_load.return_value = MagicMock()
     mock_simulate.return_value = MagicMock(
-        success=True, summary="stable", render_paths=[], mjcf_content="<mjcf/>"
+        success=True,
+        summary="stable",
+        render_paths=[],
+        mjcf_content="<mjcf/>",
+        confidence="high",
     )
 
     # Create a dummy events.jsonl to test collection
@@ -150,7 +154,7 @@ def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
         assert data["events"][0]["event_type"] == "component_usage"
 
 
-@patch("worker.api.routes._load_component")
+@patch("worker.api.routes.load_component_from_script")
 @patch("worker.api.routes.validate")
 def test_benchmark_validate(mock_validate, mock_load, tmp_path):
     """Test the benchmark validate endpoint."""

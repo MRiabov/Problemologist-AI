@@ -5,6 +5,7 @@ from worker.utils.validation import (
     SimulationResult,
     define_fluid,
     get_stress_report,
+    save_simulation_result,
     set_soft_mesh,
 )
 
@@ -22,7 +23,7 @@ def test_get_stress_report_with_advice(tmp_path, monkeypatch):
     res = SimulationResult(success=True, summary="OK", stress_summaries=[summary])
 
     res_path = tmp_path / "simulation_result.json"
-    res.save(res_path)
+    save_simulation_result(res, res_path)
 
     # Mock working directory
     monkeypatch.setenv("RENDERS_DIR", str(tmp_path / "renders"))
@@ -31,7 +32,7 @@ def test_get_stress_report_with_advice(tmp_path, monkeypatch):
     # Move simulation_result.json to where it's expected (renders/../)
     # The tool looks in Path("simulation_result.json") and RENDERS_DIR/../simulation_result.json
     res_path_target = tmp_path / "simulation_result.json"
-    res.save(res_path_target)
+    save_simulation_result(res, res_path_target)
 
     # We need to change the current working directory for the test or use a mock
     import os

@@ -61,6 +61,7 @@ dev = [
     "schemathesis>=4.10.1",
     "spec-kitty-cli>=0.15.3",
     "moto[s3]>=5.1.21",
+    "pytest-reverse>=1.9.0",
 ]
 
 [tool.ruff]
@@ -87,8 +88,8 @@ markers = [
     "integration_p0: PR gate integration tests",
     "integration_p1: Nightly integration tests",
     "integration_p2: Weekly/manual integration tests",
+    "integration_playwright: end-to-end frontend tests",
     "benchmark: marks tests related to the benchmark generator",
-    "e2e: end-to-end frontend tests",
 ]
 
 [tool.uv.sources]

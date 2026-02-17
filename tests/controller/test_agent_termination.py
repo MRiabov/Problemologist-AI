@@ -6,27 +6,28 @@ from controller.agent.graph import should_continue
 from controller.agent.state import AgentState, AgentStatus
 
 
-def test_should_continue_termination():
+@pytest.mark.asyncio
+async def test_should_continue_termination():
     """Verify that should_continue returns 'skills' when turn_count >= max_agent_turns."""
     with patch("controller.agent.graph.settings") as mock_settings:
         mock_settings.max_agent_turns = 60
 
         state = AgentState(task="test", turn_count=59, status=AgentStatus.EXECUTING)
-        assert should_continue(state) != "skills"
+        assert await should_continue(state) != "skills"
 
         state.turn_count = 60
-        assert should_continue(state) == "skills"
+        assert await should_continue(state) == "skills"
 
         state.turn_count = 61
-        assert should_continue(state) == "skills"
+        assert await should_continue(state) == "skills"
 
         # Verify configurability
         mock_settings.max_agent_turns = 10
         state.turn_count = 9
-        assert should_continue(state) != "skills"
+        assert await should_continue(state) != "skills"
 
         state.turn_count = 10
-        assert should_continue(state) == "skills"
+        assert await should_continue(state) == "skills"
 
 
 @pytest.mark.asyncio

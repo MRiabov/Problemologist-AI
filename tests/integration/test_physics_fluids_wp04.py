@@ -15,6 +15,7 @@ from shared.models.schemas import (
 from shared.simulation.backends import (
     SimulationScene,
     StepResult,
+    StressField,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.genesis_backend import GenesisBackend
@@ -23,12 +24,20 @@ from worker.simulation.loop import SimulationLoop
 
 @pytest.fixture
 def genesis_backend():
-    with patch("genesis.init"), patch("genesis.Scene"):
+    with (
+        patch("genesis.init"),
+        patch("genesis.Scene"),
+        patch("genesis.options.VisOptions"),
+    ):
         backend = GenesisBackend()
         # Mock scene and its build status
         mock_scene = MagicMock()
         type(mock_scene).is_built = PropertyMock(return_value=False)
         backend.scene = mock_scene
+
+        # Mock manufacturing config to avoid loading real yaml
+        backend.mfg_config = MagicMock()
+
         yield backend
 
 
@@ -74,7 +83,12 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
         return np.array([[0, 0, 0.1]] * 100)
 
     # 3. Setup Loop with mocked backend
-    with patch("worker.simulation.loop.get_physics_backend") as mock_get:
+    from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
+
+    with (
+        patch("worker.simulation.loop.get_physics_backend") as mock_get,
+        patch("worker.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
+    ):
         mock_get.return_value = genesis_backend
 
         # Ensure methods are mocks
@@ -82,6 +96,8 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
         genesis_backend.get_particle_positions = MagicMock()
         genesis_backend.get_particle_positions.side_effect = mock_get_particles
         genesis_backend.get_all_body_names = MagicMock(return_value=["world"])
+        genesis_backend.get_stress_summaries = MagicMock(return_value=[])
+        genesis_backend.get_stress_field = MagicMock(return_value=None)
 
         xml_path = tmp_path / "scene.json"
         xml_path.write_text("{}")  # Dummy JSON
@@ -158,6 +174,12 @@ def test_electronics_fluid_damage_logic(genesis_backend, tmp_path):
     mock_entity_state.pos.ndim = 3
 
     genesis_backend.entities["controller"].get_state.return_value = mock_entity_state
+
+    # Mock get_stress_field to return a real StressField object instead of a mock
+    # to avoid Pydantic validation errors inside GenesisBackend.step
+    genesis_backend.get_stress_field = MagicMock(
+        return_value=StressField(nodes=np.zeros((1, 3)), stress=np.array([0.0]))
+    )
 
     # Run step
     genesis_backend.current_time = 0.0

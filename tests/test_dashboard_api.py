@@ -15,9 +15,8 @@ def test_health_check():
 
 
 @patch("controller.api.main.get_sessionmaker")
-@patch("controller.api.main.get_worker_client")
-@patch("controller.api.main.create_agent_graph")
-def test_run_agent_endpoint(mock_create_graph, mock_get_worker, mock_get_sessionmaker):
+@patch("controller.api.main.execute_agent_task")
+def test_run_agent_endpoint(mock_execute_task, mock_get_sessionmaker):
     # Mock session factory and session
     mock_session = MagicMock()
     mock_session.commit = AsyncMock()
@@ -32,10 +31,13 @@ def test_run_agent_endpoint(mock_create_graph, mock_get_worker, mock_get_session
         "/agent/run", json={"task": "test task", "session_id": "test-session"}
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     assert response.json()["status"] == ResponseStatus.ACCEPTED
     assert "episode_id" in response.json()
 
     # Verify DB was called to create episode
     mock_session.add.assert_called()
     mock_session.commit.assert_called()
+
+    # Verify background task was created
+    mock_execute_task.assert_called()

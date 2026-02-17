@@ -30,8 +30,11 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
     builder = GenesisSimulationBuilder(output_dir)
 
     # Create a simple assembly
+    from shared.models.schemas import PartMetadata
+
     box = Box(10, 10, 10)
     box.label = "test_part"
+    box.metadata = PartMetadata(material_id="aluminum-6061")
     assembly = Compound(children=[box])
 
     # Define objectives with FEM enabled
@@ -77,8 +80,11 @@ def test_genesis_builder_no_msh_when_fem_disabled(
     builder = GenesisSimulationBuilder(output_dir)
 
     # Create a simple assembly
+    from shared.models.schemas import PartMetadata
+
     box = Box(10, 10, 10)
     box.label = "test_part"
+    box.metadata = PartMetadata(material_id="aluminum-6061")
     assembly = Compound(children=[box])
 
     # Define objectives with FEM disabled

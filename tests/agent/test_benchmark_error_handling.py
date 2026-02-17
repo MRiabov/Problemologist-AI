@@ -5,6 +5,7 @@ import pytest
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.agent.benchmark.models import SessionStatus
+from shared.enums import EpisodeStatus
 
 
 @pytest.mark.asyncio
@@ -20,16 +21,6 @@ async def test_run_generation_session_exception_handling():
     mock_session = MagicMock()
     mock_session.session_id = session_id
     mock_session.status = SessionStatus.planning
-
-    initial_state = {
-        "session": mock_session,
-        "messages": [],
-        "plan": {},
-        "current_script": "",
-        "simulation_result": None,
-        "review_feedback": "",
-        "iteration": 0,
-    }
 
     # Mock define_graph to return an app whose astream raises an exception
     mock_app = MagicMock()
@@ -72,23 +63,11 @@ async def test_run_generation_session_exception_handling():
         final_state = await run_generation_session(prompt, session_id=session_id)
 
         # Verify status update to failed happened in state
-        assert final_state["session"].status == SessionStatus.failed
+        assert final_state.session.status == SessionStatus.failed
 
-        # Check that DB was updated
-        mock_db.get.assert_called()
-        assert mock_episode.status == "failed"
-        assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
-        assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
-        mock_db.commit.assert_called()
-        # Execute the session
-        final_state = await run_generation_session(prompt, session_id=session_id)
-
-        # Verify status update to failed happened in state
-        assert final_state["session"].status == SessionStatus.failed
-
-        # Check that DB was updated
-        mock_db.get.assert_called()
-        assert mock_episode.status == "failed"
-        assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
-        assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
-        mock_db.commit.assert_called()
+    # Check that DB was updated
+    mock_db.get.assert_called()
+    assert mock_episode.status == EpisodeStatus.FAILED
+    assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
+    assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
+    mock_db.commit.assert_called()

@@ -83,7 +83,7 @@ async def test_write_file(mock_httpx_client):
     assert result is True
     mock_httpx_client.post.assert_called_once_with(
         "http://worker:8000/fs/write",
-        json={"path": "test.txt", "content": "content"},
+        json={"path": "test.txt", "content": "content", "overwrite": True},
         headers={"X-Session-ID": "test-session"},
         timeout=10.0,
     )
@@ -179,7 +179,7 @@ async def test_simulate(mock_httpx_client):
 
     mock_httpx_client.post.assert_called_once_with(
         "http://worker:8000/benchmark/simulate",
-        json={"script_path": "script.py"},
+        json={"script_path": "script.py", "backend": "mujoco"},
         headers={"X-Session-ID": "test-session"},
         timeout=60.0,
     )

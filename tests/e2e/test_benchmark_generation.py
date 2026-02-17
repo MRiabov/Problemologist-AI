@@ -30,29 +30,24 @@ async def test_benchmark_generation_e2e():
     mock_app = MagicMock()
 
     # Define a mock stream that simulates a successful run
-    async def mock_astream(initial_state):
+    async def mock_astream(initial_state, **kwargs):
         # Planner
-        yield {"planner": {**initial_state, "plan": {"theme": "stack"}}}
+        from shared.simulation.schemas import RandomizationStrategy
+
+        mock_plan = RandomizationStrategy(theme="stack", reasoning="test")
+        yield {"planner": {"plan": mock_plan}}
         # Coder
-        state_coder = {
-            **initial_state,
-            "current_script": "print('hello')",
-            "plan": {"theme": "stack"},
-        }
-        yield {"coder": state_coder}
+        yield {"coder": {"current_script": "print('hello')"}}
         # Validator
-        state_val = {
-            **state_coder,
-            "mjcf_content": "<mujoco/>",
-            "simulation_result": {
-                "valid": True,
-                "render_paths": ["/tmp/img1.png", "/tmp/img2.png"],
-            },
+        yield {
+            "validator": {
+                "simulation_result": MagicMock(
+                    valid=True, render_paths=["/tmp/img1.png"], render_data=[b"fake"]
+                )
+            }
         }
-        yield {"validator": state_val}
         # Reviewer
-        state_rev = {**state_val, "review_feedback": "Approved"}
-        yield {"reviewer": state_rev}
+        yield {"reviewer": {"review_feedback": "Approved"}}
 
     mock_app.astream = mock_astream
 
@@ -65,10 +60,6 @@ async def test_benchmark_generation_e2e():
         ),
         patch("controller.agent.benchmark.storage.boto3", mock_boto),
         patch("controller.agent.benchmark.graph.define_graph", return_value=mock_app),
-        patch(
-            "controller.agent.benchmark.graph.Path.read_bytes",
-            return_value=b"fake_bytes",
-        ),
     ):
         prompt = "Create a stack of blocks"
         final_state = await run_generation_session(prompt)
@@ -76,13 +67,14 @@ async def test_benchmark_generation_e2e():
         # Assertions
 
         # 1. Final Status
-        assert final_state["session"].status == SessionStatus.accepted
+        # The graph now pauses after planning for user confirmation
+        assert final_state.session.status == SessionStatus.planned
 
         # 2. DB Interactions
-        # Should add session and asset (2 calls)
-        assert mock_db.add.call_count == 2
-        # Should update status multiple times (at least planner, coder, reviewer)
-        assert mock_db.execute.call_count >= 3
+        # Should add episode (1 call)
+        assert mock_db.add.call_count >= 1
+        # Should update status (commit)
+        assert mock_db.commit.call_count >= 1
 
         # 3. S3 Interactions
         # script, mjcf upload via put_object

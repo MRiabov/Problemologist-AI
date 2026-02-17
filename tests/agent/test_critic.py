@@ -2,8 +2,9 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage
 
-from controller.agent.nodes.reviewer import reviewer_node
+from controller.agent.nodes.reviewer import reviewer_node, ReviewResult, CriticDecision
 from controller.agent.state import AgentState, AgentStatus
 
 
@@ -12,12 +13,6 @@ def mock_llm():
     with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
-        instance.ainvoke.return_value = MagicMock(
-            content="""---
-decision: approve
----
-Looks good."""
-        )
         # Mock structured output for the parser
         instance.with_structured_output = MagicMock(return_value=instance)
         yield instance
@@ -32,7 +27,20 @@ def mock_worker():
 
 
 @pytest.mark.asyncio
-async def test_critic_node_approve(mock_llm, mock_worker):
+@patch("controller.agent.nodes.reviewer.create_react_agent")
+async def test_critic_node_approve(mock_agent_factory, mock_llm, mock_worker):
+    # Mock agent
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {
+        "messages": [AIMessage(content="--- \ndecision: approved\n--- \nLooks good.")]
+    }
+    mock_agent_factory.return_value = mock_agent
+
+    # Mock structured parser return value
+    mock_llm.ainvoke.return_value = ReviewResult(
+        decision=CriticDecision.APPROVE, reason="Looks good."
+    )
+
     # Mock reports
     mock_worker.read_file.side_effect = [
         json.dumps({"status": "success", "results": "passed"}),  # sim report
@@ -49,13 +57,22 @@ async def test_critic_node_approve(mock_llm, mock_worker):
 
 
 @pytest.mark.asyncio
-async def test_critic_node_reject(mock_llm, mock_worker):
-    mock_llm.ainvoke.return_value = MagicMock(
-        content="""---
-decision: reject_code
----
-Simulation failed."""
+@patch("controller.agent.nodes.reviewer.create_react_agent")
+async def test_critic_node_reject(mock_agent_factory, mock_llm, mock_worker):
+    # Mock agent
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {
+        "messages": [
+            AIMessage(content="--- \ndecision: rejected\n--- \nSimulation failed.")
+        ]
+    }
+    mock_agent_factory.return_value = mock_agent
+
+    # Mock structured parser return value
+    mock_llm.ainvoke.return_value = ReviewResult(
+        decision=CriticDecision.REJECT_CODE, reason="Simulation failed."
     )
+
     mock_worker.read_file.side_effect = [
         json.dumps({"status": "error", "message": "collision"}),
         "Too expensive.",
@@ -67,11 +84,28 @@ Simulation failed."""
 
     assert result.status == AgentStatus.CODE_REJECTED
     assert "Simulation failed" in result.feedback
-    assert "Critic Decision: REJECT" in result.journal
+    assert "Critic Decision: REJECT_CODE" in result.journal
 
 
 @pytest.mark.asyncio
-async def test_critic_node_no_artifacts(mock_llm, mock_worker):
+@patch("controller.agent.nodes.reviewer.create_react_agent")
+async def test_critic_node_no_artifacts(mock_agent_factory, mock_llm, mock_worker):
+    # Mock agent
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {
+        "messages": [
+            AIMessage(
+                content="--- \ndecision: approved\n--- \nNo artifacts but journal is fine."
+            )
+        ]
+    }
+    mock_agent_factory.return_value = mock_agent
+
+    # Mock structured parser return value
+    mock_llm.ainvoke.return_value = ReviewResult(
+        decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine."
+    )
+
     mock_worker.read_file.side_effect = Exception("File not found")
 
     state = AgentState(task="Build a part", journal="")
@@ -80,4 +114,4 @@ async def test_critic_node_no_artifacts(mock_llm, mock_worker):
 
     # Even without artifacts, LLM decides based on journal
     assert result.status
-    mock_llm.ainvoke.assert_called_once()
+    mock_agent.ainvoke.assert_called_once()
