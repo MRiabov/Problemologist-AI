@@ -1,3 +1,4 @@
+import difflib
 import logging
 import os
 import uuid
@@ -62,6 +63,24 @@ class SkillsNode(BaseNode):
             file_path = self.suggested_skills_dir / f"{clean_title}.md"
 
             try:
+                # Safety check: Prevent massive deletions
+                if file_path.exists():
+                    existing_content = file_path.read_text(encoding="utf-8")
+                    diff = list(
+                        difflib.unified_diff(
+                            existing_content.splitlines(),
+                            content.splitlines(),
+                            lineterm="",
+                        )
+                    )
+                    deleted_lines = sum(
+                        1
+                        for line in diff
+                        if line.startswith("-") and not line.startswith("---")
+                    )
+                    if deleted_lines > 15:
+                        return f"Error: Safety toggle triggered. Attempted to delete {deleted_lines} lines (limit 15). Please review your changes."
+
                 with file_path.open("w") as f:
                     f.write(content)
 

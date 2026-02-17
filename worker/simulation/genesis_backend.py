@@ -118,12 +118,10 @@ class GenesisBackend(PhysicsBackend):
             raise ImportError("Genesis not installed")
 
         # T014: Particle visualization options from WP06
+        # particle_size and render_particle are not supported in gs 0.3.14
         self.scene = gs.Scene(
             show_viewer=False,
-            vis_options=gs.options.VisOptions(
-                particle_size=0.01,
-                render_particle=True,
-            ),
+            vis_options=gs.options.VisOptions(),
         )
         self.entities = {}
         self.entity_configs = {}
@@ -599,6 +597,33 @@ class GenesisBackend(PhysicsBackend):
     def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
         pass
 
+    def get_all_site_names(self) -> list[str]:
+        return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
+
+    def get_site_state(self, site_name: str) -> SiteState:
+        if site_name not in self.entity_configs:
+            raise ValueError(f"Site {site_name} not found")
+
+        cfg = self.entity_configs[site_name]
+        if not cfg.get("is_zone"):
+            raise ValueError(f"Entity {site_name} is not a site/zone")
+
+        pos = tuple(cfg.get("pos", [0, 0, 0]))
+        if "min" in cfg and "max" in cfg:
+            # Calculate pos/size from min/max if not explicitly provided
+            # Logic in check_collision uses min/max directly, but SiteState needs pos/size
+            min_v = np.array(cfg["min"])
+            max_v = np.array(cfg["max"])
+            center = (min_v + max_v) / 2.0
+            size = (max_v - min_v) / 2.0
+            pos = tuple(center.tolist())
+            size_t = tuple(size.tolist())
+        else:
+            size_t = tuple(cfg.get("size", [0, 0, 0]))
+
+        quat = tuple(cfg.get("quat", [1.0, 0.0, 0.0, 0.0]))
+        return SiteState(pos=pos, quat=quat, size=size_t)
+
     def get_contact_forces(self) -> list[ContactForce]:
         if not self.scene:
             return []
@@ -629,9 +654,6 @@ class GenesisBackend(PhysicsBackend):
         except Exception:
             # Fallback if API changed or no contacts
             return []
-
-    def get_site_state(self, _site_name: str) -> SiteState:
-        return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
         # Find motor by name in self.motors (which are mapped to entities)
@@ -693,9 +715,6 @@ class GenesisBackend(PhysicsBackend):
 
     def get_all_actuator_names(self) -> list[str]:
         return [m["part_name"] for m in getattr(self, "motors", [])]
-
-    def get_all_site_names(self) -> list[str]:
-        return []
 
     def get_all_tendon_names(self) -> list[str]:
         return []
