@@ -30,6 +30,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []  # list of dicts
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
@@ -235,6 +236,9 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+
+                    # 4. Add Cables
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -630,8 +634,21 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
-        return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
+    def get_site_state(self, site_name: str) -> SiteState:
+        if site_name not in self.entity_configs:
+            raise ValueError(f"Site {site_name} not found")
+
+        cfg = self.entity_configs[site_name]
+        pos = cfg.get("pos", [0, 0, 0])
+        # Default quat identity
+        quat = cfg.get("quat", [1, 0, 0, 0])
+        size = cfg.get("size", [0, 0, 0])
+
+        return SiteState(
+            pos=tuple(pos),
+            quat=tuple(quat),
+            size=tuple(size),
+        )
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
         # Find motor by name in self.motors (which are mapped to entities)
@@ -695,10 +712,14 @@ class GenesisBackend(PhysicsBackend):
         return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
-        return []
+        return [
+            name
+            for name, cfg in self.entity_configs.items()
+            if cfg.get("is_zone", False)
+        ]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        return [c["name"] for c in getattr(self, "cables", [])]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -732,7 +753,9 @@ class GenesisBackend(PhysicsBackend):
 
         return False
 
-    def get_tendon_tension(self, _tendon_name: str) -> float:
+    def get_tendon_tension(self, tendon_name: str) -> float:
+        # Genesis backend currently does not simulate physical tendons
+        # Just return 0.0 for now
         return 0.0
 
     def close(self) -> None:

@@ -939,6 +939,46 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
 
+        # 5. Add Electronics (Wires/Cables)
+        scene_data["cables"] = []
+        if electronics and hasattr(electronics, "wiring"):
+            # Build part location map for resolution
+            part_positions = {p.label: p.pos for p in parts_data}
+
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                radius = (0.001 + (20 - wire.gauge_awg) * 0.0001) / 2
+                points = []
+
+                waypoints = getattr(wire, "waypoints", [])
+                if waypoints:
+                    for j, pt in enumerate(waypoints):
+                        # Resolve to world coordinates
+                        # Heuristic: first waypoint attached to from_comp, last to to_comp
+                        # BUT waypoints are usually already in world frame if routed.
+                        # However, MuJoCo builder treats them as local offsets if attached.
+                        # This implies `pt` IS in world frame originally (from router).
+                        # Since Genesis doesn't support attached sites yet, we just want world frame points.
+                        points.append(list(pt))
+                else:
+                    # Fallback: simple line between components
+                    from_comp = wire.from_terminal.component
+                    to_comp = wire.to_terminal.component
+                    p1 = part_positions.get(from_comp, [0, 0, 0])
+                    p2 = part_positions.get(to_comp, [0, 0, 0])
+                    points.append(list(p1))
+                    points.append(list(p2))
+
+                scene_data["cables"].append(
+                    {
+                        "name": wire.wire_id,
+                        "radius": max(0.00025, radius),
+                        "points": points,
+                    }
+                )
+
         scene_path = self.output_dir / "scene.json"
         with scene_path.open("w") as f:
             json.dump(scene_data, f, indent=2)
