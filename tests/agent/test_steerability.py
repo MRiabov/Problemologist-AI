@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.state import BenchmarkGeneratorState
@@ -49,15 +49,15 @@ async def test_steerability_node_engineer():
 
 @pytest.mark.asyncio
 async def test_steerability_node_benchmark():
-    session_id = uuid4()
+    session_id = str(uuid4())  # Use string for consistency
     session = GenerationSession(session_id=session_id, prompt="Generate benchmark")
-    state: BenchmarkGeneratorState = {
+    # Pass as dict to satisfy steerability_node's current implementation
+    state = {
         "session": session,
         "messages": [],
         "review_feedback": None,
         "plan": None,
         "current_script": "",
-        "mjcf_content": "",
         "simulation_result": None,
         "review_round": 0,
     }
@@ -118,21 +118,31 @@ async def test_planner_node_steer_context():
     state = AgentState(session_id=session_id, messages=[steer_msg], task="Test task")
 
     with (
-        patch("controller.agent.nodes.planner.PromptManager") as mock_pm_class,
-        patch("controller.agent.nodes.planner.ChatOpenAI") as mock_llm,
-        patch("controller.agent.nodes.planner.WorkerClient") as mock_worker,
+        patch("controller.agent.nodes.base.PromptManager") as mock_pm_class,
+        patch("controller.agent.nodes.base.ChatOpenAI") as mock_llm,
+        patch("controller.agent.nodes.base.WorkerClient") as mock_worker,
+        patch(
+            "controller.agent.nodes.planner.create_react_agent"
+        ) as mock_agent_factory,
     ):
         mock_pm = mock_pm_class.return_value
         mock_pm.render.return_value = "PLAN\nTODO\n- [ ] task"
 
         mock_llm_instance = mock_llm.return_value
         mock_llm_instance.ainvoke = AsyncMock(
-            return_value=MagicMock(content="PLAN\nTODO\n- [ ] task")
+            return_value=AIMessage(content="PLAN\nTODO\n- [ ] task")
         )
+
+        mock_agent = AsyncMock()
+        mock_agent.ainvoke.return_value = {
+            "messages": [AIMessage(content="Plan generated")]
+        }
+        mock_agent_factory.return_value = mock_agent
 
         # Mock WorkerClient/Filesystem bits
         mock_worker_instance = mock_worker.return_value
         mock_worker_instance.write_file = AsyncMock()
+        mock_worker_instance.read_file = AsyncMock(side_effect=lambda f: "content")
 
         await planner_node(state)
 
@@ -151,32 +161,38 @@ async def test_benchmark_planner_node_steer():
     session_id = uuid4()
     session = GenerationSession(session_id=session_id, prompt="Generate benchmark")
     steer_msg = HumanMessage(content="Steering prompt")
-    state: BenchmarkGeneratorState = {
-        "session": session,
-        "messages": [steer_msg],
-        "plan": None,
-        "review_feedback": None,
-    }
+    state = BenchmarkGeneratorState(
+        session=session,
+        messages=[steer_msg],
+        plan=None,
+        review_feedback=None,
+        current_script="",
+        simulation_result=None,
+        review_round=0,
+    )
 
     with (
-        patch("controller.agent.benchmark.nodes.ChatOpenAI") as mock_llm,
-        patch("controller.agent.benchmark.nodes.WorkerClient") as mock_worker,
+        patch("controller.agent.benchmark.nodes.SharedNodeContext") as mock_ctx_class,
     ):
-        mock_llm_instance = mock_llm.return_value
-        mock_llm_instance.ainvoke = AsyncMock(
-            return_value=MagicMock(content='{"theme": "test"}')
+        mock_ctx = mock_ctx_class.create.return_value
+        mock_llm_instance = mock_ctx.llm
+        mock_llm_instance.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=MagicMock(theme="test")
         )
 
         # Mock WorkerClient methods that might be called
-        mock_worker_instance = mock_worker.return_value
+        mock_worker_instance = mock_ctx.worker_client
         mock_worker_instance.read_file = AsyncMock(return_value="{}")
         mock_worker_instance.write_file = AsyncMock()
         mock_worker_instance.git_init = AsyncMock()
+        mock_worker_instance.exists = AsyncMock(return_value=False)
 
         await benchmark_planner(state)
 
         # Verify ainvoke called with messages including steer_msg
-        args, kwargs = mock_llm_instance.ainvoke.call_args
+        args, kwargs = (
+            mock_llm_instance.with_structured_output.return_value.ainvoke.call_args
+        )
         messages = args[0]
         assert any(
             m.content == "Steering prompt"

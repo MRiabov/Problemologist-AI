@@ -23,6 +23,9 @@ TEST_SUCCESS_XML = """
 """
 
 
+from unittest.mock import patch
+
+
 @pytest.fixture
 def success_xml_path(tmp_path):
     xml_path = tmp_path / "test_success.xml"
@@ -30,12 +33,13 @@ def success_xml_path(tmp_path):
     return str(xml_path)
 
 
+@patch("worker.simulation.verification.logger")
 class TestMultiRunVerification:
-    def test_default_num_runs(self):
+    def test_default_num_runs(self, mock_logger):
         """Default is 5 runs per architecture spec."""
         assert DEFAULT_NUM_RUNS == 5
 
-    def test_consistent_success_all_pass(self, success_xml_path):
+    def test_consistent_success_all_pass(self, mock_logger, success_xml_path):
         """All runs succeed for a robust design."""
         result = verify_with_jitter(
             success_xml_path,
@@ -49,7 +53,7 @@ class TestMultiRunVerification:
         assert result.num_runs == 3
         assert len(result.individual_results) == 3
 
-    def test_deterministic_with_seed(self, success_xml_path):
+    def test_deterministic_with_seed(self, mock_logger, success_xml_path):
         """Same seed produces same results."""
         result1 = verify_with_jitter(
             success_xml_path,
@@ -70,7 +74,7 @@ class TestMultiRunVerification:
         # Same seed should give same success rate
         assert result1.success_rate == result2.success_rate
 
-    def test_result_has_metrics(self, success_xml_path):
+    def test_result_has_metrics(self, mock_logger, success_xml_path):
         """Result includes all expected metrics."""
         result = verify_with_jitter(
             success_xml_path,
@@ -87,7 +91,7 @@ class TestMultiRunVerification:
         # Success rate should be between 0 and 1
         assert 0 <= result.success_rate <= 1
 
-    def test_jitter_range_default(self, success_xml_path):
+    def test_jitter_range_default(self, mock_logger, success_xml_path):
         """Default jitter range is small (mm scale)."""
         # Just verify it runs without error
         result = verify_with_jitter(

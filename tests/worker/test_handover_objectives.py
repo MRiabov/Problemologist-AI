@@ -1,6 +1,7 @@
 import json
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from pathlib import Path
 
 import pytest
 from build123d import Box
@@ -22,6 +23,22 @@ def test_submit_for_review_includes_objectives(temp_dir):
     with BuildPart() as b:
         Box(1, 1, 1)
     component = b.part
+
+    # Create mandatory files
+    (temp_dir / "plan.md").write_text("""
+## 1. Solution Overview
+Test
+## 2. Parts List
+- Part
+## 3. Assembly Strategy
+1. Step
+## 4. Cost & Weight Budget
+- $1
+## 5. Risk Assessment
+- Low
+""")
+    (temp_dir / "todo.md").write_text("# TODO\n- [x] Done")
+    (temp_dir / "validation_results.json").write_text('{"success": true}')
 
     # Create valid objectives.yaml in CWD (mocked)
     objectives_content = """
@@ -76,29 +93,43 @@ totals:
     cost_file.write_text(cost_content)
 
     # We need to run in the temp_dir context
+    old_cwd = os.getcwd()
     os.chdir(temp_dir)
 
-    with (
-        patch("worker.utils.handover.prerender_24_views", return_value=["img1.png"]),
-        patch("worker.utils.handover.export_step"),
-        patch.dict(
-            os.environ,
-            {"RENDERS_DIR": str(temp_dir / "renders"), "SESSION_ID": "test_session"},
-        ),
-    ):
-        success = submit_for_review(component)
-        assert success is True
+    try:
+        with (
+            patch("worker.utils.handover.validate_and_price") as mock_val,
+            patch("worker.utils.handover.export_step"),
+            patch.dict(
+                os.environ,
+                {
+                    "RENDERS_DIR": str(temp_dir / "renders"),
+                    "SESSION_ID": "test_session",
+                },
+            ),
+        ):
+            mock_val_result = MagicMock()
+            mock_val_result.is_manufacturable = True
+            mock_val_result.unit_cost = 10.0
+            mock_val_result.violations = []
+            mock_val_result.metadata = {"weight_kg": 0.1}
+            mock_val.return_value = mock_val_result
 
-        # Check if objectives.yaml was copied to renders
-        target_obj = temp_dir / "renders" / "objectives.yaml"
-        assert target_obj.exists()
-        assert target_obj.read_text() == objectives_content
+            success = submit_for_review(component)
+            assert success is True
 
-        # Check manifest
-        manifest_path = temp_dir / "renders" / "review_manifest.json"
-        assert manifest_path.exists()
-        with manifest_path.open() as f:
-            manifest = json.load(f)
+            # Check if objectives.yaml was copied to renders
+            target_obj = temp_dir / "renders" / "objectives.yaml"
+            assert target_obj.exists()
+            assert target_obj.read_text() == objectives_content
 
-        assert manifest["objectives_path"] == str(target_obj)
-        assert manifest["session_id"] == "test_session"
+            # Check manifest
+            manifest_path = temp_dir / "renders" / "review_manifest.json"
+            assert manifest_path.exists()
+            with manifest_path.open() as f:
+                manifest = json.load(f)
+
+            assert manifest["objectives_path"] == str(target_obj)
+            assert manifest["session_id"] == "test_session"
+    finally:
+        os.chdir(old_cwd)

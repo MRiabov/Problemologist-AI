@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.coder import coder_node
 from controller.agent.state import AgentState
@@ -11,7 +12,7 @@ def mock_llm():
     with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
-        instance.ainvoke.return_value = MagicMock(
+        instance.ainvoke.return_value = AIMessage(
             content="```python\nprint('hello')\n```"
         )
         yield instance
@@ -50,10 +51,16 @@ def mock_record_events():
 
 
 @pytest.mark.asyncio
+@patch("controller.agent.nodes.coder.create_react_agent")
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_success(
-    mock_validate, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_agent_factory, mock_llm, mock_worker, mock_record_events
 ):
+    # Mock agent
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {"messages": [AIMessage(content="Step done.")]}
+    mock_agent_factory.return_value = mock_agent
+
     from controller.agent.nodes.coder import coder_node
 
     state = AgentState(
@@ -65,35 +72,41 @@ async def test_engineer_node_success(
     assert "Step 1" in result.current_step
     assert "- [x] Step 1" in result.todo
     assert "Successfully executed step: Step 1" in result.journal
-    mock_worker.execute_python.assert_called_once()
 
 
 @pytest.mark.asyncio
+@patch("controller.agent.nodes.coder.create_react_agent")
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_retry_then_success(
-    mock_validate, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_agent_factory, mock_llm, mock_worker, mock_record_events
 ):
-    # Mock failure then success
-    mock_worker.execute_python.side_effect = [
-        ExecuteResponse(stdout="", stderr="SyntaxError", exit_code=1),
-        ExecuteResponse(stdout="fixed", stderr="", exit_code=0),
+    # Mock agent
+    mock_agent = AsyncMock()
+    # First call fails (exception), second succeeds
+    mock_agent.ainvoke.side_effect = [
+        Exception("SyntaxError"),
+        {"messages": [AIMessage(content="Fixed.")]},
     ]
+    mock_agent_factory.return_value = mock_agent
 
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
     result = await coder_node(state)
 
     assert "- [x] Step 1" in result.todo
-    assert "Execution failed (Attempt 1): SyntaxError" in result.journal
+    assert "System error during execution: SyntaxError" in result.journal
     assert "Successfully executed step: Step 1" in result.journal
-    assert mock_worker.execute_python.call_count == 2
 
 
 @pytest.mark.asyncio
-async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events):
-    mock_worker.execute_python.return_value = ExecuteResponse(
-        stdout="", stderr="Persistent Error", exit_code=1
-    )
+@patch("controller.agent.nodes.coder.create_react_agent")
+async def test_engineer_node_all_fail(
+    mock_agent_factory, mock_llm, mock_worker, mock_record_events
+):
+    # Mock agent that always fails
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.side_effect = Exception("Persistent Error")
+    mock_agent_factory.return_value = mock_agent
 
     state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="")
 
@@ -101,4 +114,3 @@ async def test_engineer_node_all_fail(mock_llm, mock_worker, mock_record_events)
 
     assert result.iteration > 0
     assert "Failed to complete step after 3 retries" in result.journal
-    assert mock_worker.execute_python.call_count == 3

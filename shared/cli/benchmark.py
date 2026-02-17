@@ -17,7 +17,7 @@ async def _run_generate(prompt: str):
     print(f"Starting session for prompt: '{prompt}'")
     try:
         final_state = await run_generation_session(prompt)
-        session = final_state["session"]
+        session = final_state.session
 
         print(f"Session ID: {session.session_id}")
         print(f"Status: {session.status}")

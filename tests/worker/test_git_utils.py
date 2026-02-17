@@ -21,12 +21,12 @@ def test_git_conflict_resolution(tmp_path):
     file_path.write_text("Feature content")
     commit_all(tmp_path, "Feature commit")
 
-    # 3. Go back to master and change file
-    repo.git.checkout("master")
-    file_path.write_text("Master content")
-    commit_all(tmp_path, "Master commit")
+    # 3. Go back to main and change file
+    repo.git.checkout("main")
+    file_path.write_text("Main content")
+    commit_all(tmp_path, "Main commit")
 
-    # 4. Merge feature into master -> Conflict
+    # 4. Merge feature into main -> Conflict
     try:
         repo.git.merge("feature")
     except Exception:
@@ -49,7 +49,7 @@ def test_git_conflict_resolution(tmp_path):
 
     status = get_repo_status(tmp_path)
     assert status["is_merging"] is False
-    assert file_path.read_text() == "Master content"
+    assert file_path.read_text() == "Main content"
 
 
 def test_git_abort_merge(tmp_path):
@@ -63,9 +63,9 @@ def test_git_abort_merge(tmp_path):
     file_path.write_text("Feature content")
     commit_all(tmp_path, "Feature commit")
 
-    repo.git.checkout("master")
-    file_path.write_text("Master content")
-    commit_all(tmp_path, "Master commit")
+    repo.git.checkout("main")
+    file_path.write_text("Main content")
+    commit_all(tmp_path, "Main commit")
 
     try:
         repo.git.merge("feature")
@@ -79,4 +79,4 @@ def test_git_abort_merge(tmp_path):
     assert aborted is True
     assert has_merge_conflicts(tmp_path) is False
     assert (tmp_path / ".git" / "MERGE_HEAD").exists() is False
-    assert file_path.read_text() == "Master content"
+    assert file_path.read_text() == "Main content"

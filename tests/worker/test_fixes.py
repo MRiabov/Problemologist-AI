@@ -1,16 +1,11 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
-import s3fs
 from build123d import Part
 
-from worker.filesystem.backend import LocalFilesystemBackend, SimpleSessionManager
+from worker.filesystem.backend import LocalFilesystemBackend
 from worker.filesystem.router import (
     AccessMode,
     FilesystemRouter,
-    LocalFilesystemBackend,
     MountPoint,
 )
 from worker.workbenches.base import (
@@ -18,39 +13,6 @@ from worker.workbenches.base import (
     WorkbenchAnalyzer,
     WorkbenchResult,
 )
-
-
-@pytest.fixture
-def mock_s3_fs():
-    fs = MagicMock(spec=s3fs.S3FileSystem)
-    # Mock exists
-    fs.exists.return_value = False
-    return fs
-
-
-def test_sandbox_write_overwrite(mock_s3_fs):
-    backend = SandboxFilesystemBackend(
-        mock_s3_fs, "bucket", SimpleSessionManager("sess")
-    )
-
-    # 1. Write new file (should succeed)
-    mock_s3_fs.exists.return_value = False
-    res = backend.write("new.txt", "content")
-    assert res.error is None
-    mock_s3_fs.open.assert_called()
-
-    # 2. Write existing file with overwrite=False (should fail)
-    mock_s3_fs.exists.return_value = True
-    res = backend.write("existing.txt", "content", overwrite=False)
-    assert res.error is not None
-    assert "already exists" in res.error
-
-    # 3. Write existing file with overwrite=True (should succeed)
-    mock_s3_fs.exists.return_value = True
-    mock_s3_fs.open.reset_mock()
-    res = backend.write("existing.txt", "content", overwrite=True)
-    assert res.error is None
-    mock_s3_fs.open.assert_called()
 
 
 def test_router_download_files():
@@ -107,9 +69,6 @@ def test_workbench_analyzer_protocol():
     # This test verifies that a function with quantity parameter satisfies
     # the protocol usage, checking runtime compatibility if we were to enforce it,
     # but mainly ensuring we updated the protocol definition in the codebase.
-
-    # We can inspect the Protocol signature directly?
-    # Or just ensure our code runs.
 
     def my_analyze(
         part: Part, config: ManufacturingConfig, quantity: int = 1

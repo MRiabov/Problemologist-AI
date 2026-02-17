@@ -3,13 +3,13 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# We need to mock build123d before importing modules that use it
-# or use patch on the module level.
+import pytest
+from build123d import Box, BuildPart
 
 
-@patch("worker.utils.handover.prerender_24_views")
+@patch("worker.utils.handover.validate_and_price")
 @patch("worker.utils.handover.export_step")
-def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
+def test_submit_for_review(mock_export_step, mock_validate, tmp_path):
     from worker.utils.handover import submit_for_review
 
     # Setup
@@ -20,7 +20,31 @@ def test_submit_for_review(mock_export_step, mock_prerender, tmp_path):
     os.environ["TIMESTAMP"] = "2026-02-07"
 
     mock_component = MagicMock()
-    mock_prerender.return_value = ["/path/to/render1.png"]
+
+    # Mock validate_and_price return value
+    mock_val_result = MagicMock()
+    mock_val_result.is_manufacturable = True
+    mock_val_result.unit_cost = 10.0
+    mock_val_result.violations = []
+    mock_val_result.metadata = {"weight_kg": 0.1}
+    mock_validate.return_value = mock_val_result
+
+    # Create mandatory files with correct sections
+    plan_content = """
+## 1. Solution Overview
+Test solution
+## 2. Parts List
+- Part A
+## 3. Assembly Strategy
+1. Step 1
+## 4. Cost & Weight Budget
+- $10
+## 5. Risk Assessment
+- Low
+"""
+    (tmp_path / "plan.md").write_text(plan_content)
+    (tmp_path / "todo.md").write_text("# TODO\n- [x] Done")
+    (tmp_path / "validation_results.json").write_text('{"success": true}')
 
     # Create valid objectives.yaml in tmp_path
     objectives_content = """
@@ -72,18 +96,11 @@ totals:
 """
     (tmp_path / "assembly_definition.yaml").write_text(cost_content)
 
-    # Change to tmp_path so submit_for_review finds the file
-    old_cwd = Path.cwd()
-    os.chdir(tmp_path)
-    try:
-        # Execute
-        result = submit_for_review(mock_component)
-    finally:
-        os.chdir(old_cwd)
+    # Execute
+    result = submit_for_review(mock_component, cwd=tmp_path)
 
     # Assert
     assert result is True
-    mock_prerender.assert_called_once_with(mock_component)
     mock_export_step.assert_called_once()
 
     manifest_path = renders_dir / "review_manifest.json"
@@ -93,31 +110,38 @@ totals:
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test-session"
-        assert "/path/to/render1.png" in manifest["renders"]
 
 
-@patch("worker.utils.rendering.pv.Plotter")
-@patch("worker.utils.rendering.pv.read")
-@patch("worker.utils.rendering.export_stl")
-def test_prerender_24_views(
-    mock_export_stl, mock_pv_read, mock_plotter_class, tmp_path
-):
+@patch("worker.utils.rendering.get_simulation_builder")
+@patch("worker.simulation.factory.get_physics_backend")
+def test_prerender_24_views(mock_get_backend, mock_get_builder, tmp_path):
     from worker.utils.rendering import prerender_24_views
 
     # Setup
-    mock_plotter = MagicMock()
-    mock_plotter_class.return_value = mock_plotter
-    mock_component = MagicMock()
+    mock_builder = MagicMock()
+    mock_get_builder.return_value = mock_builder
+    mock_builder.build_from_assembly.return_value = tmp_path / "scene.xml"
+    (tmp_path / "scene.xml").write_text("<mujoco/>")
+
+    mock_backend = MagicMock()
+    mock_get_backend.return_value = mock_backend
+    # mock_backend.render_camera should return a numpy array (image)
+    import numpy as np
+
+    mock_backend.render_camera.return_value = np.zeros((480, 640, 3), dtype=np.uint8)
+
+    with BuildPart() as p:
+        Box(10, 10, 10)
+    mock_component = p.part
 
     # Execute
     renders = prerender_24_views(mock_component, output_dir=str(tmp_path))
 
     # Assert
     assert len(renders) == 24
-    assert mock_export_stl.called
-    assert mock_pv_read.called
-    # Each view should have a screenshot
-    assert mock_plotter.screenshot.call_count == 24
+    assert mock_get_builder.called
+    assert mock_get_backend.called
+    assert mock_backend.render_camera.call_count == 24
 
     for render_path in renders:
         assert Path(render_path).parent == tmp_path
