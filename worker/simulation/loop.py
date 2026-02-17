@@ -312,7 +312,10 @@ class SimulationLoop:
                 target_pos = state.pos
 
             # TODO: Get max stress from backend
+            stress_summaries = self.backend.get_stress_summaries()
             max_stress = 0.0
+            if stress_summaries:
+                max_stress = max(s.max_von_mises_pa for s in stress_summaries)
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 4. Check Success/Failure conditions
@@ -545,6 +548,7 @@ class SimulationLoop:
             total_time=current_time,
             total_energy=metrics.total_energy,
             max_velocity=metrics.max_velocity,
+            max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
             fail_mode=self.fail_reason
