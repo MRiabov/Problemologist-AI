@@ -6,12 +6,12 @@ import pytest
 # Set mock key before any imports that might trigger LLM initialization
 os.environ["OPENAI_API_KEY"] = "sk-mock-key"
 
+from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.coder import CoderNode
 from controller.agent.nodes.electronics_engineer import ElectronicsEngineerNode
 from controller.agent.nodes.planner import PlannerNode
 from controller.agent.nodes.reviewer import ReviewerNode
 from controller.agent.nodes.skills import SkillsNode
-from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.state import AgentState
 
 

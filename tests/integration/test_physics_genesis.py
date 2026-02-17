@@ -14,6 +14,7 @@ from shared.models.schemas import (
     ObjectivesYaml,
     PhysicsConfig,
 )
+from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
 from shared.simulation.backends import (
     BodyState,
     StepResult,
@@ -21,7 +22,6 @@ from shared.simulation.backends import (
 )
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
-from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
 
 # Shared mock to avoid "already initialized" errors if multiple backends are created
 _SHARED_BACKEND_MOCK = MagicMock()

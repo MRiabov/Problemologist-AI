@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage
 
+from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.planner import planner_node
 from controller.agent.state import AgentState
-from controller.agent.nodes.base import SharedNodeContext
 
 
 @pytest.fixture

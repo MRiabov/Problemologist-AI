@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage
 
-from controller.agent.nodes.reviewer import reviewer_node, ReviewResult, CriticDecision
+from controller.agent.nodes.reviewer import CriticDecision, ReviewResult, reviewer_node
 from controller.agent.state import AgentState, AgentStatus
 
 

@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from shared.simulation.schemas import SimulatorBackendType
 from controller.clients.worker import WorkerClient
+from shared.simulation.schemas import SimulatorBackendType
 from worker.api.schema import EditOp, ExecuteResponse
 from worker.filesystem.backend import FileInfo
 

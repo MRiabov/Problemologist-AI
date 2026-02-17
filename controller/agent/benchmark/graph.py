@@ -129,18 +129,18 @@ async def _execute_graph_streaming(
                         # Special handling for plan which is a
                         # RandomizationStrategy model
                         if key == "plan" and isinstance(value, dict):
-                            from shared.simulation.schemas import RandomizationStrategy
-
                             import contextlib
+
+                            from shared.simulation.schemas import RandomizationStrategy
 
                             with contextlib.suppress(Exception):
                                 value = RandomizationStrategy.model_validate(value)
                         # Special handling for session which is a
                         # GenerationSession model
                         if key == "session" and isinstance(value, dict):
-                            from .models import GenerationSession
-
                             import contextlib
+
+                            from .models import GenerationSession
 
                             with contextlib.suppress(Exception):
                                 value = GenerationSession.model_validate(value)

@@ -7,7 +7,6 @@ from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from shared.models.schemas import BoundingBox, COTSMetadata
 from shared.cots.parts.electronics import (
     Connector,
     ElectronicRelay,
@@ -15,6 +14,7 @@ from shared.cots.parts.electronics import (
     Wire,
 )
 from shared.cots.parts.motors import ServoMotor
+from shared.models.schemas import BoundingBox, COTSMetadata
 from shared.type_checking import type_check
 
 from .database.init import init_db
