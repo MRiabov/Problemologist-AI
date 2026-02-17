@@ -4,7 +4,15 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 
-from controller.agent.benchmark.nodes import verify_syntax
+
+def verify_syntax(script: str) -> tuple[bool, str | None]:
+    try:
+        compile(script, "<string>", "exec")
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 from worker.utils.validation import simulate, validate
 
 

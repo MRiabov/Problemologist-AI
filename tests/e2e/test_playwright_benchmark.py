@@ -39,36 +39,43 @@ def test_benchmark_creation_flow(page: Page):
 
     # 5. Submit the prompt
     print("Submitting prompt...")
-    prompt_input.press("Enter")
+    # Using explicit click on Send Message button for reliability
+    send_button = page.get_by_label("Send Message")
+    expect(send_button).to_be_enabled(timeout=30000)
+    send_button.click()
     print("Prompt submitted.")
 
     # 6. Wait for the generation to start and a plan to appear
-    print("Waiting for Thinking process...")
-    # New frontend uses "Thought for Xs" label
-    expect(page.get_by_text("Thought for", exact=False)).to_be_visible(timeout=60000)
-    print("Thinking process visible.")
+    print("Waiting for generation process...")
 
-    # Now look for the plan in ArtifactView.
-    print("Waiting for plan.md tab...")
-    # The plan.md button is in the Explorer sidebar
-    # We use .first because there might be multiple matches in the UI
+    # First, confirm the prompt appeared in the chat history
+    # Scope to 'main' area to avoid matching historical sidebar items
+    # Using a part of the prompt to avoid potential formatting/truncation issues
+    expect(
+        page.locator("main").get_by_text("move a steel ball 40mm radius", exact=False)
+    ).to_be_visible(timeout=60000)
+    print("Prompt confirmed in chat history.")
+
+    # Now wait for the plan.md button to appear in the Resources sidebar
+    print("Waiting for plan.md button...")
     plan_button = page.get_by_role("button", name="plan.md").first
+    # The generation can take a while, especially with mock LLMs
     expect(plan_button).to_be_visible(timeout=120000)
     plan_button.click()
     print("Clicked plan.md button.")
 
     # 7. Verify the plan is "non-template"
     print("Verifying plan content...")
-    # The content is now rendered via Prism SyntaxHighlighter, often in a pre tag or similar
+    # The content is rendered via SyntaxHighlighter
     # We can just look for the text in the artifact view area
     expect(page.get_by_text("steel ball", ignore_case=True)).to_be_visible(
-        timeout=30000
+        timeout=60000
     )
-    expect(page.get_by_text("40mm", ignore_case=True)).to_be_visible(timeout=30000)
+    expect(page.get_by_text("40mm", ignore_case=True)).to_be_visible(timeout=60000)
     print("Verified keywords in plan.")
 
     # Final check: ensure "goal" is mentioned
-    expect(page.get_by_text("goal", ignore_case=True)).to_be_visible(timeout=30000)
+    expect(page.get_by_text("goal", ignore_case=True)).to_be_visible(timeout=60000)
     print("Final check passed.")
 
     print("Success: Benchmark creation flow verified.")

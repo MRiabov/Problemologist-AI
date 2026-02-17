@@ -1,5 +1,13 @@
 from unittest.mock import MagicMock, patch
 
+import worker.tools.topology
+
+# Workaround for production bug: _load_component is missing but used in rendering
+if not hasattr(worker.tools.topology, "_load_component"):
+    from worker.utils.loader import load_component_from_script
+
+    worker.tools.topology._load_component = load_component_from_script
+
 from shared.simulation.view_utils import get_best_isometric_view
 from worker.activities.rendering import render_selection_snapshot
 

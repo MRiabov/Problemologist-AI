@@ -4,7 +4,6 @@ import s3fs
 
 from worker.filesystem.backend import (
     LocalFilesystemBackend,
-    SandboxFilesystemBackend,
     SimpleSessionManager,
 )
 

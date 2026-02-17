@@ -6,7 +6,7 @@ import pytest
 import s3fs
 from build123d import Part
 
-from worker.filesystem.backend import SandboxFilesystemBackend, SimpleSessionManager
+from worker.filesystem.backend import LocalFilesystemBackend, SimpleSessionManager
 from worker.filesystem.router import (
     AccessMode,
     FilesystemRouter,

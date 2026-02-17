@@ -31,14 +31,28 @@ Test Overview
 
 
 @pytest.mark.asyncio
+@patch("controller.agent.nodes.planner.create_react_agent")
 @patch("controller.agent.nodes.base.WorkerClient")
 @patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
-async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
+async def test_architect_node_logic(mock_fs, mock_worker, mock_agent_factory, mock_llm):
+    # Mock agent instance
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {
+        "messages": [MagicMock(content="Finished planning.")]
+    }
+    mock_agent_factory.return_value = mock_agent
+
     state = AgentState(task="Build a robot")
 
     # Configure mock_fs instance to support async context manager or async methods
     fs_instance = mock_fs.return_value
     fs_instance.write_file = AsyncMock()
+    fs_instance.read_file = AsyncMock(
+        side_effect=lambda f: {
+            "plan.md": "# PLAN\n## 1. Solution Overview\nTest Overview\n## 2. Parts List\n- Part A\n## 3. Assembly Strategy\n1. Step 1\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Risk 1",
+            "todo.md": "- [ ] Test Todo",
+        }.get(f, "")
+    )
 
     result = await planner_node(state)
 
@@ -48,36 +62,33 @@ async def test_architect_node_logic(mock_fs, mock_worker, mock_llm):
     assert "Test Overview" in result.plan
     assert "Test Todo" in result.todo
 
-    # Check mock file creation
-    fs_instance.write_file.assert_any_call(
-        "plan.md",
-        mock_llm.ainvoke.return_value.content.split("# TODO")[0]
-        .replace("# PLAN", "")
-        .strip(),
-    )
-    fs_instance.write_file.assert_any_call("todo.md", "- [ ] Test Todo")
-
 
 @pytest.mark.asyncio
+@patch("controller.agent.nodes.planner.create_react_agent")
 @patch("controller.agent.nodes.base.WorkerClient")
 @patch("controller.agent.nodes.base.RemoteFilesystemMiddleware")
-async def test_architect_node_fallback(mock_fs, mock_worker, mock_llm):
-    # Mock fallback response (missing sections)
-    mock_llm.ainvoke.return_value = MagicMock(content="Just some text without sections")
+async def test_architect_node_fallback(
+    mock_fs, mock_worker, mock_agent_factory, mock_llm
+):
+    # Mock agent instance that fails validation (by returning no files)
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {
+        "messages": [MagicMock(content="Just some text without writing files")]
+    }
+    mock_agent_factory.return_value = mock_agent
 
     state = AgentState(task="Build a robot")
 
-    # Configure mock_fs instance to support async context manager or async methods
+    # Configure mock_fs instance
     fs_instance = mock_fs.return_value
     fs_instance.write_file = AsyncMock()
+    # read_file returns empty for everything
+    fs_instance.read_file = AsyncMock(return_value="")
 
     result = await planner_node(state)
 
-    # Should be rejected because validation fails
+    # Should be rejected because validation fails (after retries)
     from controller.agent.state import AgentStatus
 
     assert result.status == AgentStatus.PLAN_REJECTED
     assert "Planner output validation failed" in result.feedback
-
-    # Check that it didn't write files (or we don't care, but usually it shouldn't proceed)
-    fs_instance.write_file.assert_not_called()
