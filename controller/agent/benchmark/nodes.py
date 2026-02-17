@@ -3,12 +3,12 @@ import base64
 import os
 import re
 
+import dspy
 import httpx
 import structlog
 import yaml
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
 
 from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.reviewer import ReviewResult
@@ -37,10 +37,21 @@ def extract_python_code(text: str) -> str:
     return text.strip()
 
 
+class BenchmarkPlannerSignature(dspy.Signature):
+    """
+    Planner node: Analyzes the user prompt and creates a randomization strategy.
+    You must use the provided tools to set up the objectives if necessary.
+    When done, use SUBMIT to provide the final randomization strategy.
+    """
+
+    prompt = dspy.InputField()
+    history = dspy.InputField()
+    plan: RandomizationStrategy = dspy.OutputField()
+
+
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
-    Breaks down the user prompt into a randomization strategy using a LangGraph node.
-    Refactored to use with_structured_output for robustness.
+    Breaks down the user prompt into a randomization strategy using DSPy.
     """
     session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
@@ -48,24 +59,10 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     logger.info("planner_node_start", session_id=session_id)
 
-    try:
-        base_prompt = get_prompt("benchmark_generator.planner.system")
-    except Exception as e:
-        logger.error("planner_prompt_load_failed", error=str(e))
-        state.plan = RandomizationStrategy(
-            theme="error", reasoning=f"Failed to load planner prompt: {e}"
-        )
-        return state
-
-    # Observability
-    callbacks = ctx.get_callbacks(name="benchmark_planner", session_id=session_id)
-
     # Init Git
-    logger.info("planner_git_init_start", session_id=session_id)
     await ctx.worker_client.git_init()
-    logger.info("planner_git_init_complete", session_id=session_id)
 
-    # Custom Objectives Logic (Legacy)
+    # Custom Objectives Logic (Restore)
     custom_objectives = state.session.custom_objectives
     if custom_objectives:
         logger.info("planner_updating_objectives", session_id=session_id)
@@ -94,66 +91,74 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
                 logger.info("planner_objectives_updated", session_id=session_id)
             except Exception as e:
                 logger.warning("planner_objectives_update_failed", error=str(e))
-        else:
-            logger.info("planner_objectives_not_found_skipping_update")
 
-    # Support steering by including history in the planner prompt
-    history = state.messages or []
-    messages = [
-        SystemMessage(content=base_prompt),
-        *history,
-        HumanMessage(
-            content=(
-                f"Original User Request:\n{state.session.prompt}\n\n"
-                "Please generate the randomization strategy now. "
-                "Take into account any steering or feedback from the "
-                "history above if present."
-            )
-        ),
-    ]
+    # Setup DSPy Program
+    from controller.agent.dspy_utils import WorkerInterpreter
+
+    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+
+    # Tools for benchmark generator
+    tools = get_benchmark_tools(ctx.fs, session_id)
+    tool_functions = {}
+    for t in tools:
+        func = getattr(t, "func", getattr(t, "_run", None))
+        if func:
+            tool_functions[t.name] = func
+
+    program = dspy.CodeAct(
+        BenchmarkPlannerSignature,
+        tools=list(tool_functions.values()),
+        interpreter=interpreter,
+    )
 
     try:
-        # Use structured output
-        logger.info(
-            "planner_agent_invoke_start",
-            session_id=session_id,
-            model=settings.llm_model,
-        )
-        structured_llm = ctx.llm.with_structured_output(RandomizationStrategy)
-        plan = await structured_llm.ainvoke(messages, config={"callbacks": callbacks})
-        logger.info("planner_agent_invoke_complete", session_id=session_id)
+        with dspy.settings.context(lm=ctx.dspy_lm):
+            logger.info("planner_dspy_invoke_start", session_id=session_id)
+            prediction = program(
+                prompt=state.session.prompt,
+                history=str(state.messages or []),
+            )
+            logger.info("planner_dspy_invoke_complete", session_id=session_id)
 
-        state.plan = plan
-        state.messages.append(HumanMessage(content=f"Generated plan: {plan.theme}"))
-
-        logger.info(
-            "planner_node_complete",
-            session_id=session_id,
-            theme=plan.theme,
+        state.plan = prediction.plan
+        state.messages.append(
+            HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
 
     except Exception as e:
-        logger.error("planner_agent_run_failed", error=str(e), session_id=session_id)
+        logger.error("planner_dspy_failed", error=str(e))
         state.plan = RandomizationStrategy(theme="error", reasoning=str(e))
+    finally:
+        interpreter.shutdown()
 
     return state
+
+
+class BenchmarkCoderSignature(dspy.Signature):
+    """
+    Generates build123d script and validates it for the benchmark.
+    You must use the provided tools to create the benchmark script in 'script.py'.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    prompt = dspy.InputField()
+    plan = dspy.InputField()
+    objectives_yaml = dspy.InputField()
+    review_feedback = dspy.InputField()
+    validation_logs = dspy.InputField()
+    journal = dspy.OutputField(desc="A summary of what was done")
 
 
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Generates build123d script and validates it.
-    Refactored to use create_react_agent.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
     session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     logger.info("coder_node_start", session_id=session_id)
-
-    try:
-        base_prompt = get_prompt("benchmark_generator.coder.system")
-    except Exception:
-        base_prompt = "Error loading prompt."
 
     # Context construction
     validation_logs = "\n".join(state.session.validation_logs)
@@ -168,50 +173,43 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     except Exception:
         pass
 
-    system_prompt = f"""{base_prompt}
+    # Setup DSPy Program
+    from controller.agent.dspy_utils import WorkerInterpreter
 
-### Context
-Original User Request:
-{state.session.prompt}
+    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
 
-Plan:
-{state.plan.model_dump_json(indent=2) if state.plan else "None"}
-
-### Draft Objectives (YAML):
-{objectives_yaml}
-
-Review Feedback:
-{state.review_feedback or "No feedback provided."}
-
-Validation Logs:
-{validation_logs}
-"""
-
-    # Setup Agent
     tools = get_benchmark_tools(ctx.fs, session_id)
-    agent = create_react_agent(ctx.llm, tools)
+    tool_functions = {}
+    for t in tools:
+        func = getattr(t, "func", getattr(t, "_run", None))
+        if func:
+            tool_functions[t.name] = func
 
-    # Observability
-    callbacks = ctx.get_callbacks(name="benchmark_coder", session_id=session_id)
+    program = dspy.CodeAct(
+        BenchmarkCoderSignature,
+        tools=list(tool_functions.values()),
+        interpreter=interpreter,
+    )
 
-    messages = [
-        SystemMessage(content=system_prompt),
-        *(state.messages or []),
-        HumanMessage(
-            content=f"Implement the benchmark script for: {state.session.prompt}"
-        ),
-    ]
-
-    # Invoke Agent
+    # Invoke DSPy Program
     try:
-        logger.info("coder_agent_invoke_start", session_id=session_id)
-        result = await agent.ainvoke(
-            {"messages": messages}, config={"callbacks": callbacks}
-        )
-        logger.info("coder_agent_invoke_complete", session_id=session_id)
-        state.messages = result["messages"]
+        with dspy.settings.context(lm=ctx.dspy_lm):
+            logger.info("coder_dspy_invoke_start", session_id=session_id)
+            prediction = program(
+                prompt=state.session.prompt,
+                plan=state.plan.model_dump_json() if state.plan else "None",
+                objectives_yaml=objectives_yaml,
+                review_feedback=state.review_feedback or "No feedback provided.",
+                validation_logs=validation_logs,
+            )
+            logger.info("coder_dspy_invoke_complete", session_id=session_id)
+
+            new_journal = getattr(prediction, "journal", "No journal provided.")
+            state.messages.append(AIMessage(content=f"Work summary: {new_journal}"))
     except Exception as e:
-        logger.error("coder_agent_failed", error=str(e))
+        logger.error("coder_dspy_failed", error=str(e))
+    finally:
+        interpreter.shutdown()
 
     # Retrieve script
     import contextlib
@@ -315,28 +313,55 @@ Validation Logs:
     return state
 
 
+class BenchmarkCOTSSearchSignature(dspy.Signature):
+    """
+    COTS Search node: Searches for components based on current needs for the benchmark.
+    You must use the provided tools to search for components.
+    When done, use SUBMIT to provide a summary of the components found.
+    """
+
+    prompt = dspy.InputField()
+    search_summary = dspy.OutputField(desc="A summary of the components found")
+
+
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     # Re-implementing to ensure consistency
     session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
-    # Use benchmark tools which includes search_cots_catalog
+
+    # Setup DSPy Program
+    from controller.agent.dspy_utils import WorkerInterpreter
+
+    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+
     tools = get_benchmark_tools(ctx.fs, session_id)
+    tool_functions = {}
+    for t in tools:
+        func = getattr(t, "func", getattr(t, "_run", None))
+        if func:
+            tool_functions[t.name] = func
 
-    agent = create_react_agent(ctx.llm, tools)
-
-    # Observability
-    callbacks = ctx.get_callbacks(name="benchmark_cots_search", session_id=session_id)
-
-    prompt = f"Find components for the benchmark: {state.session.prompt}"
-    logger.info("cots_search_agent_invoke_start", session_id=session_id)
-    result = await agent.ainvoke(
-        {"messages": [HumanMessage(content=prompt)]},
-        config={"callbacks": callbacks},
+    program = dspy.CodeAct(
+        BenchmarkCOTSSearchSignature,
+        tools=list(tool_functions.values()),
+        interpreter=interpreter,
     )
-    logger.info("cots_search_agent_invoke_complete", session_id=session_id)
-    state.messages.extend(result["messages"])
+
+    try:
+        with dspy.settings.context(lm=ctx.dspy_lm):
+            logger.info("cots_search_dspy_invoke_start", session_id=session_id)
+            prediction = program(prompt=state.session.prompt)
+            logger.info("cots_search_dspy_invoke_complete", session_id=session_id)
+
+        summary = getattr(prediction, "search_summary", "No summary provided.")
+        state.messages.append(AIMessage(content=f"COTS Search summary: {summary}"))
+
+    except Exception as e:
+        logger.error("cots_search_dspy_failed", error=str(e))
+    finally:
+        interpreter.shutdown()
 
     return state
 
@@ -346,10 +371,24 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
     return state
 
 
+class BenchmarkReviewerSignature(dspy.Signature):
+    """
+    Agentic review of the generated benchmark.
+    You must use the provided tools to inspect the workspace.
+    You MUST use the 'write_review_file' tool to persist your review.
+    When done, use SUBMIT to provide the final review result.
+    """
+
+    theme = dspy.InputField()
+    prompt = dspy.InputField()
+    simulation_logs = dspy.InputField()
+    review: ReviewResult = dspy.OutputField()
+
+
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Agentic review of the generated benchmark.
-    Refactored to use create_react_agent.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
     session_id = str(state.session.session_id)
     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
@@ -358,134 +397,58 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     logger.info("reviewer_node_start", round=state.review_round)
 
     state.review_round = state.review_round + 1
-    current_round = state.review_round
-    review_filename = f"reviews/review-round-{current_round}/review.md"
-
-    # Vision inputs
-    sim_result = state.simulation_result
-    render_data = sim_result.render_data if sim_result else []
-    image_contents = []
-    for img_bytes in (render_data or [])[:8]:
-        try:
-            if img_bytes:
-                encoded = base64.b64encode(img_bytes).decode("utf-8")
-                image_contents.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{encoded}"},
-                    }
-                )
-        except Exception:
-            pass
+    review_filename = f"reviews/review-round-{state.review_round}/review.md"
 
     # Setup Tools
     all_tools = get_benchmark_tools(ctx.fs, session_id)
+    tool_functions = {}
 
-    # Security: Custom wrapper for write_file to restrict path
-    violations = []
-
-    @tool
     async def write_review_file(path: str, content: str) -> str:
         """Write the review to the review file."""
         p = path.lstrip("/")
         if p != review_filename.lstrip("/"):
-            violations.append(f"Attempted to write unauthorized path: {path}")
-            return "Error: Unauthorized path."
+            return f"Error: Unauthorized path. You must write to {review_filename}"
         success = await ctx.worker_client.write_file(path, content)
         return "Review written successfully." if success else "Error writing review."
 
-    # Filter unsafe tools
-    safe_tools = [
-        t
-        for t in all_tools
-        if t.name not in ("write_file", "edit_file", "submit_for_review")
-    ]
-    safe_tools.append(write_review_file)
+    tool_functions["write_review_file"] = write_review_file
 
-    # Prompt
-    try:
-        base_prompt = get_prompt("benchmark_generator.reviewer.system")
-    except Exception:
-        base_prompt = "You are an agentic reviewer."
+    for t in all_tools:
+        if t.name not in ("write_file", "edit_file", "submit_for_review"):
+            func = getattr(t, "func", getattr(t, "_run", None))
+            if func:
+                tool_functions[t.name] = func
 
-    system_prompt = f"""{base_prompt}
-You are an agentic reviewer with access to the CAD workspace.
-YOU MUST:
-1. Inspect the renders provided in the vision message.
-2. Inspect the generated code ('{SCRIPT_FILE}').
-3. Use the 'write_review_file' tool to persist your review ONLY to '{review_filename}'.
-4. The review file MUST start with a YAML frontmatter...
-YOUR ONLY ALLOWED WRITE OPERATION IS TO '{review_filename}'.
-"""
+    from controller.agent.dspy_utils import WorkerInterpreter
 
-    # Agent
-    agent = create_react_agent(ctx.llm, safe_tools)
-
-    # Observability
-    callbacks = ctx.get_callbacks(name="benchmark_reviewer", session_id=session_id)
-
-    user_content = [
-        {
-            "type": "text",
-            "text": (
-                f"Please review the benchmark for theme: "
-                f"{state.plan.theme if state.plan else 'Unknown'}\n"
-                f"Prompt: {state.session.prompt}"
-            ),
-        }
-    ]
-    user_content.extend(image_contents)
-
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_content),
-    ]
+    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+    program = dspy.CodeAct(
+        BenchmarkReviewerSignature,
+        tools=list(tool_functions.values()),
+        interpreter=interpreter,
+    )
 
     try:
-        logger.info("reviewer_agent_invoke_start", session_id=session_id)
-        result = await agent.ainvoke(
-            {"messages": messages}, config={"callbacks": callbacks}
-        )
-        logger.info("reviewer_agent_invoke_complete", session_id=session_id)
-        # Check violations
-        if violations:
-            state.review_feedback = (
-                f"Reviewer security violation: {', '.join(violations)}"
+        with dspy.settings.context(lm=ctx.dspy_lm):
+            logger.info("reviewer_dspy_invoke_start", session_id=session_id)
+            prediction = program(
+                theme=state.plan.theme if state.plan else "Unknown",
+                prompt=state.session.prompt,
+                simulation_logs=str(
+                    state.simulation_result.logs if state.simulation_result else []
+                ),
             )
-            return state
+            logger.info("reviewer_dspy_invoke_complete", session_id=session_id)
 
-        # T018: Decision logic (Structured Parsing)
-        try:
-            parser_llm = ctx.llm.with_structured_output(ReviewResult)
-            review_parsed = await parser_llm.ainvoke(
-                [
-                    SystemMessage(
-                        content=(
-                            "Extract the final review decision from the following text."
-                        )
-                    ),
-                    HumanMessage(content=result["messages"][-1].content),
-                ]
-            )
-            state.review_feedback = (
-                f"{review_parsed.decision.value}: {review_parsed.reason}"
-            )
-            if review_parsed.required_fixes:
-                state.review_feedback += "\nFixes: " + ", ".join(
-                    review_parsed.required_fixes
-                )
-        except Exception as e:
-            logger.warn(
-                "Benchmark reviewer parsing failed, falling back to basic check",
-                error=str(e),
-            )
-            # Fallback check for file existence
-            if await ctx.worker_client.exists(review_filename):
-                state.review_feedback = "Review completed (parsed via fallback)."
-            else:
-                state.review_feedback = f"Error: Review file not created. {e}"
+        review = prediction.review
+        state.review_feedback = f"{review.decision.value}: {review.reason}"
+        if review.required_fixes:
+            state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
 
     except Exception as e:
+        logger.error("reviewer_dspy_failed", error=str(e))
         state.review_feedback = f"Error executing reviewer: {e}"
+    finally:
+        interpreter.shutdown()
 
     return state

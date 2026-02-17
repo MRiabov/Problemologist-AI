@@ -35,29 +35,11 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     )
     mock_ctx.llm = mock_llm
 
-    # Mock agent ainvoke to simulate tool call
-    with patch(
-        "controller.agent.nodes.skills.create_react_agent"
-    ) as mock_agent_factory:
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [
-                AIMessage(
-                    content="Suggesting a skill.",
-                    tool_calls=[
-                        {
-                            "name": "save_suggested_skill",
-                            "args": {
-                                "title": "build123d_import_trick",
-                                "content": "# Build123D Import Trick\nfrom build123d import Box",
-                            },
-                            "id": "call_1",
-                        }
-                    ],
-                )
-            ]
-        }
-        mock_agent_factory.return_value = mock_agent
+    # Mock DSPy Program
+    with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
+        mock_program = MagicMock()
+        mock_program.return_value = MagicMock(summary="Identified and recorded 1 new skills.")
+        mock_codeact_cls.return_value = mock_program
 
         # Mock GitManager
         with patch("controller.agent.nodes.skills.GitManager") as mock_git:
@@ -66,25 +48,15 @@ async def test_sidecar_node_suggest_skill(mock_llm):
             instance.sync_changes = AsyncMock()
 
             node = SkillsNode(context=mock_ctx, suggested_skills_dir=str(test_dir))
-
-            # We need to ensure the tool is actually called if we want to test file creation.
-            # But since we mocked the agent, we have to manually simulate the tool call
-            # OR we just test that the node handles the agent output correctly.
-
-            # For this test, let's just mock the agent to return the tool call,
-            # and verify the node's journal update logic.
-            # Wait, the node doesn't call the tool itself, the agent does.
-            # If we mock the agent, the tool won't be called.
-
-            # Let's change the test to verify suggested_count logic.
             state = AgentState(
                 task="Test task",
                 journal="I struggled with Box until I imported it correctly.",
+                session_id="test-session"
             )
 
             result = await node(state)
 
-        assert "Identified and recorded 1 new skills" in result.journal
+        assert "Sidecar Learner: Identified and recorded 1 new skills" in result.journal
 
 
 @type_check
@@ -99,14 +71,10 @@ async def test_sidecar_node_no_skill(mock_llm):
     )
     mock_ctx.llm = mock_llm
 
-    with patch(
-        "controller.agent.nodes.skills.create_react_agent"
-    ) as mock_agent_factory:
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [AIMessage(content="No new skills identified.")]
-        }
-        mock_agent_factory.return_value = mock_agent
+    with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
+        mock_program = MagicMock()
+        mock_program.return_value = MagicMock(summary="No new skills identified.")
+        mock_codeact_cls.return_value = mock_program
 
         # Mock GitManager
         with patch("controller.agent.nodes.skills.GitManager") as mock_git:
@@ -115,11 +83,11 @@ async def test_sidecar_node_no_skill(mock_llm):
             instance.sync_changes = AsyncMock()
 
             node = SkillsNode(context=mock_ctx, suggested_skills_dir=str(test_dir))
-            state = AgentState(task="Easy task", journal="Everything worked perfectly.")
+            state = AgentState(task="Easy task", journal="Everything worked perfectly.", session_id="test-session")
 
             result = await node(state)
 
-    assert "No new skills identified" in result.journal
+    assert "Sidecar Learner: No new skills identified" in result.journal
 
     if test_dir.exists():
         shutil.rmtree(test_dir)

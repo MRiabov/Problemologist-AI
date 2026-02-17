@@ -1,7 +1,9 @@
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import dspy
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 
@@ -23,17 +25,31 @@ class SharedNodeContext:
     session_id: str
     pm: PromptManager
     llm: ChatOpenAI
+    dspy_lm: dspy.LM
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
 
     @classmethod
     def create(cls, worker_url: str, session_id: str) -> "SharedNodeContext":
         worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
+        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+
+        # T012: Initialize DSPy LM for CodeAct support
+        api_key = "dummy"
+        if settings.openai_api_key:
+            api_key = settings.openai_api_key.get_secret_value()
+
+        dspy_lm = dspy.LM(
+            f"openai/{settings.llm_model}",
+            api_key=api_key,
+            cache=False,
+        )
         return cls(
             worker_url=worker_url,
             session_id=session_id,
             pm=PromptManager(),
-            llm=ChatOpenAI(model=settings.llm_model, temperature=0),
+            llm=llm,
+            dspy_lm=dspy_lm,
             worker_client=worker_client,
             fs=RemoteFilesystemMiddleware(worker_client),
         )
@@ -56,6 +72,19 @@ class BaseNode:
 
     def __init__(self, context: SharedNodeContext):
         self.ctx = context
+
+    def _get_tool_functions(self, tool_factory: Callable) -> dict[str, Callable]:
+        """Extracts raw functions from LangChain tools for DSPy compatibility."""
+        tools = tool_factory(self.ctx.fs, self.ctx.session_id)
+        tool_fns = {}
+        for t in tools:
+            # LangChain tools often wrap the actual function
+            func = getattr(t, "func", getattr(t, "_run", None))
+            if func:
+                # WP06: Ensure the function signature is compatible with DSPy
+                # We might need to wrap it to remove 'callbacks' etc. if they exist
+                tool_fns[t.name] = func
+        return tool_fns
 
     def _get_callbacks(self, name: str, session_id: str):
         return self.ctx.get_callbacks(name, session_id)

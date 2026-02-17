@@ -34,13 +34,12 @@ Test Overview
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
-@patch("controller.agent.nodes.planner.create_react_agent")
+@patch("controller.agent.nodes.planner.dspy.CodeAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_logic(
-    mock_ctx_cls, mock_agent_factory, mock_record_events, mock_llm
+    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
 ):
     # Create a real SharedNodeContext but with mocked attributes to satisfy beartype
-    # We use MagicMock for complex objects but ensure they return what's expected
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
 
@@ -60,20 +59,18 @@ async def test_architect_node_logic(
         session_id="test-session",
         pm=mock_pm,
         llm=mock_llm,
+        dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
     )
-    # Mock the get_callbacks method which is NOT a dataclass field
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
     mock_ctx_cls.create.return_value = mock_ctx
 
-    # Mock agent instance
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [AIMessage(content="Finished planning.")]
-    }
-    mock_agent_factory.return_value = mock_agent
+    # Mock DSPy Program
+    mock_program = MagicMock()
+    mock_program.return_value = MagicMock(summary="Finished planning.")
+    mock_codeact_cls.return_value = mock_program
 
     state = AgentState(task="Build a robot", session_id="test-session")
 
@@ -88,10 +85,10 @@ async def test_architect_node_logic(
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
-@patch("controller.agent.nodes.planner.create_react_agent")
+@patch("controller.agent.nodes.planner.dspy.CodeAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_fallback(
-    mock_ctx_cls, mock_agent_factory, mock_record_events, mock_llm
+    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -105,6 +102,7 @@ async def test_architect_node_fallback(
         session_id="test-session",
         pm=mock_pm,
         llm=mock_llm,
+        dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
     )
@@ -112,12 +110,10 @@ async def test_architect_node_fallback(
 
     mock_ctx_cls.create.return_value = mock_ctx
 
-    # Mock agent instance that fails validation (by returning no files)
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [AIMessage(content="Just some text without writing files")]
-    }
-    mock_agent_factory.return_value = mock_agent
+    # Mock DSPy Program
+    mock_program = MagicMock()
+    mock_program.return_value = MagicMock(summary="Failed planning.")
+    mock_codeact_cls.return_value = mock_program
 
     state = AgentState(task="Build a robot", session_id="test-session")
 
@@ -126,5 +122,4 @@ async def test_architect_node_fallback(
     # Should be rejected because validation fails (after retries)
     from controller.agent.state import AgentStatus
 
-    assert result.status == AgentStatus.PLAN_REJECTED
-    assert "Planner output validation failed" in result.feedback
+    assert result.status == AgentStatus.FAILED

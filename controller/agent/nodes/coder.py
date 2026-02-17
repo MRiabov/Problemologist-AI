@@ -1,11 +1,11 @@
+import structlog
 from contextlib import suppress
 
-import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+import dspy
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState
+from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
 
@@ -14,18 +14,25 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
+class CoderSignature(dspy.Signature):
+    """
+    Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
+    You must use the provided tools to implement the current step in 'script.py'.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    current_step = dspy.InputField()
+    plan = dspy.InputField()
+    todo = dspy.InputField()
+    journal = dspy.OutputField(desc="A summary of the implementation done for this step")
+
+
 @type_check
 class CoderNode(BaseNode):
     """
     Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
-    Refactored to use LangGraph's prebuilt ReAct agent.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
-
-    def __init__(self, context: SharedNodeContext):
-        super().__init__(context)
-        # Initialize tools and agent
-        self.tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        self.agent = create_react_agent(self.ctx.llm, self.tools)
 
     async def __call__(self, state: AgentState) -> AgentState:
         """Execute the coder node logic."""
@@ -37,32 +44,35 @@ class CoderNode(BaseNode):
                 update={"journal": state.journal + "\nNo more steps in TODO."}
             )
 
+        from controller.agent.dspy_utils import WorkerInterpreter
+
+        # Use WorkerInterpreter for remote execution
+        interpreter = WorkerInterpreter(
+            worker_client=self.ctx.worker_client, session_id=state.session_id
+        )
+
+        # Get tool signatures for DSPy
+        tool_fns = self._get_tool_functions(get_engineer_tools)
+
+        program = dspy.CodeAct(
+            CoderSignature, tools=list(tool_fns.values()), interpreter=interpreter
+        )
+
         max_retries = 3
         retry_count = 0
         journal_entry = f"\nStarting step: {current_step}"
 
-        # Render system prompt
-        system_prompt = self.ctx.pm.render(
-            "engineer", current_step=current_step, error="", plan=state.plan
-        )
-
-        # Initialize conversation with system prompt
-        messages = [SystemMessage(content=system_prompt)]
-
-        # Observability
-        callbacks = self._get_callbacks(name="coder", session_id=state.session_id)
-
         while retry_count < max_retries:
             try:
-                # Invoke the agent
-                logger.info("coder_agent_invoke_start", session_id=state.session_id)
-                result = await self.agent.ainvoke(
-                    {"messages": messages}, config={"callbacks": callbacks}
-                )
-                logger.info("coder_agent_invoke_complete", session_id=state.session_id)
-
-                # Update messages with the conversation trace
-                messages = result["messages"]
+                # Invoke DSPy
+                with dspy.settings.context(lm=self.ctx.dspy_lm):
+                    logger.info("coder_dspy_invoke_start", session_id=state.session_id)
+                    prediction = program(
+                        current_step=current_step,
+                        plan=state.plan,
+                        todo=todo,
+                    )
+                    logger.info("coder_dspy_invoke_complete", session_id=state.session_id)
 
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
@@ -74,6 +84,7 @@ class CoderNode(BaseNode):
                     "todo.md",
                     "objectives.yaml",
                     "assembly_definition.yaml",
+                    "script.py",
                 ]:
                     with suppress(Exception):
                         all_files[f] = await self.ctx.fs.read_file(f)
@@ -81,18 +92,13 @@ class CoderNode(BaseNode):
                 is_valid, validation_errors = validate_node_output("coder", all_files)
 
                 if not is_valid:
-                    error_msg = "Coder produced invalid output:\n" + "\n".join(
-                        [f"- {e}" for e in validation_errors]
-                    )
-                    journal_entry += f"\nValidation failed (Attempt {retry_count + 1}): {validation_errors}"
-
-                    # Append error to messages for the next retry
-                    messages.append(HumanMessage(content=error_msg))
+                    logger.warning("coder_validation_failed", errors=validation_errors)
                     retry_count += 1
                     continue
 
                 # Success
-                journal_entry += f"\nSuccessfully executed step: {current_step}"
+                summary = getattr(prediction, "journal", f"Successfully executed step: {current_step}")
+                journal_entry += f"\n[Coder] {summary}"
 
                 # Mark TODO as done
                 new_todo = todo.replace(
@@ -104,24 +110,23 @@ class CoderNode(BaseNode):
                         "todo": new_todo,
                         "journal": state.journal + journal_entry,
                         "current_step": current_step,
-                        "messages": messages,  # Persist the conversation
+                        "messages": state.messages + [AIMessage(content=f"Coder summary: {summary}")],
                         "turn_count": state.turn_count + 1,
                     }
                 )
 
             except Exception as e:
-                last_error = str(e)
-                journal_entry += f"\nSystem error during execution: {last_error}"
-                messages.append(HumanMessage(content=f"System error: {last_error}"))
+                logger.error("coder_dspy_failed", error=str(e))
+                journal_entry += f"\n[System Error] {e}"
                 retry_count += 1
+            finally:
+                interpreter.shutdown()
 
-        journal_entry += f"\nFailed to complete step after {max_retries} retries."
         return state.model_copy(
             update={
-                "journal": state.journal + journal_entry,
+                "journal": state.journal + journal_entry + "\nMax retries reached.",
                 "iteration": state.iteration + 1,
                 "turn_count": state.turn_count + 1,
-                "messages": messages,
             }
         )
 
