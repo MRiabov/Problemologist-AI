@@ -99,7 +99,7 @@ async def get_episode_asset(
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
-    trace_id: Annotated[int, Path(lt=2**63)],
+    trace_id: Annotated[int, Path(le=2147483647)],  # Postgres Integer max
     feedback: FeedbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -112,21 +112,21 @@ async def report_trace_feedback(
     if not trace:
         raise HTTPException(status_code=404, detail="Trace not found")
 
-    if not trace.langfuse_trace_id:
-        raise HTTPException(status_code=400, detail="Trace does not have a Langfuse ID")
+    # Langfuse update (best effort)
+    if trace.langfuse_trace_id:
+        try:
+            langfuse = get_langfuse_client()
+            if langfuse:
+                langfuse.create_score(
+                    trace_id=trace.langfuse_trace_id,
+                    name="user-feedback",
+                    value=feedback.score,
+                    comment=feedback.comment,
+                )
+        except Exception as e:
+            logger.warning("langfuse_feedback_failed", error=str(e))
 
-    langfuse = get_langfuse_client()
-    if not langfuse:
-        raise HTTPException(status_code=503, detail="Langfuse client not configured")
-
-    langfuse.create_score(
-        trace_id=trace.langfuse_trace_id,
-        name="user-feedback",
-        value=feedback.score,
-        comment=feedback.comment,
-    )
-
-    # Store locally anyway (spec requirement)
+    # Store locally
     trace.feedback_score = feedback.score
     trace.feedback_comment = feedback.comment
     await db.commit()
@@ -405,8 +405,14 @@ async def delete_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_d
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
 
-    await db.delete(episode)
-    await db.commit()
+    try:
+        await db.delete(episode)
+        await db.commit()
+    except Exception as e:
+        logger.error("delete_episode_failed", episode_id=str(episode_id), error=str(e))
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete episode: {e!s}")
+
     return {
         "status": ResponseStatus.SUCCESS,
         "message": f"Episode {episode_id} and its traces/assets deleted.",

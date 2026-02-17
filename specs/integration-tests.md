@@ -43,7 +43,7 @@ Commonly, these models and enums would be in `shared/` folder.
 
 ## Audit snapshot
 
-- Integration runner last updated: `ec6f964` on **2026-02-09 18:44:47 +0000** (`scripts/run_integration_tests.sh`).
+- Integration runner last updated: Feb 17, 2026 (`scripts/run_integration_tests.sh`).
 - `desired_architecture.md` changes since that commit: **25 commits**.
 - Net architecture diff since runner update: **+628 / -55 lines**.
 - Major post-runner additions include:

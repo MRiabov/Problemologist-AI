@@ -27,7 +27,8 @@ async def test_full_workflow_end_to_end():
     # internal objects unless we run the server *within* the test process
     # or use a special testing mode.
 
-    # However, `scripts/run_integration_tests.sh` runs a docker container.
+    # However, `scripts/run_integration_tests.sh` runs a docker container for infra
+    # and local processes for the application.
     # The tests run *outside* the container against the exposed ports.
     # This makes mocking internal server objects impossible from the test script.
 

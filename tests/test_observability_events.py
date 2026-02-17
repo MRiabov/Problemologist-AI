@@ -3,7 +3,7 @@ from shared.observability.schemas import (
     LibraryUsageEvent,
     ObservabilityEventType,
     ReviewDecisionEvent,
-    SimulationFailureReason,
+    SimulationFailureMode,
     SimulationInstabilityEvent,
     SubmissionValidationEvent,
 )
@@ -71,5 +71,5 @@ def test_review_decision_event():
     assert data["evidence_stats"]["simulations_run"] == 5
 
 
-def test_simulation_failure_reason_enum():
-    assert SimulationFailureReason.STABILITY_ISSUE == "stability_issue"
+def test_simulation_failure_mode_enum():
+    assert SimulationFailureMode.STABILITY_ISSUE == "stability_issue"

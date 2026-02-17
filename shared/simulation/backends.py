@@ -55,6 +55,7 @@ class SimulationScene(BaseModel):
     scene_path: str | None = None
     assets: dict[str, Any] = {}
     config: dict[str, Any] = {}
+    # FIXME: it appears it may need models here. JSON should be strictly typed.
 
 
 @runtime_checkable
@@ -100,7 +101,9 @@ class PhysicsBackend(Protocol):
     def get_all_tendon_names(self) -> list[str]: ...
 
     def check_collision(self, body_name: str, site_name: str) -> bool: ...
-
     def get_tendon_tension(self, tendon_name: str) -> float: ...
+
+    @property
+    def sim_lock(self) -> Any: ...
 
     def close(self) -> None: ...

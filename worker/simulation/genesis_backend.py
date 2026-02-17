@@ -20,10 +20,19 @@ from shared.simulation.backends import (
     StressField,
 )
 
+import threading
+
 logger = structlog.get_logger(__name__)
+
+# Global lock for Genesis operations since the engine has shared state issues
+GENESIS_GLOBAL_LOCK = threading.Lock()
 
 
 class GenesisBackend(PhysicsBackend):
+    @property
+    def sim_lock(self) -> threading.Lock:
+        return GENESIS_GLOBAL_LOCK
+
     def __init__(self):
         self.scene = None
         self.entities = {}  # name -> gs.Entity
@@ -33,6 +42,7 @@ class GenesisBackend(PhysicsBackend):
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
+        self._is_built = False
         if gs is not None:
             try:
                 # Use CPU for tests/CI if GPU not available, but prefer GPU
@@ -65,7 +75,10 @@ class GenesisBackend(PhysicsBackend):
 
         if "gs_scene" in scene.assets:
             self.scene = scene.assets["gs_scene"]
+            self._is_built = True
             return
+
+        self._is_built = False
 
         # T017: GPU OOM Auto-Retry Logic
         max_retries = 3
@@ -121,8 +134,8 @@ class GenesisBackend(PhysicsBackend):
         self.scene = gs.Scene(
             show_viewer=False,
             vis_options=gs.options.VisOptions(
-                particle_size=0.01,
-                render_particle=True,
+                particle_size_scale=1.0,
+                render_particle_as="sphere",
             ),
         )
         self.entities = {}
@@ -283,8 +296,13 @@ class GenesisBackend(PhysicsBackend):
                 raise
 
         # In Genesis, we must call build() before step()
-        if self.scene and not getattr(self.scene, "is_built", False):
-            self.scene.build()
+        if self.scene and not self._is_built:
+            try:
+                self.scene.build()
+            except Exception as e:
+                if "already built" not in str(e).lower():
+                    raise
+            self._is_built = True
 
     def step(self, dt: float) -> StepResult:
         if self.scene is None:
@@ -446,7 +464,7 @@ class GenesisBackend(PhysicsBackend):
             pos=entity.get_pos().tolist(),
             quat=entity.get_quat().tolist(),
             vel=entity.get_vel().tolist(),
-            angvel=entity.get_angvel().tolist(),
+            angvel=entity.get_ang().tolist(),
         )
 
     def get_state(self) -> dict[str, Any]:
@@ -695,7 +713,7 @@ class GenesisBackend(PhysicsBackend):
         return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
-        return []
+        return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
         return []
@@ -708,8 +726,17 @@ class GenesisBackend(PhysicsBackend):
         site_entity = self.entities.get(site_name)
 
         if not target_entity or not site_entity:
-            # Fallback for zones that are not entities
-            # We can check bounding boxes if available in scene meta
+            # Check if it's a zone in entity_configs
+            ent_cfg = self.entity_configs.get(site_name)
+            if ent_cfg and ent_cfg.get("is_zone"):
+                # Check if target body pos is within zone
+                state = self.get_body_state(body_name)
+                pos = state.pos
+                z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
+                z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
+                return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+
+            # Fallback for scene_meta
             if self.scene_meta:
                 for ent_cfg in self.scene_meta.assets.get("entities", []):
                     if ent_cfg.get("name") == site_name and ent_cfg.get("is_zone"):

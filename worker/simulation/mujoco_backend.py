@@ -18,6 +18,9 @@ from shared.simulation.backends import (
 
 class MuJoCoBackend(PhysicsBackend):
     def __init__(self):
+        import threading
+
+        self._lock = threading.Lock()
         self.model = None
         self.data = None
         self.renderer = None
@@ -322,3 +325,7 @@ class MuJoCoBackend(PhysicsBackend):
         if self.renderer:
             self.renderer.close()
             self.renderer = None
+
+    @property
+    def sim_lock(self) -> Any:
+        return self._lock
