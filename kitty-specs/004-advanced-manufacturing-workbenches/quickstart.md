@@ -6,15 +6,16 @@ The agent interacts with the workbenches via the `validate_and_price` utility im
 
 ```python
 from build123d import Box
+from shared.models.schemas import PartMetadata
 from utils import validate_and_price, ManufacturingMethod
 
 # 1. Create part
 part = Box(10, 10, 10)
 part.label = "bracket"
-part.metadata = {
-    "manufacturing_method": ManufacturingMethod.CNC,
-    "material": "aluminum-6061"
-}
+part.metadata = PartMetadata(
+    manufacturing_method=ManufacturingMethod.CNC,
+    material_id="aluminum-6061"
+)
 
 # 2. Validate and get price (prints results to stdout for the agent)
 validate_and_price(part)

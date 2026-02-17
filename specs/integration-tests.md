@@ -36,6 +36,7 @@ Additionally:
 6. Every test must include at least one expected-fail assertion where architecture specifies fail behavior.
 7. Any unavoidable mock must be isolated to external third-party instability only, and must not mock project modules.
 8. A test that imports app internals (`controller.*`, `worker.*`) to invoke business logic directly is **not** integration coverage.
+9. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
@@ -195,7 +196,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-001 | Bring up compose stack and hit `/health` endpoints over HTTP. | Importing FastAPI app/TestClient only. |
 | INT-002 | Trigger real run via API; verify worker-side execution evidence and controller non-execution. | Patching remote FS client or executor calls. |
 | INT-003 | Use two real session IDs via HTTP file APIs and assert isolation. | Calling router/helper methods directly in-process. |
-| INT-004 | Send parallel simulate requests over HTTP; assert serialized execution from timings/logs. | Mocking simulation lock/semaphore logic. |
+| INT-004 | Send parallel simulate requests over HTTP; assert serialized execution from timings/logs. Ensure build scripts use `PartMetadata` class. | Mocking simulation lock/semaphore logic. |
 | INT-005 | Submit with missing artifacts through API and assert rejection. | Calling artifact validator function directly. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
@@ -211,10 +212,10 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-017 | Exercise refusal + reviewer confirm/reject branch with real API transitions. | State-machine branch unit test with mocks only. |
 | INT-018 | Call simulate/submit endpoints without prior valid pricing and assert hard block. | Directly testing function precondition checks only. |
 | INT-019 | Submit overweight/overbudget/out-of-zone design through API and assert fail reasons. | Testing only local numeric comparison helpers. |
-| INT-020 | Execute scenarios over HTTP and assert failure taxonomy in response + events. | Mocking simulation result enums. |
+| INT-020 | Execute scenarios over HTTP and assert failure taxonomy in response + events. Build scripts must include `PartMetadata` for all parts. | Mocking simulation result enums. |
 | INT-021 | Run multi-seed runtime jitter simulations via API and assert aggregated robustness output. | Single mocked seed result assertion. |
 | INT-022 | Run overload scenario in real simulation path and assert `motor_overload` behavior. | Synthetic return object with overload flag. |
-| INT-023 | Submit invalid fastener/joint setup via run flow and assert validation failure. | Unit-test of fastener rule function only. |
+| INT-023 | Submit invalid fastener/joint setup via run flow and assert validation failure. Verify `PartMetadata` is used for joint definitions. | Unit-test of fastener rule function only. |
 | INT-024 | Run benchmark validation endpoint on conflicting geometry/objectives and assert failure. | Calling validation module directly in process. |
 | INT-025 | Execute real episode; verify worker events ingestion/persistence end-to-end. | Reading only local mock event list. |
 | INT-026 | Verify required event families emitted from a real run, not fabricated payloads. | Event model unit tests only. |
@@ -253,16 +254,16 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-059 | Run live episode with Langfuse configured and assert persisted trace linkage (`langfuse_trace_id`) across emitted traces. | Unit-testing callback wiring or mocking Langfuse handler calls only. |
 | INT-060 | Call live feedback endpoint and assert both remote Langfuse scoring effect and local DB feedback persistence + error-path status codes. | Directly invoking feedback route function with mocked DB/Langfuse client only. |
 | INT-101 | Set `physics.backend` in config and hit simulation endpoint; assert backend-selected event and correct engine used. | Importing backend factory and calling it directly. |
-| INT-102 | Submit parts with missing FEM fields via API when `fem_enabled: true`; assert rejection before simulation. | Calling Pydantic validator on material dict directly. |
-| INT-103 | Run simulation via API with a part designed to break; assert `PART_BREAKAGE` in result and `part_breakage` event in event stream. | Constructing `SimulationResult` manually with breakage flag. |
-| INT-104 | Run FEM simulation via API; assert `stress_summaries` populated in HTTP response with expected fields. | Calling stress computation function in-process. |
+| INT-102 | Submit parts with missing FEM fields (using `PartMetadata`) via API when `fem_enabled: true`; assert rejection before simulation. | Calling Pydantic validator on material dict directly. |
+| INT-103 | Run simulation via API with a part designed to break; assert `PART_BREAKAGE` in result and `part_breakage` event in event stream. Script must use `PartMetadata`. | Constructing `SimulationResult` manually with breakage flag. |
+| INT-104 | Run FEM simulation via API; assert `stress_summaries` populated in HTTP response with expected fields. Requires `PartMetadata` on parts. | Calling stress computation function in-process. |
 | INT-105 | Upload objectives with `fluid_containment` and run simulation via API; assert pass/fail based on particle distribution in result. | Unit-testing particle counting function only. |
 | INT-106 | Upload objectives with `flow_rate` and run simulation; assert measured rate in result matches expected behavior. | Mocking particle gate crossings. |
-| INT-107 | Upload objectives with `max_stress` and run simulation; assert `STRESS_OBJECTIVE_EXCEEDED` on overloaded part. | Testing stress threshold comparison in isolation. |
+| INT-107 | Upload objectives with `max_stress` and run simulation; assert `STRESS_OBJECTIVE_EXCEEDED` on overloaded part. Requires `PartMetadata`. | Testing stress threshold comparison in isolation. |
 | INT-108 | Submit non-manifold geometry via API and assert mesh repair retry + eventual success or `FAILED_ASSET_GENERATION` with `meshing_failure` event. | Calling TetGen wrapper function directly. |
 | INT-109 | Run simulation designed to produce runaway energy via API; assert `PHYSICS_INSTABILITY` result and event. | Setting kinetic energy variable directly. |
 | INT-110 | (Requires GPU env) Force CUDA OOM conditions; assert retry at reduced particle count and `gpu_oom_retry` event. | Mocking CUDA allocator only. |
-| INT-111 | Submit part with FEM-missing material via `validate_and_price` API when genesis+FEM; assert rejection. | Calling validation function directly with dict. |
+| INT-111 | Submit part with FEM-missing `PartMetadata` via `validate_and_price` API when genesis+FEM; assert rejection. | Calling validation function directly with dict. |
 | INT-112 | Run existing rigid-body benchmark with default configuration; assert Genesis is used and success is unchanged despite fluids/FEM config being present in system but not active for the benchmark. | Importing backend and toggling flags in unit test. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
