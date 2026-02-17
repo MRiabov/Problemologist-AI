@@ -21,7 +21,7 @@ class TraceBroadcast(BaseModel):
     """Schema for broadcasting a trace event."""
 
     type: str = "new_trace"
-    id: uuid.UUID
+    id: int | uuid.UUID
     created_at: str
     trace_type: TraceType
     name: str | None

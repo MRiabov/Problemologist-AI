@@ -619,7 +619,7 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
             media_type = "model/stl"
 
         return Response(content=content, media_type=media_type)
-    except FileNotFoundError:
+    except (FileNotFoundError, IsADirectoryError):
         raise HTTPException(status_code=404, detail="Asset not found")
     except HTTPException:
         raise

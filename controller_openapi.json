@@ -98,7 +98,7 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "exclusiveMaximum": 9223372036854775808,
+              "maximum": 2147483647,
               "title": "Trace Id"
             }
           }

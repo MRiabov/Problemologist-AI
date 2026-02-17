@@ -26,6 +26,7 @@ except Exception:
 
 
 @pytest.mark.integration_p1
+@pytest.mark.debug_fuzz
 @schema.parametrize()
 def test_api_fuzzing(case):
     """INT-044: Fuzz critical endpoints for strict API behavior; no schema drift."""

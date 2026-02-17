@@ -23,7 +23,7 @@ from shared.observability.schemas import (
     ReviewDecisionEvent,
     RunCommandToolEvent,
     SceneValidationEvent,
-    SimulationFailureReason,
+    SimulationFailureMode,
     SimulationInstabilityEvent,
     SimulationRequestEvent,
     SimulationResultEvent,
@@ -84,7 +84,7 @@ def test_simulation_events():
 
     res = SimulationResultEvent(
         success=False,
-        failure_reason=SimulationFailureReason.TIMEOUT,
+        failure_reason=SimulationFailureMode.TIMEOUT,
         time_elapsed_s=10.5,
         compute_time_ms=500.0,
     )
