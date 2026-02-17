@@ -849,6 +849,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
+        body_locations = {}
 
         # Load manufacturing config to check for deformable materials
         from worker.workbenches.config import load_config
@@ -856,6 +857,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         mfg_config = load_config()
 
         for data in parts_data:
+            body_locations[data.label] = (data.pos, data.euler)
             # Check if deformable
             is_deformable = False
             if objectives and objectives.physics and objectives.physics.fem_enabled:
@@ -938,6 +940,58 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         ):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
+
+        # 5. Add Electronics (Wires/Cables)
+        scene_data["cables"] = []
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                # Only include 3D routed wires
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                # Collect points in global coordinates
+                points = []
+                waypoints = getattr(wire, "waypoints", [])
+
+                if waypoints:
+                    for j, pt in enumerate(waypoints):
+                        # Heuristic: convert local attachment to global if needed
+                        # But wire waypoints in current architecture are usually global
+                        # or relative to the component they are attached to?
+                        # The MuJoCo implementation assumes they are local to the attached body
+                        # for endpoints, but maybe global for intermediate?
+                        # Let's follow MuJoCo logic: first/last are local to component, intermediates are global (maybe?)
+                        # Actually MuJoCo builder logic:
+                        # - j=0: attached to from_terminal.component
+                        # - j=last: attached to to_terminal.component
+                        # - others: worldbody (global)
+
+                        # Waypoints are already in global coordinates (per MuJoCo implementation implication)
+                        points.append(list(pt))
+                else:
+                    # Straight line between components
+                    from_comp = wire.from_terminal.component
+                    to_comp = wire.to_terminal.component
+
+                    for comp_id in [from_comp, to_comp]:
+                        if comp_id in body_locations:
+                            b_pos, _ = body_locations[comp_id]
+                            points.append(b_pos)
+                        else:
+                            points.append([0, 0, 0])
+
+                if len(points) >= 2:
+                    # Estimate properties
+                    radius = (0.001 + (20 - wire.gauge_awg) * 0.0001) / 2
+                    stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
+
+                    scene_data["cables"].append({
+                        "name": wire.wire_id,
+                        "points": points,
+                        "radius": max(0.00025, radius),
+                        "stiffness": stiffness,
+                        "gauge_awg": wire.gauge_awg
+                    })
 
         scene_path = self.output_dir / "scene.json"
         with scene_path.open("w") as f:

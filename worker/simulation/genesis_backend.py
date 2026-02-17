@@ -30,6 +30,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
@@ -235,6 +236,7 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -596,8 +598,9 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        if site_name in self.entity_configs:
+            self.entity_configs[site_name]["pos"] = pos.tolist()
 
     def get_contact_forces(self) -> list[ContactForce]:
         if not self.scene:
@@ -630,7 +633,14 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        cfg = self.entity_configs.get(site_name)
+        if cfg:
+            return SiteState(
+                pos=tuple(cfg.get("pos", [0, 0, 0])),
+                quat=tuple(cfg.get("quat", [1, 0, 0, 0])),
+                size=tuple(cfg.get("size", [0, 0, 0])),
+            )
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
@@ -695,10 +705,10 @@ class GenesisBackend(PhysicsBackend):
         return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
-        return []
+        return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        return [c["name"] for c in self.cables]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -709,16 +719,20 @@ class GenesisBackend(PhysicsBackend):
 
         if not target_entity or not site_entity:
             # Fallback for zones that are not entities
-            # We can check bounding boxes if available in scene meta
-            if self.scene_meta:
-                for ent_cfg in self.scene_meta.assets.get("entities", []):
-                    if ent_cfg.get("name") == site_name and ent_cfg.get("is_zone"):
-                        # Check if target body pos is within zone
-                        state = self.get_body_state(body_name)
-                        pos = state.pos
-                        z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
-                        z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
-                        return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+            ent_cfg = self.entity_configs.get(site_name)
+            if ent_cfg and ent_cfg.get("is_zone"):
+                # Check if target body pos is within zone
+                state = self.get_body_state(body_name)
+                pos = state.pos
+
+                # Zone defined by pos (center) and size (half-extents)
+                zone_pos = ent_cfg.get("pos", [0, 0, 0])
+                zone_size = ent_cfg.get("size", [0, 0, 0])
+
+                z_min = [zone_pos[i] - zone_size[i] for i in range(3)]
+                z_max = [zone_pos[i] + zone_size[i] for i in range(3)]
+
+                return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
 
             return False
 
