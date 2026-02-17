@@ -59,7 +59,7 @@ steps.id/
 MUJOCO_LOG.TXT
 *.jsonl
 # ^event outputs
-.log
+*.log
 
 # Simulation assets
 *.glb
