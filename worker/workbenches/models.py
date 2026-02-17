@@ -1,13 +1,8 @@
-from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictStr
 
-
-class ManufacturingMethod(str, Enum):
-    CNC = "cnc"
-    THREE_DP = "3dp"
-    INJECTION_MOLDING = "im"
+from shared.enums import ManufacturingMethod
 
 
 class WorkbenchResult(BaseModel):

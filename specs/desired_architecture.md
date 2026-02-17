@@ -2049,8 +2049,6 @@ Validated under all environment randomization.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: LangGraph supports subagents this is what we'll use here.-->
 
-####
-
 #### Planner tools
 
 `validate_costing_and_price`. Will:
@@ -2097,6 +2095,12 @@ The CAD engineer agent run `simulate(),` will ask a reviewer agent to review. If
 #### Dealing with latency
 
 All Python tools require all files to be uploaded. While this is a very rare edge case that an agent would run code tool before the file was edited, we should ensure that this doesn't happen.
+
+### Part metadata
+
+Parts and Assemblies have metadata, e.g. `cots_id` for COTS parts, `material_id` for material parts, and others; e.g. `fixed: bool` for usage during benchmark generation.
+
+Define a classes `PartMetadata` and `CompoundMetadata` that can store all properties related to them. Without these mandatory fields, validation will fail.
 
 ### Assigning a part to workbenches
 
