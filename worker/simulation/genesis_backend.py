@@ -30,6 +30,8 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []  # wire_id -> dict
+        self.ctrl_map = {}  # actuator_name -> float
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
@@ -120,10 +122,6 @@ class GenesisBackend(PhysicsBackend):
         # T014: Particle visualization options from WP06
         self.scene = gs.Scene(
             show_viewer=False,
-            vis_options=gs.options.VisOptions(
-                particle_size=0.01,
-                render_particle=True,
-            ),
         )
         self.entities = {}
         self.entity_configs = {}
@@ -235,6 +233,7 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -596,8 +595,11 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        # In Genesis, sites are often just coordinate systems.
+        # If we have entity configs for them, we can update them there.
+        if site_name in self.entity_configs:
+            self.entity_configs[site_name]["pos"] = pos.tolist()
 
     def get_contact_forces(self) -> list[ContactForce]:
         if not self.scene:
@@ -617,7 +619,7 @@ class GenesisBackend(PhysicsBackend):
                         body1=c.entities[0].name,
                         body2=c.entities[1].name,
                         force=tuple(force.tolist()),
-                        pos=tuple(c.pos.cpu().numpy().tolist())
+                        position=tuple(c.pos.cpu().numpy().tolist())
                         if hasattr(c.pos, "cpu")
                         else tuple(c.pos.tolist()),
                         normal=tuple(c.normal.cpu().numpy().tolist())
@@ -630,7 +632,15 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        # Query entity_configs for zones (WP3 Forward Compatibility)
+        cfg = self.entity_configs.get(site_name)
+        if cfg:
+            return SiteState(
+                pos=tuple(cfg.get("pos", (0, 0, 0))),
+                quat=tuple(cfg.get("quat", (1, 0, 0, 0))),
+                size=tuple(cfg.get("size", (0.01, 0.01, 0.01))),
+            )
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
@@ -656,7 +666,7 @@ class GenesisBackend(PhysicsBackend):
             return ActuatorState(
                 force=force,
                 velocity=vel,
-                ctrl=0.0,
+                ctrl=self.ctrl_map.get(actuator_name, 0.0),
                 forcerange=(-1000, 1000),  # Default limit
             )
         except Exception:
@@ -664,6 +674,7 @@ class GenesisBackend(PhysicsBackend):
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value
+        self.ctrl_map.update(control_inputs)
         for motor in getattr(self, "motors", []):
             motor_id = motor["part_name"]
             if motor_id in control_inputs:
@@ -695,10 +706,12 @@ class GenesisBackend(PhysicsBackend):
         return [m["part_name"] for m in getattr(self, "motors", [])]
 
     def get_all_site_names(self) -> list[str]:
-        return []
+        # Return zones from entity_configs (WP3 Forward Compatibility)
+        return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        # Return wire IDs from cables list (WP3 Forward Compatibility)
+        return [c["wire_id"] for c in getattr(self, "cables", [])]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -732,7 +745,10 @@ class GenesisBackend(PhysicsBackend):
 
         return False
 
-    def get_tendon_tension(self, _tendon_name: str) -> float:
+    def get_tendon_tension(self, tendon_name: str) -> float:
+        # Genesis doesn't provide direct tendon tension yet,
+        # but we might be able to derive it from cable state if implemented.
+        # For now, return 0.0 or a placeholder.
         return 0.0
 
     def close(self) -> None:

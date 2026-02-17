@@ -939,6 +939,14 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
 
+        # 5. Add Electronics (Wires/Cables)
+        scene_data["cables"] = []
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                # Genesis cables are often represented as tendons or discrete cable entities
+                # For now, we store them in the JSON for the backend to handle
+                scene_data["cables"].append(wire.model_dump())
+
         scene_path = self.output_dir / "scene.json"
         with scene_path.open("w") as f:
             json.dump(scene_data, f, indent=2)

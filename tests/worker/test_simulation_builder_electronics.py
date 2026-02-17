@@ -19,8 +19,13 @@ def test_builder_wire_tendons(tmp_path):
     """T014: Verify that MuJoCo builder correctly injects tendons for wires."""
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
 
+    from shared.models.schemas import PartMetadata
+    meta = PartMetadata(material_id="aluminum_6061", is_fixed=True)
+
     box1 = Box(10, 10, 10)
+    box1.metadata = meta
     box2 = Box(10, 10, 10)
+    box2.metadata = meta
     box2.location = Location((50, 0, 0))
 
     assembly = Compound(children=[box1, box2])

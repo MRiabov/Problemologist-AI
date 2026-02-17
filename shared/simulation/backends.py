@@ -25,6 +25,7 @@ class ContactForce(BaseModel):
     body2: str
     force: tuple[float, float, float]
     position: tuple[float, float, float]
+    normal: tuple[float, float, float] | None = None
 
 
 class ActuatorState(BaseModel):

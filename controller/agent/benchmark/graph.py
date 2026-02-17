@@ -47,10 +47,10 @@ def define_graph():
     workflow.add_node("steer", steerability_node)
 
     # Define transitions
-    def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
+    def route_start(state: BenchmarkGeneratorState) -> Literal["cots_search", "coder"]:
         if state.session.status == SessionStatus.EXECUTING:
             return "coder"
-        return "planner"
+        return "cots_search"
 
     workflow.add_conditional_edges(START, route_start)
     workflow.add_edge("planner", "coder")

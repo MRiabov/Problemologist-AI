@@ -155,6 +155,7 @@ class SimulationLoop:
                         self.prev_particle_distances[obj_id] = distances
 
         self.electronics_manager = ElectronicsManager(self.electronics)
+        self.switch_states = self.electronics_manager.switch_states
         self.metric_collector = MetricCollector()
         self.success_evaluator = SuccessEvaluator(
             max_simulation_time=self.max_simulation_time,
@@ -162,11 +163,13 @@ class SimulationLoop:
         )
 
         # T015: derive is_powered_map from electronics.circuit state
+        self._electronics_dirty = False
         if self.electronics:
             self._update_electronics(force=True)
 
         # Reset metrics
         self.reset_metrics()
+
 
     def _update_electronics(self, force=False):
         """Update is_powered_map based on circuit state."""
@@ -306,20 +309,47 @@ class SimulationLoop:
 
             target_vel = 0.0
             target_pos = None
+            target_vel_vec = np.zeros(3)
             if target_body_name:
                 state = self.backend.get_body_state(target_body_name)
                 target_vel = np.linalg.norm(state.vel)
                 target_pos = state.pos
+                target_vel_vec = state.vel
 
-            # TODO: Get max stress from backend
+            # T012: Collect max stress from backend
             max_stress = 0.0
+            for bname in all_bodies:
+                field = self.backend.get_stress_field(bname)
+                if field is not None and len(field.stress) > 0:
+                    max_stress = max(max_stress, np.max(field.stress))
             self.metric_collector.update(dt, energy, target_vel, max_stress)
+
+            # T016: Update flow rate objectives
+            if self.objectives and self.objectives.objectives:
+                particles = self.backend.get_particle_positions()
+                if particles is not None and len(particles) > 0:
+                    for fo in self.objectives.objectives.fluid_objectives:
+                        if fo.type == "flow_rate":
+                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            p0 = np.array(fo.gate_plane_point)
+                            n = np.array(fo.gate_plane_normal)
+                            distances = np.dot(particles - p0, n)
+
+                            if obj_id in self.prev_particle_distances:
+                                prev_dist = self.prev_particle_distances[obj_id]
+                                # Ensure arrays match in size (particles might be added/removed, though usually constant in Genesis)
+                                min_len = min(len(distances), len(prev_dist))
+                                # A crossing occurs if sign changes
+                                crossed = (prev_dist[:min_len] < 0) & (distances[:min_len] >= 0)
+                                self.cumulative_crossed_count[obj_id] = self.cumulative_crossed_count.get(obj_id, 0) + np.sum(crossed)
+
+                            self.prev_particle_distances[obj_id] = distances
 
             # 4. Check Success/Failure conditions
             fail_reason = self.success_evaluator.check_failure(
                 current_time,
                 target_pos,
-                state.vel if target_pos is not None else np.zeros(3),
+                target_vel_vec,
             )
             if fail_reason:
                 self.fail_reason = fail_reason
@@ -531,15 +561,6 @@ class SimulationLoop:
             is_success = False
 
         metrics = self.metric_collector.get_metrics()
-
-        if fail_reason:
-            is_success = False
-        elif self.goal_sites:
-            is_success = self.success
-        elif has_other_objectives:
-            is_success = True
-        else:
-            is_success = False
 
         return SimulationMetrics(
             total_time=current_time,
