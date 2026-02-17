@@ -1287,6 +1287,14 @@ All intermediate and final simulation artifacts (GLB models, STLs, renders) are 
 - **Security**: The worker enforces a syntax check (heuristic-based) on the source Python file when an asset is requested. If the source file contains red (syntax) errors, the asset request is refused with a `422 Unprocessable Entity` to prevent stale or broken models from being rendered.
 - **Session Isolation**: Assets are delivered within the context of an `X-Session-ID` header, ensuring that one session cannot access assets from another.
 
+#### Concurrency and Parallelism
+
+To support concurrent simulation requests (e.g., during integration testing or parallel benchmarking), the worker utilizes a **Process-level isolation** strategy:
+
+- **ProcessPoolExecutor**: Simulations are offloaded to a `ProcessPoolExecutor`.
+- **Backend Isolation**: This is strictly required for the `Genesis` physics backend, which enforces execution on the "main thread" and has global state issues. Process isolation ensures each simulation runs in a fresh environment.
+- **Resource Cleanup**: We use `max_tasks_per_child=1` in the executor to ensure that any potential memory leaks or corrupted global state in physics backends do not affect subsequent simulations.
+
 ### Persistent state and durable execution
 
 To simplify app logic and avoid writing retry and other "safety" logic, we will deploy a small `temporal` instance running on a separate small machine next to the main app.

@@ -20,19 +20,10 @@ from shared.simulation.backends import (
     StressField,
 )
 
-import threading
-
 logger = structlog.get_logger(__name__)
-
-# Global lock for Genesis operations since the engine has shared state issues
-GENESIS_GLOBAL_LOCK = threading.Lock()
 
 
 class GenesisBackend(PhysicsBackend):
-    @property
-    def sim_lock(self) -> threading.Lock:
-        return GENESIS_GLOBAL_LOCK
-
     def __init__(self):
         self.scene = None
         self.entities = {}  # name -> gs.Entity

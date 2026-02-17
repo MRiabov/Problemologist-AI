@@ -1,6 +1,8 @@
 import ast
 import json
+import os
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +26,7 @@ from worker.workbenches.models import WorkbenchResult
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import simulate, submit_for_review, validate, validate_and_price
+from ..utils import submit_for_review, validate, validate_and_price
 from ..utils.git import (
     abort_merge,
     commit_all,
@@ -361,47 +363,66 @@ async def execute_code(
 
 import asyncio
 
-# Global semaphore to limit concurrent simulations
-# Spec: "only one can simulate"
-SIMULATION_SEMAPHORE = asyncio.Semaphore(1)
+# Global lock to ensure only one simulation/render runs at a time cross-session
+HEAVY_OPERATION_LOCK = asyncio.Lock()
 
 
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Physics-backed stability check in isolated session."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
+        from shared.simulation.schemas import SimulatorBackendType
+        from worker.utils.validation import simulate
 
-        # Enforce single concurrent simulation
-        async with SIMULATION_SEMAPHORE:
+        # Serialize heavy operations
+        async with HEAVY_OPERATION_LOCK:
+            # Load component
+            component = load_component_from_script(
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
+            )
+
+            # Determine backend type
+            backend_type = request.backend
+            if isinstance(backend_type, str):
+                backend_type = SimulatorBackendType(backend_type)
+
+            # Run simulation in this process (it's safe now with the lock and session cache)
+            # simulate() will handle output_dir and results.
+            # We use to_thread to keep the loop responsive while simulating.
             result = await asyncio.to_thread(
                 simulate,
                 component,
                 output_dir=fs_router.local_backend.root,
                 smoke_test_mode=request.smoke_test_mode,
-                backend=request.backend,
+                backend=backend_type,
+                session_id=x_session_id,
             )
+
+        # Reconstruct model if needed
+        render_paths = result.render_paths
+        mjcf_content = result.mjcf_content
+        stress_summaries = [s.model_dump() for s in result.stress_summaries]
+        fluid_metrics = [m.model_dump() for m in result.fluid_metrics]
+        summary = result.summary
+        success = result.success
+        confidence = result.confidence
+
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
-            success=result.success,
-            message=result.summary,
-            confidence=result.confidence,
+            success=success,
+            message=summary,
+            confidence=confidence,
             artifacts={
-                "render_paths": result.render_paths,
-                "mjcf_content": result.mjcf_content,
-                "stress_summaries": [s.model_dump() for s in result.stress_summaries]
-                if result.stress_summaries
-                else [],
-                "fluid_metrics": [m.model_dump() for m in result.fluid_metrics]
-                if result.fluid_metrics
-                else [],
+                "render_paths": render_paths,
+                "mjcf_content": mjcf_content,
+                "stress_summaries": stress_summaries,
+                "fluid_metrics": fluid_metrics,
             },
             events=events,
         )
@@ -414,53 +435,60 @@ async def api_simulate(
 @router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
 async def api_validate(
     request: BenchmarkToolRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Geometric validity check in isolated session."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
-        # Geometric validation
-        is_valid, message = validate(component, output_dir=fs_router.local_backend.root)
+        async with HEAVY_OPERATION_LOCK:
+            component = load_component_from_script(
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
+            )
+            # Geometric validation
+            is_valid, message = await asyncio.to_thread(
+                validate,
+                component,
+                output_dir=fs_router.local_backend.root,
+                session_id=x_session_id,
+            )
 
-        # INT-102: Fetch objectives to check if FEM material validation is required
-        working_dir = fs_router.local_backend.root
-        obj_path = working_dir / "objectives.yaml"
-        if is_valid and obj_path.exists():
-            try:
-                import yaml
+            # INT-102: Fetch objectives to check if FEM material validation is required
+            working_dir = fs_router.local_backend.root
+            obj_path = working_dir / "objectives.yaml"
+            if is_valid and obj_path.exists():
+                try:
+                    import yaml
 
-                from shared.models.schemas import ObjectivesYaml
-                from worker.utils.dfm import validate_and_price
-                from worker.workbenches.config import load_config
-                from worker.workbenches.models import ManufacturingMethod
+                    from shared.models.schemas import ObjectivesYaml
+                    from worker.utils.dfm import validate_and_price
+                    from worker.workbenches.config import load_config
+                    from worker.workbenches.models import ManufacturingMethod
 
-                data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
-                objectives = ObjectivesYaml(**data)
-                if objectives.physics and objectives.physics.fem_enabled:
-                    config = load_config()
-                    # Check for custom config in working dir
-                    custom_config_path = working_dir / "manufacturing_config.yaml"
-                    if custom_config_path.exists():
-                        config = load_config(str(custom_config_path))
+                    data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+                    objectives = ObjectivesYaml(**data)
+                    if objectives.physics and objectives.physics.fem_enabled:
+                        config = load_config()
+                        # Check for custom config in working dir
+                        custom_config_path = working_dir / "manufacturing_config.yaml"
+                        if custom_config_path.exists():
+                            config = load_config(str(custom_config_path))
 
-                    val_report = validate_and_price(
-                        component,
-                        ManufacturingMethod.CNC,
-                        config,
-                        fem_required=True,
-                    )
-                    if not val_report.is_manufacturable:
-                        is_valid = False
-                        msg = "Material validation failed: " + "; ".join(
-                            map(str, val_report.violations)
+                        val_report = validate_and_price(
+                            component,
+                            ManufacturingMethod.CNC,
+                            config,
+                            fem_required=True,
                         )
-                        message = (message + "; " + msg) if message else msg
-            except Exception as e:
-                logger.warning("api_validate_fem_check_failed", error=str(e))
+                        if not val_report.is_manufacturable:
+                            is_valid = False
+                            msg = "Material validation failed: " + "; ".join(
+                                map(str, val_report.violations)
+                            )
+                            message = (message + "; " + msg) if message else msg
+                except Exception as e:
+                    logger.warning("api_validate_fem_check_failed", error=str(e))
 
         # INT-018: Record validation results to satisfy the handover gate
         results_path = fs_router.local_backend.root / "validation_results.json"
@@ -516,13 +544,15 @@ async def api_analyze(
             except Exception:
                 pass
 
-        result = validate_and_price(
-            component,
-            request.method,
-            config,
-            quantity=request.quantity,
-            fem_required=fem_required,
-        )
+        async with HEAVY_OPERATION_LOCK:
+            result = await asyncio.to_thread(
+                validate_and_price,
+                component,
+                request.method,
+                config,
+                quantity=request.quantity,
+                fem_required=fem_required,
+            )
 
         # INT-018: Record validation results to satisfy the handover gate
         results_path = fs_router.local_backend.root / "validation_results.json"
@@ -640,12 +670,14 @@ async def api_preview(
             session_root=fs_router.local_backend.root,
         )
 
-        image_path = preview_design(
-            component,
-            pitch=request.pitch,
-            yaw=request.yaw,
-            output_dir=fs_router.local_backend.root / "renders",
-        )
+        async with HEAVY_OPERATION_LOCK:
+            image_path = await asyncio.to_thread(
+                preview_design,
+                component,
+                pitch=request.pitch,
+                yaw=request.yaw,
+                output_dir=fs_router.local_backend.root / "renders",
+            )
         events = _collect_events(fs_router)
 
         return PreviewDesignResponse(
@@ -738,24 +770,26 @@ async def api_lint(
 @router.post("/benchmark/build", response_model=BenchmarkToolResponse)
 async def api_build(
     request: PreviewDesignRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Rebuild simulation assets (GLB) from source without running full simulation."""
     try:
-        # Load component
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-        )
+        async with HEAVY_OPERATION_LOCK:
+            # Load component
+            component = load_component_from_script(
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+            )
 
-        # Get builder
-        from worker.simulation.factory import get_simulation_builder
+            # Get builder
+            from worker.simulation.factory import get_simulation_builder
 
-        builder = get_simulation_builder(fs_router.local_backend.root)
+            builder = get_simulation_builder(fs_router.local_backend.root)
 
-        # Build assets (GLB/OBJ/Scene)
-        # We don't need objectives/moving_parts for basic visualization rebuild
-        scene_path = builder.build_from_assembly(component)
+            # Build assets (GLB/OBJ/Scene)
+            # We don't need objectives/moving_parts for basic visualization rebuild
+            scene_path = await asyncio.to_thread(builder.build_from_assembly, component)
 
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(

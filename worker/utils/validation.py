@@ -332,6 +332,7 @@ def simulate(
     particle_budget: int | None = None,
     smoke_test_mode: bool = False,
     backend: SimulatorBackendType | None = None,
+    session_id: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     logger.info(
@@ -339,6 +340,7 @@ def simulate(
         fem_enabled=fem_enabled,
         particle_budget=particle_budget,
         backend=backend,
+        session_id=session_id,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     renders_dir = working_dir / "renders"
@@ -388,6 +390,7 @@ def simulate(
         electronics=electronics,
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
+        session_id=session_id,
     )
 
     dynamic_controllers = {}
@@ -435,7 +438,10 @@ def simulate(
         )
 
         render_paths = prerender_24_views(
-            component, output_dir=str(renders_dir), backend_type=backend_type
+            component,
+            output_dir=str(renders_dir),
+            backend_type=backend_type,
+            session_id=session_id,
         )
         if video_path.exists():
             render_paths.append(str(video_path))
@@ -481,10 +487,13 @@ def simulate(
 
 
 def validate(
-    component: Compound, build_zone: dict | None = None, output_dir: Path | None = None
+    component: Compound,
+    build_zone: dict | None = None,
+    output_dir: Path | None = None,
+    session_id: str | None = None,
 ) -> tuple[bool, str | None]:
     """Verify geometric validity."""
-    logger.info("validate_start")
+    logger.info("validate_start", session_id=session_id)
     solids = component.solids()
     if len(solids) > 1:
         for i in range(len(solids)):
@@ -538,7 +547,12 @@ def validate(
                 except Exception:
                     pass
 
-        prerender_24_views(component, output_dir=renders_dir, backend_type=backend_type)
+        prerender_24_views(
+            component,
+            output_dir=renders_dir,
+            backend_type=backend_type,
+            session_id=session_id,
+        )
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))
 
