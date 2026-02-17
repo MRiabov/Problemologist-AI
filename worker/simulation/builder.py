@@ -910,7 +910,25 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())
 
-        # 4. Add Fluid Objectives
+        # 4. Add Electronics (Wires/Cables)
+        scene_data["cables"] = []
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                # Store cable info including waypoints and gauge
+                cable_info = {
+                    "wire_id": wire.wire_id,
+                    "from": wire.from_terminal.model_dump(),
+                    "to": wire.to_terminal.model_dump(),
+                    "gauge_awg": wire.gauge_awg,
+                    "length_mm": wire.length_mm,
+                    "waypoints": [list(pt) for pt in wire.waypoints],
+                }
+                scene_data["cables"].append(cable_info)
+
+        # 5. Add Fluid Objectives
         if (
             objectives
             and hasattr(objectives.objectives, "fluid_objectives")
