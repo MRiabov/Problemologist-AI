@@ -1,12 +1,11 @@
-import logging
 import os
 import uuid
 from pathlib import Path
 
-from langchain_core.messages import SystemMessage
+import dspy
+import structlog
+from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState
@@ -17,14 +16,27 @@ from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+
+class SkillsSignature(dspy.Signature):
+    """
+    Skills node: Analyzes the journal to suggest new skills.
+    You must use the provided tools to analyze the work and save new skills.
+    If you identify a valuable skill or pattern, use the `save_suggested_skill` tool to record it.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    task = dspy.InputField()
+    journal = dspy.InputField()
+    summary = dspy.OutputField(desc="A summary of the skills identified and saved")
 
 
 @type_check
 class SkillsNode(BaseNode):
     """
     Skills node: Analyzes the journal to suggest new skills.
-    Refactored to use create_react_agent and GitManager.
+    Refactored to use DSPy CodeAct with remote worker execution.
     """
 
     def __init__(
@@ -47,10 +59,9 @@ class SkillsNode(BaseNode):
     async def __call__(
         self, state: AgentState, config: RunnableConfig | None = None
     ) -> AgentState:
-        """Execute the sidecar node logic using ReAct agent."""
+        """Execute the sidecar node logic using DSPy CodeAct."""
+        from controller.agent.dspy_utils import WorkerInterpreter
 
-        # Define the specialized tool for suggesting skills
-        @tool
         async def save_suggested_skill(title: str, content: str) -> str:
             """
             Saves a new suggested skill to the repository.
@@ -60,6 +71,18 @@ class SkillsNode(BaseNode):
             """
             clean_title = title.strip().lower().replace(" ", "_").replace(".md", "")
             file_path = self.suggested_skills_dir / f"{clean_title}.md"
+
+            # T030: Safety toggle for deletions
+            if file_path.exists():
+                import difflib
+                old_lines = file_path.read_text().splitlines()
+                new_lines = content.splitlines()
+                diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
+                # Count lines starting with '-' but not '---'
+                deletions = sum(1 for line in diff if line.startswith('-') and not line.startswith('---'))
+                if deletions > 15:
+                    logger.warning("skill_update_blocked_too_many_deletions", deletions=deletions)
+                    return f"Error: Update blocked. You deleted {deletions} lines, but the limit is 15 lines of deletion to prevent skill loss."
 
             try:
                 with file_path.open("w") as f:
@@ -81,48 +104,37 @@ class SkillsNode(BaseNode):
             except Exception as e:
                 return f"Error saving skill: {e}"
 
-        # Get common tools + specialized tool
-        common_tools = get_engineer_tools(self.ctx.fs, self.ctx.session_id)
-        tools = common_tools + [save_suggested_skill]
+        # Use WorkerInterpreter for remote execution (though save_suggested_skill is local to controller)
+        interpreter = WorkerInterpreter(
+            worker_client=self.ctx.worker_client, session_id=state.session_id
+        )
 
-        agent = create_react_agent(self.ctx.llm, tools)
+        # Get tool signatures for DSPy
+        tool_fns = self._get_tool_functions(get_engineer_tools)
+        # Add the specialized local tool
+        tool_fns["save_suggested_skill"] = save_suggested_skill
 
-        prompt = self.ctx.pm.render("sidecar", journal=state.journal, task=state.task)
-        # Add explicit direction to use the tool
-        prompt += "\n\nIf you identify a valuable skill or pattern, use the `save_suggested_skill` tool to record it."
-
-        messages = [SystemMessage(content=prompt)]
+        program = dspy.CodeAct(
+            SkillsSignature, tools=list(tool_fns.values()), interpreter=interpreter
+        )
 
         try:
-            # Observability
-            callbacks = self._get_callbacks(name="skills", session_id=state.session_id)
-            # Merge with existing callbacks if any
-            if config and config.get("callbacks"):
-                callbacks.extend(config.get("callbacks"))
+            with dspy.settings.context(lm=self.ctx.dspy_lm):
+                logger.info("skills_dspy_invoke_start", session_id=state.session_id)
+                prediction = program(
+                    task=state.task,
+                    journal=state.journal,
+                )
+                logger.info("skills_dspy_invoke_complete", session_id=state.session_id)
 
-            result = await agent.ainvoke(
-                {"messages": messages}, config={"callbacks": callbacks}
-            )
-            final_messages = result["messages"]
-
-            # Check if any skills were suggested by looking for tool calls
-            suggested_count = 0
-            for msg in final_messages:
-                if hasattr(msg, "tool_calls") and msg.tool_calls:
-                    for tc in msg.tool_calls:
-                        if tc["name"] == "save_suggested_skill":
-                            suggested_count += 1
-
-            journal_entry = (
-                f"\nSidecar Learner: Identified and recorded {suggested_count} new skills."
-                if suggested_count > 0
-                else "\nSidecar Learner: No new skills identified."
-            )
+            summary = getattr(prediction, "summary", "No summary provided.")
+            journal_entry = f"\nSidecar Learner: {summary}"
 
             return state.model_copy(
                 update={
                     "journal": state.journal + journal_entry,
-                    "messages": state.messages + final_messages,
+                    "messages": state.messages
+                    + [AIMessage(content=f"Skills update: {summary}")],
                 }
             )
         except Exception as e:
@@ -130,6 +142,8 @@ class SkillsNode(BaseNode):
             return state.model_copy(
                 update={"journal": state.journal + f"\n[Skills] System error: {e}"}
             )
+        finally:
+            interpreter.shutdown()
 
 
 # Factory function for LangGraph

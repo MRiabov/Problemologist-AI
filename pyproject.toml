@@ -30,6 +30,7 @@ dependencies = [
     "uvicorn>=0.40.0",
     "httpx>=0.28.1",
     "structlog>=25.5.0",
+    "dspy-ai>=2.5.43",
     "s3fs>=2026.2.0",
     "temporalio>=1.22.0",
     "asyncpg>=0.31.0",
