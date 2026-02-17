@@ -48,7 +48,15 @@ constraints:
         )
 
         # 2. Simple box script
-        script = "from build123d import *; def build(): return Box(1, 1, 1)"
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+"""
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={"path": "script.py", "content": script},
@@ -117,7 +125,15 @@ constraints: {max_unit_cost: 100, max_weight: 10}
             f"{WORKER_URL}/fs/write",
             json={
                 "path": "script.py",
-                "content": "from build123d import *; def build(): return Box(1,1,1)",
+                "content": """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+""",
             },
             headers={"X-Session-ID": session_id},
         )
@@ -195,7 +211,15 @@ constraints: {max_unit_cost: 100, max_weight: 10}
             f"{WORKER_URL}/fs/write",
             json={
                 "path": "script.py",
-                "content": "from build123d import *; def build(): return Box(1,1,1)",
+                "content": """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+""",
             },
             headers={"X-Session-ID": session_id},
         )
@@ -244,7 +268,15 @@ constraints: {max_unit_cost: 100, max_weight: 10}
             f"{WORKER_URL}/fs/write",
             json={
                 "path": "script.py",
-                "content": "from build123d import *; def build(): return Box(1,1,1)",
+                "content": """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+""",
             },
             headers={"X-Session-ID": session_id},
         )

@@ -28,8 +28,12 @@ async def test_int_108_tetrahedralization_pipeline(session_id, base_headers):
         # 1. Write a valid STL script
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 def build():
-    return Box(10, 10, 10)
+    p = Box(10, 10, 10)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
 """
         await client.post(
             f"{WORKER_URL}/fs/write",

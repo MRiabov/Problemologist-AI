@@ -64,11 +64,14 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         # Script using a material that LACKS FEM fields (aluminum_6061 from default config)
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "test_part"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum_6061"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum_6061"
+    )
     return p
 """
         await setup_fem_workspace(
@@ -142,12 +145,15 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         # Script with a part that will surely break (high force/stress expected)
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     # Large box to ensure it interacts/stresses
     p = Box(10, 10, 1)
     p.label = "test_part"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "fragile_material"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="fragile_material"
+    )
     return p
 """
         await setup_fem_workspace(
@@ -213,11 +219,14 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 """
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "steel_part"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "steel"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="steel"
+    )
     return p
 """
         await setup_fem_workspace(
@@ -297,11 +306,14 @@ cnc:
 
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "weak_link"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "strong_steel"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="strong_steel"
+    )
     return p
 """
         await setup_fem_workspace(
@@ -343,6 +355,7 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         # Script with overlapping high-density parts to cause explosion
         script_content = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     p1 = Box(10, 10, 10).move(Location((0,0,0)))
@@ -350,8 +363,12 @@ def build():
     p1.label = "part1"
     p2.label = "part2"
     # Overwrite default density to be huge
-    p1.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "heavy"}
-    p2.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "heavy"}
+    p1.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="heavy"
+    )
+    p2.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="heavy"
+    )
     return Compound(children=[p1, p2])
 """
         custom_config = """

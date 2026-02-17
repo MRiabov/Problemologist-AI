@@ -91,6 +91,7 @@ def valid_cost():
 def minimal_script():
     return """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     # Box 10x10x10 centered at (0,0,5) -> Z from 0 to 10.
@@ -98,7 +99,9 @@ def build():
     p = Box(10, 10, 10)
     p = p.move(Location((0, 0, 5)))
     p.label = "test_part"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum-6061"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
     return p
 """
 
@@ -483,12 +486,15 @@ async def test_int_019_hard_constraints_gates(
         # Box translated to (1000, 1000, 1000) will be outside [ -50, 50 ]
         oob_script = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.workbenches.models import ManufacturingMethod
 def build():
     p = Box(10, 10, 10)
     p = p.move(Location((1000, 1000, 1000)))
     p.label = "oob_part"
-    p.metadata = {"manufacturing_method": ManufacturingMethod.CNC, "material_id": "aluminum-6061"}
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
     return p
 """
         files = {

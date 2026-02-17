@@ -2113,17 +2113,17 @@ So suppose the agent's code is as follows:
 
 ```py
 from build123d import *
-from utils import ManufacturingMethod, submit # mock
-from src.workbenches import validate_and_price
+from shared.models.schemas import PartMetadata
+from shared.enums import ManufacturingMethod
 
 with BuildPart() as part_builder:
     Box(10,10,10)
 
-part_builder.part.label="custom_label".
-part_builder.part.metadata = {
-  "manufacturing_method": ManufacturingMethod.CNC 
-  "material-id": "aluminum-6061"
-}
+part_builder.part.label="custom_label"
+part_builder.part.metadata = PartMetadata(
+    manufacturing_method=ManufacturingMethod.CNC,
+    material_id="aluminum-6061"
+)
 
 validate_and_price(part_builder.part) # prints ("Part {label} is valid, the unit price at XYZ pcs is ...)
 ```

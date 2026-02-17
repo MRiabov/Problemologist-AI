@@ -51,8 +51,13 @@ async def test_int_002_controller_worker_execution_boundary():
             if status_resp.status_code == 200:
                 status = status_resp.json()["status"]
                 if status == "failed":
-                    print(f"INT-002 DEBUG STATUS: {status_resp.json()}")
-                    pytest.fail("Agent run failed")
+                    msg = (
+                        status_resp.json().get("metadata", {}).get("error")
+                        or "Agent run failed"
+                    )
+                    pytest.fail(
+                        f"Agent run failed: {msg}. Full status: {status_resp.json()}"
+                    )
                 if status == "completed":
                     completed = True
                     break
@@ -93,11 +98,14 @@ async def test_int_004_simulation_serialization():
         session_id_1 = f"test-ser-1-{int(time.time())}"
         session_id_2 = f"test-ser-2-{int(time.time())}"
 
-        # Simple valid script for both
         script = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 def build():
-    return Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    b = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    b.label = "box"
+    b.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return b
 """
         # Write scripts
         await asyncio.gather(
@@ -196,15 +204,16 @@ constraints:
             headers={"X-Session-ID": session_id},
         )
 
-        # 2. Write a script that places a box in the forbid zone
         script_fail = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 def build():
     with BuildPart() as p:
         Box(2, 2, 2, align=(Align.CENTER, Align.CENTER, Align.CENTER))
     # Move to forbid zone center (3.5, 3.5, 3.5)
     p.part.move(Location((3.5, 3.5, 3.5)))
     p.part.label = "target_box"
+    p.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
     return p.part
 """
         await client.post(
@@ -407,13 +416,17 @@ async def test_int_023_fastener_validity_rules():
         # Let's verify that a valid fastener hole is created and validated.
         script_valid = """
 from build123d import *
+from shared.models.schemas import PartMetadata
 from worker.utils.cad import fastener_hole, HoleType
 
 def build():
     # Minimal boolean script to see if it crashes worker
     p1 = Box(10, 10, 10)
     p2 = Cylinder(2, 20).move(Location((0,0,0)))
-    return p1.cut(p2)
+    res = p1.cut(p2)
+    res.label = "valid_part"
+    res.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return res
 """
         await client.post(
             f"{WORKER_URL}/fs/write",

@@ -42,9 +42,10 @@ def test_model_produced_script_integration(tmp_path):
                     Rectangle(width, 0.1)
                 extrude(amount=0.05)
             
+            from shared.models.schemas import PartMetadata
             part = p.part
             part.label = "target_box"
-            part.metadata = {"material_id": "aluminum-6061"}
+            part.metadata = PartMetadata(material_id="aluminum-6061")
             
             # Simple MJCF that uses the mesh
             mjcf_xml = f'''

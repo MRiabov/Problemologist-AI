@@ -57,6 +57,7 @@ constraints:
 import os
 import sys
 from build123d import *
+from shared.models.schemas import PartMetadata
 from shared.observability.events import emit_event
 from worker.utils.cad import fastener_hole, HoleType
 
@@ -74,7 +75,10 @@ def build():
     # For now, explicit emit is the most reliable "black box" check of the PIPELINE
     emit_event({"event_type": "tool_call", "data": {"tool": "fastener_hole", "args": {"type": "M3"}}})
 
-    return Box(1, 1, 1)
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
