@@ -27,7 +27,10 @@ from worker.api.schema import EditOp
 
 
 class RemoteFilesystemMiddleware:
-    """Middleware that proxies filesystem operations to a remote Worker, with durable execution via Temporal."""
+    """
+    Middleware that proxies filesystem operations to a remote Worker,
+    with durable execution via Temporal.
+    """
 
     def __init__(self, client: WorkerClient, temporal_client: Client | None = None):
         self.client = client
@@ -140,7 +143,8 @@ class RemoteFilesystemMiddleware:
                 # Sync to Asset table for Explorer visibility
                 await sync_asset(episode_id, p_str, content)
             except ValueError:
-                # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
+                # If session_id is not a UUID, we can't broadcast
+                # (standard in some dev/test setups)
                 pass
             except Exception:
                 # Don't fail the write operation if broadcast fails
@@ -160,7 +164,8 @@ class RemoteFilesystemMiddleware:
         )
         success = await self.client.edit_file(p_str, edits)
         if success:
-            # For edits, we read the file back to get the updated content for the Asset table
+            # For edits, we read the file back to get the updated
+            # content for the Asset table
             try:
                 content = await self.client.read_file(p_str)
                 await sync_asset(self.client.session_id, p_str, content)
@@ -170,14 +175,17 @@ class RemoteFilesystemMiddleware:
         return success
 
     async def run_command(self, code: str, timeout: int = 30) -> dict[str, Any]:
-        """Execute a command (Python code) via the Worker client, wrapped in Temporal for durability."""
+        """
+        Execute a command (Python code) via the Worker client,
+        wrapped in Temporal for durability.
+        """
         await record_worker_events(
             episode_id=self.client.session_id,
             events=[RunCommandToolEvent(command=code)],
         )
         if self.temporal_client:
             # Wrap in Temporal workflow for durability
-            result = await self.temporal_client.execute_workflow(
+            return await self.temporal_client.execute_workflow(
                 ScriptExecutionWorkflow.run,
                 {
                     "code": code,
@@ -187,7 +195,6 @@ class RemoteFilesystemMiddleware:
                 id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
                 task_queue="simulation-task-queue",
             )
-            return result
         # Fallback to direct client call if Temporal is not available
         result = await self.client.execute_python(code, timeout=timeout)
         return result.model_dump()
@@ -211,7 +218,7 @@ class RemoteFilesystemMiddleware:
     async def simulate(
         self,
         script_path: str | Path,
-        backend: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
     ) -> dict[str, Any]:
         """Trigger physics simulation via worker client."""
         p_str = str(script_path)

@@ -14,10 +14,11 @@ def get_benchmark_tools(
 
     @tool
     async def simulate(
-        script_path: str, backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+        script_path: str, backend: SimulatorBackendType = SimulatorBackendType.GENESIS
     ) -> dict:
         """Run physics simulation for the benchmark.
-        Use MUJOCO for rigid body only, GENESIS for fluids or FEM.
+        Genesis is used by default. MuJoCo can be selected for fast
+        rigid-body only runs.
         """
         return await fs.simulate(script_path, backend=backend)
 
