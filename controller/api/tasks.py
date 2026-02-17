@@ -161,7 +161,7 @@ async def execute_agent_task(
                     session = GenerationSession(
                         session_id=u_session_id,
                         prompt=task,
-                        status=SessionStatus.planning,
+                        status=SessionStatus.PLANNING,
                     )
                     initial_input = {
                         "session": session,

@@ -14,7 +14,7 @@ def test_servo_motor_emission():
         servo = ServoMotor(size="SG90")
 
         # Verify metadata
-        assert servo.metadata["part_number"] == "SG90"
+        assert servo.metadata.cots_id == "SG90"
         assert servo.label == "motor_SG90"
 
         # Verify event emission

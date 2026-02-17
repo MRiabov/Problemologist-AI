@@ -39,6 +39,7 @@ class AssemblyPartData(BaseModel):
     joint_axis: list[float] | None = None
     joint_range: list[float] | None = None
     material_id: str | None = None
+    cots_id: str | None = None
     is_electronics: bool = False
     is_zone: bool = False
     zone_type: str | None = None
@@ -76,6 +77,7 @@ class CommonAssemblyTraverser:
                     euler=euler,
                     is_fixed=meta["is_fixed"],
                     material_id=meta["material_id"],
+                    cots_id=meta["cots_id"],
                     joint_type=meta["joint_type"],
                     joint_axis=meta["joint_axis"],
                     joint_range=meta["joint_range"],
@@ -104,7 +106,7 @@ class CommonAssemblyTraverser:
 
     @staticmethod
     def _resolve_part_metadata(child: Any) -> dict[str, Any]:
-        from shared.models.schemas import PartMetadata
+        from shared.models.schemas import CompoundMetadata, PartMetadata
 
         metadata = getattr(child, "metadata", None)
         if metadata is None:
@@ -114,6 +116,7 @@ class CommonAssemblyTraverser:
                 return {
                     "is_fixed": True,
                     "material_id": None,
+                    "cots_id": None,
                     "joint_type": None,
                     "joint_axis": None,
                     "joint_range": None,
@@ -121,11 +124,21 @@ class CommonAssemblyTraverser:
 
             raise ValueError(
                 f"Part '{label or 'unknown'}' is missing required metadata. "
-                "Every part must have a .metadata attribute (PartMetadata)."
+                "Every part must have a .metadata attribute "
+                "(PartMetadata or CompoundMetadata)."
             )
 
         if isinstance(metadata, dict):
-            metadata = PartMetadata(**metadata)
+            try:
+                metadata = PartMetadata(**metadata)
+            except Exception:
+                try:
+                    metadata = CompoundMetadata(**metadata)
+                except Exception as e:
+                    label_str = getattr(child, "label", "unknown")
+                    raise ValueError(
+                        f"Invalid metadata for part '{label_str}': {e}"
+                    ) from e
 
         joint_type, joint_axis, joint_range = None, None, None
         if metadata.joint:
@@ -135,7 +148,8 @@ class CommonAssemblyTraverser:
 
         return {
             "is_fixed": metadata.is_fixed,
-            "material_id": metadata.material_id,
+            "material_id": getattr(metadata, "material_id", None),
+            "cots_id": getattr(metadata, "cots_id", None),
             "joint_type": joint_type,
             "joint_axis": joint_axis,
             "joint_range": joint_range,
@@ -260,7 +274,9 @@ class MeshProcessor:
         return output_paths
 
     def export_topology_glb(self, part: Solid | Compound, filepath: Path):
-        """Exports the part to GLB with separate meshes for faces to allow selection in UI."""
+        """
+        Exports the part to GLB with separate meshes for faces to allow selection in UI.
+        """
         scene = trimesh.Scene()
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -280,9 +296,11 @@ class MeshProcessor:
                         face_mesh = face_mesh.dump(concatenate=True)
 
                     # Add to scene with specific name for UI selection
-                    # The node name is what allows the frontend to identify it as 'face_X'
+                    # The node name allows the frontend to identify it as 'face_X'
                     scene.add_geometry(
-                        face_mesh, node_name=f"face_{i}", geom_name=f"face_{i}_geom"
+                        face_mesh,
+                        node_name=f"face_{i}",
+                        geom_name=f"face_{i}_geom",
                     )
                 except Exception as e:
                     logger.warning(f"failed_to_export_face_{i}", error=str(e))
@@ -387,9 +405,8 @@ class SceneCompiler:
     ):
         """Adds a site to the worldbody or a specific body."""
         parent = self.worldbody
-        if parent_body_name:
-            if parent_body_name in self.body_elements:
-                parent = self.body_elements[parent_body_name]
+        if parent_body_name and parent_body_name in self.body_elements:
+            parent = self.body_elements[parent_body_name]
 
         attrs = {"name": name, "pos": " ".join(map(str, pos)), "size": str(size)}
         if rgba:
@@ -555,7 +572,7 @@ class SceneCompiler:
         xml_str = ET.tostring(self.root, encoding="utf-8")
         pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
+        with path.open("w") as f:
             f.write(pretty_xml)
 
 
@@ -645,6 +662,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
+        cots_lookup = {d.label: d.cots_id for d in parts_data}
 
         for data in parts_data:
             if data.constraint and data.constraint.startswith("weld:"):
@@ -704,6 +722,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                         name=mp.part_name,
                         joint=f"{mp.part_name}_joint",
                         actuator_type="position",  # Defaulting to position for servos
+                        cots_id=cots_lookup.get(mp.part_name),
                     )
 
         # 4. Add Electronics (Wires/Tendons)
@@ -760,8 +779,9 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     # Width scaling: AWG 10 is ~2.5mm, AWG 20 is ~0.8mm
                     # Simple linear approx:
                     width = 0.001 + (20 - wire.gauge_awg) * 0.0001
-                    # Wire material properties: Copper has high stiffness, but tendons are 1D
-                    # We use a value that prevents too much stretching
+                    # Wire material properties:
+                    # Copper has high stiffness, but tendons are 1D.
+                    # We use a value that prevents too much stretching.
                     stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
                     self.compiler.add_spatial_tendon(
                         name=wire.wire_id,
@@ -920,7 +940,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 scene_data["objectives"].append(fo.model_dump())
 
         scene_path = self.output_dir / "scene.json"
-        with open(scene_path, "w") as f:
+        with scene_path.open("w") as f:
             json.dump(scene_data, f, indent=2)
 
         return scene_path

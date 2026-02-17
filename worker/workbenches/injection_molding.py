@@ -259,15 +259,17 @@ def analyze_im(
         violations=len(violations),
     )
 
+    from worker.workbenches.models import WorkbenchMetadata
+
     return WorkbenchResult(
         is_manufacturable=is_manufacturable,
         unit_cost=cost_breakdown.unit_cost,
         weight_g=weight_g,
         violations=violations,
-        metadata={
-            "cost_breakdown": cost_breakdown.model_dump(),
-            "undercut_count": len(real_undercuts),
-        },
+        metadata=WorkbenchMetadata(
+            cost_breakdown=cost_breakdown,
+            undercut_count=len(real_undercuts),
+        ),
     )
 
 

@@ -5,19 +5,41 @@ from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictStr
 from shared.enums import ManufacturingMethod
 
 
-class WorkbenchResult(BaseModel):
-    is_manufacturable: StrictBool
-    unit_cost: StrictFloat
-    weight_g: StrictFloat = 0.0
-    violations: list[StrictStr] = Field(default_factory=list)
-    metadata: dict[StrictStr, Any] = Field(default_factory=dict)
-
-
 class BuildZone(BaseModel):
     """Defines the spatial bounds within which a design must fit."""
 
     min: tuple[float, float, float]  # (x, y, z) minimum coordinates
     max: tuple[float, float, float]  # (x, y, z) maximum coordinates
+
+
+class CostBreakdown(BaseModel):
+    process: StrictStr
+    total_cost: StrictFloat
+    unit_cost: StrictFloat
+    material_cost_per_unit: StrictFloat
+    setup_cost: StrictFloat
+    is_reused: StrictBool
+    details: dict[StrictStr, Any] = Field(default_factory=dict)
+    pricing_explanation: StrictStr = ""
+
+
+class WorkbenchMetadata(BaseModel):
+    """Standardized metadata for workbench results."""
+
+    cost_breakdown: CostBreakdown | None = None
+    dof_count: int | None = None
+    dof_warning: str | None = None
+    undercut_count: int | None = None
+    gate_count: int | None = None
+    additional_info: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkbenchResult(BaseModel):
+    is_manufacturable: StrictBool
+    unit_cost: StrictFloat
+    weight_g: StrictFloat = 0.0
+    violations: list[StrictStr] = Field(default_factory=list)
+    metadata: WorkbenchMetadata = Field(default_factory=WorkbenchMetadata)
 
 
 class DFMReport(BaseModel):
@@ -44,17 +66,6 @@ class MaterialDefinition(BaseModel):
     ultimate_stress_pa: StrictFloat | None = None
     elongation_at_break: StrictFloat | None = None
     material_class: StrictStr = "rigid"  # "rigid" | "soft" | "elastomer"
-
-
-class CostBreakdown(BaseModel):
-    process: StrictStr
-    total_cost: StrictFloat
-    unit_cost: StrictFloat
-    material_cost_per_unit: StrictFloat
-    setup_cost: StrictFloat
-    is_reused: StrictBool
-    details: dict[StrictStr, Any] = Field(default_factory=dict)
-    pricing_explanation: StrictStr = ""
 
 
 class MethodConfig(BaseModel):

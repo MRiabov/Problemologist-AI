@@ -106,15 +106,17 @@ async def run_agent(request: AgentRunRequest):
     session_factory = get_sessionmaker()
 
     # Ensure session_id is preserved in metadata for asset proxying
-    metadata = request.metadata_vars or {}
-    metadata["worker_session_id"] = request.session_id
+    from shared.models.schemas import EpisodeMetadata
+
+    metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
+    metadata.worker_session_id = request.session_id
 
     async with session_factory() as db:
         episode = Episode(
             id=uuid.uuid4(),
             task=request.task,
             status=EpisodeStatus.RUNNING,
-            metadata_vars=metadata,
+            metadata_vars=metadata.model_dump(),
             skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)

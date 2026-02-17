@@ -48,7 +48,7 @@ def define_graph():
 
     # Define transitions
     def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
-        if state.session.status == SessionStatus.executing:
+        if state.session.status == SessionStatus.EXECUTING:
             return "coder"
         return "planner"
 
@@ -154,23 +154,23 @@ async def _execute_graph_streaming(
 
             if node_name == "planner":
                 if final_state.plan and final_state.plan.theme != "error":
-                    new_status = SessionStatus.planned
+                    new_status = SessionStatus.PLANNED
                     should_stop = True
                 else:
-                    new_status = SessionStatus.failed
+                    new_status = SessionStatus.FAILED
             elif node_name == "coder":
-                new_status = SessionStatus.validating
+                new_status = SessionStatus.VALIDATING
             elif node_name == "reviewer":
                 feedback = final_state.review_feedback or ""
                 if feedback == "Approved":
-                    new_status = SessionStatus.accepted
+                    new_status = SessionStatus.ACCEPTED
                 else:
-                    new_status = SessionStatus.rejected
+                    new_status = SessionStatus.REJECTED
             elif (
                 node_name == "skills"
-                and final_state.session.status == SessionStatus.accepted
+                and final_state.session.status == SessionStatus.ACCEPTED
             ):
-                new_status = SessionStatus.accepted
+                new_status = SessionStatus.ACCEPTED
 
             # Update internal session status
             final_state.session.status = new_status
@@ -212,19 +212,21 @@ async def run_generation_session(
     )
 
     # 1. Create DB entry (Episode)
+    from shared.models.schemas import EpisodeMetadata
+
     session_factory = get_sessionmaker()
     async with session_factory() as db:
+        metadata = EpisodeMetadata(
+            detailed_status=SessionStatus.PLANNING,
+            validation_logs=[],
+            prompt=prompt,
+            custom_objectives=custom_objectives,
+        )
         episode = Episode(
             id=session_id,
             task=prompt,
             status=EpisodeStatus.RUNNING,
-            metadata_vars={
-                "detailed_status": SessionStatus.planning,
-                "validation_logs": [],
-                "prompt": prompt,
-                "custom_objectives": custom_objectives,
-                "backend": backend,
-            },
+            metadata_vars=metadata.model_dump(),
         )
         db.add(episode)
         await db.commit()
@@ -233,7 +235,7 @@ async def run_generation_session(
     session = GenerationSession(
         session_id=session_id,
         prompt=prompt,
-        status=SessionStatus.planning,
+        status=SessionStatus.PLANNING,
         custom_objectives=custom_objectives or {},
         backend=backend,
     )
@@ -257,20 +259,18 @@ async def run_generation_session(
         )
     except Exception as e:
         logger.error("generation_session_failed", session_id=session_id, error=str(e))
-        initial_state.session.status = SessionStatus.failed
+        initial_state.session.status = SessionStatus.FAILED
         # Update DB (Episode) to failed
         async with session_factory() as db:
             episode = await db.get(Episode, session_id)
             if episode:
+                from shared.models.schemas import EpisodeMetadata
+
                 episode.status = EpisodeStatus.FAILED
-                metadata = (episode.metadata_vars or {}).copy()
-                metadata.update(
-                    {
-                        "detailed_status": SessionStatus.failed,
-                        "error": str(e),
-                    }
-                )
-                episode.metadata_vars = metadata
+                metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+                metadata.detailed_status = SessionStatus.FAILED
+                metadata.error = str(e)
+                episode.metadata_vars = metadata.model_dump()
                 await db.commit()
         return initial_state
 
@@ -289,7 +289,7 @@ async def _persist_session_assets(
     final_state: BenchmarkGeneratorState, session_id: uuid.UUID
 ):
     """Helper to persist final assets after a successful session."""
-    if final_state.session.status != SessionStatus.accepted:
+    if final_state.session.status != SessionStatus.ACCEPTED:
         return
 
     session_factory = get_sessionmaker()
@@ -379,17 +379,15 @@ async def _update_episode_persistence(
     async with session_factory() as db:
         episode = await db.get(Episode, session_id)
         if episode:
+            from shared.models.schemas import EpisodeMetadata
+
             episode.status = EpisodeStatus.RUNNING
-            metadata = (episode.metadata_vars or {}).copy()
-            metadata.update(
-                {
-                    "detailed_status": new_status,
-                    "validation_logs": validation_logs,
-                    "prompt": prompt,
-                    "plan": plan.model_dump() if hasattr(plan, "model_dump") else plan,
-                }
-            )
-            episode.metadata_vars = metadata
+            metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+            metadata.detailed_status = new_status
+            metadata.validation_logs = validation_logs
+            metadata.prompt = prompt
+            metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
+            episode.metadata_vars = metadata.model_dump()
             await db.commit()
 
 
@@ -408,23 +406,29 @@ async def continue_generation_session(
             logger.error("episode_not_found_for_resume", session_id=session_id)
             return None
 
-        prompt = episode.task
-        metadata = episode.metadata_vars or {}
-        custom_objectives = metadata.get("custom_objectives", {})
+        from shared.models.schemas import EpisodeMetadata
 
-        # Reconstruct session with status 'executing' so define_graph routes to 'coder'
+        prompt = episode.task
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        custom_objectives = (
+            metadata.custom_objectives.model_dump()
+            if metadata.custom_objectives
+            else {}
+        )
+
+        # Reconstruct session with status 'EXECUTING' so define_graph routes to 'coder'
         session = GenerationSession(
             session_id=session_id,
             prompt=prompt,
-            status=SessionStatus.executing,
+            status=SessionStatus.EXECUTING,
             custom_objectives=custom_objectives,
-            validation_logs=metadata.get("validation_logs", []),
+            validation_logs=metadata.validation_logs,
         )
 
         # Update episode status
         episode.status = EpisodeStatus.RUNNING
-        metadata["detailed_status"] = SessionStatus.executing
-        episode.metadata_vars = metadata
+        metadata.detailed_status = SessionStatus.EXECUTING
+        episode.metadata_vars = metadata.model_dump()
         await db.commit()
 
     initial_state = BenchmarkGeneratorState(

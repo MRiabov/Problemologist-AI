@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from shared.simulation.schemas import SimulatorBackendType
 from controller.clients.worker import WorkerClient
 from worker.api.schema import EditOp, ExecuteResponse
 from worker.filesystem.backend import FileInfo
@@ -179,7 +180,7 @@ async def test_simulate(mock_httpx_client):
 
     mock_httpx_client.post.assert_called_once_with(
         "http://worker:8000/benchmark/simulate",
-        json={"script_path": "script.py", "backend": "mujoco"},
+        json={"script_path": "script.py", "backend": SimulatorBackendType.GENESIS},
         headers={"X-Session-ID": "test-session"},
         timeout=60.0,
     )

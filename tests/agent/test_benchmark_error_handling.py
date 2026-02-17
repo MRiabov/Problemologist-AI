@@ -20,7 +20,7 @@ async def test_run_generation_session_exception_handling():
     # Mock initial state
     mock_session = MagicMock()
     mock_session.session_id = session_id
-    mock_session.status = SessionStatus.planning
+    mock_session.status = SessionStatus.PLANNING
 
     # Mock define_graph to return an app whose astream raises an exception
     mock_app = MagicMock()
@@ -63,11 +63,11 @@ async def test_run_generation_session_exception_handling():
         final_state = await run_generation_session(prompt, session_id=session_id)
 
         # Verify status update to failed happened in state
-        assert final_state.session.status == SessionStatus.failed
+        assert final_state.session.status == SessionStatus.FAILED
 
     # Check that DB was updated
     mock_db.get.assert_called()
     assert mock_episode.status == EpisodeStatus.FAILED
-    assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.failed
+    assert mock_episode.metadata_vars["detailed_status"] == SessionStatus.FAILED
     assert "LLM Failure: Out of credits" in mock_episode.metadata_vars["error"]
     mock_db.commit.assert_called()

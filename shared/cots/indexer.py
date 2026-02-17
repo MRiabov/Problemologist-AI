@@ -7,6 +7,7 @@ from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from shared.models.schemas import BoundingBox, COTSMetadata
 from shared.cots.parts.electronics import (
     Connector,
     ElectronicRelay,
@@ -57,7 +58,7 @@ class Indexer:
             Wire,
         ]
 
-    def extract_metadata(self, part_class: type, size: str) -> dict[str, Any] | None:
+    def extract_metadata(self, part_class: type, size: str) -> COTSMetadata | None:
         """Instantiate part and extract metadata."""
         try:
             # Class-specific instantiation arguments
@@ -81,9 +82,9 @@ class Indexer:
                 "Connector",
                 "Wire",
             ]:
-                # Use provided weight from metadata
-                weight = part.metadata.get("weight_g", volume * STEEL_DENSITY_G_MM3)
-                unit_cost = part.metadata.get("price", 0.0)
+                # Use provided properties from COTSPart
+                weight = getattr(part, "weight_g", volume * STEEL_DENSITY_G_MM3)
+                unit_cost = getattr(part, "price", 0.0)
             else:
                 weight = volume * STEEL_DENSITY_G_MM3
                 unit_cost = DEFAULT_COSTS.get(class_name, 0.10)
@@ -112,20 +113,19 @@ class Indexer:
             if "fastener_type" in kwargs:
                 param_suffix += f"_{kwargs['fastener_type']}"
 
-            return {
-                "part_id": f"{class_name}_{size}{param_suffix}",
-                "name": f"{class_name} {size}{param_suffix.replace('_', ' ')}",
-                "category": category,
-                "unit_cost": unit_cost,
-                "weight_g": weight,
-                "bbox": {
-                    "min": [bb.min.X, bb.min.Y, bb.min.Z],
-                    "max": [bb.max.X, bb.max.Y, bb.max.Z],
-                    "size": [bb.size.X, bb.size.Y, bb.size.Z],
-                },
-                "volume": volume,
-                "params": kwargs,
-            }
+            return COTSMetadata(
+                part_id=f"{class_name}_{size}{param_suffix}",
+                name=f"{class_name} {size}{param_suffix.replace('_', ' ')}",
+                category=category,
+                unit_cost=unit_cost,
+                weight_g=weight,
+                bbox=BoundingBox(
+                    min=(bb.min.X, bb.min.Y, bb.min.Z),
+                    max=(bb.max.X, bb.max.Y, bb.max.Z),
+                ),
+                volume=volume,
+                params=kwargs,
+            )
         except Exception as e:
             logger.error(
                 f"Failed to extract metadata for {part_class.__name__} {size}: {e}"
@@ -181,16 +181,16 @@ class Indexer:
                     if not metadata:
                         continue
 
-                    recipe = self.generate_recipe(part_class, metadata["params"])
+                    recipe = self.generate_recipe(part_class, metadata.params)
 
                     item = COTSItemORM(
-                        part_id=metadata["part_id"],
-                        name=metadata["name"],
-                        category=metadata["category"],
-                        unit_cost=metadata["unit_cost"],
-                        weight_g=metadata["weight_g"],
+                        part_id=metadata.part_id,
+                        name=metadata.name,
+                        category=metadata.category,
+                        unit_cost=metadata.unit_cost,
+                        weight_g=metadata.weight_g,
                         import_recipe=recipe,
-                        metadata_dict=metadata,
+                        metadata_dict=metadata.model_dump(),
                     )
 
                     session.merge(item)

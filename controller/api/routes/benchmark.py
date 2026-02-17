@@ -159,20 +159,20 @@ async def update_objectives(
 
             # Actually, we need to MERGE metadata_vars to avoid losing objectives.
             # Update the episode's metadata_vars as well to persist it locally
-            new_metadata = (session.metadata_vars or {}).copy()
-            if "custom_objectives" not in new_metadata:
-                new_metadata["custom_objectives"] = {}
+            from shared.models.schemas import CustomObjectives, EpisodeMetadata
+
+            metadata = EpisodeMetadata.model_validate(session.metadata_vars or {})
+            if not metadata.custom_objectives:
+                metadata.custom_objectives = CustomObjectives()
 
             if request.max_cost is not None:
-                new_metadata["custom_objectives"]["max_unit_cost"] = request.max_cost
+                metadata.custom_objectives.max_unit_cost = request.max_cost
             if request.max_weight is not None:
-                new_metadata["custom_objectives"]["max_weight"] = request.max_weight
+                metadata.custom_objectives.max_weight = request.max_weight
             if request.target_quantity is not None:
-                new_metadata["custom_objectives"]["target_quantity"] = (
-                    request.target_quantity
-                )
+                metadata.custom_objectives.target_quantity = request.target_quantity
 
-            session.metadata_vars = new_metadata
+            session.metadata_vars = metadata.model_dump()
 
             # Write back
             new_content = yaml.dump(obj_data, sort_keys=False)

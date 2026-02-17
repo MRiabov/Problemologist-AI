@@ -27,7 +27,7 @@ def test_indexer_basic(tmp_path):
         assert nut.unit_cost == 0.05
         assert nut.weight_g > 0
         assert "import HexNut" in nut.import_recipe
-        assert nut.metadata_dict["volume"] > 0
+        assert nut.metadata_dict.get("volume", 0) > 0
 
 
 def test_metadata_extraction():
@@ -35,10 +35,10 @@ def test_metadata_extraction():
     from bd_warehouse.fastener import HexNut
 
     meta = indexer.extract_metadata(HexNut, "M6-1")
-    assert meta["part_id"] == "HexNut_M6-1"
-    assert meta["category"] == "fastener"
-    assert meta["unit_cost"] == 0.05
-    assert "bbox" in meta
+    assert meta.part_id == "HexNut_M6-1"
+    assert meta.category == "fastener"
+    assert meta.unit_cost == 0.05
+    assert meta.bbox is not None
 
 
 def test_recipe_generation():

@@ -1437,6 +1437,54 @@
         ],
         "title": "Body_upload_file_fs_upload_file_post"
       },
+      "CostBreakdown": {
+        "properties": {
+          "process": {
+            "type": "string",
+            "title": "Process"
+          },
+          "total_cost": {
+            "type": "number",
+            "title": "Total Cost"
+          },
+          "unit_cost": {
+            "type": "number",
+            "title": "Unit Cost"
+          },
+          "material_cost_per_unit": {
+            "type": "number",
+            "title": "Material Cost Per Unit"
+          },
+          "setup_cost": {
+            "type": "number",
+            "title": "Setup Cost"
+          },
+          "is_reused": {
+            "type": "boolean",
+            "title": "Is Reused"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "pricing_explanation": {
+            "type": "string",
+            "title": "Pricing Explanation",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "process",
+          "total_cost",
+          "unit_cost",
+          "material_cost_per_unit",
+          "setup_cost",
+          "is_reused"
+        ],
+        "title": "CostBreakdown"
+      },
       "DeleteFileRequest": {
         "properties": {
           "path": {
@@ -2104,6 +2152,72 @@
         ],
         "title": "ValidationError"
       },
+      "WorkbenchMetadata": {
+        "properties": {
+          "cost_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dof_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dof Count"
+          },
+          "dof_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dof Warning"
+          },
+          "undercut_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undercut Count"
+          },
+          "gate_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Count"
+          },
+          "additional_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Info"
+          }
+        },
+        "type": "object",
+        "title": "WorkbenchMetadata",
+        "description": "Standardized metadata for workbench results."
+      },
       "WorkbenchResult": {
         "properties": {
           "is_manufacturable": {
@@ -2127,9 +2241,7 @@
             "title": "Violations"
           },
           "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/WorkbenchMetadata"
           }
         },
         "type": "object",

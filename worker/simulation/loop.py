@@ -110,7 +110,8 @@ class SimulationLoop:
             for child in children:
                 label = getattr(child, "label", None)
                 if label:
-                    self.material_lookup[label] = child.metadata.get("material_id")
+                    metadata = getattr(child, "metadata", None)
+                    self.material_lookup[label] = getattr(metadata, "material_id", None)
         else:
             self.config = None
             self.material_lookup = {}
@@ -254,8 +255,8 @@ class SimulationLoop:
         all_bodies = self.backend.get_all_body_names()
         if target_body_name not in all_bodies:
             target_body_name = None
-            # Fallback: look for target_box OR any body with 'target' or 'bucket' in name
-            # Checked against 88-char limit
+            # Fallback: look for target_box OR
+            # any body with 'target' or 'bucket' in name
             for name in all_bodies:
                 if "target" in name.lower() or "bucket" in name.lower():
                     target_body_name = name

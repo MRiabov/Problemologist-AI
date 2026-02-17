@@ -17,6 +17,18 @@ class EpisodeStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class SessionStatus(StrEnum):
+    """Status of a benchmark generation session."""
+
+    PLANNING = "planning"
+    PLANNED = "planned"
+    EXECUTING = "executing"
+    VALIDATING = "validating"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    FAILED = "failed"
+
+
 class AssetType(StrEnum):
     """Type of asset stored in S3."""
 

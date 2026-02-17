@@ -69,7 +69,7 @@ async def test_benchmark_generation_e2e():
 
         # 1. Final Status
         # The graph now pauses after planning for user confirmation
-        assert final_state.session.status == SessionStatus.planned
+        assert final_state.session.status == SessionStatus.PLANNED
 
         # 2. DB Interactions
         # Should add episode (1 call)

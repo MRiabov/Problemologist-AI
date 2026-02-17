@@ -18,7 +18,7 @@ from pydantic import (
 )
 
 from shared.enums import ElectronicComponentType, ManufacturingMethod
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 # =============================================================================
 # Common Types
@@ -283,8 +283,52 @@ class CompoundMetadata(BaseModel):
     """Metadata for compounds (assemblies) in a CAD hierarchy."""
 
     is_fixed: bool = Field(default=False, alias="fixed")
+    joint: JointMetadata | None = None
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+# =============================================================================
+# COTS Catalog Models
+# =============================================================================
+
+
+class COTSMetadata(BaseModel):
+    """Metadata for COTS items, indexed into the catalog."""
+
+    part_id: str
+    name: str
+    category: str
+    unit_cost: float
+    weight_g: float
+    bbox: BoundingBox
+    volume: float
+    params: dict[str, Any]
+
+
+# =============================================================================
+# Episode & Session Models
+# =============================================================================
+
+
+class EpisodeMetadata(BaseModel):
+    """Structured metadata for episodes and benchmark sessions."""
+
+    worker_session_id: str | None = None
+    custom_objectives: CustomObjectives | None = None
+    detailed_status: str | None = None  # Using str to avoid circular deps if needed
+    error: str | None = None
+    variant_id: str | None = None
+    seed: int | None = None
+    prior_episode_id: str | None = None
+    is_optimality_check: bool | None = None
+    fidelity_check: bool | None = None
+    tolerance: float | None = None
+    is_reused: bool | None = None
+    validation_logs: list[str] = Field(default_factory=list)
+    prompt: str | None = None
+    plan: dict[str, Any] | None = None
+    additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
 # =============================================================================
@@ -492,16 +536,15 @@ class AssemblyDefinition(BaseModel):
                                 else p_config.config.control,
                             )
                         )
-            elif isinstance(item, PartConfig):
-                if item.config.dofs:
-                    parts.append(
-                        MovingPart(
-                            part_name=item.name,
-                            type=("motor" if item.config.control else "passive"),
-                            dofs=item.config.dofs,
-                            control=item.config.control,
-                        )
+            elif isinstance(item, PartConfig) and item.config.dofs:
+                parts.append(
+                    MovingPart(
+                        part_name=item.name,
+                        type=("motor" if item.config.control else "passive"),
+                        dofs=item.config.dofs,
+                        control=item.config.control,
                     )
+                )
 
         for item in self.final_assembly:
             process_item(item)

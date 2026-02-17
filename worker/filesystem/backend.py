@@ -135,10 +135,10 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
         infos = self.ls_info(path)
         return [
             FileInfo(
-                path=i["path"],
-                name=i["path"].rstrip("/").split("/")[-1] or "/",
-                is_dir=i["is_dir"],
-                size=i["size"],
+                path=i.path,
+                name=i.path.rstrip("/").split("/")[-1] or "/",
+                is_dir=i.is_dir,
+                size=i.size,
             )
             for i in infos
         ]
@@ -238,27 +238,27 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
                 virt = self._virtual(entry)
                 if is_dir and not virt.endswith("/"):
                     virt += "/"
-                info: ProtocolFileInfo = {
-                    "path": virt,
-                    "is_dir": is_dir,
-                    "size": entry.stat().st_size if not is_dir else 0,
-                    "modified_at": datetime.fromtimestamp(
+                info = ProtocolFileInfo(
+                    path=virt,
+                    is_dir=is_dir,
+                    size=entry.stat().st_size if not is_dir else 0,
+                    modified_at=datetime.fromtimestamp(
                         entry.stat().st_mtime
                     ).isoformat(),
-                }
+                )
                 results.append(info)
         else:
             results.append(
-                {
-                    "path": self._virtual(local_path),
-                    "is_dir": False,
-                    "size": local_path.stat().st_size,
-                    "modified_at": datetime.fromtimestamp(
+                ProtocolFileInfo(
+                    path=self._virtual(local_path),
+                    is_dir=False,
+                    size=local_path.stat().st_size,
+                    modified_at=datetime.fromtimestamp(
                         local_path.stat().st_mtime
                     ).isoformat(),
-                }
+                )
             )
-        results.sort(key=lambda x: x["path"])
+        results.sort(key=lambda x: x.path)
         return results
 
     def write(
@@ -318,16 +318,16 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
                     virt += "/"
 
                 results.append(
-                    {
-                        "path": virt,
-                        "is_dir": is_dir,
-                        "size": entry.stat().st_size if not is_dir else 0,
-                        "modified_at": datetime.fromtimestamp(
+                    ProtocolFileInfo(
+                        path=virt,
+                        is_dir=is_dir,
+                        size=entry.stat().st_size if not is_dir else 0,
+                        modified_at=datetime.fromtimestamp(
                             entry.stat().st_mtime
                         ).isoformat(),
-                    }
+                    )
                 )
-            results.sort(key=lambda x: x["path"])
+            results.sort(key=lambda x: x.path)
             return results
         except Exception as e:
             logger.error("glob_failed", error=str(e))
