@@ -111,10 +111,10 @@ Priorities:
 | INT-054 | Temporal outage/failure logging path | If Temporal is unavailable/fails, episode must not report false success; explicit failure state/reason/event must be persisted. |
 | INT-055 | S3 artifact upload logging | Successful asset uploads persist storage metadata (bucket/key/etag-or-version where available) and link to episode/asset records. |
 | INT-056 | S3 upload failure + retry logging | Forced object-store failure triggers retry/failure policy; final state and failure events are consistent and queryable. |
-| INT-101 | Physics backend selection contract | Setting `physics.backend: "genesis"` in config selects the Genesis backend; `"mujoco"` selects MuJoCo. Default (`mujoco`) preserves backward compat. `simulation_backend_selected` event emitted. |
+| INT-101 | Physics backend selection contract | Setting `physics.backend: "mujoco"` in config selects the MuJoCo backend; `"genesis"` selects Genesis. Default (`genesis`) is used when not specified. `simulation_backend_selected` event emitted. |
 | INT-102 | FEM material config validation | When `fem_enabled: true`, all manufactured parts must have FEM fields (`youngs_modulus_pa`, `poissons_ratio`, `yield_stress_pa`, `ultimate_stress_pa`) in `manufacturing_config.yaml`; missing fields rejected with clear error before simulation. |
 | INT-103 | Part breakage detection | Simulation with a part exceeding `ultimate_stress_pa` stops immediately with `failure_reason: PART_BREAKAGE`; result contains part label, stress value, location; `part_breakage` event emitted. |
-| INT-104 | Stress reporting in simulation result | After genesis/FEM simulation, `SimulationResult.stress_summaries` populated with per-part `StressSummary` (max von Mises, safety factor, utilization %); empty list for mujoco-only runs. |
+| INT-104 | Stress reporting in simulation result | After genesis/FEM simulation, `SimulationResult.stress_summaries` populated with per-part `StressSummary` (max von Mises, safety factor, utilization %); empty list for non-FEM runs. |
 | INT-105 | Fluid containment objective evaluation | Benchmark with `fluid_containment` objective passes when ≥ threshold fraction of particles remain in containment zone; fails otherwise with `FLUID_OBJECTIVE_FAILED`. |
 | INT-106 | Flow rate objective evaluation | Benchmark with `flow_rate` objective passes when measured particles-per-second across gate plane is within tolerance of target; fails otherwise with `FLUID_OBJECTIVE_FAILED`. |
 | INT-107 | Stress objective evaluation | Benchmark with `max_stress` objective fails simulation when max von Mises exceeds threshold with `STRESS_OBJECTIVE_EXCEEDED`; passes when below. |
@@ -122,7 +122,7 @@ Priorities:
 | INT-109 | Physics instability abort | If total kinetic energy exceeds threshold during simulation, simulation aborts with `failure_reason: PHYSICS_INSTABILITY`; `physics_instability` event emitted. |
 | INT-110 | GPU OOM retry with particle reduction | Forced CUDA OOM triggers auto-retry at 75% particle count; `gpu_oom_retry` event emitted; result annotated `confidence: approximate`. |
 | INT-111 | `validate_and_price` FEM material gate | `validate_and_price` rejects parts whose `material_id` lacks FEM fields when `fem_enabled: true` and `backend: genesis`. |
-| INT-112 | Backward compat: mujoco ignores FEM/fluid config | Running with `backend: mujoco` ignores `fluids`, `fluid_objectives`, `stress_objectives`, and `fem_enabled`; existing benchmarks pass unchanged. |
+| INT-112 | Genesis rigid-body mode: backend ignores FEM/fluid config | Running with default backend (`genesis`) ignores `fluids`, `fluid_objectives`, `stress_objectives`, and `fem_enabled` if not specified; existing benchmarks pass unchanged. |
 | INT-120 | Circuit validation pre-gate | `validate_circuit()` must pass (no short circuits, no floating nodes, total draw ≤ PSU rating) before physics simulation proceeds; simulation rejected otherwise. |
 | INT-121 | Short circuit detection | Circuit with near-zero resistance path across supply triggers `FAILED_SHORT_CIRCUIT` with branch current in result. |
 | INT-122 | Overcurrent supply detection | Circuit total draw exceeding `max_current_a` triggers `FAILED_OVERCURRENT_SUPPLY`; validation reports total draw vs PSU rating. |
@@ -263,7 +263,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-109 | Run simulation designed to produce runaway energy via API; assert `PHYSICS_INSTABILITY` result and event. | Setting kinetic energy variable directly. |
 | INT-110 | (Requires GPU env) Force CUDA OOM conditions; assert retry at reduced particle count and `gpu_oom_retry` event. | Mocking CUDA allocator only. |
 | INT-111 | Submit part with FEM-missing material via `validate_and_price` API when genesis+FEM; assert rejection. | Calling validation function directly with dict. |
-| INT-112 | Run existing rigid-body benchmark with `backend: mujoco` config and assert success unchanged despite fluids/FEM config present. | Importing backend and toggling flags in unit test. |
+| INT-112 | Run existing rigid-body benchmark with default configuration; assert Genesis is used and success is unchanged despite fluids/FEM config being present in system but not active for the benchmark. | Importing backend and toggling flags in unit test. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
 | INT-122 | Submit circuit exceeding PSU `max_current_a` via API; assert `FAILED_OVERCURRENT_SUPPLY` with total draw reported. | Comparing current values in unit test. |

@@ -1,6 +1,8 @@
 import textwrap
+from unittest.mock import MagicMock, patch
 
 import pytest
+import numpy as np
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 
@@ -42,6 +44,7 @@ def test_model_produced_script_integration(tmp_path):
             
             part = p.part
             part.label = "target_box"
+            part.metadata = {"material_id": "aluminum-6061"}
             
             # Simple MJCF that uses the mesh
             mjcf_xml = f'''
@@ -84,13 +87,12 @@ def test_model_produced_script_integration(tmp_path):
     assert is_geom_valid[0] is True
 
     # 4. Simulate without crashing
-    # This uses worker.utils.validation.simulate which runs MuJoCo for a few frames
-    # and generates renders.
-    sim_result = simulate(component)
+    # Mock mujoco.Renderer to avoid framebuffer issues in headless environment
+    with patch("mujoco.Renderer") as mock_renderer_cls:
+        mock_renderer = mock_renderer_cls.return_value
+        mock_renderer.render.return_value = np.zeros((480, 640, 3), dtype=np.uint8)
+
+        sim_result = simulate(component)
 
     assert sim_result.success is True
     assert "Simulation stable" in sim_result.summary
-    # verify it actually did something (e.g., render paths populated)
-    # Note: prerender_24_views might be slow or require GL context
-    # If it fails due to headless environment, we might need to mock it
-    # but the goal is to test the integration.

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/simulation", tags=["simulation"])
 class RunSimulationRequest(BaseModel):
     session_id: str
     compound_json: str = "{}"
-    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
 
 
 @router.post("/run", status_code=202)

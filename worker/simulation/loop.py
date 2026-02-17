@@ -40,7 +40,7 @@ class SimulationLoop:
         xml_path: str | Path,
         component: Part | Compound | None = None,
         max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
-        backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+        backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool = False,

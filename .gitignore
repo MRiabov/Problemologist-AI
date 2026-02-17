@@ -61,6 +61,7 @@ MUJOCO_LOG.TXT
 # ^event outputs
 
 # Simulation assets
-assets/part_0.glb
-assets/part_0.obj
+*.glb
+*.obj
 events.jsonl
+.xml

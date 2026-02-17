@@ -1311,7 +1311,7 @@
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
-            "default": "mujoco"
+            "default": "genesis"
           },
           "smoke_test_mode": {
             "type": "boolean",
@@ -1361,7 +1361,7 @@
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
-            "default": "mujoco"
+            "default": "genesis"
           },
           "smoke_test_mode": {
             "type": "boolean",

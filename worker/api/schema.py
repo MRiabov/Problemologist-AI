@@ -104,7 +104,7 @@ class BenchmarkToolRequest(BaseModel):
         description="Direct content of the script.",
     )
     backend: SimulatorBackendType = Field(
-        default=SimulatorBackendType.MUJOCO,
+        default=SimulatorBackendType.GENESIS,
         description="Physics backend to use.",
     )
     smoke_test_mode: bool = Field(

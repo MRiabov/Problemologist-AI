@@ -180,7 +180,7 @@ class RandomizationMeta(BaseModel):
 class PhysicsConfig(BaseModel):
     """Configuration for the physics engine."""
 
-    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
     fem_enabled: bool = False
     compute_target: str = "auto"  # "auto" | "cpu" | "gpu"
 

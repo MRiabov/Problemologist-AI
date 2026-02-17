@@ -18,7 +18,7 @@ def get_physics_backend(backend_type: SimulatorBackendType) -> PhysicsBackend:
 
 def get_simulation_builder(
     output_dir: Path,
-    backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+    backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
     use_vhacd: bool = False,
 ):
     from worker.simulation.builder import (
