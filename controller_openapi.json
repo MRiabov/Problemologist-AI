@@ -1503,7 +1503,7 @@
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
-            "default": "mujoco"
+            "default": "genesis"
           }
         },
         "type": "object",

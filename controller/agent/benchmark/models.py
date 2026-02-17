@@ -35,6 +35,6 @@ class GenerationSession(BaseModel):
     session_id: UUID
     prompt: str
     status: SessionStatus = SessionStatus.planning
-    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
     validation_logs: list[str] = Field(default_factory=list)
     custom_objectives: CustomObjectives = Field(default_factory=CustomObjectives)

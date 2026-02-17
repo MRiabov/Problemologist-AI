@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 def prerender_24_views(
     component: Compound,
     output_dir: str | None = None,
-    backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
+    backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.

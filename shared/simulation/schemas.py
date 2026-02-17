@@ -16,7 +16,7 @@ class SimulationRequest(BaseModel):
     session_id: str
     mjcf_content: str | None = None
     compound_json: str | None = None
-    backend: SimulatorBackendType = SimulatorBackendType.MUJOCO
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
     dt: float = 0.01
     duration: float = 5.0
     randomize: bool = False

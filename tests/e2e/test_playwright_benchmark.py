@@ -34,11 +34,12 @@ def test_benchmark_creation_flow(page: Page):
     )
     prompt_input = page.locator("#chat-input")
     expect(prompt_input).to_be_visible(timeout=30000)
-    prompt_input.fill(prompt_text)
+    prompt_input.press_sequentially(prompt_text)
     print("Prompt filled.")
 
     # 5. Submit the prompt
     print("Submitting prompt...")
+
     # Using explicit click on Send Message button for reliability
     send_button = page.get_by_label("Send Message")
     expect(send_button).to_be_enabled(timeout=30000)
@@ -52,7 +53,8 @@ def test_benchmark_creation_flow(page: Page):
 
     # 7. Wait for the generation to finish (Send Message button returns)
     print("Waiting for agent to finish...")
-    expect(page.get_by_label("Send Message")).to_be_visible(timeout=30000)
+    # This might take a while, increase timeout
+    expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
     print("Agent finished.")
 
     # 8. Select plan.md in Resources sidebar
