@@ -24,6 +24,7 @@ def prerender_24_views(
     component: Compound,
     output_dir: str | None = None,
     backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    session_id: str | None = None,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
@@ -34,7 +35,10 @@ def prerender_24_views(
 
     output_path = Path(output_dir)
     logger.info(
-        "prerender_24_views_start", output_dir=str(output_path), backend=backend_type
+        "prerender_24_views_start",
+        output_dir=str(output_path),
+        backend=backend_type,
+        session_id=session_id,
     )
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -53,7 +57,7 @@ def prerender_24_views(
             from shared.simulation.backends import SimulationScene
             from worker.simulation.factory import get_physics_backend
 
-            backend = get_physics_backend(backend_type)
+            backend = get_physics_backend(backend_type, session_id=session_id)
             scene = SimulationScene(scene_path=str(scene_path))
             backend.load_scene(scene)
 
@@ -111,7 +115,9 @@ def prerender_24_views(
                     img.save(filepath, "PNG")
                     saved_files.append(str(filepath))
 
-            backend.close()
+            # Only close if it's not a cached backend
+            if not session_id:
+                backend.close()
 
         logger.info("prerender_complete", count=len(saved_files))
         return saved_files

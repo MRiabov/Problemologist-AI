@@ -44,6 +44,7 @@ class SimulationLoop:
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool = False,
+        session_id: str | None = None,
     ):
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if (
@@ -55,7 +56,7 @@ class SimulationLoop:
                 "MuJoCo backend does not support fluids. Use Genesis instead."
             )
 
-        self.backend = get_physics_backend(backend_type)
+        self.backend = get_physics_backend(backend_type, session_id=session_id)
         self.smoke_test_mode = smoke_test_mode
         self.particle_budget = 5000 if smoke_test_mode else 100000
 
@@ -155,6 +156,7 @@ class SimulationLoop:
                         self.prev_particle_distances[obj_id] = distances
 
         self.electronics_manager = ElectronicsManager(self.electronics)
+        self._electronics_dirty = False
         self.metric_collector = MetricCollector()
         self.success_evaluator = SuccessEvaluator(
             max_simulation_time=self.max_simulation_time,
@@ -361,7 +363,7 @@ class SimulationLoop:
                             props = get_awg_properties(wire.gauge_awg)
                             limit = props["tensile_strength_n"]
                             if tension > limit:
-                                self.fail_reason = SimulationFailureMode.WIRE_TORN
+                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
                                 emit_event(
                                     ElectricalFailureEvent(
                                         failure_type="wire_torn",

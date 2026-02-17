@@ -16,7 +16,7 @@ class ElectronicsManager:
         if self.electronics:
             for comp in self.electronics.components:
                 if comp.type in ["switch", "relay"]:
-                    self.switch_states[comp.id] = False
+                    self.switch_states[comp.component_id] = False
 
     def update(self, force: bool = False):
         """Update is_powered_map based on circuit state."""
@@ -27,7 +27,8 @@ class ElectronicsManager:
         # In a real implementation, this would call out to a SPICE engine.
         try:
             # Placeholder for actual SPICE logic
-            pass
+            # For now, always use fallback since SPICE is not implemented in this snippet
+            self._fallback_update()
         except Exception as e:
             logger.warning("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
@@ -41,7 +42,7 @@ class ElectronicsManager:
         # (Extracted from loop.py:227-307)
         powered = set()
         sources = [
-            c.id
+            c.component_id
             for c in self.electronics.components
             if c.type in ["battery", "v_source"]
         ]
@@ -69,4 +70,4 @@ class ElectronicsManager:
                     queue.append(v)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.id] = comp.id in powered
+            self.is_powered_map[comp.component_id] = comp.component_id in powered

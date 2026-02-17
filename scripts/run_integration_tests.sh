@@ -65,18 +65,46 @@ docker compose -f docker-compose.test.yaml up -d
 
 echo "Waiting for infra to be ready..."
 MAX_INFRA_RETRIES=15
-INFRA_COUNT=0
+
 # Wait for Postgres
+INFRA_COUNT=0
 until docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
   echo "Waiting for Postgres... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
   sleep 2
   INFRA_COUNT=$((INFRA_COUNT + 1))
 done
-
 if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
   echo "Postgres failed to start in time."
   exit 1
 fi
+
+# Wait for Minio
+INFRA_COUNT=0
+until curl -s http://localhost:19000/minio/health/live > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+  echo "Waiting for Minio... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
+  sleep 2
+  INFRA_COUNT=$((INFRA_COUNT + 1))
+done
+if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
+  echo "Minio failed to start in time."
+  exit 1
+fi
+
+# Wait for Temporal (port only, auto-setup might still be running migrations)
+INFRA_COUNT=0
+until nc -z localhost 17233 > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+  echo "Waiting for Temporal... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
+  sleep 2
+  INFRA_COUNT=$((INFRA_COUNT + 1))
+done
+if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
+  echo "Temporal failed to start in time."
+  exit 1
+fi
+
+# Give Temporal auto-setup a bit more time to finish migrations
+echo "Infrastructure is up. Giving Temporal a few seconds to settle..."
+sleep 5
 
 echo "Running migrations..."
 uv run alembic upgrade head
@@ -137,14 +165,38 @@ if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
   exit 1
 fi
 
-# Default marker to run
-MARKER=${1:-"integration_p0 or integration_p1 or integration_p2"}
+# Parse arguments
+REVERSE_FLAG=""
+MARKER=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --reverse)
+      REVERSE_FLAG="--reverse"
+      shift
+      ;;
+    *)
+      if [ -z "$MARKER" ]; then
+        MARKER="$1"
+      else
+        echo "Unknown argument: $1"
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+
+# Default marker if not provided
+if [ -z "$MARKER" ]; then
+  MARKER="integration_p0 or integration_p1 or integration_p2"
+fi
 
 # We use uv run to execute pytest within the virtual environment. 
 # We pass -n0 to ensure integration tests run sequentially (stateful infra),
 # but we DO NOT use -p no:xdist because -n2 is in pyproject.toml addopts 
 # and pytest will error if the plugin is disabled while the flag is present.
-if uv run pytest -v -m "$MARKER" --maxfail=3 -s -n0; then
+if uv run pytest -v -m "$MARKER" --maxfail=3 -s -n0 $REVERSE_FLAG; then
   echo "Integration tests PASSED!"
 else
   echo "Integration tests FAILED!"
