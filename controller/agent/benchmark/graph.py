@@ -318,6 +318,7 @@ async def _persist_session_assets(
 
             # Sync assets to the Asset table
             try:
+                import asyncio
                 from contextlib import suppress
 
                 worker_url = os.getenv("WORKER_URL", "http://worker:8001")
@@ -331,25 +332,36 @@ async def _persist_session_assets(
                     backend = RemoteFilesystemBackend(middleware)
 
                     files = await backend.als_info("/")
-                    for file_info in files:
-                        if not file_info["is_dir"]:
-                            path = file_info["path"]
-                            asset_type = AssetType.OTHER
-                            if path.endswith(".py"):
-                                asset_type = AssetType.PYTHON
-                            elif path.endswith(".xml") or path.endswith(".mjcf"):
-                                asset_type = AssetType.MJCF
 
-                            content = None
-                            with suppress(Exception):
-                                raw_content = await backend.aread(path)
-                                if isinstance(raw_content, bytes):
-                                    content = raw_content.decode(
-                                        "utf-8", errors="replace"
-                                    )
-                                else:
-                                    content = str(raw_content)
+                    async def fetch_asset(file_info):
+                        if file_info["is_dir"]:
+                            return None
+                        path = file_info["path"]
+                        asset_type = AssetType.OTHER
+                        if path.endswith(".py"):
+                            asset_type = AssetType.PYTHON
+                        elif path.endswith(".xml") or path.endswith(".mjcf"):
+                            asset_type = AssetType.MJCF
 
+                        content = None
+                        with suppress(Exception):
+                            raw_content = await backend.aread(path)
+                            if isinstance(raw_content, bytes):
+                                content = raw_content.decode(
+                                    "utf-8", errors="replace"
+                                )
+                            else:
+                                content = str(raw_content)
+                        return asset_type, path, content
+
+                    # Parallelize I/O to avoid N+1 sequential HTTP requests
+                    results = await asyncio.gather(
+                        *[fetch_asset(f) for f in files]
+                    )
+
+                    for result in results:
+                        if result:
+                            asset_type, path, content = result
                             asset = Asset(
                                 episode_id=session_id,
                                 asset_type=asset_type,
