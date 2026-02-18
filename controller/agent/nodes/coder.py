@@ -1,4 +1,5 @@
 import structlog
+from contextlib import suppress
 
 import dspy
 from langchain_core.messages import AIMessage
@@ -24,6 +25,8 @@ class CoderSignature(dspy.Signature):
     current_step = dspy.InputField()
     plan = dspy.InputField()
     todo = dspy.InputField()
+    assembly_definition = dspy.InputField()
+    objectives = dspy.InputField()
     feedback = dspy.InputField(desc="Feedback from previous review steps", default="")
     journal = dspy.OutputField(
         desc="A summary of the implementation done for this step"
@@ -47,11 +50,26 @@ class CoderNode(BaseNode):
                 update={"journal": state.journal + "\nNo more steps in TODO."}
             )
 
+        # Read objectives and assembly_definition for context
+        objectives = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("objectives.yaml"):
+                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+
+        assembly_definition = "# No assembly_definition.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+                assembly_definition = await self.ctx.worker_client.read_file(
+                    "assembly_definition.yaml"
+                )
+
         inputs = {
             "task": state.task,
             "current_step": current_step,
             "plan": state.plan,
             "todo": todo,
+            "assembly_definition": assembly_definition,
+            "objectives": objectives,
             "feedback": state.feedback,
         }
         validate_files = [

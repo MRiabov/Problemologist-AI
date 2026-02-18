@@ -25,6 +25,7 @@ class PlannerSignature(dspy.Signature):
     """
 
     task = dspy.InputField()
+    objectives = dspy.InputField()
     skills = dspy.InputField()
     steer_context = dspy.InputField()
     feedback = dspy.InputField()
@@ -45,8 +46,15 @@ class PlannerNode(BaseNode):
         # WP04: Extract steerability context
         steer_context = self._get_steer_context(state.messages)
 
+        # Read objectives for context
+        objectives = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("objectives.yaml"):
+                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+
         inputs = {
             "task": state.task,
+            "objectives": objectives,
             "skills": skills_context,
             "steer_context": steer_context,
             "feedback": (

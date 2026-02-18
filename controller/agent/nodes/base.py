@@ -159,6 +159,21 @@ class BaseNode:
             worker_client=self.ctx.worker_client, session_id=state.session_id
         )
         tool_fns = self._get_tool_functions(tool_factory)
+
+        # WP07: Inject system instructions from prompts.yaml into signature
+        # Map node_type to prompt template names
+        node_to_template = {
+            "planner": "architect",
+            "coder": "engineer",
+            "electronics_engineer": "electronics_engineer",
+            "reviewer": "critic",
+            "cots_search": "cots_search",
+        }
+        template_name = node_to_template.get(node_type)
+        if template_name:
+            instructions = self.ctx.pm.render(template_name)
+            signature_cls = signature_cls.with_instructions(instructions)
+
         program = program_cls(
             signature_cls, tools=list(tool_fns.values()), interpreter=interpreter
         )

@@ -34,51 +34,40 @@ class COTSSearchNode(BaseNode):
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
-        from controller.agent.dspy_utils import WorkerInterpreter
+        inputs = {
+            "task": state.task,
+            "plan": state.plan,
+            "journal": state.journal,
+        }
 
-        # Use WorkerInterpreter for remote execution
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        prediction, _, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=COTSSearchSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=[],
+            node_type="cots_search",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-
-        program = dspy.CodeAct(
-            COTSSearchSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        try:
-            with dspy.settings.context(lm=self.ctx.dspy_lm):
-                logger.info(
-                    "cots_search_dspy_invoke_start", session_id=state.session_id
-                )
-                prediction = program(
-                    task=state.task,
-                    plan=state.plan,
-                    journal=state.journal,
-                )
-                logger.info(
-                    "cots_search_dspy_invoke_complete", session_id=state.session_id
-                )
-
-            summary = getattr(prediction, "summary", "No summary provided.")
-            new_journal = state.journal + f"\n[COTS Search] {summary}"
-
+        if not prediction:
             return state.model_copy(
                 update={
-                    "journal": new_journal,
-                    "messages": state.messages
-                    + [AIMessage(content=f"COTS Search summary: {summary}")],
+                    "journal": state.journal
+                    + f"\n[COTS Search] Failed: {journal_entry}"
                 }
             )
-        except Exception as e:
-            logger.error("COTS Search dspy failed", error=str(e))
-            return state.model_copy(
-                update={"journal": state.journal + f"\n[COTS Search] System error: {e}"}
-            )
-        finally:
-            interpreter.shutdown()
+
+        summary = getattr(prediction, "summary", "No summary provided.")
+        new_journal = state.journal + f"\n[COTS Search] {summary}" + journal_entry
+
+        return state.model_copy(
+            update={
+                "journal": new_journal,
+                "messages": state.messages
+                + [AIMessage(content=f"COTS Search summary: {summary}")],
+            }
+        )
 
 
 @type_check
