@@ -67,11 +67,25 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
+### 5. Brittle CI Workflow Configuration
+
+**File**: `.github/workflows/gemini-review.yml` (and others)
+**Issue**: The CI workflows for Gemini integration do not check for the presence of required secrets/variables before execution. Additionally, a bug in the `google-github-actions/run-gemini-cli@v0` action causes a confusing "Matching delimiter not found 'EOF'" error when the CLI fails and outputs JSON without a trailing newline.
+**Evidence**:
+- `gemini-review.yml:L44`: Runs the action regardless of whether auth is configured.
+- CI Logs: `::error::Invalid value. Matching delimiter not found 'EOF'` and `Please set an Auth method...`
+**Impact**: CI fails on all Pull Requests if the repository owner hasn't specifically configured Gemini secrets, blocking the development flow for non-configured environments (like automated bot PRs or forks). The EOF error masks the true root cause (missing auth).
+**Recommendation**: Add `if` conditions to skip Gemini steps if no authentication method is provided. (Note: This has been addressed in the current PR to unblock CI).
+
+> **User Review**:
+> [ ] Agree - [ ] Disagree
+> *Comments:*
+
 ---
 
 ## 🏗️ Architectural Observations
 
-### 5. Brittle Electronics Power Propagation
+### 6. Brittle Electronics Power Propagation
 
 **File**: `worker/simulation/electronics.py`
 **Issue**:
@@ -88,7 +102,7 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 6. Inconsistent Units in Assembly Definition
+### 7. Inconsistent Units in Assembly Definition
 
 **File**: `shared/models/schemas.py`
 **Issue**: The `AssemblyDefinition` model mixes grams and kilograms for weight. `totals.estimated_weight_g` is in grams, but `constraints.planner_target_max_weight_kg` is in kilograms.
@@ -106,7 +120,7 @@ This review identifies a second round of architectural and implementation smells
 
 ## 🧹 Implementation Smells
 
-### 7. Crude Schematic Visualization
+### 8. Crude Schematic Visualization
 
 **File**: `controller/api/routes/episodes.py`
 **Issue**: The `get_episode_schematic` endpoint generates a "Soup JSON" for schematics using a simplistic linear layout with hardcoded `10 + i * 40` spacing.
@@ -119,7 +133,7 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 8. Blind Retry Loop in Agent Nodes
+### 9. Blind Retry Loop in Agent Nodes
 
 **File**: `controller/agent/nodes/base.py`
 **Issue**: The `_run_program` method implements a retry loop for validation failures. However, it does not feed the `validation_errors` back into the next iteration of the DSPy program.
@@ -132,7 +146,7 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 9. Blatant Code Duplication in `wire_utils.py`
+### 10. Blatant Code Duplication in `wire_utils.py`
 
 **File**: `shared/wire_utils.py`
 **Issue**: The `AWG_PROPERTIES` dictionary and the `get_awg_properties` function are defined twice in the same file.
@@ -146,7 +160,7 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 10. Inefficient Actuator Monitoring
+### 11. Inefficient Actuator Monitoring
 
 **File**: `worker/simulation/loop.py`
 **Issue**: The simulation step loop calls `self.backend.get_actuator_state(n)` twice for every actuator in every step (once for energy, once for overload checks).
@@ -159,7 +173,7 @@ This review identifies a second round of architectural and implementation smells
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 11. Mean Position for FEM/MPM Bodies
+### 12. Mean Position for FEM/MPM Bodies
 
 **File**: `worker/simulation/genesis_backend.py`
 **Issue**: For deformable bodies (FEM) or fluids (MPM), `get_body_state` returns the mean position of all nodes/particles.
