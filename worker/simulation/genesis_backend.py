@@ -33,6 +33,8 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.cables = []  # List of cable definitions
+        self.applied_controls = {}  # motor_id -> value
         self.current_time = 0.0
         self._last_max_stress = 0.0
         self.mfg_config = None
@@ -124,6 +126,8 @@ class GenesisBackend(PhysicsBackend):
             self.entity_configs = {}
             self.cameras = {}
             self.motors = []
+            self.cables = []
+            self.applied_controls = {}
             self._is_built = False
 
             if "gs_scene" in scene.assets:
@@ -318,6 +322,7 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -792,8 +797,12 @@ class GenesisBackend(PhysicsBackend):
                 # In this architecture, we assume entity name matches part_name for moving parts
                 break
 
+        ctrl_val = self.applied_controls.get(actuator_name, 0.0)
+
         if entity_name not in self.entities:
-            return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
+            return ActuatorState(
+                force=0.0, velocity=0.0, ctrl=ctrl_val, forcerange=(0, 0)
+            )
 
         entity = self.entities[entity_name]
         try:
@@ -807,11 +816,13 @@ class GenesisBackend(PhysicsBackend):
             return ActuatorState(
                 force=force,
                 velocity=vel,
-                ctrl=0.0,
+                ctrl=ctrl_val,
                 forcerange=(-1000, 1000),  # Default limit
             )
         except Exception:
-            return ActuatorState(force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0, 0))
+            return ActuatorState(
+                force=0.0, velocity=0.0, ctrl=ctrl_val, forcerange=(0, 0)
+            )
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value
@@ -819,6 +830,7 @@ class GenesisBackend(PhysicsBackend):
             motor_id = motor["part_name"]
             if motor_id in control_inputs:
                 val = control_inputs[motor_id]
+                self.applied_controls[motor_id] = val
                 # Map motor to entity
                 if motor_id in self.entities:
                     entity = self.entities[motor_id]
@@ -849,7 +861,7 @@ class GenesisBackend(PhysicsBackend):
         return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        return [c["name"] for c in getattr(self, "cables", [])]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -893,7 +905,18 @@ class GenesisBackend(PhysicsBackend):
 
         return False
 
-    def get_tendon_tension(self, _tendon_name: str) -> float:
+    def get_tendon_tension(self, tendon_name: str) -> float:
+        # Check if cable exists
+        found = False
+        for c in getattr(self, "cables", []):
+            if c["name"] == tendon_name:
+                found = True
+                break
+
+        if not found:
+            raise ValueError(f"Tendon {tendon_name} not found")
+
+        # TODO: Implement actual cable tension simulation when Genesis supports it
         return 0.0
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
