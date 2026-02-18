@@ -29,9 +29,10 @@ async def run_session(session_id: str, filename: str, content: str):
         code = f"""
 import os
 files = os.listdir('.')
-print(f"Files in CWD: {{files}}")
 with open("{filename}", "r") as f:
-    print(f.read())
+    content = f.read()
+assert "{filename}" in files, f"{{filename}} not in {{files}}"
+assert content == "{content}", f"Expected {{content}}, got {{content}}"
 """
         resp = await client.post(
             f"{WORKER_URL}/runtime/execute",
@@ -40,8 +41,9 @@ with open("{filename}", "r") as f:
         )
         assert resp.status_code == 200, f"Execute failed: {resp.text}"
         data = resp.json()
-        assert data["exit_code"] == 0
-        assert content in data["stdout"]
+        assert (
+            data["exit_code"] == 0
+        ), f"Code failed with exit code {data['exit_code']}. Out: {data['stdout']} Err: {data['stderr']}"
         return data["stdout"]
 
 
@@ -73,8 +75,6 @@ async def test_worker_concurrency():
     # Session B should NOT see file_a
     assert file_b in stdout_b
     assert file_a not in stdout_b
-
-    print("Concurrency test passed!")
 
 
 if __name__ == "__main__":

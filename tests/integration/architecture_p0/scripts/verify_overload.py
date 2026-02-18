@@ -43,10 +43,6 @@ async def run(_ctx=None):
 
         metrics = loop.step(control_inputs={"servo": 3.14}, duration=3.0)
 
-        print(
-            f"SIMULATION_RESULT: success={metrics.success}, "
-            f"fail_reason={metrics.fail_reason}"
-        )
         if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason:
             raise RuntimeError(
                 f"Expected motor_overload failure, but got: {metrics.fail_reason}"
@@ -58,7 +54,6 @@ async def run(_ctx=None):
 
         with open("debug_overload.txt", "w") as f:
             f.write(traceback.format_exc())
-        print(traceback.format_exc())
         raise
     finally:
         if "tmp_path" in locals() and tmp_path.exists():

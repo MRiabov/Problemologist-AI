@@ -218,10 +218,11 @@ async def test_int_030_interrupt_propagation():
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             assert status_resp.status_code == 200
             status = status_resp.json()["status"]
-            print(f"INT-030 STATUS CHECK {i}: {status}")
             if status in ["cancelled", "failed"]:
                 break
 
-        print(f"INT-030 FINAL STATUS: {status}")
         # If it fails quickly, it might be 'failed'. If cancellation wins, it's 'cancelled'.
-        assert status in ["cancelled", "failed"]
+        assert status in [
+            "cancelled",
+            "failed",
+        ], f"Expected cancelled or failed, got {status}"

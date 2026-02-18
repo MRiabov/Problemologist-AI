@@ -35,17 +35,12 @@ async def run(_ctx=None):
             duration=1.0,
             seed=42,
         )
-        print(
-            f"VERIFICATION_RESULT: success_rate={result.success_rate}, "
-            f"consistent={result.is_consistent}"
-        )
         return result.dict()
     except Exception:
         import traceback
 
         with open("debug_jitter.txt", "w") as f:
             f.write(traceback.format_exc())
-        print(traceback.format_exc())
         raise
     finally:
         if "tmp_path" in locals() and tmp_path.exists():

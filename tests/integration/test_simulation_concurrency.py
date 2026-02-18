@@ -52,13 +52,11 @@ async def test_simulation_concurrency_serialization():
                 headers={"X-Session-ID": sid},
             )
 
-    print("\nStarting 3 concurrent simulation requests (expecting serialization)...")
     global_start = time.time()
     results = await asyncio.gather(*[run_simulation(sid) for sid in session_ids])
     global_end = time.time()
 
     total_duration = global_end - global_start
-    print(f"Total real-time duration: {total_duration:.2f}s")
 
     durations = []
     intervals = []
@@ -70,37 +68,31 @@ async def test_simulation_concurrency_serialization():
         duration = end - start
         durations.append(duration)
         intervals.append((start, end))
-        print(
-            f"Sim {i}: {duration:.2f}s (Start: {start - global_start:.2f}, End: {end - global_start:.2f})"
-        )
 
     sum_durations = sum(durations)
-    print(f"Sum of individual durations: {sum_durations:.2f}s")
 
     # If serialized, total_duration should be >= sum_durations (roughly)
     # If parallel, total_duration would be ~ max(durations)
     assert (
         total_duration >= sum_durations * 0.9
-    ), f"Simulations appeared parallel. Total: {total_duration:.2f}s, Sum: {sum_durations:.2f}s"
+    ), f"Simulations appeared parallel. Total: {total_duration:.2f}s, Sum: {sum_durations:.2f}s, Durations: {durations}"
 
     # Check for significant overlaps
     sorted_intervals = sorted(intervals, key=lambda x: x[0])
-    overlaps = 0
+    overlaps = []
     for i in range(len(sorted_intervals) - 1):
         prev_end = sorted_intervals[i][1]
         next_start = sorted_intervals[i + 1][0]
         # Allowing 0.5s for network/FastAPI overhead
         if next_start < prev_end - 0.5:
-            overlaps += 1
-            print(
+            overlaps.append(
                 f"Overlap detected: Sim {i} ended at {prev_end - global_start:.2f}s, "
                 f"Sim {i + 1} started at {next_start - global_start:.2f}s"
             )
 
-    assert overlaps == 0, f"Serialization failed: {overlaps} overlaps detected."
-    print(
-        "PASS: No significant overlaps detected. Parallelism avoided, serialization verified."
-    )
+    assert (
+        not overlaps
+    ), f"Serialization failed: {len(overlaps)} overlaps detected: {overlaps}"
 
 
 if __name__ == "__main__":
