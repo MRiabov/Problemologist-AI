@@ -43,7 +43,7 @@ class WorkerInterpreter:
 
     async def _execute_remote(self, code: str):
         """Internal async execution call."""
-        return await self.worker_client.execute(code)
+        return await self.worker_client.execute_python(code)
 
     def shutdown(self):
         """Cleanup if needed."""
@@ -71,7 +71,9 @@ def evaluate_formula(formula: str, context: dict) -> float:
         return 0.0
 
 
-def cad_simulation_metric(gold, prediction, trace=None) -> Any:
+def cad_simulation_metric(
+    gold, prediction, trace=None, pred_name=None, pred_trace=None
+) -> Any:
     """
     Unified DSPy metric for CAD simulation performance.
     Returns a dspy.Prediction with 'score' and 'feedback' for GEPA.
