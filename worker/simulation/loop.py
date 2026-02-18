@@ -313,8 +313,8 @@ class SimulationLoop:
                 target_vel = np.linalg.norm(state.vel)
                 target_pos = state.pos
 
-            # TODO: Get max stress from backend
-            max_stress = 0.0
+            # Get max stress from backend
+            max_stress = self.backend.get_max_stress()
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 4. Check Success/Failure conditions

@@ -34,6 +34,7 @@ class GenesisBackend(PhysicsBackend):
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
         self._is_built = False
+        self._last_max_stress = 0.0
         if gs is not None:
             try:
                 # Use CPU for tests/CI if GPU not available, but prefer GPU
@@ -312,11 +313,15 @@ class GenesisBackend(PhysicsBackend):
             # Ideally dt matches what was configured in gs.Scene
             self.scene.step()
 
+            self._last_max_stress = 0.0
+
             # T012: Part Breakage Detection
             for name, entity in self.entities.items():
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
                     max_stress = np.max(field.stress)
+                    if max_stress > self._last_max_stress:
+                        self._last_max_stress = float(max_stress)
 
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
@@ -480,6 +485,9 @@ class GenesisBackend(PhysicsBackend):
             return StressField(nodes=nodes, stress=stress)
 
         return None
+
+    def get_max_stress(self) -> float:
+        return self._last_max_stress
 
     def get_stress_summaries(self) -> list[StressSummary]:
         summaries = []

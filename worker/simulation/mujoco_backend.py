@@ -91,6 +91,9 @@ class MuJoCoBackend(PhysicsBackend):
         # MuJoCo (rigid only) does not have stress fields
         return None
 
+    def get_max_stress(self) -> float:
+        return 0.0
+
     def get_stress_summaries(self) -> list[StressSummary]:
         return []
 
