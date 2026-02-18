@@ -144,5 +144,6 @@ async def planner_node(state: AgentState) -> AgentState:
     ctx = SharedNodeContext.create(
         worker_url=settings.spec_001_api_url, session_id=session_id
     )
-    node = PlannerNode(context=ctx)
-    return await node(state)
+    async with ctx.lifecycle():
+        node = PlannerNode(context=ctx)
+        return await node(state)

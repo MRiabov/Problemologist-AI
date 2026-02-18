@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -65,6 +66,14 @@ class SharedNodeContext:
         if langfuse_callback:
             callbacks.append(langfuse_callback)
         return callbacks
+
+    @asynccontextmanager
+    async def lifecycle(self):
+        """Context manager for node lifecycle and resource cleanup."""
+        try:
+            yield self
+        finally:
+            await self.worker_client.aclose()
 
 
 class BaseNode:
