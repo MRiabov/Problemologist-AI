@@ -178,6 +178,10 @@ class SimulationLoop:
             except Exception:
                 pass
 
+        # Pre-calculate monitor lists to avoid rebuilding them in every simulation step
+        self._monitor_names = [x[0] for x in self.actuators_to_monitor]
+        self._monitor_limits = [x[1] for x in self.actuators_to_monitor]
+
         self.stress_summaries = []
         self.fluid_metrics = []
         self.actuator_clamp_duration = {}
@@ -340,12 +344,12 @@ class SimulationLoop:
             current_time = res.time
 
             # 2. Update Metrics
+            # Optimization: fetch all actuator states once to avoid double lookups
+            current_actuator_states = {
+                n: self.backend.get_actuator_state(n) for n in self.actuator_names
+            }
             energy = sum(
-                abs(
-                    self.backend.get_actuator_state(n).ctrl
-                    * self.backend.get_actuator_state(n).velocity
-                )
-                for n in self.actuator_names
+                abs(s.ctrl * s.velocity) for s in current_actuator_states.values()
             )
 
             target_vel = 0.0
@@ -387,7 +391,7 @@ class SimulationLoop:
                 break
 
             # Check Motor Overload
-            if self._check_motor_overload():
+            if self._check_motor_overload(current_actuator_states):
                 self.fail_reason = SimulationFailureMode.OVERCURRENT
                 break
 
@@ -615,16 +619,20 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, actuator_states: dict | None = None) -> bool:
         # Check all position/torque actuators for saturation
         from worker.simulation.loop import SIMULATION_STEP_S
 
         if not self.actuators_to_monitor:
             return False
 
-        names = [item[0] for item in self.actuators_to_monitor]
-        limits = [item[1] for item in self.actuators_to_monitor]
-        forces = [abs(self.backend.get_actuator_state(n).force) for n in names]
+        names = self._monitor_names
+        limits = self._monitor_limits
+
+        if actuator_states:
+            forces = [abs(actuator_states[n].force) for n in names]
+        else:
+            forces = [abs(self.backend.get_actuator_state(n).force) for n in names]
 
         return self.success_evaluator.check_motor_overload(
             names, forces, limits, SIMULATION_STEP_S
