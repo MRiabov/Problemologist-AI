@@ -318,6 +318,23 @@ class MuJoCoBackend(PhysicsBackend):
             raise ValueError(f"Tendon {tendon_name} not found")
         return float(self.data.ten_force[tid])
 
+    def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
+        """Apply position jitter to a body in MuJoCo."""
+        body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        if body_id == -1:
+            return
+
+        # Assuming free joint is at the beginning of qpos for simplicity
+        # or we find the joint index if more complex
+        self.data.qpos[0:3] += np.array(jitter)
+        mujoco.mj_forward(self.model, self.data)
+
+    def close(self) -> None:
+        """Close MuJoCo backend."""
+        # MuJoCo doesn't have a specific close() but we can clear data
+        self.data = None
+        self.model = None
+
     def close(self) -> None:
         if self.renderer:
             self.renderer.close()

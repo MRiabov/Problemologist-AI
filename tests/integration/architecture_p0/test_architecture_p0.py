@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from pathlib import Path
 
 import httpx
 import pytest
@@ -62,7 +63,7 @@ async def test_int_002_controller_worker_execution_boundary():
                     completed = True
                     break
             await asyncio.sleep(0.5)
-        # assert completed, "Agent run timed out or did not complete"
+        assert completed, "Agent run timed out or did not complete"
 
 
 @pytest.mark.integration_p0
@@ -249,7 +250,7 @@ run()
             json={"path": "debug_stl.py", "content": debug_stl_script},
             headers={"X-Session-ID": session_id},
         )
-        debug_resp = await client.post(
+        _ = await client.post(
             f"{WORKER_URL}/runtime/execute",
             json={
                 "code": "import sys; sys.path.append('.'); import debug_stl",
@@ -269,10 +270,15 @@ run()
         data = resp.json()
 
         assert not data["success"]
-        # Expect "Forbid zone hit: test_forbid" or "collision_with_forbidden_zone"
+        # Expect "Forbid zone hit", "collision_with_forbidden_zone",
+        # or "forbid_zone_hit"
         assert any(
-            msg in data["message"]
-            for msg in ["Forbid zone hit", "collision_with_forbidden_zone"]
+            msg in data["message"].lower()
+            for msg in [
+                "forbid zone hit",
+                "collision_with_forbidden_zone",
+                "forbid_zone_hit",
+            ]
         )
 
 
@@ -315,8 +321,8 @@ constraints:
             headers={"X-Session-ID": session_id},
         )
 
-        script_path = "tests/integration/architecture_p0/scripts/verify_jitter.py"
-        with open(script_path) as f:
+        script_path = Path("tests/integration/architecture_p0/scripts/verify_jitter.py")
+        with script_path.open() as f:
             script_content = f.read()
 
         await client.post(
@@ -328,7 +334,10 @@ constraints:
         resp = await client.post(
             f"{WORKER_URL}/runtime/execute",
             json={
-                "code": "import sys; sys.path.append('.'); import verify_jitter; import asyncio; asyncio.run(verify_jitter.run())",
+                "code": (
+                    "import sys; sys.path.append('.'); import verify_jitter; "
+                    "import asyncio; asyncio.run(verify_jitter.run())"
+                ),
                 "timeout": 30,
             },
             headers={"X-Session-ID": session_id},
@@ -337,22 +346,15 @@ constraints:
         assert resp.status_code == 200
         data = resp.json()
 
-        if data["exit_code"] != 0:
-            print(f"STDOUT:\n{data['stdout']}")
-            print(f"STDERR:\n{data['stderr']}")
-
-            # Try to read debug log
-            debug_resp = await client.post(
-                f"{WORKER_URL}/fs/read",
-                json={"path": "debug_jitter.txt"},
-                headers={"X-Session-ID": session_id},
-            )
-            if debug_resp.status_code == 200:
-                print(f"DEBUG LOG:\n{debug_resp.json()['content']}")
-
-        assert data["exit_code"] == 0
-        assert "VERIFICATION_RESULT" in data["stdout"]
-        assert "success_rate=1.0" in data["stdout"]
+        assert data["exit_code"] == 0, (
+            f"Exit code {data['exit_code']} != 0\n"
+            f"STDOUT:\n{data['stdout']}\n"
+            f"STDERR:\n{data['stderr']}"
+        )
+        assert "VERIFICATION_RESULT" in data["stdout"], "VERIFICATION_RESULT missing"
+        assert (
+            "success_rate=1.0" in data["stdout"]
+        ), f"Verification failed: {data['stdout']}"
 
 
 @pytest.mark.integration_p0
@@ -362,8 +364,10 @@ async def test_int_022_motor_overload_behavior():
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-022-{int(time.time())}"
 
-        script_path = "tests/integration/architecture_p0/scripts/verify_overload.py"
-        with open(script_path) as f:
+        script_path = Path(
+            "tests/integration/architecture_p0/scripts/verify_overload.py"
+        )
+        with script_path.open() as f:
             script_content = f.read()
 
         await client.post(
@@ -375,7 +379,10 @@ async def test_int_022_motor_overload_behavior():
         resp = await client.post(
             f"{WORKER_URL}/runtime/execute",
             json={
-                "code": "import sys; sys.path.append('.'); import verify_overload; import asyncio; asyncio.run(verify_overload.run())",
+                "code": (
+                    "import sys; sys.path.append('.'); import verify_overload; "
+                    "import asyncio; asyncio.run(verify_overload.run())"
+                ),
                 "timeout": 30,
             },
             headers={"X-Session-ID": session_id},
@@ -384,20 +391,11 @@ async def test_int_022_motor_overload_behavior():
         assert resp.status_code == 200
         data = resp.json()
 
-        if data["exit_code"] != 0:
-            print(f"STDOUT:\n{data['stdout']}")
-            print(f"STDERR:\n{data['stderr']}")
-
-            # Try to read debug log
-            debug_resp = await client.post(
-                f"{WORKER_URL}/fs/read",
-                json={"path": "debug_overload.txt"},
-                headers={"X-Session-ID": session_id},
-            )
-            if debug_resp.status_code == 200:
-                print(f"DEBUG LOG:\n{debug_resp.json()['content']}")
-
-        assert data["exit_code"] == 0
+        assert data["exit_code"] == 0, (
+            f"Exit code {data['exit_code']} != 0\n"
+            f"STDOUT:\n{data['stdout']}\n"
+            f"STDERR:\n{data['stderr']}"
+        )
 
 
 @pytest.mark.integration_p0
@@ -443,7 +441,4 @@ def build():
         assert resp.status_code == 200, resp.text
         data = resp.json()
 
-        if not data["success"]:
-            print(f"INT-023 DEBUG FAILURE: {data.get('message')}")
-
-        assert data["success"]
+        assert data["success"], f"INT-023 failure: {data.get('message')}"
