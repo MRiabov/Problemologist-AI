@@ -5,8 +5,8 @@ import structlog
 from dspy.teleprompt import GEPA
 
 from controller.agent.benchmark.data_loader import load_benchmark_dataset
+from controller.agent.bootstrap import build_eval_program
 from controller.agent.dspy_utils import cad_simulation_metric
-from controller.agent.nodes.coder import CoderSignature
 from controller.agent.reward import load_reward_config
 
 logger = structlog.get_logger(__name__)
@@ -42,22 +42,15 @@ def optimize_agent(
     )
 
     # 2. Setup Program (Module)
-    # Wraps CodeAct into a Module for DSPy optimization
-    class AgentModule(dspy.Module):
-        def __init__(self):
-            super().__init__()
-            self.program = dspy.CodeAct(CoderSignature)
-
-        def forward(self, current_step, plan, todo):
-            return self.program(current_step=current_step, plan=plan, todo=todo)
-
-    program = AgentModule()
+    program = build_eval_program(agent_name)
 
     # 3. Setup Teleprompter (Optimizer)
     if use_gepa:
         # GEPA (Genetic-Pareto) uses reflective feedback from rollouts
         # to evolve the prompt instructions.
-        reflection_model = os.getenv("REFLECTION_MODEL", "gpt-4o")
+        reflection_model = os.getenv(
+            "GEPA_REFLECTION_MODEL", "stepfun/step-3.5-flash:free"
+        )
         logger.info("configuring_gepa", reflection_model=reflection_model)
 
         teleprompter = GEPA(
@@ -110,7 +103,7 @@ if __name__ == "__main__":
     # Ensure LLM is configured globally if not already
     if not dspy.settings.lm:
         # Default to a reliable model from env or settings
-        model = os.getenv("DSPY_OPTIMIZER_MODEL", "gpt-4o")
+        model = os.getenv("DSPY_OPTIMIZER_MODEL", "stepfun/step-3.5-flash:free")
         dspy.settings.configure(lm=dspy.LM(model))
 
     optimize_agent(args.agent, args.size, args.demos, use_gepa=not args.no_gepa)

@@ -21,6 +21,10 @@ class PromptManager:
             "engineer": data["engineer"]["engineer"]["system"],
             "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
             "critic": data["engineer"]["critic"]["system"],
+            "benchmark_planner": data["benchmark_generator"]["planner"]["system"],
+            "benchmark_coder": data["benchmark_generator"]["coder"]["system"],
+            "benchmark_reviewer": data["benchmark_generator"]["reviewer"]["system"],
+            "cots_search": data["subagents"]["cots_search"]["system"],
         }
 
         # Add fallbacks for things not in prompts.yaml yet
