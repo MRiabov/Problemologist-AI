@@ -135,6 +135,30 @@ class SimulationLoop:
         # Configurable timeout (capped at hard limit)
         self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
 
+        # Performance optimizations: cache backend info
+        self.actuator_names = self.backend.get_all_actuator_names()
+        self.body_names = [
+            b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+        ]
+
+        # Cache actuator limits for monitoring
+        self.actuators_to_monitor = []
+        for name in self.actuator_names:
+            try:
+                state = self.backend.get_actuator_state(name)
+                # Only monitor if there is a non-zero force range
+                if (
+                    state.forcerange
+                    and len(state.forcerange) >= 2
+                    and state.forcerange[1] > state.forcerange[0]
+                ):
+                    self.actuators_to_monitor.append((name, state.forcerange[1]))
+                elif backend_type != SimulatorBackendType.MUJOCO:
+                    # Default for other backends (e.g. Genesis)
+                    self.actuators_to_monitor.append((name, 1000.0))
+            except Exception:
+                pass
+
         self.stress_summaries = []
         self.fluid_metrics = []
         self.actuator_clamp_duration = {}
@@ -297,13 +321,12 @@ class SimulationLoop:
             current_time = res.time
 
             # 2. Update Metrics
-            actuator_names = self.backend.get_all_actuator_names()
             energy = sum(
                 abs(
                     self.backend.get_actuator_state(n).ctrl
                     * self.backend.get_actuator_state(n).velocity
                 )
-                for n in actuator_names
+                for n in self.actuator_names
             )
 
             target_vel = 0.0
@@ -313,8 +336,7 @@ class SimulationLoop:
                 target_vel = np.linalg.norm(state.vel)
                 target_pos = state.pos
 
-            # TODO: Get max stress from backend
-            max_stress = 0.0
+            max_stress = self.backend.get_max_stress()
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
             # 4. Check Success/Failure conditions
@@ -335,8 +357,8 @@ class SimulationLoop:
                 )
                 break
 
-            # Check Forbidden Zones
-            if self._check_forbidden_collision():
+            # Check Forbidden Zones (T018 optimization: skip if no zones)
+            if self.forbidden_sites and self._check_forbidden_collision():
                 self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
                 break
 
@@ -547,6 +569,7 @@ class SimulationLoop:
             total_time=current_time,
             total_energy=metrics.total_energy,
             max_velocity=metrics.max_velocity,
+            max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
             fail_mode=self.fail_reason
@@ -576,37 +599,16 @@ class SimulationLoop:
         # Check all position/torque actuators for saturation
         from worker.simulation.loop import SIMULATION_STEP_S
 
-        actuator_names = self.backend.get_all_actuator_names()
+        if not self.actuators_to_monitor:
+            return False
 
-        for name in actuator_names:
-            state = self.backend.get_actuator_state(name)
-            # MuJoCo actuators usually have a forcerange [low, high]
-            # We check if it's hitting EITHER limit
-            # For now, we assume the backend provides forcerange or we use a fallback
-            limit = 1.0  # default fallback
+        names = [item[0] for item in self.actuators_to_monitor]
+        limits = [item[1] for item in self.actuators_to_monitor]
+        forces = [abs(self.backend.get_actuator_state(n).force) for n in names]
 
-            # Identify the motor limit from the model
-            try:
-                # MuJoCo model is in self.backend.model
-                import mujoco
-
-                idx = mujoco.mj_name2id(
-                    self.backend.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name
-                )
-                if idx >= 0:
-                    if self.backend.model.actuator_forcelimited[idx]:
-                        limit = self.backend.model.actuator_forcerange[idx][1]
-                    else:
-                        # Not force limited, so no overload possible
-                        continue
-            except Exception:
-                pass
-
-            if self.success_evaluator.check_motor_overload(
-                [name], [state.force], limit, SIMULATION_STEP_S
-            ):
-                return True
-        return False
+        return self.success_evaluator.check_motor_overload(
+            names, forces, limits, SIMULATION_STEP_S
+        )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
         """Check if any vertices of body_name are inside any of the goal sites."""
@@ -618,7 +620,6 @@ class SimulationLoop:
     def _check_forbidden_collision(self) -> bool:
         return any(
             self.backend.check_collision(b, z)
-            for b in self.backend.get_all_body_names()
+            for b in self.body_names
             for z in self.forbidden_sites
-            if b not in ["world", "0"]
         )
