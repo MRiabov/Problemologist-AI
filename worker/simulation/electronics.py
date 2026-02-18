@@ -23,12 +23,42 @@ class ElectronicsManager:
         if not self.electronics:
             return
 
-        # T004: Inlined SPICE simulation logic (simulated for refactor)
-        # In a real implementation, this would call out to a SPICE engine.
+        # T004: Integrated SPICE simulation logic
         try:
-            # Placeholder for actual SPICE logic
-            # For now, always use fallback since SPICE is not implemented in this snippet
-            self._fallback_update()
+            from shared.circuit_builder import build_circuit_from_section
+            from shared.pyspice_utils import validate_circuit
+
+            circuit = build_circuit_from_section(
+                self.electronics, switch_states=self.switch_states, add_shunts=True
+            )
+            validation = validate_circuit(circuit, self.electronics.power_supply)
+
+            if validation.valid:
+                # Map voltages to power status.
+                # A component is powered if the voltage across its terminals is sufficient.
+                # For simplicity in this integration, we'll check if the component's '+' or 'in'
+                # node has a significant voltage relative to ground.
+                for comp in self.electronics.components:
+                    # Power supply itself is always 'powered' if present
+                    if comp.type == "power_supply":
+                        self.is_powered_map[comp.component_id] = 1.0
+                        continue
+
+                    # Determine primary input node for the component
+                    node_name = f"{comp.component_id}_+"
+                    if comp.type in ["switch", "relay"]:
+                        node_name = f"{comp.component_id}_in"
+
+                    voltage = validation.node_voltages.get(node_name, 0.0)
+                    # Normalize power scale (0.0 to 1.0) based on supply voltage
+                    supply_v = self.electronics.power_supply.voltage_dc
+                    self.is_powered_map[comp.component_id] = min(
+                        1.0, max(0.0, voltage / supply_v)
+                    ) if supply_v > 0 else 0.0
+            else:
+                logger.warning("circuit_validation_failed", errors=validation.errors)
+                self._fallback_update()
+
         except Exception as e:
             logger.warning("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
