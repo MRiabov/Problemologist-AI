@@ -44,94 +44,56 @@ class PlannerNode(BaseNode):
         # WP04: Extract steerability context
         steer_context = self._get_steer_context(state.messages)
 
-        from controller.agent.dspy_utils import WorkerInterpreter
+        inputs = {
+            "task": state.task,
+            "skills": skills_context,
+            "steer_context": steer_context,
+        }
+        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
-        # Use WorkerInterpreter for remote execution
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        prediction, artifacts, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=PlannerSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="planner",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-
-        program = dspy.CodeAct(
-            PlannerSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        max_retries = 3
-        retry_count = 0
-        journal_entry = "\n[Planner] Starting planning phase."
-
-        while retry_count < max_retries:
-            try:
-                with dspy.settings.context(lm=self.ctx.dspy_lm):
-                    logger.info("planner_dspy_invoke_start", session_id=state.session_id)
-                    prediction = program(
-                        task=state.task,
-                        skills=skills_context,
-                        steer_context=steer_context,
-                    )
-                    logger.info(
-                        "planner_dspy_invoke_complete", session_id=state.session_id
-                    )
-
-                # Validation Gate
-                from worker.utils.file_validation import validate_node_output
-
-                # Read current files concurrently to validate
-                files_to_read = ["plan.md", "todo.md", "assembly_definition.yaml"]
-                results = await asyncio.gather(
-                    *[self.ctx.fs.read_file(f) for f in files_to_read],
-                    return_exceptions=True,
-                )
-                artifacts = {
-                    f: res
-                    for f, res in zip(files_to_read, results)
-                    if not isinstance(res, Exception)
+        if not prediction:
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "journal": state.journal + journal_entry,
                 }
+            )
 
-                is_valid, validation_errors = validate_node_output("planner", artifacts)
+        # Success
+        from controller.observability.tracing import record_worker_events
+        from shared.observability.schemas import SubmissionValidationEvent
 
-                if not is_valid:
-                    logger.warning("planner_validation_failed", errors=validation_errors)
-                    retry_count += 1
-                    continue
-
-                # Success
-                await record_worker_events(
-                    episode_id=state.session_id,
-                    events=[
-                        SubmissionValidationEvent(
-                            artifacts_present=list(artifacts.keys()),
-                            verification_passed=True,
-                            reasoning_trace_quality=1.0,
-                            errors=[],
-                        )
-                    ],
+        await record_worker_events(
+            episode_id=state.session_id,
+            events=[
+                SubmissionValidationEvent(
+                    artifacts_present=list(artifacts.keys()),
+                    verification_passed=True,
+                    reasoning_trace_quality=1.0,
+                    errors=[],
                 )
+            ],
+        )
 
-                summary = getattr(prediction, "summary", "No summary provided.")
-                return state.model_copy(
-                    update={
-                        "plan": artifacts.get("plan.md", ""),
-                        "todo": artifacts.get("todo.md", ""),
-                        "status": AgentStatus.EXECUTING,
-                        "journal": state.journal + f"\n[Planner] {summary}",
-                        "messages": state.messages
-                        + [AIMessage(content=f"Plan summary: {summary}")],
-                    }
-                )
-
-            except Exception as e:
-                logger.error("planner_dspy_failed", error=str(e))
-                retry_count += 1
-            finally:
-                interpreter.shutdown()
-
+        summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={
-                "status": AgentStatus.FAILED,
-                "journal": state.journal + journal_entry + "\nMax retries reached.",
+                "plan": artifacts.get("plan.md", ""),
+                "todo": artifacts.get("todo.md", ""),
+                "status": AgentStatus.EXECUTING,
+                "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
+                "messages": state.messages
+                + [AIMessage(content=f"Plan summary: {summary}")],
             }
         )
 

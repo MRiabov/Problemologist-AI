@@ -4,7 +4,12 @@ from typing import Any
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
-from controller.observability.tracing import record_worker_events, sync_asset
+from controller.observability.middleware_helper import (
+    broadcast_file_update,
+    record_events,
+    record_simulation_result,
+    sync_file_asset,
+)
 from controller.workflows.execution import ScriptExecutionWorkflow
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -15,10 +20,7 @@ from shared.observability.schemas import (
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
     RunCommandToolEvent,
-    SimulationFailureMode,
-    SimulationInstabilityEvent,
     SimulationRequestEvent,
-    SimulationResultEvent,
     SkillReadEvent,
     WriteFileToolEvent,
 )
@@ -44,7 +46,7 @@ class RemoteFilesystemMiddleware:
 
     async def list_files(self, path: str | Path = "/") -> list[dict[str, Any]]:
         """List files via the Worker client."""
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[LsFilesToolEvent(path=str(path))],
         )
@@ -71,14 +73,14 @@ class RemoteFilesystemMiddleware:
             # Simple heuristic for skill name
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=events,
         )
 
         if p_str.startswith(("skills/", "utils/")):
             module_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
-            await record_worker_events(
+            await record_events(
                 episode_id=self.client.session_id,
                 events=[
                     LibraryUsageEvent(
@@ -97,7 +99,7 @@ class RemoteFilesystemMiddleware:
         if self._is_read_only(p_str):
             raise PermissionError(f"Path '{p_str}' is read-only.")
 
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[
                 WriteFileToolEvent(
@@ -115,7 +117,7 @@ class RemoteFilesystemMiddleware:
                     if "/" in path.lstrip("/")[7:]
                     else path.lstrip("/")[7:]
                 )
-                await record_worker_events(
+                await record_events(
                     episode_id=self.client.session_id,
                     events=[
                         LibraryUsageEvent(
@@ -124,31 +126,8 @@ class RemoteFilesystemMiddleware:
                     ],
                 )
 
-            import uuid
-            from datetime import datetime
-
-            from controller.observability.broadcast import EpisodeBroadcaster
-
-            # Broadcast update to frontend via unified event hub
-            try:
-                episode_id = uuid.UUID(self.client.session_id)
-                await EpisodeBroadcaster.get_instance().broadcast(
-                    episode_id,
-                    {
-                        "type": "file_update",
-                        "data": {"path": p_str, "content": content},
-                        "timestamp": datetime.now(datetime.UTC).isoformat(),
-                    },
-                )
-                # Sync to Asset table for Explorer visibility
-                await sync_asset(episode_id, p_str, content)
-            except ValueError:
-                # If session_id is not a UUID, we can't broadcast
-                # (standard in some dev/test setups)
-                pass
-            except Exception:
-                # Don't fail the write operation if broadcast fails
-                pass
+            # Broadcast update and sync asset via helper
+            await broadcast_file_update(self.client.session_id, p_str, content)
 
         return success
 
@@ -158,7 +137,7 @@ class RemoteFilesystemMiddleware:
         if self._is_read_only(p_str):
             raise PermissionError(f"Path '{p_str}' is read-only.")
 
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[EditFileToolEvent(path=p_str, num_edits=len(edits))],
         )
@@ -168,7 +147,7 @@ class RemoteFilesystemMiddleware:
             # content for the Asset table
             try:
                 content = await self.client.read_file(p_str)
-                await sync_asset(self.client.session_id, p_str, content)
+                await sync_file_asset(self.client.session_id, p_str, content)
             except Exception:
                 # Don't fail the edit if sync fails
                 pass
@@ -179,7 +158,7 @@ class RemoteFilesystemMiddleware:
         Execute a command (Python code) via the Worker client,
         wrapped in Temporal for durability.
         """
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[RunCommandToolEvent(command=code)],
         )
@@ -208,7 +187,7 @@ class RemoteFilesystemMiddleware:
     ) -> list[dict[str, Any]]:
         """Search for a pattern in files via the Worker client."""
         p_str = str(path) if path else None
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[GrepToolEvent(pattern=pattern, path=p_str, glob=glob)],
         )
@@ -223,7 +202,7 @@ class RemoteFilesystemMiddleware:
         """Trigger physics simulation via worker client."""
         p_str = str(script_path)
         # Record request
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[SimulationRequestEvent(script_path=p_str)],
         )
@@ -231,69 +210,8 @@ class RemoteFilesystemMiddleware:
         result = await self.client.simulate(p_str, backend=backend)
         res_dict = result.model_dump()
 
-        # Record result
-        # Map failure reason if present in metadata or result
-        failure_reason = SimulationFailureMode.NONE
-        if not res_dict.get("success", True):
-            # This is a guestimate mapping for now
-            raw_reason = res_dict.get("failure_reason", "").lower()
-            if "timeout" in raw_reason:
-                failure_reason = SimulationFailureMode.TIMEOUT
-            elif "out of bounds" in raw_reason:
-                failure_reason = SimulationFailureMode.OUT_OF_BOUNDS
-            elif "forbid" in raw_reason:
-                failure_reason = SimulationFailureMode.FORBID_ZONE_HIT
-            elif "break" in raw_reason or "stress" in raw_reason:
-                failure_reason = SimulationFailureMode.PART_BREAKAGE
-            elif "nan" in raw_reason or "instability" in raw_reason:
-                failure_reason = SimulationFailureMode.PHYSICS_INSTABILITY
-            elif "short_circuit" in raw_reason:
-                failure_reason = SimulationFailureMode.SHORT_CIRCUIT
-            elif "overcurrent" in raw_reason:
-                failure_reason = SimulationFailureMode.OVERCURRENT
-            elif "wire_torn" in raw_reason:
-                failure_reason = SimulationFailureMode.WIRE_TORN
-            elif "open_circuit" in raw_reason:
-                failure_reason = SimulationFailureMode.OPEN_CIRCUIT
-
-        await record_worker_events(
-            episode_id=self.client.session_id,
-            events=[
-                SimulationResultEvent(
-                    success=res_dict.get("success", True),
-                    failure_reason=failure_reason,
-                    time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
-                    compute_time_ms=res_dict.get("compute_time_ms", 0.0),
-                    metadata=res_dict,
-                )
-            ],
-        )
-
-        # Detect instability
-        if not res_dict.get("success", True):
-            raw_reason = res_dict.get("failure_reason", "").lower()
-            if any(
-                word in raw_reason
-                for word in ["nan", "penetration", "instability", "joint violation"]
-            ):
-                instability_type = "unknown"
-                if "nan" in raw_reason:
-                    instability_type = "nan"
-                elif "penetration" in raw_reason:
-                    instability_type = "penetration"
-                elif "joint violation" in raw_reason:
-                    instability_type = "joint_violation"
-
-                await record_worker_events(
-                    episode_id=self.client.session_id,
-                    events=[
-                        SimulationInstabilityEvent(
-                            instability_type=instability_type,
-                            part_ids=res_dict.get("offending_parts", []),
-                            message=res_dict.get("failure_reason"),
-                        )
-                    ],
-                )
+        # Record result and detect instability via helper
+        await record_simulation_result(self.client.session_id, res_dict)
 
         return res_dict
 
@@ -304,7 +222,7 @@ class RemoteFilesystemMiddleware:
         res_dict = result.model_dump()
 
         # Record as ManufacturabilityCheckEvent
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[
                 ManufacturabilityCheckEvent(
@@ -327,7 +245,7 @@ class RemoteFilesystemMiddleware:
         res_dict = result.model_dump()
 
         # Record as PlanSubmissionEngineerEvent
-        await record_worker_events(
+        await record_events(
             episode_id=self.client.session_id,
             events=[
                 PlanSubmissionEngineerEvent(
