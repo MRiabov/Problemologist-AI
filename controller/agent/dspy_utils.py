@@ -1,6 +1,8 @@
 import asyncio
+from typing import Any
+
 import structlog
-from typing import Any, Callable, Dict, Optional
+
 from controller.clients.worker import WorkerClient
 
 logger = structlog.get_logger(__name__)
@@ -79,6 +81,7 @@ def cad_simulation_metric(
     Returns a dspy.Prediction with 'score' and 'feedback' for GEPA.
     """
     from dspy import Prediction
+
     from controller.agent.reward import load_reward_config
 
     agent_name = getattr(gold, "agent_name", "cad_engineer")

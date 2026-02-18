@@ -1,7 +1,7 @@
-import structlog
 from contextlib import suppress
 
 import dspy
+import structlog
 from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings

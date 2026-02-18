@@ -1,14 +1,13 @@
 import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.observability.tracing import record_worker_events, sync_asset
 from shared.observability.schemas import (
     SimulationFailureMode,
-    SimulationResultEvent,
     SimulationInstabilityEvent,
+    SimulationResultEvent,
 )
 
 
@@ -55,21 +54,21 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
     raw_reason = res_dict.get("failure_reason", "").lower()
     if "timeout" in raw_reason:
         return SimulationFailureMode.TIMEOUT
-    elif "out of bounds" in raw_reason:
+    if "out of bounds" in raw_reason:
         return SimulationFailureMode.OUT_OF_BOUNDS
-    elif "forbid" in raw_reason:
+    if "forbid" in raw_reason:
         return SimulationFailureMode.FORBID_ZONE_HIT
-    elif "break" in raw_reason or "stress" in raw_reason:
+    if "break" in raw_reason or "stress" in raw_reason:
         return SimulationFailureMode.PART_BREAKAGE
-    elif "nan" in raw_reason or "instability" in raw_reason:
+    if "nan" in raw_reason or "instability" in raw_reason:
         return SimulationFailureMode.PHYSICS_INSTABILITY
-    elif "short_circuit" in raw_reason:
+    if "short_circuit" in raw_reason:
         return SimulationFailureMode.SHORT_CIRCUIT
-    elif "overcurrent" in raw_reason:
+    if "overcurrent" in raw_reason:
         return SimulationFailureMode.OVERCURRENT
-    elif "wire_torn" in raw_reason:
+    if "wire_torn" in raw_reason:
         return SimulationFailureMode.WIRE_TORN
-    elif "open_circuit" in raw_reason:
+    if "open_circuit" in raw_reason:
         return SimulationFailureMode.OPEN_CIRCUIT
 
     return SimulationFailureMode.NONE

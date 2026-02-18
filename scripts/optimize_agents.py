@@ -1,5 +1,6 @@
 import argparse
 import os
+
 import dspy
 import structlog
 from dspy.teleprompt import GEPA
@@ -7,7 +8,6 @@ from dspy.teleprompt import GEPA
 from controller.agent.benchmark.data_loader import load_benchmark_dataset
 from controller.agent.bootstrap import build_eval_program
 from controller.agent.dspy_utils import cad_simulation_metric
-from controller.agent.reward import load_reward_config
 
 logger = structlog.get_logger(__name__)
 

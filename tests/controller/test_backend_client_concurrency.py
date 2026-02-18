@@ -1,8 +1,8 @@
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+
 import pytest
+
 from controller.clients.backend import RemoteFilesystemBackend
-from shared.backend.protocol import FileDownloadResponse, FileUploadResponse
 
 
 @pytest.mark.asyncio

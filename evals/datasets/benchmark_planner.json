@@ -1,12 +1,57 @@
 [
     {
-        "task": "Create a benchmark where a ball must roll down a ramp.",
-        "expected_criteria": "A ramp and a ball.",
-        "objectives": {}
+        "id": "bp-001",
+        "task": "Create a benchmark where a ball must be guided down a ramp into a goal zone.",
+        "expected_criteria": "Plan includes static geometry (ramp) and correct goal zone definition."
     },
     {
-        "task": "Create a benchmark with a pendulum.",
-        "expected_criteria": "A pendulum and a target.",
-        "objectives": {}
+        "id": "bp-002",
+        "task": "Create a benchmark where the ball must avoid a forbid zone (obstacle) to reach the goal.",
+        "expected_criteria": "Plan includes a forbid zone AABB that lies between the spawn point and the goal."
+    },
+    {
+        "id": "bp-003",
+        "task": "Create a benchmark with multiple forbid zones and a narrow path to the goal.",
+        "expected_criteria": "Plan defines multiple forbid zones and a goal zone that requires precise steering."
+    },
+    {
+        "id": "bp-004",
+        "task": "Create a benchmark where the goal is at a higher elevation than the starting position.",
+        "expected_criteria": "Plan specifies a starting Z and a goal Z such that goal_Z > spawn_Z."
+    },
+    {
+        "id": "bp-005",
+        "task": "Create a benchmark with a very tight build zone constraint.",
+        "expected_criteria": "Plan includes a build_zone with small delta between min and max coordinates."
+    },
+    {
+        "id": "bp-006",
+        "task": "Create a benchmark where the ball radius has significant static randomization.",
+        "expected_criteria": "Plan includes moved_object with static_randomization for radius (e.g., [5, 15])."
+    },
+    {
+        "id": "bp-007",
+        "task": "Create a benchmark involving two separate ramps and a gap that must be jumped.",
+        "expected_criteria": "Plan describes two ramp geometries and a gap, with a goal zone at the end."
+    },
+    {
+        "id": "bp-008",
+        "task": "Create a benchmark where the ball spawn has significant runtime jitter.",
+        "expected_criteria": "Plan includes moved_object with runtime_jitter of at least [5, 5, 2]."
+    },
+    {
+        "id": "bp-009",
+        "task": "Create a benchmark where the goal zone is above the ball (ball starts at Z=0, goal at Z=200). Gravity-only solutions should be impossible. Include a forbid zone above the ball to prevent vertical stacking.",
+        "expected_criteria": "Plan states that geometry must redirect or lift the ball, defines goal and forbid AABBs, and specifies input object location and randomization."
+    },
+    {
+        "id": "bp-010",
+        "task": "Create a benchmark with a moving conveyor-like roller (rotating cylinder) that imparts lateral motion to the ball. The roller is centered at X=0,Y=0,Z=50 with axis along Y and is motor-driven. Goal is at X=200,Y=0,Z=50.",
+        "expected_criteria": "Plan includes motorized moving part with axis definition, ball spawn location, goal AABB, and randomization that avoids initial intersections with the roller."
+    },
+    {
+        "id": "bp-011",
+        "task": "Create a benchmark for a simple ramp. You MUST produce `benchmark_structure.md` and `benchmark_engineer_todo.md`. You MUST also update the existing `objectives.yaml` template with the correct goal and build zones.",
+        "expected_criteria": "Agent produces mandatory markdown files and modifies `objectives.yaml` while preserving the template header."
     }
 ]

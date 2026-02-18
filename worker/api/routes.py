@@ -29,7 +29,7 @@ from worker.workbenches.models import WorkbenchResult
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import submit_for_review, validate, validate_and_price
+from ..utils import submit_for_review, validate
 from ..utils.git import (
     abort_merge,
     commit_all,
@@ -711,7 +711,7 @@ async def api_lint(
 
             try:
                 stdout, _ = await asyncio.wait_for(process.communicate(), timeout=30)
-            except (asyncio.TimeoutError, TimeoutError):
+            except TimeoutError:
                 process.kill()
                 await process.wait()
                 raise

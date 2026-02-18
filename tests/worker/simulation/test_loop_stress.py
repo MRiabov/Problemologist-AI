@@ -1,8 +1,7 @@
-import pytest
-import numpy as np
 from unittest.mock import MagicMock, patch
-from worker.simulation.loop import SimulationLoop
+
 from shared.simulation.schemas import SimulatorBackendType
+from worker.simulation.loop import SimulationLoop
 
 
 class TestSimulationLoopStress:

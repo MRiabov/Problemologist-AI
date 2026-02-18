@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 
 from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.state import BenchmarkGeneratorState

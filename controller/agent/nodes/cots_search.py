@@ -1,6 +1,5 @@
-import structlog
-
 import dspy
+import structlog
 from langchain_core.messages import AIMessage
 
 from shared.type_checking import type_check

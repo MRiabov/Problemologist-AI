@@ -1,9 +1,8 @@
-import asyncio
-import structlog
 from contextlib import suppress
 
 import dspy
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+import structlog
+from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
@@ -84,8 +83,6 @@ class PlannerNode(BaseNode):
             )
 
         # Success
-        from controller.observability.tracing import record_worker_events
-        from shared.observability.schemas import SubmissionValidationEvent
 
         await record_worker_events(
             episode_id=state.session_id,

@@ -1,28 +1,28 @@
+import uuid
+
 import dspy
 import structlog
-import uuid
-from typing import Optional
 
 from controller.agent.config import settings
 from controller.agent.dspy_utils import WorkerInterpreter
 from controller.agent.nodes.coder import CoderSignature
+from controller.agent.prompt_manager import PromptManager
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from controller.agent.prompt_manager import PromptManager
 
 logger = structlog.get_logger(__name__)
 
 
 from controller.agent.benchmark.nodes import (
-    BenchmarkPlannerSignature,
     BenchmarkCoderSignature,
+    BenchmarkPlannerSignature,
 )
 from controller.agent.benchmark.tools import get_benchmark_tools
 
 
 class AgentModule(dspy.Module):
-    def __init__(self, agent_name: str, session_id: Optional[str] = None):
+    def __init__(self, agent_name: str, session_id: str | None = None):
         super().__init__()
         self.agent_name = agent_name
         # Setup worker context for optimization
@@ -92,7 +92,7 @@ class AgentModule(dspy.Module):
                 history="",  # No history in optimization yet
                 review_feedback="",  # No feedback yet
             )
-        elif self.agent_name == "benchmark_coder":
+        if self.agent_name == "benchmark_coder":
             # Dataset keywords might need adjustment for coder
             return self.program(
                 prompt=kwargs.get("task", ""),
@@ -101,14 +101,13 @@ class AgentModule(dspy.Module):
                 review_feedback="",
                 validation_logs="",
             )
-        else:
-            # Default Coder/Engineer behavior
-            return self.program(
-                current_step=kwargs.get("current_step", kwargs.get("task", "")),
-                plan=kwargs.get("plan", ""),
-                todo=kwargs.get("todo", ""),
-                feedback=kwargs.get("feedback", ""),
-            )
+        # Default Coder/Engineer behavior
+        return self.program(
+            current_step=kwargs.get("current_step", kwargs.get("task", "")),
+            plan=kwargs.get("plan", ""),
+            todo=kwargs.get("todo", ""),
+            feedback=kwargs.get("feedback", ""),
+        )
 
 
 def build_eval_program(agent_name: str) -> dspy.Module:
