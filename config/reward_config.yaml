@@ -96,6 +96,8 @@ benchmark_generator:
           Minimum signal: even a non-compiling attempt gets 0.02 to distinguish
           from a missing file.
         minimum_score: 0.02
+        success_feedback: "The benchmark script compiled and executed without syntax or import errors."
+        failure_feedback: "The benchmark script failed to compile or encountered a runtime error."
 
       # Gate 2 — build123d CAD is geometrically valid
       cad_geometry_valid:
@@ -103,6 +105,8 @@ benchmark_generator:
         description: >
           All parts export to valid OBJ meshes (no degenerate faces,
           no self-intersections detected by trimesh).
+        success_feedback: "Benchmark geometry is valid and exported successfully."
+        failure_feedback: "Benchmark geometry is invalid or failed to export (e.g. degenerate faces)."
 
       # Gate 3 — benchmark constraints satisfied (no zone overlaps)
       benchmark_constraints_satisfied:
@@ -110,6 +114,8 @@ benchmark_generator:
         description: >
           validate() passes: input object ∩ environment = ∅, goal ∩ forbid = ∅,
           all objects within simulation_bounds under all static randomization variants.
+        success_feedback: "Benchmark constraints (zone overlaps) are satisfied."
+        failure_feedback: "Benchmark constraints violated: environment overlaps with goal or forbid zones."
 
       # Gate 4 — simulation runs without instability
       simulation_stable:
@@ -117,12 +123,16 @@ benchmark_generator:
         description: >
           A short smoke-test simulation (5 frames) completes without NaNs,
           penetration explosions, or out-of-bounds exits.
+        success_feedback: "Benchmark simulation environment is physically stable."
+        failure_feedback: "Benchmark simulation is unstable (NaNs or explosions detected)."
 
       # Gate 5 — reviewer accepted the benchmark
       reviewer_accepted:
         weight: 0.55
         description: >
           The benchmark reviewer accepted the implementation. Dominant reward.
+        success_feedback: "Benchmark implementation was accepted by the reviewer."
+        failure_feedback: "Benchmark implementation was rejected by the reviewer."
 
   # ── Benchmark Reviewer ───────────────────────────────────────────────────
   benchmark_reviewer:
@@ -226,12 +236,16 @@ engineer:
         description: >
           script.py executes without Python syntax or import errors.
         minimum_score: 0.02
+        success_feedback: "The CAD script compiled and executed without syntax or import errors."
+        failure_feedback: "The CAD script failed to compile or encountered a runtime error. Check for syntax errors or missing imports."
 
       # Gate 2 — CAD geometry valid (no self-intersections, valid mesh)
       cad_geometry_valid:
         weight: 0.08
         description: >
           All parts export to valid OBJ meshes.
+        success_feedback: "CAD geometry is valid and successfully exported."
+        failure_feedback: "CAD geometry is invalid, has self-intersections, or failed to export."
 
       # Gate 3 — manufacturability passes
       manufacturability_valid:
@@ -239,12 +253,16 @@ engineer:
         description: >
           All parts pass workbench manufacturability checks (e.g. no CNC
           undercuts, wall thickness >= minimum for injection molding).
+        success_feedback: "The design passed all manufacturability constraints (CNC/Injection Molding)."
+        failure_feedback: "The design has manufacturability issues (e.g. undercuts, thin walls). Review manufacturing constraints."
 
       # Gate 4 — parts within build zone
       parts_within_build_zone:
         weight: 0.05
         description: >
           All custom-built parts are fully within the build_zone AABB.
+        success_feedback: "All parts are correctly positioned within the designated build zone."
+        failure_feedback: "Some parts are outside the build zone. Adjust part placement or scaling."
 
       # Gate 5 — actual cost within cap (continuous penalty)
       cost_within_cap:
@@ -253,6 +271,8 @@ engineer:
           Validated unit cost (from validate_and_price) <= max_unit_cost.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, actual_cost / max_unit_cost - 1.0))"
+        success_feedback: "Manufacturing cost is within the target budget."
+        failure_feedback: "Manufacturing cost exceeds the budget. Try using cheaper materials or reducing part volume."
 
       # Gate 6 — actual weight within cap (continuous penalty)
       weight_within_cap:
@@ -261,6 +281,8 @@ engineer:
           Validated assembly weight <= max_weight.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, actual_weight / max_weight - 1.0))"
+        success_feedback: "Assembly weight is within the maximum limit."
+        failure_feedback: "Assembly weight exceeds the limit. Use lighter materials or hollow out solid regions."
 
       # Gate 7 — simulation result (dominant term)
       simulation_result:
@@ -275,6 +297,8 @@ engineer:
         partial: true
         success_formula: "0.60"
         failure_formula: "0.60 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
+        success_feedback: "The solution successfully solved the problem in simulation."
+        failure_feedback: "The simulation failed to reach the goal. Re-examine mechanical stability, component placement, or movement range."
 
   # ── Electrical Engineer ──────────────────────────────────────────────────
   electrical_engineer:
