@@ -239,6 +239,7 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
+                    self.cables = data.get("cables", [])
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -605,8 +606,9 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        if site_name in self.entity_configs:
+            self.entity_configs[site_name]["pos"] = pos.tolist()
 
     def get_contact_forces(self) -> list[ContactForce]:
         if not self.scene:
@@ -639,7 +641,12 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        if site_name in self.entity_configs:
+            cfg = self.entity_configs[site_name]
+            pos = cfg.get("pos", [0, 0, 0])
+            size = cfg.get("size", [0, 0, 0])
+            return SiteState(pos=tuple(pos), quat=(1, 0, 0, 0), size=tuple(size))
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
@@ -707,7 +714,7 @@ class GenesisBackend(PhysicsBackend):
         return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return []
+        return [c["name"] for c in getattr(self, "cables", [])]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -723,9 +730,17 @@ class GenesisBackend(PhysicsBackend):
                 # Check if target body pos is within zone
                 state = self.get_body_state(body_name)
                 pos = state.pos
-                z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
-                z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
-                return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+
+                # Check min/max or pos/size
+                if "min" in ent_cfg and "max" in ent_cfg:
+                    z_min = ent_cfg["min"]
+                    z_max = ent_cfg["max"]
+                    return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+                elif "pos" in ent_cfg and "size" in ent_cfg:
+                    # size is half-extents
+                    z_pos = ent_cfg["pos"]
+                    z_size = ent_cfg["size"]
+                    return all(abs(pos[i] - z_pos[i]) <= z_size[i] for i in range(3))
 
             # Fallback for scene_meta
             if self.scene_meta:
@@ -734,9 +749,18 @@ class GenesisBackend(PhysicsBackend):
                         # Check if target body pos is within zone
                         state = self.get_body_state(body_name)
                         pos = state.pos
-                        z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
-                        z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
-                        return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+                        # Check min/max or pos/size
+                        if "min" in ent_cfg and "max" in ent_cfg:
+                            z_min = ent_cfg["min"]
+                            z_max = ent_cfg["max"]
+                            return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+                        elif "pos" in ent_cfg and "size" in ent_cfg:
+                            # size is half-extents
+                            z_pos = ent_cfg["pos"]
+                            z_size = ent_cfg["size"]
+                            return all(
+                                abs(pos[i] - z_pos[i]) <= z_size[i] for i in range(3)
+                            )
 
             return False
 
