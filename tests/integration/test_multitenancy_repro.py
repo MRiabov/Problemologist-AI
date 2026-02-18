@@ -103,18 +103,18 @@ def build():
 
     for res in results:
         # Basic assertions
-        assert (
-            res.get("status") == 200
-        ), f"FAILURE: {res['name']} returned {res.get('status')}. Error: {res.get('error')}. Data: {json.dumps(res.get('data'), indent=2)}"
+        assert res.get("status") == 200, (
+            f"FAILURE: {res['name']} returned {res.get('status')}. Error: {res.get('error')}. Data: {json.dumps(res.get('data'), indent=2)}"
+        )
 
         data = res.get("data", {})
         success = data.get("success", False)
         message = data.get("message", "")
 
         # Check success or specific stability message
-        assert (
-            success or "Simulation stable" in message
-        ), f"FAILURE: {res['name']} reported success=False. Msg: {message}. Full Data: {json.dumps(data, indent=2)}"
+        assert success or "Simulation stable" in message, (
+            f"FAILURE: {res['name']} reported success=False. Msg: {message}. Full Data: {json.dumps(data, indent=2)}"
+        )
 
 
 if __name__ == "__main__":

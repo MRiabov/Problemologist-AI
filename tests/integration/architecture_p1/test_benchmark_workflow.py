@@ -55,20 +55,20 @@ async def test_benchmark_planner_cad_reviewer_path():
 
         # 3. Verify Artifacts
         artifacts_resp = await client.get(f"/artifacts/{session_id}")
-        assert (
-            artifacts_resp.status_code == 200
-        ), f"Failed to fetch artifacts: {artifacts_resp.text}"
+        assert artifacts_resp.status_code == 200, (
+            f"Failed to fetch artifacts: {artifacts_resp.text}"
+        )
         artifacts_list = artifacts_resp.json()
 
         # Check for key files
         artifact_paths = [a["path"] for a in artifacts_list]
 
-        assert any(
-            p.endswith("plan.md") for p in artifact_paths
-        ), f"plan.md missing. Artifacts: {artifact_paths}"
-        assert any(
-            p.endswith("objectives.yaml") for p in artifact_paths
-        ), f"objectives.yaml missing. Artifacts: {artifact_paths}"
-        assert any(
-            "reviews/" in p for p in artifact_paths
-        ), f"Reviews missing. Artifacts: {artifact_paths}"
+        assert any(p.endswith("plan.md") for p in artifact_paths), (
+            f"plan.md missing. Artifacts: {artifact_paths}"
+        )
+        assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
+            f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        )
+        assert any("reviews/" in p for p in artifact_paths), (
+            f"Reviews missing. Artifacts: {artifact_paths}"
+        )

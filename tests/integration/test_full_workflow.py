@@ -64,9 +64,9 @@ async def test_full_workflow_end_to_end():
         run_payload = {"task": engineer_task, "session_id": engineer_session_id}
 
         run_resp = await client.post("/agent/run", json=run_payload)
-        assert (
-            run_resp.status_code == 202
-        ), f"Failed to trigger engineer: {run_resp.text}"
+        assert run_resp.status_code == 202, (
+            f"Failed to trigger engineer: {run_resp.text}"
+        )
         episode_id = run_resp.json()["episode_id"]
 
         # 5. Poll for Engineer completion

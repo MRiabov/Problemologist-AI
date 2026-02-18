@@ -50,9 +50,9 @@ def test_env_files_consistency():
     }
     missing_in_example -= ignored_keys
 
-    assert (
-        not missing_in_env
-    ), f"Keys found in .env.example but missing in .env: {missing_in_env}"
-    assert (
-        not missing_in_example
-    ), f"Keys found in .env but missing in .env.example: {missing_in_example}"
+    assert not missing_in_env, (
+        f"Keys found in .env.example but missing in .env: {missing_in_env}"
+    )
+    assert not missing_in_example, (
+        f"Keys found in .env but missing in .env.example: {missing_in_example}"
+    )

@@ -55,16 +55,16 @@ async def test_benchmark_to_engineer_handoff():
 
         # 3. Verify Handoff Package Artifacts
         artifacts_resp = await client.get(f"/artifacts/{session_id}")
-        assert (
-            artifacts_resp.status_code == 200
-        ), f"Failed to fetch artifacts: {artifacts_resp.text}"
+        assert artifacts_resp.status_code == 200, (
+            f"Failed to fetch artifacts: {artifacts_resp.text}"
+        )
         artifacts = artifacts_resp.json()
         artifact_paths = [a["path"] for a in artifacts]
 
         # Check existence of required files
-        assert any(
-            "objectives.yaml" in p for p in artifact_paths
-        ), f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        assert any("objectives.yaml" in p for p in artifact_paths), (
+            f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        )
 
         # Check for renders (expecting a directory or multiple files)
         # Renders usually in renders/ folder.

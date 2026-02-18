@@ -84,9 +84,9 @@ async def test_manufacturing_methods_and_materials():
             (a for a in artifacts if "assembly_definition.yaml" in a["path"]),
             None,
         )
-        assert (
-            cost_yaml_artifact is not None
-        ), f"Workbench output (cost estimation) missing. Artifacts: {[a['path'] for a in artifacts]}"
+        assert cost_yaml_artifact is not None, (
+            f"Workbench output (cost estimation) missing. Artifacts: {[a['path'] for a in artifacts]}"
+        )
 
         # 4. Verify Material Enforcement (INT-035) - "Nice to have" negative test
         bad_material_session_id = str(uuid.uuid4())

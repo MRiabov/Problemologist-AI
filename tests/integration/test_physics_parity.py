@@ -47,6 +47,6 @@ def test_physics_parity_rigid_body(tmp_path):
     # Increase tolerance to 15% relative to initial height (1.0m)
     # Different solvers (MuJoCo vs Genesis) have different default contact models
     tolerance = 0.15
-    assert (
-        dist < tolerance
-    ), f"Parity mismatch: MuJoCo={pos_mujoco}, Genesis={pos_genesis}, dist={dist}"
+    assert dist < tolerance, (
+        f"Parity mismatch: MuJoCo={pos_mujoco}, Genesis={pos_genesis}, dist={dist}"
+    )
