@@ -1,3 +1,4 @@
+import threading
 from typing import Any
 
 import numpy as np
@@ -24,6 +25,8 @@ logger = structlog.get_logger(__name__)
 
 
 class GenesisBackend(PhysicsBackend):
+    _lock = threading.Lock()
+
     def __init__(self):
         self.scene = None
         self.entities = {}  # name -> gs.Entity
@@ -34,14 +37,15 @@ class GenesisBackend(PhysicsBackend):
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
         self._is_built = False
-        if gs is not None:
+        self._ensure_initialized()
+
+    def _ensure_initialized(self):
+        if gs is not None and not getattr(gs, "_initialized", False):
             try:
                 # Use CPU for tests/CI if GPU not available, but prefer GPU
                 gs.init(backend=gs.gpu)
             except Exception as e:
-                if "already initialized" in str(e):
-                    logger.debug("genesis_already_initialized")
-                else:
+                if "already initialized" not in str(e):
                     try:
                         gs.init(backend=gs.cpu)
                         logger.info("genesis_init_cpu")
@@ -58,68 +62,83 @@ class GenesisBackend(PhysicsBackend):
                 logger.error("failed_to_load_mfg_config", error=str(e))
 
     def load_scene(self, scene: SimulationScene) -> None:
-        if gs is None:
-            raise ImportError("Genesis not installed")
+        with self._lock:
+            # Ensure fresh state for Genesis global state
+            self.close()
+            self._ensure_initialized()
 
-        self.scene_meta = scene
-        self._load_mfg_config()
+            if gs is None:
+                raise ImportError("Genesis not installed")
 
-        # Reset state for new scene
-        self.entities = {}
-        self.entity_configs = {}
-        self.cameras = {}
-        self.motors = []
-        self._is_built = False
+            self.scene_meta = scene
+            self._load_mfg_config()
 
-        if "gs_scene" in scene.assets:
-            self.scene = scene.assets["gs_scene"]
-            self._is_built = True
-            return
+            # Reset state for new scene
+            self.entities = {}
+            self.entity_configs = {}
+            self.cameras = {}
+            self.motors = []
+            self._is_built = False
 
-        # T017: GPU OOM Auto-Retry Logic
-        max_retries = 3
-        particle_reduction_factor = 0.75
-        self.current_particle_multiplier = 1.0
+            if "gs_scene" in scene.assets:
+                self.scene = scene.assets["gs_scene"]
+                self._is_built = True
+                return
 
-        for attempt in range(max_retries):
-            try:
-                self._load_scene_internal(scene)
-                # If we get here, it succeeded
-                break
-            except Exception as e:
-                # Check for OOM
-                error_str = str(e).lower()
-                if (
-                    "out of memory" in error_str
-                    or "cuda error: out of memory" in error_str
-                ):
-                    from shared.observability.events import emit_event
-                    from shared.observability.schemas import GpuOomRetryEvent
+            # T017: GPU OOM Auto-Retry Logic
+            max_retries = 3
+            particle_reduction_factor = 0.75
+            self.current_particle_multiplier = 1.0
 
-                    original_count = int(10000 * self.current_particle_multiplier)
-                    self.current_particle_multiplier *= particle_reduction_factor
-                    reduced_count = int(10000 * self.current_particle_multiplier)
+            for attempt in range(max_retries):
+                try:
+                    self._load_scene_internal(scene)
+                    # If we get here, it succeeded
+                    self._is_built = True
+                    break
+                except Exception as e:
+                    # Check for OOM
+                    error_str = str(e).lower()
+                    if (
+                        "out of memory" in error_str
+                        or "cuda error: out of memory" in error_str
+                    ):
+                        from shared.observability.events import emit_event
+                        from shared.observability.schemas import GpuOomRetryEvent
 
-                    emit_event(
-                        GpuOomRetryEvent(
-                            original_particles=original_count,
-                            reduced_particles=reduced_count,
+                        original_count = int(10000 * self.current_particle_multiplier)
+                        self.current_particle_multiplier *= particle_reduction_factor
+                        reduced_count = int(10000 * self.current_particle_multiplier)
+
+                        emit_event(
+                            GpuOomRetryEvent(
+                                original_particles=original_count,
+                                reduced_particles=reduced_count,
+                            )
                         )
-                    )
 
-                    logger.warning(
-                        "genesis_oom_detected",
-                        attempt=attempt + 1,
-                        reduction=particle_reduction_factor,
-                    )
-                    # Clean up and retry
-                    self.close()
-                    if attempt == max_retries - 1:
-                        logger.error("genesis_oom_persistent")
+                        logger.warning(
+                            "genesis_oom_detected",
+                            attempt=attempt + 1,
+                            reduction=particle_reduction_factor,
+                        )
+                        # Clean up and retry
+                        self.close()
+                        if attempt == max_retries - 1:
+                            logger.error("genesis_oom_persistent")
+                            raise
+                    else:
+                        logger.error("failed_to_build_genesis_scene", error=str(e))
                         raise
-                else:
-                    logger.error("failed_to_build_genesis_scene", error=str(e))
-                    raise
+
+    @property
+    def is_built(self) -> bool:
+        if self.scene is None:
+            return False
+        # Genesis 0.3.x has .is_built on scene
+        if hasattr(self.scene, "is_built"):
+            return self.scene.is_built
+        return self._is_built
 
     def _load_scene_internal(self, scene: SimulationScene) -> None:
         """Internal helper to build the scene, allowing for retries on OOM."""
@@ -299,9 +318,10 @@ class GenesisBackend(PhysicsBackend):
             self._is_built = True
 
     def step(self, dt: float) -> StepResult:
-        if self.scene is None:
-            self.current_time += dt
-            return StepResult(time=self.current_time, success=True)
+        with self._lock:
+            if self.scene is None:
+                self.current_time += dt
+                return StepResult(time=self.current_time, success=True)
 
         if not getattr(self.scene, "is_built", False):
             return StepResult(
@@ -316,7 +336,7 @@ class GenesisBackend(PhysicsBackend):
             self.scene.step()
 
             # T012: Part Breakage Detection
-            for name, entity in self.entities.items():
+            for name in self.entities:
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
                     max_stress = np.max(field.stress)
@@ -336,8 +356,8 @@ class GenesisBackend(PhysicsBackend):
                     )
 
                     if max_stress > ultimate_stress:
-                        max_idx = np.argmax(field.stress)
-                        loc = field.nodes[max_idx].tolist()
+                        # max_idx = np.argmax(field.stress)  # Not used currently
+                        # loc = field.nodes[max_idx].tolist()  # Not used currently
                         return StepResult(
                             time=self.current_time,
                             success=False,
@@ -554,8 +574,9 @@ class GenesisBackend(PhysicsBackend):
         return self.render_camera("default", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
-        if not self.scene:
-            return np.zeros((height, width, 3), dtype=np.uint8)
+        with self._lock:
+            if not self.scene:
+                return np.zeros((height, width, 3), dtype=np.uint8)
 
         if camera_name not in self.cameras:
             # Add a default camera if not found
@@ -778,13 +799,15 @@ class GenesisBackend(PhysicsBackend):
                             return
 
     def close(self) -> None:
-        if self.scene:
-            try:
-                # Some versions of Genesis have gs.destroy()
-                if hasattr(gs, "destroy"):
-                    gs.destroy()
-            except Exception:
-                pass
-            self.scene = None
+        try:
+            if self.scene and hasattr(self.scene, "destroy"):
+                try:
+                    self.scene.destroy()
+                except Exception as e:
+                    logger.debug("scene_destroy_failed", error=str(e))
+        except Exception:
+            pass
+        self.scene = None
         self.entities = {}
         self.cameras = {}
+        self._is_built = False
