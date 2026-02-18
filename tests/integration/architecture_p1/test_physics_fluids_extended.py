@@ -28,15 +28,26 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
+        script_content = """from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    b = Box(1,1,1)
+    b.metadata = PartMetadata(material_id="aluminum_6061")
+    return b
+"""
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={
                 "path": "script.py",
-                "content": "from build123d import *; def build(): return Box(1,1,1)",
+                "content": script_content,
             },
             headers={"X-Session-ID": session_id},
         )
@@ -52,6 +63,7 @@ constraints: {max_unit_cost: 100, max_weight: 10}
         data = resp.json()
 
         # Verify result labelled approximate
+        assert data.get("success"), f"Simulation failed: {data.get('message')}"
         assert data["confidence"] == "approximate", (
             f"Expected confidence 'approximate', got '{data['confidence']}'"
         )
@@ -76,15 +88,26 @@ constraints: {max_unit_cost: 100, max_weight: 10}
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
+        script_content = """from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    b = Box(1,1,1)
+    b.metadata = PartMetadata(material_id="aluminum_6061")
+    return b
+"""
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={
                 "path": "script.py",
-                "content": "from build123d import *; def build(): return Box(1,1,1)",
+                "content": script_content,
             },
             headers={"X-Session-ID": session_id},
         )
@@ -96,11 +119,17 @@ constraints: {max_unit_cost: 100, max_weight: 10}
             timeout=60.0,
         )
         assert resp.status_code == 200
+        data = resp.json()
 
         # Verify artifacts in response (MP4, JSON, etc.)
-        data = resp.json()
-        artifacts = data.get("artifacts", {})
-        assert "render_paths" in artifacts
+        assert data.get("success"), f"Simulation failed: {data.get('message')}"
+        artifacts = data.get("artifacts")
+        assert artifacts is not None, (
+            f"Artifacts missing in response. Message: {data.get('message')}"
+        )
+        assert "render_paths" in artifacts, (
+            f"render_paths missing in artifacts. Keys: {list(artifacts.keys())}"
+        )
 
         # Verify raw particle data absent from workspace
         ls_resp = await client.post(

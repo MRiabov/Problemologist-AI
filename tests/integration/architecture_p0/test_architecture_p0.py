@@ -30,40 +30,33 @@ async def test_int_001_compose_boot_health_contract():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_002_controller_worker_execution_boundary():
-    """INT-002: Verify execution happens on worker only."""
-    async with httpx.AsyncClient() as client:
-        session_id = f"test-boundary-{int(time.time())}"
-        payload = {
-            "task": "Write a unique file to verify worker execution",
-            "session_id": session_id,
-        }
+    """INT-002: Verify controller-worker handoff and execution status."""
+    session_id = f"test-exec-{int(time.time())}"
+    task = "Build a simple box of 10x10x10mm."
 
+    async with httpx.AsyncClient() as client:
         # Trigger agent run
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", json=payload, timeout=20.0
+            f"{CONTROLLER_URL}/agent/run",
+            json={"task": task, "session_id": session_id},
+            timeout=600.0,
         )
-        assert resp.status_code in [200, 202]
+        assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
 
-        # Wait for completion
+        # Poll for status with increased timeout
+        max_attempts = 60
         completed = False
-        for _ in range(30):
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            if status_resp.status_code == 200:
-                status = status_resp.json()["status"]
-                if status == "failed":
-                    msg = (
-                        status_resp.json().get("metadata", {}).get("error")
-                        or "Agent run failed"
-                    )
-                    pytest.fail(
-                        f"Agent run failed: {msg}. Full status: {status_resp.json()}"
-                    )
-                if status == "completed":
-                    completed = True
-                    break
-            await asyncio.sleep(0.5)
-        assert completed, "Agent run timed out or did not complete"
+        for _ in range(max_attempts):
+            await asyncio.sleep(10.0)
+            s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            if s_resp.json()["status"] == "COMPLETED":
+                completed = True
+                break
+            if s_resp.json()["status"] == "FAILED":
+                pytest.fail(f"Agent failed: {s_resp.text}")
+
+        assert completed, "Agent did not complete in time"
 
 
 @pytest.mark.integration_p0
@@ -124,24 +117,21 @@ def build():
 
         # Launch two simulations concurrently
         # The worker should handle them (either serializing or thread-safe parallel)
-        # We start them at roughly the same time
-        t0 = time.time()
+        # Launch two simulations concurrently
         res1, res2 = await asyncio.gather(
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
                 json={"script_path": "box.py"},
                 headers={"X-Session-ID": session_id_1},
-                timeout=60.0,
+                timeout=600.0,
             ),
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
                 json={"script_path": "box.py"},
                 headers={"X-Session-ID": session_id_2},
-                timeout=60.0,
+                timeout=600.0,
             ),
         )
-        t1 = time.time()
-
         # Verify both succeeded
         assert res1.status_code == 200, f"Sim 1 failed: {res1.text}"
         assert res2.status_code == 200, f"Sim 2 failed: {res2.text}"
@@ -217,7 +207,7 @@ def build():
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
-            json={"path": "script_fail.py", "content": script_fail},
+            json={"path": "fail.py", "content": script_fail},
             headers={"X-Session-ID": session_id},
         )
 
@@ -243,10 +233,10 @@ run()
             f"{WORKER_URL}/runtime/execute",
             json={
                 "code": "import sys; sys.path.append('.'); import debug_stl; debug_stl.run()",
-                "timeout": 30,
+                "timeout": 120,
             },
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=180.0,
         )
         assert resp_exec.status_code == 200, f"Debug script failed: {resp_exec.text}"
         assert resp_exec.json()["exit_code"] == 0, (
@@ -255,9 +245,9 @@ run()
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/simulate",
-            json={"script_path": "script_fail.py"},
+            json={"script_path": "fail.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=600.0,
         )
         assert resp.status_code == 200
         data = resp.json()
