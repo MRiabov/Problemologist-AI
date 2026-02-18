@@ -112,31 +112,29 @@ class RemoteFilesystemBackend(BackendProtocol):
     async def aglob_info(self, pattern: str, path: str = "/") -> list[ProtocolFileInfo]:
         return await self.als_info(path)
 
+    async def _aupload_one(self, path: str, content: bytes) -> FileUploadResponse:
+        try:
+            success = await self.client.upload_file(path, content)
+            return FileUploadResponse(path=path, error=None if success else "failed")
+        except Exception as e:
+            return FileUploadResponse(path=path, error=str(e))
+
     async def aupload_files(
         self, files: list[tuple[str, bytes]]
     ) -> list[FileUploadResponse]:
-        responses = []
-        for path, content in files:
-            try:
-                success = await self.client.upload_file(path, content)
-                responses.append(
-                    FileUploadResponse(path=path, error=None if success else "failed")
-                )
-            except Exception as e:
-                responses.append(FileUploadResponse(path=path, error=str(e)))
-        return responses
+        tasks = [self._aupload_one(path, content) for path, content in files]
+        return list(await asyncio.gather(*tasks))
+
+    async def _adownload_one(self, path: str) -> FileDownloadResponse:
+        try:
+            content = await self.client.read_file_binary(path)
+            return FileDownloadResponse(path=path, content=content, error=None)
+        except Exception as e:
+            return FileDownloadResponse(path=path, error=str(e))
 
     async def adownload_files(self, paths: list[str]) -> list[FileDownloadResponse]:
-        responses = []
-        for path in paths:
-            try:
-                content = await self.client.read_file_binary(path)
-                responses.append(
-                    FileDownloadResponse(path=path, content=content, error=None)
-                )
-            except Exception as e:
-                responses.append(FileDownloadResponse(path=path, error=str(e)))
-        return responses
+        tasks = [self._adownload_one(path) for path in paths]
+        return list(await asyncio.gather(*tasks))
 
     # --- Sync Fallbacks ---
 

@@ -232,3 +232,47 @@ async def test_submit(mock_httpx_client):
         headers={"X-Session-ID": "test-session"},
         timeout=30.0,
     )
+
+@pytest.mark.asyncio
+async def test_client_reuse(mock_httpx_client):
+    """Test that httpx.AsyncClient is only created once and reused."""
+    from unittest.mock import patch
+
+    # Mock response for get_health
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "healthy"}
+    mock_httpx_client.get.return_value = mock_response
+
+    # Let's verify how many times httpx.AsyncClient was called
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client_cls.return_value = mock_httpx_client
+
+        client = WorkerClient("http://worker:8000", "test-session")
+        await client.get_health()
+        await client.get_health()
+        await client.get_health()
+
+        assert mock_client_cls.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_aclose(mock_httpx_client):
+    """Test that aclose() closes the cached client."""
+    from unittest.mock import patch
+
+    # Mock response for get_health
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "healthy"}
+    mock_httpx_client.get.return_value = mock_response
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client_cls.return_value = mock_httpx_client
+
+        client = WorkerClient("http://worker:8000", "test-session")
+        await client.get_health()  # Force client creation
+
+        await client.aclose()
+        mock_httpx_client.aclose.assert_called_once()
+        assert client._cached_client is None
