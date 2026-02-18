@@ -856,7 +856,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         """Converts an assembly of parts into a Genesis scene descriptor (JSON)."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
 
-        scene_data = {"entities": [], "fluids": [], "objectives": []}
+        scene_data = {"entities": [], "fluids": [], "objectives": [], "cables": []}
 
         # 1. Add zones from objectives
         if objectives:
@@ -995,6 +995,44 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         ):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
+
+        # 5. Add Electronics (Wires/Cables)
+        if electronics and hasattr(electronics, "wiring"):
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                waypoints = getattr(wire, "waypoints", [])
+                if not waypoints:
+                    continue
+
+                # Calculate physical properties from AWG
+                # Heuristic: radius (m) = diameter / 2000
+                from shared.wire_utils import get_awg_properties
+
+                props = get_awg_properties(wire.gauge_awg)
+                radius = props["diameter_mm"] / 2000.0
+
+                # WP3: stiffness scaling based on AWG
+                stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
+
+                # Resolve waypoints to absolute or relative positions
+                resolved_points = []
+                for j, pt in enumerate(waypoints):
+                    abs_pt = list(pt)
+                    # For now, we use absolute points in Genesis scene.json for cables,
+                    # but we could also support parent-relative if needed.
+                    resolved_points.append(abs_pt)
+
+                scene_data["cables"].append(
+                    {
+                        "wire_id": wire.wire_id,
+                        "points": resolved_points,
+                        "radius": radius,
+                        "gauge_awg": wire.gauge_awg,
+                        "stiffness": stiffness,
+                    }
+                )
 
         scene_path = self.output_dir / "scene.json"
         with scene_path.open("w") as f:
