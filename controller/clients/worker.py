@@ -26,31 +26,32 @@ class WorkerClient:
         session_id: str,
         http_client: httpx.AsyncClient | None = None,
     ):
-        """Initialize the worker client.
-
-        Args:
-            base_url: Base URL of the worker service (e.g., http://worker:8000).
-            session_id: Session ID to use for all requests.
-            http_client: Pre-configured httpx.AsyncClient to reuse.
-        """
         self.base_url = base_url.rstrip("/")
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
         self.http_client = http_client
-        self._cached_client: httpx.AsyncClient | None = None
-        self._client_lock = asyncio.Lock()
+        self._loop_clients: dict[int, httpx.AsyncClient] = {}
+        self._loop_locks: dict[int, asyncio.Lock] = {}
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Helper to get a client, either shared or new (for compatibility)."""
         if self.http_client:
             return self.http_client
 
-        # Fallback for code not yet updated to provide a client: reuse a shared instance
-        if self._cached_client is None:
-            async with self._client_lock:
-                if self._cached_client is None:
-                    self._cached_client = httpx.AsyncClient()
-        return self._cached_client
+        loop = asyncio.get_running_loop()
+        loop_id = id(loop)
+
+        if loop_id not in self._loop_clients:
+            # Note: Minimal race condition risk here across threads due to GIL and loop-local id,
+            # but even if two threads create different clients for different loops, it's fine.
+            if loop_id not in self._loop_locks:
+                self._loop_locks[loop_id] = asyncio.Lock()
+
+            async with self._loop_locks[loop_id]:
+                if loop_id not in self._loop_clients:
+                    self._loop_clients[loop_id] = httpx.AsyncClient()
+
+        return self._loop_clients[loop_id]
 
     async def _close_client(self, client: httpx.AsyncClient):
         """Helper to close a client only if it was created locally."""
@@ -252,7 +253,7 @@ class WorkerClient:
                 f"{self.base_url}/benchmark/simulate",
                 json=payload,
                 headers=self.headers,
-                timeout=60.0,
+                timeout=600.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
