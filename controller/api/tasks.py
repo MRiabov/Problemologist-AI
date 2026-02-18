@@ -42,7 +42,11 @@ class AgentRunRequest(BaseModel):
 def get_worker_client(session_id: str):
     from controller.clients.worker import WorkerClient
 
-    return WorkerClient(base_url=WORKER_URL, session_id=session_id)
+    return WorkerClient(
+        base_url=WORKER_URL,
+        session_id=session_id,
+        heavy_url=settings.worker_heavy_url,
+    )
 
 
 async def execute_agent_task(

@@ -14,6 +14,7 @@ from shared.type_checking import type_check
 
 # Configuration for activities
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL")
 logger = structlog.get_logger(__name__)
 
 
@@ -35,7 +36,9 @@ async def run_simulation_activity(mjcf_data: str, simulate_failures: dict = {}) 
     """Mock activity to run simulation on worker."""
     if simulate_failures.get("run_simulation"):
         raise RuntimeError("Simulated simulation failure")
-    client = WorkerClient(base_url=WORKER_URL, session_id="simulation")
+    client = WorkerClient(
+        base_url=WORKER_URL, session_id="simulation", heavy_url=WORKER_HEAVY_URL
+    )
     # This is a placeholder for the actual simulation execution on the worker
     code = "print('Running simulation...')"
     await client.execute_python(code)

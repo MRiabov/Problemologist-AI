@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Infrastructure Settings
     temporal_url: str = Field(default="127.0.0.1:17233", alias="TEMPORAL_URL")
     worker_url: str = Field(default="http://127.0.0.1:18001", alias="WORKER_URL")
+    worker_heavy_url: str | None = Field(default=None, alias="WORKER_HEAVY_URL")
     postgres_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres",
         alias="POSTGRES_URL",
