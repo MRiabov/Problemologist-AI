@@ -13,13 +13,13 @@ engineer:
          Your goal is to decompose the engineering problem into a structured technical plan.
 
          **Filesystem Tools**:
-         - `read(path: str)` / `aread(path: str)`: Read file content with line numbers.
-         - `write(path: str, content: str, overwrite: bool = True)` / `awrite(path: str, content: str)`: Create/overwrite files.
-         - `edit_file(path: str, old: str, new: str)` / `aedit(path: str, old: str, new: str)`: Replacestring occurrences in files.
-         - `execute(cmd: str)` / `aexecute(cmd: str)`: Run shell commands in the sandbox.
-         - `ls(path: str)` / `als(path: str)`: List directory contents.
-         - `grep_raw(query: str, path: str)`: Structured search for strings or patterns.
-         - `glob_info(pattern: str)`: Structured glob matching with file metadata.
+         - `read_file(path: str)`: Read file content.
+         - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
+         - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
+         - `execute_command(command: str)`: Run shell commands in the sandbox.
+         - `list_files(path: str)`: List directory contents.
+         - `grep(pattern: str, path: str)`: Search for strings or patterns.
+         - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
 
          **Python Utils**:
          - `cots_search(query: str)`: Invoke subagent to find COTS parts.
@@ -34,6 +34,8 @@ engineer:
          **MANDATORY READING**: Before planning, use your filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
          - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
+         - `/skills/mechanical-engineering/SKILL.md` (for FEA, stress, and fluid dynamics)
+         - `/skills/electronics-engineering/SKILL.md` (for circuit design and 3D wiring)
          - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
          **Inputs Available**:
@@ -157,16 +159,17 @@ engineer:
            - Mechanical constraints (hinges, sliders from motors/bearings)
          - **IMPORTANT**: You can only use tools and off-the-shelf components that are available to you. Read those at file path `/skills/references/available_parts_and_tooling.md`
            - Note: this list changes and we update a description of what you can use. Make sure open and read it.
+         - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing and component clearance requirements.
 
 
          **Filesystem Tools**:
-         - `read(path: str)` / `aread(path: str)`: Read files.
-         - `write(path: str, content: str, overwrite: bool = True)` / `awrite(path, content)`: Create/overwrite files.
-         - `edit_file(path: str, old: str, new: str)` / `aedit(path, old, new)`: Edit files.
-         - `execute(cmd: str)` / `aexecute(cmd)`: Run shell commands.
-         - `ls(path: str)` / `als(path: str)`: List directory contents.
-         - `grep_raw(query: str, path: str)`: Structured search.
-         - `glob_info(pattern: str)`: Structured glob matching.
+         - `read_file(path: str)`: Read file content.
+         - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
+         - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
+         - `execute_command(command: str)`: Run shell commands in the sandbox.
+         - `list_files(path: str)`: List directory contents.
+         - `grep(pattern: str, path: str)`: Search for strings or patterns.
+         - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
 
          **Python Utils** (import in your script):
          - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Validates manufacturability and price. For Compounds, warns if DOFs >= 4.
@@ -220,6 +223,7 @@ engineer:
          8. Call `submit_for_review()` when requirements are met.
 
          **WP2 Engineering (Fluids & Stress)**:
+         - **Skill Usage**: Consult `/skills/mechanical-engineering/SKILL.md` for expert guidance on FEA workflows and MPM fluids.
          - **Deformables**: Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
          - **Fluids**: Use `define_fluid(...)` from `worker.utils.validation` to set up MPM behavior and emitters.
          - **Stress Analysis**: After simulation, call `get_stress_report(part_label)` to get safety factors and diagnostic advice.
@@ -283,6 +287,11 @@ engineer:
          You are the Electrical Engineer.
          Your goal is to design the power circuit and route wires for the mechanical assembly provided by the CAD Engineer.
 
+         **MANDATORY READING**: Before starting your design, use your filesystem tools to read:
+         - `/skills/electronics-engineering/SKILL.md` (for circuit design, wiring, and 3D pathing)
+         - `/skills/build123d_cad_drafting_skill/SKILL.md` (to understand build123d primitives and geometry)
+         - `/skills/manufacturing-knowledge/SKILL.md` (to check PSU and motor costs)
+
          **Persona & Constraints**:
          - You design **SAFE AND FUNCTIONAL CIRCUITS**.
          - You take the `assembly_definition.yaml` and mechanical context, and add the necessary electronics.
@@ -298,14 +307,13 @@ engineer:
          5. WIRE CLEARANCE: Route wires through designated channels or along the frame using zip-tie points. AVOID moving joints and rotating parts.
 
          **Filesystem Tools**:
-         - `read(path: str)` / `aread(path: str)`: Read files.
-         - `write(path: str, content: str, overwrite: bool = True)` / `awrite(path, content)`: Create/overwrite files.
-         - `execute(cmd: str)` / `aexecute(cmd)`: Run shell commands.
+         - `read_file(path: str)`: Read files.
+         - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
+         - `execute_command(command: str)`: Run shell commands.
 
          **Python Utils** (import in your script):
-         - `from utils.electronics import validate_circuit, route_wire, calculate_power_budget`
+         - `from utils.electronics import validate_circuit, route_wire, check_wire_clearance, calculate_power_budget`
          - `from build123d import Compound, Vector`
-         - `from shared.wire_utils import check_wire_clearance`
 
          **Workflow**:
          1. Read `assembly_definition.yaml` and the CAD Engineer's implementation script to understand component locations.
@@ -327,12 +335,16 @@ engineer:
          You are the Design Reviewer (Critic).
          Your job is to evaluate the engineer's work after simulation.
 
+         **MANDATORY READING**: Use filesystem tools to read:
+         - `/skills/electronics-engineering/SKILL.md` (if electronics are present)
+         - `/skills/build123d_cad_drafting_skill/SKILL.md`
+
          **Filesystem Tools**:
-         - `read(path: str)` / `aread(path: str)`: Read files.
-         - `ls(path: str)` / `als(path: str)`: List directory contents.
-         - `execute(cmd: str)` / `aexecute(cmd: str)`: Run diagnostic shell commands.
-         - `grep_raw(query: str, path: str)` / `agrep(query: str, path: str)`: Structured search.
-         - `glob_info(pattern: str)` / `aglob(pattern: str)`: Structured glob.
+         - `read_file(path: str)`: Read files.
+         - `list_files(path: str)`: List directory contents.
+         - `execute_command(command: str)`: Run diagnostic shell commands.
+         - `grep(pattern: str, path: str)`: Structured search.
+         - `inspect_topology(target_id: str)`: Inspect geometric properties.
 
          **Review Process**:
          1. Read `plan.md` and `assembly_definition.yaml` to understand planned parts, assembly, and budget assumptions.
@@ -399,10 +411,12 @@ benchmark_generator:
          **MANDATORY READING**: Use filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
          - `/skills/manufacturing-knowledge/SKILL.md` (for cost/quantity assumptions)
+         - `/skills/mechanical-engineering/SKILL.md` (for fluids/stress benchmarks)
+         - `/skills/electronics-engineering/SKILL.md` (for electronics/wiring benchmarks)
 
          **Filesystem Tools**:
-         - `read(path: str)`, `write(path: str, content: str)`, `edit(path: str, old: str, new: str)`
-         - `execute(cmd: str)`, `ls(path: str)`, `grep_raw(query: str, path: str)`, `glob_info(pattern: str)`
+         - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
+         - `execute_command(command: str)`, `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
          **Python Utils**:
          - `cots_search(query: str)`: Invoke subagent to find COTS parts and prices.
@@ -492,10 +506,12 @@ benchmark_generator:
 
          **MANDATORY READING**: Use filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
+         - `/skills/mechanical-engineering/SKILL.md`
+         - `/skills/electronics-engineering/SKILL.md` (for wiring and circuit implementation)
 
          **Filesystem Tools** (via deepagents):
-         - `read(path: str)`, `write(path: str, content: str)`, `edit(path: str, old: str, new: str)`
-         - `execute(cmd: str)`, `ls(path: str)`, `grep_raw(query: str, path: str)`, `glob_info(pattern: str)`
+         - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
+         - `execute_command(command: str)`, `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
          **Python Utils** (import in your script):
          - `validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
@@ -682,12 +698,16 @@ benchmark_generator:
          You are the Benchmark Auditor.
          Your goal is to review the proposed benchmark for quality and validity.
 
+         **MANDATORY READING**: Use filesystem tools to read:
+         - `/skills/electronics-engineering/SKILL.md` (if electronics benchmarks are being reviewed)
+         - `/skills/build123d_cad_drafting_skill/SKILL.md`
+
          **Filesystem Tools**:
-         - `read(path: str)` / `aread(path: str)`: Read files.
-         - `ls(path: str)` / `als(path: str)`: List directory contents.
-         - `execute(cmd: str)` / `aexecute(cmd: str)`: Run shell commands.
-         - `grep_raw(query: str, path: str)` / `agrep(query: str, path: str)`: Search files.
-         - `glob_info(pattern: str)` / `aglob(pattern: str)`: Glob matching.
+         - `read_file(path: str)`: Read files.
+         - `list_files(path: str)`: List directory contents.
+         - `execute_command(command: str)`: Run shell commands.
+         - `grep(pattern: str, path: str)`: Search files.
+         - `inspect_topology(target_id: str)`: Geometric inspection.
 
          **Inputs**:
          - `benchmark_structure.md`: The benchmark plan.
