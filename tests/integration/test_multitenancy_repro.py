@@ -9,22 +9,24 @@ WORKER_URL = "http://localhost:18001"
 SCRIPT_1 = """
 from build123d import *
 from shared.models.schemas import PartMetadata
+from shared.enums import ManufacturingMethod
 
 def build(params=None):
     part = Box(10, 10, 10)
     part.label = "target_box"
-    part.metadata = PartMetadata(material_id="aluminum_6061")
+    part.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
     return part.move(Location((0, 0, 10)))
 """
 
 SCRIPT_2 = """
 from build123d import *
 from shared.models.schemas import PartMetadata
+from shared.enums import ManufacturingMethod
 
 def build(params=None):
     part = Sphere(10)
     part.label = "target_sphere"
-    part.metadata = PartMetadata(material_id="aluminum_6061")
+    part.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
     return part.move(Location((0, 0, 15)))
 """
 
@@ -62,6 +64,35 @@ async def run_simulation(script: str, name: str):
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_multitenancy_repro():
+    # Pre-warm: the first simulation on a fresh worker always takes long due to kernel compilation.
+    # We run a tiny dummy simulation to warm up the pool
+    # and we include both Box and Sphere to trigger all needed kernels.
+    print("Pre-warming Genesis cache...")
+    warmup_script = """
+from build123d import Box, Sphere, Compound
+from shared.models.schemas import PartMetadata
+from shared.enums import ManufacturingMethod
+def build():
+    b = Box(1, 1, 1)
+    b.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
+    s = Sphere(1)
+    s.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
+    return b + s
+"""
+    async with httpx.AsyncClient() as client:
+        print("Warmup round...")
+        await client.post(
+            f"{WORKER_URL}/benchmark/simulate",
+            headers={"x-session-id": "warmup"},
+            json={
+                "session_id": "warmup",
+                "script_content": warmup_script,
+                "smoke_test_mode": True,
+            },
+            timeout=300.0,
+        )
+    print("Warmup complete. Running actual tests...")
+
     # Run sequentially to avoid resource contention on CPU-only hardware
     # while still verifying session isolation and backend reuse.
     res1 = await run_simulation(SCRIPT_1, "sim1_box")
