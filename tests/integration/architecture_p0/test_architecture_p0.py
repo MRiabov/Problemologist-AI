@@ -8,6 +8,7 @@ import pytest
 
 # Constants
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -128,13 +129,13 @@ def build():
         t0 = time.time()
         res1, res2 = await asyncio.gather(
             client.post(
-                f"{WORKER_URL}/benchmark/simulate",
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json={"script_path": "box.py"},
                 headers={"X-Session-ID": session_id_1},
                 timeout=60.0,
             ),
             client.post(
-                f"{WORKER_URL}/benchmark/simulate",
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json={"script_path": "box.py"},
                 headers={"X-Session-ID": session_id_2},
                 timeout=60.0,
@@ -254,7 +255,7 @@ run()
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script_fail.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -423,7 +424,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "valid_hole.py"},
             headers={"X-Session-ID": session_id},
             timeout=30.0,  # Validate is fast

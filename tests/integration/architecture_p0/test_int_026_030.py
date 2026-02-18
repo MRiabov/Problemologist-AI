@@ -7,6 +7,7 @@ import pytest
 
 # Constants
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 API_KEY = os.getenv(
     "CONTROLLER_API_KEY", "test-key"
@@ -88,7 +89,7 @@ def build():
 
         # 3. Trigger simulation
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,

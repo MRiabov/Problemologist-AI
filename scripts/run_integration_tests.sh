@@ -17,6 +17,7 @@ export S3_SECRET_KEY=minioadmin
 export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
 export WORKER_URL="http://127.0.0.1:18001"
+export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
 
 # Ensure we are in project root
@@ -114,10 +115,17 @@ echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 # Ensure log directory exists
 mkdir -p logs
 
-# Start Worker (port 18001)
-uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
-WORKER_PID=$!
-echo "Worker started (PID: $WORKER_PID)"
+# Start Light Worker (port 18001)
+export WORKER_TYPE=light
+uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker_light.log 2>&1 &
+WORKER_LIGHT_PID=$!
+echo "Worker-Light started (PID: $WORKER_LIGHT_PID)"
+
+# Start Heavy Worker (port 18002)
+export WORKER_TYPE=heavy
+uv run uvicorn worker.app:app --host 0.0.0.0 --port 18002 > logs/worker_heavy.log 2>&1 &
+WORKER_HEAVY_PID=$!
+echo "Worker-Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
@@ -134,8 +142,8 @@ cleanup() {
   # Record the exit status of the test command
   EXIT_STATUS=$?
   echo ""
-  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker: $WORKER_PID, Temporal: $TEMP_WORKER_PID)..."
-  kill $CONTROLLER_PID $WORKER_PID $TEMP_WORKER_PID 2>/dev/null || true
+  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker-Light: $WORKER_LIGHT_PID, Worker-Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID)..."
+  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID 2>/dev/null || true
   
   echo "Bringing down infrastructure containers..."
   docker compose -f docker-compose.test.yaml down -v
@@ -159,14 +167,26 @@ while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
 
-# Wait for Worker to be healthy
+# Wait for Worker-Light to be healthy
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
-    echo "Worker is healthy!"
+    echo "Worker-Light is healthy!"
     break
   fi
-  echo "Waiting for worker... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  echo "Waiting for worker-light... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  sleep 2
+  HEALTH_COUNT=$((HEALTH_COUNT + 1))
+done
+
+# Wait for Worker-Heavy to be healthy
+HEALTH_COUNT=0
+while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+  if curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
+    echo "Worker-Heavy is healthy!"
+    break
+  fi
+  echo "Waiting for worker-heavy... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done

@@ -404,7 +404,7 @@ async def test_int_011_planner_caps_enforcement(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -461,7 +461,7 @@ async def test_int_015_engineer_handover_immutability(
         )
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -507,7 +507,7 @@ def build():
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -558,7 +558,7 @@ async def test_int_010_planner_pricing_script_integration(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
