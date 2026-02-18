@@ -70,3 +70,5 @@ events.jsonl
 # Local skills and suggestions
 skills/
 suggested_skills/
+
+gha-creds-*.json
