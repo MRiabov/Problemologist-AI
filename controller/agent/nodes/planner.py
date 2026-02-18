@@ -79,7 +79,7 @@ class PlannerNode(BaseNode):
                 from worker.utils.file_validation import validate_node_output
 
                 # Read current files concurrently to validate
-                files_to_read = ["plan.md", "todo.md"]
+                files_to_read = ["plan.md", "todo.md", "assembly_definition.yaml"]
                 results = await asyncio.gather(
                     *[self.ctx.fs.read_file(f) for f in files_to_read],
                     return_exceptions=True,

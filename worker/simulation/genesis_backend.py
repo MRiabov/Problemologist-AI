@@ -34,6 +34,7 @@ class GenesisBackend(PhysicsBackend):
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
         self.current_time = 0.0
+        self._last_max_stress = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
         self.smoke_test_mode = False
@@ -414,11 +415,13 @@ class GenesisBackend(PhysicsBackend):
             )
             self.scene.step()
 
-            # T012: Part Breakage Detection
+            # T012: Part Breakage Detection & Global Stress Tracking
+            self._last_max_stress = 0.0
             for name in self.entities:
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
                     max_stress = np.max(field.stress)
+                    self._last_max_stress = max(self._last_max_stress, float(max_stress))
 
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
@@ -598,6 +601,9 @@ class GenesisBackend(PhysicsBackend):
             return StressField(nodes=nodes, stress=stress)
 
         return None
+
+    def get_max_stress(self) -> float:
+        return self._last_max_stress
 
     def get_stress_summaries(self) -> list[StressSummary]:
         summaries = []
