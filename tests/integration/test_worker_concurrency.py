@@ -41,9 +41,9 @@ assert content == "{content}", f"Expected {{content}}, got {{content}}"
         )
         assert resp.status_code == 200, f"Execute failed: {resp.text}"
         data = resp.json()
-        assert (
-            data["exit_code"] == 0
-        ), f"Code failed with exit code {data['exit_code']}. Out: {data['stdout']} Err: {data['stderr']}"
+        assert data["exit_code"] == 0, (
+            f"Code failed with exit code {data['exit_code']}. Out: {data['stdout']} Err: {data['stderr']}"
+        )
         return data["stdout"]
 
 

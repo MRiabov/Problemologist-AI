@@ -73,9 +73,9 @@ async def test_simulation_concurrency_serialization():
 
     # If serialized, total_duration should be >= sum_durations (roughly)
     # If parallel, total_duration would be ~ max(durations)
-    assert (
-        total_duration >= sum_durations * 0.9
-    ), f"Simulations appeared parallel. Total: {total_duration:.2f}s, Sum: {sum_durations:.2f}s, Durations: {durations}"
+    assert total_duration >= sum_durations * 0.9, (
+        f"Simulations appeared parallel. Total: {total_duration:.2f}s, Sum: {sum_durations:.2f}s, Durations: {durations}"
+    )
 
     # Check for significant overlaps
     sorted_intervals = sorted(intervals, key=lambda x: x[0])
@@ -90,9 +90,9 @@ async def test_simulation_concurrency_serialization():
                 f"Sim {i + 1} started at {next_start - global_start:.2f}s"
             )
 
-    assert (
-        not overlaps
-    ), f"Serialization failed: {len(overlaps)} overlaps detected: {overlaps}"
+    assert not overlaps, (
+        f"Serialization failed: {len(overlaps)} overlaps detected: {overlaps}"
+    )
 
 
 if __name__ == "__main__":

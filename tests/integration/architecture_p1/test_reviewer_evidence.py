@@ -77,15 +77,15 @@ async def test_reviewer_evidence_completeness():
 
         # 2. Fetch Review Artifact
         artifacts_resp = await client.get(f"/artifacts/{episode_id}")
-        assert (
-            artifacts_resp.status_code == 200
-        ), f"Failed to fetch artifacts: {artifacts_resp.text}"
+        assert artifacts_resp.status_code == 200, (
+            f"Failed to fetch artifacts: {artifacts_resp.text}"
+        )
         artifacts = artifacts_resp.json()
 
         review_artifacts = [a for a in artifacts if "reviews/" in a["path"]]
-        assert (
-            len(review_artifacts) > 0
-        ), f"No reviews found in artifacts: {[a['path'] for a in artifacts]}"
+        assert len(review_artifacts) > 0, (
+            f"No reviews found in artifacts: {[a['path'] for a in artifacts]}"
+        )
 
         # 3. Inspect Content for Evidence
         passed_evidence_check = False

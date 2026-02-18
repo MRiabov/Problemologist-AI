@@ -62,9 +62,9 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
         )
         assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = resp.json()
-        assert (
-            data["exit_code"] == 0
-        ), f"Meshing script failed: {data['stdout']} {data['stderr']}"
+        assert data["exit_code"] == 0, (
+            f"Meshing script failed: {data['stdout']} {data['stderr']}"
+        )
 
         # 3. Verify files exist in session
         ls_resp = await client.post(
@@ -73,9 +73,9 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
         files = [f["name"] for f in ls_resp.json()["files"]]
         # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
         # but the spec says "-> .msh". Our mesh_utils.py has a renaming logic.
-        assert (
-            "test.node" in files or "test.msh" in files
-        ), f"Missing mesh files. Found: {files}"
+        assert "test.node" in files or "test.msh" in files, (
+            f"Missing mesh files. Found: {files}"
+        )
 
         # 4. Fail path: Non-manifold geometry
         # (This might be hard to construct via build123d without it failing first,
@@ -97,6 +97,6 @@ tetrahedralize(Path("bad.stl"), Path("bad.msh"))
             json={"code": code_fail},
             headers=base_headers,
         )
-        assert (
-            resp.json()["exit_code"] != 0
-        ), "Expected meshing to fail for malformed STL"
+        assert resp.json()["exit_code"] != 0, (
+            "Expected meshing to fail for malformed STL"
+        )

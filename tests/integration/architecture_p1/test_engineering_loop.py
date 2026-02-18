@@ -84,29 +84,29 @@ async def test_engineering_full_loop():
 
         # 4. Verify Engineering Artifacts
         artifacts_resp = await client.get(f"/artifacts/{engineer_session_id}")
-        assert (
-            artifacts_resp.status_code == 200
-        ), f"Failed to fetch artifacts for {engineer_session_id}: {artifacts_resp.text}"
+        assert artifacts_resp.status_code == 200, (
+            f"Failed to fetch artifacts for {engineer_session_id}: {artifacts_resp.text}"
+        )
         artifacts = artifacts_resp.json()
         artifact_paths = [a["path"] for a in artifacts]
 
         # Check for Planner artifacts
-        assert any(
-            "plan.md" in p for p in artifact_paths
-        ), f"plan.md missing. Artifacts: {artifact_paths}"
-        assert any(
-            "todo.md" in p for p in artifact_paths
-        ), f"todo.md missing. Artifacts: {artifact_paths}"
-        assert any(
-            "assembly_definition.yaml" in p for p in artifact_paths
-        ), f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        assert any("plan.md" in p for p in artifact_paths), (
+            f"plan.md missing. Artifacts: {artifact_paths}"
+        )
+        assert any("todo.md" in p for p in artifact_paths), (
+            f"todo.md missing. Artifacts: {artifact_paths}"
+        )
+        assert any("assembly_definition.yaml" in p for p in artifact_paths), (
+            f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        )
 
         # Check for Reviewer artifacts
         # Reviews are usually in reviews/ folder
         review_files = [p for p in artifact_paths if "reviews/" in p]
-        assert (
-            len(review_files) > 0
-        ), f"No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing). Artifacts: {artifact_paths}"
+        assert len(review_files) > 0, (
+            f"No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing). Artifacts: {artifact_paths}"
+        )
 
         # We could inspect content here if we had content access,
         # to verify "typed decision" (e.g. accepted/rejected in frontmatter)

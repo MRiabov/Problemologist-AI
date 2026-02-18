@@ -54,16 +54,16 @@ async def test_int_059_langfuse_trace_linkage():
             t["langfuse_trace_id"] for t in traces if t.get("langfuse_trace_id")
         ]
 
-        assert (
-            len(langfuse_ids) > 0
-        ), "At least the initial trace must have a langfuse_trace_id"
+        assert len(langfuse_ids) > 0, (
+            "At least the initial trace must have a langfuse_trace_id"
+        )
 
         # All traces that have a langfuse_trace_id should have the SAME one
         first_id = langfuse_ids[0]
         for lf_id in langfuse_ids:
-            assert (
-                lf_id == first_id
-            ), f"Inconsistent langfuse_trace_id: {lf_id} != {first_id}"
+            assert lf_id == first_id, (
+                f"Inconsistent langfuse_trace_id: {lf_id} != {first_id}"
+            )
 
         # Check that it's a valid 32-char hex (as per implementation in tasks.py)
         assert len(first_id) == 32

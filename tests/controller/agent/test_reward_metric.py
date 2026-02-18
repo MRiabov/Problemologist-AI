@@ -12,9 +12,9 @@ def test_metric_script_fails():
     )
     prediction = SimpleNamespace(script_compiled=False)
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # Based on reward_config.yaml for cad_engineer, script_compiles weight is 0.05, min score is 0.02
-    assert score == 0.02
+    assert result.score == 0.02
 
 
 def test_metric_cad_fails():
@@ -24,9 +24,9 @@ def test_metric_cad_fails():
     )
     prediction = SimpleNamespace(script_compiled=True, cad_geometry_valid=False)
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # score = script_compiles.weight = 0.05
-    assert score == 0.05
+    assert result.score == 0.05
 
 
 def test_metric_full_success():
@@ -44,9 +44,9 @@ def test_metric_full_success():
         simulation_success=True,
     )
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # Sum of weights: 0.05 + 0.08 + 0.07 + 0.05 + 0.10 + 0.05 + 0.60 = 1.0
-    assert score == 1.0
+    assert result.score == 1.0
 
 
 def test_metric_partial_sim():
@@ -67,11 +67,11 @@ def test_metric_partial_sim():
         initial_distance=10.0,
     )
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # Prefixes sum: 0.05 + 0.08 + 0.07 + 0.05 + 0.10 + 0.05 = 0.40
     # Sim partial: 0.60 * (1 - 5/10) * 0.4 = 0.60 * 0.5 * 0.4 = 0.12
     # Total: 0.40 + 0.12 = 0.52
-    assert score == 0.52
+    assert result.score == 0.52
 
 
 def test_metric_cost_overage():
@@ -89,7 +89,7 @@ def test_metric_cost_overage():
         simulation_success=True,
     )
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # Cost penalty: max(0, 1 - max(0, 1.5 - 1)) = 0.5
     # Total score: 1.0 - (0.10 * (1 - 0.5)) = 0.95
-    assert score == pytest.approx(0.95)
+    assert result.score == pytest.approx(0.95)

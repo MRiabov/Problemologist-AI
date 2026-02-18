@@ -149,12 +149,12 @@ def build():
         data1 = res1.json()
         data2 = res2.json()
 
-        assert (
-            data1["success"] or "Simulation stable" in data1["message"]
-        ), f"Sim 1 marked failure: {data1}"
-        assert (
-            data2["success"] or "Simulation stable" in data2["message"]
-        ), f"Sim 2 marked failure: {data2}"
+        assert data1["success"] or "Simulation stable" in data1["message"], (
+            f"Sim 1 marked failure: {data1}"
+        )
+        assert data2["success"] or "Simulation stable" in data2["message"], (
+            f"Sim 2 marked failure: {data2}"
+        )
 
         # Check artifacts
         assert "mjcf_content" in data1["artifacts"]
@@ -249,9 +249,9 @@ run()
             timeout=60.0,
         )
         assert resp_exec.status_code == 200, f"Debug script failed: {resp_exec.text}"
-        assert (
-            resp_exec.json()["exit_code"] == 0
-        ), f"Debug script exit code non-zero: {resp_exec.json()}"
+        assert resp_exec.json()["exit_code"] == 0, (
+            f"Debug script exit code non-zero: {resp_exec.json()}"
+        )
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/simulate",

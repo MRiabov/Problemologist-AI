@@ -55,9 +55,9 @@ async def test_render_artifact_generation_int_039():
             and (".png" in a["s3_path"] or ".jpg" in a["s3_path"])
         ]
         # INT-032 mentions 24-view renders, INT-039 says "produces discoverable artifacts"
-        assert (
-            len(render_assets) > 0
-        ), f"No render artifacts found in episode. Assets: {assets}"
+        assert len(render_assets) > 0, (
+            f"No render artifacts found in episode. Assets: {assets}"
+        )
 
 
 @pytest.mark.integration_p1
