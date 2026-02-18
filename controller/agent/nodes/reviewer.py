@@ -1,4 +1,5 @@
 import re
+from contextlib import suppress
 from enum import StrEnum
 
 import dspy
@@ -41,6 +42,10 @@ class ReviewerSignature(dspy.Signature):
     """
 
     task = dspy.InputField()
+    plan = dspy.InputField()
+    todo = dspy.InputField()
+    assembly_definition = dspy.InputField()
+    objectives = dspy.InputField()
     journal = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
 
@@ -54,52 +59,59 @@ class ReviewerNode(BaseNode):
 
     async def __call__(self, state: AgentState) -> AgentState:
         # T015: Use DSPy to evaluate success
-        from controller.agent.dspy_utils import WorkerInterpreter
+        # Read objectives if possible for context
+        objectives = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("objectives.yaml"):
+                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
 
-        # Use WorkerInterpreter for remote execution
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        assembly_definition = "# No assembly_definition.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+                assembly_definition = await self.ctx.worker_client.read_file(
+                    "assembly_definition.yaml"
+                )
+
+        inputs = {
+            "task": state.task,
+            "plan": state.plan,
+            "todo": state.todo,
+            "assembly_definition": assembly_definition,
+            "objectives": objectives,
+            "journal": state.journal,
+        }
+
+        # Validate existence of key reports
+        validate_files = ["simulation_result.json", "assembly_definition.yaml"]
+
+        prediction, artifacts, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=ReviewerSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="reviewer",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-
-        program = dspy.CodeAct(
-            ReviewerSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        try:
-            with dspy.settings.context(lm=self.ctx.dspy_lm):
-                logger.info("reviewer_dspy_invoke_start", session_id=state.session_id)
-                prediction = program(
-                    task=state.task,
-                    journal=state.journal,
-                )
-                logger.info(
-                    "reviewer_dspy_invoke_complete", session_id=state.session_id
-                )
-
-            review = prediction.review
-            decision = review.decision
-            feedback = review.reason
-            if review.required_fixes:
-                feedback += "\nRequired Fixes:\n" + "\n".join(
-                    [f"- {f}" for f in review.required_fixes]
-                )
-
-        except Exception as e:
-            logger.error("Reviewer dspy failed", error=str(e))
+        if not prediction:
             return state.model_copy(
                 update={
                     "status": AgentStatus.CODE_REJECTED,
-                    "feedback": f"Reviewer system error: {e}",
-                    "journal": state.journal + f"\n[Reviewer] System error: {e}",
+                    "feedback": f"Reviewer failed to complete: {journal_entry}",
+                    "journal": state.journal + journal_entry,
                 }
             )
-        finally:
-            interpreter.shutdown()
 
-        journal_entry = f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
+        review = prediction.review
+        decision = review.decision
+        feedback = review.reason
+        if review.required_fixes:
+            feedback += "\nRequired Fixes:\n" + "\n".join(
+                [f"- {f}" for f in review.required_fixes]
+            )
+
+        journal_entry += f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
 
         status_map = {
             CriticDecision.APPROVE: AgentStatus.APPROVED,

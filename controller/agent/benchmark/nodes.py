@@ -1,3 +1,5 @@
+from contextlib import suppress
+from shared.enums import SessionStatus
 import asyncio
 import base64
 import os
@@ -109,7 +111,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             tool_functions[t.name] = func
 
     program = dspy.CodeAct(
-        BenchmarkPlannerSignature,
+        BenchmarkPlannerSignature.with_instructions(ctx.pm.render("benchmark_planner")),
         tools=list(tool_functions.values()),
         interpreter=interpreter,
     )
@@ -196,7 +198,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
             tool_functions[t.name] = func
 
     program = dspy.CodeAct(
-        BenchmarkCoderSignature,
+        BenchmarkCoderSignature.with_instructions(ctx.pm.render("benchmark_coder")),
         tools=list(tool_functions.values()),
         interpreter=interpreter,
     )
@@ -397,6 +399,8 @@ class BenchmarkReviewerSignature(dspy.Signature):
 
     theme = dspy.InputField()
     prompt = dspy.InputField()
+    benchmark_structure = dspy.InputField()
+    objectives = dspy.InputField()
     simulation_logs = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
 
@@ -411,6 +415,19 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     logger.info("reviewer_node_start", round=state.review_round)
+
+    # Read context files
+    benchmark_structure = "# No benchmark_structure.md found."
+    with suppress(Exception):
+        if await ctx.worker_client.exists("benchmark_structure.md"):
+            benchmark_structure = await ctx.worker_client.read_file(
+                "benchmark_structure.md"
+            )
+
+    objectives = "# No objectives.yaml found."
+    with suppress(Exception):
+        if await ctx.worker_client.exists("objectives.yaml"):
+            objectives = await ctx.worker_client.read_file("objectives.yaml")
 
     state.review_round = state.review_round + 1
     review_filename = f"reviews/review-round-{state.review_round}/review.md"
@@ -441,7 +458,9 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
         worker_client=ctx.worker_client, session_id=session_id
     )
     program = dspy.CodeAct(
-        BenchmarkReviewerSignature,
+        BenchmarkReviewerSignature.with_instructions(
+            ctx.pm.render("benchmark_reviewer")
+        ),
         tools=list(tool_functions.values()),
         interpreter=interpreter,
     )
@@ -452,6 +471,8 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
             prediction = program(
                 theme=state.plan.theme if state.plan else "Unknown",
                 prompt=state.session.prompt,
+                benchmark_structure=benchmark_structure,
+                objectives=objectives,
                 simulation_logs=str(
                     state.simulation_result.logs if state.simulation_result else []
                 ),

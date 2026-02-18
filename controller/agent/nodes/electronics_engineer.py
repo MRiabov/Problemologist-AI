@@ -28,7 +28,9 @@ class ElectronicsSignature(dspy.Signature):
     current_step = dspy.InputField()
     plan = dspy.InputField()
     assembly_context = dspy.InputField()
+    objectives = dspy.InputField()
     feedback = dspy.InputField()
+    skills = dspy.InputField()
     journal = dspy.OutputField(desc="A summary of the electronics work done")
 
 
@@ -45,21 +47,26 @@ class ElectronicsEngineerNode(BaseNode):
         todo = state.todo
         current_step = self._get_next_electronics_step(todo)
 
+        # Read objectives for context
+        objectives = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("objectives.yaml"):
+                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+
         if not current_step:
-            try:
-                objectives_content = await self.ctx.fs.read_file("objectives.yaml")
-                if "electronics_requirements" not in objectives_content:
-                    return state
-                current_step = "Design circuit and route wires"
-            except Exception:
+            if "electronics_requirements" not in objectives:
                 return state
+            current_step = "Design circuit and route wires"
 
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
         with suppress(Exception):
             assembly_context = await self.ctx.fs.read_file("assembly_definition.yaml")
 
-        # 3. Handover event
+        # 3. Get skills context
+        skills_context = self._get_skills_context()
+
+        # 4. Handover event
         from controller.observability.tracing import record_worker_events
         from shared.observability.schemas import ElecAgentHandoverEvent
 
@@ -79,11 +86,13 @@ class ElectronicsEngineerNode(BaseNode):
             "current_step": current_step,
             "plan": state.plan,
             "assembly_context": assembly_context,
+            "objectives": objectives,
             "feedback": (
                 state.feedback
                 if state.status == AgentStatus.CODE_REJECTED
                 else "New electronics step. No rejection feedback."
             ),
+            "skills": skills_context,
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
