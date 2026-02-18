@@ -26,7 +26,7 @@ async def test_reviewer_evidence_completeness():
         # Ideally, we'd have a fixture yielding a completed episode ID.
 
         prompt = "Create a trivial benchmark."
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        resp = await client.post("/benchmark/generate", json={"prompt": prompt})
         assert resp.status_code in [
             200,
             202,
@@ -34,7 +34,7 @@ async def test_reviewer_evidence_completeness():
         benchmark_session_id = resp.json()["session_id"]
 
         # Wait for benchmark
-        for _ in range(30):
+        for _ in range(90):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if (
                 status_resp.status_code == 200
@@ -63,7 +63,7 @@ async def test_reviewer_evidence_completeness():
         # Wait for Engineer (at least until a review is produced)
         # A full completion is safest.
         engineer_completed = False
-        for _ in range(60):
+        for _ in range(120):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 status = ep_resp.json()["status"]

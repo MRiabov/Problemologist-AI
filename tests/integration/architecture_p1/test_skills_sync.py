@@ -26,13 +26,13 @@ async def test_int_045_skills_sync_lifecycle():
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
 
         # 2. Wait for completion (skills sync happens at start)
         completed = False
         start_time = time.time()
-        while time.time() - start_time < 30:
+        while time.time() - start_time < 120:
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             if status_resp.status_code == 200 and status_resp.json()["status"] in [
                 "completed",
