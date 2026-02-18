@@ -421,7 +421,9 @@ class GenesisBackend(PhysicsBackend):
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
                     max_stress = np.max(field.stress)
-                    self._last_max_stress = max(self._last_max_stress, float(max_stress))
+                    self._last_max_stress = max(
+                        self._last_max_stress, float(max_stress)
+                    )
 
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})

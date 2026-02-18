@@ -50,7 +50,9 @@ class COTSSearchNode(BaseNode):
 
         try:
             with dspy.settings.context(lm=self.ctx.dspy_lm):
-                logger.info("cots_search_dspy_invoke_start", session_id=state.session_id)
+                logger.info(
+                    "cots_search_dspy_invoke_start", session_id=state.session_id
+                )
                 prediction = program(
                     task=state.task,
                     plan=state.plan,
