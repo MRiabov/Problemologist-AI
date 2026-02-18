@@ -37,7 +37,7 @@ class SharedNodeContext:
         # T012: Initialize DSPy LM for CodeAct support
         api_key = "dummy"
         if settings.openai_api_key:
-            api_key = settings.openai_api_key.get_secret_value()
+            api_key = settings.openai_api_key
 
         dspy_lm = dspy.LM(
             f"openai/{settings.llm_model}",
