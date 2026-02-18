@@ -76,5 +76,3 @@ async def test_benchmark_generation_e2e():
         assert mock_db.add.call_count >= 1
         # Should update status (commit)
         assert mock_db.commit.call_count >= 1
-
-    print("E2E Test Passed!")

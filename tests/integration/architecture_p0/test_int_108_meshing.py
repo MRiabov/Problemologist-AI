@@ -52,7 +52,7 @@ from build123d import Box, export_stl
 part = Box(1, 1, 1)
 export_stl(part, "test.stl")
 msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
-print(f"MESH_RESULT:{msh_path}")
+assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 """
         resp = await client.post(
             f"{WORKER_URL}/runtime/execute",
@@ -60,10 +60,11 @@ print(f"MESH_RESULT:{msh_path}")
             headers=base_headers,
             timeout=60.0,
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = resp.json()
-        assert data["exit_code"] == 0
-        assert "MESH_RESULT:test.msh" in data["stdout"]
+        assert (
+            data["exit_code"] == 0
+        ), f"Meshing script failed: {data['stdout']} {data['stderr']}"
 
         # 3. Verify files exist in session
         ls_resp = await client.post(
@@ -72,7 +73,9 @@ print(f"MESH_RESULT:{msh_path}")
         files = [f["name"] for f in ls_resp.json()["files"]]
         # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
         # but the spec says "-> .msh". Our mesh_utils.py has a renaming logic.
-        assert "test.node" in files or "test.msh" in files
+        assert (
+            "test.node" in files or "test.msh" in files
+        ), f"Missing mesh files. Found: {files}"
 
         # 4. Fail path: Non-manifold geometry
         # (This might be hard to construct via build123d without it failing first,
@@ -87,14 +90,13 @@ print(f"MESH_RESULT:{msh_path}")
         code_fail = """
 from pathlib import Path
 from worker.utils.mesh_utils import tetrahedralize
-try:
-    tetrahedralize(Path("bad.stl"), Path("bad.msh"))
-except Exception as e:
-    print(f"MESH_FAILURE:{e}")
+tetrahedralize(Path("bad.stl"), Path("bad.msh"))
 """
         resp = await client.post(
             f"{WORKER_URL}/runtime/execute",
             json={"code": code_fail},
             headers=base_headers,
         )
-        assert "MESH_FAILURE" in resp.json()["stdout"]
+        assert (
+            resp.json()["exit_code"] != 0
+        ), "Expected meshing to fail for malformed STL"

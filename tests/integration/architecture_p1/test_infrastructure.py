@@ -18,14 +18,13 @@ async def test_render_artifact_generation_int_039():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
         # 1. Trigger Agent Run (or Benchmark Generation)
-        print("Triggering run for INT-039...")
         prompt = "Create a simple cube and simulate it."
         # We use /agent/run for a standard agent flow
         session_id = str(uuid.uuid4())
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
-        assert resp.status_code in [200, 202]
+        assert resp.status_code in [200, 202], f"Failed to trigger agent: {resp.text}"
         episode_id = resp.json()["episode_id"]
 
         # 2. Poll for completion
@@ -56,8 +55,9 @@ async def test_render_artifact_generation_int_039():
             and (".png" in a["s3_path"] or ".jpg" in a["s3_path"])
         ]
         # INT-032 mentions 24-view renders, INT-039 says "produces discoverable artifacts"
-        assert len(render_assets) > 0, "No render artifacts found in episode"
-        print(f"Found {len(render_assets)} render assets.")
+        assert (
+            len(render_assets) > 0
+        ), f"No render artifacts found in episode. Assets: {assets}"
 
 
 @pytest.mark.integration_p1

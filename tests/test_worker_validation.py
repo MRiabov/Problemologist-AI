@@ -17,8 +17,8 @@ def test_geometric_validation():
     with BuildPart() as p:
         Box(10, 10, 10)
 
-    print(f"Validating single box: {validate(p.part)}")
-    assert validate(p.part)[0]
+    success, msg = validate(p.part)
+    assert success, f"Validating single box failed: {msg}"
 
     # 2. Overlapping boxes
     with BuildPart() as p1:
@@ -27,11 +27,8 @@ def test_geometric_validation():
         Box(10, 10, 10)
 
     comp = Compound(label="overlapping", children=[p1.part, p2.part])
-    print(f"Validating overlapping boxes: {validate(comp)}")
-
-    # We don't have automatic event emission in validate() yet, but
-    # we will test it via validate_objectives_yaml
-    assert not validate(comp)[0]
+    success, msg = validate(comp)
+    assert not success, f"Expected overlap validation to fail, but it succeeded: {msg}"
 
 
 def test_objectives_validation_events():
@@ -70,8 +67,7 @@ def test_simulation():
         Box(10, 10, 10)
 
     res = simulate(p.part)
-    print(f"Simulation result: {res.success}, {res.summary}")
-    assert res.success
+    assert res.success, f"Simulation failed: {res.summary}"
 
 
 def test_handover():

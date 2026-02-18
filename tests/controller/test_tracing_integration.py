@@ -57,7 +57,7 @@ async def test_record_worker_events():
                 result = await db.execute(stmt)
                 traces = result.scalars().all()
 
-                assert len(traces) == 2
+                assert len(traces) == 2, f"Expected 2 traces, found {len(traces)}"
                 names = [t.name for t in traces]
                 assert "test_event_1" in names
                 assert "test_event_2" in names
@@ -73,12 +73,4 @@ async def test_record_worker_events():
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(test_record_worker_events())
-        print("Integration test passed!")
-    except Exception as e:
-        print(f"Integration test failed: {e}")
-        import traceback
-
-        traceback.print_exc()
-        exit(1)
+    asyncio.run(test_record_worker_events())

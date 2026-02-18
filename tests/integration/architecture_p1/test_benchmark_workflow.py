@@ -20,7 +20,6 @@ async def test_benchmark_planner_cad_reviewer_path():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
         # 1. Trigger Benchmark Generation
-        print("Triggering Benchmark Generation for INT-031...")
         prompt = "Create a simple path planning benchmark with a wall and a goal."
         resp = await client.post("/benchmark/generate", json={"prompt": prompt})
         assert resp.status_code in [
@@ -29,60 +28,47 @@ async def test_benchmark_planner_cad_reviewer_path():
         ], f"Failed to trigger benchmark: {resp.text}"
         data = resp.json()
         session_id = data["session_id"]
-        print(f"Benchmark Session ID: {session_id}")
 
         # 2. Poll for completion
-        # This might take time as it involves LLM calls (mocked or real)
         max_retries = 60
         benchmark_completed = False
+        last_status = None
 
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{session_id}")
             if status_resp.status_code == 200:
                 sess_data = status_resp.json()
-                status = sess_data["status"]
-                print(f"Benchmark Status: {status}")
+                last_status = sess_data["status"]
 
-                if status == "completed":
+                if last_status == "completed":
                     benchmark_completed = True
                     break
-                if status == "rejected" or status == "failed":
-                    pytest.fail(f"Benchmark generation failed with status: {status}")
+                if last_status == "rejected" or last_status == "failed":
+                    pytest.fail(
+                        f"Benchmark generation failed with status: {last_status}"
+                    )
 
             await asyncio.sleep(2)
 
         if not benchmark_completed:
-            pytest.fail("Benchmark generation timed out.")
+            pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
         # 3. Verify Artifacts
-        # fetch artifacts via API
         artifacts_resp = await client.get(f"/artifacts/{session_id}")
-        assert artifacts_resp.status_code == 200
+        assert (
+            artifacts_resp.status_code == 200
+        ), f"Failed to fetch artifacts: {artifacts_resp.text}"
         artifacts_list = artifacts_resp.json()
 
         # Check for key files
         artifact_paths = [a["path"] for a in artifacts_list]
-        print(f"Found artifacts: {artifact_paths}")
 
-        assert any(p.endswith("plan.md") for p in artifact_paths), "plan.md missing"
+        assert any(
+            p.endswith("plan.md") for p in artifact_paths
+        ), f"plan.md missing. Artifacts: {artifact_paths}"
         assert any(
             p.endswith("objectives.yaml") for p in artifact_paths
-        ), "objectives.yaml missing"
-        # Check for reviews (assuming reviews are stored in a reviews/ folder)
-        assert any("reviews/" in p for p in artifact_paths), "Reviews missing"
-
-        # 4. Verify Content of objectives.yaml (basic check)
-        # We need to find the ID or URL to fetch content.
-        # Assuming artifacts_list contains 'content_url' or similar, or we use a separate endpoint.
-        # Let's assume there's an endpoint /artifacts/{session_id}/{path_encoded} or similar.
-        # For now, if we can't easily fetch content, we assume existence is a good P1 start.
-        # But INT-031 asks for "validates artifacts".
-
-        # Let's try to fetch objectives.yaml
-        objectives_artifact = next(
-            (a for a in artifacts_list if a["path"].endswith("objectives.yaml")), None
-        )
-        if objectives_artifact:
-            # Assuming we can get content. If API doesn't support easy content fetch, we might skip detailed validation
-            # dependent on the API structure.
-            pass
+        ), f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        assert any(
+            "reviews/" in p for p in artifact_paths
+        ), f"Reviews missing. Artifacts: {artifact_paths}"

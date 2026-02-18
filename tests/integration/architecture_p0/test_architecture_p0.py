@@ -160,8 +160,6 @@ def build():
         assert "mjcf_content" in data1["artifacts"]
         assert "mjcf_content" in data2["artifacts"]
 
-        print(f"Concurrent simulations took {t1 - t0:.2f}s total")
-
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
@@ -230,19 +228,10 @@ import sys
 from build123d import *
 from worker.utils.validation import to_mjcf
 def run():
-    try:
-        part = Box(1,1,1)
-        # Check if we can import
-        print("Build123d imported")
-        # Try to export stl manually
-        export_stl(part, "debug_test.stl")
-        if os.path.exists("debug_test.stl"):
-            print("Manual export_stl success")
-        else:
-            print("Manual export_stl failed")
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
+    part = Box(1,1,1)
+    export_stl(part, "debug_test.stl")
+    if not os.path.exists("debug_test.stl"):
+        raise RuntimeError("Manual export_stl failed")
 run()
 """
         await client.post(
@@ -250,15 +239,19 @@ run()
             json={"path": "debug_stl.py", "content": debug_stl_script},
             headers={"X-Session-ID": session_id},
         )
-        _ = await client.post(
+        resp_exec = await client.post(
             f"{WORKER_URL}/runtime/execute",
             json={
-                "code": "import sys; sys.path.append('.'); import debug_stl",
+                "code": "import sys; sys.path.append('.'); import debug_stl; debug_stl.run()",
                 "timeout": 30,
             },
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
+        assert resp_exec.status_code == 200, f"Debug script failed: {resp_exec.text}"
+        assert (
+            resp_exec.json()["exit_code"] == 0
+        ), f"Debug script exit code non-zero: {resp_exec.json()}"
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/simulate",
@@ -336,25 +329,22 @@ constraints:
             json={
                 "code": (
                     "import sys; sys.path.append('.'); import verify_jitter; "
-                    "import asyncio; asyncio.run(verify_jitter.run())"
+                    "import asyncio; result = asyncio.run(verify_jitter.run()); "
+                    "assert result['success_rate'] == 1.0, f'Low success rate: {result}'"
                 ),
                 "timeout": 30,
             },
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = resp.json()
 
         assert data["exit_code"] == 0, (
-            f"Exit code {data['exit_code']} != 0\n"
+            f"Verification script failed with exit code {data['exit_code']}\n"
             f"STDOUT:\n{data['stdout']}\n"
             f"STDERR:\n{data['stderr']}"
         )
-        assert "VERIFICATION_RESULT" in data["stdout"], "VERIFICATION_RESULT missing"
-        assert (
-            "success_rate=1.0" in data["stdout"]
-        ), f"Verification failed: {data['stdout']}"
 
 
 @pytest.mark.integration_p0
