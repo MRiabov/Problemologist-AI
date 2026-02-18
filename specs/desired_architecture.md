@@ -1382,6 +1382,8 @@ We operate in a real-world-like scenario, with rigid bodies, gravity,  real-worl
 
 In environments, some objects are fixed, whereas others can be freely hanging or partially constrained at will to other objects - the input environment is not "bound" by physics too much. Whereas, the engineer-created objects can *never* be fixed unless they are properly constrained (in near future, we want to add "bolting" mechanism to the environment - i.e. the model would drill a hole in an environment and constrain it's object to the hole or multiple holes); and all constraints must be physically-realistic.
 
+Benchmarked time of execution for Genesis, simulating one-two FEM parts - 20s on dev mode.
+
 #### Physically-realistic constraints
 
 In the end, our systems should be transferrable to the real world.
