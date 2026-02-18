@@ -70,7 +70,7 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
         ls_resp = await client.post(
             f"{WORKER_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
-        files = [f["name"] for f in ls_resp.json()["files"]]
+        files = [f["name"] for f in ls_resp.json()]
         # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
         # but the spec says "-> .msh". Our mesh_utils.py has a renaming logic.
         assert "test.node" in files or "test.msh" in files, (
@@ -96,7 +96,8 @@ tetrahedralize(Path("bad.stl"), Path("bad.msh"))
             f"{WORKER_URL}/runtime/execute",
             json={"code": code_fail},
             headers=base_headers,
+            timeout=60.0,
         )
         assert resp.json()["exit_code"] != 0, (
-            "Expected meshing to fail for malformed STL"
+            f"Expected meshing to fail for malformed STL. Response: {resp.text}"
         )

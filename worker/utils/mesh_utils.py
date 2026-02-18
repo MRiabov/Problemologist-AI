@@ -143,6 +143,13 @@ def _tetrahedralize_gmsh(
         # Optimize 3D mesh for better quality
         gmsh.model.mesh.optimize("Netgen")
 
+        # Check if we actually have 3D elements
+        _, _, element_tags = gmsh.model.mesh.getElements(3)
+        if not element_tags or len(element_tags[0]) == 0:
+            raise MeshProcessingError(
+                "No 3D elements generated. Mesh might be non-manifold or too small."
+            )
+
         # Save as .msh
         output_msh_path.parent.mkdir(parents=True, exist_ok=True)
         gmsh.write(str(output_msh_path))

@@ -147,7 +147,7 @@ class WorkerClient:
             if response.status_code == 404:
                 return False
             response.raise_for_status()
-            files = response.json()["files"]
+            files = response.json()
             filename = Path(path).name
             return any(f["path"].endswith(filename) for f in files)
         except Exception:

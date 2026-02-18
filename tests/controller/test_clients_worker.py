@@ -258,6 +258,28 @@ async def test_client_reuse(mock_httpx_client):
 
 
 @pytest.mark.asyncio
+async def test_exists(mock_httpx_client):
+    client = WorkerClient("http://worker:8000", "test-session")
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = [
+        {"name": "file1.txt", "is_dir": False, "path": "/file1.txt", "size": 100},
+    ]
+    mock_httpx_client.post.return_value = mock_response
+
+    result = await client.exists("/file1.txt")
+
+    assert result is True
+    mock_httpx_client.post.assert_called_once_with(
+        "http://worker:8000/fs/ls",
+        json={"path": "/"},
+        headers={"X-Session-ID": "test-session"},
+        timeout=10.0,
+    )
+
+
+@pytest.mark.asyncio
 async def test_aclose(mock_httpx_client):
     """Test that aclose() closes the cached client."""
     from unittest.mock import patch
