@@ -36,7 +36,11 @@ class SharedNodeContext:
 
     @classmethod
     def create(cls, worker_url: str, session_id: str) -> "SharedNodeContext":
-        worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
+        worker_client = WorkerClient(
+            base_url=worker_url,
+            session_id=session_id,
+            heavy_url=settings.worker_heavy_url,
+        )
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
 
         # T012: Initialize DSPy LM for CodeAct support

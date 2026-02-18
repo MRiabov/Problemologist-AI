@@ -11,6 +11,11 @@ from controller.observability.middleware_helper import (
     sync_file_asset,
 )
 from controller.workflows.execution import ScriptExecutionWorkflow
+from controller.workflows.heavy import (
+    HeavyPreviewWorkflow,
+    HeavySimulationWorkflow,
+    HeavyValidationWorkflow,
+)
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -199,13 +204,33 @@ class RemoteFilesystemMiddleware:
         script_path: str | Path,
         backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
     ) -> dict[str, Any]:
-        """Trigger physics simulation via worker client."""
+        """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
         # Record request
         await record_events(
             episode_id=self.client.session_id,
             events=[SimulationRequestEvent(script_path=p_str)],
         )
+
+        if self.temporal_client:
+            # Bundle from light worker
+            bundle = await self.client.bundle_session()
+
+            # Execute via Temporal
+            res = await self.temporal_client.execute_workflow(
+                HeavySimulationWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "backend": backend.value,
+                    "smoke_test_mode": False,
+                    "session_id": self.client.session_id,
+                },
+                id=f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+            await record_simulation_result(self.client.session_id, res)
+            return res
 
         result = await self.client.simulate(p_str, backend=backend)
         res_dict = result.model_dump()
@@ -215,11 +240,50 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def validate(self, script_path: str | Path) -> dict[str, Any]:
-        """Trigger geometric validation via worker client."""
+    async def preview(
+        self,
+        script_path: str | Path,
+        pitch: float = -45.0,
+        yaw: float = 45.0,
+    ) -> dict[str, Any]:
+        """Trigger design preview via worker client (with bundling)."""
         p_str = str(script_path)
-        result = await self.client.validate(p_str)
-        res_dict = result.model_dump()
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            return await self.temporal_client.execute_workflow(
+                HeavyPreviewWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "pitch": pitch,
+                    "yaw": yaw,
+                },
+                id=f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+
+        return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+
+    async def validate(self, script_path: str | Path) -> dict[str, Any]:
+        """Trigger geometric validation via worker client (with bundling)."""
+        p_str = str(script_path)
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            res_dict = await self.temporal_client.execute_workflow(
+                HeavyValidationWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "session_id": self.client.session_id,
+                },
+                id=f"val-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+        else:
+            result = await self.client.validate(p_str)
+            res_dict = result.model_dump()
 
         # Record as ManufacturabilityCheckEvent
         await record_events(

@@ -25,15 +25,19 @@ class WorkerClient:
         base_url: str,
         session_id: str,
         http_client: httpx.AsyncClient | None = None,
+        heavy_url: str | None = None,
     ):
         """Initialize the worker client.
 
         Args:
-            base_url: Base URL of the worker service (e.g., http://worker:8000).
+            base_url: Base URL of the light worker service (e.g., http://worker:8000).
             session_id: Session ID to use for all requests.
             http_client: Pre-configured httpx.AsyncClient to reuse.
+            heavy_url: Optional base URL of the heavy worker service.
         """
         self.base_url = base_url.rstrip("/")
+        self.light_url = self.base_url
+        self.heavy_url = (heavy_url or base_url).rstrip("/")
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
         self.http_client = http_client
@@ -170,6 +174,20 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def bundle_session(self) -> bytes:
+        """Bundle the session workspace into a gzipped tarball from the light worker."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.light_url}/fs/bundle",
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return response.content
+        finally:
+            await self._close_client(client)
+
     async def upload_file(self, path: str, content: bytes) -> bool:
         """Upload a file with binary content."""
         client = await self._get_client()
@@ -201,6 +219,30 @@ class WorkerClient:
             )
             response.raise_for_status()
             return response.content
+        finally:
+            await self._close_client(client)
+
+    async def preview(
+        self,
+        script_path: str = "script.py",
+        pitch: float = -45.0,
+        yaw: float = 45.0,
+    ) -> dict[str, Any]:
+        """Trigger design preview via worker."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/preview",
+                json={
+                    "script_path": script_path,
+                    "pitch": pitch,
+                    "yaw": yaw,
+                },
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()
         finally:
             await self._close_client(client)
 
@@ -249,7 +291,7 @@ class WorkerClient:
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
-                f"{self.base_url}/benchmark/simulate",
+                f"{self.heavy_url}/benchmark/simulate",
                 json=payload,
                 headers=self.headers,
                 timeout=60.0,
@@ -269,7 +311,7 @@ class WorkerClient:
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
-                f"{self.base_url}/benchmark/validate",
+                f"{self.heavy_url}/benchmark/validate",
                 json=payload,
                 headers=self.headers,
                 timeout=30.0,
@@ -297,7 +339,7 @@ class WorkerClient:
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
-                f"{self.base_url}/benchmark/analyze",
+                f"{self.heavy_url}/benchmark/analyze",
                 json=payload,
                 headers=self.headers,
                 timeout=60.0,

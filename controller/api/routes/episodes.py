@@ -246,7 +246,11 @@ async def get_episode_schematic(
         )
 
     worker_url = settings.worker_url
-    client = WorkerClient(base_url=worker_url, session_id=worker_session_id)
+    client = WorkerClient(
+        base_url=worker_url,
+        session_id=worker_session_id,
+        heavy_url=settings.worker_heavy_url,
+    )
 
     try:
         content = await client.read_file("assembly_definition.yaml")
