@@ -136,8 +136,8 @@ class ReviewerNode(BaseNode):
 async def reviewer_node(state: AgentState) -> AgentState:
     # Use session_id from state
     session_id = state.session_id or settings.default_session_id
-    ctx = SharedNodeContext.create(
+    async with SharedNodeContext.lifecycle(
         worker_url=settings.spec_001_api_url, session_id=session_id
-    )
-    node = ReviewerNode(context=ctx)
-    return await node(state)
+    ) as ctx:
+        node = ReviewerNode(context=ctx)
+        return await node(state)

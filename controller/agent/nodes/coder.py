@@ -148,8 +148,8 @@ class CoderNode(BaseNode):
 async def coder_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    ctx = SharedNodeContext.create(
+    async with SharedNodeContext.lifecycle(
         worker_url=settings.spec_001_api_url, session_id=session_id
-    )
-    node = CoderNode(context=ctx)
-    return await node(state)
+    ) as ctx:
+        node = CoderNode(context=ctx)
+        return await node(state)

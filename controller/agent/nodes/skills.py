@@ -150,8 +150,8 @@ class SkillsNode(BaseNode):
 @type_check
 async def skills_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
-    ctx = SharedNodeContext.create(
+    async with SharedNodeContext.lifecycle(
         worker_url=settings.spec_001_api_url, session_id=session_id
-    )
-    node = SkillsNode(context=ctx)
-    return await node(state)
+    ) as ctx:
+        node = SkillsNode(context=ctx)
+        return await node(state)

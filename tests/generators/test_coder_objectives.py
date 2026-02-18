@@ -29,15 +29,15 @@ async def test_coder_node_injects_objectives_yaml(mock_state):
     # Patch dependencies
     with (
         patch(
-            "controller.agent.benchmark.nodes.SharedNodeContext.create"
-        ) as mock_ctx_create,
+            "controller.agent.benchmark.nodes.SharedNodeContext.lifecycle"
+        ) as mock_lifecycle,
         patch(
-            "controller.agent.benchmark.nodes.create_react_agent"
-        ) as mock_create_agent,
+            "controller.agent.benchmark.nodes.dspy.CodeAct"
+        ) as mock_codeact,
         patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
         mock_ctx = MagicMock()
-        mock_ctx_create.return_value = mock_ctx
+        mock_lifecycle.return_value.__aenter__.return_value = mock_ctx
         mock_ctx.worker_client = AsyncMock()
         mock_ctx.worker_client.exists.return_value = True
         mock_ctx.worker_client.read_file.side_effect = [
@@ -46,17 +46,14 @@ async def test_coder_node_injects_objectives_yaml(mock_state):
         ]
         mock_ctx.get_callbacks.return_value = []
 
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Done")]}
-        mock_create_agent.return_value = mock_agent
+        mock_program = MagicMock()
+        mock_program.return_value = MagicMock(journal="Done")
+        mock_codeact.return_value = mock_program
 
         await coder_node(mock_state)
 
     # Verify agent was called with objectives_yaml in context
-    mock_agent.ainvoke.assert_called_once()
-    call_args = mock_agent.ainvoke.call_args
-    messages = call_args.args[0]["messages"]
-    system_prompt = messages[0].content
-    assert "### Draft Objectives (YAML):" in system_prompt
-    assert objectives_content in system_prompt
-    assert "bracket" in system_prompt
+    mock_program.assert_called_once()
+    kwargs = mock_program.call_args.kwargs
+    assert kwargs["objectives_yaml"] == objectives_content
+    assert "bracket" in kwargs["plan"]

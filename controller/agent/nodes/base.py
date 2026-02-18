@@ -1,9 +1,12 @@
 import logging
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import AsyncIterator
 
 import dspy
+import httpx
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 
@@ -28,10 +31,18 @@ class SharedNodeContext:
     dspy_lm: dspy.LM
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
+    http_client: httpx.AsyncClient | None = None
 
     @classmethod
-    def create(cls, worker_url: str, session_id: str) -> "SharedNodeContext":
-        worker_client = WorkerClient(base_url=worker_url, session_id=session_id)
+    def create(
+        cls,
+        worker_url: str,
+        session_id: str,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> "SharedNodeContext":
+        worker_client = WorkerClient(
+            base_url=worker_url, session_id=session_id, http_client=http_client
+        )
         llm = ChatOpenAI(model=settings.llm_model, temperature=0)
 
         # T012: Initialize DSPy LM for CodeAct support
@@ -52,7 +63,17 @@ class SharedNodeContext:
             dspy_lm=dspy_lm,
             worker_client=worker_client,
             fs=RemoteFilesystemMiddleware(worker_client),
+            http_client=http_client,
         )
+
+    @classmethod
+    @asynccontextmanager
+    async def lifecycle(
+        cls, worker_url: str, session_id: str
+    ) -> AsyncIterator["SharedNodeContext"]:
+        """Creates a context with a shared HTTP client that is closed on exit."""
+        async with httpx.AsyncClient() as client:
+            yield cls.create(worker_url, session_id, http_client=client)
 
     def get_callbacks(self, name: str, session_id: str | None = None):
         """Creates observability callbacks."""

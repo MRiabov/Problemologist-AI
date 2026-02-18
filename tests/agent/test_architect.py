@@ -65,7 +65,7 @@ async def test_architect_node_logic(
     )
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
-    mock_ctx_cls.create.return_value = mock_ctx
+    mock_ctx_cls.lifecycle.return_value.__aenter__.return_value = mock_ctx
 
     # Mock DSPy Program
     mock_program = MagicMock()
@@ -108,7 +108,7 @@ async def test_architect_node_fallback(
     )
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
-    mock_ctx_cls.create.return_value = mock_ctx
+    mock_ctx_cls.lifecycle.return_value.__aenter__.return_value = mock_ctx
 
     # Mock DSPy Program
     mock_program = MagicMock()
