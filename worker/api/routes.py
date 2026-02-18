@@ -26,7 +26,7 @@ from worker.workbenches.models import WorkbenchResult
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import submit_for_review, validate, validate_and_price
+from ..utils import simulate, submit_for_review, validate, validate_and_price
 from ..utils.git import (
     abort_merge,
     commit_all,
@@ -376,12 +376,12 @@ async def api_simulate(
     """Physics-backed stability check in isolated session."""
     try:
         from shared.simulation.schemas import SimulatorBackendType
-        from worker.utils.validation import simulate
 
         # Serialize heavy operations
         async with HEAVY_OPERATION_LOCK:
             # Load component
-            component = load_component_from_script(
+            component = await asyncio.to_thread(
+                load_component_from_script,
                 script_path=fs_router.local_backend._resolve(request.script_path),
                 session_root=fs_router.local_backend.root,
                 script_content=request.script_content,
@@ -413,7 +413,7 @@ async def api_simulate(
         success = result.success
         confidence = result.confidence
 
-        events = _collect_events(fs_router)
+        events = await asyncio.to_thread(_collect_events, fs_router)
         return BenchmarkToolResponse(
             success=success,
             message=summary,
@@ -441,7 +441,8 @@ async def api_validate(
     """Geometric validity check in isolated session."""
     try:
         async with HEAVY_OPERATION_LOCK:
-            component = load_component_from_script(
+            component = await asyncio.to_thread(
+                load_component_from_script,
                 script_path=fs_router.local_backend._resolve(request.script_path),
                 session_root=fs_router.local_backend.root,
                 script_content=request.script_content,
@@ -499,7 +500,7 @@ async def api_validate(
             encoding="utf-8",
         )
 
-        events = _collect_events(fs_router)
+        events = await asyncio.to_thread(_collect_events, fs_router)
         return BenchmarkToolResponse(
             success=is_valid,
             message=message or "Validation successful",
@@ -518,12 +519,6 @@ async def api_analyze(
 ):
     """Manufacturing analysis using specified workbench."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
-
         # Load default configuration
         config = load_config()
 
@@ -545,6 +540,12 @@ async def api_analyze(
                 pass
 
         async with HEAVY_OPERATION_LOCK:
+            component = await asyncio.to_thread(
+                load_component_from_script,
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
+            )
             result = await asyncio.to_thread(
                 validate_and_price,
                 component,
@@ -584,13 +585,17 @@ async def api_submit(
 ):
     """Handover to reviewer in isolated session."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
-        success = submit_for_review(component, cwd=fs_router.local_backend.root)
-        events = _collect_events(fs_router)
+        async with HEAVY_OPERATION_LOCK:
+            component = await asyncio.to_thread(
+                load_component_from_script,
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
+            )
+            success = await asyncio.to_thread(
+                submit_for_review, component, cwd=fs_router.local_backend.root
+            )
+        events = await asyncio.to_thread(_collect_events, fs_router)
         return BenchmarkToolResponse(
             success=success,
             message="Handover complete" if success else "Handover failed",
@@ -665,12 +670,13 @@ async def api_preview(
 ):
     """Render a preview of the CAD design from specified camera angles."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-        )
-
         async with HEAVY_OPERATION_LOCK:
+            component = await asyncio.to_thread(
+                load_component_from_script,
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+            )
+
             image_path = await asyncio.to_thread(
                 preview_design,
                 component,
@@ -678,7 +684,7 @@ async def api_preview(
                 yaw=request.yaw,
                 output_dir=fs_router.local_backend.root / "renders",
             )
-        events = _collect_events(fs_router)
+        events = await asyncio.to_thread(_collect_events, fs_router)
 
         return PreviewDesignResponse(
             success=True,
@@ -777,7 +783,8 @@ async def api_build(
     try:
         async with HEAVY_OPERATION_LOCK:
             # Load component
-            component = load_component_from_script(
+            component = await asyncio.to_thread(
+                load_component_from_script,
                 script_path=fs_router.local_backend._resolve(request.script_path),
                 session_root=fs_router.local_backend.root,
             )
@@ -791,7 +798,7 @@ async def api_build(
             # We don't need objectives/moving_parts for basic visualization rebuild
             scene_path = await asyncio.to_thread(builder.build_from_assembly, component)
 
-        events = _collect_events(fs_router)
+        events = await asyncio.to_thread(_collect_events, fs_router)
         return BenchmarkToolResponse(
             success=True,
             message=f"Assets rebuilt. Scene saved to {scene_path}",
