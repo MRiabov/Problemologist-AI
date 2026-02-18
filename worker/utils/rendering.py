@@ -25,6 +25,8 @@ def prerender_24_views(
     output_dir: str | None = None,
     backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
     session_id: str | None = None,
+    scene_path: str | Path | None = None,
+    smoke_test_mode: bool = False,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
@@ -39,26 +41,35 @@ def prerender_24_views(
         output_dir=str(output_path),
         backend=backend_type,
         session_id=session_id,
+        scene_path=str(scene_path) if scene_path else None,
+        smoke_test_mode=smoke_test_mode,
     )
     output_path.mkdir(parents=True, exist_ok=True)
 
     saved_files = []
 
     try:
-        # 1. Build Scene using get_simulation_builder
+        # 1. Build Scene using get_simulation_builder (unless scene_path provided)
         with TemporaryDirectory() as temp_build_dir:
-            build_dir = Path(temp_build_dir)
-            builder = get_simulation_builder(
-                output_dir=build_dir, backend_type=backend_type
-            )
-            scene_path = builder.build_from_assembly(component)
+            if scene_path:
+                final_scene_path = Path(scene_path)
+            else:
+                build_dir = Path(temp_build_dir)
+                builder = get_simulation_builder(
+                    output_dir=build_dir, backend_type=backend_type
+                )
+                final_scene_path = builder.build_from_assembly(
+                    component, smoke_test_mode=smoke_test_mode
+                )
 
             # 2. Initialize Backend
             from shared.simulation.backends import SimulationScene
             from worker.simulation.factory import get_physics_backend
 
-            backend = get_physics_backend(backend_type, session_id=session_id)
-            scene = SimulationScene(scene_path=str(scene_path))
+            backend = get_physics_backend(
+                backend_type, session_id=session_id, smoke_test_mode=False
+            )
+            scene = SimulationScene(scene_path=str(final_scene_path))
             backend.load_scene(scene)
 
             # Step once if needed to initialize positions
@@ -122,7 +133,9 @@ def prerender_24_views(
         logger.info("prerender_complete", count=len(saved_files))
         return saved_files
     except Exception as e:
-        logger.error("prerender_failed", error=str(e))
+        import traceback
+
+        logger.error("prerender_failed", error=str(e), stack=traceback.format_exc())
         raise
 
 

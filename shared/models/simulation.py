@@ -23,10 +23,11 @@ class FluidMetricResult(BaseModel):
 
 
 class SimulationMetrics(BaseModel):
-    total_time: float
-    total_energy: float
-    max_velocity: float
-    success: bool
+    total_time: float = 0.0
+    total_energy: float = 0.0
+    max_velocity: float = 0.0
+    max_stress: float = 0.0
+    success: bool = False
     fail_reason: str | None = None
     fail_mode: SimulationFailureMode | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
@@ -34,6 +35,7 @@ class SimulationMetrics(BaseModel):
         default_factory=dict
     )  # part_label -> {"nodes": ..., "stress": ...}
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
+    events: list[dict] = Field(default_factory=list)
     confidence: str = "high"
 
 

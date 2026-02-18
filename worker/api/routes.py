@@ -365,11 +365,36 @@ async def execute_code(
 # Global lock to ensure only one simulation/render runs at a time cross-session
 HEAVY_OPERATION_LOCK = asyncio.Lock()
 SIMULATION_QUEUE_DEPTH = 0
+
+
+def _init_genesis_worker():
+    """Pre-warm Genesis in the worker process."""
+    try:
+        import genesis as gs
+        import torch
+
+        # Basic init
+        has_gpu = torch.cuda.is_available()
+        gs.init(backend=gs.gpu if has_gpu else gs.cpu, logging_level="warning")
+
+        # Build a tiny scene to trigger kernel compilation
+        scene = gs.Scene(show_viewer=False)
+        scene.add_entity(gs.morphs.Plane())
+        scene.build()
+
+        logger.info(
+            "genesis_worker_prewarmed", pid=multiprocessing.current_process().pid
+        )
+    except Exception as e:
+        logger.warning("genesis_worker_prewarm_failed", error=str(e))
+
+
 # Use 'spawn' context for true isolation, as Genesis/Torch/Vulkan hate fork
 SIMULATION_EXECUTOR = ProcessPoolExecutor(
-    max_workers=1,
-    max_tasks_per_child=1,
+    max_workers=2,
+    max_tasks_per_child=None,
     mp_context=multiprocessing.get_context("spawn"),
+    initializer=_init_genesis_worker,
 )
 
 
@@ -384,37 +409,35 @@ async def api_simulate(
     SIMULATION_QUEUE_DEPTH += 1
     wait_pos = SIMULATION_QUEUE_DEPTH
     try:
-        if wait_pos > 1:
+        if wait_pos > 4:
             logger.info(
                 "simulation_queued",
                 session_id=x_session_id,
                 queue_depth=wait_pos,
-                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
+                message=f"the simulation queue has {wait_pos - 4} members in it for your host, please wait",
             )
 
         from shared.simulation.schemas import SimulatorBackendType
         from worker.utils.validation import simulate_subprocess
 
-        # Serialize heavy operations and run in an isolated process
-        async with HEAVY_OPERATION_LOCK:
-            # Determine backend type
-            backend_type = request.backend
-            if isinstance(backend_type, str):
-                backend_type = SimulatorBackendType(backend_type)
+        # Determine backend type
+        backend_type = request.backend
+        if isinstance(backend_type, str):
+            backend_type = SimulatorBackendType(backend_type)
 
-            loop = asyncio.get_running_loop()
-            # Run in isolated subprocess to bypass Genesis global state issues
-            result = await loop.run_in_executor(
-                SIMULATION_EXECUTOR,
-                simulate_subprocess,
-                fs_router.local_backend._resolve(request.script_path),
-                fs_router.local_backend.root,
-                request.script_content,
-                fs_router.local_backend.root,
-                request.smoke_test_mode,
-                backend_type,
-                x_session_id,
-            )
+        loop = asyncio.get_running_loop()
+        # Run in isolated subprocess to bypass Genesis global state issues
+        result = await loop.run_in_executor(
+            SIMULATION_EXECUTOR,
+            simulate_subprocess,
+            fs_router.local_backend._resolve(request.script_path),
+            fs_router.local_backend.root,
+            request.script_content,
+            fs_router.local_backend.root,
+            request.smoke_test_mode,
+            backend_type,
+            x_session_id,
+        )
 
         # Reconstruct model if needed
         render_paths = result.render_paths
@@ -774,9 +797,7 @@ async def api_lint(
             )
 
             try:
-                stdout, _ = await asyncio.wait_for(
-                    process.communicate(), timeout=30
-                )
+                stdout, _ = await asyncio.wait_for(process.communicate(), timeout=30)
             except (asyncio.TimeoutError, TimeoutError):
                 process.kill()
                 await process.wait()
@@ -854,7 +875,11 @@ async def api_build(
 
             # Build assets (GLB/OBJ/Scene)
             # We don't need objectives/moving_parts for basic visualization rebuild
-            scene_path = await asyncio.to_thread(builder.build_from_assembly, component)
+            scene_path = await asyncio.to_thread(
+                builder.build_from_assembly,
+                component,
+                smoke_test_mode=request.smoke_test_mode,
+            )
 
         events = _collect_events(fs_router)
         message = f"Assets rebuilt. Scene saved to {scene_path.name}"
