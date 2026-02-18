@@ -532,7 +532,8 @@ async def test_int_010_planner_pricing_script_integration(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
     """INT-010: Verify validate_costing_and_price block when over caps."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # Increased timeout to 300s to accommodate slow Genesis initialization on CPU
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create cost estimation where totals > planner caps (which are valid vs benchmark)
         invalid_cost = {
             "version": "1.0",

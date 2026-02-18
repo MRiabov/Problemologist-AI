@@ -110,8 +110,19 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
+    # T010: Extract primary manufacturing method from assembly definition to avoid hardcoding CNC
+    mfg_method = ManufacturingMethod.CNC
+    try:
+        cost_data = yaml.safe_load(cost_path.read_text())
+        if cost_data and "manufactured_parts" in cost_data and cost_data["manufactured_parts"]:
+            primary_method_str = cost_data["manufactured_parts"][0].get("manufacturing_method")
+            if primary_method_str:
+                mfg_method = ManufacturingMethod(primary_method_str.lower())
+    except Exception as e:
+        logger.warning("failed_to_extract_mfg_method_defaulting_to_cnc", error=str(e))
+
     validation_result = validate_and_price(
-        component, ManufacturingMethod.CNC, dfm_config, build_zone=build_zone
+        component, mfg_method, dfm_config, build_zone=build_zone
     )
 
     if not validation_result.is_manufacturable:
@@ -131,15 +142,16 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             )
             raise ValueError(f"Submission rejected (Cost): {msg}")
 
+        # T019: Fix AttributeError by using weight_g from result instead of invalid metadata.get()
+        weight_kg = validation_result.weight_g / 1000.0
         if (
             constraints.max_weight
-            and validation_result.metadata.get("weight_kg", 0) > constraints.max_weight
+            and weight_kg > constraints.max_weight
         ):
-            weight = validation_result.metadata.get("weight_kg", 0)
-            msg = f"Weight {weight:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
+            msg = f"Weight {weight_kg:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
             logger.error(
                 "submission_weight_limit_exceeded",
-                weight=weight,
+                weight=weight_kg,
                 limit=constraints.max_weight,
             )
             raise ValueError(f"Submission rejected (Weight): {msg}")
