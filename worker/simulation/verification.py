@@ -113,23 +113,8 @@ def verify_with_jitter(
             rng.uniform(-jitter_range[2], jitter_range[2]),
         ]
 
-        # Use backend-specific jitter application
-        if hasattr(loop.backend, "apply_jitter"):
-            loop.backend.apply_jitter(target_body_name, jitter)
-        elif backend_type == "mujoco":
-            import mujoco
-
-            target_body_id = mujoco.mj_name2id(
-                loop.backend.model, mujoco.mjtObj.mjOBJ_BODY, target_body_name
-            )
-            if target_body_id != -1:
-                loop.backend.data.qpos[0:3] += jitter
-                mujoco.mj_forward(loop.backend.model, loop.backend.data)
-        elif backend_type == "genesis":
-            # Genesis jitter: we'd need to set_pos on the entity
-            # but verification usually happens on a fresh scene.
-            # For now, we'll assume Genesis handles its own randomization or we add it later.
-            pass
+        # Use backend-agnostic jitter application (WP01)
+        loop.backend.apply_jitter(target_body_name, jitter)
 
         # Run simulation
         metrics = loop.step(

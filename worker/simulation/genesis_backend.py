@@ -897,24 +897,35 @@ class GenesisBackend(PhysicsBackend):
         return 0.0
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
-        """Apply position jitter to a body in Genesis."""
+        """Apply position jitter to a body in Genesis using qpos."""
+        import torch
+        import genesis as gs
+
         if body_name in self.entities:
             entity = self.entities[body_name]
-            pos = entity.get_pos()
-            # pos is often a torch tensor or numpy array
-            new_pos = pos.cpu().numpy() if hasattr(pos, "cpu") else pos
-            new_pos = new_pos + np.array(jitter)
-            entity.set_pos(new_pos)
+            qpos = entity.get_qpos()  # Returns a torch tensor [n_dofs]
+            # Assuming first 3 are position for free bodies or similar
+            # If it has DOFs, jitter the first 3 (which are usually root translations)
+            if qpos.shape[0] >= 3:
+                jitter_tensor = torch.tensor(
+                    jitter, dtype=qpos.dtype, device=qpos.device
+                )
+                qpos[:3] += jitter_tensor
+                entity.set_qpos(qpos)
         else:
-            # Check links
+            # Check links within entities
             for ent in self.entities.values():
                 if hasattr(ent, "links"):
                     for link in ent.links:
                         if link.name == body_name:
-                            pos = link.get_pos()
-                            new_pos = pos.cpu().numpy() if hasattr(pos, "cpu") else pos
-                            new_pos = new_pos + np.array(jitter)
-                            link.set_pos(new_pos)
+                            # link.q_start/q_end give indices into entity qpos
+                            qpos = ent.get_qpos()
+                            if link.q_start + 3 <= qpos.shape[0]:
+                                jitter_tensor = torch.tensor(
+                                    jitter, dtype=qpos.dtype, device=qpos.device
+                                )
+                                qpos[link.q_start : link.q_start + 3] += jitter_tensor
+                                ent.set_qpos(qpos)
                             return
 
     def close(self) -> None:
