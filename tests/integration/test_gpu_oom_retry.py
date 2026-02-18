@@ -16,13 +16,14 @@ def test_gpu_oom_retry_logic(tmp_path):
 
     with (
         patch("worker.utils.validation.get_simulation_builder") as mock_builder,
-        patch("worker.utils.validation.SimulationLoop") as mock_loop_cls,
+        patch("worker.simulation.loop.SimulationLoop") as mock_loop_cls,
         patch("worker.utils.validation.prerender_24_views") as mock_render,
         patch("worker.utils.validation.calculate_assembly_totals") as mock_totals,
     ):
         # Setup mocks
         mock_scene_path = MagicMock()
         mock_scene_path.exists.return_value = True
+        mock_scene_path.read_text.return_value = "<mujoco/>"
         mock_builder.return_value.build_from_assembly.return_value = mock_scene_path
 
         mock_loop = mock_loop_cls.return_value

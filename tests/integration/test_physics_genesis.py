@@ -16,12 +16,16 @@ from shared.models.schemas import (
 )
 from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
 from shared.simulation.backends import (
+    ActuatorState,
     BodyState,
     StepResult,
     StressField,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
+
+
+pytestmark = pytest.mark.integration
 
 # Shared mock to avoid "already initialized" errors if multiple backends are created
 _SHARED_BACKEND_MOCK = MagicMock()
@@ -54,6 +58,10 @@ def mock_genesis_backend():
         backend.get_all_actuator_names.return_value = []
         backend.get_all_tendon_names.return_value = []
         backend.get_stress_summaries.return_value = []
+        backend.get_max_stress.return_value = 0.0
+        backend.get_actuator_state.return_value = ActuatorState(
+            force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0.0, 0.0)
+        )
 
         # Mock scene and its build status
         mock_scene = MagicMock()
@@ -222,4 +230,4 @@ def test_part_breakage_integration(mock_genesis_backend, tmp_path):
     metrics = loop.step({}, duration=0.1)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "physics_instability"
+    assert metrics.fail_reason == "PART_BREAKAGE:world"

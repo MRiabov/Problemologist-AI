@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import structlog
@@ -369,11 +370,10 @@ class SimulationLoop:
                 break
 
             if not res.success:
-                self.fail_reason = (
-                    res.failure_reason
-                    if isinstance(res.failure_reason, SimulationFailureMode)
-                    else SimulationFailureMode.PHYSICS_INSTABILITY
-                )
+                if res.failure_reason:
+                    self.fail_reason = res.failure_reason
+                else:
+                    self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
                 break
 
             # Check Forbidden Zones (T018 optimization: skip if no zones)
@@ -591,9 +591,7 @@ class SimulationLoop:
             max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
-            fail_mode=self.fail_reason
-            if isinstance(self.fail_reason, SimulationFailureMode)
-            else None,
+            fail_mode=self._resolve_fail_mode(self.fail_reason),
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
@@ -643,3 +641,16 @@ class SimulationLoop:
             for b in self.body_names
             for z in self.forbidden_sites
         )
+
+    def _resolve_fail_mode(self, reason: Any) -> SimulationFailureMode | None:
+        """Resolve a failure reason string or object to a SimulationFailureMode."""
+        if reason is None:
+            return None
+        if isinstance(reason, SimulationFailureMode):
+            return reason
+        if isinstance(reason, str):
+            reason_lower = reason.lower()
+            for mode in SimulationFailureMode:
+                if reason_lower.startswith(mode.value.lower()):
+                    return mode
+        return SimulationFailureMode.PHYSICS_INSTABILITY

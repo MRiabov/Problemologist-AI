@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from shared.models.schemas import ObjectivesYaml
+from shared.simulation.backends import ActuatorState
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
 
@@ -44,6 +45,12 @@ def test_fluid_containment_logic(tmp_path):
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
         mock_backend.step.return_value = MagicMock(time=0.1, success=True)
+        mock_backend.get_max_stress.return_value = 0.0
+        mock_backend.get_actuator_state.return_value = ActuatorState(
+            force=0.0, velocity=0.0, ctrl=0.0, forcerange=(0.0, 0.0)
+        )
+        mock_backend.get_all_actuator_names.return_value = []
+        mock_backend.get_all_site_names.return_value = []
 
         # Mock particles: 100 particles, 95 inside the zone
         particles = np.zeros((100, 3))
