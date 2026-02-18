@@ -23,3 +23,5 @@ Examples of commit names:
 In addition, don't stage throwaway scripts. If (most commonly in backend) a script has names like "repro_", "debug_...", "verify_...", "check_"... and they are especially in root repo, it's likely intermediate, throwaway reproduction scripts that I don't need. Notify me about them. Maybe put them into `/scripts/throwaway/` folder.
 
 NOTE: please skip the planning mode and commit directly. It's an easy task.
+
+NOTE 2: we have pre-commit hooks. I suggest running pre-commit before committing, you'll have everything formatted and autofixed; otherwise checks will fail and you'll have to do it manually.
