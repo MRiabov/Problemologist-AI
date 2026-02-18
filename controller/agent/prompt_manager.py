@@ -1,8 +1,11 @@
 from typing import Any
-
+import dspy
 import jinja2
+import structlog
 
 from ..prompts import load_prompts
+
+logger = structlog.get_logger(__name__)
 
 
 class PromptManager:
@@ -77,3 +80,31 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
             return template.render(**kwargs)
         except jinja2.TemplateNotFound:
             raise ValueError(f"Template '{template_name}' not found")
+
+    def load_compiled_program(
+        self, agent_name: str, program: dspy.Module
+    ) -> dspy.Module:
+        """
+        Loads a compiled DSPy program from config/compiled_prompts/ if it exists.
+        """
+        from pathlib import Path
+
+        # Look for compiled prompts in a standard location
+        prompt_path = Path("config/compiled_prompts") / f"{agent_name}.json"
+
+        if prompt_path.exists():
+            try:
+                program.load(str(prompt_path))
+                logger.info(
+                    "compiled_prompt_loaded",
+                    agent_name=agent_name,
+                    path=str(prompt_path),
+                )
+            except Exception as e:
+                logger.error(
+                    "compiled_prompt_load_failed", agent_name=agent_name, error=str(e)
+                )
+        else:
+            logger.debug("no_compiled_prompt_found", agent_name=agent_name)
+
+        return program
