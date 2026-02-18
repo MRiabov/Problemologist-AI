@@ -46,6 +46,7 @@ class BenchmarkPlannerSignature(dspy.Signature):
 
     prompt = dspy.InputField()
     history = dspy.InputField()
+    review_feedback = dspy.InputField()
     plan: RandomizationStrategy = dspy.OutputField()
 
 
@@ -95,7 +96,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     # Setup DSPy Program
     from controller.agent.dspy_utils import WorkerInterpreter
 
-    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+    interpreter = WorkerInterpreter(
+        worker_client=ctx.worker_client, session_id=session_id
+    )
 
     # Tools for benchmark generator
     tools = get_benchmark_tools(ctx.fs, session_id)
@@ -117,6 +120,11 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
             prediction = program(
                 prompt=state.session.prompt,
                 history=str(state.messages or []),
+                review_feedback=(
+                    state.review_feedback
+                    if state.session.status == SessionStatus.REJECTED
+                    else "No feedback yet."
+                ),
             )
             logger.info("planner_dspy_invoke_complete", session_id=session_id)
 
@@ -176,7 +184,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     # Setup DSPy Program
     from controller.agent.dspy_utils import WorkerInterpreter
 
-    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+    interpreter = WorkerInterpreter(
+        worker_client=ctx.worker_client, session_id=session_id
+    )
 
     tools = get_benchmark_tools(ctx.fs, session_id)
     tool_functions = {}
@@ -199,7 +209,11 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
                 prompt=state.session.prompt,
                 plan=state.plan.model_dump_json() if state.plan else "None",
                 objectives_yaml=objectives_yaml,
-                review_feedback=state.review_feedback or "No feedback provided.",
+                review_feedback=(
+                    state.review_feedback
+                    if state.session.status == SessionStatus.REJECTED
+                    else "No feedback provided."
+                ),
                 validation_logs=validation_logs,
             )
             logger.info("coder_dspy_invoke_complete", session_id=session_id)
@@ -334,7 +348,9 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     # Setup DSPy Program
     from controller.agent.dspy_utils import WorkerInterpreter
 
-    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+    interpreter = WorkerInterpreter(
+        worker_client=ctx.worker_client, session_id=session_id
+    )
 
     tools = get_benchmark_tools(ctx.fs, session_id)
     tool_functions = {}
@@ -421,7 +437,9 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
 
     from controller.agent.dspy_utils import WorkerInterpreter
 
-    interpreter = WorkerInterpreter(worker_client=ctx.worker_client, session_id=session_id)
+    interpreter = WorkerInterpreter(
+        worker_client=ctx.worker_client, session_id=session_id
+    )
     program = dspy.CodeAct(
         BenchmarkReviewerSignature,
         tools=list(tool_functions.values()),

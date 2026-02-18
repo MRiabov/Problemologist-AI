@@ -27,6 +27,7 @@ class PlannerSignature(dspy.Signature):
     task = dspy.InputField()
     skills = dspy.InputField()
     steer_context = dspy.InputField()
+    feedback = dspy.InputField()
     summary = dspy.OutputField(desc="A summary of the plan created")
 
 
@@ -48,6 +49,11 @@ class PlannerNode(BaseNode):
             "task": state.task,
             "skills": skills_context,
             "steer_context": steer_context,
+            "feedback": (
+                state.feedback
+                if state.status == AgentStatus.PLAN_REJECTED
+                else "New planning. No rejection feedback."
+            ),
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 

@@ -24,9 +24,11 @@ class ElectronicsSignature(dspy.Signature):
     When done, use SUBMIT to provide a summary of your work.
     """
 
+    task = dspy.InputField()
     current_step = dspy.InputField()
     plan = dspy.InputField()
     assembly_context = dspy.InputField()
+    feedback = dspy.InputField()
     journal = dspy.OutputField(desc="A summary of the electronics work done")
 
 
@@ -73,9 +75,15 @@ class ElectronicsEngineerNode(BaseNode):
         )
 
         inputs = {
+            "task": state.task,
             "current_step": current_step,
             "plan": state.plan,
             "assembly_context": assembly_context,
+            "feedback": (
+                state.feedback
+                if state.status == AgentStatus.CODE_REJECTED
+                else "New electronics step. No rejection feedback."
+            ),
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
