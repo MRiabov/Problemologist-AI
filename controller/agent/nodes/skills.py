@@ -60,7 +60,6 @@ class SkillsNode(BaseNode):
         self, state: AgentState, config: RunnableConfig | None = None
     ) -> AgentState:
         """Execute the sidecar node logic using DSPy CodeAct."""
-        from controller.agent.dspy_utils import WorkerInterpreter
 
         async def save_suggested_skill(title: str, content: str) -> str:
             """
@@ -111,46 +110,43 @@ class SkillsNode(BaseNode):
             except Exception as e:
                 return f"Error saving skill: {e}"
 
-        # Use WorkerInterpreter for remote execution (though save_suggested_skill is local to controller)
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        def get_skills_tools(fs, session_id):
+            tools = get_engineer_tools(fs, session_id)
+            tools.append(save_suggested_skill)
+            return tools
+
+        inputs = {
+            "task": state.task,
+            "journal": state.journal,
+        }
+
+        prediction, _, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=SkillsSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_skills_tools,
+            validate_files=[],
+            node_type="skill_learner",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-        # Add the specialized local tool
-        tool_fns["save_suggested_skill"] = save_suggested_skill
-
-        program = dspy.CodeAct(
-            SkillsSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        try:
-            with dspy.settings.context(lm=self.ctx.dspy_lm):
-                logger.info("skills_dspy_invoke_start", session_id=state.session_id)
-                prediction = program(
-                    task=state.task,
-                    journal=state.journal,
-                )
-                logger.info("skills_dspy_invoke_complete", session_id=state.session_id)
-
-            summary = getattr(prediction, "summary", "No summary provided.")
-            journal_entry = f"\nSidecar Learner: {summary}"
-
+        if not prediction:
             return state.model_copy(
                 update={
-                    "journal": state.journal + journal_entry,
-                    "messages": state.messages
-                    + [AIMessage(content=f"Skills update: {summary}")],
+                    "journal": state.journal + f"\n[Skills] Failed: {journal_entry}"
                 }
             )
-        except Exception as e:
-            logger.error(f"Skills agent failed: {e}")
-            return state.model_copy(
-                update={"journal": state.journal + f"\n[Skills] System error: {e}"}
-            )
-        finally:
-            interpreter.shutdown()
+
+        summary = getattr(prediction, "summary", "No summary provided.")
+        full_journal_entry = f"\nSidecar Learner: {summary}" + journal_entry
+
+        return state.model_copy(
+            update={
+                "journal": state.journal + full_journal_entry,
+                "messages": state.messages
+                + [AIMessage(content=f"Skills update: {summary}")],
+            }
+        )
 
 
 # Factory function for LangGraph

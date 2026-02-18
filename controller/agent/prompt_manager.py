@@ -18,14 +18,19 @@ class PromptManager:
 
         # Mapping from our template names to prompts.yaml paths
         templates = {
-            "architect": data["engineer"]["planner"]["system"],
-            "engineer": data["engineer"]["engineer"]["system"],
+            # Engineer Agent
+            "planner": data["engineer"]["planner"]["system"],
+            "coder": data["engineer"]["engineer"]["system"],
             "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
-            "critic": data["engineer"]["critic"]["system"],
+            "reviewer": data["engineer"]["critic"]["system"],
+            # Benchmark Generator
             "benchmark_planner": data["benchmark_generator"]["planner"]["system"],
             "benchmark_coder": data["benchmark_generator"]["coder"]["system"],
             "benchmark_reviewer": data["benchmark_generator"]["reviewer"]["system"],
+            # Subagents
             "cots_search": data["subagents"]["cots_search"]["system"],
+            "skill_learner": data["subagents"]["skill_learner"]["system"],
+            "documentation": data["subagents"]["documentation"]["system"],
         }
 
         # Add fallbacks for things not in prompts.yaml yet

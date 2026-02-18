@@ -1,11 +1,74 @@
 import asyncio
+from pathlib import Path
 from typing import Any
 
 import structlog
+from pydantic import BaseModel, Field
 
 from controller.clients.worker import WorkerClient
+from shared.observability.schemas import ObservabilityEventType
 
 logger = structlog.get_logger(__name__)
+
+
+class PredictionMetrics(BaseModel):
+    """
+    Formalized metrics for agent performance prediction.
+    Aggregates signals from worker events for reward calculation.
+    """
+
+    # General Execution
+    script_compiled: bool = False
+    cad_geometry_valid: bool = False
+    simulation_ran: bool = False
+    simulation_success: bool = False
+    simulation_stable: bool = True
+    error: str | None = None
+
+    # Engineering / CAD
+    manufacturability_valid: bool = False
+    parts_within_build_zone: bool = False
+    actual_cost: float = 0.0
+    actual_weight: float = 0.0
+    min_distance_to_goal: float = 1.0
+    initial_distance: float = 1.0
+
+    # Planning
+    plan_artifacts_present: bool = False
+    yaml_schema_valid: bool = True
+    estimated_cost: float = 0.0
+    estimated_weight: float = 0.0
+    cots_ids_valid: bool = True
+    geometry_consistent: bool = True
+    mechanism_fits_build_zone: bool = True
+
+    # Reviewing
+    review_artifacts_complete: bool = False
+    reviewer_accepted: bool = False
+    reviewer_decision: str | None = None
+    reviewer_feedback: str | None = None
+    review_actionable: bool = True
+    decision_correct: bool = False
+
+    # Electronics (WP3)
+    schematic_present: bool = False
+    power_budget_valid: bool = True
+    circuit_continuity: bool = False
+    total_power: float = 0.0
+
+    # COTS Search
+    n_queries: int = 0
+    n_valid_candidates: int = 0
+    n_returned_candidates: int = 0
+    candidate_adopted: bool = False
+
+    # Skills
+    skill_file_valid: bool = False
+    skill_adopted: bool = False
+    delta_success_rate: float = 0.0
+
+    # Benchmark specific
+    benchmark_constraints_satisfied: bool = True
 
 
 class WorkerInterpreter:
@@ -223,57 +286,185 @@ def cad_simulation_metric(
     return Prediction(score=min(score, 1.0), feedback=final_fb)
 
 
-def map_events_to_prediction(events: list[dict], _objectives: Any = None) -> dict:
-    """Translates worker events and objectives into a flatter dict."""
-    pred = {
-        "script_compiled": False,
-        "cad_geometry_valid": False,
-        "manufacturability_valid": False,
-        "parts_within_build_zone": False,
-        "simulation_success": False,
-        "simulation_ran": False,
-        "actual_cost": 0.0,
-        "actual_weight": 0.0,
-        "min_distance_to_goal": 1.0,
-        "initial_distance": 1.0,
-        "error": None,
-    }
+def map_events_to_prediction(
+    events: list[dict | Any], _objectives: Any = None
+) -> PredictionMetrics:
+    """
+    Translates worker events into a structured PredictionMetrics model.
+    Supports all agents (Planners, Engineers, Reviewers, COTS, Skills).
+    """
+    metrics = PredictionMetrics()
+
+    # Tracking for artifact presence
+    planned_files = set()
+    required_planner_files = {"plan.md", "todo.md", "assembly_definition.yaml"}
 
     for event in events:
-        etype = event.get("type")
-        data = event.get("data", {})
+        # Support both 'event_type' (BaseEvent) and 'type' (legacy/other)
+        if isinstance(event, dict):
+            etype = event.get("event_type") or event.get("type")
+            data = event.get("data", event)
+        else:
+            etype = getattr(event, "event_type", None)
+            data = event
 
-        if etype == "simulation_start":
-            pred["simulation_ran"] = True
-        elif etype == "simulation_success":
-            pred["simulation_success"] = True
-        elif etype == "cad_build_success":
-            pred["script_compiled"] = True
-            pred["cad_geometry_valid"] = True
-        elif etype == "validation_success":
-            pred["manufacturability_valid"] = True
-            pred["parts_within_build_zone"] = True
-            pred["actual_cost"] = data.get("total_cost", 0.0)
-            pred["actual_weight"] = data.get("total_weight", 0.0)
-        elif etype == "simulation_metrics":
-            pred["min_distance_to_goal"] = data.get("min_distance", 1.0)
-            pred["initial_distance"] = data.get("initial_distance", 1.0)
-        elif etype in ["simulation_error", "execution_error", "cad_build_error"]:
-            pred["error"] = data.get("error") or data.get("message") or str(data)
-        elif etype == "review_decision":
-            pred["reviewer_decision"] = data.get("decision")
-            pred["reviewer_feedback"] = data.get("reason")
+        if not etype:
+            continue
 
-            if data.get("decision") == "approve":
-                pred["reviewer_accepted"] = True
+        # 1. Filesystem & Artifacts
+        if etype == ObservabilityEventType.TOOL_WRITE_FILE:
+            path = (
+                data.get("path", "")
+                if isinstance(data, dict)
+                else getattr(data, "path", "")
+            )
+            if any(path.endswith(f) for f in required_planner_files):
+                planned_files.add(Path(path).name)
+            if "review" in path.lower() and path.endswith(".md"):
+                metrics.review_artifacts_complete = True
+            if "schematic" in path.lower():
+                metrics.schematic_present = True
 
-            # If rejected, treat it as a 'soft' error for the metric unless overriden
-            if data.get("decision") in ["reject_plan", "reject_code"]:
-                # Append to error if existing, or set it
-                existing_err = pred.get("error")
-                new_err = f"Reviewer Rejection: {data.get('reason')}"
-                pred["error"] = (
-                    f"{existing_err} | {new_err}" if existing_err else new_err
+        # 2. Planning & Logic
+        if etype in [
+            ObservabilityEventType.PLAN_SUBMISSION_ENGINEER,
+            ObservabilityEventType.PLAN_SUBMISSION_BENCHMARK,
+        ]:
+            if required_planner_files.issubset(planned_files):
+                metrics.plan_artifacts_present = True
+
+        if etype == ObservabilityEventType.LOGIC_FAILURE:
+            metrics.yaml_schema_valid = False
+            metrics.geometry_consistent = False
+            metrics.mechanism_fits_build_zone = False
+            metrics.error = (
+                data.get("error_message")
+                if isinstance(data, dict)
+                else getattr(data, "error_message", str(data))
+            )
+
+        # 3. Manufacturability & Pricing
+        if etype == ObservabilityEventType.MANUFACTURABILITY_CHECK:
+            result = (
+                data.get("result")
+                if isinstance(data, dict)
+                else getattr(data, "result", False)
+            )
+            if result:
+                metrics.manufacturability_valid = True
+                metrics.parts_within_build_zone = True
+                val_cost = (
+                    data.get("price", 0.0)
+                    if isinstance(data, dict)
+                    else getattr(data, "price", 0.0)
+                )
+                val_weight = (
+                    data.get("weight_g", 0.0)
+                    if isinstance(data, dict)
+                    else getattr(data, "weight_g", 0.0)
+                ) / 1000.0
+                metrics.actual_cost = max(metrics.actual_cost, val_cost)
+                metrics.actual_weight = max(metrics.actual_weight, val_weight)
+                metrics.estimated_cost = max(metrics.estimated_cost, val_cost)
+                metrics.estimated_weight = max(metrics.estimated_weight, val_weight)
+
+        # 4. Simulation Result
+        if etype in [
+            ObservabilityEventType.SIMULATION_START,
+            ObservabilityEventType.SIMULATION_REQUEST,
+        ]:
+            metrics.simulation_ran = True
+        elif etype == ObservabilityEventType.SIMULATION_RESULT:
+            metrics.simulation_ran = True
+            success = (
+                data.get("success")
+                if isinstance(data, dict)
+                else getattr(data, "success", False)
+            )
+            if success:
+                metrics.simulation_success = True
+            else:
+                metrics.error = str(
+                    data.get("failure_reason")
+                    if isinstance(data, dict)
+                    else getattr(data, "failure_reason", "unknown")
                 )
 
-    return pred
+        if etype == ObservabilityEventType.SIMULATION_INSTABILITY:
+            metrics.simulation_stable = False
+
+        # 5. Review Decision
+        if etype == ObservabilityEventType.REVIEW_DECISION:
+            metrics.review_artifacts_complete = True
+            decision = (
+                data.get("decision")
+                if isinstance(data, dict)
+                else getattr(data, "decision", None)
+            )
+            reason = (
+                data.get("reason")
+                if isinstance(data, dict)
+                else getattr(data, "reason", "")
+            )
+            metrics.reviewer_decision = decision
+            metrics.reviewer_feedback = reason
+            if decision == "approve":
+                metrics.reviewer_accepted = True
+            elif decision in ["reject_plan", "reject_code"]:
+                metrics.review_actionable = len(reason) > 20
+
+        # 6. Electronics (WP3)
+        if etype == ObservabilityEventType.CIRCUIT_VALIDATION:
+            metrics.schematic_present = True
+            metrics.circuit_continuity = (
+                data.get("result", False)
+                if isinstance(data, dict)
+                else getattr(data, "result", False)
+            )
+            errors = (
+                data.get("errors", [])
+                if isinstance(data, dict)
+                else getattr(data, "errors", [])
+            )
+            metrics.power_budget_valid = len(errors) == 0
+            metrics.total_power = (
+                data.get("total_draw_a", 0.0)
+                if isinstance(data, dict)
+                else getattr(data, "total_draw_a", 0.0)
+            )
+
+        # 7. COTS Search
+        if etype == ObservabilityEventType.COTS_SEARCH:
+            metrics.n_queries += 1
+            count = (
+                data.get("results_count", 0)
+                if isinstance(data, dict)
+                else getattr(data, "results_count", 0)
+            )
+            metrics.n_returned_candidates += count
+            if count > 0:
+                metrics.n_valid_candidates += count
+
+        # 8. Skills
+        if etype == ObservabilityEventType.SKILL_EDIT:
+            metrics.skill_file_valid = True
+        if etype == ObservabilityEventType.SKILL_READ:
+            metrics.skill_adopted = True
+
+        # 9. Benchmark specific
+        if etype == ObservabilityEventType.SCENE_VALIDATION:
+            result = (
+                data.get("result")
+                if isinstance(data, dict)
+                else getattr(data, "result", False)
+            )
+            if not result:
+                metrics.benchmark_constraints_satisfied = False
+                errors = (
+                    data.get("errors", [])
+                    if isinstance(data, dict)
+                    else getattr(data, "errors", [])
+                )
+                metrics.error = ", ".join(errors)
+
+    return metrics

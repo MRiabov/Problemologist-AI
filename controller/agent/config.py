@@ -12,7 +12,7 @@ class AgentSettings(BaseSettings):
     anthropic_api_key: str | None = None
 
     # URL for the Spec 001 Worker API
-    spec_001_api_url: str = "http://worker:8001"
+    spec_001_api_url: str = global_settings.worker_url
 
     # DB connection for checkpointing (if using PostgresSaver in future)
     db_connection_string: str | None = None

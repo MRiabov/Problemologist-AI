@@ -9,13 +9,14 @@ import structlog
 import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
-from controller.agent.nodes.base import SharedNodeContext
+from controller.agent.nodes.base import BaseNode, SharedNodeContext
 from controller.agent.nodes.reviewer import ReviewResult
 from shared.enums import SessionStatus
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
 )
+from shared.type_checking import type_check
 
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_tools
@@ -48,96 +49,92 @@ class BenchmarkPlannerSignature(dspy.Signature):
     plan: RandomizationStrategy = dspy.OutputField()
 
 
-async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    """
-    Breaks down the user prompt into a randomization strategy using DSPy.
-    """
-    session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+@type_check
+class BenchmarkPlannerNode(BaseNode):
+    """Refactored Benchmark Planner using BaseNode for prompt injection."""
 
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
-    logger.info("planner_node_start", session_id=session_id)
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        # Init Git
+        await self.ctx.worker_client.git_init()
 
-    # Init Git
-    await ctx.worker_client.git_init()
-
-    # Custom Objectives Logic (Restore)
-    custom_objectives = state.session.custom_objectives
-    if custom_objectives:
-        logger.info("planner_updating_objectives", session_id=session_id)
-        if await ctx.worker_client.exists(OBJECTIVES_FILE):
-            try:
-                obj_content = await ctx.worker_client.read_file(OBJECTIVES_FILE)
-                obj_data = yaml.safe_load(obj_content)
-                if not isinstance(obj_data, dict):
-                    obj_data = {}
-                if "constraints" not in obj_data:
-                    obj_data["constraints"] = {}
-                # Update constraints based on custom objectives
-                if custom_objectives.max_unit_cost is not None:
-                    obj_data["constraints"]["max_unit_cost"] = (
-                        custom_objectives.max_unit_cost
+        # Custom Objectives Logic
+        custom_objectives = state.session.custom_objectives
+        if custom_objectives:
+            logger.info("planner_updating_objectives", session_id=state.session_id)
+            if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
+                try:
+                    obj_content = await self.ctx.worker_client.read_file(
+                        OBJECTIVES_FILE
                     )
-                if custom_objectives.max_weight is not None:
-                    obj_data["constraints"]["max_weight"] = custom_objectives.max_weight
-                if custom_objectives.target_quantity is not None:
-                    obj_data["constraints"]["target_quantity"] = (
-                        custom_objectives.target_quantity
+                    obj_data = yaml.safe_load(obj_content)
+                    if not isinstance(obj_data, dict):
+                        obj_data = {}
+                    if "constraints" not in obj_data:
+                        obj_data["constraints"] = {}
+                    # Update constraints based on custom objectives
+                    if custom_objectives.max_unit_cost is not None:
+                        obj_data["constraints"]["max_unit_cost"] = (
+                            custom_objectives.max_unit_cost
+                        )
+                    if custom_objectives.max_weight is not None:
+                        obj_data["constraints"]["max_weight"] = (
+                            custom_objectives.max_weight
+                        )
+                    if custom_objectives.target_quantity is not None:
+                        obj_data["constraints"]["target_quantity"] = (
+                            custom_objectives.target_quantity
+                        )
+
+                    new_content = yaml.dump(obj_data, sort_keys=False)
+                    await self.ctx.worker_client.write_file(
+                        OBJECTIVES_FILE, new_content
                     )
+                    logger.info(
+                        "planner_objectives_updated", session_id=state.session_id
+                    )
+                except Exception as e:
+                    logger.warning("planner_objectives_update_failed", error=str(e))
 
-                new_content = yaml.dump(obj_data, sort_keys=False)
-                await ctx.worker_client.write_file(OBJECTIVES_FILE, new_content)
-                logger.info("planner_objectives_updated", session_id=session_id)
-            except Exception as e:
-                logger.warning("planner_objectives_update_failed", error=str(e))
+        inputs = {
+            "prompt": state.session.prompt,
+            "history": str(state.messages or []),
+            "review_feedback": (
+                state.review_feedback
+                if state.session.status == SessionStatus.REJECTED
+                else "No feedback yet."
+            ),
+        }
 
-    # Setup DSPy Program
-    from controller.agent.dspy_utils import WorkerInterpreter
+        prediction, _, _ = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=BenchmarkPlannerSignature,
+            state=state,  # type: ignore
+            inputs=inputs,
+            tool_factory=get_benchmark_tools,
+            validate_files=[],
+            node_type="benchmark_planner",
+        )
 
-    interpreter = WorkerInterpreter(
-        worker_client=ctx.worker_client, session_id=session_id
-    )
-
-    # Tools for benchmark generator
-    tools = get_benchmark_tools(ctx.fs, session_id)
-    tool_functions = {}
-    for t in tools:
-        func = getattr(t, "func", getattr(t, "_run", None))
-        if func:
-            tool_functions[t.name] = func
-
-    program = dspy.CodeAct(
-        BenchmarkPlannerSignature.with_instructions(ctx.pm.render("benchmark_planner")),
-        tools=list(tool_functions.values()),
-        interpreter=interpreter,
-    )
-
-    try:
-        with dspy.settings.context(lm=ctx.dspy_lm):
-            logger.info("planner_dspy_invoke_start", session_id=session_id)
-            prediction = program(
-                prompt=state.session.prompt,
-                history=str(state.messages or []),
-                review_feedback=(
-                    state.review_feedback
-                    if state.session.status == SessionStatus.REJECTED
-                    else "No feedback yet."
-                ),
+        if not prediction:
+            state.plan = RandomizationStrategy(
+                theme="error", reasoning="Failed to plan"
             )
-            logger.info("planner_dspy_invoke_complete", session_id=session_id)
+            return state
 
         state.plan = prediction.plan
         state.messages.append(
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
+        return state
 
-    except Exception as e:
-        logger.error("planner_dspy_failed", error=str(e))
-        state.plan = RandomizationStrategy(theme="error", reasoning=str(e))
-    finally:
-        interpreter.shutdown()
 
-    return state
+@type_check
+async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    node = BenchmarkPlannerNode(context=ctx)
+    return await node(state)
 
 
 class BenchmarkCoderSignature(dspy.Signature):
@@ -336,48 +333,35 @@ class BenchmarkCOTSSearchSignature(dspy.Signature):
     search_summary = dspy.OutputField(desc="A summary of the components found")
 
 
-async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    # Re-implementing to ensure consistency
-    session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+@type_check
+class BenchmarkCOTSSearchNode(BaseNode):
+    """Refactored Benchmark COTS Search using BaseNode."""
 
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        inputs = {"prompt": state.session.prompt}
 
-    # Setup DSPy Program
-    from controller.agent.dspy_utils import WorkerInterpreter
-
-    interpreter = WorkerInterpreter(
-        worker_client=ctx.worker_client, session_id=session_id
-    )
-
-    tools = get_benchmark_tools(ctx.fs, session_id)
-    tool_functions = {}
-    for t in tools:
-        func = getattr(t, "func", getattr(t, "_run", None))
-        if func:
-            tool_functions[t.name] = func
-
-    program = dspy.CodeAct(
-        BenchmarkCOTSSearchSignature,
-        tools=list(tool_functions.values()),
-        interpreter=interpreter,
-    )
-
-    try:
-        with dspy.settings.context(lm=ctx.dspy_lm):
-            logger.info("cots_search_dspy_invoke_start", session_id=session_id)
-            prediction = program(prompt=state.session.prompt)
-            logger.info("cots_search_dspy_invoke_complete", session_id=session_id)
+        prediction, _, _ = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=BenchmarkCOTSSearchSignature,
+            state=state,  # type: ignore
+            inputs=inputs,
+            tool_factory=get_benchmark_tools,
+            validate_files=[],
+            node_type="cots_search",
+        )
 
         summary = getattr(prediction, "search_summary", "No summary provided.")
         state.messages.append(AIMessage(content=f"COTS Search summary: {summary}"))
+        return state
 
-    except Exception as e:
-        logger.error("cots_search_dspy_failed", error=str(e))
-    finally:
-        interpreter.shutdown()
 
-    return state
+@type_check
+async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    node = BenchmarkCOTSSearchNode(context=ctx)
+    return await node(state)
 
 
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
@@ -401,89 +385,87 @@ class BenchmarkReviewerSignature(dspy.Signature):
     review: ReviewResult = dspy.OutputField()
 
 
-async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    """
-    Agentic review of the generated benchmark.
-    Refactored to use DSPy CodeAct with remote worker execution.
-    """
-    session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+@type_check
+class BenchmarkReviewerNode(BaseNode):
+    """Refactored Benchmark Reviewer using BaseNode."""
 
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
-    logger.info("reviewer_node_start", round=state.review_round)
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        logger.info("reviewer_node_start", round=state.review_round)
 
-    # Read context files
-    benchmark_structure = "# No benchmark_structure.md found."
-    with suppress(Exception):
-        if await ctx.worker_client.exists("benchmark_structure.md"):
-            benchmark_structure = await ctx.worker_client.read_file(
-                "benchmark_structure.md"
+        # Read context files
+        benchmark_structure = "# No benchmark_structure.md found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("benchmark_structure.md"):
+                benchmark_structure = await self.ctx.worker_client.read_file(
+                    "benchmark_structure.md"
+                )
+
+        objectives = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("objectives.yaml"):
+                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+
+        state.review_round = state.review_round + 1
+        review_filename = f"reviews/review-round-{state.review_round}/review.md"
+
+        # Specialized local tool
+        async def write_review_file(path: str, content: str) -> str:
+            """Write the review to the review file."""
+            p = path.lstrip("/")
+            if p != review_filename.lstrip("/"):
+                return f"Error: Unauthorized path. You must write to {review_filename}"
+            success = await self.ctx.worker_client.write_file(path, content)
+            return (
+                "Review written successfully." if success else "Error writing review."
             )
 
-    objectives = "# No objectives.yaml found."
-    with suppress(Exception):
-        if await ctx.worker_client.exists("objectives.yaml"):
-            objectives = await ctx.worker_client.read_file("objectives.yaml")
+        def get_reviewer_tools(fs, session_id):
+            tools = get_benchmark_tools(fs, session_id)
+            # Filter tools and add specialized one
+            final_tools = [
+                t
+                for t in tools
+                if t.name not in ("write_file", "edit_file", "submit_for_review")
+            ]
+            final_tools.append(write_review_file)
+            return final_tools
 
-    state.review_round = state.review_round + 1
-    review_filename = f"reviews/review-round-{state.review_round}/review.md"
+        inputs = {
+            "theme": state.plan.theme if state.plan else "Unknown",
+            "prompt": state.session.prompt,
+            "benchmark_structure": benchmark_structure,
+            "objectives": objectives,
+            "simulation_logs": str(
+                state.simulation_result.logs if state.simulation_result else []
+            ),
+        }
 
-    # Setup Tools
-    all_tools = get_benchmark_tools(ctx.fs, session_id)
-    tool_functions = {}
+        prediction, _, _ = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=BenchmarkReviewerSignature,
+            state=state,  # type: ignore
+            inputs=inputs,
+            tool_factory=get_reviewer_tools,
+            validate_files=[],
+            node_type="benchmark_reviewer",
+        )
 
-    async def write_review_file(path: str, content: str) -> str:
-        """Write the review to the review file."""
-        p = path.lstrip("/")
-        if p != review_filename.lstrip("/"):
-            return f"Error: Unauthorized path. You must write to {review_filename}"
-        success = await ctx.worker_client.write_file(path, content)
-        return "Review written successfully." if success else "Error writing review."
-
-    tool_functions["write_review_file"] = write_review_file
-
-    for t in all_tools:
-        if t.name not in ("write_file", "edit_file", "submit_for_review"):
-            func = getattr(t, "func", getattr(t, "_run", None))
-            if func:
-                tool_functions[t.name] = func
-
-    from controller.agent.dspy_utils import WorkerInterpreter
-
-    interpreter = WorkerInterpreter(
-        worker_client=ctx.worker_client, session_id=session_id
-    )
-    program = dspy.CodeAct(
-        BenchmarkReviewerSignature.with_instructions(
-            ctx.pm.render("benchmark_reviewer")
-        ),
-        tools=list(tool_functions.values()),
-        interpreter=interpreter,
-    )
-
-    try:
-        with dspy.settings.context(lm=ctx.dspy_lm):
-            logger.info("reviewer_dspy_invoke_start", session_id=session_id)
-            prediction = program(
-                theme=state.plan.theme if state.plan else "Unknown",
-                prompt=state.session.prompt,
-                benchmark_structure=benchmark_structure,
-                objectives=objectives,
-                simulation_logs=str(
-                    state.simulation_result.logs if state.simulation_result else []
-                ),
-            )
-            logger.info("reviewer_dspy_invoke_complete", session_id=session_id)
+        if not prediction:
+            state.review_feedback = "Error: Reviewer failed to complete."
+            return state
 
         review = prediction.review
         state.review_feedback = f"{review.decision.value}: {review.reason}"
         if review.required_fixes:
             state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
 
-    except Exception as e:
-        logger.error("reviewer_dspy_failed", error=str(e))
-        state.review_feedback = f"Error executing reviewer: {e}"
-    finally:
-        interpreter.shutdown()
+        return state
 
-    return state
+
+@type_check
+async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    node = BenchmarkReviewerNode(context=ctx)
+    return await node(state)
