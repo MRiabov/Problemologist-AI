@@ -433,10 +433,8 @@ def simulate(
             for part in assembly_definition.moving_parts:
                 if part.control:
                     if part.control.mode == "sinusoidal":
-                        dynamic_controllers[part.part_name] = (
-                            lambda t, p=part.control: (
-                                sinusoidal(t, p.speed, p.frequency or 1.0)
-                            )
+                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            sinusoidal(t, p.speed, p.frequency or 1.0)
                         )
                     elif part.control.mode == "constant":
                         control_inputs[part.part_name] = part.control.speed
@@ -593,5 +591,41 @@ def validate(
         )
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))
+
+    return True, None
+
+
+def validate_fem_manufacturability(
+    component: Compound, session_root: Path
+) -> tuple[bool, str | None]:
+    """Check if FEM material validation is required and if it passes."""
+    obj_path = session_root / "objectives.yaml"
+    if not obj_path.exists():
+        return True, None
+
+    try:
+        data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+        objs = ObjectivesYaml(**data)
+        if objs.physics and objs.physics.fem_enabled:
+            config = load_config()
+            custom_config_path = session_root / "manufacturing_config.yaml"
+            if custom_config_path.exists():
+                config = load_config(str(custom_config_path))
+
+            from worker.workbenches.models import ManufacturingMethod
+
+            val_report = validate_and_price(
+                component,
+                ManufacturingMethod.CNC,
+                config,
+                fem_required=True,
+            )
+            if not val_report.is_manufacturable:
+                msg = "Material validation failed: " + "; ".join(
+                    map(str, val_report.violations)
+                )
+                return False, msg
+    except Exception as e:
+        logger.warning("fem_manufacturability_check_failed", error=str(e))
 
     return True, None

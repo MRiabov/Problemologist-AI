@@ -44,6 +44,7 @@ All per-agent milestone weights and formulas live in **`config/reward_config.yam
 ### 1.2 Bootstrap Threshold
 
 Only traces scoring **≥ 0.75** are used as few-shot examples by `BootstrapFewShotWithRandomSearch`. This keeps examples high-quality (passed validation + near-successful simulation) while still allowing the optimizer to search over the full score range.
+<!-- NOTE: we'll migrate to GEPA optimizer soon. Literally no reason to use BootstrapFewShotWithRandomSearch AFAIK. -->
 
 ```python
 teleprompter = BootstrapFewShotWithRandomSearch(
@@ -126,7 +127,7 @@ We need a dedicated workflow (or CLI tool) to run the DSPy `Teleprompter`.
 
 - **Initial**: `BootstrapFewShotWithRandomSearch`. It is robust for `CodeAct` programs and generates few-shot examples where the agent successfully solved a hard task.
 - **Advanced**: `MIPRO` (Multi-objective Instruction Proposal). This will optimize the actual "Instruction" text in our `Signatures` using a separate LLM.
-<!-- why not GEPA? isn't it the best? -->
+<!-- why not GEPA? isn't it the best? it's basically for RL. Use GEPA. -->
 
 ### 3.2 Workflow Logic
 
