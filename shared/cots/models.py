@@ -1,10 +1,10 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, StrictFloat, StrictInt, StrictStr
 
 
-class COTSCategory(str, Enum):
+class COTSCategory(StrEnum):
     FASTENER = "fastener"
     MOTOR = "motor"
     GEAR = "gear"
