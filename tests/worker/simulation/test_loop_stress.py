@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from worker.simulation.loop import SimulationLoop
 from shared.simulation.schemas import SimulatorBackendType
 
+
 class TestSimulationLoopStress:
     @patch("worker.simulation.loop.get_physics_backend")
     def test_stress_collection(self, mock_get_backend):
@@ -14,15 +15,16 @@ class TestSimulationLoopStress:
         mock_backend.get_all_site_names.return_value = []
         mock_backend.get_all_actuator_names.return_value = []
         mock_backend.get_all_body_names.return_value = ["target_box"]
-        mock_backend.get_body_state.return_value = MagicMock(pos=(0,0,0), vel=(0,0,0))
+        mock_backend.get_body_state.return_value = MagicMock(
+            pos=(0, 0, 0), vel=(0, 0, 0)
+        )
         mock_backend.step.return_value = MagicMock(time=0.1, success=True)
 
         # Define sequential stress values to return
         mock_backend.get_max_stress.side_effect = [100.0, 500.0, 300.0]
 
         loop = SimulationLoop(
-            xml_path="dummy.xml",
-            backend_type=SimulatorBackendType.GENESIS
+            xml_path="dummy.xml", backend_type=SimulatorBackendType.GENESIS
         )
 
         # Run 3 steps

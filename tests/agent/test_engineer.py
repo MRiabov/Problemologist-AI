@@ -44,7 +44,7 @@ def mock_worker():
 def mock_record_events():
     with (
         patch(
-            "controller.middleware.remote_fs.record_worker_events",
+            "controller.observability.middleware_helper.record_events",
             new_callable=AsyncMock,
         ) as mock2,
     ):
@@ -52,19 +52,20 @@ def mock_record_events():
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.coder.dspy.CodeAct")
+@patch("controller.agent.nodes.base.BaseNode._run_program")
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_success(
-    mock_validate, mock_codeact_cls, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
-    # Mock DSPy Program
-    mock_program = MagicMock()
-    mock_program.return_value = MagicMock(journal="Step done.")
-    mock_codeact_cls.return_value = mock_program
+    # Mock _run_program return value: (prediction, artifacts, journal_entry)
+    mock_prediction = MagicMock(journal="Step done.")
+    mock_run_program.return_value = (mock_prediction, {}, "\n[Coder] Step done.")
 
     state = AgentState(
-        todo="- [ ] Step 1\n- [ ] Step 2", plan="The plan", journal="Old logs",
-        session_id="test-session"
+        todo="- [ ] Step 1\n- [ ] Step 2",
+        plan="The plan",
+        journal="Old logs",
+        session_id="test-session",
     )
 
     result = await coder_node(state)
@@ -75,40 +76,49 @@ async def test_engineer_node_success(
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.coder.dspy.CodeAct")
+@patch("controller.agent.nodes.base.BaseNode._run_program")
 @patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_retry_then_success(
-    mock_validate, mock_codeact_cls, mock_llm, mock_worker, mock_record_events
+    mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
-    # Mock DSPy Program
-    mock_program = MagicMock()
-    # First call fails (exception), second succeeds
-    mock_program.side_effect = [
-        Exception("ExecutionError"),
-        MagicMock(journal="Fixed."),
-    ]
-    mock_codeact_cls.return_value = mock_program
+    # In the new architecture, retries are HANDLED INSIDE _run_program.
+    # So we can just mock it returning the successful result after what looks like a failed attempt
+    # OR we can mock the internal behavior if we want to test retries explicitly.
+    # BUT since we are testing coder_node -> CoderNode -> _run_program,
+    # and _run_program itself handles retries, a "retry test" for CoderNode
+    # should probably verify that coder_node handles the response from _run_program correctly.
 
-    state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="", session_id="test-session")
+    mock_prediction = MagicMock(journal="Fixed.")
+    mock_run_program.return_value = (
+        mock_prediction,
+        {},
+        "\n[System Error] ExecutionError\n[Coder] Fixed.",
+    )
+
+    state = AgentState(
+        todo="- [ ] Step 1", plan="The plan", journal="", session_id="test-session"
+    )
 
     result = await coder_node(state)
 
     assert "- [x] Step 1" in result.todo
-    assert "[System Error] ExecutionError" in str(result.journal) # Error is logged, retry happens
+    assert "[System Error] ExecutionError" in str(
+        result.journal
+    )  # Error is logged, retry happens
     assert "[Coder] Fixed." in result.journal
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.coder.dspy.CodeAct")
+@patch("controller.agent.nodes.base.BaseNode._run_program")
 async def test_engineer_node_all_fail(
-    mock_codeact_cls, mock_llm, mock_worker, mock_record_events
+    mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
-    # Mock DSPy Program that always fails
-    mock_program = MagicMock()
-    mock_program.side_effect = Exception("Persistent Error")
-    mock_codeact_cls.return_value = mock_program
+    # Mock _run_program returning failed state (prediction=None)
+    mock_run_program.return_value = (None, {}, "\nMax retries reached.")
 
-    state = AgentState(todo="- [ ] Step 1", plan="The plan", journal="", session_id="test-session")
+    state = AgentState(
+        todo="- [ ] Step 1", plan="The plan", journal="", session_id="test-session"
+    )
 
     result = await coder_node(state)
 

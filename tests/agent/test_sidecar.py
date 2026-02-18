@@ -38,7 +38,9 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     # Mock DSPy Program
     with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
         mock_program = MagicMock()
-        mock_program.return_value = MagicMock(summary="Identified and recorded 1 new skills.")
+        mock_program.return_value = MagicMock(
+            summary="Identified and recorded 1 new skills."
+        )
         mock_codeact_cls.return_value = mock_program
 
         # Mock GitManager
@@ -51,7 +53,7 @@ async def test_sidecar_node_suggest_skill(mock_llm):
             state = AgentState(
                 task="Test task",
                 journal="I struggled with Box until I imported it correctly.",
-                session_id="test-session"
+                session_id="test-session",
             )
 
             result = await node(state)
@@ -83,7 +85,11 @@ async def test_sidecar_node_no_skill(mock_llm):
             instance.sync_changes = AsyncMock()
 
             node = SkillsNode(context=mock_ctx, suggested_skills_dir=str(test_dir))
-            state = AgentState(task="Easy task", journal="Everything worked perfectly.", session_id="test-session")
+            state = AgentState(
+                task="Easy task",
+                journal="Everything worked perfectly.",
+                session_id="test-session",
+            )
 
             result = await node(state)
 

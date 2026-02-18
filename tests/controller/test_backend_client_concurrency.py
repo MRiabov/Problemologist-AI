@@ -4,6 +4,7 @@ import pytest
 from controller.clients.backend import RemoteFilesystemBackend
 from shared.backend.protocol import FileDownloadResponse, FileUploadResponse
 
+
 @pytest.mark.asyncio
 async def test_adownload_files_concurrent():
     mock_client = AsyncMock()
@@ -33,6 +34,7 @@ async def test_adownload_files_concurrent():
     assert responses[2].path == "error.txt"
     assert responses[2].content is None
     assert "Read error" in responses[2].error
+
 
 @pytest.mark.asyncio
 async def test_aupload_files_concurrent():
