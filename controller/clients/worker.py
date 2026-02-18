@@ -1,3 +1,4 @@
+import asyncio
 from typing import Literal
 
 import httpx
@@ -36,18 +37,32 @@ class WorkerClient:
         self.session_id = session_id
         self.headers = {"X-Session-ID": session_id}
         self.http_client = http_client
+        self._cached_client: httpx.AsyncClient | None = None
+        self._client_lock = asyncio.Lock()
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Helper to get a client, either shared or new (for compatibility)."""
         if self.http_client:
             return self.http_client
-        # Fallback for code not yet updated to provide a client
-        return httpx.AsyncClient()
+
+        # Fallback for code not yet updated to provide a client: reuse a shared instance
+        if self._cached_client is None:
+            async with self._client_lock:
+                if self._cached_client is None:
+                    self._cached_client = httpx.AsyncClient()
+        return self._cached_client
 
     async def _close_client(self, client: httpx.AsyncClient):
         """Helper to close a client only if it was created locally."""
-        if not self.http_client:
-            await client.aclose()
+        # We no longer close the client here to allow connection pooling across requests.
+        # The client will be closed when aclose() is called or the instance is destroyed.
+        pass
+
+    async def aclose(self):
+        """Explicitly close the shared HTTP client if it was created locally."""
+        if self._cached_client:
+            await self._cached_client.aclose()
+            self._cached_client = None
 
     async def inspect_topology(
         self, target_id: str, script_path: str = "script.py"
