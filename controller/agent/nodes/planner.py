@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from contextlib import suppress
 
@@ -77,11 +78,17 @@ class PlannerNode(BaseNode):
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
 
-                artifacts = {}
-                for f in ["plan.md", "todo.md"]:
-                    with suppress(Exception):
-                        content = await self.ctx.fs.read_file(f)
-                        artifacts[f] = content
+                # Read current files concurrently to validate
+                files_to_read = ["plan.md", "todo.md"]
+                results = await asyncio.gather(
+                    *[self.ctx.fs.read_file(f) for f in files_to_read],
+                    return_exceptions=True,
+                )
+                artifacts = {
+                    f: res
+                    for f, res in zip(files_to_read, results)
+                    if not isinstance(res, Exception)
+                }
 
                 is_valid, validation_errors = validate_node_output("planner", artifacts)
 

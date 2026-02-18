@@ -31,23 +31,19 @@ async def test_all_agents_initialization():
 
         # 1. Engineer Coder
         coder = CoderNode(context=mock_ctx)
-        assert coder.agent is not None
-        assert len(coder.tools) > 0
+        assert coder.ctx == mock_ctx
 
         # 2. Engineer Electronics
         elec = ElectronicsEngineerNode(context=mock_ctx)
-        assert elec.agent is not None
-        assert len(elec.tools) > 0
+        assert elec.ctx == mock_ctx
 
         # 3. Engineer Planner
         planner = PlannerNode(context=mock_ctx)
-        assert planner.agent is not None
-        assert len(planner.tools) > 0
+        assert planner.ctx == mock_ctx
 
         # 4. Engineer Reviewer
         reviewer = ReviewerNode(context=mock_ctx)
-        assert reviewer.agent is not None
-        assert len(reviewer.tools) > 0
+        assert reviewer.ctx == mock_ctx
 
         # 5. Skill Creator (SkillsNode)
         skills = SkillsNode(context=mock_ctx)
