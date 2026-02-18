@@ -391,7 +391,7 @@ def _init_genesis_worker():
 
 # Use 'spawn' context for true isolation, as Genesis/Torch/Vulkan hate fork
 SIMULATION_EXECUTOR = ProcessPoolExecutor(
-    max_workers=2,
+    max_workers=1,
     max_tasks_per_child=None,
     mp_context=multiprocessing.get_context("spawn"),
     initializer=_init_genesis_worker,

@@ -102,9 +102,22 @@ class SimulationLoop:
                 if self.objectives and self.objectives.physics
                 else False
             )
+
+            # Resolve manufacturing method from component metadata
+            mfg_method = ManufacturingMethod.CNC
+            children = getattr(self.component, "children", [])
+            if not children:
+                children = [self.component]
+
+            for child in children:
+                meta = getattr(child, "metadata", None)
+                if meta and getattr(meta, "manufacturing_method", None):
+                    mfg_method = meta.manufacturing_method
+                    break
+
             self.validation_report = validate_and_price(
                 self.component,
-                ManufacturingMethod.CNC,
+                mfg_method,
                 self.config,
                 fem_required=fem_required,
             )
