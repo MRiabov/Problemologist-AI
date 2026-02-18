@@ -698,8 +698,8 @@ async def api_lint(
     fs_router=Depends(get_router),
 ):
     """Lint Python code using ruff."""
+    import asyncio
     import json
-    import subprocess
     import tempfile
 
     try:
@@ -720,19 +720,31 @@ async def api_lint(
             tmp_path = tmp.name
 
         try:
-            # Run ruff check with JSON output
-            result = subprocess.run(
-                ["ruff", "check", "--output-format", "json", tmp_path],
-                capture_output=True,
-                text=True,
-                timeout=30,
+            # Run ruff check with JSON output asynchronously
+            process = await asyncio.create_subprocess_exec(
+                "ruff",
+                "check",
+                "--output-format",
+                "json",
+                tmp_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
+
+            try:
+                stdout, _ = await asyncio.wait_for(
+                    process.communicate(), timeout=30
+                )
+            except (asyncio.TimeoutError, TimeoutError):
+                process.kill()
+                await process.wait()
+                raise
 
             errors = []
             warnings = []
 
-            if result.stdout:
-                lint_results = json.loads(result.stdout)
+            if stdout:
+                lint_results = json.loads(stdout.decode())
                 for item in lint_results:
                     issue = {
                         "code": item.get("code", ""),
