@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from shared.enums import SimulationFailureMode
 
 
-class SimulatorBackendType(str, Enum):
+class SimulatorBackendType(StrEnum):
     MUJOCO = "mujoco"  # Rigid-body only, fast, no FEM/fluids
     GENESIS = "genesis"  # FEM + MPM fluids, requires more compute
 

@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from bd_warehouse.fastener import (
     CounterSunkScrew,
@@ -27,7 +27,7 @@ STANDARD_PITCHES = {
 }
 
 
-class HoleType(Enum):
+class HoleType(StrEnum):
     FlatHeadHole = "FlatHeadHole"  # Uses CounterSink
     CounterBoreHole = "CounterBoreHole"  # Uses CounterBore
     SimpleHole = "SimpleHole"  # Uses simple Hole
