@@ -335,6 +335,7 @@ def simulate_subprocess(
     smoke_test_mode: bool = False,
     backend: Any | None = None,
     session_id: str | None = None,
+    particle_budget: int | None = None,
 ) -> SimulationResult:
     """Serializable entry point for ProcessPoolExecutor."""
     from worker.utils.loader import load_component_from_script
@@ -350,6 +351,7 @@ def simulate_subprocess(
         smoke_test_mode=smoke_test_mode,
         backend=backend,
         session_id=session_id,
+        particle_budget=particle_budget,
     )
 
 
@@ -422,6 +424,7 @@ def simulate(
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
         session_id=session_id,
+        particle_budget=particle_budget,
     )
 
     dynamic_controllers = {}
@@ -454,6 +457,16 @@ def simulate(
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
             logger.warning("gpu_oom_detected_retrying_smoke_mode")
+            from shared.observability.events import emit_event
+            from shared.observability.schemas import GpuOomRetryEvent
+
+            emit_event(
+                GpuOomRetryEvent(
+                    original_particles=loop.particle_budget,
+                    reduced_particles=5000,
+                )
+            )
+
             loop.smoke_test_mode = True
             loop.particle_budget = 5000
             metrics = loop.step(

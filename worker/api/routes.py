@@ -419,6 +419,7 @@ async def api_simulate(
             request.smoke_test_mode,
             backend_type,
             x_session_id,
+            request.particle_budget,
         )
 
         # Reconstruct model if needed
