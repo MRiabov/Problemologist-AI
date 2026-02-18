@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from contextlib import suppress
 
@@ -77,17 +78,23 @@ class CoderNode(BaseNode):
                 # Validation Gate
                 from worker.utils.file_validation import validate_node_output
 
-                # Read current files to validate
-                all_files = {}
-                for f in [
+                # Read current files concurrently to validate
+                files_to_read = [
                     "plan.md",
                     "todo.md",
                     "objectives.yaml",
                     "assembly_definition.yaml",
                     "script.py",
-                ]:
-                    with suppress(Exception):
-                        all_files[f] = await self.ctx.fs.read_file(f)
+                ]
+                results = await asyncio.gather(
+                    *[self.ctx.fs.read_file(f) for f in files_to_read],
+                    return_exceptions=True,
+                )
+                all_files = {
+                    f: res
+                    for f, res in zip(files_to_read, results)
+                    if not isinstance(res, Exception)
+                }
 
                 is_valid, validation_errors = validate_node_output("coder", all_files)
 

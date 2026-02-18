@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from contextlib import suppress
 
@@ -106,10 +107,17 @@ class ElectronicsEngineerNode(BaseNode):
                 # 4. Validate output
                 from worker.utils.file_validation import validate_node_output
 
-                all_files = {}
-                for f in ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]:
-                    with suppress(Exception):
-                        all_files[f] = await self.ctx.fs.read_file(f)
+                # Read current files concurrently to validate
+                files_to_read = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
+                results = await asyncio.gather(
+                    *[self.ctx.fs.read_file(f) for f in files_to_read],
+                    return_exceptions=True,
+                )
+                all_files = {
+                    f: res
+                    for f, res in zip(files_to_read, results)
+                    if not isinstance(res, Exception)
+                }
 
                 is_valid, validation_errors = validate_node_output(
                     "electronics_engineer", all_files
