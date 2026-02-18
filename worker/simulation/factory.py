@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+
 import structlog
 
 from shared.simulation.backends import PhysicsBackend
@@ -9,7 +9,7 @@ logger = structlog.get_logger(__name__)
 
 # Global cache for session-isolated backends
 # session_id -> PhysicsBackend
-BACKEND_CACHE: Dict[str, PhysicsBackend] = {}
+BACKEND_CACHE: dict[str, PhysicsBackend] = {}
 MAX_ACTIVE_SESSIONS = 4
 
 

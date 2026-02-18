@@ -1,26 +1,22 @@
-from contextlib import suppress
-from shared.enums import SessionStatus
 import asyncio
-import base64
 import os
 import re
+from contextlib import suppress
 
 import dspy
 import httpx
 import structlog
 import yaml
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
+from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.reviewer import ReviewResult
-from controller.prompts import get_prompt
+from shared.enums import SessionStatus
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
 )
 
-from ..config import settings
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_tools
 

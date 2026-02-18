@@ -1,5 +1,7 @@
-import pytest
 from types import SimpleNamespace
+
+import pytest
+
 from controller.agent.dspy_utils import cad_simulation_metric
 
 

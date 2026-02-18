@@ -1,7 +1,8 @@
 import asyncio
-import httpx
 import json
 import sys
+
+import httpx
 import pytest
 
 WORKER_URL = "http://localhost:18001"
@@ -57,7 +58,7 @@ async def run_simulation(script: str, name: str):
             return {
                 "name": name,
                 "success": False,
-                "error": f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}",
+                "error": f"{type(e).__name__}: {e!s}\n{traceback.format_exc()}",
             }
 
 

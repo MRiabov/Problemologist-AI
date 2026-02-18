@@ -1,10 +1,10 @@
-import genesis as gs
-import time
-import torch
 import os
-from build123d import Box, Sphere, export_stl
+import time
+
+import genesis as gs
+import torch
 import trimesh
-from pathlib import Path
+from build123d import Box, Sphere, export_stl
 
 
 def measure_compilation():

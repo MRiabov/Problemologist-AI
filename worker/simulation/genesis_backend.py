@@ -43,9 +43,10 @@ class GenesisBackend(PhysicsBackend):
 
     def _ensure_initialized(self):
         if gs is not None and not getattr(gs, "_initialized", False):
-            import torch
             import os
             import time
+
+            import torch
 
             start_t = time.time()
 
