@@ -1,12 +1,10 @@
-import asyncio
 import structlog
-from contextlib import suppress
 
 import dspy
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState, AgentStatus
+from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
 
@@ -25,7 +23,9 @@ class CoderSignature(dspy.Signature):
     current_step = dspy.InputField()
     plan = dspy.InputField()
     todo = dspy.InputField()
-    journal = dspy.OutputField(desc="A summary of the implementation done for this step")
+    journal = dspy.OutputField(
+        desc="A summary of the implementation done for this step"
+    )
 
 
 @type_check
@@ -45,94 +45,54 @@ class CoderNode(BaseNode):
                 update={"journal": state.journal + "\nNo more steps in TODO."}
             )
 
-        from controller.agent.dspy_utils import WorkerInterpreter
+        inputs = {
+            "current_step": current_step,
+            "plan": state.plan,
+            "todo": todo,
+        }
+        validate_files = [
+            "plan.md",
+            "todo.md",
+            "objectives.yaml",
+            "assembly_definition.yaml",
+            "script.py",
+        ]
 
-        # Use WorkerInterpreter for remote execution
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        prediction, _, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=CoderSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="coder",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-
-        program = dspy.CodeAct(
-            CoderSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        max_retries = 3
-        retry_count = 0
-        journal_entry = f"\nStarting step: {current_step}"
-
-        while retry_count < max_retries:
-            try:
-                # Invoke DSPy
-                with dspy.settings.context(lm=self.ctx.dspy_lm):
-                    logger.info("coder_dspy_invoke_start", session_id=state.session_id)
-                    prediction = program(
-                        current_step=current_step,
-                        plan=state.plan,
-                        todo=todo,
-                    )
-                    logger.info("coder_dspy_invoke_complete", session_id=state.session_id)
-
-                # Validation Gate
-                from worker.utils.file_validation import validate_node_output
-
-                # Read current files concurrently to validate
-                files_to_read = [
-                    "plan.md",
-                    "todo.md",
-                    "objectives.yaml",
-                    "assembly_definition.yaml",
-                    "script.py",
-                ]
-                results = await asyncio.gather(
-                    *[self.ctx.fs.read_file(f) for f in files_to_read],
-                    return_exceptions=True,
-                )
-                all_files = {
-                    f: res
-                    for f, res in zip(files_to_read, results)
-                    if not isinstance(res, Exception)
+        if not prediction:
+            return state.model_copy(
+                update={
+                    "journal": state.journal + journal_entry,
+                    "iteration": state.iteration + 1,
+                    "turn_count": state.turn_count + 1,
                 }
+            )
 
-                is_valid, validation_errors = validate_node_output("coder", all_files)
+        # Success
+        summary = getattr(
+            prediction, "journal", f"Successfully executed step: {current_step}"
+        )
+        journal_entry += f"\n[Coder] {summary}"
 
-                if not is_valid:
-                    logger.warning("coder_validation_failed", errors=validation_errors)
-                    retry_count += 1
-                    continue
-
-                # Success
-                summary = getattr(prediction, "journal", f"Successfully executed step: {current_step}")
-                journal_entry += f"\n[Coder] {summary}"
-
-                # Mark TODO as done
-                new_todo = todo.replace(
-                    f"- [ ] {current_step}", f"- [x] {current_step}"
-                )
-
-                return state.model_copy(
-                    update={
-                        "todo": new_todo,
-                        "journal": state.journal + journal_entry,
-                        "current_step": current_step,
-                        "messages": state.messages + [AIMessage(content=f"Coder summary: {summary}")],
-                        "turn_count": state.turn_count + 1,
-                    }
-                )
-
-            except Exception as e:
-                logger.error("coder_dspy_failed", error=str(e))
-                journal_entry += f"\n[System Error] {e}"
-                retry_count += 1
-            finally:
-                interpreter.shutdown()
+        # Mark TODO as done
+        new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
 
         return state.model_copy(
             update={
-                "journal": state.journal + journal_entry + "\nMax retries reached.",
-                "iteration": state.iteration + 1,
+                "todo": new_todo,
+                "journal": state.journal + journal_entry,
+                "current_step": current_step,
+                "messages": state.messages
+                + [AIMessage(content=f"Coder summary: {summary}")],
                 "turn_count": state.turn_count + 1,
             }
         )

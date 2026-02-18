@@ -54,15 +54,13 @@ class ElectronicsEngineerNode(BaseNode):
 
         # 2. Get current assembly context
         assembly_context = "No assembly context available."
-        try:
-            with suppress(Exception):
-                assembly_context = await self.ctx.fs.read_file(
-                    "assembly_definition.yaml"
-                )
-        except Exception:
-            pass
+        with suppress(Exception):
+            assembly_context = await self.ctx.fs.read_file("assembly_definition.yaml")
 
         # 3. Handover event
+        from controller.observability.tracing import record_worker_events
+        from shared.observability.schemas import ElecAgentHandoverEvent
+
         await record_worker_events(
             episode_id=state.session_id,
             events=[
@@ -74,89 +72,49 @@ class ElectronicsEngineerNode(BaseNode):
             ],
         )
 
-        from controller.agent.dspy_utils import WorkerInterpreter
+        inputs = {
+            "current_step": current_step,
+            "plan": state.plan,
+            "assembly_context": assembly_context,
+        }
+        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
-        # Use WorkerInterpreter for remote execution
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+        prediction, artifacts, journal_entry = await self._run_program(
+            program_cls=dspy.CodeAct,
+            signature_cls=ElectronicsSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="electronics_engineer",
         )
 
-        # Get tool signatures for DSPy
-        tool_fns = self._get_tool_functions(get_engineer_tools)
-
-        program = dspy.CodeAct(
-            ElectronicsSignature, tools=list(tool_fns.values()), interpreter=interpreter
-        )
-
-        max_retries = 3
-        retry_count = 0
-        journal_entry = f"\n[Electronics Engineer] Starting task: {current_step}"
-
-        while retry_count < max_retries:
-            try:
-                # Invoke DSPy
-                with dspy.settings.context(lm=self.ctx.dspy_lm):
-                    logger.info("electronics_dspy_invoke_start", session_id=state.session_id)
-                    prediction = program(
-                        current_step=current_step,
-                        plan=state.plan,
-                        assembly_context=assembly_context,
-                    )
-                    logger.info("electronics_dspy_invoke_complete", session_id=state.session_id)
-
-                # 4. Validate output
-                from worker.utils.file_validation import validate_node_output
-
-                # Read current files concurrently to validate
-                files_to_read = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
-                results = await asyncio.gather(
-                    *[self.ctx.fs.read_file(f) for f in files_to_read],
-                    return_exceptions=True,
-                )
-                all_files = {
-                    f: res
-                    for f, res in zip(files_to_read, results)
-                    if not isinstance(res, Exception)
+        if not prediction:
+            return state.model_copy(
+                update={
+                    "journal": state.journal + journal_entry,
+                    "turn_count": state.turn_count + 1,
                 }
+            )
 
-                is_valid, validation_errors = validate_node_output(
-                    "electronics_engineer", all_files
-                )
-
-                if not is_valid:
-                    logger.warning("electronics_engineer_validation_failed", errors=validation_errors)
-                    retry_count += 1
-                    continue
-
-                # Success
-                summary = getattr(prediction, "journal", f"Successfully completed electronics task: {current_step}")
-                journal_entry += f"\n[Electronics] {summary}"
-                new_todo = todo
-                if current_step in todo:
-                    new_todo = todo.replace(
-                        f"- [ ] {current_step}", f"- [x] {current_step}"
-                    )
-
-                return state.model_copy(
-                    update={
-                        "todo": new_todo,
-                        "journal": state.journal + journal_entry,
-                        "turn_count": state.turn_count + 1,
-                        "messages": state.messages + [AIMessage(content=f"Electronics summary: {summary}")],
-                    }
-                )
-
-            except Exception as e:
-                logger.error("electronics_dspy_failed", error=str(e))
-                journal_entry += f"\n[System Error] {e}"
-                retry_count += 1
-            finally:
-                interpreter.shutdown()
+        # Success
+        summary = getattr(
+            prediction,
+            "journal",
+            f"Successfully completed electronics task: {current_step}",
+        )
+        journal_entry += f"\n[Electronics] {summary}"
+        new_todo = todo
+        if current_step in todo:
+            new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
 
         return state.model_copy(
             update={
-                "journal": state.journal + journal_entry + "\nMax retries reached.",
+                "todo": new_todo,
+                "journal": state.journal + journal_entry,
                 "turn_count": state.turn_count + 1,
+                "messages": state.messages
+                + [AIMessage(content=f"Electronics summary: {summary}")],
             }
         )
 
