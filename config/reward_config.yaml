@@ -1,0 +1,409 @@
+# Reward configuration for DSPy optimization metric (cad_simulation_metric).
+#
+# Design principles:
+#   1. Never return 0.0 — even a tiny signal helps the optimizer distinguish
+#      between "completely broken" and "almost working".
+#   2. Simulation success is the dominant reward term (largest weight).
+#   3. Validation gates give partial credit proportional to how far the agent got.
+#   4. Price/weight overages are penalised continuously, not zeroed out.
+#   5. Weights within each agent sum to 1.0.
+#
+# Usage:
+#   from controller.agent.reward import load_reward_config
+#   cfg = load_reward_config()  # returns RewardConfig pydantic model
+#
+# Optimizer bootstrap threshold: only traces scoring >= bootstrap_threshold
+# are used as few-shot examples (keeps examples high-quality).
+
+bootstrap_threshold: 0.75
+
+# ---------------------------------------------------------------------------
+# Benchmark Generator graph
+# ---------------------------------------------------------------------------
+benchmark_generator:
+  # ── Benchmark Planner ────────────────────────────────────────────────────
+  benchmark_planner:
+    description: >
+      Scores the planner's ability to produce a valid, well-structured benchmark
+      plan with correct cost/weight caps and a feasible environment geometry.
+    milestones:
+      # Gate 1 — plan artifacts exist and are non-empty
+      plan_artifacts_present:
+        weight: 0.05
+        description: >
+          plan.md, objectives.yaml, assembly_definition.yaml, and todo.md all
+          exist and are non-empty (not equal to template stubs).
+
+      # Gate 2 — YAML files pass schema validation
+      yaml_schema_valid:
+        weight: 0.10
+        description: >
+          objectives.yaml and assembly_definition.yaml pass Pydantic schema
+          validation (no missing required fields, correct types, valid units).
+
+      # Gate 3 — cost estimate within benchmark cap
+      cost_within_cap:
+        weight: 0.10
+        description: >
+          Planner-estimated assembly cost <= benchmark max_unit_cost.
+          Partial credit: max(0, 1 - max(0, ratio - 1)) where ratio =
+          estimated_cost / max_unit_cost. E.g. 20% over → 0.80 partial.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_cost / max_unit_cost - 1.0))"
+
+      # Gate 4 — weight estimate within cap
+      weight_within_cap:
+        weight: 0.05
+        description: >
+          Planner-estimated weight <= max_weight. Same continuous penalty as cost.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight - 1.0))"
+
+      # Gate 5 — environment geometry is self-consistent
+      geometry_consistent:
+        weight: 0.10
+        description: >
+          build_zone, goal_zone, forbid_zones, and simulation_bounds are
+          non-overlapping (goal ∩ forbid = ∅, build_zone ⊂ sim_bounds).
+          Binary: either consistent or not.
+
+      # Gate 6 — COTS parts referenced with valid catalog IDs
+      cots_ids_valid:
+        weight: 0.05
+        description: >
+          All COTS part IDs in assembly_definition.yaml resolve to known
+          entries in the parts catalog DB.
+
+      # Gate 7 — plan passes reviewer acceptance (downstream signal)
+      reviewer_accepted:
+        weight: 0.55
+        description: >
+          The benchmark reviewer accepted the plan without requesting a re-plan.
+          This is the dominant reward — a plan is only good if it produces an
+          acceptable benchmark.
+
+  # ── Benchmark CAD Engineer ───────────────────────────────────────────────
+  benchmark_cad_engineer:
+    description: >
+      Scores the CAD engineer's ability to implement a valid, compilable, and
+      physically stable benchmark environment.
+    milestones:
+      # Gate 1 — script compiles without errors
+      script_compiles:
+        weight: 0.08
+        description: >
+          script.py executes without Python syntax or import errors.
+          Minimum signal: even a non-compiling attempt gets 0.02 to distinguish
+          from a missing file.
+        minimum_score: 0.02
+
+      # Gate 2 — build123d CAD is geometrically valid
+      cad_geometry_valid:
+        weight: 0.12
+        description: >
+          All parts export to valid OBJ meshes (no degenerate faces,
+          no self-intersections detected by trimesh).
+
+      # Gate 3 — benchmark constraints satisfied (no zone overlaps)
+      benchmark_constraints_satisfied:
+        weight: 0.10
+        description: >
+          validate() passes: input object ∩ environment = ∅, goal ∩ forbid = ∅,
+          all objects within simulation_bounds under all static randomization variants.
+
+      # Gate 4 — simulation runs without instability
+      simulation_stable:
+        weight: 0.15
+        description: >
+          A short smoke-test simulation (5 frames) completes without NaNs,
+          penetration explosions, or out-of-bounds exits.
+
+      # Gate 5 — reviewer accepted the benchmark
+      reviewer_accepted:
+        weight: 0.55
+        description: >
+          The benchmark reviewer accepted the implementation. Dominant reward.
+
+  # ── Benchmark Reviewer ───────────────────────────────────────────────────
+  benchmark_reviewer:
+    description: >
+      Scores the reviewer's decision quality. A reviewer is rewarded for
+      correctly accepting solvable benchmarks and correctly rejecting broken ones.
+      Evaluated post-hoc against engineer solve rate.
+    milestones:
+      # Gate 1 — review artifacts are complete
+      review_artifacts_complete:
+        weight: 0.10
+        description: >
+          reviews/ directory contains a structured review file with decision,
+          reason category, and evidence (images viewed count, files checked).
+
+      # Gate 2 — decision is consistent with downstream engineer outcome
+      # (post-hoc; computed after engineer attempts the benchmark)
+      decision_correct:
+        weight: 0.60
+        description: >
+          Accepted benchmarks are solvable by the engineer (true positive).
+          Rejected benchmarks were genuinely broken (true negative).
+          Partial: 0.60 for correct, 0.0 for incorrect (false accept/reject).
+
+      # Gate 3 — review is actionable (rejection includes fix suggestions)
+      review_actionable:
+        weight: 0.30
+        description: >
+          If rejected: review includes at least one concrete, specific fix
+          suggestion referencing a file and line/section. If accepted: N/A
+          (full credit awarded automatically).
+
+# ---------------------------------------------------------------------------
+# Engineer (problem solver) graph
+# ---------------------------------------------------------------------------
+engineer:
+  # ── Engineering Planner ──────────────────────────────────────────────────
+  engineering_planner:
+    description: >
+      Scores the planner's ability to produce a feasible, cost-compliant
+      engineering plan that the CAD engineer can implement.
+    milestones:
+      # Gate 1 — plan artifacts present and non-stub
+      plan_artifacts_present:
+        weight: 0.05
+        description: >
+          plan.md (all 5 required sections), todo.md, assembly_definition.yaml
+          all exist and are non-empty.
+
+      # Gate 2 — YAML schema valid
+      yaml_schema_valid:
+        weight: 0.08
+        description: >
+          assembly_definition.yaml passes Pydantic validation.
+
+      # Gate 3 — cost estimate within cap (continuous penalty)
+      cost_within_cap:
+        weight: 0.12
+        description: >
+          Planner-estimated cost <= objectives.yaml max_unit_cost.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_cost / max_unit_cost - 1.0))"
+
+      # Gate 4 — weight estimate within cap (continuous penalty)
+      weight_within_cap:
+        weight: 0.05
+        description: >
+          Planner-estimated weight <= max_weight.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight - 1.0))"
+
+      # Gate 5 — COTS parts valid
+      cots_ids_valid:
+        weight: 0.05
+        description: >
+          All COTS part IDs resolve to catalog entries.
+
+      # Gate 6 — mechanism fits build zone
+      mechanism_fits_build_zone:
+        weight: 0.10
+        description: >
+          All parts declared in assembly_definition.yaml fit within the
+          build_zone AABB from objectives.yaml (checked geometrically).
+
+      # Gate 7 — engineer successfully implemented the plan (downstream)
+      engineer_implemented_successfully:
+        weight: 0.55
+        description: >
+          The CAD engineer produced a passing simulation based on this plan.
+          Dominant reward — a plan is only good if it leads to a working solution.
+
+  # ── CAD Engineer (Mechanical Implementer) ────────────────────────────────
+  cad_engineer:
+    description: >
+      Scores the CAD engineer's ability to produce a manufacturable,
+      cost-compliant solution that passes simulation.
+    milestones:
+      # Gate 1 — script compiles
+      script_compiles:
+        weight: 0.05
+        description: >
+          script.py executes without Python syntax or import errors.
+        minimum_score: 0.02
+
+      # Gate 2 — CAD geometry valid (no self-intersections, valid mesh)
+      cad_geometry_valid:
+        weight: 0.08
+        description: >
+          All parts export to valid OBJ meshes.
+
+      # Gate 3 — manufacturability passes
+      manufacturability_valid:
+        weight: 0.07
+        description: >
+          All parts pass workbench manufacturability checks (e.g. no CNC
+          undercuts, wall thickness >= minimum for injection molding).
+
+      # Gate 4 — parts within build zone
+      parts_within_build_zone:
+        weight: 0.05
+        description: >
+          All custom-built parts are fully within the build_zone AABB.
+
+      # Gate 5 — actual cost within cap (continuous penalty)
+      cost_within_cap:
+        weight: 0.10
+        description: >
+          Validated unit cost (from validate_and_price) <= max_unit_cost.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_cost / max_unit_cost - 1.0))"
+
+      # Gate 6 — actual weight within cap (continuous penalty)
+      weight_within_cap:
+        weight: 0.05
+        description: >
+          Validated assembly weight <= max_weight.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_weight / max_weight - 1.0))"
+
+      # Gate 7 — simulation result (dominant term)
+      simulation_result:
+        weight: 0.60
+        description: >
+          Simulation outcome. Full credit for success. Partial credit for
+          failure proportional to progress toward goal:
+            partial_score = 1.0 - (min_distance_achieved / initial_distance)
+          Partial credit is discounted by 0.4 to incentivise full success:
+            score = 0.60 * partial_score * 0.4  (if failed)
+            score = 0.60                         (if success)
+        partial: true
+        success_formula: "0.60"
+        failure_formula: "0.60 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
+
+  # ── Electrical Engineer ──────────────────────────────────────────────────
+  electrical_engineer:
+    description: >
+      Scores the electrical engineer's ability to design a valid, functional
+      electrical subsystem (wiring, power budget, continuity).
+    milestones:
+      # Gate 1 — electrical schematic file present
+      schematic_present:
+        weight: 0.10
+        description: >
+          electrical_schematic.yaml or equivalent artifact exists and is non-empty.
+
+      # Gate 2 — power budget within cap
+      power_budget_valid:
+        weight: 0.15
+        description: >
+          Total power draw <= power_budget from objectives.yaml.
+        partial: true
+        penalty_formula: "max(0.0, 1.0 - max(0.0, total_power / max_power - 1.0))"
+
+      # Gate 3 — circuit continuity check passes
+      circuit_continuity:
+        weight: 0.20
+        description: >
+          All actuators and sensors are reachable from the power source
+          (graph connectivity check on the schematic).
+
+      # Gate 4 — simulation with electrical subsystem passes
+      simulation_result:
+        weight: 0.55
+        description: >
+          Full simulation (mechanical + electrical) passes. Same partial
+          credit formula as cad_engineer.simulation_result.
+        partial: true
+        success_formula: "0.55"
+        failure_formula: "0.55 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
+
+  # ── Engineering Reviewer ─────────────────────────────────────────────────
+  engineering_reviewer:
+    description: >
+      Scores the reviewer's decision quality. Rewarded for correctly
+      accepting working solutions and correctly rejecting broken ones.
+    milestones:
+      # Gate 1 — review artifacts complete
+      review_artifacts_complete:
+        weight: 0.10
+        description: >
+          reviews/ contains a structured review with decision, reason, and
+          evidence (images viewed, files checked, simulation video watched).
+
+      # Gate 2 — decision correctness (post-hoc)
+      decision_correct:
+        weight: 0.60
+        description: >
+          Accepted solutions pass re-simulation. Rejected solutions were
+          genuinely broken (verified by re-run).
+
+      # Gate 3 — review is actionable
+      review_actionable:
+        weight: 0.30
+        description: >
+          Rejections include specific, file-referenced fix suggestions.
+          Acceptances: full credit automatically.
+
+# ---------------------------------------------------------------------------
+# Shared subagents
+# ---------------------------------------------------------------------------
+shared:
+  # ── COTS Search Subagent ─────────────────────────────────────────────────
+  cots_search:
+    description: >
+      Scores the COTS search subagent's ability to return relevant,
+      constraint-satisfying part candidates efficiently.
+    milestones:
+      # Gate 1 — returned candidates within constraints
+      candidates_within_constraints:
+        weight: 0.40
+        description: >
+          All returned candidates satisfy the invoker's constraints
+          (torque, voltage, size, cost tier). Partial: fraction of
+          candidates that satisfy all constraints.
+        partial: true
+        formula: "n_valid_candidates / n_returned_candidates"
+
+      # Gate 2 — at least one candidate was used in the final plan
+      candidate_adopted:
+        weight: 0.40
+        description: >
+          At least one returned part_id appears in the final
+          assembly_definition.yaml. Binary.
+
+      # Gate 3 — search was efficient (few queries)
+      search_efficiency:
+        weight: 0.20
+        description: >
+          Fewer SQL queries to find a valid candidate is better.
+          Score = max(0, 1 - (n_queries - 1) / 5). 1 query → 1.0,
+          6+ queries → 0.0.
+        partial: true
+        formula: "max(0.0, 1.0 - (n_queries - 1) / 5.0)"
+
+  # ── Skill Creator Subagent ───────────────────────────────────────────────
+  skill_creator:
+    description: >
+      Scores the skill creator's ability to produce reusable, correct skills
+      that improve downstream agent performance.
+    milestones:
+      # Gate 1 — skill file is valid markdown with required sections
+      skill_file_valid:
+        weight: 0.15
+        description: >
+          SKILL.md contains required YAML frontmatter (name, description)
+          and at least one instruction section.
+
+      # Gate 2 — skill is adopted (read by at least one subsequent agent)
+      skill_adopted:
+        weight: 0.35
+        description: >
+          The skill file is read (skill_file_read event) by at least one
+          subsequent agent run within the same episode.
+
+      # Gate 3 — skill improves downstream success rate (post-hoc)
+      skill_improves_success:
+        weight: 0.50
+        description: >
+          Episodes that read this skill have a higher simulation_result score
+          than the baseline (computed over a rolling window of 10 episodes).
+          Partial: delta_score / 0.10 clamped to [0, 1]. A 10% improvement
+          → full credit.
+        partial: true
+        formula: "min(1.0, delta_success_rate / 0.10)"
