@@ -1,6 +1,6 @@
 import ast
+import asyncio
 import json
-import os
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -361,10 +361,10 @@ async def execute_code(
     )
 
 
-import asyncio
-
 # Global lock to ensure only one simulation/render runs at a time cross-session
 HEAVY_OPERATION_LOCK = asyncio.Lock()
+SIMULATION_QUEUE_DEPTH = 0
+SIMULATION_EXECUTOR = ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1)
 
 
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
@@ -374,34 +374,40 @@ async def api_simulate(
     fs_router=Depends(get_router),
 ):
     """Physics-backed stability check in isolated session."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
-        from shared.simulation.schemas import SimulatorBackendType
-        from worker.utils.validation import simulate
-
-        # Serialize heavy operations
-        async with HEAVY_OPERATION_LOCK:
-            # Load component
-            component = load_component_from_script(
-                script_path=fs_router.local_backend._resolve(request.script_path),
-                session_root=fs_router.local_backend.root,
-                script_content=request.script_content,
+        if wait_pos > 1:
+            logger.info(
+                "simulation_queued",
+                session_id=x_session_id,
+                queue_depth=wait_pos,
+                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
             )
 
+        from shared.simulation.schemas import SimulatorBackendType
+        from worker.utils.validation import simulate_subprocess
+
+        # Serialize heavy operations and run in an isolated process
+        async with HEAVY_OPERATION_LOCK:
             # Determine backend type
             backend_type = request.backend
             if isinstance(backend_type, str):
                 backend_type = SimulatorBackendType(backend_type)
 
-            # Run simulation in this process (it's safe now with the lock and session cache)
-            # simulate() will handle output_dir and results.
-            # We use to_thread to keep the loop responsive while simulating.
-            result = await asyncio.to_thread(
-                simulate,
-                component,
-                output_dir=fs_router.local_backend.root,
-                smoke_test_mode=request.smoke_test_mode,
-                backend=backend_type,
-                session_id=x_session_id,
+            loop = asyncio.get_running_loop()
+            # Run in isolated subprocess to bypass Genesis global state issues
+            result = await loop.run_in_executor(
+                SIMULATION_EXECUTOR,
+                simulate_subprocess,
+                fs_router.local_backend._resolve(request.script_path),
+                fs_router.local_backend.root,
+                request.script_content,
+                fs_router.local_backend.root,
+                request.smoke_test_mode,
+                backend_type,
+                x_session_id,
             )
 
         # Reconstruct model if needed
@@ -410,6 +416,12 @@ async def api_simulate(
         stress_summaries = [s.model_dump() for s in result.stress_summaries]
         fluid_metrics = [m.model_dump() for m in result.fluid_metrics]
         summary = result.summary
+        if wait_pos > 1:
+            summary = (
+                f"{summary} (Queued: wait position {wait_pos})"
+                if summary
+                else f"Queued: wait position {wait_pos}"
+            )
         success = result.success
         confidence = result.confidence
 
@@ -430,6 +442,8 @@ async def api_simulate(
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
@@ -439,7 +453,17 @@ async def api_validate(
     fs_router=Depends(get_router),
 ):
     """Geometric validity check in isolated session."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
+        if wait_pos > 1:
+            logger.info(
+                "validation_queued",
+                session_id=x_session_id,
+                queue_depth=wait_pos,
+                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
+            )
         async with HEAVY_OPERATION_LOCK:
             component = load_component_from_script(
                 script_path=fs_router.local_backend._resolve(request.script_path),
@@ -499,6 +523,13 @@ async def api_validate(
             encoding="utf-8",
         )
 
+        if wait_pos > 1:
+            message = (
+                f"{message} (Queued: wait position {wait_pos})"
+                if message
+                else f"Queued: wait position {wait_pos}"
+            )
+
         events = _collect_events(fs_router)
         return BenchmarkToolResponse(
             success=is_valid,
@@ -509,72 +540,59 @@ async def api_validate(
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @router.post("/benchmark/analyze", response_model=WorkbenchResult)
 async def api_analyze(
     request: AnalyzeRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
-    """Manufacturing analysis using specified workbench."""
+    """Component analysis (topology, material, weight) in isolated session."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
-
-        # Load default configuration
-        config = load_config()
-
-        # Determine if FEM validation is required from objectives
-        fem_required = False
-        working_dir = fs_router.local_backend.root
-        obj_path = working_dir / "objectives.yaml"
-        if obj_path.exists():
-            try:
-                import yaml
-
-                from shared.models.schemas import ObjectivesYaml
-
-                data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
-                objectives = ObjectivesYaml(**data)
-                if objectives.physics:
-                    fem_required = objectives.physics.fem_enabled
-            except Exception:
-                pass
-
+        if wait_pos > 1:
+            logger.info(
+                "analysis_queued",
+                session_id=x_session_id,
+                queue_depth=wait_pos,
+                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
+            )
         async with HEAVY_OPERATION_LOCK:
+            # Component analysis logic
+            from worker.utils.topology import analyze_component
+
+            component = load_component_from_script(
+                script_path=fs_router.local_backend._resolve(request.script_path),
+                session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
+            )
             result = await asyncio.to_thread(
-                validate_and_price,
+                analyze_component,
                 component,
-                request.method,
-                config,
-                quantity=request.quantity,
-                fem_required=fem_required,
+                output_dir=fs_router.local_backend.root,
             )
 
-        # INT-018: Record validation results to satisfy the handover gate
-        results_path = fs_router.local_backend.root / "validation_results.json"
-        results_path.write_text(
-            json.dumps(
-                {
-                    "success": result.is_manufacturable,
-                    "message": "; ".join(result.violations)
-                    if result.violations
-                    else "Analysis successful",
-                    "timestamp": time.time(),
-                }
-            ),
-            encoding="utf-8",
-        )
+            # [NEW] Wrap message with queue info
+            msg = result.message
+            if wait_pos > 1:
+                msg = (
+                    f"{msg} (Queued: wait position {wait_pos})"
+                    if msg
+                    else f"Queued: wait position {wait_pos}"
+                )
+            result.message = msg
 
-        return result
+            return result
     except Exception as e:
         logger.error("api_benchmark_analyze_failed", error=str(e))
-        # Wrap error in a failed WorkbenchResult if possible, or raise HTTP error
-        # Since WorkbenchResult has strict fields, raising HTTP exception is safer/easier
-        raise HTTPException(status_code=500, detail=str(e))
+        return WorkbenchResult(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
@@ -661,10 +679,22 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
 @router.post("/benchmark/preview", response_model=PreviewDesignResponse)
 async def api_preview(
     request: PreviewDesignRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Render a preview of the CAD design from specified camera angles."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
+        if wait_pos > 1:
+            logger.info(
+                "preview_queued",
+                session_id=x_session_id,
+                queue_depth=wait_pos,
+                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
+            )
+
         component = load_component_from_script(
             script_path=fs_router.local_backend._resolve(request.script_path),
             session_root=fs_router.local_backend.root,
@@ -680,9 +710,13 @@ async def api_preview(
             )
         events = _collect_events(fs_router)
 
+        message = "Preview generated successfully"
+        if wait_pos > 1:
+            message = f"{message} (Queued: wait position {wait_pos})"
+
         return PreviewDesignResponse(
             success=True,
-            message="Preview generated successfully",
+            message=message,
             image_path=str(image_path.relative_to(fs_router.local_backend.root)),
             events=events,
         )
@@ -690,6 +724,8 @@ async def api_preview(
     except Exception as e:
         logger.error("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @router.post("/lint", response_model=LintResponse)
@@ -774,12 +810,23 @@ async def api_build(
     fs_router=Depends(get_router),
 ):
     """Rebuild simulation assets (GLB) from source without running full simulation."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
+        if wait_pos > 1:
+            logger.info(
+                "build_queued",
+                session_id=x_session_id,
+                queue_depth=wait_pos,
+                message=f"the simulation queue has {wait_pos - 1} members in it for your host, please wait",
+            )
         async with HEAVY_OPERATION_LOCK:
             # Load component
             component = load_component_from_script(
                 script_path=fs_router.local_backend._resolve(request.script_path),
                 session_root=fs_router.local_backend.root,
+                script_content=request.script_content,
             )
 
             # Get builder
@@ -792,9 +839,13 @@ async def api_build(
             scene_path = await asyncio.to_thread(builder.build_from_assembly, component)
 
         events = _collect_events(fs_router)
+        message = f"Assets rebuilt. Scene saved to {scene_path.name}"
+        if wait_pos > 1:
+            message = f"{message} (Queued: wait position {wait_pos})"
+
         return BenchmarkToolResponse(
             success=True,
-            message=f"Assets rebuilt. Scene saved to {scene_path}",
+            message=message,
             artifacts={
                 # Return paths relative to session root
                 "scene_path": str(scene_path.relative_to(fs_router.local_backend.root))
@@ -805,3 +856,5 @@ async def api_build(
     except Exception as e:
         logger.error("api_benchmark_build_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1

@@ -1,3 +1,4 @@
+import threading
 from typing import Any
 
 import mujoco
@@ -17,6 +18,8 @@ from shared.simulation.backends import (
 
 
 class MuJoCoBackend(PhysicsBackend):
+    _lock = threading.Lock()
+
     def __init__(self):
         self.model = None
         self.data = None
@@ -24,15 +27,17 @@ class MuJoCoBackend(PhysicsBackend):
         self.custom_cameras = {}  # name -> mjvCamera
 
     def load_scene(self, scene: SimulationScene) -> None:
-        if scene.scene_path:
-            self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
-            self.data = mujoco.MjData(self.model)
-        else:
-            raise ValueError("MuJoCoBackend requires scene_path")
+        with self._lock:
+            if scene.scene_path:
+                self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
+                self.data = mujoco.MjData(self.model)
+            else:
+                raise ValueError("MuJoCoBackend requires scene_path")
 
     def step(self, dt: float) -> StepResult:
-        if self.model is None or self.data is None:
-            raise RuntimeError("Scene not loaded")
+        with self._lock:
+            if self.model is None or self.data is None:
+                raise RuntimeError("Scene not loaded")
 
         # In MuJoCo, dt is usually model.opt.timestep
         # If passed dt != model.opt.timestep, we might need multiple steps or to change model.opt.timestep

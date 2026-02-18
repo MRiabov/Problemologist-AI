@@ -942,7 +942,7 @@
           "worker"
         ],
         "summary": "Api Analyze",
-        "description": "Manufacturing analysis using specified workbench.",
+        "description": "Component analysis (topology, material, weight) in isolated session.",
         "operationId": "api_analyze_benchmark_analyze_post",
         "parameters": [
           {
