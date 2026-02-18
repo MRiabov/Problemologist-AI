@@ -112,9 +112,9 @@ randomization:
 version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
-  benchmark_max_weight_kg: 10.0
+  benchmark_max_weight_g: 10000.0
   planner_target_max_unit_cost_usd: 80.0
-  planner_target_max_weight_kg: 8.0
+  planner_target_max_weight_g: 8000.0
 manufactured_parts: []
 cots_parts: []
 final_assembly: []

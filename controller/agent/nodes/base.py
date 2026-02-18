@@ -218,6 +218,13 @@ class BaseNode:
                         logger.warning(
                             f"{node_type}_validation_failed", errors=validation_errors
                         )
+                        # Feed back errors to the model for the next retry (Issue 8)
+                        error_msg = "\n".join(validation_errors)
+                        if "feedback" in inputs:
+                            inputs["feedback"] = (
+                                f"{inputs['feedback']}\n\n"
+                                f"Validation errors in previous attempt:\n{error_msg}"
+                            )
                         retry_count += 1
                         continue
 

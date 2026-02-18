@@ -64,6 +64,7 @@ from .schema import (
     PreviewDesignResponse,
     ReadFileRequest,
     ReadFileResponse,
+    ExistsResponse,
     StatusResponse,
     WriteFileRequest,
 )
@@ -130,6 +131,16 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=404, detail="File not found")
     except Exception as e:
         logger.error("api_read_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fs/exists", response_model=ExistsResponse)
+async def api_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
+    """Check if a file exists."""
+    try:
+        return ExistsResponse(exists=fs_router.exists(request.path))
+    except Exception as e:
+        logger.error("api_exists_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

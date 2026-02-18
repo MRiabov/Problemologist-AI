@@ -35,6 +35,7 @@ class GenesisBackend(PhysicsBackend):
         self.motors = []  # part_name -> dict
         self.current_time = 0.0
         self._last_max_stress = 0.0
+        self._last_control = {}  # motor_id -> float
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
         self.smoke_test_mode = False
@@ -464,7 +465,9 @@ class GenesisBackend(PhysicsBackend):
                 time=self.current_time, success=False, failure_reason=str(e)
             )
 
-        self.current_time += dt
+        # Use actual physics dt from SimOptions to avoid drift (Issue 1)
+        sim_dt = getattr(self.scene.sim_options, "dt", dt)
+        self.current_time += sim_dt
         return StepResult(time=self.current_time, success=True)
 
     def _check_electronics_fluid_damage(self) -> str | None:
@@ -562,7 +565,9 @@ class GenesisBackend(PhysicsBackend):
 
             if hasattr(state, "pos") and state.pos.ndim == 3:
                 # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
-                pos = state.pos[0].mean(axis=0).tolist()
+                # Use bounding box center for more accurate position of deformable/fluid bodies (Issue 11)
+                pts = state.pos[0].cpu().numpy()
+                pos = ((np.min(pts, axis=0) + np.max(pts, axis=0)) / 2.0).tolist()
                 vel = state.vel[0].mean(axis=0).tolist()
                 return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
@@ -803,11 +808,12 @@ class GenesisBackend(PhysicsBackend):
 
             force = float(forces[0]) if forces.size > 0 else 0.0
             vel = float(vels[0]) if vels.size > 0 else 0.0
+            ctrl = self._last_control.get(actuator_name, 0.0)
 
             return ActuatorState(
                 force=force,
                 velocity=vel,
-                ctrl=0.0,
+                ctrl=ctrl,
                 forcerange=(-1000, 1000),  # Default limit
             )
         except Exception:
@@ -815,6 +821,7 @@ class GenesisBackend(PhysicsBackend):
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value
+        self._last_control.update(control_inputs)
         for motor in getattr(self, "motors", []):
             motor_id = motor["part_name"]
             if motor_id in control_inputs:

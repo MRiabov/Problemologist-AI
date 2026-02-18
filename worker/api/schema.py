@@ -13,6 +13,12 @@ class ReadFileResponse(BaseModel):
     content: StrictStr
 
 
+class ExistsResponse(BaseModel):
+    """Response checking if a file exists."""
+
+    exists: StrictBool
+
+
 class StatusResponse(BaseModel):
     """Generic status response."""
 

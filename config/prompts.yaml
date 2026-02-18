@@ -658,9 +658,9 @@ benchmark_generator:
          version: "1.0"
          constraints:
            benchmark_max_unit_cost_usd: 50.0
-           benchmark_max_weight_kg: 1.2
+           benchmark_max_weight_g: 1200.0
            planner_target_max_unit_cost_usd: 40.0
-           planner_target_max_weight_kg: 1.0
+           planner_target_max_weight_g: 1000.0
          final_assembly:
            - subassembly_id: "main_unit"
              parts:

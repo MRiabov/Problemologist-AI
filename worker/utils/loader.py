@@ -69,24 +69,28 @@ def load_component_from_script(
     # Use a unique module name to prevent sys.modules collisions (Review Item 2)
     module_name = f"dynamic_build_{uuid.uuid4().hex}"
 
-    with sys_path_context(root):
-        spec = importlib.util.spec_from_file_location(module_name, str(path))
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"Could not load spec for {path}")
+    try:
+        with sys_path_context(root):
+            spec = importlib.util.spec_from_file_location(module_name, str(path))
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"Could not load spec for {path}")
 
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)
-        except Exception as e:
-            raise RuntimeError(f"Failed to execute script {path}: {e}") from e
+            module = importlib.util.module_from_spec(spec)
+            try:
+                spec.loader.exec_module(module)
+            except Exception as e:
+                raise RuntimeError(f"Failed to execute script {path}: {e}") from e
 
-        if hasattr(module, "build"):
-            return module.build()
+            if hasattr(module, "build"):
+                return module.build()
 
-        # Fallback for finding a 'build' function in the relative scope
-        for attr in dir(module):
-            val = getattr(module, attr)
-            if callable(val) and attr == "build":
-                return val()
+            # Fallback for finding a 'build' function in the relative scope
+            for attr in dir(module):
+                val = getattr(module, attr)
+                if callable(val) and attr == "build":
+                    return val()
 
-        raise AttributeError(f"build() function not found in script {path}.")
+            raise AttributeError(f"build() function not found in script {path}.")
+    finally:
+        # Avoid memory leak from dynamic modules
+        sys.modules.pop(module_name, None)

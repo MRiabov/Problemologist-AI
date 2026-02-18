@@ -267,12 +267,20 @@ async def get_episode_schematic(
         for i, comp in enumerate(assembly.electronics.components):
             # schematic_component
             comp_id = f"comp_{comp.component_id}"
+
+            # Simple layout heuristic (Issue 7)
+            y_pos = 10
+            if comp.type == "power_supply":
+                y_pos = -30
+            elif comp.type in ["motor", "relay"]:
+                y_pos = 50
+
             soup.append(
                 {
                     "type": "schematic_component",
                     "id": comp_id,
                     "name": comp.component_id,
-                    "center": {"x": 10 + i * 40, "y": 10},
+                    "center": {"x": 10 + i * 50, "y": y_pos},
                     "rotation": 0,
                     "symbol_name": "resistor"
                     if comp.type == "motor"
@@ -287,7 +295,7 @@ async def get_episode_schematic(
                     "id": f"{comp_id}_p1",
                     "component_id": comp_id,
                     "name": "1",
-                    "center": {"x": 10 + i * 40 - 10, "y": 10},
+                    "center": {"x": 10 + i * 50 - 10, "y": y_pos},
                 }
             )
             soup.append(
@@ -296,7 +304,7 @@ async def get_episode_schematic(
                     "id": f"{comp_id}_p2",
                     "component_id": comp_id,
                     "name": "2",
-                    "center": {"x": 10 + i * 40 + 10, "y": 10},
+                    "center": {"x": 10 + i * 50 + 10, "y": y_pos},
                 }
             )
 

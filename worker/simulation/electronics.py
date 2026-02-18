@@ -44,7 +44,7 @@ class ElectronicsManager:
         sources = [
             c.component_id
             for c in self.electronics.components
-            if c.type in ["battery", "v_source"]
+            if c.type == "power_supply"
         ]
 
         # Simplified BFS for power propagation
@@ -63,11 +63,20 @@ class ElectronicsManager:
                     v = wire.from_terminal.component
 
                 if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
-                    visited.add(v)
-                    powered.add(v)
-                    queue.append(v)
+                    # Check if connection is closed (if u is a switch/relay)
+                    u_comp = next(
+                        (c for c in self.electronics.components if c.component_id == u),
+                        None,
+                    )
+                    can_pass = True
+                    if u_comp and u_comp.type in ["switch", "relay"]:
+                        if not self.switch_states.get(u, False):
+                            can_pass = False
+
+                    if can_pass:
+                        visited.add(v)
+                        powered.add(v)
+                        queue.append(v)
 
         for comp in self.electronics.components:
             self.is_powered_map[comp.component_id] = comp.component_id in powered

@@ -18,6 +18,7 @@ This review identifies a second round of architectural and implementation smells
 - `loop.py:L283-284`: `res = self.backend.step(dt)` -> `current_time = res.time`
 **Impact**: The simulation clock drifts by 25x. A requested "10 second" simulation will actually execute 250 seconds of physics. This renders all time-based objectives (like flow rates or stability durations) completely incorrect in smoke mode.
 **Recommendation**: The `SimulationLoop` must use the actual `dt` reported by the backend, or the backend must perform the correct number of substeps to match the requested `dt`.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -34,6 +35,7 @@ This review identifies a second round of architectural and implementation smells
 - `routes.py:L76`: `@router.post("/fs/ls", response_model=list[FileInfo])`
 **Impact**: The controller cannot reliably check if files exist on the worker. In large directories, this operation is also O(N) instead of O(1).
 **Recommendation**: Fix the JSON access bug. Implement a dedicated `/fs/exists` endpoint in the worker API that uses `os.path.exists` for O(1) performance.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -48,6 +50,7 @@ This review identifies a second round of architectural and implementation smells
 - `loop.py:L291`: `energy = sum(abs(state.ctrl * state.velocity) ...)`
 **Impact**: The `total_energy` metric is always 0.0 for all Genesis simulations. This prevents the agent from optimizing for power efficiency.
 **Recommendation**: The `GenesisBackend` should store the values passed to `apply_control` in a local dictionary and return them in `get_actuator_state`.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -62,6 +65,7 @@ This review identifies a second round of architectural and implementation smells
 - `loader.py:L77`: `spec.loader.exec_module(module)`
 **Impact**: In a long-running worker process, `sys.modules` will grow indefinitely, eventually leading to Out-of-Memory (OOM) failures.
 **Recommendation**: Use `sys.modules.pop(module_name, None)` in a `finally` block after the component has been successfully loaded and used.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -76,6 +80,7 @@ This review identifies a second round of architectural and implementation smells
 - CI Logs: `::error::Invalid value. Matching delimiter not found 'EOF'` and `Please set an Auth method...`
 **Impact**: CI fails on all Pull Requests if the repository owner hasn't specifically configured Gemini secrets, blocking the development flow for non-configured environments (like automated bot PRs or forks). The EOF error masks the true root cause (missing auth).
 **Recommendation**: Add `if` conditions to skip Gemini steps if no authentication method is provided. (Note: This has been addressed in the current PR to unblock CI).
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -97,6 +102,7 @@ This review identifies a second round of architectural and implementation smells
 - `electronics.py:L52-54`: Switch check is a placeholder comment.
 **Impact**: Electronics simulation is disconnected from actual circuit logic. All components will appear unpowered (due to the type mismatch) or incorrectly powered (ignoring switches).
 **Recommendation**: Align the check with `ElectronicComponentType.POWER_SUPPLY` and implement actual state checks for `switch` and `relay` components during the BFS traversal.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -111,6 +117,7 @@ This review identifies a second round of architectural and implementation smells
 - `schemas.py:L529`: `planner_target_max_weight_kg: float`
 **Impact**: Extreme risk of 1000x scaling errors. The validator at `L563` correctly divides by 1000, but having both units in the same object is a known recipe for "Mars Climate Orbiter" style failures.
 **Recommendation**: Standardize on a single unit (grams preferred for small assemblies) or use a custom `Weight` type that encapsulates the unit.
+**Status**: Fixed in current branch (standardized on grams for `AssemblyDefinition`).
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -128,6 +135,7 @@ This review identifies a second round of architectural and implementation smells
 - `episodes.py:L166`: `"center": {"x": 10 + i * 40, "y": 10}`
 **Impact**: For any circuit with more than 3-4 components, the schematic becomes a mess or an unreadable straight line. It also assumes every component has exactly 2 pins, which is false for relays and complex ICs.
 **Recommendation**: Use a basic force-directed graph algorithm or at least separate components into "Source", "Logic/Switch", and "Load" rows.
+**Status**: Partially addressed with row-based heuristic in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -141,6 +149,7 @@ This review identifies a second round of architectural and implementation smells
 - `base.py:L142-166`: The loop increments `retry_count` but doesn't update the `inputs` or the `journal` in a way the model can see.
 **Impact**: The agent is likely to repeat the same error three times, as it has no context on *why* its previous output was invalid.
 **Recommendation**: Append the validation errors to the `feedback` or a dedicated `errors` field in the `inputs` for subsequent retries.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -155,6 +164,7 @@ This review identifies a second round of architectural and implementation smells
 - `wire_utils.py:L114` and `L141` (get_awg_properties)
 **Impact**: Maintenance risk; changes to one definition might not be reflected in the other.
 **Recommendation**: Remove the duplicated blocks.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -168,6 +178,7 @@ This review identifies a second round of architectural and implementation smells
 - `loop.py:L293-294` and `L324` (via `_check_motor_overload`)
 **Impact**: Unnecessary overhead. For high-frequency simulations with many motors, this can measurably slow down the loop.
 **Recommendation**: Fetch the state once per step, cache it in a local variable, and reuse it for both energy and overload calculations.
+**Status**: Fixed in current branch.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
@@ -181,6 +192,7 @@ This review identifies a second round of architectural and implementation smells
 - `genesis_backend.py:L413`: `pos = state.pos[0].mean(axis=0).tolist()`
 **Impact**: This can be highly misleading for asymmetric deformations or spread-out fluids, where the "mean" might be a point in empty space.
 **Recommendation**: Consider returning the bounding box center or the position of the "root" node if applicable.
+**Status**: Fixed in current branch (switched to bounding box center).
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree

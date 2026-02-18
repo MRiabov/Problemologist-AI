@@ -443,9 +443,9 @@ class AssemblyConstraints(BaseModel):
     """Cap values from benchmark vs planner targets."""
 
     benchmark_max_unit_cost_usd: float
-    benchmark_max_weight_kg: float
+    benchmark_max_weight_g: float
     planner_target_max_unit_cost_usd: float
-    planner_target_max_weight_kg: float
+    planner_target_max_weight_g: float
 
 
 # =============================================================================
@@ -564,14 +564,14 @@ class AssemblyDefinition(BaseModel):
                 f"({self.constraints.benchmark_max_unit_cost_usd})"
             )
         if (
-            self.constraints.planner_target_max_weight_kg
-            > self.constraints.benchmark_max_weight_kg
+            self.constraints.planner_target_max_weight_g
+            > self.constraints.benchmark_max_weight_g
         ):
             raise ValueError(
                 f"Planner target weight "
-                f"({self.constraints.planner_target_max_weight_kg}) "
+                f"({self.constraints.planner_target_max_weight_g}g) "
                 f"must be less than or equal to benchmark max weight "
-                f"({self.constraints.benchmark_max_weight_kg})"
+                f"({self.constraints.benchmark_max_weight_g}g)"
             )
 
         # Enforce INT-010: Estimated totals must be within planner target caps
@@ -586,12 +586,12 @@ class AssemblyDefinition(BaseModel):
                 f"(${self.constraints.planner_target_max_unit_cost_usd})"
             )
         if (
-            self.totals.estimated_weight_g / 1000.0
-        ) > self.constraints.planner_target_max_weight_kg:
+            self.totals.estimated_weight_g
+        ) > self.constraints.planner_target_max_weight_g:
             raise ValueError(
                 f"Estimated weight ({self.totals.estimated_weight_g}g) "
                 f"exceeds target limit "
-                f"({self.constraints.planner_target_max_weight_kg}kg)"
+                f"({self.constraints.planner_target_max_weight_g}g)"
             )
 
         return self
