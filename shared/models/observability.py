@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr
 
 
-class AssetType(str, Enum):
+class AssetType(StrEnum):
     VIDEO = "VIDEO"
     IMAGE = "IMAGE"
     LOG = "LOG"
