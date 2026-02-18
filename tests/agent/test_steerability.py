@@ -97,7 +97,9 @@ async def test_check_steering():
 
 
 @pytest.mark.asyncio
-async def test_planner_node_steer_context():
+@patch("controller.agent.nodes.planner.dspy.CodeAct")
+@patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
+async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
     from controller.agent.nodes.planner import planner_node
 
     session_id = str(uuid4())
@@ -118,36 +120,25 @@ async def test_planner_node_steer_context():
     state = AgentState(session_id=session_id, messages=[steer_msg], task="Test task")
 
     with (
-        patch("controller.agent.nodes.base.PromptManager") as mock_pm_class,
         patch("controller.agent.nodes.base.ChatOpenAI") as mock_llm,
+        patch("controller.agent.dspy_utils.WorkerInterpreter") as mock_interpreter,
         patch("controller.agent.nodes.base.WorkerClient") as mock_worker,
-        patch(
-            "controller.agent.nodes.planner.create_react_agent"
-        ) as mock_agent_factory,
     ):
-        mock_pm = mock_pm_class.return_value
-        mock_pm.render.return_value = "PLAN\nTODO\n- [ ] task"
-
-        mock_llm_instance = mock_llm.return_value
-        mock_llm_instance.ainvoke = AsyncMock(
-            return_value=AIMessage(content="PLAN\nTODO\n- [ ] task")
-        )
-
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [AIMessage(content="Plan generated")]
-        }
-        mock_agent_factory.return_value = mock_agent
+        # Mock DSPy Program
+        mock_program = MagicMock()
+        mock_program.return_value = MagicMock(summary="Plan generated")
+        mock_codeact_cls.return_value = mock_program
 
         # Mock WorkerClient/Filesystem bits
         mock_worker_instance = mock_worker.return_value
         mock_worker_instance.write_file = AsyncMock()
         mock_worker_instance.read_file = AsyncMock(side_effect=lambda f: "content")
+        mock_worker_instance.exists = AsyncMock(return_value=True)
 
         await planner_node(state)
 
-        # Verify render called with steer_context
-        args, kwargs = mock_pm.render.call_args
+        # Verify DSPy program called with steer_context
+        args, kwargs = mock_program.call_args
         assert "steer_context" in kwargs
         assert "Geometric Selections:" in kwargs["steer_context"]
         assert "Code References:" in kwargs["steer_context"]
@@ -155,7 +146,8 @@ async def test_planner_node_steer_context():
 
 
 @pytest.mark.asyncio
-async def test_benchmark_planner_node_steer():
+@patch("controller.agent.benchmark.nodes.dspy.CodeAct")
+async def test_benchmark_planner_node_steer(mock_codeact_cls):
     from controller.agent.benchmark.nodes import planner_node as benchmark_planner
 
     session_id = uuid4()
@@ -175,10 +167,12 @@ async def test_benchmark_planner_node_steer():
         patch("controller.agent.benchmark.nodes.SharedNodeContext") as mock_ctx_class,
     ):
         mock_ctx = mock_ctx_class.create.return_value
-        mock_llm_instance = mock_ctx.llm
-        mock_llm_instance.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=MagicMock(theme="test")
-        )
+
+        # Mock DSPy Program
+        mock_program = MagicMock()
+        from shared.simulation.schemas import RandomizationStrategy
+        mock_program.return_value = MagicMock(plan=RandomizationStrategy(theme="test", reasoning="test"))
+        mock_codeact_cls.return_value = mock_program
 
         # Mock WorkerClient methods that might be called
         mock_worker_instance = mock_ctx.worker_client
@@ -189,13 +183,7 @@ async def test_benchmark_planner_node_steer():
 
         await benchmark_planner(state)
 
-        # Verify ainvoke called with messages including steer_msg
-        args, kwargs = (
-            mock_llm_instance.with_structured_output.return_value.ainvoke.call_args
-        )
-        messages = args[0]
-        assert any(
-            m.content == "Steering prompt"
-            for m in messages
-            if isinstance(m, HumanMessage)
-        )
+        # Verify program called with history including steer_msg
+        args, kwargs = mock_program.call_args
+        history = kwargs["history"]
+        assert "Steering prompt" in history
