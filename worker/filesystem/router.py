@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import structlog
@@ -17,7 +17,7 @@ from .backend import (
 logger = structlog.get_logger(__name__)
 
 
-class AccessMode(Enum):
+class AccessMode(StrEnum):
     """Access modes for filesystem paths."""
 
     READ_WRITE = "read_write"
