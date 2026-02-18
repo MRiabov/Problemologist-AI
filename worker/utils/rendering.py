@@ -67,7 +67,7 @@ def prerender_24_views(
             from worker.simulation.factory import get_physics_backend
 
             backend = get_physics_backend(
-                backend_type, session_id=session_id, smoke_test_mode=False
+                backend_type, session_id=session_id, smoke_test_mode=smoke_test_mode
             )
             scene = SimulationScene(scene_path=str(final_scene_path))
             backend.load_scene(scene)
