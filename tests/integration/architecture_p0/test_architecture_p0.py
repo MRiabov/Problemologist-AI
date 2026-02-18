@@ -129,13 +129,13 @@ def build():
         res1, res2 = await asyncio.gather(
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
-                json={"script_path": "box.py"},
+                json={"script_path": "box.py", "smoke_test_mode": True},
                 headers={"X-Session-ID": session_id_1},
                 timeout=60.0,
             ),
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
-                json={"script_path": "box.py"},
+                json={"script_path": "box.py", "smoke_test_mode": True},
                 headers={"X-Session-ID": session_id_2},
                 timeout=60.0,
             ),
@@ -424,7 +424,7 @@ def build():
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/validate",
-            json={"script_path": "valid_hole.py"},
+            json={"script_path": "valid_hole.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=30.0,  # Validate is fast
         )

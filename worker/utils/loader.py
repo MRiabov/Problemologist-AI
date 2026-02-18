@@ -76,17 +76,22 @@ def load_component_from_script(
 
         module = importlib.util.module_from_spec(spec)
         try:
-            spec.loader.exec_module(module)
-        except Exception as e:
-            raise RuntimeError(f"Failed to execute script {path}: {e}") from e
+            try:
+                spec.loader.exec_module(module)
+            except Exception as e:
+                raise RuntimeError(f"Failed to execute script {path}: {e}") from e
 
-        if hasattr(module, "build"):
-            return module.build()
+            if hasattr(module, "build"):
+                return module.build()
 
-        # Fallback for finding a 'build' function in the relative scope
-        for attr in dir(module):
-            val = getattr(module, attr)
-            if callable(val) and attr == "build":
-                return val()
+            # Fallback for finding a 'build' function in the relative scope
+            for attr in dir(module):
+                val = getattr(module, attr)
+                if callable(val) and attr == "build":
+                    return val()
 
-        raise AttributeError(f"build() function not found in script {path}.")
+            raise AttributeError(f"build() function not found in script {path}.")
+        finally:
+            # Prevent memory leak by removing unique module from sys.modules if it was added
+            if module_name in sys.modules:
+                sys.modules.pop(module_name)

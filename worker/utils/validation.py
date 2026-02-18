@@ -526,6 +526,7 @@ def validate(
     build_zone: dict | None = None,
     output_dir: Path | None = None,
     session_id: str | None = None,
+    smoke_test_mode: bool = False,
 ) -> tuple[bool, str | None]:
     """Verify geometric validity."""
     logger.info("validate_start", session_id=session_id)
@@ -587,7 +588,7 @@ def validate(
             output_dir=renders_dir,
             backend_type=backend_type,
             session_id=session_id,
-            smoke_test_mode=False,  # Default for manual validation
+            smoke_test_mode=smoke_test_mode,
         )
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))

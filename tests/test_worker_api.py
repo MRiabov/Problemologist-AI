@@ -118,23 +118,27 @@ def test_execute_runtime_timeout():
 
 
 @patch("worker.api.routes.load_component_from_script")
-@patch("worker.api.routes.simulate")
-def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
+@patch("worker.api.routes.run_simulation_task")
+def test_benchmark_simulate(mock_run_task, mock_load, tmp_path):
     """Test the benchmark simulate endpoint."""
     mock_load.return_value = MagicMock()
-    mock_simulate.return_value = MagicMock(
-        success=True,
-        summary="stable",
-        render_paths=[],
-        mjcf_content="<mjcf/>",
-        confidence="high",
-    )
 
     # Create a dummy events.jsonl to test collection
     events_file = tmp_path / "events.jsonl"
     events_file.write_text('{"event_type": "component_usage", "category": "test"}\n')
 
+    mock_result = MagicMock()
+    mock_result.success = True
+    mock_result.summary = "stable"
+    mock_result.render_paths = []
+    mock_result.mjcf_content = "<mjcf/>"
+    mock_result.stress_summaries = []
+    mock_result.fluid_metrics = []
+    mock_result.confidence = "high"
+    mock_run_task.return_value = mock_result
+
     with patch("worker.api.routes.create_filesystem_router") as mock_create_router:
+
         mock_router = MagicMock()
         mock_router.local_backend.root = tmp_path
         mock_router.exists.return_value = True

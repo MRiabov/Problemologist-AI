@@ -23,7 +23,11 @@ from worker.utils.persistence import (
     collect_and_cleanup_events,
     record_validation_result,
 )
-from worker.utils.validation import validate_fem_manufacturability
+from worker.utils.validation import (
+    simulate,
+    simulate_subprocess,
+    validate_fem_manufacturability,
+)
 from worker.workbenches.models import WorkbenchResult
 
 from ..filesystem.backend import FileInfo
@@ -380,6 +384,30 @@ SIMULATION_EXECUTOR = ProcessPoolExecutor(
 )
 
 
+async def run_simulation_task(
+    script_path: Path,
+    session_root: Path,
+    script_content: str | None,
+    output_dir: Path,
+    smoke_test_mode: bool,
+    backend_type: Any,
+    session_id: str,
+) -> Any:
+    """Helper to run simulation in the executor, allowing for easier mocking in tests."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        SIMULATION_EXECUTOR,
+        simulate_subprocess,
+        script_path,
+        session_root,
+        script_content,
+        output_dir,
+        smoke_test_mode,
+        backend_type,
+        session_id,
+    )
+
+
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
@@ -400,18 +428,14 @@ async def api_simulate(
             )
 
         from shared.simulation.schemas import SimulatorBackendType
-        from worker.utils.validation import simulate_subprocess
 
         # Determine backend type
         backend_type = request.backend
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
-        loop = asyncio.get_running_loop()
         # Run in isolated subprocess to bypass Genesis global state issues
-        result = await loop.run_in_executor(
-            SIMULATION_EXECUTOR,
-            simulate_subprocess,
+        result = await run_simulation_task(
             fs_router.local_backend._resolve(request.script_path),
             fs_router.local_backend.root,
             request.script_content,
@@ -487,6 +511,7 @@ async def api_validate(
                 component,
                 output_dir=fs_router.local_backend.root,
                 session_id=x_session_id,
+                smoke_test_mode=request.smoke_test_mode,
             )
 
             # INT-102: Fetch objectives to check if FEM material validation is required

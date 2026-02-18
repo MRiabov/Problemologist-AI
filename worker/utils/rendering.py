@@ -96,6 +96,11 @@ def prerender_24_views(
                 -75,
             ]  # MuJoCo uses negative elevation for looking down
 
+            if smoke_test_mode:
+                logger.info("smoke_test_mode_reducing_render_views")
+                angles = [45]
+                elevations = [-45]
+
             width, height = 640, 480
 
             for elevation in elevations:
