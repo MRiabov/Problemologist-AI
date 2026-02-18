@@ -11,6 +11,7 @@ def test_get_langfuse_callback_returns_none_without_credentials():
     ):
         mock_settings.langfuse_public_key = None
         mock_settings.langfuse_secret_key = None
+        mock_settings.is_integration_test = False
         callback = get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         assert callback is None
 
@@ -29,6 +30,7 @@ def test_get_langfuse_callback_uses_trace_context():
         mock_settings.langfuse_public_key = "pk-test"
         mock_settings.langfuse_secret_key = "sk-test"
         mock_settings.langfuse_host = "https://langfuse.example"
+        mock_settings.is_integration_test = False
         get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         mock_handler.assert_called_once_with(
             public_key="pk-test",
@@ -48,6 +50,7 @@ def test_get_langfuse_client_returns_none_without_credentials():
     ):
         mock_settings.langfuse_public_key = None
         mock_settings.langfuse_secret_key = None
+        mock_settings.is_integration_test = False
         client = get_langfuse_client()
         assert client is None
 
@@ -66,9 +69,34 @@ def test_get_langfuse_client_uses_configured_host():
         mock_settings.langfuse_public_key = "pk-test"
         mock_settings.langfuse_secret_key = "sk-test"
         mock_settings.langfuse_host = "https://langfuse.example"
+        mock_settings.is_integration_test = False
         get_langfuse_client()
         mock_langfuse.assert_called_once_with(
             public_key="pk-test",
             secret_key="sk-test",
             host="https://langfuse.example",
         )
+
+
+def test_get_langfuse_callback_returns_none_in_integration_test():
+    with (
+        patch("controller.observability.langfuse.settings") as mock_settings,
+    ):
+        mock_settings.langfuse_public_key = "pk-test"
+        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.is_integration_test = True
+
+        callback = get_langfuse_callback(trace_id="trace-123", name="test")
+        assert callback is None
+
+
+def test_get_langfuse_client_returns_none_in_integration_test():
+    with (
+        patch("controller.observability.langfuse.settings") as mock_settings,
+    ):
+        mock_settings.langfuse_public_key = "pk-test"
+        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.is_integration_test = True
+
+        client = get_langfuse_client()
+        assert client is None
