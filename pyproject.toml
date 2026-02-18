@@ -96,6 +96,7 @@ markers = [
     "integration_p2: Weekly/manual integration tests",
     "integration_playwright: end-to-end frontend tests",
     "benchmark: marks tests related to the benchmark generator",
+    "debug_fuzz: manual debugging for schemathesis tests",
 ]
 
 [tool.uv.sources]

@@ -9,14 +9,14 @@ export IS_INTEGRATION_TEST=true
 export LOG_LEVEL=${LOG_LEVEL:-INFO}
 
 # Networking for local services (infra is still in Docker but exposed on host)
-export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@localhost:15432/postgres"
-export TEMPORAL_URL="localhost:17233"
-export S3_ENDPOINT="http://localhost:19000"
+export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres"
+export TEMPORAL_URL="127.0.0.1:17233"
+export S3_ENDPOINT="http://127.0.0.1:19000"
 export S3_ACCESS_KEY=minioadmin
 export S3_SECRET_KEY=minioadmin
 export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
-export WORKER_URL="http://localhost:18001"
+export WORKER_URL="http://127.0.0.1:18001"
 export ASSET_S3_BUCKET="problemologist"
 
 # Ensure we are in project root
@@ -80,7 +80,7 @@ fi
 
 # Wait for Minio
 INFRA_COUNT=0
-until curl -s http://localhost:19000/minio/health/live > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+until curl -s http://127.0.0.1:19000/minio/health/live > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
   echo "Waiting for Minio... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
   sleep 2
   INFRA_COUNT=$((INFRA_COUNT + 1))
@@ -92,7 +92,7 @@ fi
 
 # Wait for Temporal (port only, auto-setup might still be running migrations)
 INFRA_COUNT=0
-until nc -z localhost 17233 > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+until nc -z 127.0.0.1 17233 > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
   echo "Waiting for Temporal... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
   sleep 2
   INFRA_COUNT=$((INFRA_COUNT + 1))
@@ -125,7 +125,8 @@ CONTROLLER_PID=$!
 echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
-uv run python controller/temporal_worker.py > logs/temporal_worker.log 2>&1 &
+export PYTHONPATH=$PYTHONPATH:.
+uv run python -m controller.temporal_worker > logs/temporal_worker.log 2>&1 &
 TEMP_WORKER_PID=$!
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
@@ -149,11 +150,23 @@ echo "Waiting for servers to be healthy..."
 MAX_HEALTH_RETRIES=30
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if curl -s http://localhost:18000/health | grep -q "healthy"; then
+  if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
     echo "Controller is healthy!"
     break
   fi
   echo "Waiting for controller... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  sleep 2
+  HEALTH_COUNT=$((HEALTH_COUNT + 1))
+done
+
+# Wait for Worker to be healthy
+HEALTH_COUNT=0
+while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+  if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
+    echo "Worker is healthy!"
+    break
+  fi
+  echo "Waiting for worker... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
@@ -167,7 +180,7 @@ fi
 
 # Parse arguments
 REVERSE_FLAG=""
-MARKER=""
+PYTEST_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -176,27 +189,37 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      if [ -z "$MARKER" ]; then
-        MARKER="$1"
-      else
-        echo "Unknown argument: $1"
-        exit 1
-      fi
+      PYTEST_ARGS+=("$1")
       shift
       ;;
   esac
 done
 
-# Default marker if not provided
-if [ -z "$MARKER" ]; then
-  MARKER="integration_p0 or integration_p1 or integration_p2"
+# If no marker/file specified, add default markers
+HAS_MARKER=false
+HAS_FILE=false
+for arg in "${PYTEST_ARGS[@]}"; do
+  if [[ "$arg" == "-m" ]]; then HAS_MARKER=true; fi
+  if [[ "$arg" == tests/* ]] || [[ "$arg" == */tests/* ]]; then HAS_FILE=true; fi
+done
+
+if [ "$HAS_MARKER" = false ] && [ "$HAS_FILE" = false ]; then
+  if [ ${#PYTEST_ARGS[@]} -eq 1 ]; then
+    # Treat single positional arg as the marker
+    MARKER="${PYTEST_ARGS[0]}"
+    PYTEST_ARGS=("-m" "$MARKER")
+  elif [ ${#PYTEST_ARGS[@]} -eq 0 ]; then
+    # No args, use default markers
+    PYTEST_ARGS=("-m" "integration_p0 or integration_p1 or integration_p2")
+  fi
+  # If more than 1 arg and no -m/file, we don't know what to do, 
+  # so we leave it to pytest (it might be -k, etc.)
 fi
 
 # We use uv run to execute pytest within the virtual environment. 
-# We pass -n0 to ensure integration tests run sequentially (stateful infra),
-# but we DO NOT use -p no:xdist because -n2 is in pyproject.toml addopts 
-# and pytest will error if the plugin is disabled while the flag is present.
-if uv run pytest -v -m "$MARKER" --maxfail=3 -s -n0 $REVERSE_FLAG; then
+# We pass -n0 to ensure integration tests run sequentially (stateful infra).
+# We override addopts to clear the default 'not integration' markers from pyproject.toml
+if uv run pytest -v -o "addopts=-n0" --maxfail=3 -s $REVERSE_FLAG "${PYTEST_ARGS[@]}"; then
   echo "Integration tests PASSED!"
 else
   echo "Integration tests FAILED!"

@@ -64,12 +64,17 @@ class GenesisBackend(PhysicsBackend):
         self.scene_meta = scene
         self._load_mfg_config()
 
+        # Reset state for new scene
+        self.entities = {}
+        self.entity_configs = {}
+        self.cameras = {}
+        self.motors = []
+        self._is_built = False
+
         if "gs_scene" in scene.assets:
             self.scene = scene.assets["gs_scene"]
             self._is_built = True
             return
-
-        self._is_built = False
 
         # T017: GPU OOM Auto-Retry Logic
         max_retries = 3
@@ -129,8 +134,6 @@ class GenesisBackend(PhysicsBackend):
                 render_particle_as="sphere",
             ),
         )
-        self.entities = {}
-        self.entity_configs = {}
 
         if scene.scene_path and (
             scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
@@ -752,6 +755,27 @@ class GenesisBackend(PhysicsBackend):
 
     def get_tendon_tension(self, _tendon_name: str) -> float:
         return 0.0
+
+    def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
+        """Apply position jitter to a body in Genesis."""
+        if body_name in self.entities:
+            entity = self.entities[body_name]
+            pos = entity.get_pos()
+            # pos is often a torch tensor or numpy array
+            new_pos = pos.cpu().numpy() if hasattr(pos, "cpu") else pos
+            new_pos = new_pos + np.array(jitter)
+            entity.set_pos(new_pos)
+        else:
+            # Check links
+            for ent in self.entities.values():
+                if hasattr(ent, "links"):
+                    for link in ent.links:
+                        if link.name == body_name:
+                            pos = link.get_pos()
+                            new_pos = pos.cpu().numpy() if hasattr(pos, "cpu") else pos
+                            new_pos = new_pos + np.array(jitter)
+                            link.set_pos(new_pos)
+                            return
 
     def close(self) -> None:
         if self.scene:
