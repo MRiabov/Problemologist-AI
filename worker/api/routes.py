@@ -517,6 +517,7 @@ async def api_validate(
                 component,
                 output_dir=fs_router.local_backend.root,
                 session_id=x_session_id,
+                smoke_test_mode=request.smoke_test_mode,
             )
 
             # INT-102: Fetch objectives to check if FEM material validation is required
