@@ -191,6 +191,34 @@ async def _execute_graph_streaming(
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
                 return final_state
 
+    # Report automated score to Langfuse
+    if langfuse_callback:
+        try:
+            from controller.observability.langfuse import (
+                calculate_and_report_automated_score,
+            )
+
+            trace_id = None
+            if hasattr(langfuse_callback, "get_trace_id"):
+                trace_id = langfuse_callback.get_trace_id()
+
+            if trace_id:
+                async with get_sessionmaker()() as db:
+                    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+                    client = WorkerClient(
+                        base_url=worker_url, session_id=str(session_id)
+                    )
+                    await calculate_and_report_automated_score(
+                        episode_id=session_id,
+                        session_id=str(session_id),
+                        trace_id=trace_id,
+                        agent_name="benchmark_generator",
+                        db=db,
+                        worker_client=client,
+                    )
+        except Exception as e:
+            logger.warning("failed_to_report_benchmark_automated_score", error=str(e))
+
     return final_state
 
 
