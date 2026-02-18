@@ -1293,7 +1293,9 @@ To support concurrent simulation requests (e.g., during integration testing or p
 
 - **ProcessPoolExecutor**: Simulations are offloaded to a `ProcessPoolExecutor`.
 - **Backend Isolation**: This is strictly required for the `Genesis` physics backend, which enforces execution on the "main thread" and has global state issues. Process isolation ensures each simulation runs in a fresh environment.
-- **Resource Cleanup**: We use `max_tasks_per_child=1` in the executor to ensure that any potential memory leaks or corrupted global state in physics backends do not affect subsequent simulations.
+- **Resource Cleanup**: We use `max_tasks_per_child=None` in the executor to allow for process reuse. This is critical for Genesis, as it enables the caching of JIT-compiled kernels across multiple simulation requests within the same process.
+- **Pre-warming**: To eliminate the ~50s JIT compilation delay during the first user request, the worker pool uses an `initializer` (`_init_genesis_worker`) that builds a tiny dummy scene immediately upon process startup.
+- **CPU Scaling**: On CPU-only hardware, `max_workers` is restricted to 1 for simulations to prevent resource contention during heavy kernel compilation and voxelization phases.
 
 ### Persistent state and durable execution
 
@@ -1764,6 +1766,9 @@ We want the agent to be able to preview their own CAD models (likely done more o
 #### Mesh limits and Simplification
 
 The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. That said, the mesh should be simplified where *safe* to do so; however the higher quality is desired.
+
+- **Smoke Test Optimization**: When `smoke_test_mode=True` is requested, the system automatically increases the CAD-to-STL export tolerance (e.g., from 0.1 to 1.0). This generates coarser meshes that are drastically faster for the physics engine (especially Genesis on CPU) to voxelize, enabling rapid stability and multitenancy checks.
+- **Dynamic Manufacturing Resolution**: Simulation and validation logic must dynamically resolve the manufacturing method from CAD metadata. This ensures that validation rules (like CNC undercut detection) are only applied when appropriate for the chosen production process.
 
 <!-- For rigid mesh only - not for deformable materials(!), we do this:
 The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. However, to ensure **simulation stability** and **performance**, we use a dual-mesh strategy:
@@ -2245,7 +2250,7 @@ The controller controls the execution of LLMs, and frontend communicates only to
 #### Multiple agents per machine CPU
 
 A single agent would consume a single cpu only during simulation. Thus, it's ideal to allow multiple agents to run on a single node; but don't allow multiple simulations at the same time to avoid OOM issues or CPU overload.
-By default, there should be 4 agents per a machine or two, but only one can simulate.
+By default, there should be 4 agents per a machine or two, but only one can simulate (`max_workers=1` in the simulation executor). This is especially critical on CPU-only hardware where Genesis kernel compilation is extremely resource-intensive.
 There will also likely be multiple workers. At least, the system should be implemented such that it can (because it makes for clear and easy devops).
 This requires agents writing in different directories (presumably /tmp/) and cleaning up after they are finished.
 
