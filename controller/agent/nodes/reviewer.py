@@ -75,7 +75,9 @@ class ReviewerNode(BaseNode):
                     task=state.task,
                     journal=state.journal,
                 )
-                logger.info("reviewer_dspy_invoke_complete", session_id=state.session_id)
+                logger.info(
+                    "reviewer_dspy_invoke_complete", session_id=state.session_id
+                )
 
             review = prediction.review
             decision = review.decision

@@ -75,13 +75,20 @@ class SkillsNode(BaseNode):
             # T030: Safety toggle for deletions
             if file_path.exists():
                 import difflib
+
                 old_lines = file_path.read_text().splitlines()
                 new_lines = content.splitlines()
                 diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
                 # Count lines starting with '-' but not '---'
-                deletions = sum(1 for line in diff if line.startswith('-') and not line.startswith('---'))
+                deletions = sum(
+                    1
+                    for line in diff
+                    if line.startswith("-") and not line.startswith("---")
+                )
                 if deletions > 15:
-                    logger.warning("skill_update_blocked_too_many_deletions", deletions=deletions)
+                    logger.warning(
+                        "skill_update_blocked_too_many_deletions", deletions=deletions
+                    )
                     return f"Error: Update blocked. You deleted {deletions} lines, but the limit is 15 lines of deletion to prevent skill loss."
 
             try:

@@ -42,7 +42,11 @@ class SuccessEvaluator:
         return None
 
     def check_motor_overload(
-        self, motor_names: list[str], forces: list[float], limits: list[float], dt: float
+        self,
+        motor_names: list[str],
+        forces: list[float],
+        limits: list[float],
+        dt: float,
     ) -> bool:
         """Identify motors stalled at their limit."""
         for i, name in enumerate(motor_names):
