@@ -60,6 +60,7 @@ MUJOCO_LOG.TXT
 *.jsonl
 # ^event outputs
 *.log
+*.pid
 
 # Simulation assets
 *.glb

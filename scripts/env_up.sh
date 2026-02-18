@@ -1,0 +1,115 @@
+#!/bin/bash
+# scripts/env_up.sh
+# Sets up the Problemologist-AI development environment using local infra and FastAPI servers.
+# Use this for local debugging, optimization, or manual testing.
+
+set -e
+
+# Ensure we are in project root
+cd "$(dirname "$0")/.."
+
+# Stop any existing environment first to ensure a clean start
+./scripts/env_down.sh
+
+# Networking for local services (infra is still in Docker but exposed on host)
+export IS_INTEGRATION_TEST=true
+export LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+# DB points to the exposed port in docker-compose.test.yaml
+export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres"
+export TEMPORAL_URL="127.0.0.1:17233"
+export S3_ENDPOINT="http://127.0.0.1:19000"
+export S3_ACCESS_KEY=minioadmin
+export S3_SECRET_KEY=minioadmin
+export AWS_ACCESS_KEY_ID=minioadmin
+export AWS_SECRET_ACCESS_KEY=minioadmin
+export WORKER_URL="http://127.0.0.1:18001"
+export ASSET_S3_BUCKET="problemologist"
+
+# Load .env if it exists to pick up API keys (OpenAI, etc.)
+if [ -f .env ]; then
+  echo "Loading environment from .env..."
+  while IFS= read -r line || [ -n "$line" ]; do
+    line=$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    [[ "$line" =~ ^#.*$ ]] && continue
+    [[ -z "$line" ]] && continue
+    if [[ "$line" == *#* ]]; then
+      if [[ "$line" != *\"*#*\"* && "$line" != *\'*#*\'* ]]; then
+        line="${line%%#*}"
+      fi
+    fi
+    clean_line=$(echo "$line" | sed -E 's/[[:space:]]*=[[:space:]]*/=/')
+    if [[ "$clean_line" =~ ^[A-Za-z_][A-Za-z0-0_]*=.*$ ]]; then
+      clean_line=$(echo "$clean_line" | sed -e 's/[[:space:]]*$//')
+      export "$clean_line"
+    fi
+  done < .env
+fi
+
+echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
+docker compose -f docker-compose.test.yaml up -d
+
+echo "Waiting for infra to be ready..."
+MAX_INFRA_RETRIES=15
+
+# Wait for Postgres
+INFRA_COUNT=0
+until docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+  echo "Waiting for Postgres... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
+  sleep 2
+  INFRA_COUNT=$((INFRA_COUNT + 1))
+done
+
+# Wait for Minio
+INFRA_COUNT=0
+until curl -s http://127.0.0.1:19000/minio/health/live > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+  echo "Waiting for Minio... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
+  sleep 2
+  INFRA_COUNT=$((INFRA_COUNT + 1))
+done
+
+# Wait for Temporal
+INFRA_COUNT=0
+until nc -z 127.0.0.1 17233 > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+  echo "Waiting for Temporal... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
+  sleep 2
+  INFRA_COUNT=$((INFRA_COUNT + 1))
+done
+
+echo "Running migrations..."
+uv run alembic upgrade head
+
+echo "Starting Application Servers..."
+mkdir -p logs
+
+# Start Worker (port 18001)
+uv run fastapi run worker/app.py --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
+echo $! > logs/worker.pid
+echo "Worker started (PID: $(cat logs/worker.pid))"
+
+# Start Controller (port 18000)
+uv run fastapi run controller/api/main.py --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
+echo $! > logs/controller.pid
+echo "Controller started (PID: $(cat logs/controller.pid))"
+
+# Start Temporal Worker
+export PYTHONPATH=$PYTHONPATH:.
+uv run python -m controller.temporal_worker > logs/temporal_worker.log 2>&1 &
+echo $! > logs/temporal_worker.pid
+echo "Temporal Worker started (PID: $(cat logs/temporal_worker.pid))"
+
+echo "Waiting for services to be healthy..."
+sleep 5
+if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
+  echo "Worker is healthy!"
+else
+  echo "Worker health check failed (see logs/worker.log)"
+fi
+
+if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
+  echo "Controller is healthy!"
+else
+  echo "Controller health check failed (see logs/controller.log)"
+fi
+
+echo "Environment is UP. Use 'scripts/env_down.sh' to stop."
