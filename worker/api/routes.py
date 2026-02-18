@@ -1,8 +1,5 @@
-import ast
 import asyncio
-import json
 import multiprocessing
-import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -20,8 +17,13 @@ from fastapi import (
 )
 
 from shared.enums import ResponseStatus
+from worker.utils.assets import get_media_type, validate_asset_source
 from worker.utils.loader import load_component_from_script
-from worker.workbenches.config import load_config
+from worker.utils.persistence import (
+    collect_and_cleanup_events,
+    record_validation_result,
+)
+from worker.utils.validation import validate_fem_manufacturability
 from worker.workbenches.models import WorkbenchResult
 
 from ..filesystem.backend import FileInfo
@@ -103,27 +105,7 @@ async def api_inspect_topology(
 
 def _collect_events(fs_router) -> list[dict[str, Any]]:
     """Read and delete events.jsonl from the workspace."""
-    events = []
-    events_path = "events.jsonl"
-    try:
-        if fs_router.exists(events_path):
-            content = fs_router.read(events_path).decode("utf-8")
-            for line in content.strip().split("\n"):
-                if line:
-                    try:
-                        events.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        logger.warning("failed_to_decode_event_line", line=line)
-            # Delete the file after reading to avoid cross-contamination between runs
-            # Note: fs_router expects paths relative to root or absolute if backed allows
-            # But here fs_router seems to handle it.
-            # Actually, fs_router doesn't have a 'delete' method in the snippet I saw.
-            # I'll check the filesystem router/backend later if needed.
-            # For now, I'll just leave it or use a trick.
-            # Wait, I saw create_filesystem_router in lines 43-50.
-    except Exception as e:
-        logger.warning("failed_to_collect_events", error=str(e))
-    return events
+    return collect_and_cleanup_events(fs_router.local_backend.root)
 
 
 @router.post("/fs/ls", response_model=list[FileInfo])
@@ -508,49 +490,17 @@ async def api_validate(
             )
 
             # INT-102: Fetch objectives to check if FEM material validation is required
-            working_dir = fs_router.local_backend.root
-            obj_path = working_dir / "objectives.yaml"
-            if is_valid and obj_path.exists():
-                try:
-                    import yaml
-
-                    from shared.models.schemas import ObjectivesYaml
-                    from worker.utils.dfm import validate_and_price
-                    from worker.workbenches.config import load_config
-                    from worker.workbenches.models import ManufacturingMethod
-
-                    data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
-                    objectives = ObjectivesYaml(**data)
-                    if objectives.physics and objectives.physics.fem_enabled:
-                        config = load_config()
-                        # Check for custom config in working dir
-                        custom_config_path = working_dir / "manufacturing_config.yaml"
-                        if custom_config_path.exists():
-                            config = load_config(str(custom_config_path))
-
-                        val_report = validate_and_price(
-                            component,
-                            ManufacturingMethod.CNC,
-                            config,
-                            fem_required=True,
-                        )
-                        if not val_report.is_manufacturable:
-                            is_valid = False
-                            msg = "Material validation failed: " + "; ".join(
-                                map(str, val_report.violations)
-                            )
-                            message = (message + "; " + msg) if message else msg
-                except Exception as e:
-                    logger.warning("api_validate_fem_check_failed", error=str(e))
+            fem_valid, fem_msg = await asyncio.to_thread(
+                validate_fem_manufacturability,
+                component,
+                fs_router.local_backend.root,
+            )
+            if is_valid and not fem_valid:
+                is_valid = False
+                message = (message + "; " + fem_msg) if message else fem_msg
 
         # INT-018: Record validation results to satisfy the handover gate
-        results_path = fs_router.local_backend.root / "validation_results.json"
-        results_path.write_text(
-            json.dumps(
-                {"success": is_valid, "message": message, "timestamp": time.time()}
-            ),
-            encoding="utf-8",
-        )
+        record_validation_result(fs_router.local_backend.root, is_valid, message)
 
         if wait_pos > 1:
             message = (
@@ -654,47 +604,10 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
     """Serve assets from the filesystem."""
     try:
         # Check source code if requesting a model
-        if path.endswith(".glb") or path.endswith(".stl"):
-            # Try to find the source python file
-            # Heuristic: file with same name in root, or 'main.py'
-            candidate_paths = [
-                Path(path).with_suffix(".py").name,
-                "main.py",
-                "component.py",
-                "solution.py",
-            ]
-
-            for py_path in candidate_paths:
-                if fs_router.exists(py_path):
-                    try:
-                        source_code = fs_router.read(py_path)
-                        ast.parse(source_code)
-                        break  # Found valid source, or at least one exists
-                    except SyntaxError:
-                        logger.warning(
-                            "asset_serving_refused_syntax_error",
-                            asset=path,
-                            source=py_path,
-                        )
-                        raise HTTPException(
-                            status_code=422,
-                            detail=f"Source code {py_path} has syntax errors.",
-                        )
-                    except Exception as e:
-                        logger.warning("asset_source_check_failed", error=str(e))
-                        # Don't block if we stick to heuristic, but maybe we should?
-                        # User asked for "red (linting) errors". SyntaxError is definitely red.
-                        pass
+        validate_asset_source(fs_router.local_backend.root, path)
 
         content = fs_router.read(path)
-        media_type = "application/octet-stream"
-        if path.endswith(".glb"):
-            media_type = "model/gltf-binary"
-        elif path.endswith(".py"):
-            media_type = "text/x-python"
-        elif path.endswith(".stl"):
-            media_type = "model/stl"
-
+        media_type = get_media_type(path)
         return Response(content=content, media_type=media_type)
     except (FileNotFoundError, IsADirectoryError):
         raise HTTPException(status_code=404, detail="Asset not found")
