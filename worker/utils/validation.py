@@ -229,7 +229,9 @@ def set_soft_mesh(
     return False
 
 
-def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
+def to_mjcf(
+    component: Compound, renders_dir: Path | None = None, smoke_test_mode: bool = False
+) -> str:
     """Convert a build123d Compound to a MuJoCo XML (MJCF) string."""
     if not renders_dir:
         renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
@@ -238,7 +240,7 @@ def to_mjcf(component: Compound, renders_dir: Path | None = None) -> str:
     builder = get_simulation_builder(
         output_dir=renders_dir, backend_type=SimulatorBackendType.GENESIS
     )
-    scene_path = builder.build_from_assembly(component)
+    scene_path = builder.build_from_assembly(component, smoke_test_mode=smoke_test_mode)
     return scene_path.read_text()
 
 
@@ -376,11 +378,13 @@ def simulate(
     assembly_definition = None
     objectives_path = working_dir / "objectives.yaml"
     if objectives_path.exists():
-        try:
-            data = yaml.safe_load(objectives_path.read_text(encoding="utf-8"))
-            objectives = ObjectivesYaml(**data)
-        except Exception as e:
-            logger.warning("failed_to_load_objectives", error=str(e))
+        content = objectives_path.read_text(encoding="utf-8")
+        if "[TEMPLATE]" not in content:
+            try:
+                data = yaml.safe_load(content)
+                objectives = ObjectivesYaml(**data)
+            except Exception as e:
+                logger.warning("failed_to_load_objectives", error=str(e))
 
     cost_est_path = working_dir / "assembly_definition.yaml"
     if cost_est_path.exists():
@@ -405,6 +409,7 @@ def simulate(
         objectives=objectives,
         moving_parts=moving_parts,
         electronics=electronics,
+        smoke_test_mode=smoke_test_mode,
     )
 
     from worker.simulation.loop import SimulationLoop
@@ -439,10 +444,11 @@ def simulate(
             logger.warning("failed_to_load_controllers", error=str(e))
 
     try:
-        video_path = renders_dir / "simulation.mp4"
+        video_path = renders_dir / "simulation.mp4" if not smoke_test_mode else None
+        sim_duration = 0.5 if smoke_test_mode else 30.0
         metrics = loop.step(
             control_inputs=control_inputs,
-            duration=30.0,
+            duration=sim_duration,
             dynamic_controllers=dynamic_controllers,
             video_path=video_path,
         )
@@ -454,23 +460,28 @@ def simulate(
             loop.particle_budget = 5000
             metrics = loop.step(
                 control_inputs=control_inputs,
-                duration=30.0,
+                duration=sim_duration,
                 dynamic_controllers=dynamic_controllers,
-                video_path=video_path,
+                video_path=None,  # No video on retry
             )
 
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
 
-        render_paths = prerender_24_views(
-            component,
-            output_dir=str(renders_dir),
-            backend_type=backend_type,
-            session_id=session_id,
-        )
-        if video_path.exists():
-            render_paths.append(str(video_path))
+        if not smoke_test_mode:
+            render_paths = prerender_24_views(
+                component,
+                output_dir=str(renders_dir),
+                backend_type=backend_type,
+                session_id=session_id,
+                scene_path=str(scene_path),
+                smoke_test_mode=smoke_test_mode,
+            )
+            if video_path and video_path.exists():
+                render_paths.append(str(video_path))
+        else:
+            render_paths = []
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
@@ -578,6 +589,7 @@ def validate(
             output_dir=renders_dir,
             backend_type=backend_type,
             session_id=session_id,
+            smoke_test_mode=False,  # Default for manual validation
         )
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))

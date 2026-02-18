@@ -6,7 +6,7 @@ from build123d import Compound, Part
 
 from shared.enums import SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
-from shared.models.simulation import FluidMetricResult
+from shared.models.simulation import FluidMetricResult, SimulationMetrics
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
@@ -17,7 +17,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.electronics import ElectronicsManager
 from worker.simulation.evaluator import SuccessEvaluator
 from worker.simulation.factory import get_physics_backend
-from worker.simulation.metrics import MetricCollector, SimulationMetrics
+from worker.simulation.metrics import MetricCollector
 from worker.utils.dfm import validate_and_price
 from worker.utils.rendering import VideoRenderer
 from worker.workbenches.config import load_config
@@ -56,8 +56,14 @@ class SimulationLoop:
                 "MuJoCo backend does not support fluids. Use Genesis instead."
             )
 
-        self.backend = get_physics_backend(backend_type, session_id=session_id)
+        self.backend = get_physics_backend(
+            backend_type, session_id=session_id, smoke_test_mode=smoke_test_mode
+        )
         self.smoke_test_mode = smoke_test_mode
+        # Propagate smoke test mode to backend for optimization (in case of cache hit)
+        if hasattr(self.backend, "smoke_test_mode"):
+            self.backend.smoke_test_mode = smoke_test_mode
+
         self.particle_budget = 5000 if smoke_test_mode else 100000
 
         # Emit backend selection event (WP2)
@@ -547,6 +553,7 @@ class SimulationLoop:
             total_time=current_time,
             total_energy=metrics.total_energy,
             max_velocity=metrics.max_velocity,
+            max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
             fail_mode=self.fail_reason
@@ -555,6 +562,7 @@ class SimulationLoop:
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
+            events=metrics.events,
             confidence="approximate" if self.smoke_test_mode else "high",
         )
 

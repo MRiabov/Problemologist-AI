@@ -1,14 +1,4 @@
-from pydantic import BaseModel
-
-
-class SimulationMetrics(BaseModel):
-    total_time: float = 0.0
-    total_energy: float = 0.0
-    max_velocity: float = 0.0
-    max_stress: float = 0.0
-    success: bool = False
-    fail_reason: str | None = None
-    events: list[dict] = []
+from shared.models.simulation import SimulationMetrics
 
 
 class MetricCollector:

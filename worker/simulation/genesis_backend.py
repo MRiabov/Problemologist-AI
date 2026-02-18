@@ -36,21 +36,54 @@ class GenesisBackend(PhysicsBackend):
         self.current_time = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
+        self.smoke_test_mode = False
         self._is_built = False
         self._ensure_initialized()
 
     def _ensure_initialized(self):
         if gs is not None and not getattr(gs, "_initialized", False):
+            import torch
+            import os
+            import time
+
+            start_t = time.time()
+
+            force_cpu = os.getenv("GENESIS_FORCE_CPU", "0") == "1"
+            has_gpu = torch.cuda.is_available() and not force_cpu
+
+            backend = gs.gpu if has_gpu else gs.cpu
+            logger.info(
+                "genesis_initializing", backend="gpu" if backend == gs.gpu else "cpu"
+            )
+
             try:
-                # Use CPU for tests/CI if GPU not available, but prefer GPU
-                gs.init(backend=gs.gpu)
+                # Reduce logging in smoke test mode
+                gs.init(
+                    backend=backend,
+                    logging_level="warning" if self.smoke_test_mode else "info",
+                )
+                logger.info(
+                    "genesis_initialized",
+                    backend="gpu" if backend == gs.gpu else "cpu",
+                    duration=time.time() - start_t,
+                )
             except Exception as e:
-                if "already initialized" not in str(e):
+                if backend == gs.gpu:
+                    logger.warning(
+                        "genesis_gpu_init_failed_falling_back_to_cpu", error=str(e)
+                    )
+                    start_t = time.time()
                     try:
                         gs.init(backend=gs.cpu)
-                        logger.info("genesis_init_cpu")
+                        logger.info(
+                            "genesis_initialized",
+                            backend="cpu",
+                            duration=time.time() - start_t,
+                        )
                     except Exception as e2:
                         logger.error("genesis_init_failed", error=str(e2))
+                else:
+                    logger.error("genesis_init_failed", error=str(e))
 
     def _load_mfg_config(self):
         if self.mfg_config is None:
@@ -63,6 +96,17 @@ class GenesisBackend(PhysicsBackend):
 
     def load_scene(self, scene: SimulationScene) -> None:
         with self._lock:
+            # OPTIMIZATION/FIX: If same scene is already built, skip rebuild.
+            # This avoids "Scene is already built" error when multiple calls (simulate + prerender)
+            # share the same backend instance.
+            if (
+                self._is_built
+                and self.scene_meta
+                and self.scene_meta.scene_path == scene.scene_path
+            ):
+                logger.debug("genesis_backend_reuse_scene", scene_path=scene.scene_path)
+                return
+
             # Ensure fresh state for Genesis global state
             self.close()
             self._ensure_initialized()
@@ -145,14 +189,25 @@ class GenesisBackend(PhysicsBackend):
         if gs is None:
             raise ImportError("Genesis not installed")
 
+        # Optimization for smoke tests
+        is_smoke = getattr(self, "smoke_test_mode", False)
+        sim_options = gs.options.SimOptions(
+            dt=0.05 if is_smoke else 0.002,
+            substeps=1 if is_smoke else 10,
+        )
+
         # T014: Particle visualization options from WP06
         self.scene = gs.Scene(
+            sim_options=sim_options,
             show_viewer=False,
             vis_options=gs.options.VisOptions(
                 particle_size_scale=1.0,
                 render_particle_as="sphere",
             ),
         )
+
+        # Add default ground plane
+        self.scene.add_entity(gs.morphs.Plane())
 
         if scene.scene_path and (
             scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
@@ -310,10 +365,24 @@ class GenesisBackend(PhysicsBackend):
 
         # In Genesis, we must call build() before step()
         if self.scene and not self._is_built:
+            # Add default cameras before building
             try:
+                if "main" not in self.cameras:
+                    self.cameras["main"] = self.scene.add_camera()
+                if "prerender" not in self.cameras:
+                    self.cameras["prerender"] = self.scene.add_camera()
+            except Exception as e:
+                logger.warning("genesis_add_camera_failed_pre_build", error=str(e))
+
+            try:
+                import traceback
+
+                stack = "".join(traceback.format_stack())
+                logger.info("genesis_building_scene", stack=stack)
                 self.scene.build()
             except Exception as e:
                 if "already built" not in str(e).lower():
+                    logger.error("genesis_build_failed", error=str(e))
                     raise
             self._is_built = True
 
@@ -323,16 +392,26 @@ class GenesisBackend(PhysicsBackend):
                 self.current_time += dt
                 return StepResult(time=self.current_time, success=True)
 
-        if not getattr(self.scene, "is_built", False):
-            return StepResult(
-                time=self.current_time,
-                success=False,
-                failure_reason="Scene is not built yet.",
-            )
+        if not self._is_built:
+            # Fallback for unexpected state
+            logger.warning("genesis_step_called_unbuilt_attempting_sync")
+            if getattr(self.scene, "is_built", False):
+                self._is_built = True
+            else:
+                return StepResult(
+                    time=self.current_time,
+                    success=False,
+                    failure_reason="Scene is not built yet.",
+                )
 
         try:
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
+            logger.debug(
+                "genesis_scene_stepping",
+                is_built=self._is_built,
+                scene_is_built=getattr(self.scene, "is_built", False),
+            )
             self.scene.step()
 
             # T012: Part Breakage Detection
@@ -411,75 +490,91 @@ class GenesisBackend(PhysicsBackend):
 
     def get_body_state(self, body_id: str) -> BodyState:
         logger.debug("genesis_get_body_state_request", body_id=body_id)
-        if body_id not in self.entities:
-            # Check links within MJCF entities (from WP07)
-            for ent in self.entities.values():
-                try:
-                    # In Genesis, if it's an MJCF entity, it's a RigidEntity
-                    # which has a .links attribute
-                    target_link = None
-                    if hasattr(ent, "links"):
-                        for link in ent.links:
-                            if link.name == body_id:
-                                target_link = link
-                                break
+        try:
+            if body_id not in self.entities:
+                # Check links within MJCF entities (from WP07)
+                for ent in self.entities.values():
+                    try:
+                        # In Genesis, if it's an MJCF entity, it's a RigidEntity
+                        # which has a .links attribute
+                        target_link = None
+                        if hasattr(ent, "links"):
+                            for link in ent.links:
+                                if link.name == body_id:
+                                    target_link = link
+                                    break
 
-                    if target_link:
-                        logger.debug("genesis_link_state_found", body_id=body_id)
-                        # Use get_pos() etc. if they exist, or fallback to properties
-                        pos = (
-                            target_link.get_pos().tolist()
-                            if hasattr(target_link, "get_pos")
-                            else target_link.pos.tolist()
-                        )
-                        quat = (
-                            target_link.get_quat().tolist()
-                            if hasattr(target_link, "get_quat")
-                            else target_link.quat.tolist()
-                        )
-                        vel = (
-                            target_link.get_vel().tolist()
-                            if hasattr(target_link, "get_vel")
-                            else target_link.vel.tolist()
-                        )
+                        if target_link:
+                            logger.debug("genesis_link_state_found", body_id=body_id)
+                            # Use get_pos() etc. if they exist, or fallback to properties
+                            pos = (
+                                target_link.get_pos().tolist()
+                                if hasattr(target_link, "get_pos")
+                                else target_link.pos.tolist()
+                            )
+                            quat = (
+                                target_link.get_quat().tolist()
+                                if hasattr(target_link, "get_quat")
+                                else target_link.quat.tolist()
+                            )
+                            vel = (
+                                target_link.get_vel().tolist()
+                                if hasattr(target_link, "get_vel")
+                                else target_link.vel.tolist()
+                            )
 
-                        angvel = [0, 0, 0]
-                        if hasattr(target_link, "get_angvel"):
-                            angvel = target_link.get_angvel().tolist()
-                        elif hasattr(target_link, "angvel"):
-                            angvel = target_link.angvel.tolist()
+                            angvel = [0, 0, 0]
+                            if hasattr(target_link, "get_angvel"):
+                                angvel = target_link.get_angvel().tolist()
+                            elif hasattr(target_link, "angvel"):
+                                angvel = target_link.angvel.tolist()
 
-                        return BodyState(
-                            pos=pos,
-                            quat=quat,
-                            vel=vel,
-                            angvel=angvel,
+                            return BodyState(
+                                pos=pos,
+                                quat=quat,
+                                vel=vel,
+                                angvel=angvel,
+                            )
+                    except Exception as e:
+                        logger.debug(
+                            "genesis_get_link_failed", body_id=body_id, error=str(e)
                         )
-                except Exception as e:
-                    logger.debug(
-                        "genesis_get_link_failed", body_id=body_id, error=str(e)
-                    )
-                    continue
+                        continue
 
-            logger.debug("genesis_body_not_found", body_id=body_id)
+                logger.debug("genesis_body_not_found", body_id=body_id)
+                return BodyState(
+                    pos=[0.0, 0.0, 0.0],
+                    quat=[1.0, 0.0, 0.0, 0.0],
+                    vel=[0.0, 0.0, 0.0],
+                    angvel=[0.0, 0.0, 0.0],
+                )
+
+            entity = self.entities[body_id]
+            logger.debug("genesis_calling_get_state", body_id=body_id)
+            state = entity.get_state()
+            logger.debug("genesis_get_state_returned", body_id=body_id)
+
+            if hasattr(state, "pos") and state.pos.ndim == 3:
+                # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
+                pos = state.pos[0].mean(axis=0).tolist()
+                vel = state.vel[0].mean(axis=0).tolist()
+                return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
-                pos=(0, 0, 0), quat=(1, 0, 0, 0), vel=(0, 0, 0), angvel=(0, 0, 0)
+                pos=entity.get_pos().tolist(),
+                quat=entity.get_quat().tolist(),
+                vel=entity.get_vel().tolist(),
+                angvel=entity.get_ang().tolist(),
             )
+        except BaseException as e:
+            import traceback
 
-        entity = self.entities[body_id]
-        state = entity.get_state()
-
-        if hasattr(state, "pos") and state.pos.ndim == 3:
-            # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
-            pos = state.pos[0].mean(axis=0).tolist()
-            vel = state.vel[0].mean(axis=0).tolist()
-            return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
-        return BodyState(
-            pos=entity.get_pos().tolist(),
-            quat=entity.get_quat().tolist(),
-            vel=entity.get_vel().tolist(),
-            angvel=entity.get_ang().tolist(),
-        )
+            logger.error(
+                "genesis_get_body_state_error_base",
+                error=str(e),
+                type=type(e).__name__,
+                stack="".join(traceback.format_stack()),
+            )
+            raise
 
     def get_state(self) -> dict[str, Any]:
         if self.scene is None:
@@ -584,7 +679,12 @@ class GenesisBackend(PhysicsBackend):
             self.cameras[camera_name] = cam
 
         cam = self.cameras[camera_name]
-        rgb, _, _ = cam.render()
+        # Genesis can return (rgb, depth, segmentation) or more
+        res = cam.render()
+        if isinstance(res, tuple):
+            rgb = res[0]
+        else:
+            rgb = res
 
         if hasattr(rgb, "cpu"):
             rgb = rgb.cpu().numpy()
@@ -633,12 +733,14 @@ class GenesisBackend(PhysicsBackend):
         pass
 
     def get_contact_forces(self) -> list[ContactForce]:
+        # logger.debug("genesis_get_contact_forces_start")
         if not self.scene:
             return []
 
         # Genesis provides contacts via solver/sim
         # In version 0.3.x, contacts are typically accessed via simulator.get_contacts()
         try:
+            # logger.debug("genesis_calling_sim_get_contacts")
             contacts = self.scene.sim.get_contacts()
             results = []
             for c in contacts:
@@ -659,7 +761,14 @@ class GenesisBackend(PhysicsBackend):
                     )
                 )
             return results
-        except Exception:
+        except Exception as e:
+            import traceback
+
+            logger.warning(
+                "genesis_get_contact_forces_failed",
+                error=str(e),
+                stack="".join(traceback.format_stack()),
+            )
             # Fallback if API changed or no contacts
             return []
 
@@ -735,6 +844,7 @@ class GenesisBackend(PhysicsBackend):
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
+        logger.debug("genesis_check_collision_start", body=body_name, site=site_name)
         # In Genesis, sites are often just entities or zones.
         # If site_name is an entity, check contact.
         target_entity = self.entities.get(body_name)

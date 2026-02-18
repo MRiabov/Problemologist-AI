@@ -30,7 +30,8 @@ class SafeCallbackHandler(BaseCallbackHandler):
                     return await result
                 except Exception as e:
                     logger.warning(
-                        f"Langfuse async callback error in {method_name} suppressed: {e}"
+                        f"Langfuse async callback error in {method_name} "
+                        f"suppressed: {e}"
                     )
 
             return safe_await_wrapper()
@@ -52,10 +53,12 @@ class SafeCallbackHandler(BaseCallbackHandler):
             return safe_call
         return attr
 
-    # Explicitly implement common methods to ensure they are wrapped if __getattr__ isn't enough for base class
-    # (BaseCallbackHandler methods are defined, so __getattr__ might not be called for them if we trace via type)
+    # Explicitly implement common methods to ensure they are wrapped if __getattr__
+    # isn't enough for base class (BaseCallbackHandler methods are defined, so
+    # __getattr__ might not be called for them if we trace via type).
     # However, LangChain checks attributes.
-    # To be safe, we should inherit from the specific class or just trust duck typing if we weren't using strict types.
+    # To be safe, we should inherit from the specific class or just trust duck typing
+    # if we weren't using strict types.
     # But get_langfuse_callback returns CallbackHandler? No, BaseCallbackHandler.
 
     def on_llm_start(
@@ -195,6 +198,9 @@ def get_langfuse_callback(
     """
     Initialize and return a Langfuse CallbackHandler if credentials are provided.
     """
+    if settings.is_integration_test:
+        return None
+
     public_key = settings.langfuse_public_key
     secret_key = settings.langfuse_secret_key
     host = settings.langfuse_host
@@ -244,6 +250,9 @@ def get_langfuse_client() -> Langfuse | None:
     """
     Initialize and return a Langfuse client if credentials are provided.
     """
+    if settings.is_integration_test:
+        return None
+
     public_key = settings.langfuse_public_key
     secret_key = settings.langfuse_secret_key
     host = settings.langfuse_host

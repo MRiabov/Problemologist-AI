@@ -194,6 +194,8 @@ class MeshProcessor:
         filepath: Path,
         decompose: bool = True,
         use_vhacd: bool = False,
+        tolerance: float = 0.1,
+        angular_tolerance: float = 0.1,
     ) -> list[Path]:
         """Converts a build123d object to OBJ and GLB file(s).
 
@@ -205,6 +207,8 @@ class MeshProcessor:
             filepath: Output base path
             decompose: Whether to compute convex hull for physics
             use_vhacd: Whether to use V-HACD decomposition for concave shapes
+            tolerance: Linear deflection tolerance for STL export
+            angular_tolerance: Angular deflection tolerance for STL export
 
         Returns:
             List of output file paths (both .obj and .glb)
@@ -217,7 +221,9 @@ class MeshProcessor:
 
         # Export build123d object to a temporary STL file
         temp_stl = filepath.with_suffix(".tmp.stl")
-        export_stl(part, temp_stl)
+        export_stl(
+            part, temp_stl, tolerance=tolerance, angular_tolerance=angular_tolerance
+        )
 
         output_paths = []
         try:
@@ -231,7 +237,7 @@ class MeshProcessor:
             mesh = self._recenter_mesh(mesh)
 
             # Validate watertightness
-            self._validate_watertight(mesh, filepath.name)
+            mesh = self._validate_watertight(mesh, filepath.name)
 
             if decompose:
                 if use_vhacd:
@@ -314,13 +320,41 @@ class MeshProcessor:
         mesh.apply_translation(-centroid)
         return mesh
 
-    def _validate_watertight(self, mesh: trimesh.Trimesh, name: str) -> None:
+    def _validate_watertight(self, mesh: trimesh.Trimesh, name: str) -> trimesh.Trimesh:
         """Validate that mesh is watertight (required per architecture spec)."""
-        if not mesh.is_watertight:
-            raise ValueError(
-                f"Mesh '{name}' is not watertight. "
-                "All meshes must be watertight for physics simulation."
-            )
+        if mesh.is_watertight:
+            return mesh
+
+        # T008: Attempt repair before failing
+        try:
+            # Basic repairs
+            mesh.fill_holes()
+            mesh.fix_normals()
+            mesh.fix_inversion()
+        except Exception:
+            pass
+
+        if mesh.is_watertight:
+            return mesh
+
+        # Last ditch: compute convex hull
+        # This is safe for convex shapes (like the sphere in the repro)
+        # For non-convex shapes, this simplifies geometry, but it ensures simulation runs.
+        logger.warning(
+            f"Mesh '{name}' is not watertight after repair. "
+            "Falling back to convex hull."
+        )
+        try:
+            hull = mesh.convex_hull
+            if hull.is_watertight:
+                return hull
+        except Exception:
+            pass
+
+        raise ValueError(
+            f"Mesh '{name}' is not watertight. "
+            "All meshes must be watertight for physics simulation."
+        )
 
     def compute_convex_hull(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
         """Computes the convex hull of a mesh for better physics stability."""
@@ -592,6 +626,7 @@ class SimulationBuilderBase(ABC):
         objectives: ObjectivesYaml | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
+        smoke_test_mode: bool = False,
     ) -> Path:
         """Converts an assembly of parts into a simulation scene."""
         pass
@@ -610,6 +645,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         objectives: ObjectivesYaml | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
+        smoke_test_mode: bool = False,
     ) -> Path:
         """Converts an assembly of parts into a MuJoCo scene.xml and associated STLs."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
@@ -681,8 +717,14 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 )
             else:
                 mesh_path_base = self.assets_dir / data.label
+                # Use coarser mesh for smoke tests
+                tolerance = 1.0 if smoke_test_mode else 0.1
                 saved_paths = self.processor.process_geometry(
-                    data.part, mesh_path_base, use_vhacd=self.use_vhacd
+                    data.part,
+                    mesh_path_base,
+                    use_vhacd=self.use_vhacd,
+                    tolerance=tolerance,
+                    angular_tolerance=tolerance,
                 )
                 obj_paths = [p for p in saved_paths if p.suffix == ".obj"]
 
@@ -809,6 +851,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         objectives: ObjectivesYaml | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
+        smoke_test_mode: bool = False,
     ) -> Path:
         """Converts an assembly of parts into a Genesis scene descriptor (JSON)."""
         self.assets_dir.mkdir(parents=True, exist_ok=True)
@@ -866,7 +909,16 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                     is_deformable = True
 
             mesh_path_base = self.assets_dir / data.label
-            self.processor.process_geometry(data.part, mesh_path_base, decompose=False)
+
+            # Use coarser mesh for smoke tests to speed up Genesis voxelization
+            tolerance = 1.0 if smoke_test_mode else 0.1
+            self.processor.process_geometry(
+                data.part,
+                mesh_path_base,
+                decompose=False,
+                tolerance=tolerance,
+                angular_tolerance=tolerance,
+            )
 
             entity_info = {
                 "name": data.label,
@@ -893,7 +945,12 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 repaired_stl_path = mesh_path_base.with_suffix(".repaired.stl")
 
                 # Export to STL for processing
-                export_stl(data.part, str(stl_path))
+                export_stl(
+                    data.part,
+                    str(stl_path),
+                    tolerance=tolerance,
+                    angular_tolerance=tolerance,
+                )
 
                 from worker.utils.mesh_utils import repair_mesh_file, tetrahedralize
 

@@ -14,7 +14,9 @@ MAX_ACTIVE_SESSIONS = 4
 
 
 def get_physics_backend(
-    backend_type: SimulatorBackendType, session_id: str | None = None
+    backend_type: SimulatorBackendType,
+    session_id: str | None = None,
+    smoke_test_mode: bool = False,
 ) -> PhysicsBackend:
     """
     Returns a physics backend instance.
@@ -23,11 +25,14 @@ def get_physics_backend(
     """
     if not session_id:
         # Legacy behavior or one-off runs
-        return _create_backend(backend_type)
+        return _create_backend(backend_type, smoke_test_mode=smoke_test_mode)
 
     if session_id in BACKEND_CACHE:
         logger.debug("backend_cache_hit", session_id=session_id)
-        return BACKEND_CACHE[session_id]
+        backend = BACKEND_CACHE[session_id]
+        if hasattr(backend, "smoke_test_mode"):
+            backend.smoke_test_mode = smoke_test_mode
+        return backend
 
     # Enforce session limit
     if len(BACKEND_CACHE) >= MAX_ACTIVE_SESSIONS:
@@ -43,12 +48,14 @@ def get_physics_backend(
     logger.info(
         "creating_new_session_backend", session_id=session_id, backend_type=backend_type
     )
-    backend = _create_backend(backend_type)
+    backend = _create_backend(backend_type, smoke_test_mode=smoke_test_mode)
     BACKEND_CACHE[session_id] = backend
     return backend
 
 
-def _create_backend(backend_type: SimulatorBackendType) -> PhysicsBackend:
+def _create_backend(
+    backend_type: SimulatorBackendType, smoke_test_mode: bool = False
+) -> PhysicsBackend:
     if backend_type == SimulatorBackendType.MUJOCO:
         from worker.simulation.mujoco_backend import MuJoCoBackend
 
@@ -56,7 +63,12 @@ def _create_backend(backend_type: SimulatorBackendType) -> PhysicsBackend:
     if backend_type == SimulatorBackendType.GENESIS:
         from worker.simulation.genesis_backend import GenesisBackend
 
-        return GenesisBackend()
+        backend = GenesisBackend()
+        backend.smoke_test_mode = smoke_test_mode
+        # Trigger re-init if needed with correct mode
+        if hasattr(backend, "_ensure_initialized"):
+            backend._ensure_initialized()
+        return backend
     raise ValueError(f"Unknown backend type: {backend_type}")
 
 
