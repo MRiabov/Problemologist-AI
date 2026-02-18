@@ -71,7 +71,9 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         self, serialized: dict[str, Any], inputs: dict[str, Any], **_kwargs: Any
     ) -> None:
         logger.info(
-            "chain_start", name=serialized.get("name"), episode_id=str(self.episode_id)
+            "chain_start",
+            name=(serialized or {}).get("name"),
+            episode_id=str(self.episode_id),
         )
 
     def _get_langfuse_id(self) -> str | None:
@@ -86,7 +88,9 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
         self, serialized: dict[str, Any], prompts: list[str], **_kwargs: Any
     ) -> None:
         logger.info(
-            "llm_start", model=serialized.get("name"), episode_id=str(self.episode_id)
+            "llm_start",
+            model=(serialized or {}).get("name"),
+            episode_id=str(self.episode_id),
         )
 
         try:
@@ -127,7 +131,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
 
         logger.info(
             "tool_start",
-            name=serialized.get("name"),
+            name=(serialized or {}).get("name"),
             input=clean_content,
             episode_id=str(self.episode_id),
         )
@@ -137,7 +141,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.TOOL_START,
-                    name=serialized.get("name"),
+                    name=(serialized or {}).get("name"),
                     content=clean_content,
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
