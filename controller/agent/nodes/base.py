@@ -163,6 +163,9 @@ class BaseNode:
             signature_cls, tools=list(tool_fns.values()), interpreter=interpreter
         )
 
+        # WP07: Try to load compiled prompt if available
+        self.ctx.pm.load_compiled_program(node_type, program)
+
         retry_count = 0
         journal_entry = ""
         prediction = None
