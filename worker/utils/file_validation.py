@@ -248,13 +248,17 @@ def validate_node_output(
 
     # 1. Required files check
     required_files = {
-        "planner": ["plan.md", "todo.md"],
+        "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
         "coder": [
             "plan.md",
             "todo.md",
             "objectives.yaml",
         ],  # Coder should maintain these
-        "electronics_engineer": ["plan.md", "todo.md"],
+        "electronics_engineer": [
+            "plan.md",
+            "todo.md",
+            "assembly_definition.yaml",
+        ],
     }.get(node_type, [])
 
     for req_file in required_files:

@@ -2,6 +2,7 @@
 
 import pytest
 
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import (
     MOTOR_OVERLOAD_THRESHOLD_SECONDS,
     SimulationLoop,
@@ -46,14 +47,18 @@ TEST_NO_LIMIT_XML = """
 def overload_loop(tmp_path):
     xml_path = tmp_path / "test_overload.xml"
     xml_path.write_text(TEST_OVERLOAD_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(
+        str(xml_path), backend_type=SimulatorBackendType.MUJOCO
+    )
 
 
 @pytest.fixture
 def no_limit_loop(tmp_path):
     xml_path = tmp_path / "test_no_limit.xml"
     xml_path.write_text(TEST_NO_LIMIT_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(
+        str(xml_path), backend_type=SimulatorBackendType.MUJOCO
+    )
 
 
 class TestMotorOverload:
