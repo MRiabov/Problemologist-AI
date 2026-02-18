@@ -29,7 +29,9 @@ class AgentModule(dspy.Module):
         self.session_id = session_id or f"opt-{agent_name}-{uuid.uuid4().hex[:8]}"
 
         self.worker_client = WorkerClient(
-            base_url=settings.spec_001_api_url, session_id=self.session_id
+            base_url=settings.spec_001_api_url,
+            session_id=self.session_id,
+            heavy_url=settings.worker_heavy_url,
         )
         self.fs = RemoteFilesystemMiddleware(self.worker_client)
         self.interpreter = WorkerInterpreter(

@@ -13,6 +13,11 @@ from controller.activities.simulation import (
     upload_to_s3_activity,
 )
 from controller.workflows.execution import ScriptExecutionWorkflow
+from controller.workflows.heavy import (
+    HeavyPreviewWorkflow,
+    HeavySimulationWorkflow,
+    HeavyValidationWorkflow,
+)
 from controller.workflows.simulation import SimulationWorkflow
 
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
@@ -26,7 +31,13 @@ async def main():
     worker = Worker(
         client,
         task_queue="simulation-task-queue",
-        workflows=[SimulationWorkflow, ScriptExecutionWorkflow],
+        workflows=[
+            SimulationWorkflow,
+            ScriptExecutionWorkflow,
+            HeavySimulationWorkflow,
+            HeavyValidationWorkflow,
+            HeavyPreviewWorkflow,
+        ],
         activities=[
             compile_mjcf_activity,
             run_simulation_activity,

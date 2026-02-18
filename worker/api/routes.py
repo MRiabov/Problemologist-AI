@@ -70,6 +70,8 @@ from .schema import (
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
+light_router = APIRouter()
+heavy_router = APIRouter()
 
 
 async def get_router(x_session_id: str = Header(...)):
@@ -81,7 +83,7 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-@router.post("/topology/inspect", response_model=InspectTopologyResponse)
+@light_router.post("/topology/inspect", response_model=InspectTopologyResponse)
 async def api_inspect_topology(
     request: InspectTopologyRequest,
     fs_router=Depends(get_router),
@@ -108,7 +110,7 @@ def _collect_events(fs_router) -> list[dict[str, Any]]:
     return collect_and_cleanup_events(fs_router.local_backend.root)
 
 
-@router.post("/fs/ls", response_model=list[FileInfo])
+@light_router.post("/fs/ls", response_model=list[FileInfo])
 async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     """List contents of a directory."""
     try:
@@ -120,7 +122,7 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/read", response_model=ReadFileResponse)
+@light_router.post("/fs/read", response_model=ReadFileResponse)
 async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
     """Read file contents."""
     try:
@@ -133,7 +135,7 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/write", response_model=StatusResponse)
+@light_router.post("/fs/write", response_model=StatusResponse)
 async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     """Write content to a file."""
     try:
@@ -146,7 +148,7 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/edit", response_model=StatusResponse)
+@light_router.post("/fs/edit", response_model=StatusResponse)
 async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
     """Edit a file with one or more operations."""
     try:
@@ -173,7 +175,7 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/upload_file", response_model=StatusResponse)
+@light_router.post("/fs/upload_file", response_model=StatusResponse)
 async def upload_file(
     path: str = Form(...),
     file: UploadFile = File(...),
@@ -197,7 +199,7 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/read_blob")
+@light_router.post("/fs/read_blob")
 async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
     """Read file contents as binary blob."""
     try:
@@ -210,7 +212,7 @@ async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/grep", response_model=list[GrepMatch])
+@light_router.post("/fs/grep", response_model=list[GrepMatch])
 async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
     """Search for a pattern in files."""
     try:
@@ -227,7 +229,35 @@ async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/fs/delete", response_model=StatusResponse)
+@light_router.post("/fs/bundle")
+async def bundle_session(fs_router=Depends(get_router)):
+    """Bundle the session workspace into a gzipped tarball."""
+    import io
+    import tarfile
+
+    root = fs_router.local_backend.root
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        # Exclude large artifacts and internal git state
+        exclude = {"renders", ".git", "__pycache__", "assets"}
+
+        for path in root.rglob("*"):
+            # Check if any parent part is in exclude set
+            rel_p = path.relative_to(root)
+            if any(part in exclude for part in rel_p.parts):
+                continue
+            if path.is_file():
+                tar.add(path, arcname=str(rel_p))
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/x-gzip",
+        headers={"Content-Disposition": "attachment; filename=session.tar.gz"},
+    )
+
+
+@light_router.post("/fs/delete", response_model=StatusResponse)
 async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router)):
     """Delete a file or directory."""
     try:
@@ -242,7 +272,7 @@ async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/git/init", response_model=StatusResponse)
+@light_router.post("/git/init", response_model=StatusResponse)
 async def git_init(fs_router=Depends(get_router)):
     """Initialize a git repository in the workspace."""
     try:
@@ -253,7 +283,7 @@ async def git_init(fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/git/commit", response_model=GitCommitResponse)
+@light_router.post("/git/commit", response_model=GitCommitResponse)
 async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
     """Commit changes to the local repository."""
     try:
@@ -275,13 +305,13 @@ async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
         return GitCommitResponse(success=False, message=str(e))
 
 
-@router.get("/git/status", response_model=GitStatusResponse)
+@light_router.get("/git/status", response_model=GitStatusResponse)
 async def git_status(fs_router=Depends(get_router)):
     """Get repository status."""
     return get_repo_status(fs_router.local_backend.root)
 
 
-@router.post("/git/resolve", response_model=StatusResponse)
+@light_router.post("/git/resolve", response_model=StatusResponse)
 async def git_resolve(request: GitResolveRequest, fs_router=Depends(get_router)):
     """Resolve a merge conflict."""
     path = fs_router.local_backend.root
@@ -296,7 +326,7 @@ async def git_resolve(request: GitResolveRequest, fs_router=Depends(get_router))
     raise HTTPException(status_code=500, detail="Failed to resolve conflict")
 
 
-@router.post("/git/merge/abort", response_model=StatusResponse)
+@light_router.post("/git/merge/abort", response_model=StatusResponse)
 async def git_abort(fs_router=Depends(get_router)):
     """Abort a merge."""
     if abort_merge(fs_router.local_backend.root):
@@ -304,7 +334,7 @@ async def git_abort(fs_router=Depends(get_router)):
     raise HTTPException(status_code=500, detail="Failed to abort merge")
 
 
-@router.post("/git/merge/complete", response_model=GitCommitResponse)
+@light_router.post("/git/merge/complete", response_model=GitCommitResponse)
 async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
     """Complete a merge."""
     commit_hash = complete_merge(fs_router.local_backend.root, request.message)
@@ -320,7 +350,7 @@ async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
     )
 
 
-@router.post("/runtime/execute", response_model=ExecuteResponse)
+@light_router.post("/runtime/execute", response_model=ExecuteResponse)
 async def execute_code(
     request: ExecuteRequest,
     fs_router=Depends(get_router),
@@ -380,7 +410,7 @@ SIMULATION_EXECUTOR = ProcessPoolExecutor(
 )
 
 
-@router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
+@heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -457,7 +487,7 @@ async def api_simulate(
         SIMULATION_QUEUE_DEPTH -= 1
 
 
-@router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
+@heavy_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
 async def api_validate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -523,7 +553,7 @@ async def api_validate(
         SIMULATION_QUEUE_DEPTH -= 1
 
 
-@router.post("/benchmark/analyze", response_model=WorkbenchResult)
+@heavy_router.post("/benchmark/analyze", response_model=WorkbenchResult)
 async def api_analyze(
     request: AnalyzeRequest,
     x_session_id: str = Header(...),
@@ -569,12 +599,16 @@ async def api_analyze(
             return result
     except Exception as e:
         logger.error("api_benchmark_analyze_failed", error=str(e))
-        return WorkbenchResult(success=False, message=str(e))
+        return WorkbenchResult(
+            is_manufacturable=False,
+            unit_cost=0.0,
+            violations=[str(e)],
+        )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 
 
-@router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
+@light_router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
 async def api_submit(
     request: BenchmarkToolRequest,
     fs_router=Depends(get_router),
@@ -599,7 +633,7 @@ async def api_submit(
         return BenchmarkToolResponse(success=False, message=str(e))
 
 
-@router.get("/assets/{path:path}")
+@light_router.get("/assets/{path:path}")
 async def get_asset(path: str, fs_router=Depends(get_router)):
     """Serve assets from the filesystem."""
     try:
@@ -618,7 +652,7 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/benchmark/preview", response_model=PreviewDesignResponse)
+@heavy_router.post("/benchmark/preview", response_model=PreviewDesignResponse)
 async def api_preview(
     request: PreviewDesignRequest,
     x_session_id: str = Header(...),
@@ -670,7 +704,7 @@ async def api_preview(
         SIMULATION_QUEUE_DEPTH -= 1
 
 
-@router.post("/lint", response_model=LintResponse)
+@light_router.post("/lint", response_model=LintResponse)
 async def api_lint(
     request: LintRequest,
     fs_router=Depends(get_router),
@@ -755,7 +789,7 @@ async def api_lint(
         )
 
 
-@router.post("/benchmark/build", response_model=BenchmarkToolResponse)
+@heavy_router.post("/benchmark/build", response_model=BenchmarkToolResponse)
 async def api_build(
     request: PreviewDesignRequest,
     x_session_id: str = Header(...),
@@ -814,3 +848,7 @@ async def api_build(
         return BenchmarkToolResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
+
+# Include both routers in the main router for backward compatibility/single-node mode
+router.include_router(light_router)
+router.include_router(heavy_router)
