@@ -29,6 +29,7 @@ async def run_session(session_id: str, filename: str, content: str):
         code = f"""
 import os
 files = os.listdir('.')
+print(files)
 with open("{filename}", "r") as f:
     content = f.read()
 assert "{filename}" in files, f"{{filename}} not in {{files}}"
