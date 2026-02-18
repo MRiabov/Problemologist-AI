@@ -66,3 +66,7 @@ MUJOCO_LOG.TXT
 *.obj
 events.jsonl
 .xml
+
+# Local skills and suggestions
+skills/
+suggested_skills/
