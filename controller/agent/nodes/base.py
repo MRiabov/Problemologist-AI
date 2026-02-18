@@ -1,5 +1,5 @@
 import asyncio
-import logging
+import structlog
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +19,7 @@ from controller.observability.langfuse import get_langfuse_callback
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -186,7 +186,7 @@ class BaseNode:
                             f"{node_type}_dspy_invoke_start",
                             session_id=state.session_id,
                         )
-                        prediction = program(**inputs)
+                        prediction = await asyncio.to_thread(program, **inputs)
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
                             session_id=state.session_id,

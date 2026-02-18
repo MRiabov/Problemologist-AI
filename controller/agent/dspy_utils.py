@@ -93,9 +93,16 @@ class WorkerInterpreter:
             asyncio.set_event_loop(loop)
 
         if loop.is_running():
-            import nest_asyncio
+            try:
+                import nest_asyncio
 
-            nest_asyncio.apply()
+                nest_asyncio.apply(loop)
+            except Exception as e:
+                logger.warning(
+                    "nest_asyncio_apply_failed",
+                    error=str(e),
+                    loop_type=type(loop).__name__,
+                )
 
         result = loop.run_until_complete(self._execute_remote(code))
 

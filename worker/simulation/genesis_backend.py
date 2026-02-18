@@ -409,11 +409,14 @@ class GenesisBackend(PhysicsBackend):
         try:
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
-            logger.debug(
-                "genesis_scene_stepping",
-                is_built=self._is_built,
-                scene_is_built=getattr(self.scene, "is_built", False),
-            )
+            # Reduce debug logging overhead: only log every 100 steps
+            self._step_counter = getattr(self, "_step_counter", 0) + 1
+            if self._step_counter % 100 == 0:
+                logger.debug(
+                    "genesis_scene_stepping",
+                    is_built=self._is_built,
+                    scene_is_built=getattr(self.scene, "is_built", False),
+                )
             self.scene.step()
 
             # T012: Part Breakage Detection & Global Stress Tracking

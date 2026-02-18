@@ -227,6 +227,12 @@ class VideoRenderer:
         )
 
         for frame in self.frames:
+            # Multi-tenant / Dynamic Resolution Safeguard:
+            # Ensure frame matches the expected VideoWriter resolution (width, height)
+            h, w = frame.shape[:2]
+            if w != self.width or h != self.height:
+                frame = cv2.resize(frame, (self.width, self.height))
+
             # Convert RGB to BGR for OpenCV
             bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             out.write(bgr_frame)

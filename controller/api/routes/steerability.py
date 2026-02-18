@@ -41,9 +41,7 @@ async def get_episode_from_session_id(
         # This assumes Episode.metadata_vars is a JSON/JSONB column.
         stmt = (
             select(Episode)
-            .where(
-                Episode.metadata_vars["worker_session_id"].astext == session_id
-            )
+            .where(Episode.metadata_vars["worker_session_id"].astext == session_id)
             .order_by(Episode.created_at.desc())
             .limit(1)
         )
@@ -73,7 +71,9 @@ async def steer_agent(
         if task and not task.done():
             # Agent is running, enqueue
             logger.info("agent_running_enqueuing_prompt", episode_id=str(episode.id))
-            queue_position = await steerability_service.enqueue_prompt(session_id, prompt)
+            queue_position = await steerability_service.enqueue_prompt(
+                session_id, prompt
+            )
             return {"status": "queued", "queue_position": queue_position}
         else:
             # Agent is idle, wake up
