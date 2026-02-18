@@ -233,6 +233,7 @@ async def test_submit(mock_httpx_client):
         timeout=30.0,
     )
 
+
 @pytest.mark.asyncio
 async def test_client_reuse(mock_httpx_client):
     """Test that httpx.AsyncClient is only created once and reused."""

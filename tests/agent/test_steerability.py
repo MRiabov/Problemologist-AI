@@ -171,7 +171,10 @@ async def test_benchmark_planner_node_steer(mock_codeact_cls):
         # Mock DSPy Program
         mock_program = MagicMock()
         from shared.simulation.schemas import RandomizationStrategy
-        mock_program.return_value = MagicMock(plan=RandomizationStrategy(theme="test", reasoning="test"))
+
+        mock_program.return_value = MagicMock(
+            plan=RandomizationStrategy(theme="test", reasoning="test")
+        )
         mock_codeact_cls.return_value = mock_program
 
         # Mock WorkerClient methods that might be called

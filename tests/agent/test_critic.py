@@ -36,7 +36,9 @@ async def test_critic_node_approve(mock_codeact_cls, mock_llm, mock_worker):
     )
     mock_codeact_cls.return_value = mock_program
 
-    state = AgentState(task="Build a part", journal="Implementation details", session_id="test-session")
+    state = AgentState(
+        task="Build a part", journal="Implementation details", session_id="test-session"
+    )
 
     result = await reviewer_node(state)
 
@@ -51,7 +53,9 @@ async def test_critic_node_reject(mock_codeact_cls, mock_llm, mock_worker):
     # Mock DSPy Program
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(
-        review=ReviewResult(decision=CriticDecision.REJECT_CODE, reason="Simulation failed.")
+        review=ReviewResult(
+            decision=CriticDecision.REJECT_CODE, reason="Simulation failed."
+        )
     )
     mock_codeact_cls.return_value = mock_program
 
@@ -70,7 +74,9 @@ async def test_critic_node_no_artifacts(mock_codeact_cls, mock_llm, mock_worker)
     # Mock DSPy Program
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(
-        review=ReviewResult(decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine.")
+        review=ReviewResult(
+            decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine."
+        )
     )
     mock_codeact_cls.return_value = mock_program
 
