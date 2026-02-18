@@ -20,9 +20,11 @@ class CoderSignature(dspy.Signature):
     When done, use SUBMIT to provide a summary of your work.
     """
 
+    task = dspy.InputField()
     current_step = dspy.InputField()
     plan = dspy.InputField()
     todo = dspy.InputField()
+    feedback = dspy.InputField(desc="Feedback from previous review steps", default="")
     journal = dspy.OutputField(
         desc="A summary of the implementation done for this step"
     )
@@ -46,9 +48,11 @@ class CoderNode(BaseNode):
             )
 
         inputs = {
+            "task": state.task,
             "current_step": current_step,
             "plan": state.plan,
             "todo": todo,
+            "feedback": state.feedback,
         }
         validate_files = [
             "plan.md",
