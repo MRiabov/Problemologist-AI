@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 import yaml
@@ -323,6 +323,32 @@ def calculate_assembly_totals(
                 pass
 
     return total_cost, total_weight
+
+
+def simulate_subprocess(
+    script_path: str,
+    session_root: str,
+    script_content: str | None = None,
+    output_dir: Path | None = None,
+    smoke_test_mode: bool = False,
+    backend: Any | None = None,
+    session_id: str | None = None,
+) -> SimulationResult:
+    """Serializable entry point for ProcessPoolExecutor."""
+    from worker.utils.loader import load_component_from_script
+
+    component = load_component_from_script(
+        script_path=script_path,
+        session_root=session_root,
+        script_content=script_content,
+    )
+    return simulate(
+        component=component,
+        output_dir=output_dir,
+        smoke_test_mode=smoke_test_mode,
+        backend=backend,
+        session_id=session_id,
+    )
 
 
 def simulate(

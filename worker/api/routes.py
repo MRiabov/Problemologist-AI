@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import json
+import multiprocessing
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -364,7 +365,12 @@ async def execute_code(
 # Global lock to ensure only one simulation/render runs at a time cross-session
 HEAVY_OPERATION_LOCK = asyncio.Lock()
 SIMULATION_QUEUE_DEPTH = 0
-SIMULATION_EXECUTOR = ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1)
+# Use 'spawn' context for true isolation, as Genesis/Torch/Vulkan hate fork
+SIMULATION_EXECUTOR = ProcessPoolExecutor(
+    max_workers=1,
+    max_tasks_per_child=1,
+    mp_context=multiprocessing.get_context("spawn"),
+)
 
 
 @router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
