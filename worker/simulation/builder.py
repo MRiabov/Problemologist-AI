@@ -996,6 +996,68 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             for fo in objectives.objectives.fluid_objectives:
                 scene_data["objectives"].append(fo.model_dump())
 
+        # 5. Add Cables (Wires/Tendons)
+        scene_data["cables"] = []
+        if electronics and hasattr(electronics, "wiring"):
+            from shared.wire_utils import get_awg_properties
+
+            # Build lookup for part positions (needed for wire attachments)
+            part_locations = {d.label: (d.pos, d.euler) for d in parts_data}
+
+            for wire in electronics.wiring:
+                if not getattr(wire, "routed_in_3d", False):
+                    continue
+
+                # Calculate stiffness based on AWG (similar to MuJoCo builder)
+                stiffness = 1000.0 * (1.26 ** (18 - wire.gauge_awg))
+                props = get_awg_properties(wire.gauge_awg)
+                radius = props["diameter_mm"] / 2000.0  # mm to m, then radius
+
+                points = []
+                waypoints = getattr(wire, "waypoints", [])
+
+                if waypoints:
+                    for j, pt in enumerate(waypoints):
+                        parent = None
+                        local_pos = list(pt)
+
+                        # Heuristic: first waypoint attached to from_comp, last to to_comp
+                        if j == 0:
+                            comp_id = wire.from_terminal.component
+                            if comp_id in part_locations:
+                                parent = comp_id
+                                b_pos, _ = part_locations[comp_id]
+                                local_pos = [pt[k] - b_pos[k] for k in range(3)]
+                        elif j == len(waypoints) - 1:
+                            comp_id = wire.to_terminal.component
+                            if comp_id in part_locations:
+                                parent = comp_id
+                                b_pos, _ = part_locations[comp_id]
+                                local_pos = [pt[k] - b_pos[k] for k in range(3)]
+
+                        points.append({"pos": local_pos, "parent": parent})
+                else:
+                    # Fallback: connect from/to components directly
+                    from_comp = wire.from_terminal.component
+                    to_comp = wire.to_terminal.component
+
+                    for comp_id in [from_comp, to_comp]:
+                        parent = None
+                        pos = [0, 0, 0]
+                        if comp_id in part_locations:
+                            parent = comp_id
+                        points.append({"pos": pos, "parent": parent})
+
+                if len(points) >= 2:
+                    scene_data["cables"].append(
+                        {
+                            "name": wire.wire_id,
+                            "radius": radius,
+                            "stiffness": stiffness,
+                            "points": points,
+                        }
+                    )
+
         scene_path = self.output_dir / "scene.json"
         with scene_path.open("w") as f:
             json.dump(scene_data, f, indent=2)
