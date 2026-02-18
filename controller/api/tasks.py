@@ -230,6 +230,21 @@ async def execute_agent_task(
                 await db_callback._broadcast_trace(final_llm_trace)
                 logger.info("agent_task_logic_completed", episode_id=episode_id)
 
+                # Report automated score to Langfuse
+                if langfuse_callback:
+                    from controller.observability.langfuse import (
+                        calculate_and_report_automated_score,
+                    )
+
+                    await calculate_and_report_automated_score(
+                        episode_id=episode_id,
+                        session_id=session_id,
+                        trace_id=trace_id,
+                        agent_name=agent_name,
+                        db=db,
+                        worker_client=client,
+                    )
+
                 # Sync assets from worker (now in background after status update)
                 logger.info("starting_asset_sync", episode_id=episode_id)
                 try:
@@ -475,6 +490,21 @@ async def continue_agent_task(
 
                 await db.commit()
                 await db_callback._broadcast_trace(final_trace)
+
+                # Report automated score to Langfuse
+                if langfuse_callback:
+                    from controller.observability.langfuse import (
+                        calculate_and_report_automated_score,
+                    )
+
+                    await calculate_and_report_automated_score(
+                        episode_id=episode_id,
+                        session_id=session_id,
+                        trace_id=trace_id,
+                        agent_name=agent_name,
+                        db=db,
+                        worker_client=client,
+                    )
 
                 logger.info("agent_continuation_completed", episode_id=episode_id)
 

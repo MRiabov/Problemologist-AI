@@ -17,10 +17,10 @@ class Settings(BaseSettings):
     max_agent_turns: int = Field(default=60, alias="MAX_AGENT_TURNS")
 
     # Infrastructure Settings
-    temporal_url: str = Field(default="temporal:7233", alias="TEMPORAL_URL")
-    worker_url: str = Field(default="http://worker:8001", alias="WORKER_URL")
+    temporal_url: str = Field(default="127.0.0.1:17233", alias="TEMPORAL_URL")
+    worker_url: str = Field(default="http://127.0.0.1:18001", alias="WORKER_URL")
     postgres_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:15432/problemologist",
+        default="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres",
         alias="POSTGRES_URL",
     )
 

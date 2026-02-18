@@ -8,7 +8,7 @@ dependencies = [
     "alembic>=1.18.4",
     "bd_warehouse",
     "build123d>=0.10.0",
-    "fastapi>=0.129.0",
+    "fastapi[standard]>=0.129.0",
     "langchain>=1.2.10",
     "langchain-core>=1.2.12",
     "langchain-openai>=1.1.9",
