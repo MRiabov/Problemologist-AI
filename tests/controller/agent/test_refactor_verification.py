@@ -21,9 +21,6 @@ async def test_all_agents_initialization():
     with (
         patch("controller.agent.nodes.base.WorkerClient"),
         patch("controller.agent.nodes.base.RemoteFilesystemMiddleware"),
-        patch(
-            "controller.agent.benchmark.nodes.get_prompt", return_value="mock prompt"
-        ),
     ):
         mock_ctx = SharedNodeContext.create(
             worker_url="http://worker", session_id="test"

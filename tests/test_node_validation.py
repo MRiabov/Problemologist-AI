@@ -37,7 +37,11 @@ constraints:
 
 
 def test_validate_node_output_planner_success():
-    files = {"plan.md": VALID_ENGINEERING_PLAN, "todo.md": "- [ ] task 1"}
+    files = {
+        "plan.md": VALID_ENGINEERING_PLAN,
+        "todo.md": "- [ ] task 1",
+        "assembly_definition.yaml": "version: '1.0'",
+    }
     is_valid, errors = validate_node_output("planner", files)
     assert is_valid, f"Validation failed with errors: {errors}"
     assert not errors
@@ -54,6 +58,7 @@ def test_validate_node_output_template_placeholder():
     files = {
         "plan.md": "## 1. Solution Overview\nTODO: write this",
         "todo.md": "- [ ] task 1",
+        "assembly_definition.yaml": "version: '1.0'",
     }
     is_valid, errors = validate_node_output("planner", files)
     assert not is_valid
@@ -61,7 +66,11 @@ def test_validate_node_output_template_placeholder():
 
 
 def test_validate_node_output_invalid_plan_structure():
-    files = {"plan.md": "Just some text without headers", "todo.md": "- [ ] task 1"}
+    files = {
+        "plan.md": "Just some text without headers",
+        "todo.md": "- [ ] task 1",
+        "assembly_definition.yaml": "version: '1.0'",
+    }
     is_valid, errors = validate_node_output("planner", files)
     assert not is_valid
     assert any("plan.md:" in e for e in errors)

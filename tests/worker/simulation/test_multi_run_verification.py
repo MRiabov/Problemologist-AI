@@ -2,6 +2,7 @@
 
 import pytest
 
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.verification import (
     DEFAULT_NUM_RUNS,
     MultiRunResult,
@@ -47,6 +48,7 @@ class TestMultiRunVerification:
             num_runs=3,
             duration=2.0,
             seed=42,
+            backend_type=SimulatorBackendType.MUJOCO,
         )
 
         assert isinstance(result, MultiRunResult)
@@ -61,6 +63,7 @@ class TestMultiRunVerification:
             num_runs=3,
             duration=1.0,
             seed=123,
+            backend_type=SimulatorBackendType.MUJOCO,
         )
 
         result2 = verify_with_jitter(
@@ -69,6 +72,7 @@ class TestMultiRunVerification:
             num_runs=3,
             duration=1.0,
             seed=123,
+            backend_type=SimulatorBackendType.MUJOCO,
         )
 
         # Same seed should give same success rate
@@ -81,6 +85,7 @@ class TestMultiRunVerification:
             control_inputs={},
             num_runs=2,
             duration=1.0,
+            backend_type=SimulatorBackendType.MUJOCO,
         )
 
         assert hasattr(result, "success_rate")
@@ -99,6 +104,7 @@ class TestMultiRunVerification:
             control_inputs={},
             num_runs=1,
             duration=0.5,
+            backend_type=SimulatorBackendType.MUJOCO,
         )
 
         assert result.num_runs == 1

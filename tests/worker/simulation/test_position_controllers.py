@@ -3,6 +3,7 @@
 import mujoco
 import pytest
 
+from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
 from worker.utils.controllers.position_based import hold_position, oscillate, waypoint
 
@@ -31,7 +32,7 @@ TEST_POSITION_XML = """
 def sim_loop_position(tmp_path):
     xml_path = tmp_path / "test_position.xml"
     xml_path.write_text(TEST_POSITION_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 class TestWaypointController:

@@ -432,13 +432,13 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     all_tools = get_benchmark_tools(ctx.fs, session_id)
     tool_functions = {}
 
-    async def write_review_file(path: str, content: str) -> str:
-        """Write the review to the review file."""
-        p = path.lstrip("/")
-        if p != review_filename.lstrip("/"):
-            return f"Error: Unauthorized path. You must write to {review_filename}"
-        success = await ctx.worker_client.write_file(path, content)
-        return "Review written successfully." if success else "Error writing review."
+    async def write_review_file(content: str) -> str:
+        """
+        Write the review to the review file.
+        Must include YAML frontmatter with decision and comments.
+        """
+        success = await ctx.worker_client.write_file(review_filename, content, overwrite=True)
+        return f"Review written successfully to {review_filename}." if success else "Error writing review."
 
     tool_functions["write_review_file"] = write_review_file
 

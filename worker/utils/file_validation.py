@@ -202,8 +202,13 @@ def validate_review_frontmatter(
 # Required sections for plan.md validation
 BENCHMARK_PLAN_REQUIRED_SECTIONS = [
     "Learning Objective",
-    "Geometry",
+    "Static Geometry",
+    "Input Object",
     "Objectives",
+    "Randomization",
+    "Build123d Strategy",
+    "Cost & Weight Envelope",
+    "Part Metadata",
 ]
 
 ENGINEERING_PLAN_REQUIRED_SECTIONS = [
@@ -259,6 +264,8 @@ def validate_node_output(
             "todo.md",
             "assembly_definition.yaml",
         ],
+        "benchmark_planner": ["benchmark_structure.md", "benchmark_engineer_todo.md"],
+        "benchmark_coder": ["objectives.yaml", "assembly_definition.yaml", "script.py"],
     }.get(node_type, [])
 
     for req_file in required_files:
@@ -276,20 +283,20 @@ def validate_node_output(
 
     # 3. Specific validation for known formats
     for filename, content in files_content_map.items():
-        if filename == "plan.md":
+        if filename == "plan.md" or filename == "benchmark_structure.md":
             plan_type = "engineering"  # Default to engineering for most nodes
-            if node_type == "planner" and "# Learning Objective" in content:
+            if (node_type == "planner" and "# Learning Objective" in content) or filename == "benchmark_structure.md":
                 plan_type = "benchmark"
 
             is_valid, plan_errors = validate_plan_md_structure(content, plan_type)
             if not is_valid:
                 errors.extend([f"plan.md: {e}" for e in plan_errors])
-        elif filename == "todo.md":
+        elif filename == "todo.md" or filename == "benchmark_engineer_todo.md":
             from .markdown_validator import validate_todo_md
 
             res = validate_todo_md(content)
             if not res.is_valid:
-                errors.extend([f"todo.md: {e}" for e in res.violations])
+                errors.extend([f"{filename}: {e}" for e in res.violations])
         elif filename == "objectives.yaml":
             is_valid, obj_res = validate_objectives_yaml(content)
             if not is_valid:

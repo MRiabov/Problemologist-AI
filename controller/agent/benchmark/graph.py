@@ -71,9 +71,9 @@ def define_graph():
             return "steer"
 
         feedback = state.review_feedback or ""
-        if feedback == "Approved":
+        if "Approved" in feedback or "APPROVE" in feedback:
             return "skills"
-        if feedback.startswith("Steering:"):
+        if feedback.startswith("Steering:") or "CONFIRM_PLAN_REFUSAL" in feedback:
             return "planner"
         return "coder"
 

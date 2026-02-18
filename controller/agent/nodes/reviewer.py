@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
+from langchain_core.tools import tool
+
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import ReviewDecisionEvent
@@ -22,6 +24,8 @@ class CriticDecision(StrEnum):
     APPROVE = "APPROVE"
     REJECT_PLAN = "REJECT_PLAN"
     REJECT_CODE = "REJECT_CODE"
+    CONFIRM_PLAN_REFUSAL = "CONFIRM_PLAN_REFUSAL"
+    REJECT_PLAN_REFUSAL = "REJECT_PLAN_REFUSAL"
 
 
 class ReviewResult(BaseModel):
@@ -45,6 +49,7 @@ class ReviewerSignature(dspy.Signature):
     assembly_definition = dspy.InputField()
     objectives = dspy.InputField()
     journal = dspy.InputField()
+    plan_refusal = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
 
 
@@ -70,6 +75,12 @@ class ReviewerNode(BaseNode):
                     "assembly_definition.yaml"
                 )
 
+        # Check for plan refusal from the engineer
+        plan_refusal = "No plan refusal recorded."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("plan_refusal.md"):
+                plan_refusal = await self.ctx.worker_client.read_file("plan_refusal.md")
+
         inputs = {
             "task": state.task,
             "plan": state.plan,
@@ -77,18 +88,42 @@ class ReviewerNode(BaseNode):
             "assembly_definition": assembly_definition,
             "objectives": objectives,
             "journal": state.journal,
+            "plan_refusal": plan_refusal,
         }
 
         # Validate existence of key reports
         validate_files = ["simulation_result.json", "assembly_definition.yaml"]
+
+        # Ensure review directory exists and N is correct
+        review_round = state.turn_count // 5 + 1 # Rough heuristic or we can use a dedicated field
+        # Actually turn_count is not ideal. Let's use a simpler one.
+        # AgentState doesn't have review_round. BenchmarkState does.
+        # I'll use iteration for now.
+        review_round = state.iteration + 1
+        review_path = f"reviews/review-round-{review_round}/review.md"
+
+        def get_reviewer_tools(fs, session_id):
+            tools = get_engineer_tools(fs, session_id)
+
+            @tool
+            async def write_review_file(content: str):
+                """
+                Write the review to the review file.
+                Must include YAML frontmatter with decision and comments.
+                """
+                await fs.write_file(review_path, content, overwrite=True)
+                return f"Review written to {review_path}"
+
+            tools.append(write_review_file)
+            return tools
 
         prediction, artifacts, journal_entry = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=ReviewerSignature,
             state=state,
             inputs=inputs,
-            tool_factory=get_engineer_tools,
-            validate_files=validate_files,
+            tool_factory=get_reviewer_tools,
+            validate_files=validate_files + [review_path],
             node_type="reviewer",
         )
 
@@ -115,6 +150,8 @@ class ReviewerNode(BaseNode):
             CriticDecision.APPROVE: AgentStatus.APPROVED,
             CriticDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
             CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+            CriticDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.PLAN_REJECTED,
+            CriticDecision.REJECT_PLAN_REFUSAL: AgentStatus.CODE_REJECTED,
         }
 
         # Emit ReviewDecisionEvent for observability

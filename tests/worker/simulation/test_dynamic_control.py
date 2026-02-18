@@ -19,11 +19,13 @@ TEST_XML = """
 """
 
 
+from shared.simulation.schemas import SimulatorBackendType
+
 @pytest.fixture
 def sim_loop(tmp_path):
     xml_path = tmp_path / "test_dynamic.xml"
     xml_path.write_text(TEST_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 def test_dynamic_controllers(sim_loop):

@@ -96,6 +96,19 @@ class PlannerNode(BaseNode):
             ],
         )
 
+        # WP01: Post-validation - Ensure assembly_definition.yaml has been priced
+        if "assembly_definition.yaml" in artifacts:
+            content = artifacts["assembly_definition.yaml"]
+            import yaml
+            try:
+                data = yaml.safe_load(content)
+                if data and (not data.get("totals") or not data["totals"].get("estimated_unit_cost_usd")):
+                    logger.warning("planner_output_unpriced", session_id=state.session_id)
+                    # We could force a retry here, or just log it.
+                    # Per architecture, the script SHOULD have been run.
+            except Exception as e:
+                logger.warning("planner_output_yaml_error", error=str(e))
+
         summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={

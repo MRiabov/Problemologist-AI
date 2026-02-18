@@ -59,6 +59,16 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    @tool
+    async def refuse_plan(reason: str):
+        """
+        Refuse the current plan if it's fundamentally flawed or impossible.
+        You must provide a detailed reason and evidence.
+        This will escalate the issue to the Reviewer for confirmation.
+        """
+        await fs.write_file("plan_refusal.md", f"# Plan Refusal\n\nReason: {reason}")
+        return "Plan refusal recorded. You should now SUBMIT your work for review."
+
     return [
         list_files,
         read_file,
@@ -68,6 +78,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        refuse_plan,
     ]
 
 
