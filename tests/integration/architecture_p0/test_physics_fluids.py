@@ -231,8 +231,17 @@ def build():
             timeout=60.0,
         )
         assert resp.status_code == 200
-        # Flow rate evaluation is currently a no-op in SimulationLoop if not 'continuous'
-        # but we check if it handles it without crashing.
+        data = resp.json()
+
+        # Verify flow rate metrics in result
+        fluid_metrics = data.get("artifacts", {}).get("fluid_metrics", [])
+        assert any(m["metric_type"] == "flow_rate" for m in fluid_metrics), (
+            "Missing flow_rate metric in results"
+        )
+        metric = next(m for m in fluid_metrics if m["metric_type"] == "flow_rate")
+        assert metric["fluid_id"] == "water"
+        # In this static test, we expect 0 flow rate
+        assert metric["measured_value"] == 0.0
 
 
 @pytest.mark.integration_p0

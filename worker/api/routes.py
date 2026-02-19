@@ -451,18 +451,19 @@ async def api_simulate(
 
         loop = asyncio.get_running_loop()
         # Run in isolated subprocess to bypass Genesis global state issues
-        result = await loop.run_in_executor(
-            SIMULATION_EXECUTOR,
-            simulate_subprocess,
-            fs_router.local_backend._resolve(request.script_path),
-            fs_router.local_backend.root,
-            request.script_content,
-            fs_router.local_backend.root,
-            request.smoke_test_mode,
-            backend_type,
-            x_session_id,
-            request.particle_budget,
-        )
+        async with HEAVY_OPERATION_LOCK:
+            result = await loop.run_in_executor(
+                SIMULATION_EXECUTOR,
+                simulate_subprocess,
+                fs_router.local_backend._resolve(request.script_path),
+                fs_router.local_backend.root,
+                request.script_content,
+                fs_router.local_backend.root,
+                request.smoke_test_mode,
+                backend_type,
+                x_session_id,
+                request.particle_budget,
+            )
 
         # Reconstruct model if needed
         render_paths = result.render_paths
