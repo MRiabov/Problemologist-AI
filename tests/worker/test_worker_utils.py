@@ -24,8 +24,12 @@ def test_submit_for_review(mock_export_step, mock_validate, tmp_path):
     mock_val_result = MagicMock()
     mock_val_result.is_manufacturable = True
     mock_val_result.unit_cost = 10.0
+    mock_val_result.weight_g = 100.0
     mock_val_result.violations = []
-    mock_val_result.metadata = {"weight_kg": 0.1}
+    # Note: production code uses WorkbenchMetadata object, but tests often mock as dict
+    # We should ideally use the object to match my fix
+    from worker.workbenches.models import WorkbenchMetadata
+    mock_val_result.metadata = WorkbenchMetadata()
     mock_validate.return_value = mock_val_result
 
     # Create mandatory files with correct sections

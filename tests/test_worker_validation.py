@@ -155,8 +155,10 @@ Simple test plan
             mock_val_result = MagicMock()
             mock_val_result.is_manufacturable = True
             mock_val_result.unit_cost = 10.0
+            mock_val_result.weight_g = 100.0
             mock_val_result.violations = []
-            mock_val_result.metadata = {"weight_kg": 0.1}
+            from worker.workbenches.models import WorkbenchMetadata
+            mock_val_result.metadata = WorkbenchMetadata()
             mock_val.return_value = mock_val_result
 
             res = submit_for_review(p.part)
