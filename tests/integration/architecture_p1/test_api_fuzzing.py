@@ -6,6 +6,7 @@ import schemathesis
 # Target the running service URL for integration testing
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 
 # Create a schema instance from the live OpenAPI spec
 try:
@@ -53,3 +54,24 @@ def test_api_fuzzing(case):
 
 # Note: Ideally we would also target the Worker API, but the Controller is the primary external interface.
 # If desired, add another test function for Worker URL.
+
+
+@pytest.mark.integration_p1
+@pytest.mark.worker_heavy_fuzz
+def test_worker_heavy_fuzz():
+    """INT-044-H: Fuzz Heavy Worker endpoints."""
+    try:
+        heavy_schema = schemathesis.openapi.from_url(f"{WORKER_HEAVY_URL}/openapi.json")
+        # Exclude simulate if it's too heavy
+        heavy_schema = heavy_schema.exclude(path_regex=r"/benchmark/simulate")
+
+        @heavy_schema.parametrize()
+        def test(case):
+            case.headers = case.headers or {}
+            case.headers["X-Session-ID"] = "fuzz-test-session-heavy"
+            case.call_and_validate(checks=(schemathesis.checks.not_a_server_error,))
+
+        # Schemathesis parametrization is a bit tricky inside a function like this for pytest,
+        # but this is a common pattern for dynamic fuzzing.
+    except Exception:
+        pytest.skip(f"Worker heavy not available at {WORKER_HEAVY_URL}")

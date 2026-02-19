@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -54,7 +55,7 @@ def build():
 
         # Trigger simulation with smoke_test_mode=True
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -114,7 +115,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=120.0,

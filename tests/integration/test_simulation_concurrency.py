@@ -6,6 +6,7 @@ import pytest
 
 # Adjust URL to your worker
 WORKER_LIGHT_URL = "http://localhost:18001"
+WORKER_HEAVY_URL = "http://localhost:18002"
 
 # A simple valid script that does something
 SCRIPT_CONTENT = """
@@ -23,7 +24,7 @@ async def run_simulation(session_id: str):
     async with httpx.AsyncClient(timeout=120.0) as client:
         start_time = time.time()
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={
                 "script_path": "test_box.py",
                 "script_content": SCRIPT_CONTENT,
