@@ -560,23 +560,33 @@ class GenesisBackend(PhysicsBackend):
         if particles is None or len(particles) == 0:
             return None
 
-        # We need to know which entities are electronics.
-        # This information would typically come from the assembly definition.
-        # For now, we'll check if the entity has 'is_electronics' in its config.
+        # Identify electronics either from 'is_electronics' flag or explicit list
+        electronics_names = getattr(self, "_electronics_names", [])
+
         for name, entity in self.entities.items():
             cfg = self.entity_configs.get(name, {})
-            if cfg.get("is_electronics"):
+            if cfg.get("is_electronics") or name in electronics_names:
                 # Get bounding box of the entity
                 # This is simplified; ideally we use the mesh collision
-                state = entity.get_state()
-                if hasattr(state, "pos"):
-                    # Check distance from each particle to entity center
-                    # (Very rough approximation for MVP)
-                    center = np.mean(state.pos[0].cpu().numpy(), axis=0)
-                    dist = np.linalg.norm(particles - center, axis=1)
-                    if np.any(dist < 0.05):  # 5cm threshold
-                        logger.info("electronics_fluid_damage", part=name)
-                        return f"ELECTRONICS_FLUID_DAMAGE:{name}"
+                try:
+                    state = entity.get_state()
+                    if hasattr(state, "pos"):
+                        # Check distance from each particle to entity center
+                        # (Very rough approximation for MVP)
+                        pos_tensor = state.pos[0]
+                        if pos_tensor.ndim == 2:
+                            # FEM or MPM: average over nodes/particles
+                            center = pos_tensor.mean(dim=0).cpu().numpy()
+                        else:
+                            # Rigid or Link: use center
+                            center = pos_tensor.cpu().numpy()
+
+                        dist = np.linalg.norm(particles - center, axis=1)
+                        if np.any(dist < 0.05):  # 5cm threshold
+                            logger.info("electronics_fluid_damage", part=name)
+                            return f"ELECTRONICS_FLUID_DAMAGE:{name}"
+                except Exception:
+                    continue
         return None
 
     def get_body_state(self, body_id: str) -> BodyState:
@@ -1064,6 +1074,10 @@ class GenesisBackend(PhysicsBackend):
             return 0.0
         except Exception:
             return 0.0
+
+    def set_electronics(self, names: list[str]) -> None:
+        """Mark specific entities as electronics for fluid damage detection."""
+        self._electronics_names = names
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in Genesis using qpos."""

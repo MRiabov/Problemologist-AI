@@ -440,7 +440,7 @@ def simulate(
     control_inputs = {}
     if assembly_definition and assembly_definition.moving_parts:
         try:
-            from worker.utils.controllers import sinusoidal
+            from worker.utils.controllers import sinusoidal, square
 
             for part in assembly_definition.moving_parts:
                 if part.control:
@@ -450,6 +450,10 @@ def simulate(
                         )
                     elif part.control.mode == MotorControlMode.CONSTANT:
                         control_inputs[part.part_name] = part.control.speed
+                    elif part.control.mode == MotorControlMode.ON_OFF:
+                        dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            square(t, p.speed, p.frequency or 1.0)
+                        )
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
