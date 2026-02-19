@@ -19,6 +19,7 @@ export S3_SECRET_KEY=minioadmin
 export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
 export WORKER_URL="http://127.0.0.1:18001"
+export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
 
 # Ensure we are in project root
@@ -119,12 +120,20 @@ mkdir -p logs
 # Pre-emptive cleanup of any stale processes from previous runs
 pkill -f "uvicorn.*18000" || true
 pkill -f "uvicorn.*18001" || true
+pkill -f "uvicorn.*18002" || true
 pkill -f "python -m controller.temporal_worker" || true
 
-# Start Worker (port 18001)
-uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
-WORKER_PID=$!
-echo "Worker started (PID: $WORKER_PID)"
+# Start Worker Light (port 18001)
+export WORKER_TYPE=light
+uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > logs/worker_light.log 2>&1 &
+WORKER_LIGHT_PID=$!
+echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
+
+# Start Worker Heavy (port 18002)
+export WORKER_TYPE=heavy
+uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > logs/worker_heavy.log 2>&1 &
+WORKER_HEAVY_PID=$!
+echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
@@ -141,10 +150,10 @@ cleanup() {
   # Record the exit status of the test command
   EXIT_STATUS=$?
   echo ""
-  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker: $WORKER_PID, Temporal: $TEMP_WORKER_PID)..."
+  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID)..."
   
   # Kill the captured PIDs
-  kill $CONTROLLER_PID $WORKER_PID $TEMP_WORKER_PID 2>/dev/null || true
+  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID 2>/dev/null || true
   
   # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
   pkill -f "uvicorn.*18000" || true
@@ -179,27 +188,22 @@ while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
 
-# Wait for Worker to be healthy
+# Wait for Workers to be healthy
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if ! kill -0 $WORKER_PID 2>/dev/null; then
-    echo "Worker process (PID: $WORKER_PID) died unexpectedly!"
-    echo "--- LAST 20 LINES OF WORKER LOG ---"
-    tail -n 20 logs/worker.log
-    exit 1
-  fi
-  if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
-    echo "Worker is healthy!"
+  if curl -s http://127.0.0.1:18001/health | grep -q "healthy" && curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
+    echo "Workers are healthy!"
     break
   fi
-  echo "Waiting for worker... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  echo "Waiting for workers... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
 
 # Final check that all processes are still alive
 if ! kill -0 $CONTROLLER_PID 2>/dev/null; then echo "Controller died!"; exit 1; fi
-if ! kill -0 $WORKER_PID 2>/dev/null; then echo "Worker died!"; exit 1; fi
+if ! kill -0 $WORKER_LIGHT_PID 2>/dev/null; then echo "Worker Light died!"; exit 1; fi
+if ! kill -0 $WORKER_HEAVY_PID 2>/dev/null; then echo "Worker Heavy died!"; exit 1; fi
 if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
   echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"

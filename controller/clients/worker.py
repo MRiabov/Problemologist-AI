@@ -4,7 +4,7 @@ from typing import Literal, Any
 import httpx
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.api.schema import (
+from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
     ExecuteResponse,
@@ -13,8 +13,8 @@ from worker.api.schema import (
     GrepMatch,
     InspectTopologyResponse,
 )
-from worker.filesystem.backend import FileInfo
-from worker.workbenches.models import ManufacturingMethod, WorkbenchResult
+from shared.workers.filesystem.backend import FileInfo
+from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 
 class WorkerClient:
@@ -363,7 +363,7 @@ class WorkerClient:
             if script_content is not None:
                 payload["script_content"] = script_content
             response = await client.post(
-                f"{self.base_url}/benchmark/submit",
+                f"{self.heavy_url}/benchmark/submit",
                 json=payload,
                 headers=self.headers,
                 timeout=30.0,

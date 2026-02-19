@@ -83,7 +83,7 @@ def test_assembly_definition_with_electronics():
 def test_electronics_reference_validation():
     import yaml
 
-    from worker.utils.file_validation import validate_assembly_definition_yaml
+    from worker_heavy.utils.file_validation import validate_assembly_definition_yaml
 
     data = {
         "constraints": {

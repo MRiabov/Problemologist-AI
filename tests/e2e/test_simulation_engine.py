@@ -1,7 +1,7 @@
 # from build123d import Box, Compound, Location
 # from controller.api.main import SimulationRequest
 # from tests.worker.simulation.cases.pusher_bot import get_pusher_bot
-# from worker.utils.simulation import simulate_local
+# from worker_heavy.utils.simulation import simulate_local
 
 
 # class MockStorageClient:

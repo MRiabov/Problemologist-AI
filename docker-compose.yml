@@ -110,13 +110,38 @@ services:
     #       path: ./config
     #       target: /app/config
 
-  worker:
+  worker-light:
     build:
       context: .
-      dockerfile: worker/Dockerfile
-    image: problemologist-ai-worker:latest
+      dockerfile: worker_light/Dockerfile
+    image: problemologist-ai-worker-light:latest
     ports:
       - "18001:8001"
+    environment:
+      - S3_ENDPOINT=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKER_TYPE=light
+    networks:
+      - default
+    command: ["uvicorn", "worker_light.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    env_file:
+      - .env
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./worker_light:/app/worker_light
+      - ./shared:/app/shared
+
+  worker-heavy:
+    build:
+      context: .
+      dockerfile: worker_heavy/Dockerfile
+    image: problemologist-ai-worker-heavy:latest
+    ports:
+      - "18002:8002"
     environment:
       - S3_ENDPOINT=http://minio:9000
       - AWS_ACCESS_KEY_ID=minioadmin
@@ -126,16 +151,21 @@ services:
       - PYVISTA_OFF_SCREEN=true
       - VTK_DEFAULT_OPENGL_RENDERER=OSMesa
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKER_TYPE=heavy
+      - TEMPORAL_URL=temporal:7233
     networks:
       - default
-    command: ["uvicorn", "worker.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    command: ["xvfb-run", "-a", "uvicorn", "worker_heavy.app:app", "--host", "0.0.0.0", "--port", "8002"]
     env_file:
       - .env
     depends_on:
       minio:
         condition: service_healthy
+      temporal:
+        condition: service_started
     volumes:
-      - ./worker:/app/worker
+      - ./worker_heavy:/app/worker_heavy
+      - ./worker_light:/app/worker_light
       - ./shared:/app/shared
     # develop:
     #   watch:

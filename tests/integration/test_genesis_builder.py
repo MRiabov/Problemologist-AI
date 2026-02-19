@@ -11,7 +11,7 @@ from shared.models.schemas import (
     ObjectivesYaml,
     PhysicsConfig,
 )
-from worker.simulation.builder import GenesisSimulationBuilder
+from worker_heavy.simulation.builder import GenesisSimulationBuilder
 
 
 def create_dummy_stl(part, file_path, *args, **kwargs):
@@ -19,9 +19,9 @@ def create_dummy_stl(part, file_path, *args, **kwargs):
     mesh.export(str(file_path))
 
 
-@patch("worker.utils.mesh_utils.tetrahedralize")
-@patch("worker.utils.mesh_utils.repair_mesh_file")
-@patch("worker.simulation.builder.export_stl", side_effect=create_dummy_stl)
+@patch("worker_heavy.utils.mesh_utils.tetrahedralize")
+@patch("worker_heavy.utils.mesh_utils.repair_mesh_file")
+@patch("worker_heavy.simulation.builder.export_stl", side_effect=create_dummy_stl)
 def test_genesis_builder_generates_msh_when_fem_enabled(
     mock_export_stl, mock_repair, mock_tetra, tmp_path
 ):
@@ -69,9 +69,9 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
     assert mock_export_stl.call_count >= 2
 
 
-@patch("worker.utils.mesh_utils.tetrahedralize")
-@patch("worker.utils.mesh_utils.repair_mesh_file")
-@patch("worker.simulation.builder.export_stl", side_effect=create_dummy_stl)
+@patch("worker_heavy.utils.mesh_utils.tetrahedralize")
+@patch("worker_heavy.utils.mesh_utils.repair_mesh_file")
+@patch("worker_heavy.simulation.builder.export_stl", side_effect=create_dummy_stl)
 def test_genesis_builder_no_msh_when_fem_disabled(
     mock_export_stl, mock_repair, mock_tetra, tmp_path
 ):

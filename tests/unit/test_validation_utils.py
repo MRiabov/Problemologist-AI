@@ -1,7 +1,7 @@
 import yaml
 
 from shared.models.simulation import StressSummary
-from worker.utils.validation import (
+from worker_heavy.utils.validation import (
     SimulationResult,
     define_fluid,
     get_stress_report,
