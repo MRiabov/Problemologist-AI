@@ -130,9 +130,10 @@ def preview_stress(
 
     render_paths = []
     for part_label, field_data in res.stress_fields.items():
-        field = StressField(
-            nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
-        )
+        # T019: Use attribute access for StressFieldData model (WP2)
+        nodes = getattr(field_data, "nodes", None) or field_data["nodes"]
+        stress = getattr(field_data, "stress", None) or field_data["stress"]
+        field = StressField(nodes=np.array(nodes), stress=np.array(stress))
         out_path = stress_renders_dir / f"stress_{part_label}.png"
 
         # Use the exported mesh for better VLM visibility if available
@@ -394,7 +395,7 @@ def simulate(
                 data = yaml.safe_load(content)
                 objectives = ObjectivesYaml(**data)
             except Exception as e:
-                logger.warning("failed_to_load_objectives", error=str(e))
+                logger.error("failed_to_load_objectives", error=str(e))
 
     cost_est_path = working_dir / "assembly_definition.yaml"
     if cost_est_path.exists():
@@ -402,7 +403,7 @@ def simulate(
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
             assembly_definition = AssemblyDefinition(**data)
         except Exception as e:
-            logger.warning("failed_to_load_assembly_definition", error=str(e))
+            logger.error("failed_to_load_assembly_definition", error=str(e))
 
     backend_type = backend
     if backend_type is None:
@@ -542,7 +543,7 @@ def simulate(
             try:
                 save_simulation_result(result, working_dir / "simulation_result.json")
             except Exception as e:
-                logger.warning(
+                logger.error(
                     "failed_to_save_simulation_result_pre_preview", error=str(e)
                 )
 
@@ -552,7 +553,7 @@ def simulate(
         try:
             save_simulation_result(result, working_dir / "simulation_result.json")
         except Exception as e:
-            logger.warning("failed_to_save_simulation_result", error=str(e))
+            logger.error("failed_to_save_simulation_result", error=str(e))
 
         return result
     except Exception as e:
@@ -673,6 +674,7 @@ def validate_fem_manufacturability(
                 )
                 return False, msg
     except Exception as e:
-        logger.warning("fem_manufacturability_check_failed", error=str(e))
+        logger.error("fem_manufacturability_check_failed", error=str(e))
+        return False, f"FEM manufacturability check failed: {e!s}"
 
     return True, None
