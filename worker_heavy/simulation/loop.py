@@ -327,6 +327,10 @@ class SimulationLoop:
                     target_body_name = name
                     break
 
+            # T025: Fallback to part_0 if no explicit target found
+            if target_body_name is None and "part_0" in all_bodies:
+                target_body_name = "part_0"
+
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         for step_idx in range(steps):
@@ -413,7 +417,7 @@ class SimulationLoop:
                     break
 
                 # Check Motor Overload
-                if self._check_motor_overload():
+                if self._check_motor_overload(dt):
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                     break
 
@@ -640,10 +644,8 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, dt: float) -> bool:
         # Check all position/torque actuators for saturation
-        from worker_heavy.simulation.loop import SIMULATION_STEP_S
-
         if not self._monitor_names:
             return False
 
@@ -652,7 +654,7 @@ class SimulationLoop:
         ]
 
         return self.success_evaluator.check_motor_overload(
-            self._monitor_names, forces, self._monitor_limits, SIMULATION_STEP_S
+            self._monitor_names, forces, self._monitor_limits, dt
         )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
