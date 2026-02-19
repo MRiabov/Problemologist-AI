@@ -22,7 +22,6 @@ from shared.models.simulation import (
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
-from worker.simulation.loop import SimulationLoop
 from worker.workbenches.config import load_config
 
 from .dfm import validate_and_price
@@ -371,6 +370,8 @@ def simulate(
     session_id: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
+    from worker.simulation.loop import SimulationLoop
+
     logger.info(
         "simulate_start",
         fem_enabled=fem_enabled,

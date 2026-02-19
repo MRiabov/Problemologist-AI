@@ -232,6 +232,12 @@ class SimulationLoop:
         # Bridge back is_powered_map for existing code compatibility if needed,
         # but better to use electronics_manager.is_powered_map directly.
         self.is_powered_map = self.electronics_manager.is_powered_map
+        self.electronics_validation_error = self.electronics_manager.validation_error
+
+    @property
+    def switch_states(self) -> dict[str, bool]:
+        """Expose electronics switch states for the agent/activity."""
+        return self.electronics_manager.switch_states
 
     def reset_metrics(self):
         self.metric_collector.reset()
