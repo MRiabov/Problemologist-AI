@@ -25,14 +25,32 @@ class MuJoCoBackend(PhysicsBackend):
         self.data = None
         self.renderer = None
         self.custom_cameras = {}  # name -> mjvCamera
+        self._id_cache: dict[tuple[int, str], int] = {}
 
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
+            self._id_cache.clear()
             if scene.scene_path:
                 self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
                 self.data = mujoco.MjData(self.model)
             else:
                 raise ValueError("MuJoCoBackend requires scene_path")
+
+    def _get_id(self, obj_type: int, name: str) -> int:
+        if self.model is None:
+            return -1
+        key = (obj_type, name)
+        if key in self._id_cache:
+            return self._id_cache[key]
+
+        try:
+            id = mujoco.mj_name2id(self.model, obj_type, name)
+        except Exception:
+            # Fallback for older bindings or other errors
+            id = -1
+
+        self._id_cache[key] = id
+        return id
 
     def step(self, dt: float) -> StepResult:
         with self._lock:
@@ -67,10 +85,12 @@ class MuJoCoBackend(PhysicsBackend):
 
     def get_body_state(self, body_id: str) -> BodyState:
         # MuJoCo uses integer IDs or names
-        try:
-            bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_id)
-        except:
-            bid = int(body_id)
+        bid = self._get_id(mujoco.mjtObj.mjOBJ_BODY, body_id)
+        if bid == -1:
+            try:
+                bid = int(body_id)
+            except ValueError:
+                pass
 
         if bid == -1:
             raise ValueError(f"Body {body_id} not found")
@@ -172,7 +192,7 @@ class MuJoCoBackend(PhysicsBackend):
         return np.eye(4)
 
     def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
-        sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        sid = self._get_id(mujoco.mjtObj.mjOBJ_SITE, site_name)
         if sid != -1:
             self.model.site_pos[sid] = pos
         else:
@@ -210,7 +230,7 @@ class MuJoCoBackend(PhysicsBackend):
         return forces
 
     def get_site_state(self, site_name: str) -> SiteState:
-        sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        sid = self._get_id(mujoco.mjtObj.mjOBJ_SITE, site_name)
         if sid == -1:
             raise ValueError(f"Site {site_name} not found")
 
@@ -224,7 +244,7 @@ class MuJoCoBackend(PhysicsBackend):
         )
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
-        aid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name)
+        aid = self._get_id(mujoco.mjtObj.mjOBJ_ACTUATOR, actuator_name)
         if aid == -1:
             raise ValueError(f"Actuator {actuator_name} not found")
 
@@ -247,7 +267,7 @@ class MuJoCoBackend(PhysicsBackend):
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         for name, value in control_inputs.items():
-            aid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
+            aid = self._get_id(mujoco.mjtObj.mjOBJ_ACTUATOR, name)
             if aid != -1:
                 self.data.ctrl[aid] = value
 
@@ -276,8 +296,8 @@ class MuJoCoBackend(PhysicsBackend):
         ]
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
-        bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
-        sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+        bid = self._get_id(mujoco.mjtObj.mjOBJ_BODY, body_name)
+        sid = self._get_id(mujoco.mjtObj.mjOBJ_SITE, site_name)
         if bid == -1 or sid == -1:
             return False
 
@@ -321,14 +341,14 @@ class MuJoCoBackend(PhysicsBackend):
         return False
 
     def get_tendon_tension(self, tendon_name: str) -> float:
-        tid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_TENDON, tendon_name)
+        tid = self._get_id(mujoco.mjtObj.mjOBJ_TENDON, tendon_name)
         if tid == -1:
             raise ValueError(f"Tendon {tendon_name} not found")
         return float(self.data.ten_force[tid])
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in MuJoCo."""
-        body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        body_id = self._get_id(mujoco.mjtObj.mjOBJ_BODY, body_name)
         if body_id == -1:
             return
 
@@ -340,10 +360,10 @@ class MuJoCoBackend(PhysicsBackend):
     def close(self) -> None:
         """Close MuJoCo backend."""
         # MuJoCo doesn't have a specific close() but we can clear data
-        self.data = None
-        self.model = None
-
-    def close(self) -> None:
         if self.renderer:
             self.renderer.close()
             self.renderer = None
+        self.data = None
+        self.model = None
+        if hasattr(self, "_id_cache"):
+            self._id_cache.clear()
