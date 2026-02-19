@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
 
 @pytest.mark.integration_p1
@@ -59,7 +59,7 @@ async def test_int_045_skills_sync_lifecycle():
 
         # Checking filesystem for journal or specific skill log
         fs_resp = await client.post(
-            f"{WORKER_URL}/fs/read",
+            f"{WORKER_LIGHT_URL}/fs/read",
             json={"path": "journal.md"},
             headers={"X-Session-ID": session_id},
         )
@@ -80,7 +80,7 @@ async def test_int_045_skills_sync_lifecycle():
         # We can also check if the skills directory exists on the worker.
 
         fs_ls_resp = await client.post(
-            f"{WORKER_URL}/fs/ls",
+            f"{WORKER_LIGHT_URL}/fs/ls",
             json={
                 "path": "skills/build123d_cad_drafting_skill"
             },  # Check specific skill

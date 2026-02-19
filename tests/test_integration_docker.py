@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
 
 @pytest.mark.integration
@@ -25,11 +25,11 @@ async def test_services_health():
 
         # Check Worker
         try:
-            resp = await client.get(f"{WORKER_URL}/health", timeout=10.0)
+            resp = await client.get(f"{WORKER_LIGHT_URL}/health", timeout=10.0)
             assert resp.status_code == 200
             assert resp.json()["status"].lower() in ["healthy", "ok"]
         except Exception as e:
-            pytest.fail(f"Worker at {WORKER_URL} is not reachable: {e}")
+            pytest.fail(f"Worker at {WORKER_LIGHT_URL} is not reachable: {e}")
 
 
 @pytest.mark.integration
@@ -71,7 +71,7 @@ async def test_controller_to_worker_agent_run():
 
         # Verify the file was actually written to the worker's filesystem
         fs_resp = await client.post(
-            f"{WORKER_URL}/fs/read",
+            f"{WORKER_LIGHT_URL}/fs/read",
             json={"path": "hello_integration.txt"},
             headers={"X-Session-ID": session_id},
         )

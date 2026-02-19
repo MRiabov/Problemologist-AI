@@ -25,7 +25,7 @@ except Exception as e:
     logger.warning("failed_to_initialize_langfuse_globally", error=str(e))
 
 TEMPORAL_URL = settings.temporal_url
-WORKER_URL = settings.worker_url
+WORKER_LIGHT_URL = settings.worker_light_url
 
 # Temporal client
 temporal_client_instance: Client = None

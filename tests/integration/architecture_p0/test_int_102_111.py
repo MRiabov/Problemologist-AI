@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -23,7 +23,7 @@ async def setup_fem_workspace(client, headers, objectives_content, script_conten
     """Utility to setup a FEM workspace."""
     # Write objectives.yaml
     await client.post(
-        f"{WORKER_URL}/fs/write",
+        f"{WORKER_LIGHT_URL}/fs/write",
         json={
             "path": "objectives.yaml",
             "content": objectives_content,
@@ -35,7 +35,7 @@ async def setup_fem_workspace(client, headers, objectives_content, script_conten
     # Write script.py if provided
     if script_content:
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "script.py", "content": script_content, "overwrite": True},
             headers=headers,
         )
@@ -81,7 +81,7 @@ def build():
         # 2. Test INT-111: validate_and_price gate
         # We expect this to fail because aluminum_6061 lacks FEM fields
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -92,7 +92,7 @@ def build():
 
         # 3. Test INT-102: simulate entry gate
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -126,7 +126,7 @@ cnc:
       compatibility: ["cnc"]
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
             headers=base_headers,
         )
@@ -162,7 +162,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -201,7 +201,7 @@ cnc:
       compatibility: ["cnc"]
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
             headers=base_headers,
         )
@@ -235,7 +235,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -299,7 +299,7 @@ cnc:
       compatibility: ["cnc"]
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
             headers=base_headers,
         )
@@ -322,7 +322,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -383,7 +383,7 @@ cnc:
       compatibility: ["cnc"]
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
             headers=base_headers,
         )
@@ -394,7 +394,7 @@ cnc:
 
         # Skip geometric validation to allow intersection
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py", "skip_validate": True},
             headers=base_headers,
             timeout=120.0,

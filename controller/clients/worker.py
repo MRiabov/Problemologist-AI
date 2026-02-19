@@ -30,7 +30,7 @@ class WorkerClient:
         """Initialize the worker client.
 
         Args:
-            base_url: Base URL of the light worker service (e.g., http://worker:8000).
+            base_url: Base URL of the light worker service (e.g., http://worker-light:8000).
             session_id: Session ID to use for all requests.
             http_client: Pre-configured httpx.AsyncClient to reuse.
             heavy_url: Optional base URL of the heavy worker service.
@@ -71,7 +71,13 @@ class WorkerClient:
         pass
 
     async def aclose(self):
-        """Explicitly close the shared HTTP client if it was created locally."""
+        """Explicitly close all HTTP clients created for different loops."""
+        # WP08: Handle loop-specific clients
+        for loop_id, client in list(self._loop_clients.items()):
+            await client.aclose()
+            del self._loop_clients[loop_id]
+
+        # Compatibility for legacy _cached_client check in tests
         if hasattr(self, "_cached_client") and self._cached_client:
             await self._cached_client.aclose()
             self._cached_client = None

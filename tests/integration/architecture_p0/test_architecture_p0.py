@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -17,7 +17,7 @@ async def test_int_001_compose_boot_health_contract():
     """INT-001: Verify services are up and healthy."""
     async with httpx.AsyncClient() as client:
         # Worker health
-        resp = await client.get(f"{WORKER_URL}/health", timeout=5.0)
+        resp = await client.get(f"{WORKER_LIGHT_URL}/health", timeout=5.0)
         assert resp.status_code == 200
         assert resp.json() == {"status": "healthy"}
 
@@ -71,14 +71,14 @@ async def test_int_003_session_filesystem_isolation():
 
         # Write to A
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "secret.txt", "content": "secret_data"},
             headers={"X-Session-ID": session_a},
         )
 
         # Try read from B
         resp = await client.post(
-            f"{WORKER_URL}/fs/read",
+            f"{WORKER_LIGHT_URL}/fs/read",
             json={"path": "secret.txt"},
             headers={"X-Session-ID": session_b},
         )
@@ -106,12 +106,12 @@ def build():
         # Write scripts
         await asyncio.gather(
             client.post(
-                f"{WORKER_URL}/fs/write",
+                f"{WORKER_LIGHT_URL}/fs/write",
                 json={"path": "box.py", "content": script},
                 headers={"X-Session-ID": session_id_1},
             ),
             client.post(
-                f"{WORKER_URL}/fs/write",
+                f"{WORKER_LIGHT_URL}/fs/write",
                 json={"path": "box.py", "content": script},
                 headers={"X-Session-ID": session_id_2},
             ),
@@ -122,13 +122,13 @@ def build():
         # Launch two simulations concurrently
         res1, res2 = await asyncio.gather(
             client.post(
-                f"{WORKER_URL}/benchmark/simulate",
+                f"{WORKER_LIGHT_URL}/benchmark/simulate",
                 json={"script_path": "box.py", "backend": "mujoco"},
                 headers={"X-Session-ID": session_id_1},
                 timeout=600.0,
             ),
             client.post(
-                f"{WORKER_URL}/benchmark/simulate",
+                f"{WORKER_LIGHT_URL}/benchmark/simulate",
                 json={"script_path": "box.py", "backend": "mujoco"},
                 headers={"X-Session-ID": session_id_2},
                 timeout=600.0,
@@ -187,7 +187,7 @@ constraints:
 """
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "objectives.yaml",
                 "content": objectives_content,
@@ -211,7 +211,7 @@ def build():
 """
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "fail.py", "content": script_fail},
             headers={"X-Session-ID": session_id},
         )
@@ -230,12 +230,12 @@ def run():
 run()
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "debug_stl.py", "content": debug_stl_script},
             headers={"X-Session-ID": session_id},
         )
         resp_exec = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={
                 "code": "import sys; sys.path.append('.'); import debug_stl; debug_stl.run()",
                 "timeout": 120,
@@ -249,7 +249,7 @@ run()
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "fail.py", "backend": "mujoco"},
             headers={"X-Session-ID": session_id},
             timeout=600.0,
@@ -302,7 +302,7 @@ constraints:
     max_weight_g: 10
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "objectives.yaml",
                 "content": objectives_content,
@@ -316,13 +316,13 @@ constraints:
             script_content = f.read()
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "verify_jitter.py", "content": script_content},
             headers={"X-Session-ID": session_id},
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={
                 "code": (
                     "import sys; sys.path.append('.'); import verify_jitter; "
@@ -359,13 +359,13 @@ async def test_int_022_motor_overload_behavior():
             script_content = f.read()
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "verify_overload.py", "content": script_content},
             headers={"X-Session-ID": session_id},
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={
                 "code": (
                     "import sys; sys.path.append('.'); import verify_overload; "
@@ -415,13 +415,13 @@ def build():
     return res
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "valid_hole.py", "content": script_valid},
             headers={"X-Session-ID": session_id},
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "valid_hole.py"},
             headers={"X-Session-ID": session_id},
             timeout=30.0,  # Validate is fast

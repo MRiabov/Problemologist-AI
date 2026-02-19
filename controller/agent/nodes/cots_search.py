@@ -73,7 +73,7 @@ class COTSSearchNode(BaseNode):
 async def cots_search_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
-        worker_url=settings.spec_001_api_url, session_id=session_id
+        worker_light_url=settings.spec_001_api_url, session_id=session_id
     )
     node = COTSSearchNode(context=ctx)
     return await node(state)

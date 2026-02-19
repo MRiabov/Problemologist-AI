@@ -137,13 +137,14 @@ async def update_objectives(
         raise HTTPException(status_code=404, detail="Session not found")
 
     from controller.agent.config import settings
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+
+    worker_light_url = os.getenv("WORKER_LIGHT_URL", "http://worker-light:8001")
     async with httpx.AsyncClient() as http_client:
         client = WorkerClient(
-            base_url=worker_url,
+            base_url=worker_light_url,
             session_id=str(session_id),
             http_client=http_client,
-            heavy_url=settings.worker_heavy_url
+            heavy_url=settings.worker_heavy_url,
         )
 
         try:

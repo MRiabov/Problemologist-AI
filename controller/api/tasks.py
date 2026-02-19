@@ -17,7 +17,7 @@ from shared.enums import AssetType, EpisodeStatus, TraceType
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
-WORKER_URL = settings.worker_url
+WORKER_LIGHT_URL = settings.worker_light_url
 
 
 class AgentRunRequest(BaseModel):
@@ -43,7 +43,7 @@ def get_worker_client(session_id: str):
     from controller.clients.worker import WorkerClient
 
     return WorkerClient(
-        base_url=WORKER_URL,
+        base_url=WORKER_LIGHT_URL,
         session_id=session_id,
         heavy_url=settings.worker_heavy_url,
     )

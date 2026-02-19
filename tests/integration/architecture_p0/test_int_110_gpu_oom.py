@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         # I will implement it as a "known-to-fail-or-skip-if-no-gpu" test.
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers=base_headers,
         )
@@ -55,7 +55,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         # Trigger simulation with a huge particle count that exceeds typical RAM/VRAM
         # (Though current worker caps at 100k, we might need a way to force OOM)
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py", "particle_budget": 10**9},
             headers=base_headers,
             timeout=180.0,

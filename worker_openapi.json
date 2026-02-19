@@ -1060,6 +1060,324 @@
           }
         }
       }
+    },
+    "/benchmark/simulate": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Simulate",
+        "description": "Physics-backed stability check in isolated session.",
+        "operationId": "api_simulate_benchmark_simulate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/validate": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Validate",
+        "description": "Geometric validity check in isolated session.",
+        "operationId": "api_validate_benchmark_validate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/analyze": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Analyze",
+        "description": "Component analysis (topology, material, weight) in isolated session.",
+        "operationId": "api_analyze_benchmark_analyze_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/preview": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Preview",
+        "description": "Render a preview of the CAD design from specified camera angles.",
+        "operationId": "api_preview_benchmark_preview_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewDesignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/build": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Build",
+        "description": "Rebuild simulation assets (GLB) from source without running full simulation.",
+        "operationId": "api_build_benchmark_build_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/submit": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Submit",
+        "description": "Handover to reviewer in isolated session (moved to heavy due to DFM dependencies).",
+        "operationId": "api_submit_benchmark_submit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1703,6 +2021,448 @@
         ],
         "title": "WriteFileRequest",
         "description": "Request to write a file."
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "genesis"
+          },
+          "smoke_test_mode": {
+            "type": "boolean",
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          },
+          "method": {
+            "$ref": "#/components/schemas/ManufacturingMethod",
+            "description": "Manufacturing method to analyze (cnc, 3dp, im)."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantity",
+            "description": "Number of units to manufacture for pricing.",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "AnalyzeRequest",
+        "description": "Request to run manufacturing analysis."
+      },
+      "BenchmarkToolRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "genesis"
+          },
+          "smoke_test_mode": {
+            "type": "boolean",
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          }
+        },
+        "type": "object",
+        "title": "BenchmarkToolRequest",
+        "description": "Request to run a benchmark tool (simulate, validate, etc.)."
+      },
+      "BenchmarkToolResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
+          },
+          "artifacts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationArtifacts"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "BenchmarkToolResponse",
+        "description": "Response from a benchmark tool."
+      },
+      "CostBreakdown": {
+        "properties": {
+          "process": {
+            "type": "string",
+            "title": "Process"
+          },
+          "total_cost": {
+            "type": "number",
+            "title": "Total Cost"
+          },
+          "unit_cost": {
+            "type": "number",
+            "title": "Unit Cost"
+          },
+          "material_cost_per_unit": {
+            "type": "number",
+            "title": "Material Cost Per Unit"
+          },
+          "setup_cost": {
+            "type": "number",
+            "title": "Setup Cost"
+          },
+          "is_reused": {
+            "type": "boolean",
+            "title": "Is Reused"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "pricing_explanation": {
+            "type": "string",
+            "title": "Pricing Explanation",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "process",
+          "total_cost",
+          "unit_cost",
+          "material_cost_per_unit",
+          "setup_cost",
+          "is_reused"
+        ],
+        "title": "CostBreakdown"
+      },
+      "ManufacturingMethod": {
+        "type": "string",
+        "enum": [
+          "cnc",
+          "3dp",
+          "im"
+        ],
+        "title": "ManufacturingMethod",
+        "description": "Supported manufacturing methods."
+      },
+      "PreviewDesignRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "pitch": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch",
+            "description": "Camera elevation angle in degrees (negative = looking down).",
+            "default": -45.0
+          },
+          "yaw": {
+            "type": "number",
+            "exclusiveMaximum": 360.0,
+            "minimum": 0.0,
+            "title": "Yaw",
+            "description": "Camera azimuth angle in degrees (clockwise from front).",
+            "default": 45.0
+          }
+        },
+        "type": "object",
+        "title": "PreviewDesignRequest",
+        "description": "Request to preview a CAD design from specific angles."
+      },
+      "PreviewDesignResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Path"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "PreviewDesignResponse",
+        "description": "Response from preview design endpoint."
+      },
+      "SimulationArtifacts": {
+        "properties": {
+          "render_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Render Paths"
+          },
+          "mjcf_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mjcf Content"
+          },
+          "stress_summaries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Stress Summaries"
+          },
+          "fluid_metrics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fluid Metrics"
+          },
+          "scene_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Path"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SimulationArtifacts",
+        "description": "Structured artifacts from a simulation run."
+      },
+      "SimulatorBackendType": {
+        "type": "string",
+        "enum": [
+          "mujoco",
+          "genesis"
+        ],
+        "title": "SimulatorBackendType"
+      },
+      "WorkbenchMetadata": {
+        "properties": {
+          "cost_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dof_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dof Count"
+          },
+          "dof_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dof Warning"
+          },
+          "undercut_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undercut Count"
+          },
+          "gate_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Count"
+          },
+          "additional_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Info"
+          }
+        },
+        "type": "object",
+        "title": "WorkbenchMetadata",
+        "description": "Standardized metadata for workbench results."
+      },
+      "WorkbenchResult": {
+        "properties": {
+          "is_manufacturable": {
+            "type": "boolean",
+            "title": "Is Manufacturable"
+          },
+          "unit_cost": {
+            "type": "number",
+            "title": "Unit Cost"
+          },
+          "weight_g": {
+            "type": "number",
+            "title": "Weight G",
+            "default": 0.0
+          },
+          "violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/WorkbenchMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_manufacturable",
+          "unit_cost"
+        ],
+        "title": "WorkbenchResult"
       }
     }
   }

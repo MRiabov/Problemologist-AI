@@ -26,7 +26,7 @@ async def test_all_agents_initialization():
         ),
     ):
         mock_ctx = SharedNodeContext.create(
-            worker_url="http://worker", session_id="test"
+            worker_light_url="http://worker", session_id="test"
         )
 
         # 1. Engineer Coder

@@ -17,7 +17,7 @@ from shared.utils.evaluation import analyze_electronics_metrics
 load_dotenv()
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
 
 async def _handle_electronics_metrics(
@@ -141,7 +141,7 @@ async def run_single_eval(
             agent_stats["success"] += 1
 
             # 3. Post-run verification & Metrics
-            worker = WorkerClient(base_url=WORKER_URL, session_id=session_id)
+            worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
             handler = METRIC_HANDLERS.get(agent_name)
             if handler:
                 await handler(worker, session_id, agent_stats)
@@ -192,15 +192,15 @@ async def main():
             print(f"Error: Could not connect to controller at {CONTROLLER_URL}: {e}")
             sys.exit(1)
 
-    print(f"Checking worker health at {WORKER_URL}...")
-    temp_client = WorkerClient(base_url=WORKER_URL, session_id="healthcheck")
+    print(f"Checking worker health at {WORKER_LIGHT_URL}...")
+    temp_client = WorkerClient(base_url=WORKER_LIGHT_URL, session_id="healthcheck")
     try:
         health = await temp_client.get_health()
         if health.get("status") != "healthy":
             print(f"Error: Worker is unhealthy: {health}")
             sys.exit(1)
     except Exception as e:
-        print(f"Error: Could not connect to worker at {WORKER_URL}: {e}")
+        print(f"Error: Could not connect to worker at {WORKER_LIGHT_URL}: {e}")
 
     # Load datasets
     evals_root = Path(__file__).parent / "datasets"
