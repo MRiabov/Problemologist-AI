@@ -119,10 +119,23 @@ class MuJoCoBackend(PhysicsBackend):
         return self.render_camera(cam_name or "fixed", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
-        if self.renderer is None:
-            self.renderer = mujoco.Renderer(self.model, width, height)
+        # Recreate renderer every time to avoid resolution/framebuffer issues
+        if self.renderer is not None:
+            try:
+                self.renderer.close()
+            except:
+                pass
 
+        self.renderer = mujoco.Renderer(self.model, width, height)
+
+        # Check if camera exists, otherwise fallback to default view
         cam = self.custom_cameras.get(camera_name, camera_name)
+        if isinstance(cam, str):
+            cid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, cam)
+            if cid == -1:
+                # logger.warning("mujoco_camera_not_found_falling_back", camera=cam)
+                cam = None
+
         self.renderer.update_scene(self.data, camera=cam)
         return self.renderer.render()
 
@@ -229,18 +242,21 @@ class MuJoCoBackend(PhysicsBackend):
             raise ValueError(f"Actuator {actuator_name} not found")
 
         # Get actuator velocity. In MuJoCo, this depends on the joint it's attached to.
-        # Simple heuristic: use data.actuator_velocity if available (it's not in older versions)
-        # Or use data.qvel for the joint.
-
-        # For now, let's use 0 or try to find the joint
         vel = 0.0
         # actuator_velocity is available in newer mujoco
         if hasattr(self.data, "actuator_velocity"):
             vel = self.data.actuator_velocity[aid]
+        else:
+            # Fallback: find joint and use its velocity
+            trntype = self.model.actuator_trntype[aid]
+            if trntype == mujoco.mjtTrn.mjTRN_JOINT:
+                joint_id = self.model.actuator_trnid[aid, 0]
+                qvel_adr = self.model.jnt_doveladr[joint_id]
+                vel = self.data.qvel[qvel_adr]
 
         return ActuatorState(
             force=self.data.actuator_force[aid],
-            velocity=vel,
+            velocity=float(vel),
             ctrl=self.data.ctrl[aid],
             forcerange=tuple(self.model.actuator_forcerange[aid].tolist()),
         )
@@ -278,18 +294,28 @@ class MuJoCoBackend(PhysicsBackend):
     def check_collision(self, body_name: str, site_name: str) -> bool:
         bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
         sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+
         if bid == -1 or sid == -1:
             return False
 
         geom_start = self.model.body_geomadr[bid]
         geom_num = self.model.body_geomnum[bid]
-        if geom_start == -1:
-            return False
 
         zone_pos = self.data.site_xpos[sid]
         zone_size = self.model.site_size[sid]
         zone_type = self.model.site_type[sid]
         site_mat = self.data.site_xmat[sid].reshape(3, 3)
+
+        # Fallback: check body center if no geoms
+        if geom_num == 0:
+            body_pos = self.data.xpos[bid]
+            diff = body_pos - zone_pos
+            v_local = diff @ site_mat
+            if zone_type == mujoco.mjtGeom.mjGEOM_BOX:
+                return all(np.abs(v_local) <= zone_size[:3])
+            elif zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+                return np.linalg.norm(diff) <= zone_size[0]
+            return False
 
         for i in range(geom_num):
             geom_id = geom_start + i
@@ -305,17 +331,20 @@ class MuJoCoBackend(PhysicsBackend):
                 raw_verts = self.model.mesh_vert[vert_adr : vert_adr + vert_num]
                 vertices = geom_pos + raw_verts @ geom_mat.T
             else:
+                # For non-mesh geoms, just use center for now
                 vertices = np.array([geom_pos])
 
             # Check vertices against the zone
             if zone_type == mujoco.mjtGeom.mjGEOM_BOX:
                 diff = vertices - zone_pos
                 v_local = diff @ site_mat
-                in_box = np.all(np.abs(v_local) <= zone_size[:3], axis=1)
+                # Use np.atleast_2d to handle single vertex case
+                in_box = np.all(np.abs(np.atleast_2d(v_local)) <= zone_size[:3], axis=1)
                 if np.any(in_box):
                     return True
             elif zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
-                dists = np.linalg.norm(vertices - zone_pos, axis=1)
+                diff = vertices - zone_pos
+                dists = np.linalg.norm(np.atleast_2d(diff), axis=1)
                 if np.any(dists < zone_size[0]):
                     return True
         return False
@@ -338,12 +367,12 @@ class MuJoCoBackend(PhysicsBackend):
         mujoco.mj_forward(self.model, self.data)
 
     def close(self) -> None:
-        """Close MuJoCo backend."""
-        # MuJoCo doesn't have a specific close() but we can clear data
+        """Close MuJoCo backend and release resources."""
+        if self.renderer:
+            try:
+                self.renderer.close()
+            except Exception:
+                pass
+            self.renderer = None
         self.data = None
         self.model = None
-
-    def close(self) -> None:
-        if self.renderer:
-            self.renderer.close()
-            self.renderer = None

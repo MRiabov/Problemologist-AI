@@ -1,0 +1,331 @@
+scenarios:
+  # INT-002: Engineering execution boundary
+  test-exec:
+    planner:
+      thought: "I will generate the engineering plan for the 10x10x10mm box."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nBuild a box.')
+        with open('todo.md', 'w') as f: f.write('- [x] Step 1')
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
+        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight: 1.0}')
+    coder:
+      thought: "I will implement the box in build123d and run simulation."
+      generated_code: |
+        from build123d import *
+        with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+        with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
+    reviewer:
+      decision: "approved"
+      review:
+        decision: "APPROVE"
+        reason: "The design satisfies all requirements."
+        required_fixes: []
+
+  # Benchmark workflow (detected by prompt or UUID session_id)
+  benchmark:
+    planner:
+      thought: "Designing benchmark scenario with a wall and a goal."
+      reasoning: "Creating a simple path planning task with randomization to verify agent movement robustness."
+      plan:
+        theme: "path_planning_with_wall"
+        reasoning: "Creating a simple path planning task to verify movement."
+        params: { wall_height: 50, goal_pos: [100, 100, 0] }
+    coder:
+      thought: "Implementing benchmark script and setting up mandatory files."
+      generated_code: |
+        with open('script.py', 'w') as f:
+            f.write('from build123d import *\ndef build(): return Box(10,10,10)')
+
+        objectives_content = """
+        objectives:
+          goal_zone: {min: [80, 80, 0], max: [100, 100, 20]}
+          forbid_zones: []
+          build_zone: {min: [-100, -100, 0], max: [100, 100, 100]}
+        physics:
+          backend: genesis
+        simulation_bounds: {min: [-150, -150, 0], max: [150, 150, 200]}
+        moved_object:
+          label: ball
+          shape: sphere
+          static_randomization: {radius: [5, 5]}
+          start_position: [0, 0, 10]
+          runtime_jitter: [1, 1, 0]
+        constraints:
+          max_unit_cost: 100.0
+          max_weight_g: 1000.0
+        """
+        with open('objectives.yaml', 'w') as f: f.write(objectives_content.strip())
+
+        with open('plan.md', 'w') as f:
+            f.write('## 1. Learning Objective\nPath planning.\n## 2. Geometry\nA wall.\n## 3. Objectives\nGoal at corner.')
+
+        with open('todo.md', 'w') as f:
+            f.write('# TODO\n- [x] Done')
+    reviewer:
+      thought: "Reviewing benchmark files."
+      review:
+        decision: "approved"
+        reason: "The design is valid and objectives are well-defined."
+        required_fixes: []
+    cots_search:
+      search_summary: "Found required hardware for benchmark setup."
+
+  INT-002:
+    planner:
+      thought: "Generating INT-002 plan."
+      plan: "Build a 10x10x10mm box."
+    coder:
+      thought: "Implementing box."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(10,10,10)')"
+      finished: true
+    reviewer:
+      review:
+        decision: "approved"
+        reason: "Looks good."
+
+  INT-016:
+    planner:
+      thought: "Review schema test for INT-016."
+    coder:
+      thought: "Running review schema task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-017:
+    planner:
+      thought: "Refusal loop test for INT-017."
+    coder:
+      thought: "Running refusal task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-030:
+    planner:
+      thought: "Starting a long task for INT-030..."
+      plan: "A very long plan that will be interrupted."
+    coder:
+      thought: "Executing long task..."
+      generated_code: "import time; time.sleep(10)"
+
+  INT-031:
+    planner:
+      thought: "Designing benchmark for INT-031."
+      plan: "## 1. Solution Overview\nA wall and a goal.\n## 2. Parts List\n- Wall\n- Goal\n## 3. Assembly Strategy\nPlace wall.\n## 4. Cost & Weight Budget\n$10, 100g\n## 5. Risk Assessment\nLow."
+    coder:
+      thought: "Implementing benchmark geometry."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nWall.')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [10,10,10], max: [20,20,20]}}')
+    reviewer:
+      review:
+        decision: "approved"
+        reason: "Benchmark valid."
+
+  INT-033:
+    planner:
+      thought: "Engineering loop for INT-033."
+      plan: "Solve the stacking blocks benchmark."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nStack.')
+        with open('todo.md', 'w') as f: f.write('- [x] Done')
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\ntotals: {estimated_unit_cost_usd: 5}')
+    coder:
+      thought: "Implementing stacking solution."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+    reviewer:
+      review:
+        decision: "approved"
+        reason: "Stacking approved."
+
+  INT-034:
+    planner:
+      thought: "Engineering loop for INT-034."
+      plan: "Solve trivial benchmark."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTrivial.')
+        with open('todo.md', 'w') as f: f.write('- [x] Done')
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\ntotals: {estimated_unit_cost_usd: 1}')
+    coder:
+      thought: "Implementing trivial solution."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+    reviewer:
+      review:
+        decision: "approved"
+        reason: "Trivial approved."
+
+  INT-043:
+    planner:
+      thought: "Batch execution test for INT-043."
+    coder:
+      thought: "Running batch task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-058:
+    planner:
+      thought: "Correlation test for INT-058."
+    coder:
+      thought: "Running correlation task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-059:
+    planner:
+      thought: "Langfuse linkage test for INT-059."
+    coder:
+      thought: "Running Langfuse task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-060:
+    planner:
+      thought: "Langfuse feedback test for INT-060."
+    coder:
+      thought: "Running feedback task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-035:
+    planner:
+      thought: "Checking materials for INT-035."
+    coder:
+      thought: "Testing Aluminum 6061."
+      generated_code: |
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\ntotals: {estimated_unit_cost_usd: 10}')
+      finished: true
+    reviewer:
+      review:
+        decision: "approved"
+
+  INT-036:
+    planner:
+      thought: "Checking workbench methods for INT-036."
+    coder:
+      thought: "Testing CNC/3D Print."
+      generated_code: |
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\ntotals: {estimated_unit_cost_usd: 15}')
+      finished: true
+    reviewer:
+      review:
+        decision: "approved"
+
+  INT-037:
+    planner:
+      thought: "Designing door for INT-037."
+    coder:
+      thought: "Implementing RevoluteJoint."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-038:
+    planner:
+      thought: "Designing oscillator for INT-038."
+    coder:
+      thought: "Implementing sinusoidal controller."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-039:
+    planner:
+      thought: "Generating cube for INT-039."
+    coder:
+      thought: "Implementing cube."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-040:
+    planner:
+      thought: "Creating part for INT-040."
+    coder:
+      thought: "Implementing linkage_test."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-042:
+    planner:
+      thought: "Quick hello for INT-042."
+      finished: true
+    coder:
+      thought: "Finishing immediately."
+      finished: true
+
+  INT-045:
+    planner:
+      thought: "Skills sync test for INT-045."
+    coder:
+      thought: "Running skills sync task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-046:
+    planner:
+      thought: "Fidelity regression for INT-046."
+    coder:
+      thought: "Reconstructing..."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-047:
+    planner:
+      thought: "Transfer uplift for INT-047."
+    coder:
+      thought: "Designing bracket."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-048:
+    planner:
+      thought: "Optimality check for INT-048."
+    coder:
+      thought: "Optimizing..."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-053:
+    planner:
+      thought: "Observability test for INT-053."
+    coder:
+      thought: "Running observability task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-054:
+    planner:
+      thought: "Failure injection for INT-054."
+    coder:
+      thought: "Running failure task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-055:
+    planner:
+      thought: "S3 test for INT-055."
+    coder:
+      thought: "Running S3 task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  INT-056:
+    planner:
+      thought: "S3 retry test for INT-056."
+    coder:
+      thought: "Running S3 retry task."
+      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      finished: true
+
+  # Default fallback
+  default:
+    planner:
+      thought: "Default planner response."
+      generated_code: "with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nDefault')"
+    coder:
+      thought: "Default coder response."
+      generated_code: "with open('solution.py', 'w') as f: f.write('# Default')"
+    reviewer:
+      decision: "approved"
+      review:
+        decision: "APPROVE"
+        reason: "Default approval."
+        required_fixes: []

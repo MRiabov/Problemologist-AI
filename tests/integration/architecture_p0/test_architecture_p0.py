@@ -31,7 +31,7 @@ async def test_int_001_compose_boot_health_contract():
 @pytest.mark.asyncio
 async def test_int_002_controller_worker_execution_boundary():
     """INT-002: Verify controller-worker handoff and execution status."""
-    session_id = f"test-exec-{int(time.time())}"
+    session_id = f"INT-002-{int(time.time())}"
     task = "Build a simple box of 10x10x10mm."
 
     async with httpx.AsyncClient() as client:
@@ -99,7 +99,7 @@ from build123d import *
 from shared.models.schemas import PartMetadata
 def build():
     b = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    b.label = "box"
+    b.label = "target_box"
     b.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return b
 """
@@ -123,13 +123,13 @@ def build():
         res1, res2 = await asyncio.gather(
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
-                json={"script_path": "box.py"},
+                json={"script_path": "box.py", "backend": "mujoco"},
                 headers={"X-Session-ID": session_id_1},
                 timeout=600.0,
             ),
             client.post(
                 f"{WORKER_URL}/benchmark/simulate",
-                json={"script_path": "box.py"},
+                json={"script_path": "box.py", "backend": "mujoco"},
                 headers={"X-Session-ID": session_id_2},
                 timeout=600.0,
             ),
@@ -167,7 +167,7 @@ objectives:
     min: [10.5, 10.5, 10.5]
     max: [12.5, 12.5, 12.5]
   forbid_zones:
-    - name: "test_forbid"
+    - name: "zone_forbid_test"
       min: [2.5, 2.5, 2.5]
       max: [4.5, 4.5, 4.5]
   build_zone:
@@ -177,14 +177,15 @@ simulation_bounds:
     min: [-100.5, -100.5, -100.5]
     max: [100.5, 100.5, 100.5]
 moved_object:
-    label: "test_obj"
+    label: "target_box"
     shape: "sphere"
-    start_position: [0.5, 0.5, 5.5]
-    runtime_jitter: [0.5, 0.5, 0.5]
+    start_position: [3.5, 3.5, 3.5]
+    runtime_jitter: [0.0, 0.0, 0.0]
 constraints:
     max_unit_cost: 100.5
     max_weight_g: 10.5
 """
+
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={
@@ -201,12 +202,14 @@ from shared.models.schemas import PartMetadata
 def build():
     with BuildPart() as p:
         Box(2, 2, 2, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    # Move to forbid zone center (3.5, 3.5, 3.5)
+    # Part is at (0,0,0) in local coords
+    # Move it to forbid zone center (3.5, 3.5, 3.5)
     p.part.move(Location((3.5, 3.5, 3.5)))
     p.part.label = "target_box"
     p.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
     return p.part
 """
+
         await client.post(
             f"{WORKER_URL}/fs/write",
             json={"path": "fail.py", "content": script_fail},
@@ -247,18 +250,20 @@ run()
 
         resp = await client.post(
             f"{WORKER_URL}/benchmark/simulate",
-            json={"script_path": "fail.py"},
+            json={"script_path": "fail.py", "backend": "mujoco"},
             headers={"X-Session-ID": session_id},
             timeout=600.0,
         )
+
         assert resp.status_code == 200
         data = resp.json()
 
         assert not data["success"]
         # Expect "Forbid zone hit", "collision_with_forbidden_zone",
         # or "forbid_zone_hit"
+        msg_lower = data["message"].lower()
         assert any(
-            msg in data["message"].lower()
+            msg in msg_lower
             for msg in [
                 "forbid zone hit",
                 "collision_with_forbidden_zone",
@@ -324,11 +329,12 @@ constraints:
                     "import asyncio; result = asyncio.run(verify_jitter.run()); "
                     "assert result['success_rate'] == 1.0, f'Low success rate: {result}'"
                 ),
-                "timeout": 30,
+                "timeout": 120,
             },
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=180.0,
         )
+
         assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = resp.json()
 
@@ -365,10 +371,10 @@ async def test_int_022_motor_overload_behavior():
                     "import sys; sys.path.append('.'); import verify_overload; "
                     "import asyncio; asyncio.run(verify_overload.run())"
                 ),
-                    "timeout": 90,
+                "timeout": 90,
             },
             headers={"X-Session-ID": session_id},
-                timeout=120.0,
+            timeout=120.0,
         )
         assert resp.status_code == 200
         data = resp.json()

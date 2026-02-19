@@ -29,8 +29,12 @@ if [ -f logs/temporal_worker.pid ]; then
 fi
 
 # Also kill any leftover FastAPI/Uvicorn processes just in case
-pkill -f "fastapi run" || true
-pkill -f "controller.temporal_worker" || true
+pkill -9 -f "uvicorn.*18000" || true
+pkill -9 -f "uvicorn.*18001" || true
+pkill -9 -f "fastapi run" || true
+pkill -9 -f "controller.temporal_worker" || true
+pkill -9 -f "uv run uvicorn" || true
+pkill -9 -f "uv run python -m controller.temporal_worker" || true
 
 echo "Bringing down infrastructure containers..."
 docker compose -f docker-compose.test.yaml down

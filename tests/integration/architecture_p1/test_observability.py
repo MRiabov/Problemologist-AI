@@ -20,7 +20,7 @@ async def test_int_059_langfuse_trace_linkage():
         task = "Write a hello world python script"
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": f"test-int-059-{uuid.uuid4().hex[:8]}"},
+            json={"task": task, "session_id": f"INT-059-{uuid.uuid4().hex[:8]}"},
         )
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
@@ -79,7 +79,7 @@ async def test_int_060_langfuse_feedback_contract():
         task = "Test feedback"
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": f"test-int-060-{uuid.uuid4().hex[:8]}"},
+            json={"task": task, "session_id": f"INT-060-{uuid.uuid4().hex[:8]}"},
         )
         episode_id = resp.json()["episode_id"]
 

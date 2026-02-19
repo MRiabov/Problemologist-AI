@@ -71,7 +71,7 @@ def verify_with_jitter(
     duration: float = 10.0,
     seed: int = 42,
     dynamic_controllers: dict[str, Any] | None = None,
-    backend_type: str = "genesis",
+    backend_type: str = "mujoco",
     session_id: str | None = None,
 ) -> MultiRunResult:
     """Run simulation multiple times with perturbed initial positions.

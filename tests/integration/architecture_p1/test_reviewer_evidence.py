@@ -45,7 +45,7 @@ async def test_reviewer_evidence_completeness():
         else:
             pytest.fail("Benchmark generation timed out.")
 
-        engineer_session_id = str(uuid.uuid4())
+        engineer_session_id = f"INT-034-{uuid.uuid4().hex[:8]}"
         task = f"Solve benchmark: {benchmark_session_id}"
         run_payload = {
             "task": task,

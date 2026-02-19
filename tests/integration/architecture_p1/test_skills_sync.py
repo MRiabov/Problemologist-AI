@@ -14,7 +14,7 @@ WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
 async def test_int_045_skills_sync_lifecycle():
     """INT-045: Verify worker pulls expected skills and records skill version metadata."""
     async with httpx.AsyncClient() as client:
-        session_id = f"skills-sync-test-{int(time.time())}"
+        session_id = f"INT-045-{int(time.time())}"
 
         # 1. Trigger a run that should initialize the workspace and skills
         payload = {

@@ -597,28 +597,45 @@ class GenesisBackend(PhysicsBackend):
 
                         if target_link:
                             logger.debug("genesis_link_state_found", body_id=body_id)
+
                             # Use get_pos() etc. if they exist, or fallback to properties
-                            pos = (
-                                target_link.get_pos().tolist()
+                            # T001: Genesis returns batched tensors, take [0] and ensure it's on CPU
+                            def _to_flat_list(val):
+                                if hasattr(val, "cpu"):
+                                    val = val.cpu().numpy()
+                                if isinstance(val, np.ndarray):
+                                    if val.ndim > 1:
+                                        return val[0].tolist()
+                                    return val.tolist()
+                                if (
+                                    isinstance(val, list)
+                                    and len(val) > 0
+                                    and isinstance(val[0], list)
+                                ):
+                                    return val[0]
+                                return val
+
+                            pos = _to_flat_list(
+                                target_link.get_pos()
                                 if hasattr(target_link, "get_pos")
-                                else target_link.pos.tolist()
+                                else target_link.pos
                             )
-                            quat = (
-                                target_link.get_quat().tolist()
+                            quat = _to_flat_list(
+                                target_link.get_quat()
                                 if hasattr(target_link, "get_quat")
-                                else target_link.quat.tolist()
+                                else target_link.quat
                             )
-                            vel = (
-                                target_link.get_vel().tolist()
+                            vel = _to_flat_list(
+                                target_link.get_vel()
                                 if hasattr(target_link, "get_vel")
-                                else target_link.vel.tolist()
+                                else target_link.vel
                             )
 
                             angvel = [0, 0, 0]
                             if hasattr(target_link, "get_angvel"):
-                                angvel = target_link.get_angvel().tolist()
+                                angvel = _to_flat_list(target_link.get_angvel())
                             elif hasattr(target_link, "angvel"):
-                                angvel = target_link.angvel.tolist()
+                                angvel = _to_flat_list(target_link.angvel)
 
                             return BodyState(
                                 pos=pos,
@@ -645,16 +662,27 @@ class GenesisBackend(PhysicsBackend):
             state = entity.get_state()
             logger.debug("genesis_get_state_returned", body_id=body_id)
 
+            def _to_flat_list(val):
+                if hasattr(val, "cpu"):
+                    val = val.cpu().numpy()
+                if isinstance(val, np.ndarray):
+                    if val.ndim > 1:
+                        return val[0].tolist()
+                    return val.tolist()
+                if isinstance(val, list) and len(val) > 0 and isinstance(val[0], list):
+                    return val[0]
+                return val
+
             if hasattr(state, "pos") and state.pos.ndim == 3:
                 # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
-                pos = state.pos[0].mean(axis=0).tolist()
-                vel = state.vel[0].mean(axis=0).tolist()
+                pos = state.pos[0].cpu().numpy().mean(axis=0).tolist()
+                vel = state.vel[0].cpu().numpy().mean(axis=0).tolist()
                 return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
-                pos=entity.get_pos().tolist(),
-                quat=entity.get_quat().tolist(),
-                vel=entity.get_vel().tolist(),
-                angvel=entity.get_ang().tolist(),
+                pos=_to_flat_list(entity.get_pos()),
+                quat=_to_flat_list(entity.get_quat()),
+                vel=_to_flat_list(entity.get_vel()),
+                angvel=_to_flat_list(entity.get_ang()),
             )
         except BaseException as e:
             import traceback

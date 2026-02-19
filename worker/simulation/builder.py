@@ -376,6 +376,7 @@ class SceneCompiler:
 
         # Visual assets and lighting
         visual = ET.SubElement(self.root, "visual")
+        ET.SubElement(visual, "global", offwidth="2048", offheight="2048")
         ET.SubElement(
             visual,
             "headlight",
@@ -519,6 +520,17 @@ class SceneCompiler:
         self.body_elements[name] = body
         if any(v != 0 for v in euler):
             body.set("euler", " ".join(map(str, euler)))
+
+        if name == "target_box":
+            # Add tracking camera for the main object
+            ET.SubElement(
+                self.worldbody,
+                "camera",
+                name="main",
+                pos="1 1 1",
+                mode="trackcom",
+                target="target_box",
+            )
 
         if is_zone:
             # Zone Logic (T005): goal = green, forbid = red

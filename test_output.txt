@@ -1,0 +1,157 @@
+Integration Tests Started at: Thu Feb 19 02:03:41 PM GMT 2026
+Loading environment from .env...
+Spinning up infrastructure (Postgres, Temporal, Minio)...
+ Network problemologist-ai_default Creating 
+ Network problemologist-ai_default Created 
+ Volume problemologist-ai_postgres_test_data Creating 
+ Volume problemologist-ai_postgres_test_data Created 
+ Volume problemologist-ai_minio_test_data Creating 
+ Volume problemologist-ai_minio_test_data Created 
+time="2026-02-19T14:03:42Z" level=warning msg="Found orphan containers ([problemologist-ai-worker-1 problemologist-ai-controller-worker-1 problemologist-ai-migrations-1 problemologist-ai-mock-warning-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container problemologist-ai-minio-1 Creating 
+ Container problemologist-ai-postgres-1 Creating 
+ Container problemologist-ai-minio-1 Created 
+ Container problemologist-ai-createbuckets-1 Creating 
+ Container problemologist-ai-postgres-1 Created 
+ Container problemologist-ai-temporal-1 Creating 
+ Container problemologist-ai-createbuckets-1 Created 
+ Container problemologist-ai-temporal-1 Created 
+ Container problemologist-ai-temporal-ui-1 Creating 
+ Container problemologist-ai-temporal-ui-1 Created 
+ Container problemologist-ai-postgres-1 Starting 
+ Container problemologist-ai-minio-1 Starting 
+ Container problemologist-ai-minio-1 Started 
+ Container problemologist-ai-minio-1 Waiting 
+ Container problemologist-ai-postgres-1 Started 
+ Container problemologist-ai-postgres-1 Waiting 
+ Container problemologist-ai-minio-1 Healthy 
+ Container problemologist-ai-createbuckets-1 Starting 
+ Container problemologist-ai-postgres-1 Healthy 
+ Container problemologist-ai-temporal-1 Starting 
+ Container problemologist-ai-createbuckets-1 Started 
+ Container problemologist-ai-temporal-1 Started 
+ Container problemologist-ai-temporal-ui-1 Starting 
+ Container problemologist-ai-temporal-ui-1 Started 
+Waiting for infra to be ready...
+Infrastructure is up. Giving Temporal a few seconds to settle...
+Running migrations...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 5b673a27de1b, Initial benchmark models
+INFO  [alembic.runtime.migration] Running upgrade 5b673a27de1b -> b5f3ce2a7b6d, Add episode trace and asset models
+INFO  [alembic.runtime.migration] Running upgrade b5f3ce2a7b6d -> f189942f2103, add_trace_feedback_fields
+INFO  [alembic.runtime.migration] Running upgrade f189942f2103 -> 6a5fb04a4024, align_traces_schema
+INFO  [alembic.runtime.migration] Running upgrade 6a5fb04a4024 -> 8fd328614af0, add_planned_to_episodestatus
+INFO  [alembic.runtime.migration] Running upgrade 8fd328614af0 -> c8e4cc2bf89c, add_user_steering_preference
+Starting Application Servers (Controller, Worker, Temporal Worker)...
+Worker started (PID: 155533)
+Controller started (PID: 155534)
+Temporal Worker started (PID: 155535)
+Waiting for servers to be healthy...
+Waiting for controller... (0/60)
+Waiting for controller... (1/60)
+Waiting for controller... (2/60)
+Waiting for controller... (3/60)
+Waiting for controller... (4/60)
+Waiting for controller... (5/60)
+Waiting for controller... (6/60)
+Controller is healthy!
+Worker is healthy!
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0 -- /home/maksym/Work/proj/Problemologist/Problemologist-AI/.venv/bin/python3
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /home/maksym/Work/proj/Problemologist/Problemologist-AI
+configfile: pyproject.toml
+plugins: base-url-2.1.0, reverse-1.9.0, anyio-4.12.1, cov-7.0.0, playwright-0.7.2, hypothesis-6.151.6, asyncio-1.3.0, typeguard-4.4.4, xdist-3.8.0, schemathesis-4.10.1, langsmith-0.7.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/architecture_p1/test_benchmark_workflow.py::test_benchmark_planner_cad_reviewer_path FAILED
+
+=================================== FAILURES ===================================
+___________________ test_benchmark_planner_cad_reviewer_path ___________________
+
+    @pytest.mark.integration_p1
+    @pytest.mark.asyncio
+    async def test_benchmark_planner_cad_reviewer_path():
+        """
+        INT-031: Benchmark planner -> CAD -> reviewer path
+    
+        Verifies:
+        1. Benchmark generation trigger
+        2. Successful completion of the workflow
+        3. Existence of required artifacts (plan.md, objectives.yaml, Reviews)
+        """
+        async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+            # 1. Trigger Benchmark Generation
+            prompt = "Create a simple path planning benchmark with a wall and a goal."
+            resp = await client.post("/benchmark/generate", json={"prompt": prompt})
+            assert resp.status_code in [
+                200,
+                202,
+            ], f"Failed to trigger benchmark: {resp.text}"
+            data = resp.json()
+            session_id = data["session_id"]
+    
+            # 2. Poll for completion
+            max_retries = 60
+            benchmark_completed = False
+            last_status = None
+    
+            for _ in range(max_retries):
+                status_resp = await client.get(f"/benchmark/{session_id}")
+                if status_resp.status_code == 200:
+                    sess_data = status_resp.json()
+                    last_status = sess_data["status"]
+    
+                    if last_status == "completed":
+                        benchmark_completed = True
+                        break
+                    if last_status == "rejected" or last_status == "failed":
+                        pytest.fail(
+                            f"Benchmark generation failed with status: {last_status}"
+                        )
+    
+                await asyncio.sleep(2)
+    
+            if not benchmark_completed:
+>               pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
+E               Failed: Benchmark generation timed out. Last status: running
+
+tests/integration/architecture_p1/test_benchmark_workflow.py:54: Failed
+=========================== short test summary info ============================
+FAILED tests/integration/architecture_p1/test_benchmark_workflow.py::test_benchmark_planner_cad_reviewer_path
+======================== 1 failed in 121.55s (0:02:01) =========================
+Integration tests FAILED!
+
+Cleaning up processes (Controller: 155534, Worker: 155533, Temporal: 155535)...
+./scripts/run_integration_tests.sh: line 143: 155534 Killed                  uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1
+./scripts/run_integration_tests.sh: line 143: 155533 Killed                  uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1
+Bringing down infrastructure containers...
+ Container problemologist-ai-createbuckets-1 Stopping 
+ Container problemologist-ai-temporal-ui-1 Stopping 
+ Container problemologist-ai-createbuckets-1 Stopped 
+ Container problemologist-ai-createbuckets-1 Removing 
+ Container problemologist-ai-createbuckets-1 Removed 
+ Container problemologist-ai-minio-1 Stopping 
+ Container problemologist-ai-temporal-ui-1 Stopped 
+ Container problemologist-ai-temporal-ui-1 Removing 
+ Container problemologist-ai-temporal-ui-1 Removed 
+ Container problemologist-ai-temporal-1 Stopping 
+ Container problemologist-ai-minio-1 Stopped 
+ Container problemologist-ai-minio-1 Removing 
+ Container problemologist-ai-minio-1 Removed 
+ Container problemologist-ai-temporal-1 Stopped 
+ Container problemologist-ai-temporal-1 Removing 
+ Container problemologist-ai-temporal-1 Removed 
+ Container problemologist-ai-postgres-1 Stopping 
+ Container problemologist-ai-postgres-1 Stopped 
+ Container problemologist-ai-postgres-1 Removing 
+ Container problemologist-ai-postgres-1 Removed 
+ Volume problemologist-ai_minio_test_data Removing 
+ Volume problemologist-ai_postgres_test_data Removing 
+ Network problemologist-ai_default Removing 
+ Volume problemologist-ai_minio_test_data Removed 
+ Volume problemologist-ai_postgres_test_data Removed 
+ Network problemologist-ai_default Removed 

@@ -16,7 +16,7 @@ TEST_OVERLOAD_XML = """
     </body>
   </worldbody>
   <actuator>
-    <position name="servo" joint="hinge" kp="50" kv="5" forcerange="-0.1 0.1"/>
+    <position name="servo" joint="hinge" kp="100" kv="0" forcerange="-0.01 0.01"/>
   </actuator>
 </mujoco>
 """
@@ -28,20 +28,13 @@ async def run(_ctx=None):
             tmp.write(TEST_OVERLOAD_XML)
             tmp_path = Path(tmp.name)
 
-        loop = SimulationLoop(str(tmp_path))
+        from shared.simulation.schemas import SimulatorBackendType
+
+        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.MUJOCO)
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        # We need to manually construct control inputs or let it drift?
-        # worker.utils.controllers... might be available.
-
-        # Simple constant control input:
-        # data.ctrl[0] = 3.14
-
-        # SimulationLoop.step applies control_inputs.
-        # It expects a dict {actuator_name: value}.
-
-        metrics = loop.step(control_inputs={"servo": 3.14}, duration=3.0)
+        metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
 
         if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason:
             raise RuntimeError(

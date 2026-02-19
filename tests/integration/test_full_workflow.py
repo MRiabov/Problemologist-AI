@@ -59,7 +59,7 @@ async def test_full_workflow_end_to_end():
 
         # 4. Trigger Engineer Agent
         # Generate a unique session ID for the engineer run
-        engineer_session_id = str(uuid.uuid4())
+        engineer_session_id = f"INT-033-full-{uuid.uuid4().hex[:8]}"
 
         run_payload = {"task": engineer_task, "session_id": engineer_session_id}
 

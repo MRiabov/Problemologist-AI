@@ -124,17 +124,20 @@ pkill -f "python -m controller.temporal_worker" || true
 # Start Worker (port 18001)
 uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
 WORKER_PID=$!
+echo $WORKER_PID > logs/worker.pid
 echo "Worker started (PID: $WORKER_PID)"
 
 # Start Controller (port 18000)
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
 CONTROLLER_PID=$!
+echo $CONTROLLER_PID > logs/controller.pid
 echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
 uv run python -m controller.temporal_worker > logs/temporal_worker.log 2>&1 &
 TEMP_WORKER_PID=$!
+echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
 cleanup() {
@@ -147,9 +150,14 @@ cleanup() {
   kill $CONTROLLER_PID $WORKER_PID $TEMP_WORKER_PID 2>/dev/null || true
   
   # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
-  pkill -f "uvicorn.*18000" || true
-  pkill -f "uvicorn.*18001" || true
-  pkill -f "python -m controller.temporal_worker" || true
+  # We use -9 here as some processes (especially when uv run is involved) can hang
+  pkill -9 -f "uvicorn.*18000" || true
+  pkill -9 -f "uvicorn.*18001" || true
+  pkill -9 -f "python -m controller.temporal_worker" || true
+  pkill -9 -f "uv run uvicorn" || true
+  
+  # Remove PID files
+  rm -f logs/worker.pid logs/controller.pid logs/temporal_worker.pid
   
   echo "Bringing down infrastructure containers..."
   docker compose -f docker-compose.test.yaml down -v

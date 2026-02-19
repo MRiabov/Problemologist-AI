@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 from contextlib import suppress
 
@@ -46,6 +45,7 @@ class BenchmarkPlannerSignature(dspy.Signature):
     prompt = dspy.InputField()
     history = dspy.InputField()
     review_feedback = dspy.InputField()
+    reasoning = dspy.OutputField()
     plan: RandomizationStrategy = dspy.OutputField()
 
 
@@ -134,7 +134,9 @@ class BenchmarkPlannerNode(BaseNode):
 @type_check
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    from controller.config.settings import settings as global_settings
+
+    worker_url = global_settings.worker_url
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     node = BenchmarkPlannerNode(context=ctx)
     return await node(state)
@@ -161,7 +163,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     Refactored to use DSPy CodeAct with remote worker execution.
     """
     session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    from controller.config.settings import settings as global_settings
+
+    worker_url = global_settings.worker_url
 
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     logger.info("coder_node_start", session_id=session_id)
@@ -198,6 +202,10 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         tools=list(tool_functions.values()),
         interpreter=interpreter,
     )
+
+    # WP08: Set node_type on mock LM if available for explicit lookup
+    if hasattr(ctx.dspy_lm, "node_type"):
+        ctx.dspy_lm.node_type = "benchmark_coder"
 
     # Invoke DSPy Program
     try:
@@ -325,6 +333,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
                     )
         except Exception as e:
             logger.error("integrated_validation_error", error=str(e))
+            # Set a failure status and sleep to prevent infinite tight loop
+            state.session.status = SessionStatus.FAILED
+            await asyncio.sleep(2)
 
     return state
 
@@ -365,7 +376,9 @@ class BenchmarkCOTSSearchNode(BaseNode):
 @type_check
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    from controller.config.settings import settings as global_settings
+
+    worker_url = global_settings.worker_url
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     node = BenchmarkCOTSSearchNode(context=ctx)
     return await node(state)
@@ -447,24 +460,29 @@ class BenchmarkReviewerNode(BaseNode):
             ),
         }
 
-        prediction, _, _ = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=BenchmarkReviewerSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_reviewer_tools,
-            validate_files=[],
-            node_type="benchmark_reviewer",
-        )
+        try:
+            prediction, _, _ = await self._run_program(
+                program_cls=dspy.CodeAct,
+                signature_cls=BenchmarkReviewerSignature,
+                state=state,
+                inputs=inputs,
+                tool_factory=get_reviewer_tools,
+                validate_files=[],
+                node_type="benchmark_reviewer",
+            )
 
-        if not prediction:
-            state.review_feedback = "Error: Reviewer failed to complete."
-            return state
+            if not prediction:
+                state.review_feedback = "Error: Reviewer failed to complete."
+                return state
 
-        review = prediction.review
-        state.review_feedback = f"{review.decision.value}: {review.reason}"
-        if review.required_fixes:
-            state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+            review = prediction.review
+            state.review_feedback = f"{review.decision.value}: {review.reason}"
+            if review.required_fixes:
+                state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+        except Exception as e:
+            logger.error("benchmark_reviewer_node_failed", error=str(e))
+            state.review_feedback = "Rejected: Internal error"
+            await asyncio.sleep(2)
 
         return state
 
@@ -472,7 +490,9 @@ class BenchmarkReviewerNode(BaseNode):
 @type_check
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state.session.session_id)
-    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+    from controller.config.settings import settings as global_settings
+
+    worker_url = global_settings.worker_url
     ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
     node = BenchmarkReviewerNode(context=ctx)
     return await node(state)
