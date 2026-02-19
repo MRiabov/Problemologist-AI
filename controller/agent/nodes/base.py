@@ -145,7 +145,7 @@ class BaseNode:
         self,
         program_cls: type[dspy.Module],
         signature_cls: type[dspy.Signature],
-        state: "AgentState",
+        state: Any,
         inputs: dict[str, Any],
         tool_factory: Callable,
         validate_files: list[str],
@@ -160,7 +160,7 @@ class BaseNode:
         from worker.utils.file_validation import validate_node_output
 
         interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=state.session_id
+            worker_client=self.ctx.worker_client, session_id=self.ctx.session_id
         )
         tool_fns = self._get_tool_functions(tool_factory)
 
@@ -188,7 +188,7 @@ class BaseNode:
                     with dspy.settings.context(lm=self.ctx.dspy_lm):
                         logger.info(
                             f"{node_type}_dspy_invoke_start",
-                            session_id=state.session_id,
+                            session_id=self.ctx.session_id,
                         )
                         # Add a timeout to prevent infinite hangs in DSPy CodeAct
                         try:
@@ -198,7 +198,7 @@ class BaseNode:
                             )
                         except asyncio.TimeoutError:
                             logger.error(
-                                f"{node_type}_dspy_timeout", session_id=state.session_id
+                                f"{node_type}_dspy_timeout", session_id=self.ctx.session_id
                             )
                             raise RuntimeError(
                                 f"DSPy program {node_type} timed out after 300s"
@@ -206,7 +206,7 @@ class BaseNode:
 
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
-                            session_id=state.session_id,
+                            session_id=self.ctx.session_id,
                         )
 
                     results = await asyncio.gather(

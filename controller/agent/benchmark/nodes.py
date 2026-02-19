@@ -111,7 +111,7 @@ class BenchmarkPlannerNode(BaseNode):
         prediction, _, _ = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=BenchmarkPlannerSignature,
-            state=state,  # type: ignore
+            state=state,
             inputs=inputs,
             tool_factory=get_benchmark_tools,
             validate_files=[],
@@ -350,7 +350,7 @@ class BenchmarkCOTSSearchNode(BaseNode):
         prediction, _, _ = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=BenchmarkCOTSSearchSignature,
-            state=state,  # type: ignore
+            state=state,
             inputs=inputs,
             tool_factory=get_benchmark_tools,
             validate_files=[],
@@ -450,7 +450,7 @@ class BenchmarkReviewerNode(BaseNode):
         prediction, _, _ = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=BenchmarkReviewerSignature,
-            state=state,  # type: ignore
+            state=state,
             inputs=inputs,
             tool_factory=get_reviewer_tools,
             validate_files=[],
