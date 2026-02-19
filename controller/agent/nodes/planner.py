@@ -79,6 +79,7 @@ class PlannerNode(BaseNode):
                 update={
                     "status": AgentStatus.FAILED,
                     "journal": state.journal + journal_entry,
+                    "turn_count": state.turn_count + 1,
                 }
             )
 
@@ -105,6 +106,7 @@ class PlannerNode(BaseNode):
                 "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
                 "messages": state.messages
                 + [AIMessage(content=f"Plan summary: {summary}")],
+                "turn_count": state.turn_count + 1,
             }
         )
 

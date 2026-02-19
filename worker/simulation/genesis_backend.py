@@ -449,13 +449,13 @@ class GenesisBackend(PhysicsBackend):
 
             if render_only:
                 # OPTIMIZATION: Genesis can render without building the full physics scene.
-                # This significantly speeds up static view generation.
-                logger.info("genesis_skipping_build_for_render_only")
-                return
+                # However, some versions/configurations fail with AttributeError: 'Camera' object has no attribute '_is_batched'
+                # if the scene is not built.
+                logger.info("genesis_building_scene_for_render_only")
 
             try:
                 logger.info("genesis_building_scene")
-                self.scene.build()
+                self.scene.build(n_envs=1)
             except Exception as e:
                 if "already built" not in str(e).lower():
                     logger.error("genesis_build_failed", error=str(e))

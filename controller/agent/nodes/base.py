@@ -41,18 +41,28 @@ class SharedNodeContext:
             session_id=session_id,
             heavy_url=settings.worker_heavy_url,
         )
-        llm = ChatOpenAI(model=settings.llm_model, temperature=0)
 
-        # T012: Initialize DSPy LM for CodeAct support
-        api_key = "dummy"
-        if settings.openai_api_key:
-            api_key = settings.openai_api_key
+        # WP05: Support mock LLMs for integration tests
+        if settings.is_integration_test:
+            from controller.agent.mock_llm import MockChatOpenAI, MockDSPyLM
 
-        dspy_lm = dspy.LM(
-            f"openai/{settings.llm_model}",
-            api_key=api_key,
-            cache=False,
-        )
+            logger.info("using_mock_llms_for_integration_test", session_id=session_id)
+            llm = MockChatOpenAI()
+            dspy_lm = MockDSPyLM()
+        else:
+            llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+
+            # T012: Initialize DSPy LM for CodeAct support
+            api_key = "dummy"
+            if settings.openai_api_key:
+                api_key = settings.openai_api_key
+
+            dspy_lm = dspy.LM(
+                f"openai/{settings.llm_model}",
+                api_key=api_key,
+                cache=False,
+            )
+
         return cls(
             worker_url=worker_url,
             session_id=session_id,
@@ -198,7 +208,8 @@ class BaseNode:
                             )
                         except asyncio.TimeoutError:
                             logger.error(
-                                f"{node_type}_dspy_timeout", session_id=self.ctx.session_id
+                                f"{node_type}_dspy_timeout",
+                                session_id=self.ctx.session_id,
                             )
                             raise RuntimeError(
                                 f"DSPy program {node_type} timed out after 300s"

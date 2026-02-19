@@ -98,6 +98,7 @@ class ReviewerNode(BaseNode):
                     "status": AgentStatus.CODE_REJECTED,
                     "feedback": f"Reviewer failed to complete: {journal_entry}",
                     "journal": state.journal + journal_entry,
+                    "turn_count": state.turn_count + 1,
                 }
             )
 
@@ -139,6 +140,7 @@ class ReviewerNode(BaseNode):
                 "journal": state.journal + journal_entry,
                 "messages": state.messages
                 + [AIMessage(content=f"Review decision: {decision.value}")],
+                "turn_count": state.turn_count + 1,
             }
         )
 
