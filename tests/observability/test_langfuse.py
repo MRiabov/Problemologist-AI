@@ -19,8 +19,8 @@ def test_get_langfuse_callback_returns_none_without_credentials():
 
 def test_get_langfuse_callback_uses_trace_context():
     env = {
-        "LANGFUSE_PUBLIC_KEY": "pk-test",
-        "LANGFUSE_SECRET_KEY": "sk-test",
+        "LANGFUSE_PUBLIC_KEY": "dummy_public_key",
+        "LANGFUSE_SECRET_KEY": "dummy_secret_key",
         "LANGFUSE_HOST": "https://langfuse.example",
     }
     with (
@@ -28,13 +28,13 @@ def test_get_langfuse_callback_uses_trace_context():
         patch("controller.observability.langfuse.settings") as mock_settings,
         patch("controller.observability.langfuse.CallbackHandler") as mock_handler,
     ):
-        mock_settings.langfuse_public_key = "pk-test"
-        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.langfuse_public_key = "dummy_public_key"
+        mock_settings.langfuse_secret_key = "dummy_secret_key"
         mock_settings.langfuse_host = "https://langfuse.example"
         mock_settings.is_integration_test = False
         get_langfuse_callback(trace_id="trace-123", name="engineer_coder")
         mock_handler.assert_called_once_with(
-            public_key="pk-test",
+            public_key="dummy_public_key",
             trace_context={
                 "trace_id": "trace-123",
                 "name": "engineer_coder",
@@ -58,8 +58,8 @@ def test_get_langfuse_client_returns_none_without_credentials():
 
 def test_get_langfuse_client_uses_configured_host():
     env = {
-        "LANGFUSE_PUBLIC_KEY": "pk-test",
-        "LANGFUSE_SECRET_KEY": "sk-test",
+        "LANGFUSE_PUBLIC_KEY": "dummy_public_key",
+        "LANGFUSE_SECRET_KEY": "dummy_secret_key",
         "LANGFUSE_HOST": "https://langfuse.example",
     }
     with (
@@ -67,14 +67,14 @@ def test_get_langfuse_client_uses_configured_host():
         patch("controller.observability.langfuse.settings") as mock_settings,
         patch("controller.observability.langfuse.Langfuse") as mock_langfuse,
     ):
-        mock_settings.langfuse_public_key = "pk-test"
-        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.langfuse_public_key = "dummy_public_key"
+        mock_settings.langfuse_secret_key = "dummy_secret_key"
         mock_settings.langfuse_host = "https://langfuse.example"
         mock_settings.is_integration_test = False
         get_langfuse_client()
         mock_langfuse.assert_called_once_with(
-            public_key="pk-test",
-            secret_key="sk-test",
+            public_key="dummy_public_key",
+            secret_key="dummy_secret_key",
             host="https://langfuse.example",
         )
 
@@ -83,8 +83,8 @@ def test_get_langfuse_callback_returns_none_in_integration_test():
     with (
         patch("controller.observability.langfuse.settings") as mock_settings,
     ):
-        mock_settings.langfuse_public_key = "pk-test"
-        mock_settings.langfuse_secret_key = "sk-test"
+        mock_settings.langfuse_public_key = "dummy_public_key"
+        mock_settings.langfuse_secret_key = "dummy_secret_key"
         mock_settings.is_integration_test = True
 
         callback = get_langfuse_callback(trace_id="trace-123", name="test")

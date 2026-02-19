@@ -315,7 +315,7 @@ async def calculate_and_report_automated_score(
             pass
 
         # 3. Calculate score
-        pred_dict = map_events_to_prediction(events)
+        metrics = map_events_to_prediction(events)
 
         # Get episode to check metadata for fallback caps
         stmt = select(Episode).where(Episode.id == episode_id)
@@ -329,11 +329,11 @@ async def calculate_and_report_automated_score(
             max_unit_cost=episode.metadata_vars.get("max_unit_cost")
             if episode and episode.metadata_vars
             else 1000.0,
-            max_weight=episode.metadata_vars.get("max_weight")
+            max_weight=episode.metadata_vars.get("max_weight_g")
             if episode and episode.metadata_vars
             else 10.0,
         )
-        prediction = Prediction(**pred_dict)
+        prediction = Prediction(**metrics.model_dump())
 
         metric_result = cad_simulation_metric(gold, prediction)
 

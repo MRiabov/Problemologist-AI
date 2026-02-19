@@ -376,10 +376,7 @@ def map_events_to_prediction(
                 metrics.estimated_weight = max(metrics.estimated_weight, val_weight)
 
         # 4. Simulation Result
-        if etype in [
-            ObservabilityEventType.SIMULATION_START,
-            ObservabilityEventType.SIMULATION_REQUEST,
-        ]:
+        if etype == ObservabilityEventType.SIMULATION_REQUEST:
             metrics.simulation_ran = True
         elif etype == ObservabilityEventType.SIMULATION_RESULT:
             metrics.simulation_ran = True

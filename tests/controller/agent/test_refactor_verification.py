@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Set mock key before any imports that might trigger LLM initialization
-os.environ["OPENAI_API_KEY"] = "sk-mock-key"
+os.environ["OPENAI_API_KEY"] = "placeholder_key"
 
 from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.coder import CoderNode
@@ -21,9 +21,6 @@ async def test_all_agents_initialization():
     with (
         patch("controller.agent.nodes.base.WorkerClient"),
         patch("controller.agent.nodes.base.RemoteFilesystemMiddleware"),
-        patch(
-            "controller.agent.benchmark.nodes.get_prompt", return_value="mock prompt"
-        ),
     ):
         mock_ctx = SharedNodeContext.create(
             worker_url="http://worker", session_id="test"
