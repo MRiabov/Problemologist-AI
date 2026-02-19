@@ -33,6 +33,7 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
+        self.mjcf_actuators = {}  # name -> {joint: str, force_range: tuple}
         self.cables = {}  # name -> gs.Entity
         self.applied_controls = {}  # name -> float
         self.current_time = 0.0
@@ -138,6 +139,7 @@ class GenesisBackend(PhysicsBackend):
             self.entity_configs = {}
             self.cameras = {}
             self.motors = []
+            self.mjcf_actuators = {}
             self.cables = []
             self.applied_controls = {}
             self._is_built = False
@@ -231,12 +233,39 @@ class GenesisBackend(PhysicsBackend):
             scene.scene_path.endswith(".xml") or scene.scene_path.endswith(".mjcf")
         ):
             try:
+                # WP2: Parse MJCF to find actuators and mapping to joints
+                import xml.etree.ElementTree as ET
+
+                tree = ET.parse(scene.scene_path)
+                root = tree.getroot()
+                for act in root.findall(".//actuator/*"):
+                    name = act.get("name")
+                    joint_name = act.get("joint")
+                    force_range = act.get("forcerange")
+                    if name and joint_name:
+                        fr = (-1000.0, 1000.0)
+                        if force_range:
+                            try:
+                                parts = [float(x) for x in force_range.split()]
+                                if len(parts) == 2:
+                                    fr = (parts[0], parts[1])
+                            except ValueError:
+                                pass
+                        self.mjcf_actuators[name] = {
+                            "joint": joint_name,
+                            "force_range": fr,
+                        }
+
                 # Load MJCF directly
                 mjcf_entity = self.scene.add_entity(
                     gs.morphs.MJCF(file=scene.scene_path)
                 )
                 self.entities["mjcf_scene"] = mjcf_entity
-                logger.debug("genesis_mjcf_loaded", path=scene.scene_path)
+                logger.debug(
+                    "genesis_mjcf_loaded",
+                    path=scene.scene_path,
+                    actuators=list(self.mjcf_actuators.keys()),
+                )
             except Exception as e:
                 logger.error("failed_to_load_mjcf_in_genesis", error=str(e))
 
@@ -822,57 +851,111 @@ class GenesisBackend(PhysicsBackend):
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
-        # Find motor by name in self.motors (which are mapped to entities)
+        ctrl_val = self.applied_controls.get(actuator_name, 0.0)
+
+        # 1. Check MJCF actuators
+        if actuator_name in self.mjcf_actuators:
+            info = self.mjcf_actuators[actuator_name]
+            joint_name = info["joint"]
+            entity = self.entities.get("mjcf_scene")
+            if entity:
+                try:
+                    # Find joint by name
+                    joint = None
+                    for j in entity.joints:
+                        if j.name == joint_name:
+                            joint = j
+                            break
+
+                    if joint:
+                        idx = joint.dof_start
+                        forces = entity.get_dofs_force().cpu().numpy()
+                        vels = entity.get_dofs_velocity().cpu().numpy()
+
+                        return ActuatorState(
+                            force=float(forces[idx]),
+                            velocity=float(vels[idx]),
+                            ctrl=ctrl_val,
+                            forcerange=info["force_range"],
+                        )
+                except Exception as e:
+                    logger.debug("failed_to_get_mjcf_actuator_state", error=str(e))
+
+        # 2. Check standard motors
         entity_name = actuator_name
         for motor in getattr(self, "motors", []):
             if motor["part_name"] == actuator_name:
-                # In this architecture, we assume entity name matches part_name for moving parts
                 break
 
-        ctrl_val = self.applied_controls.get(actuator_name, 0.0)
+        if entity_name in self.entities:
+            entity = self.entities[entity_name]
+            try:
+                forces = entity.get_dofs_force().cpu().numpy()
+                vels = entity.get_dofs_velocity().cpu().numpy()
 
-        if entity_name not in self.entities:
-            return ActuatorState(
-                force=0.0, velocity=0.0, ctrl=ctrl_val, forcerange=(0, 0)
-            )
+                force = float(forces[0]) if forces.size > 0 else 0.0
+                vel = float(vels[0]) if vels.size > 0 else 0.0
 
-        entity = self.entities[entity_name]
-        try:
-            # Genesis uses DOFs for articulated/controlled entities
-            forces = entity.get_dofs_force().cpu().numpy()
-            vels = entity.get_dofs_velocity().cpu().numpy()
+                return ActuatorState(
+                    force=force,
+                    velocity=vel,
+                    ctrl=ctrl_val,
+                    forcerange=(-1000, 1000),
+                )
+            except Exception:
+                pass
 
-            force = float(forces[0]) if forces.size > 0 else 0.0
-            vel = float(vels[0]) if vels.size > 0 else 0.0
-            ctrl = self.applied_controls.get(actuator_name, 0.0)
+        return ActuatorState(force=0.0, velocity=0.0, ctrl=ctrl_val, forcerange=(0, 0))
 
-            return ActuatorState(
-                force=force,
-                velocity=vel,
-                ctrl=ctrl,
-                forcerange=(-1000, 1000),  # Default limit
-            )
-        except Exception:
-            return ActuatorState(
-                force=0.0, velocity=0.0, ctrl=ctrl_val, forcerange=(0, 0)
-            )
+    def _set_entity_dofs_force(self, entity, forces):
+        """Helper to set DOFs force, supporting different Genesis versions."""
+        if hasattr(entity, "control_dofs_force"):
+            entity.control_dofs_force(forces)
+        elif hasattr(entity, "set_dofs_force"):
+            entity.set_dofs_force(forces)
+        else:
+            logger.warning("entity_missing_force_control_method", entity=str(entity))
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value
-        for motor in getattr(self, "motors", []):
-            motor_id = motor["part_name"]
-            if motor_id in control_inputs:
-                val = control_inputs[motor_id]
-                self.applied_controls[motor_id] = val
-                # Map motor to entity
-                if motor_id in self.entities:
-                    entity = self.entities[motor_id]
+        for motor_id, val in control_inputs.items():
+            self.applied_controls[motor_id] = val
+
+            # 1. Handle MJCF actuators
+            if motor_id in self.mjcf_actuators:
+                info = self.mjcf_actuators[motor_id]
+                joint_name = info["joint"]
+                entity = self.entities.get("mjcf_scene")
+                if entity:
                     try:
-                        entity.set_dofs_force(np.array([val], dtype=np.float32))
+                        # Find joint by name
+                        joint = None
+                        for j in entity.joints:
+                            if j.name == joint_name:
+                                joint = j
+                                break
+
+                        if joint:
+                            idx = joint.dof_start
+                            # We need to set all DOFs or use specific indices
+                            forces = entity.get_dofs_force()
+                            forces[idx] = val
+                            self._set_entity_dofs_force(entity, forces)
                     except Exception as e:
-                        logger.debug(
-                            "genesis_apply_control_failed", name=motor_id, error=str(e)
-                        )
+                        logger.debug("mjcf_apply_control_failed", error=str(e))
+                continue
+
+            # 2. Handle standard motors
+            if motor_id in self.entities:
+                entity = self.entities[motor_id]
+                try:
+                    self._set_entity_dofs_force(
+                        entity, np.array([val], dtype=np.float32)
+                    )
+                except Exception as e:
+                    logger.debug(
+                        "genesis_apply_control_failed", name=motor_id, error=str(e)
+                    )
 
     def get_all_body_names(self) -> list[str]:
         names = list(self.entities.keys())
@@ -888,7 +971,9 @@ class GenesisBackend(PhysicsBackend):
         return names
 
     def get_all_actuator_names(self) -> list[str]:
-        return [m["part_name"] for m in getattr(self, "motors", [])]
+        names = [m["part_name"] for m in getattr(self, "motors", [])]
+        names.extend(list(self.mjcf_actuators.keys()))
+        return names
 
     def get_all_site_names(self) -> list[str]:
         return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]

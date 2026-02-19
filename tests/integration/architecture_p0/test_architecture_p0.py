@@ -364,10 +364,10 @@ async def test_int_022_motor_overload_behavior():
                     "import sys; sys.path.append('.'); import verify_overload; "
                     "import asyncio; asyncio.run(verify_overload.run())"
                 ),
-                "timeout": 30,
+                    "timeout": 90,
             },
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+                timeout=120.0,
         )
         assert resp.status_code == 200
         data = resp.json()

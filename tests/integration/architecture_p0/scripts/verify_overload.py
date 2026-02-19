@@ -2,7 +2,6 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.loop import SimulationLoop
 
 # XML with position actuator and strict forcerange to trigger overload
@@ -29,7 +28,7 @@ async def run(_ctx=None):
             tmp.write(TEST_OVERLOAD_XML)
             tmp_path = Path(tmp.name)
 
-        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.MUJOCO)
+        loop = SimulationLoop(str(tmp_path))
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
