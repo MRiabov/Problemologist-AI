@@ -8,7 +8,21 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+
+
+async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
+    """Fetch gzipped workspace from light worker and return base64 string."""
+    resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/bundle",
+        headers={"X-Session-ID": session_id},
+        timeout=60.0,
+    )
+    assert resp.status_code == 200, f"Failed to get bundle: {resp.text}"
+    import base64
+
+    return base64.b64encode(resp.content).decode("utf-8")
 
 
 @pytest.mark.integration_p0
@@ -16,8 +30,13 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 async def test_int_001_compose_boot_health_contract():
     """INT-001: Verify services are up and healthy."""
     async with httpx.AsyncClient() as client:
-        # Worker health
+        # Worker Light health
         resp = await client.get(f"{WORKER_LIGHT_URL}/health", timeout=5.0)
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "healthy"}
+
+        # Worker Heavy health
+        resp = await client.get(f"{WORKER_HEAVY_URL}/health", timeout=5.0)
         assert resp.status_code == 200
         assert resp.json() == {"status": "healthy"}
 
@@ -119,17 +138,27 @@ def build():
 
         # Launch two simulations concurrently
         # The worker should handle them (either serializing or thread-safe parallel)
-        # Launch two simulations concurrently
+        bundle1 = await get_bundle(client, session_id_1)
+        bundle2 = await get_bundle(client, session_id_2)
+
         res1, res2 = await asyncio.gather(
             client.post(
-                f"{WORKER_LIGHT_URL}/benchmark/simulate",
-                json={"script_path": "box.py", "backend": "mujoco"},
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
+                json={
+                    "script_path": "box.py",
+                    "backend": "mujoco",
+                    "bundle_base64": bundle1,
+                },
                 headers={"X-Session-ID": session_id_1},
                 timeout=600.0,
             ),
             client.post(
-                f"{WORKER_LIGHT_URL}/benchmark/simulate",
-                json={"script_path": "box.py", "backend": "mujoco"},
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
+                json={
+                    "script_path": "box.py",
+                    "backend": "mujoco",
+                    "bundle_base64": bundle2,
+                },
                 headers={"X-Session-ID": session_id_2},
                 timeout=600.0,
             ),
@@ -248,9 +277,15 @@ run()
             f"Debug script exit code non-zero: {resp_exec.json()}"
         )
 
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "fail.py", "backend": "mujoco"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={
+                "script_path": "fail.py",
+                "backend": "mujoco",
+                "bundle_base64": bundle64,
+            },
             headers={"X-Session-ID": session_id},
             timeout=600.0,
         )
@@ -420,9 +455,11 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
-            json={"script_path": "valid_hole.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json={"script_path": "valid_hole.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=30.0,  # Validate is fast
         )

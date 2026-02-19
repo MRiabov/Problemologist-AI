@@ -7,6 +7,7 @@ import yaml
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -157,7 +158,7 @@ async def test_int_005_mandatory_artifacts_gate(
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -174,7 +175,7 @@ async def test_int_005_mandatory_artifacts_gate(
             headers=base_headers,
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -191,7 +192,7 @@ async def test_int_005_mandatory_artifacts_gate(
             headers=base_headers,
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -219,7 +220,7 @@ async def test_int_006_plan_structure_validation(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -242,7 +243,7 @@ Just some text here, no list or table.
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -271,7 +272,7 @@ async def test_int_007_todo_integrity(
             client, base_headers, {**base_files, "todo.md": invalid_todo}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -284,7 +285,7 @@ async def test_int_007_todo_integrity(
             client, base_headers, {**base_files, "todo.md": uncompleted_todo}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -311,7 +312,7 @@ async def test_int_008_objectives_validation(
             client, base_headers, {**base_files, "objectives.yaml": template_content}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -323,7 +324,7 @@ async def test_int_008_objectives_validation(
             client, base_headers, {**base_files, "objectives.yaml": invalid_obj}
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -352,7 +353,7 @@ async def test_int_009_cost_estimation_validation(
             {**base_files, "assembly_definition.yaml": template_cost},
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -369,7 +370,7 @@ async def test_int_009_cost_estimation_validation(
             {**base_files, "assembly_definition.yaml": invalid_cost},
         )
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -408,13 +409,13 @@ async def test_int_011_planner_caps_enforcement(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -465,13 +466,13 @@ async def test_int_015_engineer_handover_immutability(
         )
         # Record validation
         await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -511,13 +512,13 @@ def build():
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -563,13 +564,13 @@ async def test_int_010_planner_pricing_script_integration(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -622,7 +623,7 @@ async def test_int_018_validate_and_price_integration_gate(
         )
 
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/submit",
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
