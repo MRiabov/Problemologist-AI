@@ -59,7 +59,7 @@ moved_object:
   runtime_jitter: [0, 0, 0]
 constraints:
   max_unit_cost: 100.0
-  max_weight: 10.0
+  max_weight_g: 10000.0
 randomization:
   static_variation_id: "test"
   runtime_jitter_enabled: false
@@ -77,9 +77,9 @@ units:
   currency: "USD"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
-  benchmark_max_weight_kg: 10.0
+  benchmark_max_weight_g: 10000.0
   planner_target_max_unit_cost_usd: 80.0
-  planner_target_max_weight_kg: 8.0
+  planner_target_max_weight_g: 8000.0
 manufactured_parts: []
 cots_parts: []
 final_assembly: []
@@ -111,7 +111,7 @@ totals:
             mock_val_result.is_manufacturable = True
             mock_val_result.unit_cost = 10.0
             mock_val_result.violations = []
-            mock_val_result.metadata = {"weight_kg": 0.1}
+            mock_val_result.weight_g = 100.0
             mock_val.return_value = mock_val_result
 
             success = submit_for_review(component)

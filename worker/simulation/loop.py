@@ -12,8 +12,9 @@ from shared.observability.schemas import (
     ElectricalFailureEvent,
     SimulationBackendSelectedEvent,
 )
-from shared.simulation.backends import SimulationScene
+from shared.simulation.backends import ActuatorState, SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
+from shared.wire_utils import get_awg_properties
 from worker.simulation.electronics import ElectronicsManager
 from worker.simulation.evaluator import SuccessEvaluator
 from worker.simulation.factory import get_physics_backend
@@ -348,12 +349,11 @@ class SimulationLoop:
             current_time = res.time
 
             # 2. Update Metrics
+            actuator_states = {
+                n: self.backend.get_actuator_state(n) for n in self.actuator_names
+            }
             energy = sum(
-                abs(
-                    self.backend.get_actuator_state(n).ctrl
-                    * self.backend.get_actuator_state(n).velocity
-                )
-                for n in self.actuator_names
+                abs(state.ctrl * state.velocity) for state in actuator_states.values()
             )
 
             target_vel = 0.0
@@ -395,14 +395,12 @@ class SimulationLoop:
                 break
 
             # Check Motor Overload
-            if self._check_motor_overload():
+            if self._check_motor_overload(actuator_states):
                 self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                 break
 
             # 7. Check Wire Failure (T015)
             if self.electronics:
-                from shared.wire_utils import get_awg_properties
-
                 wire_broken = False
                 for wire in self.electronics.wiring:
                     if getattr(wire, "routed_in_3d", False):
@@ -624,7 +622,7 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, actuator_states: dict[str, ActuatorState]) -> bool:
         # Check all position/torque actuators for saturation
         from worker.simulation.loop import SIMULATION_STEP_S
 
@@ -633,7 +631,7 @@ class SimulationLoop:
 
         names = [item[0] for item in self.actuators_to_monitor]
         limits = [item[1] for item in self.actuators_to_monitor]
-        forces = [abs(self.backend.get_actuator_state(n).force) for n in names]
+        forces = [abs(actuator_states[n].force) for n in names]
 
         return self.success_evaluator.check_motor_overload(
             names, forces, limits, SIMULATION_STEP_S

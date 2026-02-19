@@ -75,9 +75,9 @@ def valid_cost():
         "version": "1.0",
         "constraints": {
             "benchmark_max_unit_cost_usd": 50.0,
-            "benchmark_max_weight_kg": 1.0,
+            "benchmark_max_weight_g": 1000.0,
             "planner_target_max_unit_cost_usd": 45.0,
-            "planner_target_max_weight_kg": 0.9,
+            "planner_target_max_weight_g": 900.0,
         },
         "totals": {
             "estimated_unit_cost_usd": 30.0,
@@ -384,9 +384,9 @@ async def test_int_011_planner_caps_enforcement(
             "version": "1.0",
             "constraints": {
                 "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_kg": 1.0,
+                "benchmark_max_weight_g": 1000.0,
                 "planner_target_max_unit_cost_usd": 60.0,  # OVER LIMIT
-                "planner_target_max_weight_kg": 0.5,
+                "planner_target_max_weight_g": 500.0,
             },
             "totals": {
                 "estimated_unit_cost_usd": 40.0,
@@ -539,9 +539,9 @@ async def test_int_010_planner_pricing_script_integration(
             "version": "1.0",
             "constraints": {
                 "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_kg": 1.0,
+                "benchmark_max_weight_g": 1000.0,
                 "planner_target_max_unit_cost_usd": 45.0,
-                "planner_target_max_weight_kg": 0.9,
+                "planner_target_max_weight_g": 900.0,
             },
             "totals": {
                 "estimated_unit_cost_usd": 55.0,  # OVER PLANNER CAP

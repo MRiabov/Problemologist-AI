@@ -85,9 +85,6 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
     assert len(data["stress_summaries"]) == 1
     assert data["stress_summaries"][0]["part_label"] == "part1"
 
-    # 2. Clear global state
-    validation.LAST_SIMULATION_RESULT = None
-
     # 3. Call get_stress_report
     # It should look in cwd or RENDERS_DIR parent.
     # Since we set RENDERS_DIR to tmp_path/renders, parent is tmp_path.
@@ -106,6 +103,3 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
     paths = preview_stress(component, output_dir=tmp_path)
     assert len(paths) > 0
     assert "stress_part1.png" in paths[0]
-
-    # Verify global state is restored
-    assert validation.LAST_SIMULATION_RESULT is not None

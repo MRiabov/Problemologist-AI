@@ -69,6 +69,24 @@ def test_fs_write(mock_create_router):
 
 
 @patch("worker.api.routes.create_filesystem_router")
+def test_fs_exists(mock_create_router):
+    """Test checking file existence via API."""
+    mock_router = MagicMock(spec=FilesystemRouter)
+    mock_router.exists.return_value = True
+    mock_create_router.return_value = mock_router
+
+    response = client.post(
+        "/fs/exists",
+        json={"path": "/test.txt"},
+        headers={"X-Session-ID": "test-session"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["exists"] is True
+    mock_router.exists.assert_called_with("/test.txt")
+
+
+@patch("worker.api.routes.create_filesystem_router")
 def test_fs_edit(mock_create_router):
     """Test editing a file via API."""
     mock_router = MagicMock(spec=FilesystemRouter)
