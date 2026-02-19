@@ -51,10 +51,11 @@ async def test_int_002_controller_worker_execution_boundary():
             await asyncio.sleep(10.0)
             # 20 minutes?
             s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            if s_resp.json()["status"] == "COMPLETED":
+            status = s_resp.json()["status"]
+            if status == "completed":
                 completed = True
                 break
-            if s_resp.json()["status"] == "FAILED":
+            if status == "failed":
                 pytest.fail(f"Agent failed: {s_resp.text}")
 
         assert completed, "Agent did not complete in time"
@@ -182,7 +183,7 @@ moved_object:
     runtime_jitter: [0.5, 0.5, 0.5]
 constraints:
     max_unit_cost: 100.5
-    max_weight: 10.5
+    max_weight_g: 10.5
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
@@ -293,7 +294,7 @@ moved_object:
     runtime_jitter: [0.1, 0.1, 0]
 constraints:
     max_unit_cost: 100
-    max_weight: 10
+    max_weight_g: 10
 """
         await client.post(
             f"{WORKER_URL}/fs/write",
