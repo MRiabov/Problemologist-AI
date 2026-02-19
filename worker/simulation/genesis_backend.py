@@ -119,6 +119,7 @@ class GenesisBackend(PhysicsBackend):
                 self._is_built
                 and self.scene_meta
                 and self.scene_meta.scene_path == scene.scene_path
+                and self.scene_meta.config == scene.config
             ):
                 logger.debug("genesis_backend_reuse_scene", scene_path=scene.scene_path)
                 return
@@ -150,7 +151,10 @@ class GenesisBackend(PhysicsBackend):
             # T017: GPU OOM Auto-Retry Logic
             max_retries = 3
             particle_reduction_factor = 0.75
-            self.current_particle_multiplier = 1.0
+
+            # Initial multiplier based on requested budget (default 100k -> multiplier 1.0)
+            requested_budget = scene.config.get("particle_budget", 100000)
+            self.current_particle_multiplier = requested_budget / 100000.0
 
             for attempt in range(max_retries):
                 try:

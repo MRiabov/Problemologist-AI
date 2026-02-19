@@ -30,9 +30,6 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
-LAST_SIMULATION_RESULT: SimulationResult | None = None
-
-
 def load_simulation_result(path: Path) -> SimulationResult | None:
     if not path.exists():
         return None
@@ -48,31 +45,28 @@ def save_simulation_result(result: SimulationResult, path: Path):
     path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
 
-def get_stress_report(part_label: str) -> dict | None:
+def get_stress_report(part_label: str, output_dir: Path | None = None) -> dict | None:
     """Returns the worst-case stress summary for a simulated FEM part."""
-    global LAST_SIMULATION_RESULT
-    if LAST_SIMULATION_RESULT is None:
-        # Try to load from disk
-        candidates = [Path("simulation_result.json")]
-        if os.getenv("RENDERS_DIR"):
-            candidates.append(
-                Path(os.getenv("RENDERS_DIR")).parent / "simulation_result.json"
-            )
+    # Try to load from disk
+    candidates = [Path("simulation_result.json")]
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    candidates.append(working_dir / "simulation_result.json")
 
-        for p in candidates:
-            res = load_simulation_result(p)
-            if res:
-                LAST_SIMULATION_RESULT = res
-                break
+    last_result = None
+    for p in candidates:
+        res = load_simulation_result(p)
+        if res:
+            last_result = res
+            break
 
-    if LAST_SIMULATION_RESULT is None:
+    if last_result is None:
         logger.warning("get_stress_report_called_before_simulation")
         return None
 
     worst_summary = None
     min_sf = float("inf")
 
-    for summary in LAST_SIMULATION_RESULT.stress_summaries:
+    for summary in last_result.stress_summaries:
         if summary.part_label == part_label and summary.safety_factor < min_sf:
             min_sf = summary.safety_factor
             worst_summary = summary
@@ -109,26 +103,23 @@ def preview_stress(
     output_dir: Path | None = None,
 ) -> list[str]:
     """Renders the component with a von Mises stress heatmap overlay."""
-    global LAST_SIMULATION_RESULT
-    if LAST_SIMULATION_RESULT is None:
-        # Try to load from disk
-        candidates = [Path("simulation_result.json")]
-        working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-        candidates.append(working_dir / "simulation_result.json")
+    # Try to load from disk
+    candidates = [Path("simulation_result.json")]
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    candidates.append(working_dir / "simulation_result.json")
 
-        for p in candidates:
-            res = load_simulation_result(p)
-            if res:
-                LAST_SIMULATION_RESULT = res
-                break
+    last_result = None
+    for p in candidates:
+        res = load_simulation_result(p)
+        if res:
+            last_result = res
+            break
 
-    if LAST_SIMULATION_RESULT is None:
+    if last_result is None:
         logger.warning("preview_stress_called_before_simulation")
         return []
 
-    logger.info(
-        "rendering_stress_heatmaps", count=len(LAST_SIMULATION_RESULT.stress_fields)
-    )
+    logger.info("rendering_stress_heatmaps", count=len(last_result.stress_fields))
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     stress_renders_dir = working_dir / "renders" / "stress"
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
@@ -139,7 +130,7 @@ def preview_stress(
     from .rendering import render_stress_heatmap
 
     render_paths = []
-    for part_label, field_data in LAST_SIMULATION_RESULT.stress_fields.items():
+    for part_label, field_data in last_result.stress_fields.items():
         field = StressField(
             nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
         )
@@ -337,6 +328,10 @@ def simulate_subprocess(
     session_id: str | None = None,
 ) -> SimulationResult:
     """Serializable entry point for ProcessPoolExecutor."""
+    # Ensure events are written to the session's event log
+    if session_root:
+        os.environ["EVENTS_FILE"] = str(Path(session_root) / "events.jsonl")
+
     from worker.utils.loader import load_component_from_script
 
     component = load_component_from_script(
@@ -422,6 +417,7 @@ def simulate(
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
         session_id=session_id,
+        particle_budget=particle_budget,
     )
 
     dynamic_controllers = {}
@@ -453,9 +449,30 @@ def simulate(
 
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
+            from shared.observability.events import emit_event
+            from shared.observability.schemas import GpuOomRetryEvent
+
             logger.warning("gpu_oom_detected_retrying_smoke_mode")
-            loop.smoke_test_mode = True
-            loop.particle_budget = 5000
+
+            # Emit event for observability
+            emit_event(
+                GpuOomRetryEvent(
+                    original_particles=loop.particle_budget,
+                    reduced_particles=5000,
+                )
+            )
+
+            # Re-create loop with reduced budget to force backend scene rebuild
+            loop = SimulationLoop(
+                str(scene_path),
+                component=component,
+                backend_type=backend_type,
+                electronics=electronics,
+                objectives=objectives,
+                smoke_test_mode=True,
+                session_id=session_id,
+                particle_budget=5000,
+            )
             metrics = loop.step(
                 control_inputs=control_inputs,
                 duration=sim_duration,
@@ -489,8 +506,7 @@ def simulate(
             cots_parts=assembly_definition.cots_parts if assembly_definition else None,
         )
 
-        global LAST_SIMULATION_RESULT
-        LAST_SIMULATION_RESULT = SimulationResult(
+        result = SimulationResult(
             success=metrics.success,
             summary=status_msg,
             render_paths=render_paths,
@@ -505,17 +521,21 @@ def simulate(
 
         # T023: Generate stress heatmaps and append to render_paths
         if metrics.stress_fields:
+            # Save first so preview_stress can load it
+            try:
+                save_simulation_result(result, working_dir / "simulation_result.json")
+            except Exception as e:
+                logger.warning("failed_to_save_simulation_result_pre_preview", error=str(e))
+
             stress_renders = preview_stress(component, output_dir=working_dir)
-            LAST_SIMULATION_RESULT.render_paths.extend(stress_renders)
+            result.render_paths.extend(stress_renders)
 
         try:
-            save_simulation_result(
-                LAST_SIMULATION_RESULT, working_dir / "simulation_result.json"
-            )
+            save_simulation_result(result, working_dir / "simulation_result.json")
         except Exception as e:
             logger.warning("failed_to_save_simulation_result", error=str(e))
 
-        return LAST_SIMULATION_RESULT
+        return result
     except Exception as e:
         logger.error("simulation_error", error=str(e))
         return SimulationResult(success=False, summary=f"Simulation error: {e!s}")
