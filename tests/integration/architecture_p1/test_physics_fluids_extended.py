@@ -60,12 +60,13 @@ def build():
             timeout=60.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
-        # FIXME: why not pydantic schemas?
+        from worker.api.schema import BenchmarkToolResponse
+
+        data = BenchmarkToolResponse.model_validate(resp.json())
 
         # Verify result labelled approximate
-        assert data["confidence"] == "approximate", (
-            f"Expected confidence 'approximate', got '{data['confidence']}'"
+        assert data.confidence == "approximate", (
+            f"Expected confidence 'approximate', got '{data.confidence}'"
         )
 
 
@@ -119,13 +120,13 @@ def build():
             timeout=120.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
+        data = BenchmarkToolResponse.model_validate(resp.json())
 
         # Verify artifacts in response (MP4, JSON, etc.)
-        assert data.get("success"), f"Simulation failed: {data.get('message')}"
-        artifacts = data.get("artifacts")
+        assert data.success, f"Simulation failed: {data.message}"
+        artifacts = data.artifacts
         assert artifacts is not None, (
-            f"Artifacts missing in response. Message: {data.get('message')}"
+            f"Artifacts missing in response. Message: {data.message}"
         )
         assert "render_paths" in artifacts, (
             f"render_paths missing in artifacts. Keys: {list(artifacts.keys())}"

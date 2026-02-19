@@ -14,6 +14,8 @@ class WorkerSettings(BaseSettings):
     # We allow override via SKILLS_DIR env var.
     # If not set, we default based on the environment (integration test vs production/docker).
     skills_dir_override: str | None = Field(default=None, alias="SKILLS_DIR")
+    # Fallback for local development or custom environments
+    skills_dir_default: str | None = Field(default=None, alias="SKILLS_DIR_DEFAULT")
 
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")
     git_pat: str | None = Field(default=None, alias="GIT_PAT")
@@ -28,7 +30,9 @@ class WorkerSettings(BaseSettings):
             # Use a stable temp dir for integration tests
             return Path(tempfile.gettempdir()) / "problemologist_skills"
 
-        # FIXME: should be an env var in configs
+        if self.skills_dir_default:
+            return Path(self.skills_dir_default)
+
         # Fallback for local development
         app_skills = Path("/app/skills")
         try:
