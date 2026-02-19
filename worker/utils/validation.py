@@ -306,6 +306,45 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
+            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
+                from shared.cots.parts.electronics import ElectronicRelay
+
+                try:
+                    relay = ElectronicRelay(size=comp.cots_part_id)
+                    total_cost += getattr(relay, "price", 0.0)
+                    total_weight += getattr(relay, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_relay",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
+                from shared.cots.parts.electronics import Switch
+
+                try:
+                    switch = Switch(size=comp.cots_part_id)
+                    total_cost += getattr(switch, "price", 0.0)
+                    total_weight += getattr(switch, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_switch",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
+                from shared.cots.parts.electronics import Connector
+
+                try:
+                    conn = Connector(size=comp.cots_part_id)
+                    total_cost += getattr(conn, "price", 0.0)
+                    total_weight += getattr(conn, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_connector",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
 
         for wire in electronics.wiring:
             length_m = wire.length_mm / 1000.0
