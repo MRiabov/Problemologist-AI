@@ -65,7 +65,7 @@ def valid_objectives():
             "start_position": [0.0, 0.0, 50.0],
             "runtime_jitter": [0.0, 0.0, 0.0],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight": 1.0},
+        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1.0},
     }
 
 

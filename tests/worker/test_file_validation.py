@@ -36,7 +36,7 @@ moved_object:
   runtime_jitter: [2, 2, 1]
 constraints:
   max_unit_cost: 50.0
-  max_weight: 1.2
+  max_weight_g: 1.2
 """
 
     def test_valid_content(self, valid_yaml_content):

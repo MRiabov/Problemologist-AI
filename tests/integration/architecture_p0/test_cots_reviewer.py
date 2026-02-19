@@ -52,7 +52,7 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
         # Verify that after search, no new files are created in a dummy session
         # (beyond journal entries which are allowed)
         ls_resp = await client.post(
-            f"{WORKER_URL}/fs/list", json={"path": "."}, headers=base_headers
+            f"{WORKER_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
         files = [f["name"] for f in ls_resp.json()]
         # Allow only journals or nothing

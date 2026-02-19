@@ -64,7 +64,7 @@ def test_define_fluid_updates_yaml(tmp_path, monkeypatch):
             "start_position": [0, 0, 5],
             "runtime_jitter": [0, 0, 0],
         },
-        "constraints": {"max_unit_cost": 100, "max_weight": 10},
+        "constraints": {"max_unit_cost": 100, "max_weight_g": 10},
         "physics": {"backend": "mujoco"},
     }
     obj_path.write_text(yaml.dump(data))
@@ -94,7 +94,7 @@ def test_set_soft_mesh(tmp_path, monkeypatch):
             "start_position": [0, 0, 5],
             "runtime_jitter": [0, 0, 0],
         },
-        "constraints": {"max_unit_cost": 100, "max_weight": 10},
+        "constraints": {"max_unit_cost": 100, "max_weight_g": 10},
         "physics": {"backend": "mujoco", "fem_enabled": False},
     }
     obj_path.write_text(yaml.dump(data))
