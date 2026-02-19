@@ -161,18 +161,6 @@ def calculate_path_length(
         return float(length)
 
 
-def calculate_length(waypoints: list[tuple[float, float, float]]) -> float:
-    """Legacy length calculation (uses manual distance sum)."""
-    if not waypoints or len(waypoints) < 2:
-        return 0.0
-
-    length = 0.0
-    pts = np.array(waypoints)
-    diffs = np.diff(pts, axis=0)
-    lengths = np.linalg.norm(diffs, axis=1)
-    return float(np.sum(lengths))
-
-
 # T011: Implement check_wire_clearance
 def check_wire_clearance(
     wire_waypoints: list[tuple[float, float, float]],
@@ -287,7 +275,7 @@ def route_wire_legacy(
     """
     Process a wire route (legacy signature), calculating length and basic path validation.
     """
-    length = calculate_length(waypoints)
+    length = calculate_path_length(waypoints, use_spline=False)
     errors = []
 
     if length <= 0:

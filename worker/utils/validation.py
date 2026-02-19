@@ -22,6 +22,7 @@ from shared.models.simulation import (
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker.simulation.factory import get_simulation_builder
+from worker.simulation.loop import SimulationLoop
 from worker.workbenches.config import load_config
 
 from .dfm import validate_and_price
@@ -52,46 +53,45 @@ def get_stress_report(part_label: str, output_dir: Path | None = None) -> dict |
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     candidates.append(working_dir / "simulation_result.json")
 
-    last_result = None
+    res = None
     for p in candidates:
         res = load_simulation_result(p)
         if res:
-            last_result = res
             break
 
-    if last_result is None:
+    if res is None:
         logger.warning("get_stress_report_called_before_simulation")
         return None
 
     worst_summary = None
     min_sf = float("inf")
 
-    for summary in last_result.stress_summaries:
+    for summary in res.stress_summaries:
         if summary.part_label == part_label and summary.safety_factor < min_sf:
             min_sf = summary.safety_factor
             worst_summary = summary
 
     if worst_summary:
-        res = worst_summary.model_dump()
-        sf = res.get("safety_factor", 10.0)
+        res_dict = worst_summary.model_dump()
+        sf = res_dict.get("safety_factor", 10.0)
         if sf < 1.2:
-            res["advice"] = (
+            res_dict["advice"] = (
                 "Safety factor critical (below 1.2). Part will likely fail. "
                 "Reinforce geometry at the location of maximum stress."
             )
         elif sf < 1.5:
-            res["advice"] = (
+            res_dict["advice"] = (
                 "Safety factor low (below 1.5). "
                 "Consider adding material to reach target range (1.5 - 5.0)."
             )
         elif sf > 5.0:
-            res["advice"] = (
+            res_dict["advice"] = (
                 "Safety factor high (over 5.0). Part might be over-engineered. "
                 "Consider removing material to reduce cost and weight."
             )
         else:
-            res["advice"] = "Safety factor is within acceptable range (1.5 - 5.0)."
-        return res
+            res_dict["advice"] = "Safety factor is within acceptable range (1.5 - 5.0)."
+        return res_dict
 
     logger.warning("stress_report_part_not_found", part_label=part_label)
     return None
@@ -108,18 +108,17 @@ def preview_stress(
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     candidates.append(working_dir / "simulation_result.json")
 
-    last_result = None
+    res = None
     for p in candidates:
         res = load_simulation_result(p)
         if res:
-            last_result = res
             break
 
-    if last_result is None:
+    if res is None:
         logger.warning("preview_stress_called_before_simulation")
         return []
 
-    logger.info("rendering_stress_heatmaps", count=len(last_result.stress_fields))
+    logger.info("rendering_stress_heatmaps", count=len(res.stress_fields))
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     stress_renders_dir = working_dir / "renders" / "stress"
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
@@ -130,7 +129,7 @@ def preview_stress(
     from .rendering import render_stress_heatmap
 
     render_paths = []
-    for part_label, field_data in last_result.stress_fields.items():
+    for part_label, field_data in res.stress_fields.items():
         field = StressField(
             nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
         )
@@ -270,8 +269,12 @@ def calculate_assembly_totals(
             res = validate_and_price(child, method, config)
             total_cost += res.unit_cost
             total_weight += res.weight_g
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                "failed_to_price_manufactured_part",
+                part=getattr(child, "label", "unknown"),
+                error=str(e),
+            )
 
     # 2. Electronics and COTS parts
     if electronics:
@@ -283,8 +286,12 @@ def calculate_assembly_totals(
                     psu = PowerSupply(size=comp.cots_part_id)
                     total_cost += getattr(psu, "price", 0.0)
                     total_weight += getattr(psu, "weight_g", 0.0)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_psu",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
             elif comp.type == "motor" and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
 
@@ -292,8 +299,12 @@ def calculate_assembly_totals(
                     motor = ServoMotor(size=comp.cots_part_id)
                     total_cost += getattr(motor, "price", 0.0)
                     total_weight += getattr(motor, "weight_g", 0.0)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_motor",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
 
         for wire in electronics.wiring:
             length_m = wire.length_mm / 1000.0
@@ -408,8 +419,6 @@ def simulate(
         electronics=electronics,
         smoke_test_mode=smoke_test_mode,
     )
-
-    from worker.simulation.loop import SimulationLoop
 
     loop = SimulationLoop(
         str(scene_path),

@@ -42,9 +42,9 @@ def test_assembly_definition_with_electronics():
     data = {
         "constraints": {
             "benchmark_max_unit_cost_usd": 100.0,
-            "benchmark_max_weight_kg": 1.0,
+            "benchmark_max_weight_g": 1000.0,
             "planner_target_max_unit_cost_usd": 80.0,
-            "planner_target_max_weight_kg": 0.8,
+            "planner_target_max_weight_g": 800.0,
         },
         "manufactured_parts": [
             {
@@ -88,9 +88,9 @@ def test_electronics_reference_validation():
     data = {
         "constraints": {
             "benchmark_max_unit_cost_usd": 100.0,
-            "benchmark_max_weight_kg": 1.0,
+            "benchmark_max_weight_g": 1000.0,
             "planner_target_max_unit_cost_usd": 80.0,
-            "planner_target_max_weight_kg": 0.8,
+            "planner_target_max_weight_g": 800.0,
         },
         "manufactured_parts": [],
         "electronics": {

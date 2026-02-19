@@ -29,7 +29,7 @@ from worker.workbenches.models import WorkbenchResult
 from ..filesystem.backend import FileInfo
 from ..filesystem.router import WritePermissionError, create_filesystem_router
 from ..runtime.executor import RuntimeConfig, run_python_code_async
-from ..utils import submit_for_review, validate
+from ..utils import simulate, submit_for_review, validate
 from ..utils.git import (
     abort_merge,
     commit_all,
@@ -48,6 +48,7 @@ from .schema import (
     EditFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    ExistsResponse,
     GitCommitRequest,
     GitCommitResponse,
     GitMergeRequest,
@@ -119,6 +120,17 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
         raise HTTPException(status_code=404, detail="Directory not found")
     except Exception as e:
         logger.error("api_ls_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@light_router.post("/fs/exists", response_model=ExistsResponse)
+async def file_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
+    """Check if a file or directory exists."""
+    try:
+        exists = fs_router.exists(request.path)
+        return ExistsResponse(exists=exists)
+    except Exception as e:
+        logger.error("api_exists_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

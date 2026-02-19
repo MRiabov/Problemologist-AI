@@ -116,6 +116,59 @@
         }
       }
     },
+    "/fs/exists": {
+      "post": {
+        "tags": [
+          "worker"
+        ],
+        "summary": "File Exists",
+        "description": "Check if a file or directory exists.",
+        "operationId": "file_exists_fs_exists_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExistsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fs/read": {
       "post": {
         "tags": [
@@ -1667,6 +1720,20 @@
         ],
         "title": "ExecuteResponse",
         "description": "Response from executing Python code."
+      },
+      "ExistsResponse": {
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "title": "Exists"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exists"
+        ],
+        "title": "ExistsResponse",
+        "description": "Response for file existence check."
       },
       "FileInfo": {
         "properties": {

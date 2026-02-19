@@ -430,7 +430,7 @@ benchmark_generator:
          3. Design static geometry, input object behavior, and any moving parts with explicit randomization ranges.
          4. Validate solvability and objective clearance under randomization assumptions.
          5. Build pricing/weight estimates from manufacturing/COTS references, then set cost/weight as envelopes (not exact spend targets).
-            - Compute `estimated_unit_cost_usd` and `estimated_weight_kg`.
+            - Compute `estimated_unit_cost_usd` and `estimated_weight_g`.
             - Default to `max_unit_cost ~= 1.5x estimated_unit_cost_usd` (round up to practical values, not exact cents).
             - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
             - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
@@ -447,7 +447,7 @@ benchmark_generator:
          **Cost Envelope Policy (MANDATORY)**:
          - Treat `max_unit_cost` and `max_weight` as hard ceilings, not exact targets to hit.
          - Do NOT overfit benchmark requirements so the engineer must spend to an exact value.
-         - Always provide an expected solution range (`expected_solution_cost_range_usd`, `expected_solution_weight_kg`).
+         - Always provide an expected solution range (`expected_solution_cost_range_usd`, `expected_solution_weight_g`).
          - If estimate confidence is low, increase leeway instead of tightening caps.
          - Reject brittle budgets where caps are too close to estimates (minimum 20% buffer above high-end estimate).
 
@@ -470,7 +470,7 @@ benchmark_generator:
          7. **Build123d Strategy**: CSG vs sketches, patterns to use.
          8. **Cost & Weight Envelope**:
             - `estimated_unit_cost_usd`, `max_unit_cost`, `budget_leeway_pct`
-            - `estimated_weight_kg`, `max_weight`, `weight_leeway_pct`
+            - `estimated_weight_g`, `max_weight`, `weight_leeway_pct`
             - Short rationale for why these caps are challenging but non-brittle.
          9. **Part Metadata**:
             - All parts and assemblies MUST have metadata.
@@ -658,9 +658,9 @@ benchmark_generator:
          version: "1.0"
          constraints:
            benchmark_max_unit_cost_usd: 50.0
-           benchmark_max_weight_kg: 1.2
+           benchmark_max_weight_g: 1200.0
            planner_target_max_unit_cost_usd: 40.0
-           planner_target_max_weight_kg: 1.0
+           planner_target_max_weight_g: 1000.0
          final_assembly:
            - subassembly_id: "main_unit"
              parts:

@@ -146,33 +146,18 @@ class WorkerClient:
 
     async def exists(self, path: str) -> bool:
         """Check if a file exists."""
-        from pathlib import Path
-
         client = await self._get_client()
         try:
-            # First attempt: use /fs/read with head request or similar if it existed,
-            # but since we only have these endpoints, we'll stick to /fs/ls
-            # but fix the parsing.
-            parent_path = str(Path(path).parent)
-            if parent_path == ".":
-                parent_path = "/"
-
             response = await client.post(
-                f"{self.base_url}/fs/ls",
-                json={"path": parent_path},
+                f"{self.base_url}/fs/exists",
+                json={"path": path},
                 headers=self.headers,
                 timeout=10.0,
             )
             if response.status_code == 404:
                 return False
             response.raise_for_status()
-
-            # The API returns a list of FileInfo objects: [{"name": "...", "path": "...", ...}]
-            files = response.json()
-            filename = Path(path).name
-
-            # Check for exact name match in the directory listing
-            return any(f["name"] == filename for f in files)
+            return response.json()["exists"]
         except Exception:
             return False
         finally:

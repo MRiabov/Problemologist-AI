@@ -1,5 +1,6 @@
 import structlog
 
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import ElectronicsSection
 
 logger = structlog.get_logger(__name__)
@@ -74,7 +75,7 @@ class ElectronicsManager:
         sources = [
             c.component_id
             for c in self.electronics.components
-            if c.type in ["battery", "v_source", "power_supply"]
+            if c.type == ElectronicComponentType.POWER_SUPPLY
         ]
 
         # Simplified BFS for power propagation
