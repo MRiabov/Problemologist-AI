@@ -12,7 +12,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_101_physics_backend_selection():
+async def test_int_101_physics_backend_selection(get_bundle):
     """INT-101: Verify physics backend selection and event emission."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-101-{int(time.time())}"
@@ -64,10 +64,13 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # 3. Simulate
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
@@ -91,7 +94,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_105_fluid_containment_evaluation():
+async def test_int_105_fluid_containment_evaluation(get_bundle):
     """INT-105: Verify fluid containment objective evaluation."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-105-{int(time.time())}"
@@ -139,9 +142,12 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
@@ -167,9 +173,13 @@ def build():
             json={"path": "objectives.yaml", "content": objectives_fail},
             headers={"X-Session-ID": session_id},
         )
+
+        # Re-bundle
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
@@ -181,7 +191,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_106_flow_rate_evaluation():
+async def test_int_106_flow_rate_evaluation(get_bundle):
     """INT-106: Verify flow rate objective evaluation (stub)."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-106-{int(time.time())}"
@@ -225,9 +235,12 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
@@ -238,7 +251,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_112_mujoco_backward_compat():
+async def test_int_112_mujoco_backward_compat(get_bundle):
     """INT-112: Verify MuJoCo ignores fluid/FEM config."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-112-{int(time.time())}"
@@ -282,9 +295,12 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )

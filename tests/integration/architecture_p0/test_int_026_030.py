@@ -7,6 +7,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 API_KEY = os.getenv(
     "CONTROLLER_API_KEY", "test-key"
@@ -15,7 +16,7 @@ API_KEY = os.getenv(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_026_mandatory_event_families():
+async def test_int_026_mandatory_event_families(get_bundle):
     """INT-026: Verify mandatory event families are emitted in a real run."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-events-{int(time.time())}"
@@ -86,10 +87,13 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # 3. Trigger simulation
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )

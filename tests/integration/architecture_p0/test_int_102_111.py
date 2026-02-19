@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -43,7 +44,7 @@ async def setup_fem_workspace(client, headers, objectives_content, script_conten
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_102_111_fem_material_validation(session_id, base_headers):
+async def test_int_102_111_fem_material_validation(session_id, base_headers, get_bundle):
     """
     INT-102: FEM material config validation before simulation.
     INT-111: validate_and_price FEM material gate.
@@ -78,11 +79,14 @@ def build():
             client, base_headers, objectives_content, script_content
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # 2. Test INT-111: validate_and_price gate
         # We expect this to fail because aluminum_6061 lacks FEM fields
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert resp.status_code == 200
@@ -92,8 +96,8 @@ def build():
 
         # 3. Test INT-102: simulate entry gate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert resp.status_code == 200
@@ -104,7 +108,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_103_part_breakage_detection(session_id, base_headers):
+async def test_int_103_part_breakage_detection(session_id, base_headers, get_bundle):
     """
     INT-103: Verify simulation abort on ultimate_stress_pa violation.
     """
@@ -160,10 +164,13 @@ def build():
             client, base_headers, objectives_content, script_content
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers=base_headers,
             timeout=120.0,
         )
@@ -179,7 +186,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_104_stress_reporting(session_id, base_headers):
+async def test_int_104_stress_reporting(session_id, base_headers, get_bundle):
     """
     INT-104: Verify SimulationResult.stress_summaries is populated.
     """
@@ -233,10 +240,13 @@ def build():
             client, base_headers, objectives_content, script_content
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers=base_headers,
             timeout=120.0,
         )
@@ -262,7 +272,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_107_stress_objective_evaluation(session_id, base_headers):
+async def test_int_107_stress_objective_evaluation(session_id, base_headers, get_bundle):
     """
     INT-107: Verify STRESS_OBJECTIVE_EXCEEDED failure reason.
     """
@@ -320,10 +330,13 @@ def build():
             client, base_headers, objectives_content, script_content
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={"script_path": "script.py", "bundle_base64": bundle64},
             headers=base_headers,
             timeout=120.0,
         )
@@ -335,7 +348,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_109_physics_instability_abort(session_id, base_headers):
+async def test_int_109_physics_instability_abort(session_id, base_headers, get_bundle):
     """
     INT-109: Verify kinetics energy abort.
     Note: Creating true instability reliably is hard, but we can try
@@ -392,10 +405,17 @@ cnc:
             client, base_headers, objectives_content, script_content
         )
 
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
+
         # Skip geometric validation to allow intersection
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "skip_validate": True},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={
+                "script_path": "script.py",
+                "skip_validate": True,
+                "bundle_base64": bundle64,
+            },
             headers=base_headers,
             timeout=120.0,
         )

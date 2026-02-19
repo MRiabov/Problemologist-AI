@@ -133,6 +133,7 @@ async def test_int_005_mandatory_artifacts_gate(
     valid_objectives,
     valid_cost,
     minimal_script,
+    get_bundle,
 ):
     """INT-005: Verify rejection if mandatory artifacts are missing."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -157,9 +158,11 @@ async def test_int_005_mandatory_artifacts_gate(
             headers=base_headers,
         )
 
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert not resp.json()["success"]
@@ -174,9 +177,10 @@ async def test_int_005_mandatory_artifacts_gate(
             json={"path": "todo.md"},
             headers=base_headers,
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert not resp.json()["success"]
@@ -191,9 +195,10 @@ async def test_int_005_mandatory_artifacts_gate(
             json={"path": "assembly_definition.yaml"},
             headers=base_headers,
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert not resp.json()["success"]
@@ -203,7 +208,13 @@ async def test_int_005_mandatory_artifacts_gate(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_006_plan_structure_validation(
-    session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
+    session_id,
+    base_headers,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+    minimal_script,
+    get_bundle,
 ):
     """INT-006: Verify plan.md structural requirements."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -219,9 +230,10 @@ async def test_int_006_plan_structure_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "plan.md invalid" in resp.json()["message"]
@@ -242,9 +254,10 @@ Just some text here, no list or table.
         await setup_workspace(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert (
@@ -255,7 +268,13 @@ Just some text here, no list or table.
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_007_todo_integrity(
-    session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_objectives,
+    valid_cost,
+    minimal_script,
+    get_bundle,
 ):
     """INT-007: Verify todo.md integrity (all items completed or skipped)."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -271,9 +290,10 @@ async def test_int_007_todo_integrity(
         await setup_workspace(
             client, base_headers, {**base_files, "todo.md": invalid_todo}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "todo.md invalid" in resp.json()["message"]
@@ -284,9 +304,10 @@ async def test_int_007_todo_integrity(
         await setup_workspace(
             client, base_headers, {**base_files, "todo.md": uncompleted_todo}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "must be completed or skipped" in resp.json()["message"]
@@ -295,7 +316,13 @@ async def test_int_007_todo_integrity(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_008_objectives_validation(
-    session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_cost,
+    minimal_script,
+    get_bundle,
 ):
     """INT-008: Verify objectives.yaml schema and template detection."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -311,9 +338,10 @@ async def test_int_008_objectives_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "objectives.yaml": template_content}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "template placeholders" in resp.json()["message"]
@@ -323,9 +351,10 @@ async def test_int_008_objectives_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "objectives.yaml": invalid_obj}
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "objectives.yaml invalid" in resp.json()["message"]
@@ -334,7 +363,13 @@ async def test_int_008_objectives_validation(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_009_cost_estimation_validation(
-    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    minimal_script,
+    get_bundle,
 ):
     """INT-009: Verify assembly_definition.yaml schema and placeholders."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -352,9 +387,10 @@ async def test_int_009_cost_estimation_validation(
             base_headers,
             {**base_files, "assembly_definition.yaml": template_cost},
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "template placeholders" in resp.json()["message"]
@@ -369,9 +405,10 @@ async def test_int_009_cost_estimation_validation(
             base_headers,
             {**base_files, "assembly_definition.yaml": invalid_cost},
         )
+        bundle64 = await get_bundle(client, session_id)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "assembly_definition.yaml invalid" in resp.json()["message"]
@@ -380,7 +417,13 @@ async def test_int_009_cost_estimation_validation(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_011_planner_caps_enforcement(
-    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    minimal_script,
+    get_bundle,
 ):
     """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -407,16 +450,19 @@ async def test_int_011_planner_caps_enforcement(
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
+        bundle64 = await get_bundle(client, session_id)
         # Record validation
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
+        # Re-bundle since validate might have produced artifacts (though here it's about the record)
+        bundle64 = await get_bundle(client, session_id)
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert "assembly_definition.yaml invalid" in resp.json()["message"]
@@ -436,6 +482,7 @@ async def test_int_015_engineer_handover_immutability(
     valid_objectives,
     valid_cost,
     minimal_script,
+    get_bundle,
 ):
     """INT-015: Verify immutability of objectives.yaml during handover."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -464,16 +511,18 @@ async def test_int_015_engineer_handover_immutability(
         await setup_workspace(
             client, base_headers, {"objectives.yaml": modified_objectives}
         )
+        bundle64 = await get_bundle(client, session_id)
         # Record validation
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
+        bundle64 = await get_bundle(client, session_id)
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert not resp.json()["success"]
@@ -484,7 +533,13 @@ async def test_int_015_engineer_handover_immutability(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_019_hard_constraints_gates(
-    session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+    get_bundle,
 ):
     """INT-019: Verify cost/weight/build-zone hard failure during submission."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -510,16 +565,18 @@ def build():
             "solution.py": oob_script,
         }
         await setup_workspace(client, base_headers, files)
+        bundle64 = await get_bundle(client, session_id)
         # Record validation
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
+        bundle64 = await get_bundle(client, session_id)
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         data = resp.json()
@@ -534,7 +591,13 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_010_planner_pricing_script_integration(
-    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    minimal_script,
+    get_bundle,
 ):
     """INT-010: Verify validate_costing_and_price block when over caps."""
     # Increased timeout to 300s to accommodate slow Genesis initialization on CPU
@@ -562,16 +625,18 @@ async def test_int_010_planner_pricing_script_integration(
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
+        bundle64 = await get_bundle(client, session_id)
         # Record validation
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
+        bundle64 = await get_bundle(client, session_id)
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         assert not resp.json()["success"]
@@ -589,6 +654,7 @@ async def test_int_018_validate_and_price_integration_gate(
     valid_objectives,
     valid_cost,
     minimal_script,
+    get_bundle,
 ):
     """INT-018: Verify simulate/submit require prior validation."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -622,9 +688,11 @@ async def test_int_018_validate_and_price_integration_gate(
             headers=base_headers,
         )
 
+        bundle64 = await get_bundle(client, session_id)
+
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json={"script_path": "solution.py", "bundle_base64": bundle64},
             headers=base_headers,
         )
         # If the gate is enforced, it should fail.
