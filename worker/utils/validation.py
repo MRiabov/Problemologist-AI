@@ -536,7 +536,9 @@ def simulate(
             try:
                 save_simulation_result(result, working_dir / "simulation_result.json")
             except Exception as e:
-                logger.warning("failed_to_save_simulation_result_pre_preview", error=str(e))
+                logger.warning(
+                    "failed_to_save_simulation_result_pre_preview", error=str(e)
+                )
 
             stress_renders = preview_stress(component, output_dir=working_dir)
             result.render_paths.extend(stress_renders)
