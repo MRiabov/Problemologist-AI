@@ -59,7 +59,7 @@ objectives:
   build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         # Script using a material that LACKS FEM fields (aluminum_6061 from default config)
         script_content = """
@@ -140,7 +140,7 @@ objectives:
   build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         # Script with a part that will surely break (high force/stress expected)
         script_content = """
@@ -170,7 +170,7 @@ def build():
         assert resp.status_code == 200
         data = resp.json()
         assert not data["success"]
-        assert "PART_BREAKAGE" in data["message"]
+        assert "PART_BREAKAGE" in data["message"].upper()
 
         # Verify event emission
         events = data.get("events", [])
@@ -215,7 +215,7 @@ objectives:
   build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         script_content = """
 from build123d import *
@@ -280,7 +280,7 @@ objectives:
       max_von_mises_mpa: 0.0001 # Extremely low threshold
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         # Material setup with FEM fields so it passes initial gate
         custom_config = """
@@ -330,7 +330,7 @@ def build():
         assert resp.status_code == 200
         data = resp.json()
         assert not data["success"]
-        assert "STRESS_OBJECTIVE_EXCEEDED" in data["message"]
+        assert "STRESS_OBJECTIVE_EXCEEDED" in data["message"].upper()
 
 
 @pytest.mark.integration_p0
@@ -350,7 +350,7 @@ objectives:
   build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         # Script with overlapping high-density parts to cause explosion
         script_content = """
@@ -405,7 +405,7 @@ cnc:
         # It might either be PHYSICS_INSTABILITY or success if it didn't explode
         # but for INT-109 we want to verify the abort logic.
         # If it happens, we assert it.
-        if "PHYSICS_INSTABILITY" in data["message"]:
+        if "PHYSICS_INSTABILITY" in data["message"].upper():
             assert any(
                 e["event_type"] == "physics_instability" for e in data.get("events", [])
             )

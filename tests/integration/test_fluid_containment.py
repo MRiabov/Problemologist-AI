@@ -37,7 +37,7 @@ def test_fluid_containment_logic(tmp_path):
             "start_position": [0, 0, 0],
             "runtime_jitter": [0, 0, 0],
         },
-        "constraints": {"max_unit_cost": 100, "max_weight": 10},
+        "constraints": {"max_unit_cost": 100, "max_weight_g": 10},
     }
 
     with patch("worker.simulation.loop.get_physics_backend") as mock_get_backend:
