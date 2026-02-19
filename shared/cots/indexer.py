@@ -11,6 +11,7 @@ from shared.cots.parts.electronics import (
     Connector,
     ElectronicRelay,
     PowerSupply,
+    Switch,
     Wire,
 )
 from shared.cots.parts.motors import ServoMotor
@@ -55,6 +56,7 @@ class Indexer:
             PowerSupply,
             ElectronicRelay,
             Connector,
+            Switch,
             Wire,
         ]
 
@@ -80,6 +82,7 @@ class Indexer:
                 "PowerSupply",
                 "ElectronicRelay",
                 "Connector",
+                "Switch",
                 "Wire",
             ]:
                 # Use provided properties from COTSPart
@@ -101,6 +104,8 @@ class Indexer:
                 category = "relay"
             elif class_name == "Connector":
                 category = "connector"
+            elif class_name == "Switch":
+                category = "switch"
             elif class_name == "Wire":
                 category = "wire"
             elif "Gear" in class_name:
@@ -166,6 +171,8 @@ class Indexer:
                     sizes = list(part_class.relay_data.keys())
                 elif hasattr(part_class, "connector_data"):
                     sizes = list(part_class.connector_data.keys())
+                elif hasattr(part_class, "switch_data"):
+                    sizes = list(part_class.switch_data.keys())
                 elif hasattr(part_class, "wire_data"):
                     sizes = list(part_class.wire_data.keys())
                 else:

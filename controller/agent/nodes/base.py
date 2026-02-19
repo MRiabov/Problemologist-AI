@@ -214,9 +214,13 @@ class BaseNode:
                             logger.error(
                                 f"{node_type}_dspy_timeout",
                                 session_id=self.ctx.session_id,
+                                timeout=300.0,
+                                architect_trace=getattr(state, "architect_trace", None),
                             )
+                            # T033: Improved error reporting for thread leaks
                             raise RuntimeError(
-                                f"DSPy program {node_type} timed out after 300s"
+                                f"DSPy program {node_type} (Session: {self.ctx.session_id}) "
+                                "timed out after 300s. The underlying thread may still be running."
                             )
 
                         logger.info(

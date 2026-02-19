@@ -32,6 +32,22 @@ class PowerSupply(COTSPart):
             "price": 20.00,
             "type": "Desktop adapter",
         },
+        "6V-Battery": {
+            "voltage_dc": 6.0,
+            "max_current_a": 10.0,
+            "weight_g": 150.0,
+            "dims": (50.0, 50.0, 100.0),
+            "price": 5.00,
+            "type": "Battery",
+        },
+        "12V-Battery": {
+            "voltage_dc": 12.0,
+            "max_current_a": 20.0,
+            "weight_g": 350.0,
+            "dims": (100.0, 50.0, 100.0),
+            "price": 12.00,
+            "type": "Battery",
+        },
     }
 
     def __init__(self, size: str = "DR-120-24", **kwargs):
@@ -166,3 +182,39 @@ class Wire(COTSPart):
         data["price"] = data["price_per_m"]
 
         super().__init__(category="wire", part_number=size, data=data, children=[body])
+
+
+class Switch(COTSPart):
+    """
+    Represents a COTS Electrical Switch.
+    """
+
+    switch_data = {
+        "KCD1-101": {
+            "max_current_a": 6.0,
+            "weight_g": 5.0,
+            "dims": (15.0, 21.0, 25.0),
+            "price": 0.50,
+            "type": "Rocker",
+        },
+        "SS-5GL": {
+            "max_current_a": 5.0,
+            "weight_g": 2.0,
+            "dims": (20.0, 6.4, 10.2),
+            "price": 1.20,
+            "type": "Microswitch",
+        },
+    }
+
+    def __init__(self, size: str = "KCD1-101", **kwargs):
+        if size not in self.switch_data:
+            super().__init__(
+                category="switch", part_number="UNKNOWN", data={}, children=[]
+            )
+            return
+
+        data = self.switch_data[size]
+        l, w, h = data["dims"]
+        body = Box(l, w, h)
+        body.color = Color("gray")
+        super().__init__(category="switch", part_number=size, data=data, children=[body])
