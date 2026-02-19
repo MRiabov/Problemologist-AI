@@ -110,7 +110,7 @@ class GenesisBackend(PhysicsBackend):
             except Exception as e:
                 logger.error("failed_to_load_mfg_config", error=str(e))
 
-    def load_scene(self, scene: SimulationScene) -> None:
+    def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
             # OPTIMIZATION/FIX: If same scene is already built, skip rebuild.
             # This avoids "Scene is already built" error when multiple calls (simulate + prerender)
@@ -154,9 +154,10 @@ class GenesisBackend(PhysicsBackend):
 
             for attempt in range(max_retries):
                 try:
-                    self._load_scene_internal(scene)
+                    self._load_scene_internal(scene, render_only=render_only)
                     # If we get here, it succeeded
-                    self._is_built = True
+                    if not render_only:
+                        self._is_built = True
                     break
                 except Exception as e:
                     # Check for OOM
@@ -202,7 +203,9 @@ class GenesisBackend(PhysicsBackend):
             return self.scene.is_built
         return self._is_built
 
-    def _load_scene_internal(self, scene: SimulationScene) -> None:
+    def _load_scene_internal(
+        self, scene: SimulationScene, render_only: bool = False
+    ) -> None:
         """Internal helper to build the scene, allowing for retries on OOM."""
         if gs is None:
             raise ImportError("Genesis not installed")
@@ -406,6 +409,12 @@ class GenesisBackend(PhysicsBackend):
                     self.cameras["prerender"] = self.scene.add_camera()
             except Exception as e:
                 logger.warning("genesis_add_camera_failed_pre_build", error=str(e))
+
+            if render_only:
+                # OPTIMIZATION: Genesis can render without building the full physics scene.
+                # This significantly speeds up static view generation.
+                logger.info("genesis_skipping_build_for_render_only")
+                return
 
             try:
                 logger.info("genesis_building_scene")
