@@ -124,7 +124,7 @@ async def test_calculate_and_report_automated_score():
 
     # Mock episode for metadata
     mock_episode = MagicMock()
-    mock_episode.metadata_vars = {"max_unit_cost": 100.0, "max_weight": 1.0}
+    mock_episode.metadata_vars = {"max_unit_cost": 100.0, "max_weight_g": 1.0}
 
     # Set side effect for two calls to execute
     mock_db.execute.side_effect = [
@@ -135,7 +135,7 @@ async def test_calculate_and_report_automated_score():
     # Mock WorkerClient
     mock_worker = AsyncMock()
     mock_worker.read_file.return_value = (
-        "constraints:\n  max_unit_cost: 100.0\n  max_weight: 1.0"
+        "constraints:\n  max_unit_cost: 100.0\n  max_weight_g: 1.0"
     )
 
     with patch("controller.observability.langfuse.report_score") as mock_report:

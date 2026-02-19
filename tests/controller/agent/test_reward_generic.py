@@ -9,7 +9,7 @@ def test_metric_benchmark_planner_basic():
     """Test using benchmark_planner milestones from reward_config.yaml"""
     gold = SimpleNamespace(
         agent_name="benchmark_planner",
-        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight=50.0),
+        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
     )
     # Give it all milestones except reviewer_accepted
     prediction = SimpleNamespace(
@@ -39,7 +39,7 @@ def test_metric_benchmark_planner_basic():
 def test_metric_benchmark_planner_cost_overage():
     gold = SimpleNamespace(
         agent_name="benchmark_planner",
-        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight=50.0),
+        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
     )
     # 20% over cost cap -> penalty 0.8
     prediction = SimpleNamespace(
@@ -64,7 +64,7 @@ def test_metric_cad_engineer_failure_formula():
     """Verify that cad_engineer simulation failure formula is used."""
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,

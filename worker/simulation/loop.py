@@ -4,7 +4,7 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
-from shared.enums import SimulationFailureMode
+from shared.enums import FluidEvalAt, FluidObjectiveType, SimulationFailureMode
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import FluidMetricResult, SimulationMetrics
 from shared.observability.events import emit_event
@@ -204,7 +204,7 @@ class SimulationLoop:
             particles = self.backend.get_particle_positions()
             if particles is not None and len(particles) > 0:
                 for fo in self.objectives.objectives.fluid_objectives:
-                    if fo.type == "flow_rate":
+                    if fo.type == FluidObjectiveType.FLOW_RATE:
                         p0 = np.array(fo.gate_plane_point)
                         n = np.array(fo.gate_plane_normal)
                         distances = np.dot(particles - p0, n)
@@ -484,10 +484,10 @@ class SimulationLoop:
         # Final fluid objectives evaluation (eval_at='end')
         if self.objectives and self.objectives.objectives:
             for fo in self.objectives.objectives.fluid_objectives:
-                if not hasattr(fo, "eval_at") or fo.eval_at == "end":
+                if not hasattr(fo, "eval_at") or fo.eval_at == FluidEvalAt.END:
                     particles = self.backend.get_particle_positions()
                     if particles is not None:
-                        if fo.type == "fluid_containment":
+                        if fo.type == FluidObjectiveType.FLUID_CONTAINMENT:
                             # Count particles inside containment_zone
                             zone = fo.containment_zone
                             z_min = np.array(zone.min)
@@ -528,7 +528,7 @@ class SimulationLoop:
                                     self.fail_reason
                                     or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
                                 )
-                        elif fo.type == "flow_rate":
+                        elif fo.type == FluidObjectiveType.FLOW_RATE:
                             # T016: Use cumulative crossed count for more accurate
                             # flow rate check
                             obj_id = f"{fo.fluid_id}_{fo.type}"

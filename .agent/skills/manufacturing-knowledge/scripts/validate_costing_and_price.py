@@ -7,6 +7,7 @@ from pydantic import ValidationError
 # Add project root to sys.path to import shared models
 sys.path.append(str(Path(__file__).resolve().parents[4]))
 
+from shared.enums import ManufacturingMethod
 from shared.logging import get_logger
 from shared.models.schemas import AssemblyDefinition
 
@@ -17,7 +18,7 @@ def calculate_part_cost(part, materials_data):
     """
     Simplified cost estimation logic for preliminary planning.
     """
-    method = part.manufacturing_method.upper()
+    method = part.manufacturing_method
     material_id = part.material_id.lower().replace("-", "_")
     material = materials_data.get("materials", {}).get(material_id, {})
 
@@ -34,7 +35,7 @@ def calculate_part_cost(part, materials_data):
     mass_g = volume_cm3 * density
     material_cost = (mass_g / 1000.0) * cost_per_kg
 
-    if method == "CNC":
+    if method == ManufacturingMethod.CNC:
         # CNC Formula: Setup + (Material + Run) * Quantity
         setup_cost = 80.0
         stock_vol = part.stock_volume_mm3 or (part.part_volume_mm3 * 2.0)
@@ -43,14 +44,14 @@ def calculate_part_cost(part, materials_data):
         unit_cost = (setup_cost / part.quantity) + material_cost + run_cost
         return unit_cost, mass_g
 
-    if method == "INJECTION_MOLDING" or method == "IM":
+    if method == ManufacturingMethod.INJECTION_MOLDING:
         # IM Formula: Tooling + (Material + Cycle) * Quantity
         tooling_cost = 2000.0
         cycle_cost = 0.5
         unit_cost = (tooling_cost / part.quantity) + material_cost + cycle_cost
         return unit_cost, mass_g
 
-    if method in ["3D_PRINTING", "3DP"]:
+    if method == ManufacturingMethod.THREE_DP:
         # 3DP: Material + Machine Time
         machine_cost = (part.part_volume_mm3 / 1000.0) * 0.5
         unit_cost = material_cost + machine_cost

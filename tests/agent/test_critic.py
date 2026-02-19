@@ -2,7 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from controller.agent.nodes.reviewer import CriticDecision, ReviewResult, reviewer_node
+from shared.enums import ReviewDecision
+from controller.agent.nodes.reviewer import ReviewResult, reviewer_node
 from controller.agent.state import AgentState, AgentStatus
 
 
@@ -30,7 +31,7 @@ async def test_critic_node_approve(mock_codeact_cls, mock_llm, mock_worker):
     # Mock DSPy Program
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(
-        review=ReviewResult(decision=CriticDecision.APPROVE, reason="Looks good.")
+        review=ReviewResult(decision=ReviewDecision.APPROVED, reason="Looks good.")
     )
     mock_codeact_cls.return_value = mock_program
 
@@ -42,7 +43,7 @@ async def test_critic_node_approve(mock_codeact_cls, mock_llm, mock_worker):
 
     assert result.status == AgentStatus.APPROVED
     assert "Looks good" in result.feedback
-    assert "Critic Decision: APPROVE" in result.journal
+    assert "Critic Decision: approved" in result.journal
 
 
 @pytest.mark.asyncio
@@ -52,7 +53,7 @@ async def test_critic_node_reject(mock_codeact_cls, mock_llm, mock_worker):
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(
         review=ReviewResult(
-            decision=CriticDecision.REJECT_CODE, reason="Simulation failed."
+            decision=ReviewDecision.REJECT_CODE, reason="Simulation failed."
         )
     )
     mock_codeact_cls.return_value = mock_program
@@ -63,7 +64,7 @@ async def test_critic_node_reject(mock_codeact_cls, mock_llm, mock_worker):
 
     assert result.status == AgentStatus.CODE_REJECTED
     assert "Simulation failed" in result.feedback
-    assert "Critic Decision: REJECT_CODE" in result.journal
+    assert "Critic Decision: reject_code" in result.journal
 
 
 @pytest.mark.asyncio
@@ -73,7 +74,7 @@ async def test_critic_node_no_artifacts(mock_codeact_cls, mock_llm, mock_worker)
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(
         review=ReviewResult(
-            decision=CriticDecision.APPROVE, reason="No artifacts but journal is fine."
+            decision=ReviewDecision.APPROVED, reason="No artifacts but journal is fine."
         )
     )
     mock_codeact_cls.return_value = mock_program

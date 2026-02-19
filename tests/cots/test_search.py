@@ -57,7 +57,7 @@ def test_search_by_category(test_db):
 
 def test_search_with_constraints(test_db):
     # Weight constraint
-    query = SearchQuery(query="", constraints={"max_weight": 100})
+    query = SearchQuery(query="", constraints={"max_weight_g": 100})
     results = search_parts(query, test_db)
     assert len(results) == 1
     assert results[0].part_id == "test_bolt_m6"
