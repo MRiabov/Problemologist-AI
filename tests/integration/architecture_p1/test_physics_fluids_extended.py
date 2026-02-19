@@ -21,7 +21,7 @@ async def test_int_138_smoke_test_mode():
 physics:
   backend: "genesis"
 objectives:
-  goal_zone: {min: [10,10,10], max: [12,12,12]}
+  goal_zone: {min: [-1,-1,-1], max: [1,1,1]}
   build_zone: {min: [-100,-100,-100], max: [100,100,100]}
 simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
@@ -41,6 +41,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
 from shared.models.schemas import PartMetadata
 def build():
     b = Box(1,1,1)
+    b.label = "target_box"
     b.metadata = PartMetadata(material_id="aluminum_6061")
     return b
 """
@@ -82,11 +83,22 @@ async def test_int_139_fluid_storage_policy():
 physics:
   backend: "genesis"
 objectives:
-  goal_zone: {min: [10,10,10], max: [12,12,12]}
+  goal_zone: {min: [-1,-1,-1], max: [1,1,1]}
   build_zone: {min: [-100,-100,-100], max: [100,100,100]}
+  fluid_objectives:
+    - type: "fluid_containment"
+      fluid_id: "water"
+      containment_zone: {min: [-2,-2,-2], max: [2,2,2]}
+      threshold: 0.1
 simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
+fluids:
+  - fluid_id: "water"
+    initial_volume:
+      type: "sphere"
+      center: [0,0,0.5]
+      radius: 0.1
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -102,6 +114,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
 from shared.models.schemas import PartMetadata
 def build():
     b = Box(1,1,1)
+    b.label = "target_box"
     b.metadata = PartMetadata(material_id="aluminum_6061")
     return b
 """
