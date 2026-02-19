@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import structlog
@@ -228,6 +229,20 @@ class SimulationLoop:
         self.stress_summaries = []
         self.fluid_metrics = []
 
+    def _resolve_fail_mode(self, reason: Any) -> SimulationFailureMode | None:
+        """Map raw failure string to enum member."""
+        if isinstance(reason, SimulationFailureMode):
+            return reason
+        if not reason or not isinstance(reason, str):
+            return None
+
+        # Check for prefixed failures (e.g. PART_BREAKAGE:name)
+        base = reason.split(":")[0]
+        try:
+            return SimulationFailureMode(base)
+        except ValueError:
+            return None
+
     def step(
         self,
         control_inputs: dict[str, float],
@@ -309,6 +324,7 @@ class SimulationLoop:
 
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
+        state = None
         for step_idx in range(steps):
             # T015: Update electronics if state changed
             if self.electronics and self._electronics_dirty:
@@ -558,16 +574,14 @@ class SimulationLoop:
         # Final success determination:
         # Success if no failures AND (goal achieved IF goals exist,
         # or fluid/stress objectives passed)
-        has_other_objectives = False
-        if (
+        has_other_objectives = bool(
             self.objectives
             and self.objectives.objectives
             and (
                 self.objectives.objectives.fluid_objectives
                 or self.objectives.objectives.stress_objectives
             )
-        ):
-            has_other_objectives = True
+        )
 
         if self.fail_reason:
             is_success = False
@@ -585,15 +599,6 @@ class SimulationLoop:
 
         metrics = self.metric_collector.get_metrics()
 
-        if fail_reason:
-            is_success = False
-        elif self.goal_sites:
-            is_success = self.success
-        elif has_other_objectives:
-            is_success = True
-        else:
-            is_success = False
-
         return SimulationMetrics(
             total_time=current_time,
             total_energy=metrics.total_energy,
@@ -601,9 +606,7 @@ class SimulationLoop:
             max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
-            fail_mode=self.fail_reason
-            if isinstance(self.fail_reason, SimulationFailureMode)
-            else None,
+            fail_mode=self._resolve_fail_mode(self.fail_reason),
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,

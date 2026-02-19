@@ -78,15 +78,21 @@ def load_component_from_script(
         try:
             spec.loader.exec_module(module)
         except Exception as e:
+            # Clean up on failure (Review Item 2)
+            sys.modules.pop(module_name, None)
             raise RuntimeError(f"Failed to execute script {path}: {e}") from e
 
-        if hasattr(module, "build"):
-            return module.build()
+        try:
+            if hasattr(module, "build"):
+                return module.build()
 
-        # Fallback for finding a 'build' function in the relative scope
-        for attr in dir(module):
-            val = getattr(module, attr)
-            if callable(val) and attr == "build":
-                return val()
+            # Fallback for finding a 'build' function in the relative scope
+            for attr in dir(module):
+                val = getattr(module, attr)
+                if callable(val) and attr == "build":
+                    return val()
 
-        raise AttributeError(f"build() function not found in script {path}.")
+            raise AttributeError(f"build() function not found in script {path}.")
+        finally:
+            # Prevent memory leaks by removing the dynamic module from sys.modules
+            sys.modules.pop(module_name, None)
