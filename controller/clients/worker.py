@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from typing import Literal, Any
 
 import httpx
@@ -198,6 +199,12 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def _add_bundle_to_payload(self, payload: dict):
+        """Append a workspace bundle to the payload if light and heavy workers are different."""
+        if self.light_url != self.heavy_url:
+            bundle = await self.bundle_session()
+            payload["bundle_base64"] = base64.b64encode(bundle).decode("utf-8")
+
     async def upload_file(self, path: str, content: bytes) -> bool:
         """Upload a file with binary content."""
         client = await self._get_client()
@@ -235,19 +242,26 @@ class WorkerClient:
     async def preview(
         self,
         script_path: str = "script.py",
+        script_content: str | None = None,
         pitch: float = -45.0,
         yaw: float = 45.0,
     ) -> dict[str, Any]:
         """Trigger design preview via worker."""
         client = await self._get_client()
         try:
+            payload = {
+                "script_path": script_path,
+                "pitch": pitch,
+                "yaw": yaw,
+            }
+            if script_content is not None:
+                payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
             response = await client.post(
                 f"{self.heavy_url}/benchmark/preview",
-                json={
-                    "script_path": script_path,
-                    "pitch": pitch,
-                    "yaw": yaw,
-                },
+                json=payload,
                 headers=self.headers,
                 timeout=30.0,
             )
@@ -300,6 +314,9 @@ class WorkerClient:
             payload = {"script_path": script_path, "backend": backend}
             if script_content is not None:
                 payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
             response = await client.post(
                 f"{self.heavy_url}/benchmark/simulate",
                 json=payload,
@@ -320,6 +337,9 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
             response = await client.post(
                 f"{self.heavy_url}/benchmark/validate",
                 json=payload,
@@ -348,6 +368,9 @@ class WorkerClient:
             }
             if script_content is not None:
                 payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
             response = await client.post(
                 f"{self.heavy_url}/benchmark/analyze",
                 json=payload,
@@ -368,6 +391,9 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
             response = await client.post(
                 f"{self.heavy_url}/benchmark/submit",
                 json=payload,

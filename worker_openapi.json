@@ -2042,6 +2042,18 @@
             "title": "Script Content",
             "description": "Direct content of the script."
           },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
+          },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
@@ -2103,6 +2115,18 @@
             ],
             "title": "Script Content",
             "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
@@ -2244,6 +2268,30 @@
             "title": "Script Path",
             "description": "Path to the script containing the build() function.",
             "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
           },
           "pitch": {
             "type": "number",

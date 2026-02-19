@@ -109,6 +109,10 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Direct content of the script.",
     )
+    bundle_base64: str | None = Field(
+        default=None,
+        description="Gzipped tarball of the session workspace (base64 encoded).",
+    )
     backend: SimulatorBackendType = Field(
         default=SimulatorBackendType.GENESIS,
         description="Physics backend to use.",
@@ -202,6 +206,14 @@ class PreviewDesignRequest(BaseModel):
     script_path: StrictStr = Field(
         default="script.py",
         description="Path to the script containing the build() function.",
+    )
+    script_content: StrictStr | None = Field(
+        default=None,
+        description="Direct content of the script.",
+    )
+    bundle_base64: str | None = Field(
+        default=None,
+        description="Gzipped tarball of the session workspace (base64 encoded).",
     )
     pitch: float = Field(
         default=-45.0,
