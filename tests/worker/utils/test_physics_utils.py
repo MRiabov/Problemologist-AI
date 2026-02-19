@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 import yaml
 
@@ -36,26 +37,25 @@ def test_get_stress_report_logic():
         success=True, summary="Test summary", stress_summaries=summaries
     )
 
-    # Manually set the global variable for testing
-    import worker.utils.validation as validation
-
-    validation.LAST_SIMULATION_RESULT = result
-
-    # Should return the worst case (safety_factor=1.1)
-    report = get_stress_report("part1")
+    # Mock load_simulation_result to return our test result
+    with patch("worker.utils.validation.load_simulation_result", return_value=result):
+        # Should return the worst case (safety_factor=1.1)
+        report = get_stress_report("part1")
     assert report is not None
     assert report["safety_factor"] == 1.1
     assert "critical" in report["advice"].lower()
 
     # Test another range
     summaries[1].safety_factor = 1.4
-    report = get_stress_report("part1")
-    assert "low" in report["advice"].lower()
+    with patch("worker.utils.validation.load_simulation_result", return_value=result):
+        report = get_stress_report("part1")
+        assert "low" in report["advice"].lower()
 
     summaries[1].safety_factor = 3.0
     summaries[0].safety_factor = 2.0
-    report = get_stress_report("part1")
-    assert "acceptable" in report["advice"].lower()
+    with patch("worker.utils.validation.load_simulation_result", return_value=result):
+        report = get_stress_report("part1")
+        assert "acceptable" in report["advice"].lower()
 
 
 def test_define_fluid(tmp_path):
@@ -74,7 +74,7 @@ moved_object:
   shape: sphere
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
-constraints: {max_unit_cost: 0, max_weight: 0}
+constraints: {max_unit_cost: 0, max_weight_g: 0}
 """)
 
     fluid = define_fluid(
@@ -110,7 +110,7 @@ moved_object:
   shape: sphere
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
-constraints: {max_unit_cost: 0, max_weight: 0}
+constraints: {max_unit_cost: 0, max_weight_g: 0}
 """)
 
     res = set_soft_mesh("part1", enabled=True, output_dir=tmp_path)
