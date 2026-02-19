@@ -87,7 +87,7 @@ class SimulationLoop:
             )
         )
         scene = SimulationScene(
-            scene_path=xml_path, config={"particle_budget": self.particle_budget}
+            scene_path=str(xml_path), config={"particle_budget": self.particle_budget}
         )
         self.backend.load_scene(scene)
 
@@ -597,8 +597,8 @@ class SimulationLoop:
             is_success = True
         else:
             # Stability test or goal-less benchmark
-            # (legacy behavior expects False if no goal)
-            is_success = False
+            # If no failure occurred, we consider it a success (e.g. for stability tests)
+            is_success = True
 
         metrics = self.metric_collector.get_metrics()
 
