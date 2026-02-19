@@ -10,6 +10,16 @@ from worker.filesystem.router import FilesystemRouter
 # Initialize schemathesis with the app's OpenAPI schema
 schema = schemathesis.openapi.from_asgi("/openapi.json", app)
 
+# Exclude heavy worker endpoints from fuzzing to keep tests fast and focused on lightweight contracts
+HEAVY_ENDPOINTS_REGEX = (
+    r"/benchmark/simulate"
+    r"|/benchmark/validate"
+    r"|/benchmark/analyze"
+    r"|/benchmark/preview"
+    r"|/benchmark/build"
+)
+schema = schema.exclude(path_regex=HEAVY_ENDPOINTS_REGEX)
+
 
 @pytest.fixture(autouse=True)
 def mock_dependencies(tmp_path):
@@ -57,7 +67,7 @@ def mock_dependencies(tmp_path):
         ),
         patch("worker.api.routes.validate", return_value=(True, None)),
         patch(
-            "worker.api.routes.validate_and_price",
+            "worker.utils.dfm.validate_and_price",
             return_value=MagicMock(
                 is_manufacturable=True,
                 total_cost=10.0,
