@@ -1497,11 +1497,34 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 
 ### Worker API
 
-The worker exposes a REST API (FastAPI) for task execution and asset management.
+The worker is physically split into two specialized services to optimize resource allocation and separate concerns: **Worker Light** and **Worker Heavy**.
+
+#### Worker Light
+- **Purpose**: Handles lightweight, synchronous operations and filesystem management.
+- **Responsibilities**:
+  - Filesystem CRUD operations (`/fs/*`).
+  - Git repository management (`/git/*`).
+  - Python code execution (short-lived) (`/runtime/execute`).
+  - Asset serving (`/assets/*`).
+  - Code linting (`/lint`).
+  - Topology inspection (`/topology/inspect`).
+- **HTTP Boundary**: Typically exposed on port 18001.
+
+#### Worker Heavy
+- **Purpose**: Handles compute-intensive, long-running tasks.
+- **Responsibilities**:
+  - Physics simulation (`/benchmark/simulate`).
+  - Geometric validation (`/benchmark/validate`).
+  - Design handover and DFM checks (`/benchmark/submit`).
+  - Manufacturing analysis (`/benchmark/analyze`).
+  - Rendering and preview generation (`/benchmark/preview`).
+  - Asset building (`/benchmark/build`).
+  - Temporal Activity Worker (consumes from `heavy-tasks-queue`).
+- **HTTP Boundary**: Typically exposed on port 18002.
 
 #### Asset Serving
 
-All intermediate and final simulation artifacts (GLB models, STLs, renders) are served directly from the worker's filesystem.
+All intermediate and final simulation artifacts (GLB models, STLs, renders) are served directly from the light worker's filesystem.
 
 - **Endpoint**: `GET /assets/{path:path}`
 - **Functionality**: Serves files from the active session's workspace.

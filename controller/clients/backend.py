@@ -84,7 +84,7 @@ class RemoteFilesystemBackend(BackendProtocol):
         replace_all: bool = False,
     ) -> EditResult:
         # Note: WorkerClient.edit_file takes a list of EditOp
-        from worker.api.schema import EditOp
+        from shared.workers.schema import EditOp
 
         try:
             success = await self.client.edit_file(

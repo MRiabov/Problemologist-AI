@@ -65,7 +65,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "test_part"
@@ -146,7 +146,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     # Large box to ensure it interacts/stresses
     p = Box(10, 10, 1)
@@ -220,7 +220,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "steel_part"
@@ -307,7 +307,7 @@ cnc:
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
     p.label = "weak_link"
@@ -356,7 +356,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p1 = Box(10, 10, 10).move(Location((0,0,0)))
     p2 = Box(10, 10, 10).move(Location((0.1, 0.1, 0.1)))

@@ -243,7 +243,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
     # Validation Logic (Same as before)
     if state.current_script:
-        from worker.utils.file_validation import validate_node_output
+        from worker_heavy.utils.file_validation import validate_node_output
 
         is_valid, errors = validate_node_output(
             "coder", {SCRIPT_FILE: state.current_script}
