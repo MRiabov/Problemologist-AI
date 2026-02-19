@@ -1,8 +1,8 @@
 import pytest
 from build123d import Box, Pos
 
-from worker.workbenches.config import load_config
-from worker.workbenches.print_3d import analyze_3dp, calculate_3dp_cost
+from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.print_3d import analyze_3dp, calculate_3dp_cost
 
 
 @pytest.fixture

@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from build123d import Box
 
-from worker.simulation.loop import SimulationMetrics
-from worker.utils.validation import simulate
+from worker_heavy.simulation.loop import SimulationMetrics
+from worker_heavy.utils.validation import simulate
 
 
 @pytest.mark.integration
@@ -15,10 +15,10 @@ def test_gpu_oom_retry_logic(tmp_path):
     component = Box(1, 1, 1)
 
     with (
-        patch("worker.utils.validation.get_simulation_builder") as mock_builder,
-        patch("worker.simulation.loop.SimulationLoop") as mock_loop_cls,
-        patch("worker.utils.validation.prerender_24_views") as mock_render,
-        patch("worker.utils.validation.calculate_assembly_totals") as mock_totals,
+        patch("worker_heavy.utils.validation.get_simulation_builder") as mock_builder,
+        patch("worker_heavy.utils.validation.SimulationLoop") as mock_loop_cls,
+        patch("worker_heavy.utils.validation.prerender_24_views") as mock_render,
+        patch("worker_heavy.utils.validation.calculate_assembly_totals") as mock_totals,
     ):
         # Setup mocks
         mock_scene_path = MagicMock()

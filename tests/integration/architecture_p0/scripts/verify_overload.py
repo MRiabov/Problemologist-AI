@@ -2,7 +2,7 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 # XML with position actuator and strict forcerange to trigger overload
 TEST_OVERLOAD_XML = """

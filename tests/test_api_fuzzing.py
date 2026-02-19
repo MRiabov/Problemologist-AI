@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 import schemathesis
 
-from worker.api.routes import get_router
-from worker.app import app
-from worker.filesystem.router import FilesystemRouter
+from worker_light.api.routes import get_router
+from worker_light.app import app
+from shared.workers.filesystem.router import FilesystemRouter
 
 # Initialize schemathesis with the app's OpenAPI schema
 schema = schemathesis.openapi.from_asgi("/openapi.json", app)
@@ -43,15 +43,15 @@ def mock_dependencies(tmp_path):
 
     # Mock all heavy utilities and those involving git or subprocesses
     with (
-        patch("worker.app.sync_skills"),
-        patch("worker.api.routes.init_workspace_repo"),
-        patch("worker.api.routes.commit_all", return_value="deadbeef"),
-        patch("worker.api.routes.resolve_conflict_ours", return_value=True),
-        patch("worker.api.routes.resolve_conflict_theirs", return_value=True),
-        patch("worker.api.routes.abort_merge", return_value=True),
-        patch("worker.api.routes.complete_merge", return_value="deadbeef"),
+        patch("worker_light.app.sync_skills", side_effect=None),
+        patch("worker_light.api.routes.init_workspace_repo"),
+        patch("worker_light.api.routes.commit_all", return_value="deadbeef"),
+        patch("worker_light.api.routes.resolve_conflict_ours", return_value=True),
+        patch("worker_light.api.routes.resolve_conflict_theirs", return_value=True),
+        patch("worker_light.api.routes.abort_merge", return_value=True),
+        patch("worker_light.api.routes.complete_merge", return_value="deadbeef"),
         patch(
-            "worker.api.routes.get_repo_status",
+            "worker_light.api.routes.get_repo_status",
             return_value={
                 "branch": "main",
                 "is_dirty": False,
@@ -60,28 +60,11 @@ def mock_dependencies(tmp_path):
             },
         ),
         patch(
-            "worker.api.routes.simulate",
-            return_value=MagicMock(
-                success=True, summary="OK", artifacts={}, message="OK"
-            ),
-        ),
-        patch("worker.api.routes.validate", return_value=(True, None)),
-        patch(
-            "worker.utils.dfm.validate_and_price",
-            return_value=MagicMock(
-                is_manufacturable=True,
-                total_cost=10.0,
-                total_weight_g=100.0,
-                metadata={},
-            ),
-        ),
-        patch(
-            "worker.api.routes.run_python_code_async",
+            "worker_light.api.routes.run_python_code_async",
             return_value=MagicMock(
                 exit_code=0, stdout="OK", stderr="", timed_out=False
             ),
         ),
-        patch("worker.api.routes.load_component_from_script", return_value=MagicMock()),
     ):
         yield
 

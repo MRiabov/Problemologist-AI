@@ -6,7 +6,7 @@ import pytest
 from shared.enums import SimulationFailureMode
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 @pytest.mark.integration
@@ -27,7 +27,7 @@ def test_fem_breakage_detection(tmp_path):
 """
     xml_path.write_text(xml_content)
 
-    with patch("worker.simulation.loop.get_physics_backend") as mock_get_backend:
+    with patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get_backend:
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
 

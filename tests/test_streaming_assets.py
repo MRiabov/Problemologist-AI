@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException, Response
 
 from controller.observability.broadcast import EpisodeBroadcaster
-from worker.api.routes import get_asset
+from worker_light.api.routes import get_asset
 
 
 @pytest.mark.asyncio
