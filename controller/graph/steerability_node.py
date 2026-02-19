@@ -16,7 +16,15 @@ def get_session_id(state: Any) -> str | None:
         if session and hasattr(session, "session_id"):
             return str(session.session_id)
         return state.get("session_id")
-    return getattr(state, "session_id", None)
+
+    # Handle Pydantic model BenchmarkGeneratorState or similar
+    # FIXME: omg, just use the normal value field, and fail if it doesn't pass!
+    session = getattr(state, "session", None)
+    if session and hasattr(session, "session_id"):
+        return str(session.session_id)
+
+    res = getattr(state, "session_id", None)
+    return str(res) if res else None
 
 
 async def steerability_node(state: Any) -> dict:

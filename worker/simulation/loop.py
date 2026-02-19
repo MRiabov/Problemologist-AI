@@ -443,9 +443,19 @@ class SimulationLoop:
                 # Setup a reasonable camera for video if not already set
                 # For MuJoCo we can use "free" or a named camera.
                 # For Genesis we use "main".
-                frame = self.backend.render_camera("main", 640, 480)
-                particles = self.backend.get_particle_positions()
-                video_renderer.add_frame(frame, particles=particles)
+                try:
+                    frame = self.backend.render_camera("main", 640, 480)
+                    particles = self.backend.get_particle_positions()
+                    video_renderer.add_frame(frame, particles=particles)
+                except Exception as e:
+                    # T024: Skip rendering if display is not available (e.g. CI without GPU)
+                    if "EGL" in str(e) or "display" in str(e).lower():
+                        logger.warning(
+                            "camera_render_failed_skipping_video", error=str(e)
+                        )
+                        video_renderer = None  # Stop attempting to render video
+                    else:
+                        raise
 
         # Finalize video
         if video_renderer:

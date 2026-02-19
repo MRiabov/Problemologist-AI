@@ -28,7 +28,20 @@ class WorkerSettings(BaseSettings):
             # Use a stable temp dir for integration tests
             return Path(tempfile.gettempdir()) / "problemologist_skills"
 
-        return Path("/app/skills")
+        # FIXME: should be an env var in configs
+        # Fallback for local development
+        app_skills = Path("/app/skills")
+        try:
+            # Check if we can write to /app (unlikely on host) or if /app/skills exists and is writable
+            if app_skills.exists():
+                return app_skills
+
+            # If we are on a host system, /app probably doesn't exist or isn't writable
+            # Use a local directory instead
+            local_skills = Path("./skills").absolute()
+            return local_skills
+        except Exception:
+            return Path("./skills").absolute()
 
     model_config = SettingsConfigDict(
         env_file=".env",

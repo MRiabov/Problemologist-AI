@@ -60,7 +60,9 @@ class BenchmarkPlannerNode(BaseNode):
         # Custom Objectives Logic
         custom_objectives = state.session.custom_objectives
         if custom_objectives:
-            logger.info("planner_updating_objectives", session_id=state.session_id)
+            logger.info(
+                "planner_updating_objectives", session_id=state.session.session_id
+            )
             if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
                 try:
                     obj_content = await self.ctx.worker_client.read_file(
@@ -90,7 +92,8 @@ class BenchmarkPlannerNode(BaseNode):
                         OBJECTIVES_FILE, new_content
                     )
                     logger.info(
-                        "planner_objectives_updated", session_id=state.session_id
+                        "planner_objectives_updated",
+                        session_id=state.session.session_id,
                     )
                 except Exception as e:
                     logger.warning("planner_objectives_update_failed", error=str(e))
