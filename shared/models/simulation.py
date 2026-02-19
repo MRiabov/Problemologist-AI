@@ -22,6 +22,13 @@ class FluidMetricResult(BaseModel):
     passed: bool
 
 
+class StressFieldData(BaseModel):
+    """Serializable version of StressField."""
+
+    nodes: list[list[float]]  # (N, 3)
+    stress: list[float]  # (N,) von Mises stress
+
+
 class SimulationMetrics(BaseModel):
     total_time: float = 0.0
     total_energy: float = 0.0
@@ -31,9 +38,9 @@ class SimulationMetrics(BaseModel):
     fail_reason: str | None = None
     fail_mode: SimulationFailureMode | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
-    stress_fields: dict[str, dict] = Field(
+    stress_fields: dict[str, StressFieldData] = Field(
         default_factory=dict
-    )  # part_label -> {"nodes": ..., "stress": ...}
+    )  # part_label -> StressFieldData
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     events: list[dict] = Field(default_factory=list)
     confidence: str = "high"
@@ -47,7 +54,7 @@ class SimulationResult(BaseModel):
     render_paths: list[str] = Field(default_factory=list)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
-    stress_fields: dict[str, Any] = Field(default_factory=dict)
+    stress_fields: dict[str, StressFieldData] = Field(default_factory=dict)
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     total_cost: float = 0.0
     total_weight_g: float = 0.0

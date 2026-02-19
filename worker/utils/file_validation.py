@@ -109,16 +109,16 @@ def validate_assembly_definition_yaml(
 
         # T003 (WP01): Cross-reference electronics component references
         if estimation.electronics:
-            from shared.models.schemas import SubassemblyEstimate
+            from shared.models.schemas import PartConfig, SubassemblyEstimate
 
             all_part_names = {p.part_name for p in estimation.manufactured_parts}
             # Also check final_assembly
             for item in estimation.final_assembly:
                 if isinstance(item, SubassemblyEstimate):
-                    for p_dict in item.parts:
-                        all_part_names.update(p_dict.keys())
-                elif isinstance(item, dict):
-                    all_part_names.update(item.keys())
+                    for p_config in item.parts:
+                        all_part_names.add(p_config.name)
+                elif isinstance(item, PartConfig):
+                    all_part_names.add(item.name)
 
             for comp in estimation.electronics.components:
                 if (
