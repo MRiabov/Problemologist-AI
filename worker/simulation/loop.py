@@ -84,7 +84,9 @@ class SimulationLoop:
                 else "auto",
             )
         )
-        scene = SimulationScene(scene_path=xml_path)
+        scene = SimulationScene(
+            scene_path=xml_path, config={"particle_budget": self.particle_budget}
+        )
         self.backend.load_scene(scene)
 
         self.component = component
@@ -590,15 +592,6 @@ class SimulationLoop:
             is_success = False
 
         metrics = self.metric_collector.get_metrics()
-
-        if fail_reason:
-            is_success = False
-        elif self.goal_sites:
-            is_success = self.success
-        elif has_other_objectives:
-            is_success = True
-        else:
-            is_success = False
 
         return SimulationMetrics(
             total_time=current_time,
