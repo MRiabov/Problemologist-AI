@@ -87,7 +87,7 @@ class SimulationLoop:
             )
         )
         scene = SimulationScene(
-            scene_path=xml_path, config={"particle_budget": self.particle_budget}
+            scene_path=str(xml_path), config={"particle_budget": self.particle_budget}
         )
         self.backend.load_scene(scene)
 
@@ -217,11 +217,21 @@ class SimulationLoop:
         self.success_evaluator = SuccessEvaluator(
             max_simulation_time=self.max_simulation_time,
             motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
+            simulation_bounds=self.objectives.simulation_bounds
+            if self.objectives
+            else None,
         )
 
         # T015: derive is_powered_map from electronics.circuit state
         if self.electronics:
             self._update_electronics(force=True)
+            # WP3: Pass electronics names to backend for fluid damage detection
+            electronic_names = [
+                c.assembly_part_ref
+                for c in self.electronics.components
+                if c.assembly_part_ref
+            ]
+            self.backend.set_electronics(electronic_names)
 
         # Reset metrics
         self.reset_metrics()
@@ -359,6 +369,55 @@ class SimulationLoop:
             res = self.backend.step(dt)
             current_time = res.time
 
+            # T016: Flow Rate Tracking (Update cumulative_crossed_count)
+            if self.objectives and self.objectives.objectives:
+                particles = self.backend.get_particle_positions()
+                if particles is not None and len(particles) > 0:
+                    for fo in self.objectives.objectives.fluid_objectives:
+                        if fo.type == FluidObjectiveType.FLOW_RATE:
+                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            p0 = np.array(fo.gate_plane_point)
+                            n = np.array(fo.gate_plane_normal)
+
+                            distances = np.dot(particles - p0, n)
+                            prev_distances = self.prev_particle_distances.get(obj_id)
+
+                            if prev_distances is not None:
+                                # A particle crossed the gate if it moved from one side to the other.
+                                # Assuming normal points in flow direction, crossing is from + to -.
+                                # If it was > 0 and now <= 0, it crossed.
+                                crossed = (prev_distances > 0) & (distances <= 0)
+                                self.cumulative_crossed_count[obj_id] = (
+                                    self.cumulative_crossed_count.get(obj_id, 0)
+                                    + np.sum(crossed)
+                                )
+
+                            self.prev_particle_distances[obj_id] = distances
+
+                        # T016: Continuous Fluid Evaluation (eval_at='continuous')
+                        if (
+                            fo.type == FluidObjectiveType.FLUID_CONTAINMENT
+                            and getattr(fo, "eval_at", None) == FluidEvalAt.CONTINUOUS
+                        ):
+                            zone = fo.containment_zone
+                            z_min = np.array(zone.min)
+                            z_max = np.array(zone.max)
+                            inside = np.all(
+                                (particles >= z_min) & (particles <= z_max), axis=1
+                            )
+                            ratio = (
+                                np.sum(inside) / len(particles)
+                                if len(particles) > 0
+                                else 0.0
+                            )
+                            if ratio < fo.threshold:
+                                self.fail_reason = (
+                                    SimulationFailureMode.FLUID_OBJECTIVE_FAILED
+                                )
+                                break
+                    if self.fail_reason:
+                        break
+
             # 2. Update Metrics
             actuator_states = {
                 n: self.backend.get_actuator_state(n) for n in self.actuator_names
@@ -369,19 +428,45 @@ class SimulationLoop:
 
             target_vel = 0.0
             target_pos = None
+            target_vel_vec = np.zeros(3)
             if target_body_name:
                 state = self.backend.get_body_state(target_body_name)
-                target_vel = np.linalg.norm(state.vel)
+                target_vel_vec = state.vel
+                target_vel = np.linalg.norm(target_vel_vec)
                 target_pos = state.pos
 
             max_stress = self.backend.get_max_stress()
             self.metric_collector.update(dt, energy, target_vel, max_stress)
 
+            # T012: Enforce Stress Objectives (early failure)
+            if (
+                self.objectives
+                and self.objectives.objectives
+                and self.objectives.objectives.stress_objectives
+            ):
+                for so in self.objectives.objectives.stress_objectives:
+                    field = self.backend.get_stress_field(so.part_label)
+                    if field is not None and len(field.stress) > 0:
+                        part_max = np.max(field.stress)
+                        if part_max > so.max_von_mises_mpa * 1e6:
+                            self.fail_reason = (
+                                SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                            )
+                            logger.info(
+                                "stress_objective_exceeded",
+                                part=so.part_label,
+                                stress_pa=part_max,
+                                limit_pa=so.max_von_mises_mpa * 1e6,
+                            )
+                            break
+                if self.fail_reason:
+                    break
+
             # 4. Check Success/Failure conditions
             fail_reason = self.success_evaluator.check_failure(
                 current_time,
                 target_pos,
-                state.vel if target_pos is not None else np.zeros(3),
+                target_vel_vec,
             )
             if fail_reason:
                 self.fail_reason = fail_reason
@@ -597,8 +682,8 @@ class SimulationLoop:
             is_success = True
         else:
             # Stability test or goal-less benchmark
-            # (legacy behavior expects False if no goal)
-            is_success = False
+            # If no failure reason, then it's a success
+            is_success = True
 
         metrics = self.metric_collector.get_metrics()
 

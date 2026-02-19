@@ -326,6 +326,11 @@ class MuJoCoBackend(PhysicsBackend):
             raise ValueError(f"Tendon {tendon_name} not found")
         return float(self.data.ten_force[tid])
 
+    def set_electronics(self, names: list[str]) -> None:
+        """Mark specific entities as electronics."""
+        # MuJoCo backend currently doesn't implement fluid damage detection
+        pass
+
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in MuJoCo."""
         body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
