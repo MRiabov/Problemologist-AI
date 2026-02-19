@@ -17,7 +17,16 @@ from pydantic import (
     model_validator,
 )
 
-from shared.enums import ElectronicComponentType, ManufacturingMethod
+from shared.enums import (
+    ElectronicComponentType,
+    FluidEvalAt,
+    FluidObjectiveType,
+    FluidShapeType,
+    ManufacturingMethod,
+    MotorControlMode,
+    MovingPartType,
+    ReviewDecision,
+)
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 # =============================================================================
@@ -57,7 +66,7 @@ class FluidProperties(BaseModel):
 
 
 class FluidVolume(BaseModel):
-    type: Literal["cylinder", "box", "sphere"]
+    type: FluidShapeType
     center: CoercedTuple3D
     # For cylinder
     radius: float | None = None
@@ -78,15 +87,15 @@ class FluidDefinition(BaseModel):
 
 
 class FluidContainmentObjective(BaseModel):
-    type: Literal["fluid_containment"] = "fluid_containment"
+    type: FluidObjectiveType = FluidObjectiveType.FLUID_CONTAINMENT
     fluid_id: str
     containment_zone: BoundingBox
     threshold: float = 0.95
-    eval_at: Literal["end", "continuous"] = "end"
+    eval_at: FluidEvalAt = FluidEvalAt.END
 
 
 class FlowRateObjective(BaseModel):
-    type: Literal["flow_rate"] = "flow_rate"
+    type: FluidObjectiveType = FluidObjectiveType.FLOW_RATE
     fluid_id: str
     gate_plane_point: CoercedTuple3D
     gate_plane_normal: CoercedTuple3D
@@ -142,7 +151,7 @@ class MovedObject(BaseModel):
 class MotorControl(BaseModel):
     """Control parameters for motor-type moving parts."""
 
-    mode: Literal["constant", "sinusoidal", "on_off"]
+    mode: MotorControlMode
     speed: float
     frequency: float | None = None
 
@@ -154,7 +163,7 @@ class MovingPart(BaseModel):
     """
 
     part_name: str
-    type: Literal["motor", "passive"]
+    type: MovingPartType
     dofs: list[str]
     control: MotorControl | None = None
 
@@ -347,9 +356,7 @@ class ReviewFrontmatter(BaseModel):
     - reject_plan_refusal: Override CAD agent's refusal, plan is valid
     """
 
-    decision: Literal[
-        "approved", "rejected", "confirm_plan_refusal", "reject_plan_refusal"
-    ]
+    decision: ReviewDecision
     comments: list[str] = []
 
     @field_validator("decision")
@@ -371,8 +378,23 @@ class ManufacturedPartEstimate(BaseModel):
 
     part_name: str
     part_id: str
-    manufacturing_method: str
+    manufacturing_method: ManufacturingMethod
     material_id: str
+
+    @field_validator("manufacturing_method", mode="before")
+    @classmethod
+    def normalize_method(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v_lower = v.lower()
+            if v_lower in ["3d_printing", "3dprinting", "3dp"]:
+                return ManufacturingMethod.THREE_DP
+            if v_lower in ["injection_molding", "im"]:
+                return ManufacturingMethod.INJECTION_MOLDING
+            # Try to match enum values
+            for m in ManufacturingMethod:
+                if v_lower == m.value:
+                    return m
+        return v
     quantity: int
     part_volume_mm3: float
     stock_bbox_mm: dict[str, float]  # {x: float, y: float, z: float}

@@ -74,7 +74,7 @@ def test_search_cots_catalog_all_args(mock_search_parts):
 
     args, _ = mock_search_parts.call_args
     search_query = args[0]
-    assert search_query.constraints["max_weight"] == 100.0
+    assert search_query.constraints["max_weight_g"] == 100.0
     assert search_query.constraints["max_cost"] == 50.0
     assert search_query.constraints["category"] == "motor"
     assert search_query.limit == 10

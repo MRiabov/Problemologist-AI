@@ -37,7 +37,7 @@ def test_search_cots_catalog_tool(mock_parts):
         args, _ = mock_search.call_args
         sq = args[0]
         assert sq.query == "bolt"
-        assert sq.constraints["max_weight"] == 20.0
+        assert sq.constraints["max_weight_g"] == 20.0
 
 
 def test_search_cots_catalog_no_results():

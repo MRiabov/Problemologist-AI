@@ -34,7 +34,7 @@ def mock_worker():
         instance.read_file.side_effect = lambda path: {
             "plan.md": "## 1. Solution Overview\nTest\n## 2. Parts List\n- Part A\n## 3. Assembly Strategy\n1. Step 1\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Risk 1",
             "todo.md": "- [ ] Step 1\n- [ ] Step 2",
-            "objectives.yaml": "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [0,0,0], max: [1,1,1]}\nmoved_object: {initial_pos: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight: 100}",
+            "objectives.yaml": "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [0,0,0], max: [1,1,1]}\nmoved_object: {initial_pos: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 100}",
             "script.py": "print('hello')",
         }.get(path, "content")
         yield instance

@@ -51,7 +51,7 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
             runtime_jitter=(0, 0, 0),
             shape="box",
         ),
-        constraints=Constraints(max_unit_cost=100, max_weight=10),
+        constraints=Constraints(max_unit_cost=100, max_weight_g=10),
     )
 
     # Execute
@@ -101,7 +101,7 @@ def test_genesis_builder_no_msh_when_fem_disabled(
             runtime_jitter=(0, 0, 0),
             shape="box",
         ),
-        constraints=Constraints(max_unit_cost=100, max_weight=10),
+        constraints=Constraints(max_unit_cost=100, max_weight_g=10),
     )
 
     # Execute
