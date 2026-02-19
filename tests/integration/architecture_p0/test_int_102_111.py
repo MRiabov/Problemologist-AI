@@ -61,7 +61,29 @@ simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
-        # Script using a material that LACKS FEM fields (aluminum_6061 from default config)
+        # Setup custom material config that LACKS FEM fields
+        custom_config = """
+cnc:
+  materials:
+    no_fem_material:
+      name: "No FEM Material"
+      density_g_cm3: 2.7
+      cost_per_kg: 6.0
+      machine_hourly_rate: 80.0
+      color: "#D1D5DB"
+      compatibility: ["cnc"]
+"""
+        await client.post(
+            f"{WORKER_URL}/fs/write",
+            json={
+                "path": "manufacturing_config.yaml",
+                "content": custom_config,
+                "overwrite": True,
+            },
+            headers=base_headers,
+        )
+
+        # Script using a material that LACKS FEM fields
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
@@ -70,7 +92,7 @@ def build():
     p = Box(1, 1, 1)
     p.label = "test_part"
     p.metadata = PartMetadata(
-        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum_6061"
+        manufacturing_method=ManufacturingMethod.CNC, material_id="no_fem_material"
     )
     return p
 """

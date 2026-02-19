@@ -481,6 +481,29 @@ class SimulationLoop:
         # Final stress evaluation
         self.stress_summaries = self.backend.get_stress_summaries()
 
+        # Check stress objectives (T012/INT-107)
+        if self.objectives and self.objectives.objectives:
+            for so in self.objectives.objectives.stress_objectives:
+                # Find corresponding summary
+                summary = next(
+                    (s for s in self.stress_summaries if s.part_label == so.part_label),
+                    None,
+                )
+                if summary:
+                    # Convert Pa to MPa for comparison
+                    max_mpa = summary.max_von_mises_pa / 1e6
+                    if max_mpa > so.max_von_mises_mpa:
+                        self.fail_reason = (
+                            SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                        )
+                        logger.warning(
+                            "stress_objective_exceeded",
+                            part=so.part_label,
+                            measured_mpa=max_mpa,
+                            threshold_mpa=so.max_von_mises_mpa,
+                        )
+                        break
+
         # Final fluid objectives evaluation (eval_at='end')
         if self.objectives and self.objectives.objectives:
             for fo in self.objectives.objectives.fluid_objectives:
