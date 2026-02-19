@@ -8,7 +8,7 @@ from controller.agent.dspy_utils import cad_simulation_metric
 def test_metric_script_fails():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(script_compiled=False)
 
@@ -20,7 +20,7 @@ def test_metric_script_fails():
 def test_metric_cad_fails():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(script_compiled=True, cad_geometry_valid=False)
 
@@ -32,7 +32,7 @@ def test_metric_cad_fails():
 def test_metric_full_success():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,
@@ -52,7 +52,7 @@ def test_metric_full_success():
 def test_metric_partial_sim():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,
@@ -77,7 +77,7 @@ def test_metric_partial_sim():
 def test_metric_cost_overage():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight=5.0),
+        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,

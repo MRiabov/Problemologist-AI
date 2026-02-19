@@ -4,7 +4,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from shared.enums import SimulationFailureMode
+from shared.enums import (
+    ManufacturingMethod,
+    ReviewDecision,
+    SimulationFailureMode,
+)
 
 
 class ObservabilityEventType(StrEnum):
@@ -114,7 +118,7 @@ class ToolInvocationEvent(BaseEvent):
 class ManufacturabilityCheckEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.MANUFACTURABILITY_CHECK
     part_id: str
-    method: str  # e.g., "cnc", "injection_molding"
+    method: ManufacturingMethod
     result: bool  # pass/fail
     price: float | None = None
     weight_g: float | None = None
@@ -309,7 +313,7 @@ class ReviewEvidenceStats(BaseModel):
 
 class ReviewDecisionEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
-    decision: str  # "approve", "reject_plan", "reject_code"
+    decision: ReviewDecision
     reason: str
     evidence_stats: ReviewEvidenceStats = Field(default_factory=ReviewEvidenceStats)
 
@@ -319,7 +323,7 @@ class ReviewEvent(BaseEvent):
 
     event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
     episode_id: str
-    decision: str
+    decision: ReviewDecision
     comments: list[str] = Field(default_factory=list)
 
 

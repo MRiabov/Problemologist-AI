@@ -58,7 +58,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
 
         self.assertIn("cables", data, "'cables' key missing in scene.json")
         self.assertEqual(len(data["cables"]), 1)
-        self.assertEqual(data["cables"][0]["name"], "wire_1")
+        self.assertEqual(data["cables"][0]["wire_id"], "wire_1")
         self.assertEqual(len(data["cables"][0]["points"]), 2)
 
     def test_applied_control_persistence(self):
@@ -79,9 +79,9 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
     def test_tendon_support(self):
         backend = GenesisBackend()
         # Inject cables manually as if loaded from scene
-        backend.cables = [
-            {"name": "wire_1", "radius": 0.001, "stiffness": 100, "points": []}
-        ]
+        backend.cables = {
+            "wire_1": MagicMock()
+        }
 
         self.assertTrue(
             hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute"
