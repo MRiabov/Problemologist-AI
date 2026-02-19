@@ -142,7 +142,7 @@ class GenesisBackend(PhysicsBackend):
             self.cameras = {}
             self.motors = []
             self.mjcf_actuators = {}
-            self.cables = []
+            self.cables = {}
             self.applied_controls = {}
             self._is_built = False
 
@@ -371,11 +371,11 @@ class GenesisBackend(PhysicsBackend):
 
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
-                    self.cables = data.get("cables", [])
+                    cable_configs = data.get("cables", [])
 
                     # 4. Add Cables (Wiring)
-                    for cable_cfg in data.get("cables", []):
-                        name = cable_cfg["wire_id"]
+                    for cable_cfg in cable_configs:
+                        name = cable_cfg.get("name") or cable_cfg["wire_id"]
                         material = gs.materials.Rigid(rho=8960)  # Copper density
 
                         cable = self.scene.add_entity(
@@ -1050,7 +1050,7 @@ class GenesisBackend(PhysicsBackend):
     def get_tendon_tension(self, tendon_name: str) -> float:
         """Returns the average tension along the cable."""
         if tendon_name not in self.cables:
-            return 0.0
+            raise ValueError(f"Tendon '{tendon_name}' not found in scene.")
 
         cable = self.cables[tendon_name]
         try:
