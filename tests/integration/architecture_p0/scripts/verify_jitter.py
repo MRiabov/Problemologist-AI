@@ -2,7 +2,7 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-from worker.simulation.verification import verify_with_jitter
+from worker_heavy.simulation.verification import verify_with_jitter
 
 # Create a dummy XML that always succeeds
 TEST_SUCCESS_XML = """

@@ -18,14 +18,14 @@ from shared.simulation.backends import (
     StressField,
 )
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.genesis_backend import GenesisBackend
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.genesis_backend import GenesisBackend
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 @pytest.fixture
 def genesis_backend():
     # Patching at the module level where they are used in genesis_backend.py
-    with patch("worker.simulation.genesis_backend.gs") as mock_gs:
+    with patch("worker_heavy.simulation.genesis_backend.gs") as mock_gs:
         # Mock VisOptions to avoid unrecognized attribute error
         mock_gs.options.VisOptions.return_value = MagicMock()
         mock_gs.Scene.return_value = MagicMock()
@@ -87,8 +87,8 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
     from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
 
     with (
-        patch("worker.simulation.loop.get_physics_backend") as mock_get,
-        patch("worker.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
+        patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get,
+        patch("worker_heavy.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
     ):
         mock_get.return_value = genesis_backend
 

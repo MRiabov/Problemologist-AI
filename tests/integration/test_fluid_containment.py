@@ -5,7 +5,7 @@ import pytest
 
 from shared.models.schemas import ObjectivesYaml
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 @pytest.mark.integration
@@ -40,7 +40,7 @@ def test_fluid_containment_logic(tmp_path):
         "constraints": {"max_unit_cost": 100, "max_weight_g": 10},
     }
 
-    with patch("worker.simulation.loop.get_physics_backend") as mock_get_backend:
+    with patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get_backend:
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
         mock_backend.step.return_value = MagicMock(time=0.1, success=True)

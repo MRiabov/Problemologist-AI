@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 @pytest.mark.integration

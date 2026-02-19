@@ -1,8 +1,8 @@
 import pytest
 from build123d import *
 
-from worker.workbenches.cnc import analyze_cnc, calculate_cnc_cost
-from worker.workbenches.config import load_config
+from worker_heavy.workbenches.cnc import analyze_cnc, calculate_cnc_cost
+from worker_heavy.workbenches.config import load_config
 
 
 @pytest.fixture

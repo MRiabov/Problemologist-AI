@@ -167,7 +167,7 @@ class BaseNode:
         Returns (prediction, artifacts, journal_entry).
         """
         from controller.agent.dspy_utils import WorkerInterpreter
-        from worker.utils.file_validation import validate_node_output
+        from worker_heavy.utils.file_validation import validate_node_output
 
         interpreter = WorkerInterpreter(
             worker_client=self.ctx.worker_client, session_id=self.ctx.session_id

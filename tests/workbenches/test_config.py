@@ -1,8 +1,8 @@
 import pytest
 from structlog.testing import capture_logs
 
-from worker.workbenches.config import load_config
-from worker.workbenches.models import ManufacturingConfig
+from worker_heavy.workbenches.config import load_config
+from shared.workers.workbench_models import ManufacturingConfig
 
 
 def test_load_config():

@@ -191,7 +191,7 @@ async def _execute_graph_streaming(
                     plan=final_state.plan,
                 )
             except Exception as e:
-                logger.warning("failed_to_update_episode_persistence", error=str(e))
+                logger.error("failed_to_update_episode_persistence", error=str(e))
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
@@ -210,9 +210,13 @@ async def _execute_graph_streaming(
 
             if trace_id:
                 async with get_sessionmaker()() as db:
+                    from controller.agent.config import settings
+
                     worker_url = os.getenv("WORKER_URL", "http://worker:8001")
                     client = WorkerClient(
-                        base_url=worker_url, session_id=str(session_id)
+                        base_url=worker_url,
+                        session_id=str(session_id),
+                        heavy_url=settings.worker_heavy_url,
                     )
                     await calculate_and_report_automated_score(
                         episode_id=session_id,
@@ -223,7 +227,7 @@ async def _execute_graph_streaming(
                         worker_client=client,
                     )
         except Exception as e:
-            logger.warning("failed_to_report_benchmark_automated_score", error=str(e))
+            logger.error("failed_to_report_benchmark_automated_score", error=str(e))
 
     return final_state
 
@@ -353,6 +357,7 @@ async def _persist_session_assets(
             # Sync assets to the Asset table
             try:
                 from contextlib import suppress
+                from controller.agent.config import settings
 
                 worker_url = os.getenv("WORKER_URL", "http://worker:8001")
                 async with httpx.AsyncClient() as http_client:
@@ -360,6 +365,7 @@ async def _persist_session_assets(
                         base_url=worker_url,
                         session_id=str(session_id),
                         http_client=http_client,
+                        heavy_url=settings.worker_heavy_url,
                     )
                     middleware = RemoteFilesystemMiddleware(client)
                     backend = RemoteFilesystemBackend(middleware)

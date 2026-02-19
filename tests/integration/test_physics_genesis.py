@@ -21,7 +21,7 @@ from shared.simulation.backends import (
     StressField,
 )
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 # Shared mock to avoid "already initialized" errors if multiple backends are created
 _SHARED_BACKEND_MOCK = MagicMock()
@@ -30,8 +30,8 @@ _SHARED_BACKEND_MOCK = MagicMock()
 @pytest.fixture
 def mock_genesis_backend():
     with (
-        patch("worker.simulation.loop.get_physics_backend") as mock_get,
-        patch("worker.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
+        patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get,
+        patch("worker_heavy.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
     ):
         backend = _SHARED_BACKEND_MOCK
         mock_get.return_value = backend

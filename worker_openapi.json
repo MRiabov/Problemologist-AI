@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Problemologist Worker API",
+    "title": "Problemologist Worker API (Light)",
     "description": "Sandboxed execution and filesystem API for agentic CAD tasks",
     "version": "0.1.0"
   },
@@ -9,7 +9,7 @@
     "/topology/inspect": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Api Inspect Topology",
         "description": "Inspect topological features of the component.",
@@ -62,7 +62,7 @@
     "/fs/ls": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "List Files",
         "description": "List contents of a directory.",
@@ -119,7 +119,7 @@
     "/fs/exists": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "File Exists",
         "description": "Check if a file or directory exists.",
@@ -172,7 +172,7 @@
     "/fs/read": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Read File",
         "description": "Read file contents.",
@@ -225,7 +225,7 @@
     "/fs/write": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Write File",
         "description": "Write content to a file.",
@@ -278,7 +278,7 @@
     "/fs/edit": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Edit File",
         "description": "Edit a file with one or more operations.",
@@ -331,7 +331,7 @@
     "/fs/upload_file": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Upload File",
         "description": "Upload a file with binary content.",
@@ -384,7 +384,7 @@
     "/fs/read_blob": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Read Blob",
         "description": "Read file contents as binary blob.",
@@ -435,7 +435,7 @@
     "/fs/grep": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Api Grep",
         "description": "Search for a pattern in files.",
@@ -492,7 +492,7 @@
     "/fs/bundle": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Bundle Session",
         "description": "Bundle the session workspace into a gzipped tarball.",
@@ -533,7 +533,7 @@
     "/fs/delete": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Delete File",
         "description": "Delete a file or directory.",
@@ -586,7 +586,7 @@
     "/git/init": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Init",
         "description": "Initialize a git repository in the workspace.",
@@ -629,7 +629,7 @@
     "/git/commit": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Commit",
         "description": "Commit changes to the local repository.",
@@ -682,7 +682,7 @@
     "/git/status": {
       "get": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Status",
         "description": "Get repository status.",
@@ -725,7 +725,7 @@
     "/git/resolve": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Resolve",
         "description": "Resolve a merge conflict.",
@@ -778,7 +778,7 @@
     "/git/merge/abort": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Abort",
         "description": "Abort a merge.",
@@ -821,7 +821,7 @@
     "/git/merge/complete": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Git Complete",
         "description": "Complete a merge.",
@@ -874,7 +874,7 @@
     "/runtime/execute": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Execute Code",
         "description": "Execute Python code in session-isolated environment.",
@@ -924,63 +924,10 @@
         }
       }
     },
-    "/benchmark/submit": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Submit",
-        "description": "Handover to reviewer in isolated session.",
-        "operationId": "api_submit_benchmark_submit_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BenchmarkToolRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchmarkToolResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/assets/{path}": {
       "get": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Get Asset",
         "description": "Serve assets from the filesystem.",
@@ -1030,7 +977,7 @@
     "/lint": {
       "post": {
         "tags": [
-          "worker"
+          "worker-light"
         ],
         "summary": "Api Lint",
         "description": "Lint Python code using ruff.",
@@ -1063,271 +1010,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LintResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/benchmark/simulate": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Simulate",
-        "description": "Physics-backed stability check in isolated session.",
-        "operationId": "api_simulate_benchmark_simulate_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BenchmarkToolRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchmarkToolResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/benchmark/validate": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Validate",
-        "description": "Geometric validity check in isolated session.",
-        "operationId": "api_validate_benchmark_validate_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BenchmarkToolRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchmarkToolResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/benchmark/analyze": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Analyze",
-        "description": "Component analysis (topology, material, weight) in isolated session.",
-        "operationId": "api_analyze_benchmark_analyze_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnalyzeRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkbenchResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/benchmark/preview": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Preview",
-        "description": "Render a preview of the CAD design from specified camera angles.",
-        "operationId": "api_preview_benchmark_preview_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PreviewDesignRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PreviewDesignResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/benchmark/build": {
-      "post": {
-        "tags": [
-          "worker"
-        ],
-        "summary": "Api Build",
-        "description": "Rebuild simulation assets (GLB) from source without running full simulation.",
-        "operationId": "api_build_benchmark_build_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PreviewDesignRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchmarkToolResponse"
                 }
               }
             }
@@ -1382,163 +1064,6 @@
   },
   "components": {
     "schemas": {
-      "AnalyzeRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
-            "default": "script.py"
-          },
-          "script_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Script Content",
-            "description": "Direct content of the script."
-          },
-          "backend": {
-            "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "genesis"
-          },
-          "smoke_test_mode": {
-            "type": "boolean",
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate.",
-            "default": false
-          },
-          "particle_budget": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Particle Budget",
-            "description": "Optional particle budget override."
-          },
-          "method": {
-            "$ref": "#/components/schemas/ManufacturingMethod",
-            "description": "Manufacturing method to analyze (cnc, 3dp, im)."
-          },
-          "quantity": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Quantity",
-            "description": "Number of units to manufacture for pricing.",
-            "default": 1
-          }
-        },
-        "type": "object",
-        "required": [
-          "method"
-        ],
-        "title": "AnalyzeRequest",
-        "description": "Request to run manufacturing analysis."
-      },
-      "BenchmarkToolRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
-            "default": "script.py"
-          },
-          "script_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Script Content",
-            "description": "Direct content of the script."
-          },
-          "backend": {
-            "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "genesis"
-          },
-          "smoke_test_mode": {
-            "type": "boolean",
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate.",
-            "default": false
-          },
-          "particle_budget": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Particle Budget",
-            "description": "Optional particle budget override."
-          }
-        },
-        "type": "object",
-        "title": "BenchmarkToolRequest",
-        "description": "Request to run a benchmark tool (simulate, validate, etc.)."
-      },
-      "BenchmarkToolResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "confidence": {
-            "type": "string",
-            "title": "Confidence",
-            "default": "high"
-          },
-          "artifacts": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SimulationArtifacts"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Artifacts"
-          },
-          "events": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Events"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
-        "title": "BenchmarkToolResponse",
-        "description": "Response from a benchmark tool."
-      },
       "Body_upload_file_fs_upload_file_post": {
         "properties": {
           "path": {
@@ -1557,54 +1082,6 @@
           "file"
         ],
         "title": "Body_upload_file_fs_upload_file_post"
-      },
-      "CostBreakdown": {
-        "properties": {
-          "process": {
-            "type": "string",
-            "title": "Process"
-          },
-          "total_cost": {
-            "type": "number",
-            "title": "Total Cost"
-          },
-          "unit_cost": {
-            "type": "number",
-            "title": "Unit Cost"
-          },
-          "material_cost_per_unit": {
-            "type": "number",
-            "title": "Material Cost Per Unit"
-          },
-          "setup_cost": {
-            "type": "number",
-            "title": "Setup Cost"
-          },
-          "is_reused": {
-            "type": "boolean",
-            "title": "Is Reused"
-          },
-          "details": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Details"
-          },
-          "pricing_explanation": {
-            "type": "string",
-            "title": "Pricing Explanation",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "process",
-          "total_cost",
-          "unit_cost",
-          "material_cost_per_unit",
-          "setup_cost",
-          "is_reused"
-        ],
-        "title": "CostBreakdown"
       },
       "DeleteFileRequest": {
         "properties": {
@@ -2107,83 +1584,6 @@
         "title": "ListFilesRequest",
         "description": "Request to list files in a directory."
       },
-      "ManufacturingMethod": {
-        "type": "string",
-        "enum": [
-          "cnc",
-          "3dp",
-          "im"
-        ],
-        "title": "ManufacturingMethod",
-        "description": "Supported manufacturing methods."
-      },
-      "PreviewDesignRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
-            "default": "script.py"
-          },
-          "pitch": {
-            "type": "number",
-            "maximum": 90.0,
-            "minimum": -90.0,
-            "title": "Pitch",
-            "description": "Camera elevation angle in degrees (negative = looking down).",
-            "default": -45.0
-          },
-          "yaw": {
-            "type": "number",
-            "exclusiveMaximum": 360.0,
-            "minimum": 0.0,
-            "title": "Yaw",
-            "description": "Camera azimuth angle in degrees (clockwise from front).",
-            "default": 45.0
-          }
-        },
-        "type": "object",
-        "title": "PreviewDesignRequest",
-        "description": "Request to preview a CAD design from specific angles."
-      },
-      "PreviewDesignResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "image_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Path"
-          },
-          "events": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Events"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
-        "title": "PreviewDesignResponse",
-        "description": "Response from preview design endpoint."
-      },
       "ReadFileRequest": {
         "properties": {
           "path": {
@@ -2225,67 +1625,6 @@
         ],
         "title": "ResponseStatus",
         "description": "Standard API response status values."
-      },
-      "SimulationArtifacts": {
-        "properties": {
-          "render_paths": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Render Paths"
-          },
-          "mjcf_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mjcf Content"
-          },
-          "stress_summaries": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Stress Summaries"
-          },
-          "fluid_metrics": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Fluid Metrics"
-          },
-          "scene_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scene Path"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "SimulationArtifacts",
-        "description": "Structured artifacts from a simulation run."
-      },
-      "SimulatorBackendType": {
-        "type": "string",
-        "enum": [
-          "mujoco",
-          "genesis"
-        ],
-        "title": "SimulatorBackendType"
       },
       "StatusResponse": {
         "properties": {
@@ -2339,105 +1678,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WorkbenchMetadata": {
-        "properties": {
-          "cost_breakdown": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CostBreakdown"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "dof_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dof Count"
-          },
-          "dof_warning": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dof Warning"
-          },
-          "undercut_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Undercut Count"
-          },
-          "gate_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gate Count"
-          },
-          "additional_info": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Additional Info"
-          }
-        },
-        "type": "object",
-        "title": "WorkbenchMetadata",
-        "description": "Standardized metadata for workbench results."
-      },
-      "WorkbenchResult": {
-        "properties": {
-          "is_manufacturable": {
-            "type": "boolean",
-            "title": "Is Manufacturable"
-          },
-          "unit_cost": {
-            "type": "number",
-            "title": "Unit Cost"
-          },
-          "weight_g": {
-            "type": "number",
-            "title": "Weight G",
-            "default": 0.0
-          },
-          "violations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Violations"
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/WorkbenchMetadata"
-          }
-        },
-        "type": "object",
-        "required": [
-          "is_manufacturable",
-          "unit_cost"
-        ],
-        "title": "WorkbenchResult"
       },
       "WriteFileRequest": {
         "properties": {
