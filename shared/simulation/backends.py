@@ -1,7 +1,7 @@
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from shared.models.simulation import FluidMetricResult, StressSummary
 
@@ -46,6 +46,24 @@ class StepResult(BaseModel):
     failure_reason: str | None = None
 
 
+class SceneConfig(BaseModel):
+    """Configuration for the simulation scene."""
+
+    particle_budget: int = 100000
+    model_config = {"extra": "allow"}
+
+
+class SceneAssets(BaseModel):
+    """Assets associated with a simulation scene."""
+
+    gs_scene: Any | None = None
+    entities: list[dict[str, Any]] = []
+    motors: list[dict[str, Any]] = []
+    cables: list[dict[str, Any]] = []
+    fluids: list[dict[str, Any]] = []
+    model_config = {"extra": "allow", "arbitrary_types_allowed": True}
+
+
 class SimulationScene(BaseModel):
     """Container for scene definition.
     For MuJoCo, this might be the XML path.
@@ -53,9 +71,8 @@ class SimulationScene(BaseModel):
     """
 
     scene_path: str | None = None
-    assets: dict[str, Any] = {}
-    config: dict[str, Any] = {}
-    # FIXME: it appears it may need models here. JSON should be strictly typed.
+    assets: SceneAssets = Field(default_factory=SceneAssets)
+    config: SceneConfig = Field(default_factory=SceneConfig)
 
 
 @runtime_checkable

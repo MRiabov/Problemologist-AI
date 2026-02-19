@@ -3,7 +3,8 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage
 
-from controller.agent.state import AgentStatus
+from controller.agent.benchmark.state import BenchmarkGeneratorState
+from controller.agent.state import AgentStatus, AgentState
 from controller.services.steerability.service import steerability_service
 
 logger = structlog.get_logger(__name__)
@@ -11,20 +12,21 @@ logger = structlog.get_logger(__name__)
 
 def get_session_id(state: Any) -> str | None:
     """Extract session_id from either AgentState or BenchmarkGeneratorState."""
+    if isinstance(state, AgentState):
+        return state.session_id
+    if isinstance(state, BenchmarkGeneratorState):
+        return str(state.session.session_id)
+
     if isinstance(state, dict):
         session = state.get("session")
-        if session and hasattr(session, "session_id"):
-            return str(session.session_id)
+        if session:
+            if hasattr(session, "session_id"):
+                return str(session.session_id)
+            if isinstance(session, dict):
+                return str(session.get("session_id"))
         return state.get("session_id")
 
-    # Handle Pydantic model BenchmarkGeneratorState or similar
-    # FIXME: omg, just use the normal value field, and fail if it doesn't pass!
-    session = getattr(state, "session", None)
-    if session and hasattr(session, "session_id"):
-        return str(session.session_id)
-
-    res = getattr(state, "session_id", None)
-    return str(res) if res else None
+    return None
 
 
 async def steerability_node(state: Any) -> dict:

@@ -1510,6 +1510,9 @@
           "artifacts": {
             "anyOf": [
               {
+                "$ref": "#/components/schemas/SimulationArtifacts"
+              },
+              {
                 "additionalProperties": true,
                 "type": "object"
               },
@@ -2222,6 +2225,59 @@
         ],
         "title": "ResponseStatus",
         "description": "Standard API response status values."
+      },
+      "SimulationArtifacts": {
+        "properties": {
+          "render_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Render Paths"
+          },
+          "mjcf_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mjcf Content"
+          },
+          "stress_summaries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Stress Summaries"
+          },
+          "fluid_metrics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fluid Metrics"
+          },
+          "scene_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Path"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SimulationArtifacts",
+        "description": "Structured artifacts from a simulation run."
       },
       "SimulatorBackendType": {
         "type": "string",
