@@ -1,3 +1,4 @@
+import contextvars
 import json
 import os
 from pathlib import Path
@@ -30,7 +31,9 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
-LAST_SIMULATION_RESULT: SimulationResult | None = None
+LAST_SIMULATION_RESULT: contextvars.ContextVar[SimulationResult | None] = (
+    contextvars.ContextVar("LAST_SIMULATION_RESULT", default=None)
+)
 
 
 def load_simulation_result(path: Path) -> SimulationResult | None:
@@ -50,8 +53,8 @@ def save_simulation_result(result: SimulationResult, path: Path):
 
 def get_stress_report(part_label: str) -> dict | None:
     """Returns the worst-case stress summary for a simulated FEM part."""
-    global LAST_SIMULATION_RESULT
-    if LAST_SIMULATION_RESULT is None:
+    last_result = LAST_SIMULATION_RESULT.get()
+    if last_result is None:
         # Try to load from disk
         candidates = [Path("simulation_result.json")]
         if os.getenv("RENDERS_DIR"):
@@ -62,17 +65,18 @@ def get_stress_report(part_label: str) -> dict | None:
         for p in candidates:
             res = load_simulation_result(p)
             if res:
-                LAST_SIMULATION_RESULT = res
+                LAST_SIMULATION_RESULT.set(res)
+                last_result = res
                 break
 
-    if LAST_SIMULATION_RESULT is None:
+    if last_result is None:
         logger.warning("get_stress_report_called_before_simulation")
         return None
 
     worst_summary = None
     min_sf = float("inf")
 
-    for summary in LAST_SIMULATION_RESULT.stress_summaries:
+    for summary in last_result.stress_summaries:
         if summary.part_label == part_label and summary.safety_factor < min_sf:
             min_sf = summary.safety_factor
             worst_summary = summary
@@ -109,8 +113,8 @@ def preview_stress(
     output_dir: Path | None = None,
 ) -> list[str]:
     """Renders the component with a von Mises stress heatmap overlay."""
-    global LAST_SIMULATION_RESULT
-    if LAST_SIMULATION_RESULT is None:
+    last_result = LAST_SIMULATION_RESULT.get()
+    if last_result is None:
         # Try to load from disk
         candidates = [Path("simulation_result.json")]
         working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
@@ -119,16 +123,15 @@ def preview_stress(
         for p in candidates:
             res = load_simulation_result(p)
             if res:
-                LAST_SIMULATION_RESULT = res
+                LAST_SIMULATION_RESULT.set(res)
+                last_result = res
                 break
 
-    if LAST_SIMULATION_RESULT is None:
+    if last_result is None:
         logger.warning("preview_stress_called_before_simulation")
         return []
 
-    logger.info(
-        "rendering_stress_heatmaps", count=len(LAST_SIMULATION_RESULT.stress_fields)
-    )
+    logger.info("rendering_stress_heatmaps", count=len(last_result.stress_fields))
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     stress_renders_dir = working_dir / "renders" / "stress"
     stress_renders_dir.mkdir(parents=True, exist_ok=True)
@@ -139,7 +142,7 @@ def preview_stress(
     from .rendering import render_stress_heatmap
 
     render_paths = []
-    for part_label, field_data in LAST_SIMULATION_RESULT.stress_fields.items():
+    for part_label, field_data in last_result.stress_fields.items():
         field = StressField(
             nodes=np.array(field_data["nodes"]), stress=np.array(field_data["stress"])
         )
@@ -489,8 +492,7 @@ def simulate(
             cots_parts=assembly_definition.cots_parts if assembly_definition else None,
         )
 
-        global LAST_SIMULATION_RESULT
-        LAST_SIMULATION_RESULT = SimulationResult(
+        last_result = SimulationResult(
             success=metrics.success,
             summary=status_msg,
             render_paths=render_paths,
@@ -502,20 +504,21 @@ def simulate(
             total_weight_g=weight,
             confidence=metrics.confidence,
         )
+        LAST_SIMULATION_RESULT.set(last_result)
 
         # T023: Generate stress heatmaps and append to render_paths
         if metrics.stress_fields:
             stress_renders = preview_stress(component, output_dir=working_dir)
-            LAST_SIMULATION_RESULT.render_paths.extend(stress_renders)
+            last_result.render_paths.extend(stress_renders)
 
         try:
             save_simulation_result(
-                LAST_SIMULATION_RESULT, working_dir / "simulation_result.json"
+                last_result, working_dir / "simulation_result.json"
             )
         except Exception as e:
             logger.warning("failed_to_save_simulation_result", error=str(e))
 
-        return LAST_SIMULATION_RESULT
+        return last_result
     except Exception as e:
         logger.error("simulation_error", error=str(e))
         return SimulationResult(success=False, summary=f"Simulation error: {e!s}")

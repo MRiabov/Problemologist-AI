@@ -70,11 +70,13 @@ class ElectronicsManager:
 
         # BFS for connectivity
         # (Extracted from loop.py:227-307)
+        from shared.enums import ElectronicComponentType
+
         powered = set()
         sources = [
             c.component_id
             for c in self.electronics.components
-            if c.type in ["battery", "v_source"]
+            if c.type == ElectronicComponentType.POWER_SUPPLY
         ]
 
         # Simplified BFS for power propagation

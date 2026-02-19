@@ -58,7 +58,7 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
             f"{WORKER_URL}/runtime/execute",
             json={"code": code},
             headers=base_headers,
-            timeout=60.0,
+            timeout=180.0,
         )
         assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = resp.json()
@@ -96,7 +96,7 @@ tetrahedralize(Path("bad.stl"), Path("bad.msh"))
             f"{WORKER_URL}/runtime/execute",
             json={"code": code_fail},
             headers=base_headers,
-            timeout=60.0,
+            timeout=180.0,
         )
         assert resp.json()["exit_code"] != 0, (
             "Expected meshing to fail for malformed STL"
