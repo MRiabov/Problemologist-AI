@@ -1,5 +1,10 @@
 import asyncio
+import base64
+import contextlib
+import io
 import multiprocessing
+import tarfile
+import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -37,6 +42,7 @@ heavy_router = APIRouter()
 # This usually comes from the bundled session
 from shared.workers.filesystem.router import create_filesystem_router
 
+
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
@@ -46,9 +52,32 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-def _collect_events(fs_router) -> list[dict[str, Any]]:
+def _collect_events(fs_router, root: Path | None = None) -> list[dict[str, Any]]:
     """Read and delete events.jsonl from the workspace."""
-    return collect_and_cleanup_events(fs_router.local_backend.root)
+    search_root = root or fs_router.local_backend.root
+    return collect_and_cleanup_events(search_root)
+
+
+@contextlib.contextmanager
+def bundle_context(bundle_base64: str | None, default_root: Path):
+    """Context manager to optionally extract a workspace bundle."""
+    if not bundle_base64:
+        yield default_root
+        return
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_root = Path(tmpdir)
+        try:
+            bundle_bytes = base64.b64decode(bundle_base64)
+            with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
+                tar.extractall(path=tmp_root, filter="fully_trusted")
+            logger.info("bundle_extracted", path=str(tmp_root), session_id=None)
+            yield tmp_root
+        except Exception as e:
+            logger.error("bundle_extraction_failed", error=str(e))
+            raise HTTPException(
+                status_code=400, detail=f"Failed to extract bundle: {e}"
+            ) from e
 
 
 # Global lock to ensure only one simulation/render runs at a time cross-session
@@ -130,33 +159,45 @@ async def api_simulate(
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
-        result = await run_simulation_task(
-            fs_router.local_backend._resolve(request.script_path),
-            fs_router.local_backend.root,
-            request.script_content,
-            request.smoke_test_mode,
-            backend_type,
-            x_session_id,
-            request.particle_budget,
-        )
+        async with HEAVY_OPERATION_LOCK:
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                result = await run_simulation_task(
+                    str(root / request.script_path)
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    root,
+                    request.script_content,
+                    request.smoke_test_mode,
+                    backend_type,
+                    x_session_id,
+                    request.particle_budget,
+                )
 
-        summary = result.summary
-        if wait_pos > 1:
-            summary = f"{summary} (Queued: wait position {wait_pos})" if summary else f"Queued: wait position {wait_pos}"
+                summary = result.summary
+                if wait_pos > 1:
+                    summary = (
+                        f"{summary} (Queued: wait position {wait_pos})"
+                        if summary
+                        else f"Queued: wait position {wait_pos}"
+                    )
 
-        events = _collect_events(fs_router)
-        return BenchmarkToolResponse(
-            success=result.success,
-            message=summary,
-            confidence=result.confidence,
-            artifacts={
-                "render_paths": result.render_paths,
-                "mjcf_content": result.mjcf_content,
-                "stress_summaries": [s.model_dump() for s in result.stress_summaries],
-                "fluid_metrics": [m.model_dump() for m in result.fluid_metrics],
-            },
-            events=events,
-        )
+                events = _collect_events(fs_router, root=root)
+                return BenchmarkToolResponse(
+                    success=result.success,
+                    message=summary,
+                    confidence=result.confidence,
+                    artifacts={
+                        "render_paths": result.render_paths,
+                        "mjcf_content": result.mjcf_content,
+                        "stress_summaries": [
+                            s.model_dump() for s in result.stress_summaries
+                        ],
+                        "fluid_metrics": [m.model_dump() for m in result.fluid_metrics],
+                    },
+                    events=events,
+                )
 
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
@@ -176,37 +217,42 @@ async def api_validate(
     SIMULATION_QUEUE_DEPTH += 1
     try:
         async with HEAVY_OPERATION_LOCK:
-            component = load_component_from_script(
-                script_path=fs_router.local_backend._resolve(request.script_path),
-                session_root=fs_router.local_backend.root,
-                script_content=request.script_content,
-            )
-            is_valid, message = await asyncio.to_thread(
-                validate,
-                component,
-                output_dir=fs_router.local_backend.root,
-                session_id=x_session_id,
-                smoke_test_mode=request.smoke_test_mode,
-                particle_budget=request.particle_budget,
-            )
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
+                )
+                is_valid, message = await asyncio.to_thread(
+                    validate,
+                    component,
+                    output_dir=root,
+                    session_id=x_session_id,
+                    smoke_test_mode=request.smoke_test_mode,
+                    particle_budget=request.particle_budget,
+                )
 
-            fem_valid, fem_msg = await asyncio.to_thread(
-                validate_fem_manufacturability,
-                component,
-                fs_router.local_backend.root,
-            )
-            if is_valid and not fem_valid:
-                is_valid = False
-                message = (message + "; " + fem_msg) if message else fem_msg
+                fem_valid, fem_msg = await asyncio.to_thread(
+                    validate_fem_manufacturability,
+                    component,
+                    root,
+                )
+                if is_valid and not fem_valid:
+                    is_valid = False
+                    message = (message + "; " + fem_msg) if message else fem_msg
 
-        record_validation_result(fs_router.local_backend.root, is_valid, message)
+                record_validation_result(root, is_valid, message)
 
-        events = _collect_events(fs_router)
-        return BenchmarkToolResponse(
-            success=is_valid,
-            message=message or "Validation successful",
-            events=events,
-        )
+                events = _collect_events(fs_router, root=root)
+                return BenchmarkToolResponse(
+                    success=is_valid,
+                    message=message or "Validation successful",
+                    events=events,
+                )
 
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
@@ -226,20 +272,27 @@ async def api_analyze(
     SIMULATION_QUEUE_DEPTH += 1
     try:
         async with HEAVY_OPERATION_LOCK:
-            component = load_component_from_script(
-                script_path=fs_router.local_backend._resolve(request.script_path),
-                session_root=fs_router.local_backend.root,
-                script_content=request.script_content,
-            )
-            result = await asyncio.to_thread(
-                analyze_component,
-                component,
-                output_dir=fs_router.local_backend.root,
-            )
-            return result
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
+                )
+                result = await asyncio.to_thread(
+                    analyze_component,
+                    component,
+                    output_dir=root,
+                )
+                return result
     except Exception as e:
         logger.error("api_benchmark_analyze_failed", error=str(e))
-        return WorkbenchResult(is_manufacturable=False, unit_cost=0.0, violations=[str(e)])
+        return WorkbenchResult(
+            is_manufacturable=False, unit_cost=0.0, violations=[str(e)]
+        )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 
@@ -254,27 +307,33 @@ async def api_preview(
     global SIMULATION_QUEUE_DEPTH
     SIMULATION_QUEUE_DEPTH += 1
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-        )
-
         async with HEAVY_OPERATION_LOCK:
-            image_path = await asyncio.to_thread(
-                preview_design,
-                component,
-                pitch=request.pitch,
-                yaw=request.yaw,
-                output_dir=fs_router.local_backend.root / "renders",
-            )
-        events = _collect_events(fs_router)
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
+                )
 
-        return PreviewDesignResponse(
-            success=True,
-            message="Preview generated successfully",
-            image_path=str(image_path.relative_to(fs_router.local_backend.root)),
-            events=events,
-        )
+                image_path = await asyncio.to_thread(
+                    preview_design,
+                    component,
+                    pitch=request.pitch,
+                    yaw=request.yaw,
+                    output_dir=root / "renders",
+                )
+                events = _collect_events(fs_router, root=root)
+
+                return PreviewDesignResponse(
+                    success=True,
+                    message="Preview generated successfully",
+                    image_path=str(image_path.relative_to(root)),
+                    events=events,
+                )
 
     except Exception as e:
         logger.error("api_benchmark_preview_failed", error=str(e))
@@ -294,28 +353,34 @@ async def api_build(
     SIMULATION_QUEUE_DEPTH += 1
     try:
         async with HEAVY_OPERATION_LOCK:
-            component = load_component_from_script(
-                script_path=fs_router.local_backend._resolve(request.script_path),
-                session_root=fs_router.local_backend.root,
-                script_content=request.script_content,
-            )
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
+                )
 
-            from worker_heavy.simulation.factory import get_simulation_builder
-            builder = get_simulation_builder(fs_router.local_backend.root)
+                from worker_heavy.simulation.factory import get_simulation_builder
 
-            scene_path = await asyncio.to_thread(
-                builder.build_from_assembly,
-                component,
-                smoke_test_mode=request.smoke_test_mode,
-            )
+                builder = get_simulation_builder(root)
 
-        events = _collect_events(fs_router)
-        return BenchmarkToolResponse(
-            success=True,
-            message=f"Assets rebuilt. Scene saved to {scene_path.name}",
-            artifacts={"scene_path": str(scene_path.relative_to(fs_router.local_backend.root))},
-            events=events,
-        )
+                scene_path = await asyncio.to_thread(
+                    builder.build_from_assembly,
+                    component,
+                    smoke_test_mode=request.smoke_test_mode,
+                )
+
+                events = _collect_events(fs_router, root=root)
+                return BenchmarkToolResponse(
+                    success=True,
+                    message=f"Assets rebuilt. Scene saved to {scene_path.name}",
+                    artifacts={"scene_path": str(scene_path.relative_to(root))},
+                    events=events,
+                )
 
     except Exception as e:
         logger.error("api_benchmark_build_failed", error=str(e))
@@ -331,18 +396,23 @@ async def api_submit(
 ):
     """Handover to reviewer in isolated session (moved to heavy due to DFM dependencies)."""
     try:
-        component = load_component_from_script(
-            script_path=fs_router.local_backend._resolve(request.script_path),
-            session_root=fs_router.local_backend.root,
-            script_content=request.script_content,
-        )
-        success = submit_for_review(component, cwd=fs_router.local_backend.root)
-        events = _collect_events(fs_router)
-        return BenchmarkToolResponse(
-            success=success,
-            message="Handover complete" if success else "Handover failed",
-            events=events,
-        )
+        with bundle_context(
+            request.bundle_base64, fs_router.local_backend.root
+        ) as root:
+            component = load_component_from_script(
+                script_path=root / request.script_path
+                if request.bundle_base64
+                else fs_router.local_backend._resolve(request.script_path),
+                session_root=root,
+                script_content=request.script_content,
+            )
+            success = submit_for_review(component, cwd=root)
+            events = _collect_events(fs_router, root=root)
+            return BenchmarkToolResponse(
+                success=success,
+                message="Handover complete" if success else "Handover failed",
+                events=events,
+            )
 
     except Exception as e:
         logger.error("api_benchmark_submit_failed", error=str(e))
