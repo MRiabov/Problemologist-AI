@@ -32,10 +32,10 @@ TEST_POSITION_XML = """
 def sim_loop_position(tmp_path):
     xml_path = tmp_path / "test_position.xml"
     xml_path.write_text(TEST_POSITION_XML)
-    # Using GENESIS as requested
+    # Use MUJOCO to reliably support MJCF <position> actuators
     from shared.simulation.schemas import SimulatorBackendType
 
-    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 class TestWaypointController:

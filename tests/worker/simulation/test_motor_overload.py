@@ -71,7 +71,7 @@ class TestMotorOverload:
 
         assert not metrics.success
         assert metrics.fail_reason is not None
-        assert "overcurrent" in metrics.fail_reason
+        assert "motor_overload" in metrics.fail_reason
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""

@@ -12,6 +12,7 @@ from worker.utils.git import (
 def test_git_conflict_resolution(tmp_path):
     # 1. Setup repo
     repo = init_workspace_repo(tmp_path)
+    main_branch = repo.active_branch.name
     file_path = tmp_path / "conflict.txt"
     file_path.write_text("Base content")
     commit_all(tmp_path, "Initial commit")
@@ -22,7 +23,7 @@ def test_git_conflict_resolution(tmp_path):
     commit_all(tmp_path, "Feature commit")
 
     # 3. Go back to main and change file
-    repo.git.checkout("main")
+    repo.git.checkout(main_branch)
     file_path.write_text("Main content")
     commit_all(tmp_path, "Main commit")
 
@@ -55,6 +56,7 @@ def test_git_conflict_resolution(tmp_path):
 def test_git_abort_merge(tmp_path):
     # 1. Setup repo
     repo = init_workspace_repo(tmp_path)
+    main_branch = repo.active_branch.name
     file_path = tmp_path / "conflict.txt"
     file_path.write_text("Base content")
     commit_all(tmp_path, "Initial commit")
@@ -63,7 +65,7 @@ def test_git_abort_merge(tmp_path):
     file_path.write_text("Feature content")
     commit_all(tmp_path, "Feature commit")
 
-    repo.git.checkout("main")
+    repo.git.checkout(main_branch)
     file_path.write_text("Main content")
     commit_all(tmp_path, "Main commit")
 
