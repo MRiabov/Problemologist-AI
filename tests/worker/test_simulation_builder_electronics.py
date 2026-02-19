@@ -20,7 +20,9 @@ def test_builder_wire_tendons(tmp_path):
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
 
     box1 = Box(10, 10, 10)
+    box1.metadata = {"is_fixed": True, "material_id": "aluminum"}
     box2 = Box(10, 10, 10)
+    box2.metadata = {"is_fixed": False, "material_id": "aluminum"}
     box2.location = Location((50, 0, 0))
 
     assembly = Compound(children=[box1, box2])
