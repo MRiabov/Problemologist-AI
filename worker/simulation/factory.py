@@ -17,6 +17,7 @@ def get_physics_backend(
     backend_type: SimulatorBackendType,
     session_id: str | None = None,
     smoke_test_mode: bool = False,
+    particle_budget: int | None = None,
 ) -> PhysicsBackend:
     """
     Returns a physics backend instance.
@@ -25,13 +26,19 @@ def get_physics_backend(
     """
     if not session_id:
         # Legacy behavior or one-off runs
-        return _create_backend(backend_type, smoke_test_mode=smoke_test_mode)
+        return _create_backend(
+            backend_type,
+            smoke_test_mode=smoke_test_mode,
+            particle_budget=particle_budget,
+        )
 
     if session_id in BACKEND_CACHE:
         logger.debug("backend_cache_hit", session_id=session_id)
         backend = BACKEND_CACHE[session_id]
         if hasattr(backend, "smoke_test_mode"):
             backend.smoke_test_mode = smoke_test_mode
+        if hasattr(backend, "particle_budget"):
+            backend.particle_budget = particle_budget
         return backend
 
     # Enforce session limit
@@ -48,13 +55,17 @@ def get_physics_backend(
     logger.info(
         "creating_new_session_backend", session_id=session_id, backend_type=backend_type
     )
-    backend = _create_backend(backend_type, smoke_test_mode=smoke_test_mode)
+    backend = _create_backend(
+        backend_type, smoke_test_mode=smoke_test_mode, particle_budget=particle_budget
+    )
     BACKEND_CACHE[session_id] = backend
     return backend
 
 
 def _create_backend(
-    backend_type: SimulatorBackendType, smoke_test_mode: bool = False
+    backend_type: SimulatorBackendType,
+    smoke_test_mode: bool = False,
+    particle_budget: int | None = None,
 ) -> PhysicsBackend:
     if backend_type == SimulatorBackendType.MUJOCO:
         from worker.simulation.mujoco_backend import MuJoCoBackend
@@ -65,6 +76,7 @@ def _create_backend(
 
         backend = GenesisBackend()
         backend.smoke_test_mode = smoke_test_mode
+        backend.particle_budget = particle_budget
         # Trigger re-init if needed with correct mode
         if hasattr(backend, "_ensure_initialized"):
             backend._ensure_initialized()

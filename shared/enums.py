@@ -75,6 +75,7 @@ class SimulationFailureMode(StrEnum):
     PART_BREAKAGE = "part_breakage"
     STABILITY_ISSUE = "stability_issue"
     PHYSICS_INSTABILITY = "physics_instability"
+    MOTOR_OVERLOAD = "motor_overload"
 
     # Electronics failures
     SHORT_CIRCUIT = "short_circuit"

@@ -158,6 +158,7 @@ Simple test plan
             mock_val_result.weight_g = 100.0
             mock_val_result.violations = []
             from worker.workbenches.models import WorkbenchMetadata
+
             mock_val_result.metadata = WorkbenchMetadata()
             mock_val.return_value = mock_val_result
 

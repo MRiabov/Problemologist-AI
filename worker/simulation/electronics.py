@@ -52,9 +52,9 @@ class ElectronicsManager:
                     voltage = validation.node_voltages.get(node_name, 0.0)
                     # Normalize power scale (0.0 to 1.0) based on supply voltage
                     supply_v = self.electronics.power_supply.voltage_dc
-                    self.is_powered_map[comp.component_id] = min(
-                        1.0, max(0.0, voltage / supply_v)
-                    ) if supply_v > 0 else 0.0
+                    self.is_powered_map[comp.component_id] = (
+                        min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
+                    )
             else:
                 logger.warning("circuit_validation_failed", errors=validation.errors)
                 self._fallback_update()

@@ -112,5 +112,5 @@ async def preview_design_activity(params: dict[str, Any]) -> dict[str, Any]:
         return {
             "success": True,
             "image_bytes": image_path.read_bytes() if image_path.exists() else None,
-            "filename": image_path.name if image_path.exists() else None
+            "filename": image_path.name if image_path.exists() else None,
         }

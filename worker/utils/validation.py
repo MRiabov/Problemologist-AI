@@ -335,6 +335,7 @@ def simulate_subprocess(
     smoke_test_mode: bool = False,
     backend: Any | None = None,
     session_id: str | None = None,
+    particle_budget: int | None = None,
 ) -> SimulationResult:
     """Serializable entry point for ProcessPoolExecutor."""
     from worker.utils.loader import load_component_from_script
@@ -350,6 +351,7 @@ def simulate_subprocess(
         smoke_test_mode=smoke_test_mode,
         backend=backend,
         session_id=session_id,
+        particle_budget=particle_budget,
     )
 
 
@@ -422,6 +424,7 @@ def simulate(
         objectives=objectives,
         smoke_test_mode=smoke_test_mode,
         session_id=session_id,
+        particle_budget=particle_budget,
     )
 
     dynamic_controllers = {}
@@ -527,9 +530,15 @@ def validate(
     output_dir: Path | None = None,
     session_id: str | None = None,
     smoke_test_mode: bool = False,
+    particle_budget: int | None = None,
 ) -> tuple[bool, str | None]:
     """Verify geometric validity."""
-    logger.info("validate_start", session_id=session_id, smoke_test_mode=smoke_test_mode)
+    logger.info(
+        "validate_start",
+        session_id=session_id,
+        smoke_test_mode=smoke_test_mode,
+        particle_budget=particle_budget,
+    )
     solids = component.solids()
     if len(solids) > 1:
         for i in range(len(solids)):
@@ -589,6 +598,7 @@ def validate(
             backend_type=backend_type,
             session_id=session_id,
             smoke_test_mode=smoke_test_mode,
+            particle_budget=particle_budget,
         )
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))

@@ -111,6 +111,10 @@ class BenchmarkToolRequest(BaseModel):
         default=False,
         description="If true: cap particles to 5000, label results as approximate.",
     )
+    particle_budget: int | None = Field(
+        default=None,
+        description="Optional particle budget override.",
+    )
 
 
 class AnalyzeRequest(BenchmarkToolRequest):

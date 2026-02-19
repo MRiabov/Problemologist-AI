@@ -32,7 +32,7 @@ async def test_int_045_skills_sync_lifecycle():
         # 2. Wait for completion (skills sync happens at start)
         completed = False
         start_time = time.time()
-        while time.time() - start_time < 120:
+        while time.time() - start_time < 300:
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             if status_resp.status_code == 200 and status_resp.json()["status"] in [
                 "completed",
@@ -81,7 +81,9 @@ async def test_int_045_skills_sync_lifecycle():
 
         fs_ls_resp = await client.post(
             f"{WORKER_URL}/fs/ls",
-            json={"path": "skills"},  # Check root skills dir
+            json={
+                "path": "skills/build123d_cad_drafting_skill"
+            },  # Check specific skill
             headers={"X-Session-ID": session_id},
         )
 

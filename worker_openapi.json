@@ -1360,6 +1360,18 @@
             "description": "If true: cap particles to 5000, label results as approximate.",
             "default": false
           },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          },
           "method": {
             "$ref": "#/components/schemas/ManufacturingMethod",
             "description": "Manufacturing method to analyze (cnc, 3dp, im)."
@@ -1409,6 +1421,18 @@
             "title": "Smoke Test Mode",
             "description": "If true: cap particles to 5000, label results as approximate.",
             "default": false
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
           }
         },
         "type": "object",

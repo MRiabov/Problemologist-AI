@@ -45,6 +45,7 @@ class SimulationLoop:
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool = False,
         session_id: str | None = None,
+        particle_budget: int | None = None,
     ):
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if (
@@ -57,14 +58,19 @@ class SimulationLoop:
             )
 
         self.backend = get_physics_backend(
-            backend_type, session_id=session_id, smoke_test_mode=smoke_test_mode
+            backend_type,
+            session_id=session_id,
+            smoke_test_mode=smoke_test_mode,
+            particle_budget=particle_budget,
         )
         self.smoke_test_mode = smoke_test_mode
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
             self.backend.smoke_test_mode = smoke_test_mode
+        if hasattr(self.backend, "particle_budget"):
+            self.backend.particle_budget = particle_budget
 
-        self.particle_budget = 5000 if smoke_test_mode else 100000
+        self.particle_budget = particle_budget or (5000 if smoke_test_mode else 100000)
 
         # Emit backend selection event (WP2)
         emit_event(
@@ -388,7 +394,7 @@ class SimulationLoop:
 
             # Check Motor Overload
             if self._check_motor_overload():
-                self.fail_reason = SimulationFailureMode.OVERCURRENT
+                self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                 break
 
             # 7. Check Wire Failure (T015)

@@ -203,16 +203,20 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     try:
         with dspy.settings.context(lm=ctx.dspy_lm):
             logger.info("coder_dspy_invoke_start", session_id=session_id)
-            prediction = program(
-                prompt=state.session.prompt,
-                plan=state.plan.model_dump_json() if state.plan else "None",
-                objectives_yaml=objectives_yaml,
-                review_feedback=(
-                    state.review_feedback
-                    if state.session.status == SessionStatus.REJECTED
-                    else "No feedback provided."
+            prediction = await asyncio.wait_for(
+                asyncio.to_thread(
+                    program,
+                    prompt=state.session.prompt,
+                    plan=state.plan.model_dump_json() if state.plan else "None",
+                    objectives_yaml=objectives_yaml,
+                    review_feedback=(
+                        state.review_feedback
+                        if state.session.status == SessionStatus.REJECTED
+                        else "No feedback provided."
+                    ),
+                    validation_logs=validation_logs,
                 ),
-                validation_logs=validation_logs,
+                timeout=300.0,
             )
             logger.info("coder_dspy_invoke_complete", session_id=session_id)
 
