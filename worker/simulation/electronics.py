@@ -75,7 +75,7 @@ class ElectronicsManager:
         sources = [
             c.component_id
             for c in self.electronics.components
-            if c.type == ElectronicComponentType.POWER_SUPPLY
+            if c.type in [ElectronicComponentType.POWER_SUPPLY, "battery", "v_source"]
         ]
 
         # Simplified BFS for power propagation
