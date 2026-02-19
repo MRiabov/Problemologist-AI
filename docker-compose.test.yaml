@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: mirror.gcr.io/library/postgres:15-alpine
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -16,7 +16,7 @@ services:
       - postgres_test_data:/var/lib/postgresql/data
 
   minio:
-    image: minio/minio
+    image: mirror.gcr.io/minio/minio
     ports:
       - "19000:9000"
       - "19001:9001"
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   createbuckets:
-    image: minio/mc
+    image: mirror.gcr.io/minio/mc
     depends_on:
       minio:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
       "
 
   temporal:
-    image: temporalio/auto-setup:1.22.0
+    image: mirror.gcr.io/temporalio/auto-setup:1.22.0
     ports:
       - "17233:7233"
     environment:
@@ -60,7 +60,7 @@ services:
         condition: service_healthy
 
   temporal-ui:
-    image: temporalio/ui:2.21.3
+    image: mirror.gcr.io/temporalio/ui:2.21.3
     ports:
       - "18081:8080"
     environment:
