@@ -79,9 +79,11 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
     def test_tendon_support(self):
         backend = GenesisBackend()
         # Inject cables manually as if loaded from scene
-        backend.cables = [
-            {"name": "wire_1", "radius": 0.001, "stiffness": 100, "points": []}
-        ]
+        mock_cable = MagicMock()
+        mock_cable.get_state.return_value = MagicMock(force=MagicMock())
+        backend.cables = {
+            "wire_1": mock_cable
+        }
 
         self.assertTrue(
             hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute"

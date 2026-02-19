@@ -5,6 +5,8 @@ from build123d import Solid
 
 from ..utils.loader import load_component_from_script
 
+_load_component = load_component_from_script
+
 
 def inspect_topology(
     target_id: str, script_path: str | Path = "script.py"
