@@ -447,6 +447,16 @@ class GenesisBackend(PhysicsBackend):
                 )
             self.scene.step()
 
+            # WP2: Ensure current_time matches Genesis physics clock
+            actual_dt = dt
+            if (
+                hasattr(self.scene, "sim_options")
+                and self.scene.sim_options is not None
+            ):
+                actual_dt = getattr(self.scene.sim_options, "dt", dt)
+
+            self.current_time += actual_dt
+
             # T012: Part Breakage Detection & Global Stress Tracking
             self._last_max_stress = 0.0
             for name in self.entities:
@@ -495,7 +505,6 @@ class GenesisBackend(PhysicsBackend):
                 time=self.current_time, success=False, failure_reason=str(e)
             )
 
-        self.current_time += dt
         return StepResult(time=self.current_time, success=True)
 
     def _check_electronics_fluid_damage(self) -> str | None:

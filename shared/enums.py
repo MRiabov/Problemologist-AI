@@ -73,6 +73,7 @@ class SimulationFailureMode(StrEnum):
     OUT_OF_BOUNDS = "out_of_bounds"
     FORBID_ZONE_HIT = "forbid_zone_hit"
     PART_BREAKAGE = "part_breakage"
+    MOTOR_OVERLOAD = "motor_overload"
     STABILITY_ISSUE = "stability_issue"
     PHYSICS_INSTABILITY = "physics_instability"
 
