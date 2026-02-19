@@ -13,11 +13,12 @@ class ElectronicsManager:
         self.electronics = electronics
         self.is_powered_map: dict[str, bool] = {}
         self.switch_states: dict[str, bool] = {}
+        self.validation_error: str | None = None
 
         if self.electronics:
             for comp in self.electronics.components:
                 if comp.type in ["switch", "relay"]:
-                    self.switch_states[comp.component_id] = False
+                    self.switch_states[comp.component_id] = True
 
     def update(self, force: bool = False):
         """Update is_powered_map based on circuit state."""
@@ -35,6 +36,7 @@ class ElectronicsManager:
             validation = validate_circuit(circuit, self.electronics.power_supply)
 
             if validation.valid:
+                self.validation_error = None
                 # Map voltages to power status.
                 # A component is powered if the voltage across its terminals is sufficient.
                 # For simplicity in this integration, we'll check if the component's '+' or 'in'
@@ -57,10 +59,12 @@ class ElectronicsManager:
                         min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
                     )
             else:
+                self.validation_error = ", ".join(validation.errors)
                 logger.warning("circuit_validation_failed", errors=validation.errors)
                 self._fallback_update()
 
         except Exception as e:
+            self.validation_error = str(e)
             logger.warning("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
 
