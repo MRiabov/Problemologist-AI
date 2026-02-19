@@ -110,8 +110,9 @@ totals:
             mock_val_result = MagicMock()
             mock_val_result.is_manufacturable = True
             mock_val_result.unit_cost = 10.0
-            mock_val_result.violations = []
             mock_val_result.weight_g = 100.0
+            mock_val_result.violations = []
+            mock_val_result.metadata = MagicMock()
             mock_val.return_value = mock_val_result
 
             success = submit_for_review(component)

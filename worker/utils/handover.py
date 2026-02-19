@@ -116,7 +116,8 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         # Use primary method from first part
         raw_method = estimation.manufactured_parts[0].manufacturing_method
         try:
-            method = ManufacturingMethod(raw_method)
+            # Handle common case variations (CNC vs cnc, 3DP vs 3dp)
+            method = ManufacturingMethod(raw_method.lower())
         except ValueError:
             logger.warning("invalid_manufacturing_method", method=raw_method)
 
