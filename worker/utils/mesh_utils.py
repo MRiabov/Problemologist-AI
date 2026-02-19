@@ -140,6 +140,14 @@ def _tetrahedralize_gmsh(
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
 
+        # Verify that 3D elements were actually created
+        # getElements(3) returns (elementTypes, elementTags, nodeTags)
+        elem_types, _, _ = gmsh.model.mesh.getElements(3)
+        if len(elem_types) == 0:
+            raise RuntimeError(
+                "Gmsh failed to generate 3D tetrahedral elements. Check if the surface is closed and manifold."
+            )
+
         # Optimize 3D mesh for better quality
         gmsh.model.mesh.optimize("Netgen")
 
