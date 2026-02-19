@@ -26,7 +26,7 @@ class MuJoCoBackend(PhysicsBackend):
         self.renderer = None
         self.custom_cameras = {}  # name -> mjvCamera
 
-    def load_scene(self, scene: SimulationScene) -> None:
+    def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
             if scene.scene_path:
                 self.model = mujoco.MjModel.from_xml_path(scene.scene_path)

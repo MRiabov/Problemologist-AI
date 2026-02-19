@@ -70,10 +70,13 @@ def prerender_24_views(
                 backend_type, session_id=session_id, smoke_test_mode=smoke_test_mode
             )
             scene = SimulationScene(scene_path=str(final_scene_path))
-            backend.load_scene(scene)
 
-            # Step once if needed to initialize positions
-            backend.step(0.002)
+            # OPTIMIZATION: Use render_only=True to skip expensive physics build in Genesis.
+            backend.load_scene(scene, render_only=True)
+
+            # NOTE: We skip backend.step() here because it requires a built physics scene,
+            # and for 24-view static renders we only need the geometric/visual state.
+            # backend.step(0.002)
 
             # 3. Setup Camera Parameters
             bbox = component.bounding_box()
