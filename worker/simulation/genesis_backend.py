@@ -33,8 +33,8 @@ class GenesisBackend(PhysicsBackend):
         self.entity_configs = {}  # name -> dict (from json)
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
-        self.cables = []  # List of cable definitions
-        self.applied_controls = {}  # motor_id -> value
+        self.cables = {}  # name -> gs.Entity
+        self.applied_controls = {}  # name -> float
         self.current_time = 0.0
         self._last_max_stress = 0.0
         self.mfg_config = None
@@ -335,6 +335,20 @@ class GenesisBackend(PhysicsBackend):
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
                     self.cables = data.get("cables", [])
+
+                    # 4. Add Cables (Wiring)
+                    for cable_cfg in data.get("cables", []):
+                        name = cable_cfg["wire_id"]
+                        material = gs.materials.Rigid(rho=8960)  # Copper density
+
+                        cable = self.scene.add_entity(
+                            gs.morphs.Cable(
+                                points=cable_cfg["points"],
+                                radius=cable_cfg["radius"],
+                            ),
+                            material=material,
+                        )
+                        self.cables[name] = cable
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -778,12 +792,9 @@ class GenesisBackend(PhysicsBackend):
                         body1=c.entities[0].name,
                         body2=c.entities[1].name,
                         force=tuple(force.tolist()),
-                        pos=tuple(c.pos.cpu().numpy().tolist())
+                        position=tuple(c.pos.cpu().numpy().tolist())
                         if hasattr(c.pos, "cpu")
                         else tuple(c.pos.tolist()),
-                        normal=tuple(c.normal.cpu().numpy().tolist())
-                        if hasattr(c.normal, "cpu")
-                        else tuple(c.normal.tolist()),
                     )
                 )
             return results
@@ -824,11 +835,12 @@ class GenesisBackend(PhysicsBackend):
 
             force = float(forces[0]) if forces.size > 0 else 0.0
             vel = float(vels[0]) if vels.size > 0 else 0.0
+            ctrl = self.applied_controls.get(actuator_name, 0.0)
 
             return ActuatorState(
                 force=force,
                 velocity=vel,
-                ctrl=ctrl_val,
+                ctrl=ctrl,
                 forcerange=(-1000, 1000),  # Default limit
             )
         except Exception:
@@ -873,7 +885,7 @@ class GenesisBackend(PhysicsBackend):
         return [name for name, cfg in self.entity_configs.items() if cfg.get("is_zone")]
 
     def get_all_tendon_names(self) -> list[str]:
-        return [c["name"] for c in getattr(self, "cables", [])]
+        return list(self.cables.keys())
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
@@ -886,24 +898,31 @@ class GenesisBackend(PhysicsBackend):
         if not target_entity or not site_entity:
             # Check if it's a zone in entity_configs
             ent_cfg = self.entity_configs.get(site_name)
+            if not ent_cfg and self.scene_meta:
+                # Fallback for scene_meta
+                for cfg in self.scene_meta.assets.get("entities", []):
+                    if cfg.get("name") == site_name:
+                        ent_cfg = cfg
+                        break
+
             if ent_cfg and ent_cfg.get("is_zone"):
                 # Check if target body pos is within zone
                 state = self.get_body_state(body_name)
                 pos = state.pos
-                z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
-                z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
-                return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
 
-            # Fallback for scene_meta
-            if self.scene_meta:
-                for ent_cfg in self.scene_meta.assets.get("entities", []):
-                    if ent_cfg.get("name") == site_name and ent_cfg.get("is_zone"):
-                        # Check if target body pos is within zone
-                        state = self.get_body_state(body_name)
-                        pos = state.pos
-                        z_min = ent_cfg.get("min", [-1e9, -1e9, -1e9])
-                        z_max = ent_cfg.get("max", [1e9, 1e9, 1e9])
-                        return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
+                # Handle both min/max and pos/size representations
+                if "min" in ent_cfg and "max" in ent_cfg:
+                    z_min = ent_cfg["min"]
+                    z_max = ent_cfg["max"]
+                elif "pos" in ent_cfg and "size" in ent_cfg:
+                    center = ent_cfg["pos"]
+                    half_extents = ent_cfg["size"]
+                    z_min = [center[i] - half_extents[i] for i in range(3)]
+                    z_max = [center[i] + half_extents[i] for i in range(3)]
+                else:
+                    return False
+
+                return all(z_min[i] <= pos[i] <= z_max[i] for i in range(3))
 
             return False
 
@@ -918,18 +937,23 @@ class GenesisBackend(PhysicsBackend):
         return False
 
     def get_tendon_tension(self, tendon_name: str) -> float:
-        # Check if cable exists
-        found = False
-        for c in getattr(self, "cables", []):
-            if c["name"] == tendon_name:
-                found = True
-                break
+        """Returns the average tension along the cable."""
+        if tendon_name not in self.cables:
+            return 0.0
 
-        if not found:
-            raise ValueError(f"Tendon {tendon_name} not found")
-
-        # TODO: Implement actual cable tension simulation when Genesis supports it
-        return 0.0
+        cable = self.cables[tendon_name]
+        try:
+            # Genesis cables (MPM or Rigid) might have stress or force data.
+            # For a Rigid cable, we can check forces between nodes.
+            # This is an approximation.
+            state = cable.get_state()
+            if hasattr(state, "force"):
+                # Average force magnitude
+                forces = state.force.cpu().numpy()
+                return float(np.mean(np.linalg.norm(forces, axis=-1)))
+            return 0.0
+        except Exception:
+            return 0.0
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in Genesis using qpos."""
@@ -974,5 +998,6 @@ class GenesisBackend(PhysicsBackend):
             pass
         self.scene = None
         self.entities = {}
+        self.cables = {}
         self.cameras = {}
         self._is_built = False
