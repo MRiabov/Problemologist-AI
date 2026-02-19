@@ -207,7 +207,7 @@ def set_soft_mesh(
             objs.physics.fem_enabled = enabled
             if enabled:
                 # FEM currently requires Genesis backend
-                objs.physics.backend = "genesis"
+                objs.physics.backend = SimulatorBackendType.GENESIS
             obj_path.write_text(
                 yaml.dump(objs.model_dump(mode="json")), encoding="utf-8"
             )
