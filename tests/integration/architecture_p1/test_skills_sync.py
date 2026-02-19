@@ -18,7 +18,7 @@ async def test_int_045_skills_sync_lifecycle():
 
         # 1. Trigger a run that should initialize the workspace and skills
         payload = {
-            "task": "Print hello world",
+            "task": "Use the terminal to echo 'hello'",
             "session_id": session_id,
         }
 

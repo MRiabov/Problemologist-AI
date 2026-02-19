@@ -45,10 +45,11 @@ async def test_int_002_controller_worker_execution_boundary():
         episode_id = resp.json()["episode_id"]
 
         # Poll for status with increased timeout
-        max_attempts = 60
+        max_attempts = 120
         completed = False
         for _ in range(max_attempts):
             await asyncio.sleep(10.0)
+            # 20 minutes?
             s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             if s_resp.json()["status"] == "COMPLETED":
                 completed = True

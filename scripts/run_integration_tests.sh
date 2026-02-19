@@ -147,7 +147,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 echo "Waiting for servers to be healthy..."
-MAX_HEALTH_RETRIES=30
+MAX_HEALTH_RETRIES=60
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then

@@ -58,34 +58,46 @@ class GenesisBackend(PhysicsBackend):
                 "genesis_initializing", backend="gpu" if backend == gs.gpu else "cpu"
             )
 
-            try:
-                # Reduce logging in smoke test mode
-                gs.init(
-                    backend=backend,
-                    logging_level="warning" if self.smoke_test_mode else "info",
-                )
-                logger.info(
-                    "genesis_initialized",
-                    backend="gpu" if backend == gs.gpu else "cpu",
-                    duration=time.time() - start_t,
-                )
-            except Exception as e:
-                if backend == gs.gpu:
-                    logger.warning(
-                        "genesis_gpu_init_failed_falling_back_to_cpu", error=str(e)
+            max_init_retries = 3
+            for attempt in range(max_init_retries):
+                try:
+                    # Reduce logging in smoke test mode
+                    gs.init(
+                        backend=backend,
+                        logging_level="warning" if self.smoke_test_mode else "info",
                     )
-                    start_t = time.time()
-                    try:
-                        gs.init(backend=gs.cpu)
-                        logger.info(
-                            "genesis_initialized",
-                            backend="cpu",
-                            duration=time.time() - start_t,
+                    logger.info(
+                        "genesis_initialized",
+                        backend="gpu" if backend == gs.gpu else "cpu",
+                        duration=time.time() - start_t,
+                    )
+                    break
+                except Exception as e:
+                    if "EGL_BAD_DISPLAY" in str(e) and attempt < max_init_retries - 1:
+                        logger.warning("genesis_init_egl_retry", attempt=attempt + 1)
+                        time.sleep(1.0)
+                        continue
+
+                    if backend == gs.gpu:
+                        logger.warning(
+                            "genesis_gpu_init_failed_falling_back_to_cpu", error=str(e)
                         )
-                    except Exception as e2:
-                        logger.error("genesis_init_failed", error=str(e2))
-                else:
-                    logger.error("genesis_init_failed", error=str(e))
+                        backend = gs.cpu
+                        start_t = time.time()
+                        try:
+                            gs.init(backend=gs.cpu)
+                            logger.info(
+                                "genesis_initialized",
+                                backend="cpu",
+                                duration=time.time() - start_t,
+                            )
+                            break
+                        except Exception as e2:
+                            logger.error("genesis_init_failed", error=str(e2))
+                            raise
+                    else:
+                        logger.error("genesis_init_failed", error=str(e))
+                        raise
 
     def _load_mfg_config(self):
         if self.mfg_config is None:
@@ -377,10 +389,7 @@ class GenesisBackend(PhysicsBackend):
                 logger.warning("genesis_add_camera_failed_pre_build", error=str(e))
 
             try:
-                import traceback
-
-                stack = "".join(traceback.format_stack())
-                logger.info("genesis_building_scene", stack=stack)
+                logger.info("genesis_building_scene")
                 self.scene.build()
             except Exception as e:
                 if "already built" not in str(e).lower():

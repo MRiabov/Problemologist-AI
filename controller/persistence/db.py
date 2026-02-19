@@ -23,7 +23,13 @@ def get_engine():
         return _engine_cache[loop]
 
     database_url = settings.postgres_url
-    engine = create_async_engine(database_url, echo=False)
+    engine = create_async_engine(
+        database_url,
+        echo=False,
+        pool_pre_ping=True,
+        pool_size=20,
+        max_overflow=10,
+    )
     _engine_cache[loop] = engine
     return engine
 
