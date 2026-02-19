@@ -1,3 +1,4 @@
+import copy
 import os
 import uuid
 
@@ -65,7 +66,7 @@ def valid_objectives():
             "start_position": [0.0, 0.0, 50.0],
             "runtime_jitter": [0.0, 0.0, 0.0],
         },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1.0},
+        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1000.0},
     }
 
 
@@ -453,7 +454,7 @@ async def test_int_015_engineer_handover_immutability(
         )
 
         # Cheat: modify objectives.yaml
-        modified_objectives = valid_objectives.copy()
+        modified_objectives = copy.deepcopy(valid_objectives)
         modified_objectives["constraints"]["max_unit_cost"] = 1000.0
         # setup_workspace handles delete+write
         await setup_workspace(
