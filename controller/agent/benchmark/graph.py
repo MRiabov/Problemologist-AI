@@ -185,7 +185,7 @@ async def _execute_graph_streaming(
                     plan=final_state.plan,
                 )
             except Exception as e:
-                logger.warning("failed_to_update_episode_persistence", error=str(e))
+                logger.error("failed_to_update_episode_persistence", error=str(e))
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
@@ -217,7 +217,7 @@ async def _execute_graph_streaming(
                         worker_client=client,
                     )
         except Exception as e:
-            logger.warning("failed_to_report_benchmark_automated_score", error=str(e))
+            logger.error("failed_to_report_benchmark_automated_score", error=str(e))
 
     return final_state
 

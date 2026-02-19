@@ -20,7 +20,7 @@ from worker.utils.validation import (
 def mock_simulation_dependencies():
     with (
         patch("worker.utils.validation.get_simulation_builder") as mock_builder,
-        patch("worker.utils.validation.SimulationLoop") as mock_loop_cls,
+        patch("worker.simulation.loop.SimulationLoop") as mock_loop_cls,
         patch("worker.utils.validation.prerender_24_views") as mock_render,
         patch("worker.utils.validation.calculate_assembly_totals") as mock_totals,
         patch("worker.utils.validation.validate_and_price"),

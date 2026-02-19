@@ -410,7 +410,7 @@ def _init_genesis_worker():
             "genesis_worker_prewarmed", pid=multiprocessing.current_process().pid
         )
     except Exception as e:
-        logger.warning("genesis_worker_prewarm_failed", error=str(e))
+        logger.error("genesis_worker_prewarm_failed", error=str(e))
 
 
 # Use 'spawn' context for true isolation, as Genesis/Torch/Vulkan hate fork
