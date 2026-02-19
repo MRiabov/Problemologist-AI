@@ -24,6 +24,19 @@ except Exception:
             }
         )
 
+# INT-044: Exclude heavy endpoints from fuzzing to avoid overloading the system
+# especially those that trigger long-running background tasks.
+HEAVY_ENDPOINTS_REGEX = (
+    r"/agent/run"
+    r"|/benchmark/generate"
+    r"|/simulation/run"
+    r"|/benchmark/\{session_id\}/confirm"
+    r"|/episodes/\{episode_id\}/messages"
+    r"|/api/v1/sessions/\{session_id\}/steer"
+    r"|/ops/backup"
+)
+schema = schema.exclude(path_regex=HEAVY_ENDPOINTS_REGEX)
+
 
 @pytest.mark.integration_p1
 @pytest.mark.debug_fuzz
