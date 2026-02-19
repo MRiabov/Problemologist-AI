@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel
 
-from worker.simulation.loop import SimulationLoop, SimulationMetrics
+from shared.models.simulation import SimulationMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,7 @@ def verify_with_jitter(
         MultiRunResult with aggregated statistics.
     """
     from shared.simulation.schemas import SimulatorBackendType
+    from worker.simulation.loop import SimulationLoop
 
     results: list[SimulationMetrics] = []
     rng = np.random.default_rng(seed)

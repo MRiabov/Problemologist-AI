@@ -135,12 +135,12 @@ def test_execute_runtime_timeout():
     assert data["exit_code"] == -1
 
 
-@patch("worker.api.routes.load_component_from_script")
-@patch("worker.api.routes.simulate")
-def test_benchmark_simulate(mock_simulate, mock_load, tmp_path):
+@patch("worker.api.routes.run_simulation_task")
+def test_benchmark_simulate(mock_run_task, tmp_path):
     """Test the benchmark simulate endpoint."""
-    mock_load.return_value = MagicMock()
-    mock_simulate.return_value = MagicMock(
+    from shared.models.simulation import SimulationResult
+
+    mock_run_task.return_value = SimulationResult(
         success=True,
         summary="stable",
         render_paths=[],

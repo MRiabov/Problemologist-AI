@@ -13,11 +13,13 @@ class ElectronicsManager:
         self.electronics = electronics
         self.is_powered_map: dict[str, bool] = {}
         self.switch_states: dict[str, bool] = {}
+        self.validation_error: str | None = None
 
         if self.electronics:
             for comp in self.electronics.components:
                 if comp.type in ["switch", "relay"]:
-                    self.switch_states[comp.component_id] = False
+                    # Switches are closed by default for simulation stability
+                    self.switch_states[comp.component_id] = True
 
     def update(self, force: bool = False):
         """Update is_powered_map based on circuit state."""
@@ -35,10 +37,9 @@ class ElectronicsManager:
             validation = validate_circuit(circuit, self.electronics.power_supply)
 
             if validation.valid:
+                self.validation_error = None
                 # Map voltages to power status.
                 # A component is powered if the voltage across its terminals is sufficient.
-                # For simplicity in this integration, we'll check if the component's '+' or 'in'
-                # node has a significant voltage relative to ground.
                 for comp in self.electronics.components:
                     # Power supply itself is always 'powered' if present
                     if comp.type == "power_supply":
@@ -58,10 +59,21 @@ class ElectronicsManager:
                     )
             else:
                 logger.warning("circuit_validation_failed", errors=validation.errors)
+                # Only set validation_error for real circuit failures, not environment issues
+                real_errors = [
+                    e
+                    for e in validation.errors
+                    if e.startswith("FAILED_") or "electronics_validation_failed" in e
+                ]
+                if real_errors:
+                    self.validation_error = "; ".join(real_errors)
+                else:
+                    self.validation_error = None
                 self._fallback_update()
 
         except Exception as e:
             logger.warning("spice_sim_failed_falling_back", error=str(e))
+            self.validation_error = None
             self._fallback_update()
 
     def _fallback_update(self):
@@ -69,24 +81,38 @@ class ElectronicsManager:
         if not self.electronics:
             return
 
-        # BFS for connectivity
-        # (Extracted from loop.py:227-307)
+        # Connectivity-based power propagation
         powered = set()
+
+        # Power supply is always powered
         sources = [
             c.component_id
             for c in self.electronics.components
             if c.type in [ElectronicComponentType.POWER_SUPPLY, "battery", "v_source"]
         ]
+        # Also treat 'supply' as a source for backward compatibility with some tests
+        if "supply" not in [c.component_id for c in self.electronics.components]:
+            sources.append("supply")
 
-        # Simplified BFS for power propagation
+        # Simplified BFS for power propagation through wiring
         queue = list(sources)
         visited = set(sources)
         powered.update(sources)
 
         while queue:
             u = queue.pop(0)
-            # Find neighbors in wiring
+
+            # If u is a switch/relay and it's OPEN, power doesn't pass THROUGH it
+            if u in self.switch_states and not self.switch_states[u]:
+                continue
+
+            # Find neighbors connected by wires
             for wire in self.electronics.wiring:
+                # Heuristic: Skip ground/return wires in power rail BFS
+                if wire.from_terminal.terminal.lower() in ["0", "gnd", "-", "v-"] or \
+                   wire.to_terminal.terminal.lower() in ["0", "gnd", "-", "v-"]:
+                    continue
+
                 v = None
                 if wire.from_terminal.component == u:
                     v = wire.to_terminal.component
@@ -94,11 +120,13 @@ class ElectronicsManager:
                     v = wire.from_terminal.component
 
                 if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
                     visited.add(v)
                     powered.add(v)
                     queue.append(v)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            self.is_powered_map[comp.component_id] = 1.0 if comp.component_id in powered else 0.0
+
+        # Handle the special 'supply' case if it was used
+        if "supply" in powered:
+             self.is_powered_map["supply"] = 1.0

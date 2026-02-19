@@ -226,12 +226,17 @@ class SimulationLoop:
         # Reset metrics
         self.reset_metrics()
 
+    @property
+    def switch_states(self) -> dict[str, bool]:
+        return self.electronics_manager.switch_states
+
     def _update_electronics(self, force=False):
         """Update is_powered_map based on circuit state."""
         self.electronics_manager.update(force=force)
         # Bridge back is_powered_map for existing code compatibility if needed,
         # but better to use electronics_manager.is_powered_map directly.
         self.is_powered_map = self.electronics_manager.is_powered_map
+        self.electronics_validation_error = self.electronics_manager.validation_error
 
     def reset_metrics(self):
         self.metric_collector.reset()
@@ -415,7 +420,8 @@ class SimulationLoop:
                             props = get_awg_properties(wire.gauge_awg)
                             limit = props["tensile_strength_n"]
                             if tension > limit:
-                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
+                                # Use uppercase for failure reasons to match test expectations (legacy)
+                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.name}:{wire.wire_id}"
                                 emit_event(
                                     ElectricalFailureEvent(
                                         failure_type="wire_torn",

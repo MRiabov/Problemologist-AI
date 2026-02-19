@@ -156,7 +156,7 @@ class GenesisBackend(PhysicsBackend):
             particle_reduction_factor = 0.75
 
             # Initial multiplier based on requested budget (default 100k -> multiplier 1.0)
-            requested_budget = scene.config.get("particle_budget", 100000)
+            requested_budget = getattr(scene.config, "particle_budget", 100000)
             self.current_particle_multiplier = requested_budget / 100000.0
 
             for attempt in range(max_retries):

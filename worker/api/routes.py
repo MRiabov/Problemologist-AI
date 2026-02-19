@@ -422,6 +422,36 @@ SIMULATION_EXECUTOR = ProcessPoolExecutor(
 )
 
 
+async def run_simulation_task(
+    script_path: Path,
+    session_root: Path,
+    script_content: str | None,
+    smoke_test_mode: bool,
+    backend_type: Any,
+    x_session_id: str,
+    particle_budget: int | None,
+):
+    """
+    Helper to run simulation in a subprocess.
+    This is separated to allow easier mocking in unit tests.
+    """
+    from worker.utils.validation import simulate_subprocess
+
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        SIMULATION_EXECUTOR,
+        simulate_subprocess,
+        script_path,
+        session_root,
+        script_content,
+        session_root,
+        smoke_test_mode,
+        backend_type,
+        x_session_id,
+        particle_budget,
+    )
+
+
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
@@ -442,22 +472,17 @@ async def api_simulate(
             )
 
         from shared.simulation.schemas import SimulatorBackendType
-        from worker.utils.validation import simulate_subprocess
 
         # Determine backend type
         backend_type = request.backend
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
-        loop = asyncio.get_running_loop()
         # Run in isolated subprocess to bypass Genesis global state issues
-        result = await loop.run_in_executor(
-            SIMULATION_EXECUTOR,
-            simulate_subprocess,
+        result = await run_simulation_task(
             fs_router.local_backend._resolve(request.script_path),
             fs_router.local_backend.root,
             request.script_content,
-            fs_router.local_backend.root,
             request.smoke_test_mode,
             backend_type,
             x_session_id,
