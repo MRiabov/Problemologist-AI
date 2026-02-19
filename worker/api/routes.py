@@ -573,28 +573,22 @@ async def api_analyze(
             )
         async with HEAVY_OPERATION_LOCK:
             # Component analysis logic
-            from worker.utils.topology import analyze_component
+            from worker.utils.dfm import validate_and_price
+            from worker.workbenches.config import load_config
 
             component = load_component_from_script(
                 script_path=fs_router.local_backend._resolve(request.script_path),
                 session_root=fs_router.local_backend.root,
                 script_content=request.script_content,
             )
+            config = load_config()
             result = await asyncio.to_thread(
-                analyze_component,
+                validate_and_price,
                 component,
-                output_dir=fs_router.local_backend.root,
+                method=request.method,
+                config=config,
+                quantity=request.quantity,
             )
-
-            # [NEW] Wrap message with queue info
-            msg = result.message
-            if wait_pos > 1:
-                msg = (
-                    f"{msg} (Queued: wait position {wait_pos})"
-                    if msg
-                    else f"Queued: wait position {wait_pos}"
-                )
-            result.message = msg
 
             return result
     except Exception as e:
