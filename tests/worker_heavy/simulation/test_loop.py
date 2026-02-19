@@ -98,7 +98,7 @@ def test_forbidden_zone_trigger(sim_loop):
     # Collision detection relies on contacts.
     # Just setting position might not generate contacts immediately if no step is running?
     # instability_detection usually returns physics_instability
-    assert metrics.fail_reason == "forbid_zone_hit"
+    assert metrics.fail_reason == "FORBID_ZONE_HIT"
 
 
 def test_validation_hook_failure(tmp_path):
@@ -141,7 +141,7 @@ def test_timeout_configurable(tmp_path):
 
     # Should timeout before reaching goal
     assert metrics.success is False
-    assert metrics.fail_reason == "timeout"
+    assert metrics.fail_reason == "TIMEOUT"
     assert metrics.total_time >= 0.05  # At least ran until timeout
 
 
@@ -169,7 +169,7 @@ def test_target_fell_off_world(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "out_of_bounds"
+    assert metrics.fail_reason == "OUT_OF_BOUNDS"
 
 
 def test_instability_detection(sim_loop):
@@ -183,4 +183,4 @@ def test_instability_detection(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "physics_instability"
+    assert metrics.fail_reason == "PHYSICS_INSTABILITY"

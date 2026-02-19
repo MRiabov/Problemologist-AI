@@ -166,8 +166,11 @@ class SimulationLoop:
 
         # Performance optimizations: cache backend info
         self.actuator_names = self.backend.get_all_actuator_names()
+        # T034: Exclude infrastructure bodies (zones) from collision checking
         self.body_names = [
-            b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+            b
+            for b in self.backend.get_all_body_names()
+            if b not in ["world", "0"] and not b.startswith("zone_")
         ]
 
         # Cache actuator limits for monitoring
@@ -327,6 +330,10 @@ class SimulationLoop:
                     target_body_name = name
                     break
 
+            # T031: Final fallback to part_0 as per architecture requirements
+            if target_body_name is None and "part_0" in all_bodies:
+                target_body_name = "part_0"
+
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         for step_idx in range(steps):
@@ -413,7 +420,7 @@ class SimulationLoop:
                     break
 
                 # Check Motor Overload
-                if self._check_motor_overload():
+                if self._check_motor_overload(dt * check_interval):
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                     break
 
@@ -609,13 +616,21 @@ class SimulationLoop:
 
         metrics = self.metric_collector.get_metrics()
 
+        # T032: Ensure fail_reason is uppercase for integration test compatibility
+        fail_reason_str = None
+        if self.fail_reason:
+            if isinstance(self.fail_reason, SimulationFailureMode):
+                fail_reason_str = self.fail_reason.name
+            else:
+                fail_reason_str = str(self.fail_reason).upper()
+
         return SimulationMetrics(
             total_time=current_time,
             total_energy=metrics.total_energy,
             max_velocity=metrics.max_velocity,
             max_stress=metrics.max_stress,
             success=is_success,
-            fail_reason=str(self.fail_reason) if self.fail_reason else None,
+            fail_reason=fail_reason_str,
             fail_mode=self.fail_reason
             if isinstance(self.fail_reason, SimulationFailureMode)
             else None,
@@ -640,10 +655,8 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, dt: float) -> bool:
         # Check all position/torque actuators for saturation
-        from worker_heavy.simulation.loop import SIMULATION_STEP_S
-
         if not self._monitor_names:
             return False
 
@@ -652,7 +665,7 @@ class SimulationLoop:
         ]
 
         return self.success_evaluator.check_motor_overload(
-            self._monitor_names, forces, self._monitor_limits, SIMULATION_STEP_S
+            self._monitor_names, forces, self._monitor_limits, dt
         )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
