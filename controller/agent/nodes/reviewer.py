@@ -10,6 +10,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
+from shared.enums import ReviewDecision
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
@@ -18,16 +19,10 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
-class CriticDecision(StrEnum):
-    APPROVE = "APPROVE"
-    REJECT_PLAN = "REJECT_PLAN"
-    REJECT_CODE = "REJECT_CODE"
-
-
 class ReviewResult(BaseModel):
     """Structured output for the reviewer."""
 
-    decision: CriticDecision
+    decision: ReviewDecision
     reason: str
     required_fixes: list[str] = Field(default_factory=list)
 
@@ -113,9 +108,10 @@ class ReviewerNode(BaseNode):
         journal_entry += f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
 
         status_map = {
-            CriticDecision.APPROVE: AgentStatus.APPROVED,
-            CriticDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
-            CriticDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+            ReviewDecision.APPROVED: AgentStatus.APPROVED,
+            ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
+            ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
+            ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
         }
 
         # Emit ReviewDecisionEvent for observability
@@ -123,7 +119,7 @@ class ReviewerNode(BaseNode):
             episode_id=state.session_id,
             events=[
                 ReviewDecisionEvent(
-                    decision=decision.value.lower(),
+                    decision=decision,
                     reason=feedback,
                     evidence_stats={
                         "has_sim_report": True,

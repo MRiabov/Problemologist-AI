@@ -110,3 +110,51 @@ class ManufacturingMethod(StrEnum):
     CNC = "cnc"
     THREE_DP = "3dp"
     INJECTION_MOLDING = "im"
+
+
+class MotorControlMode(StrEnum):
+    """Control modes for actuators."""
+
+    CONSTANT = "constant"
+    SINUSOIDAL = "sinusoidal"
+    ON_OFF = "on_off"
+
+
+class FluidShapeType(StrEnum):
+    """Supported shapes for fluid volumes."""
+
+    CYLINDER = "cylinder"
+    BOX = "box"
+    SPHERE = "sphere"
+
+
+class FluidObjectiveType(StrEnum):
+    """Types of fluid-related objectives."""
+
+    FLUID_CONTAINMENT = "fluid_containment"
+    FLOW_RATE = "flow_rate"
+
+
+class FluidEvalAt(StrEnum):
+    """When to evaluate fluid objectives."""
+
+    END = "end"
+    CONTINUOUS = "continuous"
+
+
+class MovingPartType(StrEnum):
+    """Types of moving parts in the assembly."""
+
+    MOTOR = "motor"
+    PASSIVE = "passive"
+
+
+class ReviewDecision(StrEnum):
+    """Decision values for reviewer nodes."""
+
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    REJECT_PLAN = "reject_plan"
+    REJECT_CODE = "reject_code"
+    CONFIRM_PLAN_REFUSAL = "confirm_plan_refusal"
+    REJECT_PLAN_REFUSAL = "reject_plan_refusal"

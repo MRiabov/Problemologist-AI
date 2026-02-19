@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 # Add project root to path to import shared models
 sys.path.append(str(Path(__file__).parents[3]))
+from shared.enums import ManufacturingMethod
 from shared.models.schemas import AssemblyDefinition
 
 logger = structlog.get_logger(__name__)
@@ -44,7 +45,8 @@ def main():
                 part["stock_volume_mm3"] = round(stock_vol, 2)
 
                 # Calculate removed volume for CNC
-                if part.get("manufacturing_method") == "CNC":
+                m_method = part.get("manufacturing_method")
+                if m_method == ManufacturingMethod.CNC or m_method == "CNC":
                     part_vol = float(part.get("part_volume_mm3", 0))
                     part["removed_volume_mm3"] = round(
                         max(0.0, stock_vol - part_vol), 2
