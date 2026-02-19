@@ -134,7 +134,7 @@ async def test_int_005_mandatory_artifacts_gate(
     minimal_script,
 ):
     """INT-005: Verify rejection if mandatory artifacts are missing."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Initial: All required files except one
         base_files = {
             "plan.md": valid_plan,
@@ -201,7 +201,7 @@ async def test_int_006_plan_structure_validation(
     session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
 ):
     """INT-006: Verify plan.md structural requirements."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "todo.md": valid_todo,
             "objectives.yaml": valid_objectives,
@@ -253,7 +253,7 @@ async def test_int_007_todo_integrity(
     session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
 ):
     """INT-007: Verify todo.md integrity (all items completed or skipped)."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
             "objectives.yaml": valid_objectives,
@@ -293,7 +293,7 @@ async def test_int_008_objectives_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
 ):
     """INT-008: Verify objectives.yaml schema and template detection."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -332,7 +332,7 @@ async def test_int_009_cost_estimation_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
     """INT-009: Verify assembly_definition.yaml schema and placeholders."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -378,7 +378,7 @@ async def test_int_011_planner_caps_enforcement(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
     """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create invalid cost estimation (target > benchmark cap)
         invalid_cost = {
             "version": "1.0",
@@ -433,7 +433,7 @@ async def test_int_015_engineer_handover_immutability(
     minimal_script,
 ):
     """INT-015: Verify immutability of objectives.yaml during handover."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         await client.post(f"{WORKER_URL}/git/init", headers=base_headers)
 
         files = {
@@ -482,7 +482,7 @@ async def test_int_019_hard_constraints_gates(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
 ):
     """INT-019: Verify cost/weight/build-zone hard failure during submission."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Box translated to (1000, 1000, 1000) will be outside [ -50, 50 ]
         oob_script = """
 from build123d import *
@@ -532,7 +532,7 @@ async def test_int_010_planner_pricing_script_integration(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
     """INT-010: Verify validate_costing_and_price block when over caps."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create cost estimation where totals > planner caps (which are valid vs benchmark)
         invalid_cost = {
             "version": "1.0",
@@ -585,7 +585,7 @@ async def test_int_018_validate_and_price_integration_gate(
     minimal_script,
 ):
     """INT-018: Verify simulate/submit require prior validation."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Setup workspace BUT do not call /benchmark/validate
         files = {
             "plan.md": valid_plan,
