@@ -1,6 +1,6 @@
 import pytest
 
-from worker.tools.topology import inspect_topology
+from worker_light.tools.topology import inspect_topology
 
 
 def test_inspect_topology_face(tmp_path):

@@ -98,7 +98,7 @@ async def test_check_steering():
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.dspy.CodeAct")
-@patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
+@patch("worker_heavy.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
     from controller.agent.nodes.planner import planner_node
 

@@ -92,7 +92,7 @@ def minimal_script():
     return """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     # Box 10x10x10 centered at (0,0,5) -> Z from 0 to 10.
     # Build zone is [0, 100] in objectives.
@@ -487,7 +487,7 @@ async def test_int_019_hard_constraints_gates(
         oob_script = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.workbenches.models import ManufacturingMethod
+from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(10, 10, 10)
     p = p.move(Location((1000, 1000, 1000)))

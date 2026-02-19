@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from build123d import Box
 
-from worker.utils.handover import submit_for_review
+from worker_heavy.utils.handover import submit_for_review
 
 
 @pytest.fixture
@@ -97,8 +97,8 @@ totals:
 
     try:
         with (
-            patch("worker.utils.handover.validate_and_price") as mock_val,
-            patch("worker.utils.handover.export_step"),
+            patch("worker_heavy.utils.handover.validate_and_price") as mock_val,
+            patch("worker_heavy.utils.handover.export_step"),
             patch.dict(
                 os.environ,
                 {

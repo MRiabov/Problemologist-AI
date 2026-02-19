@@ -1,17 +1,15 @@
 import os
-
 import yaml
-
-from shared.models.simulation import StressSummary
-from worker.utils.validation import (
-    SimulationResult,
+from pathlib import Path
+from shared.models.simulation import StressSummary, SimulationResult
+from worker_heavy.utils.validation import (
     define_fluid,
     get_stress_report,
     set_soft_mesh,
+    save_simulation_result,
 )
 
-
-def test_get_stress_report_logic():
+def test_get_stress_report_logic(tmp_path):
     # Setup mock simulation result
     summaries = [
         StressSummary(
@@ -36,25 +34,28 @@ def test_get_stress_report_logic():
         success=True, summary="Test summary", stress_summaries=summaries
     )
 
-    # Manually set the global variable for testing
-    import worker.utils.validation as validation
-
-    validation.LAST_SIMULATION_RESULT = result
+    # Write to disk as expected by get_stress_report
+    res_path = tmp_path / "simulation_result.json"
+    save_simulation_result(result, res_path)
 
     # Should return the worst case (safety_factor=1.1)
-    report = get_stress_report("part1")
+    report = get_stress_report("part1", output_dir=tmp_path)
     assert report is not None
     assert report["safety_factor"] == 1.1
     assert "critical" in report["advice"].lower()
 
     # Test another range
     summaries[1].safety_factor = 1.4
-    report = get_stress_report("part1")
+    result.stress_summaries = summaries
+    save_simulation_result(result, res_path)
+    report = get_stress_report("part1", output_dir=tmp_path)
     assert "low" in report["advice"].lower()
 
     summaries[1].safety_factor = 3.0
     summaries[0].safety_factor = 2.0
-    report = get_stress_report("part1")
+    result.stress_summaries = summaries
+    save_simulation_result(result, res_path)
+    report = get_stress_report("part1", output_dir=tmp_path)
     assert "acceptable" in report["advice"].lower()
 
 
@@ -74,7 +75,7 @@ moved_object:
   shape: sphere
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
-constraints: {max_unit_cost: 0, max_weight: 0}
+constraints: {max_unit_cost: 0, max_weight_g: 0}
 """)
 
     fluid = define_fluid(
@@ -110,7 +111,7 @@ moved_object:
   shape: sphere
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
-constraints: {max_unit_cost: 0, max_weight: 0}
+constraints: {max_unit_cost: 0, max_weight_g: 0}
 """)
 
     res = set_soft_mesh("part1", enabled=True, output_dir=tmp_path)

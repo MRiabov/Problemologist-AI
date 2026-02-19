@@ -1,9 +1,9 @@
 import pytest
 
-from worker.filesystem.backend import (
+from shared.workers.filesystem.backend import (
     LocalFilesystemBackend,
 )
-from worker.filesystem.router import (
+from shared.workers.filesystem.router import (
     AccessMode,
     FilesystemRouter,
     MountPoint,

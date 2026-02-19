@@ -59,7 +59,7 @@ import sys
 from build123d import *
 from shared.models.schemas import PartMetadata
 from shared.observability.events import emit_event
-from worker.utils.cad import fastener_hole, HoleType
+from worker_heavy.utils.cad import fastener_hole, HoleType
 
 def build():
     # Ensure event is written to the file worker expects in the session root

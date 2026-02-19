@@ -1,7 +1,7 @@
 from build123d import Box, Location
 
-from worker.workbenches.config import load_config
-from worker.workbenches.injection_molding import analyze_im
+from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.injection_molding import analyze_im
 
 
 def test_analyze_im_basic_box():
@@ -84,7 +84,7 @@ def test_im_cost_calculation():
     assert result1.unit_cost > 5000.0
 
     # Test with context for reuse
-    from worker.workbenches.injection_molding import _calculate_im_cost
+    from worker_heavy.workbenches.injection_molding import _calculate_im_cost
 
     context = {}
     cost1 = _calculate_im_cost(box, config, quantity=1, context=context)

@@ -8,8 +8,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sim
 from build123d import Box
 
 from shared.models.simulation import SimulationMetrics, StressSummary
-from worker.utils import validation
-from worker.utils.validation import (
+from worker_heavy.utils import validation
+from worker_heavy.utils.validation import (
     get_stress_report,
     preview_stress,
     simulate,
@@ -19,11 +19,11 @@ from worker.utils.validation import (
 @pytest.fixture
 def mock_simulation_dependencies():
     with (
-        patch("worker.utils.validation.get_simulation_builder") as mock_builder,
-        patch("worker.utils.validation.SimulationLoop") as mock_loop_cls,
-        patch("worker.utils.validation.prerender_24_views") as mock_render,
-        patch("worker.utils.validation.calculate_assembly_totals") as mock_totals,
-        patch("worker.utils.validation.validate_and_price"),
+        patch("worker_heavy.utils.validation.get_simulation_builder") as mock_builder,
+        patch("worker_heavy.simulation.loop.SimulationLoop") as mock_loop_cls,
+        patch("worker_heavy.utils.validation.prerender_24_views") as mock_render,
+        patch("worker_heavy.utils.validation.calculate_assembly_totals") as mock_totals,
+        patch("worker_heavy.utils.validation.validate_and_price"),
     ):
         # Mock builder
         mock_scene_path = MagicMock()

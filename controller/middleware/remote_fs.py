@@ -30,7 +30,7 @@ from shared.observability.schemas import (
     WriteFileToolEvent,
 )
 from shared.simulation.schemas import SimulatorBackendType
-from worker.api.schema import EditOp
+from shared.workers.schema import EditOp
 
 
 class RemoteFilesystemMiddleware:

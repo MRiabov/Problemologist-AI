@@ -3,14 +3,14 @@ from pathlib import Path
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.builder import (
+from worker_heavy.simulation.builder import (
     GenesisSimulationBuilder,
     MuJoCoSimulationBuilder,
 )
-from worker.simulation.factory import get_physics_backend, get_simulation_builder
-from worker.simulation.genesis_backend import GenesisBackend
-from worker.simulation.loop import SimulationLoop
-from worker.simulation.mujoco_backend import MuJoCoBackend
+from worker_heavy.simulation.factory import get_physics_backend, get_simulation_builder
+from worker_heavy.simulation.genesis_backend import GenesisBackend
+from worker_heavy.simulation.loop import SimulationLoop
+from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 

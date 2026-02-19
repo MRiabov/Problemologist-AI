@@ -217,7 +217,7 @@ def build():
 import os
 import sys
 from build123d import *
-from worker.utils.validation import to_mjcf
+from worker_heavy.utils.validation import to_mjcf
 def run():
     part = Box(1,1,1)
     export_stl(part, "debug_test.stl")
@@ -396,7 +396,7 @@ async def test_int_023_fastener_validity_rules():
         script_valid = """
 from build123d import *
 from shared.models.schemas import PartMetadata
-from worker.utils.cad import fastener_hole, HoleType
+from worker_heavy.utils.cad import fastener_hole, HoleType
 
 def build():
     # Minimal boolean script to see if it crashes worker

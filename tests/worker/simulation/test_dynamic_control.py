@@ -1,7 +1,7 @@
 import pytest
-
-from worker.simulation.loop import SimulationLoop
-from worker.utils.controllers.time_based import constant
+from shared.simulation.schemas import SimulatorBackendType
+from worker_heavy.simulation.loop import SimulationLoop
+from worker_heavy.utils.controllers.time_based import constant
 
 # Mock XML with an actuator
 TEST_XML = """
@@ -23,7 +23,7 @@ TEST_XML = """
 def sim_loop(tmp_path):
     xml_path = tmp_path / "test_dynamic.xml"
     xml_path.write_text(TEST_XML)
-    return SimulationLoop(str(xml_path))
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 def test_dynamic_controllers(sim_loop):
@@ -34,6 +34,7 @@ def test_dynamic_controllers(sim_loop):
     sim_loop.step({}, duration=0.01, dynamic_controllers=controllers)
 
     # Check that ctrl was set to 10.0
+    # MuJoCo backend exposes .data.ctrl
     assert sim_loop.backend.data.ctrl[0] == 10.0
 
 

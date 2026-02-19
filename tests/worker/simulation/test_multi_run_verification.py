@@ -2,7 +2,7 @@
 
 import pytest
 
-from worker.simulation.verification import (
+from worker_heavy.simulation.verification import (
     DEFAULT_NUM_RUNS,
     MultiRunResult,
     verify_with_jitter,
@@ -33,7 +33,7 @@ def success_xml_path(tmp_path):
     return str(xml_path)
 
 
-@patch("worker.simulation.verification.logger")
+@patch("worker_heavy.simulation.verification.logger")
 class TestMultiRunVerification:
     def test_default_num_runs(self, mock_logger):
         """Default is 5 runs per architecture spec."""

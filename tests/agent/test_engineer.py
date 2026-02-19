@@ -18,7 +18,7 @@ def mock_llm():
         yield instance
 
 
-from worker.api.schema import ExecuteResponse
+from shared.workers.schema import ExecuteResponse
 
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def mock_record_events():
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.base.BaseNode._run_program")
-@patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
+@patch("worker_heavy.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_success(
     mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
@@ -77,7 +77,7 @@ async def test_engineer_node_success(
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.base.BaseNode._run_program")
-@patch("worker.utils.file_validation.validate_node_output", return_value=(True, []))
+@patch("worker_heavy.utils.file_validation.validate_node_output", return_value=(True, []))
 async def test_engineer_node_retry_then_success(
     mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):

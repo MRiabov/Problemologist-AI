@@ -6,8 +6,8 @@ import typer
 
 # Adjust import path based on where this file is located relative to src
 # If running as module python -m shared.cli.benchmark, this works.
-from worker.generators.benchmark.graph import run_generation_session
-from worker.generators.benchmark.models import SessionStatus
+from worker_heavy.generators.benchmark.graph import run_generation_session
+from worker_heavy.generators.benchmark.models import SessionStatus
 
 app = typer.Typer(help="Benchmark Generation CLI")
 logger = structlog.get_logger()

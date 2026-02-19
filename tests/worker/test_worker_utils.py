@@ -6,10 +6,10 @@ from unittest.mock import MagicMock, patch
 from build123d import Box, BuildPart
 
 
-@patch("worker.utils.handover.validate_and_price")
-@patch("worker.utils.handover.export_step")
+@patch("worker_heavy.utils.handover.validate_and_price")
+@patch("worker_heavy.utils.handover.export_step")
 def test_submit_for_review(mock_export_step, mock_validate, tmp_path):
-    from worker.utils.handover import submit_for_review
+    from worker_heavy.utils.handover import submit_for_review
 
     # Setup
     renders_dir = tmp_path / "renders"
@@ -28,7 +28,7 @@ def test_submit_for_review(mock_export_step, mock_validate, tmp_path):
     mock_val_result.violations = []
     # Note: production code uses WorkbenchMetadata object, but tests often mock as dict
     # We should ideally use the object to match my fix
-    from worker.workbenches.models import WorkbenchMetadata
+    from shared.workers.workbench_models import WorkbenchMetadata
 
     mock_val_result.metadata = WorkbenchMetadata()
     mock_validate.return_value = mock_val_result
@@ -116,10 +116,10 @@ totals:
         assert manifest["session_id"] == "test-session"
 
 
-@patch("worker.utils.rendering.get_simulation_builder")
-@patch("worker.simulation.factory.get_physics_backend")
+@patch("worker_heavy.utils.rendering.get_simulation_builder")
+@patch("worker_heavy.simulation.factory.get_physics_backend")
 def test_prerender_24_views(mock_get_backend, mock_get_builder, tmp_path):
-    from worker.utils.rendering import prerender_24_views
+    from worker_heavy.utils.rendering import prerender_24_views
 
     # Setup
     mock_builder = MagicMock()

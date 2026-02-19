@@ -3,13 +3,13 @@ from pathlib import Path
 
 from build123d import Part
 
-from worker.filesystem.backend import LocalFilesystemBackend
-from worker.filesystem.router import (
+from shared.workers.filesystem.backend import LocalFilesystemBackend
+from shared.workers.filesystem.router import (
     AccessMode,
     FilesystemRouter,
     MountPoint,
 )
-from worker.workbenches.base import (
+from worker_heavy.workbenches.base import (
     ManufacturingConfig,
     WorkbenchAnalyzer,
     WorkbenchResult,

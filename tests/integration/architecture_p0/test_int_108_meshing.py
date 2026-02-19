@@ -46,7 +46,7 @@ def build():
         # Assuming we can trigger meshing via /runtime/execute for now to test the internal tool
         code = """
 from pathlib import Path
-from worker.utils.mesh_utils import tetrahedralize
+from worker_heavy.utils.mesh_utils import tetrahedralize
 from build123d import Box, export_stl
 
 part = Box(1, 1, 1)
@@ -89,7 +89,7 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 
         code_fail = """
 from pathlib import Path
-from worker.utils.mesh_utils import tetrahedralize
+from worker_heavy.utils.mesh_utils import tetrahedralize
 tetrahedralize(Path("bad.stl"), Path("bad.msh"))
 """
         resp = await client.post(

@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 import trimesh
 
-from worker.utils.mesh_utils import MeshProcessingError, repair_mesh, tetrahedralize
+from worker_heavy.utils.mesh_utils import MeshProcessingError, repair_mesh, tetrahedralize
 
 
 def test_repair_mesh_already_watertight():

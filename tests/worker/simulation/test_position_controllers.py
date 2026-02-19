@@ -4,8 +4,8 @@ import mujoco
 import numpy as np
 import pytest
 
-from worker.simulation.loop import SimulationLoop
-from worker.utils.controllers.position_based import hold_position, oscillate, waypoint
+from worker_heavy.simulation.loop import SimulationLoop
+from worker_heavy.utils.controllers.position_based import hold_position, oscillate, waypoint
 
 # XML with a POSITION actuator (not motor)
 # CRITICAL: PD gains must be tuned relative to inertia to avoid numerical instability.
@@ -32,10 +32,10 @@ TEST_POSITION_XML = """
 def sim_loop_position(tmp_path):
     xml_path = tmp_path / "test_position.xml"
     xml_path.write_text(TEST_POSITION_XML)
-    # Using GENESIS as requested
+    # Using MUJOCO for reliability of position actuators in tests
     from shared.simulation.schemas import SimulatorBackendType
 
-    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 class TestWaypointController:

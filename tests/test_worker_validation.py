@@ -9,7 +9,7 @@ from tests.observability.test_observability_utils import (
     assert_event_emitted,
     clear_emitted_events,
 )
-from worker.utils.validation import simulate, validate
+from worker_heavy.utils.validation import simulate, validate
 
 
 def test_geometric_validation():
@@ -32,7 +32,7 @@ def test_geometric_validation():
 
 
 def test_objectives_validation_events():
-    from worker.utils.file_validation import validate_objectives_yaml
+    from worker_heavy.utils.file_validation import validate_objectives_yaml
 
     clear_emitted_events()
 
@@ -49,7 +49,7 @@ def test_objectives_validation_events():
 
 
 def test_plan_validation_events():
-    from worker.utils.file_validation import validate_plan_md_structure
+    from worker_heavy.utils.file_validation import validate_plan_md_structure
 
     clear_emitted_events()
 
@@ -71,7 +71,7 @@ def test_simulation():
 
 
 def test_handover():
-    from worker.utils.handover import submit_for_review
+    from worker_heavy.utils.handover import submit_for_review
 
     with BuildPart() as p:
         Box(10, 10, 10)
@@ -151,13 +151,13 @@ Simple test plan
             encoding="utf-8",
         )
         # Mock validate_and_price to avoid heavy DFM check
-        with patch("worker.utils.handover.validate_and_price") as mock_val:
+        with patch("worker_heavy.utils.handover.validate_and_price") as mock_val:
             mock_val_result = MagicMock()
             mock_val_result.is_manufacturable = True
             mock_val_result.unit_cost = 10.0
             mock_val_result.weight_g = 100.0
             mock_val_result.violations = []
-            from worker.workbenches.models import WorkbenchMetadata
+            from shared.workers.workbench_models import WorkbenchMetadata
 
             mock_val_result.metadata = WorkbenchMetadata()
             mock_val.return_value = mock_val_result

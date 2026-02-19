@@ -1,7 +1,7 @@
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 # Mock XML for testing
 TEST_XML = """
@@ -110,7 +110,7 @@ def test_validation_hook_failure(tmp_path):
     xml_path.write_text(TEST_XML)
 
     # Mock validate_and_price to return invalid
-    with patch("worker.simulation.loop.validate_and_price") as mock_val:
+    with patch("worker_heavy.simulation.loop.validate_and_price") as mock_val:
         from unittest.mock import MagicMock
 
         mock_val.return_value = MagicMock(
@@ -147,7 +147,7 @@ def test_timeout_configurable(tmp_path):
 
 def test_timeout_capped_at_30s(tmp_path):
     """Test that timeout cannot exceed 30 seconds (hard cap)."""
-    from worker.simulation.loop import MAX_SIMULATION_TIME_SECONDS
+    from worker_heavy.simulation.loop import MAX_SIMULATION_TIME_SECONDS
 
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)

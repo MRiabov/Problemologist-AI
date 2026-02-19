@@ -1,11 +1,11 @@
 from unittest.mock import MagicMock, patch
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 class TestSimulationLoopStress:
-    @patch("worker.simulation.loop.get_physics_backend")
+    @patch("worker_heavy.simulation.loop.get_physics_backend")
     def test_stress_collection(self, mock_get_backend):
         # Setup mock backend
         mock_backend = MagicMock()

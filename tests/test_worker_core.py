@@ -10,7 +10,7 @@ These tests verify:
 import pytest
 
 from shared.type_checking import type_check
-from worker.runtime.executor import RuntimeConfig, run_python_code
+from worker_light.runtime.executor import RuntimeConfig, run_python_code
 
 
 @type_check
@@ -64,7 +64,7 @@ class TestFilesystemRouter:
 
     def test_read_only_utils_check(self):
         """Test that utils path is detected as read-only."""
-        from worker.filesystem.router import FilesystemRouter
+        from shared.workers.filesystem.router import FilesystemRouter
 
         # Create a mock router (we don't connect to S3 here)
         # Just test the read-only detection logic

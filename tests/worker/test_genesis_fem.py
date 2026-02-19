@@ -5,12 +5,12 @@ pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sim
 from unittest.mock import MagicMock, patch
 
 from shared.simulation.backends import SimulationScene
-from worker.simulation.genesis_backend import GenesisBackend
+from worker_heavy.simulation.genesis_backend import GenesisBackend
 
 
 @pytest.fixture
 def mock_gs():
-    with patch("worker.simulation.genesis_backend.gs") as mock:
+    with patch("worker_heavy.simulation.genesis_backend.gs") as mock:
         yield mock
 
 

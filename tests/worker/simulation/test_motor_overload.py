@@ -3,7 +3,7 @@
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.loop import (
+from worker_heavy.simulation.loop import (
     MOTOR_OVERLOAD_THRESHOLD_SECONDS,
     SimulationLoop,
 )
@@ -62,7 +62,7 @@ class TestMotorOverload:
         """Test that motor clamped at forcerange for >2s fails simulation."""
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        from worker.utils.controllers.position_based import hold_position
+        from worker_heavy.utils.controllers.position_based import hold_position
 
         controllers = {"servo": hold_position(3.14)}  # Impossible with 0.1 N limit
 
@@ -71,18 +71,19 @@ class TestMotorOverload:
 
         assert not metrics.success
         assert metrics.fail_reason is not None
-        assert "overcurrent" in metrics.fail_reason
+        # Architecture spec uses 'motor_overload'
+        assert "motor_overload" in metrics.fail_reason
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""
-        from worker.utils.controllers.position_based import hold_position
+        from worker_heavy.utils.controllers.position_based import hold_position
 
         controllers = {"servo": hold_position(0.5)}
 
         metrics = no_limit_loop.step({}, duration=2.0, dynamic_controllers=controllers)
 
         # Should not fail due to overload
-        assert metrics.fail_reason is None or "overcurrent" not in str(
+        assert metrics.fail_reason is None or "motor_overload" not in str(
             metrics.fail_reason
         )
 

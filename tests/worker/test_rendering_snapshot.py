@@ -1,21 +1,21 @@
 from unittest.mock import MagicMock, patch
 
-import worker.tools.topology
+import worker_light.tools.topology
 
 # Workaround for production bug: _load_component is missing but used in rendering
-if not hasattr(worker.tools.topology, "_load_component"):
-    from worker.utils.loader import load_component_from_script
+if not hasattr(worker_light.tools.topology, "_load_component"):
+    from shared.workers.loader import load_component_from_script
 
-    worker.tools.topology._load_component = load_component_from_script
+    worker_light.tools.topology._load_component = load_component_from_script
 
 from shared.simulation.view_utils import get_best_isometric_view
-from worker.activities.rendering import render_selection_snapshot
+from worker_heavy.activities.rendering import render_selection_snapshot
 
 
 def test_render_selection_snapshot(tmp_path):
     # Setup
     # Patch S3Client inside the module where it's used
-    with patch("worker.activities.rendering.S3Client") as mock_s3_class:
+    with patch("worker_heavy.activities.rendering.S3Client") as mock_s3_class:
         mock_s3 = MagicMock()
         mock_s3_class.return_value = mock_s3
 

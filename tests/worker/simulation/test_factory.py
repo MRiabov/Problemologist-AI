@@ -1,9 +1,9 @@
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
-from worker.simulation.factory import get_physics_backend, get_simulation_builder
-from worker.simulation.genesis_backend import GenesisBackend
-from worker.simulation.mujoco_backend import MuJoCoBackend
+from worker_heavy.simulation.factory import get_physics_backend, get_simulation_builder
+from worker_heavy.simulation.genesis_backend import GenesisBackend
+from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 
 
 def test_get_physics_backend():
@@ -20,7 +20,7 @@ def test_get_physics_backend_invalid():
 
 
 def test_get_simulation_builder(tmp_path):
-    from worker.simulation.builder import (
+    from worker_heavy.simulation.builder import (
         GenesisSimulationBuilder,
         MuJoCoSimulationBuilder,
     )

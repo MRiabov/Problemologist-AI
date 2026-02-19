@@ -15,7 +15,7 @@ def verify_syntax(script: str) -> tuple[bool, str | None]:
         return False, str(e)
 
 
-from worker.utils.validation import simulate, validate
+from worker_heavy.utils.validation import simulate, validate
 
 
 def test_model_produced_script_integration(tmp_path):
@@ -43,9 +43,13 @@ def test_model_produced_script_integration(tmp_path):
                 extrude(amount=0.05)
             
             from shared.models.schemas import PartMetadata
+            from shared.enums import ManufacturingMethod
             part = p.part
             part.label = "target_box"
-            part.metadata = PartMetadata(material_id="aluminum-6061")
+            part.metadata = PartMetadata(
+                material_id="aluminum_6061",
+                manufacturing_method=ManufacturingMethod.THREE_DP
+            )
             
             # Simple MJCF that uses the mesh
             mjcf_xml = f'''
@@ -84,7 +88,7 @@ def test_model_produced_script_integration(tmp_path):
 
     # 3. Validate Geometry
     # This uses our worker.utils.validation.validate which checks for intersections/bounds
-    is_geom_valid = validate(component)
+    is_geom_valid = validate(component, output_dir=tmp_path)
     assert is_geom_valid[0] is True
 
     # 4. Simulate without crashing
@@ -93,7 +97,7 @@ def test_model_produced_script_integration(tmp_path):
         mock_renderer = mock_renderer_cls.return_value
         mock_renderer.render.return_value = np.zeros((480, 640, 3), dtype=np.uint8)
 
-        sim_result = simulate(component)
+        sim_result = simulate(component, output_dir=tmp_path, smoke_test_mode=True)
 
     assert sim_result.success is True
-    assert "Simulation stable" in sim_result.summary
+    assert any(msg in sim_result.summary for msg in ["Simulation stable", "Goal achieved"])

@@ -1,4 +1,4 @@
-from worker.filesystem.backend import LocalFilesystemBackend
+from shared.workers.filesystem.backend import LocalFilesystemBackend
 
 
 def test_local_write_overwrite(tmp_path):

@@ -3,7 +3,7 @@ import numpy as np
 from build123d import Box, Compound
 
 from shared.models.schemas import PartMetadata
-from worker.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
+from worker_heavy.simulation.builder import MeshProcessor, SceneCompiler, SimulationBuilder
 
 
 def test_mesh_processor_dual_export(tmp_path):

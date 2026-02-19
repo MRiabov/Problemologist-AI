@@ -19,7 +19,7 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
-from worker.api.schema import EditOp
+from shared.workers.schema import EditOp
 
 
 @pytest.fixture

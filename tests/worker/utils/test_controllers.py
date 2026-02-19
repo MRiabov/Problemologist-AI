@@ -1,7 +1,7 @@
 import math
 
-from worker.utils.controllers.position_based import rotate_to
-from worker.utils.controllers.time_based import (
+from worker_heavy.utils.controllers.position_based import rotate_to
+from worker_heavy.utils.controllers.time_based import (
     constant,
     sinusoidal,
     square,

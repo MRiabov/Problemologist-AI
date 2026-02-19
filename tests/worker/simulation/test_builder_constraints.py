@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from build123d import Box, Compound, Part
 
 from shared.models.schemas import PartMetadata
-from worker.simulation.builder import SimulationBuilder
+from worker_heavy.simulation.builder import SimulationBuilder
 
 
 def test_weld_constraint_generation(tmp_path):

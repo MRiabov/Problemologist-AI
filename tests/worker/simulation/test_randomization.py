@@ -2,7 +2,7 @@
 
 import pytest
 
-from worker.simulation.randomization import (
+from worker_heavy.simulation.randomization import (
     MaterialAssignment,
     apply_material_to_mjcf_geom,
     get_eligible_materials,

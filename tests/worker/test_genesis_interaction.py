@@ -5,7 +5,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sim
 from unittest.mock import MagicMock, patch
 
 from shared.simulation.backends import SimulationScene
-from worker.simulation.genesis_backend import GenesisBackend
+from worker_heavy.simulation.genesis_backend import GenesisBackend
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_check_collision_with_zone(genesis_backend):
     mock_body.get_pos.return_value = np.array([0.5, 0.5, 0.5])
     mock_body.get_quat.return_value = np.array([1, 0, 0, 0])
     mock_body.get_vel.return_value = np.array([0, 0, 0])
-    mock_body.get_angvel.return_value = np.array([0, 0, 0])
+    mock_body.get_ang.return_value = np.array([0, 0, 0])
     genesis_backend.entities = {"body1": mock_body}
 
     assert genesis_backend.check_collision("body1", "zone_forbid") is True

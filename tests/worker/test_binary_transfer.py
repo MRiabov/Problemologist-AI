@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from controller.clients.worker import WorkerClient
-from worker.filesystem.backend import LocalFilesystemBackend
-from worker.filesystem.router import (
+from shared.workers.filesystem.backend import LocalFilesystemBackend
+from shared.workers.filesystem.router import (
     FilesystemRouter,
 )
 

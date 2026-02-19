@@ -14,7 +14,7 @@ from shared.models.schemas import (
 )
 from shared.pyspice_utils import CircuitValidationResult
 from shared.wire_utils import check_wire_clearance
-from worker.simulation.loop import SimulationLoop
+from worker_heavy.simulation.loop import SimulationLoop
 
 
 def test_int_135_wire_clearance_basic():

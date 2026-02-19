@@ -1,4 +1,4 @@
-from worker.utils.file_validation import validate_node_output
+from worker_heavy.utils.file_validation import validate_node_output
 
 # Valid plan content for engineering nodes
 VALID_ENGINEERING_PLAN = """## 1. Solution Overview

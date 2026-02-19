@@ -6,9 +6,9 @@ import tempfile
 import sys
 import os
 
-from worker.simulation.builder import GenesisSimulationBuilder
-from worker.simulation.genesis_backend import GenesisBackend
-import worker.workbenches.config
+from worker_heavy.simulation.builder import GenesisSimulationBuilder
+from worker_heavy.simulation.genesis_backend import GenesisBackend
+import worker_heavy.workbenches.config
 from shared.models.schemas import WireConfig, WireTerminal
 
 
@@ -41,11 +41,11 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
 
         # Mock traverse to avoid complex logic
         with patch(
-            "worker.simulation.builder.CommonAssemblyTraverser.traverse",
+            "worker_heavy.simulation.builder.CommonAssemblyTraverser.traverse",
             return_value=[],
         ):
             # Also patch load_config to avoid config loading issues
-            with patch("worker.workbenches.config.load_config"):
+            with patch("worker_heavy.workbenches.config.load_config"):
                 self.builder.build_from_assembly(
                     assembly=mock_assembly, electronics=mock_electronics
                 )
@@ -79,9 +79,10 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
     def test_tendon_support(self):
         backend = GenesisBackend()
         # Inject cables manually as if loaded from scene
-        backend.cables = [
-            {"name": "wire_1", "radius": 0.001, "stiffness": 100, "points": []}
-        ]
+        # It should be a dict mapping name to entity
+        backend.cables = {
+            "wire_1": MagicMock()
+        }
 
         self.assertTrue(
             hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute"
@@ -93,6 +94,17 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         self.assertIn("wire_1", names)
 
         # Check get_tendon_tension
+        # Mocking the tendon tension logic which uses waypoint distances
+        backend.tendon_rest_lengths = {"wire_1": 1.0}
+        backend.tendon_waypoints = {"wire_1": [(0,0,0), (1,0,0)]}
+
+        # We need to mock gs if we want it to actually run distance calc,
+        # or just mock get_tendon_tension if we can.
+        # But get_tendon_tension is what we are testing (or at least its existence).
+
+        # In GenesisBackend, get_tendon_tension calculates Euclidean distance between global waypoints.
+        # It needs self.entities and self.tendon_waypoints
+
         tension = backend.get_tendon_tension("wire_1")
         self.assertEqual(tension, 0.0)
 
