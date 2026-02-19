@@ -38,7 +38,8 @@ def test_simulation_loop_with_mujoco():
     metrics = loop.step(control_inputs={}, duration=0.1)
 
     assert metrics.total_time >= 0.1
-    assert metrics.success == True  # Finished normally without failure
+    # Legacy behavior: no goals/objectives -> success=False
+    assert metrics.success == False
     assert metrics.fail_reason == None  # Finished normally
 
 

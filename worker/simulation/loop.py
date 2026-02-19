@@ -87,7 +87,7 @@ class SimulationLoop:
             )
         )
         scene = SimulationScene(
-            scene_path=xml_path, config={"particle_budget": self.particle_budget}
+            scene_path=str(xml_path), config={"particle_budget": self.particle_budget}
         )
         self.backend.load_scene(scene)
 
