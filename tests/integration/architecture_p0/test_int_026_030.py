@@ -39,7 +39,7 @@ moved_object:
     runtime_jitter: [0, 0, 0]
 constraints:
     max_unit_cost: 100
-    max_weight: 10
+    max_weight_g: 10
 """
         await client.post(
             f"{WORKER_URL}/fs/write",

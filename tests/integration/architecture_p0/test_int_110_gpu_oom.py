@@ -40,7 +40,7 @@ objectives:
   build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
 simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight: 10}
+constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         # If the environment has NO GPU, this might fail differently.
         # But INT-110 says "Requires GPU environment; currently not tested."
