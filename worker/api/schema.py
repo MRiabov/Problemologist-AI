@@ -137,13 +137,25 @@ class AnalyzeRequest(BenchmarkToolRequest):
     )
 
 
+class SimulationArtifacts(BaseModel):
+    """Structured artifacts from a simulation run."""
+
+    render_paths: list[StrictStr] = Field(default_factory=list)
+    mjcf_content: StrictStr | None = None
+    stress_summaries: list[dict[StrictStr, Any]] = Field(default_factory=list)
+    fluid_metrics: list[dict[StrictStr, Any]] = Field(default_factory=list)
+    scene_path: StrictStr | None = None
+
+    model_config = {"extra": "allow"}
+
+
 class BenchmarkToolResponse(BaseModel):
     """Response from a benchmark tool."""
 
     success: StrictBool
     message: StrictStr
     confidence: StrictStr = "high"
-    artifacts: dict[StrictStr, Any] | None = None
+    artifacts: SimulationArtifacts | dict[StrictStr, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
 
 
