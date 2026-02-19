@@ -32,7 +32,8 @@ async def test_int_053_temporal_workflow_lifecycle():
         # 1. Create a dummy episode to link to
         task = "Test Temporal Workflow Lifecycle"
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", json={"task": task, "session_id": "test-obs"}
+            f"{CONTROLLER_URL}/agent/run",
+            json={"task": task, "session_id": "INT-053-obs"},
         )
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
@@ -71,14 +72,14 @@ async def test_int_055_s3_artifact_upload_logging():
         # Manual insert or use agent/run
         await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": "Test S3 Upload", "session_id": "test-s3"},
+            json={"task": "Test S3 Upload", "session_id": "INT-055-s3"},
         )
         # Wait, I need the actual ID. Let's list and pick latest?
         # Or better just use the one from previous test if I want to be fast, but isolation is better.
 
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": "Test S3 Upload", "session_id": "test-s3"},
+            json={"task": "Test S3 Upload", "session_id": "INT-055-s3"},
         )
         episode_id = resp.json()["episode_id"]
 
@@ -110,7 +111,7 @@ async def test_int_054_temporal_failure_path():
         # 1. Create episode via API
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": "Test Failure Injection", "session_id": "test-fail"},
+            json={"task": "Test Failure Injection", "session_id": "INT-054-fail"},
         )
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
@@ -183,7 +184,7 @@ async def test_int_056_s3_upload_failure_retry():
         # Create episode via test endpoint (no agent task interference)
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": "Test S3 Retry", "session_id": "test-s3-retry"},
+            json={"task": "Test S3 Retry", "session_id": "INT-056-retry"},
         )
         episode_id = resp.json()["episode_id"]
 

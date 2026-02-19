@@ -20,7 +20,7 @@ async def test_render_artifact_generation_int_039():
         # 1. Trigger Agent Run (or Benchmark Generation)
         prompt = "Create a simple cube and simulate it."
         # We use /agent/run for a standard agent flow
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
@@ -70,7 +70,7 @@ async def test_asset_persistence_linkage_int_040():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
         # Trigger a run
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run",
             json={
@@ -109,7 +109,7 @@ async def test_mjcf_joint_mapping_int_037():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
         # We use a prompt that should result in a jointed assembly
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-037-{uuid.uuid4().hex[:8]}"
         prompt = """Create a simple door: a 'frame' and a 'panel'. 
         The 'panel' should be attached to the 'frame' with a RevoluteJoint.
         Then simulate."""
@@ -158,7 +158,7 @@ async def test_controller_function_family_int_038():
         prompt = (
             "Create a part that oscillates sinusoidally using the dynamic controller."
         )
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-038-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
@@ -211,7 +211,7 @@ async def test_async_callbacks_int_042():
     Verify that episodes transition status correctly through async execution.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-042-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run",
             json={"task": "Just say hello and finish.", "session_id": session_id},

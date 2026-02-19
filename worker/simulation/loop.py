@@ -359,97 +359,104 @@ class SimulationLoop:
             res = self.backend.step(dt)
             current_time = res.time
 
-            # 2. Update Metrics
-            actuator_states = {
-                n: self.backend.get_actuator_state(n) for n in self.actuator_names
-            }
-            energy = sum(
-                abs(state.ctrl * state.velocity) for state in actuator_states.values()
-            )
-
-            target_vel = 0.0
-            target_pos = None
-            if target_body_name:
-                state = self.backend.get_body_state(target_body_name)
-                target_vel = np.linalg.norm(state.vel)
-                target_pos = state.pos
-
-            max_stress = self.backend.get_max_stress()
-            self.metric_collector.update(dt, energy, target_vel, max_stress)
-
-            # 4. Check Success/Failure conditions
-            fail_reason = self.success_evaluator.check_failure(
-                current_time,
-                target_pos,
-                state.vel if target_pos is not None else np.zeros(3),
-            )
-            if fail_reason:
-                self.fail_reason = fail_reason
-                break
-
-            if not res.success:
-                self.fail_reason = (
-                    res.failure_reason
-                    if isinstance(res.failure_reason, SimulationFailureMode)
-                    else SimulationFailureMode.PHYSICS_INSTABILITY
+            # OPTIMIZATION: Only check expensive conditions every N steps
+            # T018: Keep interval small for collisions/overload to avoid missing events
+            check_interval = 1
+            if step_idx % check_interval == 0 or step_idx == steps - 1:
+                # 2. Update Metrics
+                actuator_states = {
+                    n: self.backend.get_actuator_state(n) for n in self.actuator_names
+                }
+                energy = sum(
+                    abs(state.ctrl * state.velocity)
+                    for state in actuator_states.values()
                 )
-                break
 
-            # Check Forbidden Zones (T018 optimization: skip if no zones)
-            if self.forbidden_sites and self._check_forbidden_collision():
-                self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
-                break
+                target_vel = 0.0
+                target_pos = None
+                if target_body_name:
+                    state = self.backend.get_body_state(target_body_name)
+                    target_vel = np.linalg.norm(state.vel)
+                    target_pos = state.pos
 
-            # Check Goal Zone
-            if target_body_name and self.check_goal_with_vertices(target_body_name):
-                self.success = True
-                break
+                max_stress = self.backend.get_max_stress()
+                self.metric_collector.update(
+                    dt * check_interval, energy, target_vel, max_stress
+                )
 
-            # Check Motor Overload
-            if self._check_motor_overload():
-                self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
-                break
-
-            # 7. Check Wire Failure (T015)
-            if self.electronics:
-                wire_broken = False
-                for wire in self.electronics.wiring:
-                    if getattr(wire, "routed_in_3d", False):
-                        try:
-                            tension = self.backend.get_tendon_tension(wire.wire_id)
-                            # T016: Use accurate tensile strength from AWG lookup
-                            props = get_awg_properties(wire.gauge_awg)
-                            limit = props["tensile_strength_n"]
-                            if tension > limit:
-                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
-                                emit_event(
-                                    ElectricalFailureEvent(
-                                        failure_type="wire_torn",
-                                        component_id=wire.wire_id,
-                                        message=(
-                                            f"Wire {wire.wire_id} torn due to "
-                                            f"high tension ({tension:.2f}N > "
-                                            f"{limit:.2f}N)"
-                                        ),
-                                    )
-                                )
-                                logger.info(
-                                    "simulation_fail",
-                                    reason="wire_torn",
-                                    wire=wire.wire_id,
-                                    tension=tension,
-                                )
-                                wire_broken = True
-                                # If wire breaks, remove it and re-evaluate circuit
-                                self.electronics.wiring.remove(wire)
-                                self._electronics_dirty = True
-                                self._update_electronics()
-                                break
-                        except Exception:
-                            # Tendon might not be in backend if not routed
-                            pass
-                if wire_broken:
+                # 4. Check Success/Failure conditions
+                fail_reason = self.success_evaluator.check_failure(
+                    current_time,
+                    target_pos,
+                    state.vel if target_pos is not None else np.zeros(3),
+                )
+                if fail_reason:
+                    self.fail_reason = fail_reason
                     break
+
+                if not res.success:
+                    self.fail_reason = (
+                        res.failure_reason
+                        if isinstance(res.failure_reason, SimulationFailureMode)
+                        else SimulationFailureMode.PHYSICS_INSTABILITY
+                    )
+                    break
+
+                # Check Forbidden Zones (T018 optimization: skip if no zones)
+                if self.forbidden_sites and self._check_forbidden_collision():
+                    self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
+                    break
+
+                # Check Goal Zone
+                if target_body_name and self.check_goal_with_vertices(target_body_name):
+                    self.success = True
+                    break
+
+                # Check Motor Overload
+                if self._check_motor_overload():
+                    self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
+                    break
+
+                # 7. Check Wire Failure (T015)
+                if self.electronics:
+                    wire_broken = False
+                    for wire in self.electronics.wiring:
+                        if getattr(wire, "routed_in_3d", False):
+                            try:
+                                tension = self.backend.get_tendon_tension(wire.wire_id)
+                                # T016: Use accurate tensile strength from AWG lookup
+                                props = get_awg_properties(wire.gauge_awg)
+                                limit = props["tensile_strength_n"]
+                                if tension > limit:
+                                    self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
+                                    emit_event(
+                                        ElectricalFailureEvent(
+                                            failure_type="wire_torn",
+                                            component_id=wire.wire_id,
+                                            message=(
+                                                f"Wire {wire.wire_id} torn due to "
+                                                f"high tension ({tension:.2f}N > "
+                                                f"{limit:.2f}N)"
+                                            ),
+                                        )
+                                    )
+                                    logger.info(
+                                        "simulation_fail",
+                                        reason="wire_torn",
+                                        wire=wire.wire_id,
+                                        tension=tension,
+                                    )
+                                    wire_broken = True
+                                    # If wire breaks, remove it and re-evaluate circuit
+                                    self.electronics.wiring.remove(wire)
+                                    self._electronics_dirty = True
+                                    self._update_electronics()
+                                    break
+                            except Exception:
+                                # Tendon might not be in backend if not routed
+                                pass
+                    if wire_broken:
+                        break
 
             if render_callback:
                 # This might need adjustment as render_callback usually takes model/data
@@ -574,7 +581,7 @@ class SimulationLoop:
 
         # Final success determination:
         # Success if no failures AND (goal achieved IF goals exist,
-        # or fluid/stress objectives passed)
+        # or fluid/stress objectives passed, or it is a stability-only test)
         has_other_objectives = False
         if (
             self.objectives
@@ -597,8 +604,8 @@ class SimulationLoop:
             is_success = True
         else:
             # Stability test or goal-less benchmark
-            # (legacy behavior expects False if no goal)
-            is_success = False
+            # If no fail_reason, we consider it a success (simulation was stable)
+            is_success = True
 
         metrics = self.metric_collector.get_metrics()
 

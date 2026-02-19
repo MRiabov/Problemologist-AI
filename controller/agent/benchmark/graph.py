@@ -63,17 +63,23 @@ def define_graph():
     )
 
     # Conditional edges for reviewer
-    async def reviewer_router(
+    async def reviewer_router(  # FIXME: flaky! why can't we just pass proper enums and/or deterministic state?
         state: BenchmarkGeneratorState,
     ) -> Literal["steer", "coder", "planner", "skills"]:
         # Check for steering first
         if await check_steering(state) == "steer":
             return "steer"
 
-        feedback = state.review_feedback or ""
-        if feedback == "Approved":
+        if state.review_round > 10:
+            logger.warning(
+                "max_review_rounds_reached", session_id=state.session.session_id
+            )
             return "skills"
-        if feedback.startswith("Steering:"):
+
+        feedback = (state.review_feedback or "").lower()
+        if "approved" in feedback:  # FIXME: flaky!
+            return "skills"
+        if feedback.startswith("Steering:"):  # FIXME: flaky!
             return "planner"
         return "coder"
 

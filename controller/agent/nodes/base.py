@@ -48,7 +48,7 @@ class SharedNodeContext:
 
             logger.info("using_mock_llms_for_integration_test", session_id=session_id)
             llm = MockChatOpenAI()
-            dspy_lm = MockDSPyLM()
+            dspy_lm = MockDSPyLM(session_id=session_id)
         else:
             llm = ChatOpenAI(model=settings.llm_model, temperature=0)
 
@@ -187,6 +187,10 @@ class BaseNode:
         # WP07: Try to load compiled prompt if available
         self.ctx.pm.load_compiled_program(node_type, program)
 
+        # WP08: Set node_type on mock LM if available for explicit lookup
+        if hasattr(self.ctx.dspy_lm, "node_type"):
+            self.ctx.dspy_lm.node_type = node_type
+
         retry_count = 0
         journal_entry = ""
         prediction = None
@@ -239,6 +243,7 @@ class BaseNode:
                             f"{node_type}_validation_failed", errors=validation_errors
                         )
                         retry_count += 1
+                        await asyncio.sleep(1)  # Backoff to prevent log explosion
                         continue
 
                     return prediction, artifacts, journal_entry
@@ -247,6 +252,7 @@ class BaseNode:
                     logger.error(f"{node_type}_dspy_failed", error=str(e))
                     journal_entry += f"\n[System Error] {e}"
                     retry_count += 1
+                    await asyncio.sleep(1)  # Backoff to prevent log explosion
 
             journal_entry += "\nMax retries reached."
             return None, artifacts, journal_entry

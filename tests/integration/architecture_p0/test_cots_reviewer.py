@@ -11,7 +11,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 @pytest.fixture
 def session_id():
-    return str(uuid.uuid4())
+    return f"INT-012-{uuid.uuid4().hex[:8]}"
 
 
 @pytest.fixture
@@ -71,6 +71,7 @@ async def test_int_016_reviewer_decision_schema_gate(session_id, base_headers):
     """INT-016: Verify reviewer rejects malformed frontmatter decisions."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Create a real episode first
+        session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
             json={"task": "Test Review Schema", "session_id": session_id},
@@ -110,6 +111,7 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers):
     """INT-017: Verify plan refusal loop (rejection leads to FAILED state)."""
     async with httpx.AsyncClient(timeout=60.0) as client:
         # 1. Start agent run
+        session_id = f"INT-017-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
             json={"task": "Test Refusal Loop", "session_id": session_id},

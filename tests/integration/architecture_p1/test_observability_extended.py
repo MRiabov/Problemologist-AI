@@ -85,7 +85,7 @@ async def test_int_058_cross_system_correlation():
         task = "Generate a simple part for correlation test"
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": f"test-int-058-{uuid.uuid4().hex[:8]}"},
+            json={"task": task, "session_id": f"INT-058-{uuid.uuid4().hex[:8]}"},
         )
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]

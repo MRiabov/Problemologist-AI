@@ -27,9 +27,15 @@ async def test_benchmark_planner_cad_reviewer_path():
             202,
         ], f"Failed to trigger benchmark: {resp.text}"
         data = resp.json()
-        session_id = data["session_id"]
-
-        # 2. Poll for completion
+        session_id = str(data["session_id"])
+        # Override with INT-031 prefix for mock routing if needed,
+        # but the controller generated a UUID.
+        # Actually, the mock LM handles UUIDs by routing to 'benchmark' scenario.
+        # If I want to use 'INT-031' specifically, I should probably pass it if the API allowed,
+        # but /benchmark/generate generates its own UUID.
+        # Wait, the MockDSPyLM routes UUIDs to 'benchmark'.
+        # 'benchmark' in mock_responses.yaml is already defined.
+        # Let's check 'benchmark' scenario in mock_responses.yaml.
         max_retries = 60
         benchmark_completed = False
         last_status = None

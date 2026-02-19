@@ -43,7 +43,7 @@ async def test_manufacturing_methods_and_materials():
             pytest.fail("Benchmark generation timed out.")
 
         # 2. Trigger Engineer - Requesting CNC and specific material
-        engineer_session_id = str(uuid.uuid4())
+        engineer_session_id = f"INT-036-{uuid.uuid4().hex[:8]}"
         # We explicitly ask for Aluminum 6061 (valid) to test success path first
         task = f"Solve benchmark: {benchmark_session_id}. Use CNC milling with Aluminum 6061."
         run_payload = {
@@ -89,7 +89,7 @@ async def test_manufacturing_methods_and_materials():
         )
 
         # 4. Verify Material Enforcement (INT-035) - "Nice to have" negative test
-        bad_material_session_id = str(uuid.uuid4())
+        bad_material_session_id = f"INT-035-{uuid.uuid4().hex[:8]}"
         bad_task = f"Solve benchmark: {benchmark_session_id}. Use Unobtanium material."
 
         bad_run_resp = await client.post(

@@ -13,11 +13,11 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 async def test_int_043_batch_execution_path():
     """INT-043: Verify batch job submission and execution isolation."""
     async with httpx.AsyncClient() as client:
-        # Submit 3 concurrent jobs
+        # Submit 2 concurrent jobs
         tasks = []
         session_ids = []
         for i in range(2):
-            session_id = f"batch-test-{int(time.time())}-{i}"
+            session_id = f"INT-043-batch-{i}-{int(time.time())}"
             session_ids.append(session_id)
             payload = {
                 "task": f"Batch execution test task {i}",

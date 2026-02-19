@@ -192,7 +192,7 @@ async def test_int_030_interrupt_propagation():
     async with httpx.AsyncClient() as client:
         # 1. Start a task that takes some time (e.g. simulation or agent run)
         # We'll use agent/run for now as it's the main entry point.
-        session_id = f"test-interrupt-{int(time.time())}"
+        session_id = f"INT-030-{int(time.time())}"
         payload = {
             "task": "Perform a very complex multi-step reasoning task that involves writing a large script with at least 50 different parts and complex joints, explain each step in detail, and perform a deep analysis of the physics constraints for each component. Do NOT skip any details.",
             "session_id": session_id,

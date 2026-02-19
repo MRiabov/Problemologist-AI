@@ -393,18 +393,37 @@ SIMULATION_QUEUE_DEPTH = 0
 
 def _init_genesis_worker():
     """Pre-warm Genesis in the worker process."""
+    import time
+
     try:
         import genesis as gs
         import torch
 
         # Basic init
         has_gpu = torch.cuda.is_available()
-        gs.init(backend=gs.gpu if has_gpu else gs.cpu, logging_level="warning")
+        backend = gs.gpu if has_gpu else gs.cpu
 
-        # Build a tiny scene to trigger kernel compilation
-        scene = gs.Scene(show_viewer=False)
-        scene.add_entity(gs.morphs.Plane())
-        scene.build()
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                gs.init(backend=backend, logging_level="warning")
+                # Build a tiny scene to trigger kernel compilation
+                scene = gs.Scene(show_viewer=False)
+                scene.add_entity(gs.morphs.Plane())
+                scene.build()
+                break
+            except Exception as e:
+                if "EGL" in str(e) or "display" in str(e).lower():
+                    if attempt < max_retries - 1:
+                        logger.warning("genesis_prewarm_egl_retry", attempt=attempt + 1)
+                        time.sleep(1.0)
+                        continue
+                    else:
+                        logger.warning(
+                            "genesis_prewarm_display_failed_skipping", error=str(e)
+                        )
+                        return
+                raise
 
         logger.info(
             "genesis_worker_prewarmed", pid=multiprocessing.current_process().pid

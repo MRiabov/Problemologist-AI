@@ -16,7 +16,7 @@ async def test_plan_to_cad_fidelity_regression_int_046():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Trigger a reconstruction episode
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-046-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run",
             json={
@@ -59,7 +59,7 @@ async def test_cross_seed_transfer_uplift_int_047():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Run first variant (Seed A)
         variant_a = "variant_alpha"
-        session_a = str(uuid.uuid4())
+        session_a = f"INT-047-A-{uuid.uuid4().hex[:8]}"
         resp_a = await client.post(
             "/agent/run",
             json={
@@ -73,7 +73,7 @@ async def test_cross_seed_transfer_uplift_int_047():
 
         # Wait for ep_a (mocked logic or fast exit)
         # 2. Run related variant (Seed B)
-        session_b = str(uuid.uuid4())
+        session_b = f"INT-047-B-{uuid.uuid4().hex[:8]}"
         resp_b = await client.post(
             "/agent/run",
             json={
@@ -108,7 +108,7 @@ async def test_reviewer_optimality_regression_int_048():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Start an episode
-        session_id = str(uuid.uuid4())
+        session_id = f"INT-048-{uuid.uuid4().hex[:8]}"
         # We simulate a "regression check" trigger via metadata injection in API
         resp = await client.post(
             "/agent/run",

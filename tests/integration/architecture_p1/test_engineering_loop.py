@@ -50,7 +50,7 @@ async def test_engineering_full_loop():
             pytest.fail("Benchmark generation failed or timed out during setup.")
 
         # 2. Trigger Engineer Agent
-        engineer_session_id = str(uuid.uuid4())
+        engineer_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
         task = f"Solve benchmark: {benchmark_session_id}"
         run_payload = {
             "task": task,
