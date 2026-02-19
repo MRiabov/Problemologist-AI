@@ -2,7 +2,7 @@
 
 ## Why this document exists
 
-This document defines the integration test coverage required to match `kitty-specs/desired_architecture.md`, `kitty-specs/desired_architecture_WP2_fluids.md`, and `kitty-specs/desired_architecture_WP3_electronics.md` as of February 13, 2026.
+This document defines the integration test coverage required to match `kitty-specs/desired_architecture.md`, `kitty-specs/desired_architecture_WP2_fluids.md`, `kitty-specs/desired_architecture_WP3_electronics.md`, and implemented roadmap features in `roadmap.md` as of February 19, 2026.
 
 Short answer to the audit question: **No, current integration tests do not accurately reflect the current desired architecture.**
 
@@ -112,6 +112,9 @@ Priorities:
 | INT-054 | Temporal outage/failure logging path | If Temporal is unavailable/fails, episode must not report false success; explicit failure state/reason/event must be persisted. |
 | INT-055 | S3 artifact upload logging | Successful asset uploads persist storage metadata (bucket/key/etag-or-version where available) and link to episode/asset records. |
 | INT-056 | S3 upload failure + retry logging | Forced object-store failure triggers retry/failure policy; final state and failure events are consistent and queryable. |
+| INT-061 | Asset serving security + session isolation contract | `GET /assets/{path}` serves only session-scoped files, returns expected MIME types for supported formats, and rejects stale/broken Python source assets with `422 Unprocessable Entity` when syntax heuristic fails. |
+| INT-062 | Split-worker OpenAPI artifact contract | Generated worker API schema is either (a) merged light+heavy `worker_openapi.json` or (b) separate `worker_light_openapi.json` + `worker_heavy_openapi.json`; benchmark/simulation endpoints must not disappear from generated artifacts. |
+| INT-063 | Mounted path compatibility/read-only contract | `/utils`, `/skills`, `/reviews`, `/config` mounts are present and read-only across light/heavy worker surfaces; write attempts fail while workspace root remains writable. |
 | INT-101 | Physics backend selection contract | Setting `physics.backend: "mujoco"` in config selects the MuJoCo backend; `"genesis"` selects Genesis. Default (`genesis`) is used when not specified. `simulation_backend_selected` event emitted. |
 | INT-102 | FEM material config validation | When `fem_enabled: true`, all manufactured parts must have FEM fields (`youngs_modulus_pa`, `poissons_ratio`, `yield_stress_pa`, `ultimate_stress_pa`) in `manufacturing_config.yaml`; missing fields rejected with clear error before simulation. |
 | INT-103 | Part breakage detection | Simulation with a part exceeding `ultimate_stress_pa` stops immediately with `failure_reason: PART_BREAKAGE`; result contains part label, stress value, location; `part_breakage` event emitted. |
@@ -157,6 +160,12 @@ Priorities:
 | INT-058 | Cross-system correlation IDs | A single episode/trace can be correlated across controller logs/events, Temporal records, and S3 asset metadata. |
 | INT-059 | Langfuse trace linkage in live runs | With valid `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`, live episode execution emits trace records linked by non-empty `langfuse_trace_id`; tool/LLM/event traces are correlated to the same run-level trace identity. |
 | INT-060 | Langfuse feedback forwarding contract | `POST /episodes/{episode_id}/traces/{trace_id}/feedback` forwards score/comment to Langfuse and persists local feedback fields; missing Langfuse client returns `503`, missing `langfuse_trace_id` returns `400`. |
+| INT-064 | COTS reproducibility metadata persistence | COTS queries/selection persist reproducibility metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`) and expose it in downstream artifacts/events used for replayable evaluation. |
+| INT-065 | Skill safety toggle enforcement | Skill-writer flow blocks or reverts sessions that overwrite/delete more than configured threshold lines (15), records safety event, and preserves prior skill content when guard trips. |
+| INT-066 | Fluid-on-electronics failure coupling | In electromechanical simulations with fluids enabled, fluid contact with powered electrical components triggers electrical failure state and benchmark failure/penalty path. |
+| INT-067 | Steerability exact-pointing + mention payload contract | Face/edge/vertex/part/subassembly selections and `@`-mentions are accepted over API/UI boundary, preserved in prompt payload, and observable in run traces/events used by the agent. |
+| INT-068 | Line-targeted steering contract | `@path/file.py:start-end` style references resolve and provide the exact requested code span to the agent context in the majority path; invalid ranges fail with explicit user-visible validation errors. |
+| INT-069 | Frontend delivery visibility contract | End-to-end UI flow exposes simulation outputs, schematics, and macro wire views backed by real API assets for completed episodes (not placeholder/test fixtures). |
 | INT-131 | Full fluid benchmark workflow (planner → engineer → reviewer) | Benchmark planner creates fluid-based benchmark; engineer designs solution with `define_fluid()` and `get_stress_report()`; reviewer verifies fluid containment metrics pass and stress results are reasonable. |
 | INT-132 | Full electromechanical workflow (mech → elec → reviewer) | Mech engineer designs assembly with motors; electronics engineer wires circuit, routes wires, passes `validate_circuit()`; reviewer approves; unified simulation runs with power gating. |
 | INT-133 | Elec → Mech conflict iteration loop | Wire routing conflict (wire intersects moving part sweep) triggers Elec→Mech handover; Mech modifies assembly; iteration count tracked via `elec_agent_handover` event. |
@@ -253,6 +262,15 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-058 | For one episode, correlate IDs across events, Temporal records, and S3 metadata from real persistence. | Asserting hardcoded correlation IDs in fixtures. |
 | INT-059 | Run live episode with Langfuse configured and assert persisted trace linkage (`langfuse_trace_id`) across emitted traces. | Unit-testing callback wiring or mocking Langfuse handler calls only. |
 | INT-060 | Call live feedback endpoint and assert both remote Langfuse scoring effect and local DB feedback persistence + error-path status codes. | Directly invoking feedback route function with mocked DB/Langfuse client only. |
+| INT-061 | Request assets via live `GET /assets/{path}` with `X-Session-ID`; assert MIME behavior, cross-session denial, and `422` rejection for syntactically broken Python source. | Calling asset-serving helper directly or checking filesystem paths without HTTP boundary. |
+| INT-062 | Generate/fetch worker OpenAPI artifact(s) in CI/integration environment and assert light+heavy endpoint coverage is present. | Linting a stale committed schema file without runtime generation. |
+| INT-063 | Attempt writes to mounted paths and writes to workspace root via live file APIs; assert read-only mounts and writable workspace behavior across worker surfaces. | Asserting config constants for mount paths without exercising container mounts. |
+| INT-064 | Execute COTS lookup and artifact handoff via APIs; assert persisted `catalog_version`, `bd_warehouse_commit`, and `generated_at` in events/records/artifacts. | Unit-testing metadata dataclass construction only. |
+| INT-065 | Run skill-update path through live workflow; attempt >15-line overwrite/delete and assert safety guard (block/revert) + persisted safety event. | Git diff unit test with mocked repository state. |
+| INT-066 | Run fluid-enabled electromechanical scenario via API where fluid contacts powered electronics; assert electrical failure reason and benchmark fail/penalty output. | Manually setting electrical failure enum without simulation path. |
+| INT-067 | Submit steerability request with topology selections and `@` part mentions through public API/UI contract; assert serialized payload reaches run trace/events and is consumed in agent prompt context. | Unit-testing prompt formatter with handcrafted input only. |
+| INT-068 | Submit chat prompt with code-line reference (`@file:line-line`) through API; assert resolved snippet in agent context and explicit validation error for invalid spans. | Parsing line references in isolation without executing run path. |
+| INT-069 | Execute UI e2e flow on completed episode and verify simulation media/schematic/wire views render from real backend assets. | Component tests with mocked API payloads only. |
 | INT-101 | Set `physics.backend` in config and hit simulation endpoint; assert backend-selected event and correct engine used. | Importing backend factory and calling it directly. |
 | INT-102 | Submit parts with missing FEM fields (using `PartMetadata`) via API when `fem_enabled: true`; assert rejection before simulation. | Calling Pydantic validator on material dict directly. |
 | INT-103 | Run simulation via API with a part designed to break; assert `PART_BREAKAGE` in result and `part_breakage` event in event stream. Script must use `PartMetadata`. | Constructing `SimulationResult` manually with breakage flag. |
@@ -298,6 +316,7 @@ This section exists to force implementation as true integration tests, not unit 
   - INT-001, INT-002, INT-003, INT-004 (basic smoke/plumbing/concurrency).
 - Not covered or only weakly covered:
   - INT-005 through INT-060 (planner gating, COTS, artifact validation, observability completeness, Langfuse logging guarantees, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).
+  - INT-061 through INT-069 (asset-serving security/session boundaries, split-worker OpenAPI artifacts, mounted path contracts, COTS reproducibility metadata, skill safety toggle, fluid-electronics coupling, steerability contracts, and UI delivery visibility).
   - INT-101 through INT-112 (WP2: physics backend abstraction, FEM/deformable materials, fluid simulation, stress reporting, breakage detection, meshing pipeline, fluid/stress metrics, GPU OOM handling).
   - INT-120 through INT-128 (WP3: circuit validation, electrical failure modes, motor power gating, wire tear, backward compat, electronics schema).
   - INT-131 through INT-141 (WP2/WP3 P1: full fluid and electromechanical workflows, agent handovers, stress rendering, wire routing, power budget, COTS electrical, smoke-test mode, data storage policy, circuit transient).
@@ -306,8 +325,8 @@ This section exists to force implementation as true integration tests, not unit 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-101..INT-112, INT-120..INT-128.
-- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-131..INT-141.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-101..INT-112, INT-120..INT-128.
+- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 
 Marker recommendation:
