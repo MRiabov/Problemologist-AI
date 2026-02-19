@@ -1,0 +1,26 @@
+{
+  "entities": [
+    {
+      "name": "target_box",
+      "pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "euler": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "material_id": "aluminum-6061",
+      "fixed": false,
+      "joint": null,
+      "type": "mesh",
+      "file": "assets/target_box.obj"
+    }
+  ],
+  "fluids": [],
+  "objectives": [],
+  "cables": [],
+  "motors": []
+}

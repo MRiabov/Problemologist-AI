@@ -1022,6 +1022,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 scene_data["cables"].append(
                     {
                         "wire_id": wire.wire_id,
+                        "name": wire.wire_id,
                         "points": resolved_points,
                         "radius": radius,
                         "gauge_awg": wire.gauge_awg,
