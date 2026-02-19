@@ -5,7 +5,7 @@ from temporalio import activity
 from controller.clients.worker import WorkerClient
 from shared.type_checking import type_check
 
-WORKER_URL = os.getenv("WORKER_URL", "http://worker:8001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://worker-light:8001")
 
 
 @type_check
@@ -17,10 +17,11 @@ async def execute_script_activity(data: dict) -> dict:
     timeout = data.get("timeout", 30)
 
     from controller.agent.config import settings
+
     client = WorkerClient(
-        base_url=WORKER_URL,
+        base_url=WORKER_LIGHT_URL,
         session_id=session_id,
-        heavy_url=settings.worker_heavy_url
+        heavy_url=settings.worker_heavy_url,
     )
     result = await client.execute_python(code, timeout=timeout)
     return result.model_dump()

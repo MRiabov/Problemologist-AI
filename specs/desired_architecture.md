@@ -114,7 +114,7 @@
       - Slow evals - Benchmark generator (1469)
         - Slow evals - CAD Engineer (1471)
     - Integration/post-processing evals (more than one episode) (1476)
-  -  (1485)
+  - (1485)
 - Distributed execution (1487)
   - Worker API (1498)
     - Asset Serving (1502)
@@ -1486,20 +1486,32 @@ There are some episodes which can be take multiple episodes to run.
 
 ## Distributed execution
 
-There is a controller node which runs the LLM and tool calls, and the worker node which:
+There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
-1. Executes the simulation,
-2. Executes the python scripts.
+1. `worker-light` for filesystem + execution tooling,
+2. `worker-heavy` for simulation + validation + rendering,
+3. `controller-worker` (Temporal worker) for durable orchestration.
 
 For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
 
 In the future we may well refactor to run on distributed nodes, perhaps even IPv6.
 
+#### Current service topology (main)
+
+- `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
+- `controller-worker` (Temporal worker): durable execution for long-running workflows and retries.
+- `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
+- `worker-heavy` (FastAPI + process pool): simulation, validation, rendering, manufacturability analysis, review handover.
+- Shared dependencies: `temporal`, `postgres`, `minio`.
+
+The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
+
 ### Worker API
 
-The worker is physically split into two specialized services to optimize resource allocation and separate concerns: **Worker Light** and **Worker Heavy**.
+The worker API is physically split into two specialized services to optimize resource allocation and separate concerns: **Worker Light** and **Worker Heavy**.
 
 #### Worker Light
+
 - **Purpose**: Handles lightweight, synchronous operations and filesystem management.
 - **Responsibilities**:
   - Filesystem CRUD operations (`/fs/*`).
@@ -1509,8 +1521,10 @@ The worker is physically split into two specialized services to optimize resourc
   - Code linting (`/lint`).
   - Topology inspection (`/topology/inspect`).
 - **HTTP Boundary**: Typically exposed on port 18001.
+- **Operational profile**: High request-rate, short-lived operations, no heavy physics kernels.
 
 #### Worker Heavy
+
 - **Purpose**: Handles compute-intensive, long-running tasks.
 - **Responsibilities**:
   - Physics simulation (`/benchmark/simulate`).
@@ -1521,6 +1535,30 @@ The worker is physically split into two specialized services to optimize resourc
   - Asset building (`/benchmark/build`).
   - Temporal Activity Worker (consumes from `heavy-tasks-queue`).
 - **HTTP Boundary**: Typically exposed on port 18002.
+- **Operational profile**: low parallelism by design (`max_workers=1` for heavy simulation process pool on CPU-bound infra).
+
+#### Routing Contract (Controller -> Workers)
+
+- Controller routes light operations to `WORKER_URL` (default light worker endpoint).
+- Controller routes heavy operations to `WORKER_HEAVY_URL`.
+- All worker calls are session-scoped with `X-Session-ID`.
+- The `WorkerClient` is the single boundary adapter; agents do not know about service split.
+
+#### Shared Worker Modules
+
+To avoid drift between services, common models and logic are in shared modules:
+
+- `shared/workers/schema.py` - request/response schemas.
+- `shared/workers/filesystem/*` - session filesystem backend/router.
+- `shared/workers/workbench_models.py` - manufacturing/workbench contracts.
+- `shared/workers/loader.py`, `persistence.py`, `markdown_validator.py` - shared execution helpers.
+
+Worker-specific logic stays in:
+
+- `worker_light/*` for FS/runtime/git/assets/lint/topology APIs.
+- `worker_heavy/*` for simulation/validation/rendering/workbench/DFM APIs.
+
+Filesystem mount points exposed to agents are still logically stable (`/utils`, `/skills`, `/reviews`, `/config`) even though their source directories now live across split services. This mapping must be treated as a compatibility contract.
 
 #### Asset Serving
 
@@ -1534,6 +1572,12 @@ All intermediate and final simulation artifacts (GLB models, STLs, renders) are 
   - `.py`: `text/x-python` (Allows agents to read their own source code)
 - **Security**: The worker enforces a syntax check (heuristic-based) on the source Python file when an asset is requested. If the source file contains red (syntax) errors, the asset request is refused with a `422 Unprocessable Entity` to prevent stale or broken models from being rendered.
 - **Session Isolation**: Assets are delivered within the context of an `X-Session-ID` header, ensuring that one session cannot access assets from another.
+
+#### OpenAPI Artifacts
+
+- `controller_openapi.json` documents the controller surface.
+- Worker OpenAPI generation must include both worker surfaces (light and heavy) or provide separate specs (`worker_light_openapi.json`, `worker_heavy_openapi.json`) to avoid missing benchmark endpoints from generated artifacts.
+- If a single `worker_openapi.json` is kept, it must be a merged schema, not just `worker_light` endpoints.
 
 #### Concurrency and Parallelism
 
@@ -1579,7 +1623,17 @@ The "main app" essentially serves as a business logic layer that also forwards r
 
 Notably, the files can be created locally (e.g. video, image, MJCF outputs), and something should be done about it.
 
-The filesystem will be reset (and pull skills) (how? presumably just by deleting and cloning a copy - perhaps from local) on every run from a github repo.
+Each `X-Session-ID` maps to its own isolated temp workspace root. Light and heavy services resolve the same session root contract for cross-service continuity.
+
+Read/write split:
+
+- Workspace files (`/`) are read-write.
+- Mounted paths (`/utils`, `/skills`, `/reviews`, `/config`) are read-only.
+
+Mount paths must be defined explicitly for split workers (light/heavy/shared) and tested to avoid dead mounts after refactors.
+
+Skills sync is startup-configurable; in integration tests we can use local deterministic skills paths.
+
 For videos and large files, we will also use a `CompositeBackend`. It will route the `/render/` folder to the s3; we will need internal plumbing to make this happen (presumably, any python function that will render, will upload to s3).
 
 #### Videos
@@ -1887,7 +1941,7 @@ For position-based control (servos, steppers), we use **MuJoCo's native `<positi
 - Safe starting point: `kp=5`, `kv=0.5` with `mass=1`, `diaginertia=0.01`
 - Add joint `damping` to improve stability further
 
-**Available position controllers** (`worker.utils.controllers`):
+**Available position controllers** (`worker_heavy.utils.controllers`):
 
 - `waypoint(schedule: list[tuple[float, float]])`: Move to target positions at scheduled times
 - `hold_position(target: float)`: Hold a fixed target position  
@@ -2229,7 +2283,7 @@ To further avoid any issues, we will use Beartype for type checking.
 
 ### Schema autogeneration
 
-We autogenerate python schemas, keeping in sync to the workers. We keep schemas defined in the Controller app, the worker and frontend inherit it. (for now). We have git hooks that implement the model.
+We autogenerate python schemas, keeping in sync to the workers. We keep schemas defined in the Controller app; worker-light, worker-heavy, and frontend inherit them (for now). We have git hooks that implement the model.
 
 ## "Workbenches" - manufacturability verification
 
@@ -2428,12 +2482,11 @@ Both planner agent and engineer can only prompt the searching agent for searchin
 
 We are building open-source, and we trust our compute nodes, so no complex "zero-trust" architecture is necessary.
 
-All the code that runs in the controller app will be in the controller node directory, and all the worker node will be packaged into the controller node.
-<!-- Note: the above failed. -->
+All the code that runs in the controller app is in `controller/`. Worker code is split into `worker_light/` and `worker_heavy/`, with shared worker contracts in `shared/workers/`.
 
-Both controller and worker will have their own container files.
+Controller, worker-light, and worker-heavy each have their own container files.
 
-Controller will be responsible for scheduling the jobs and using LLMs (and containing all secrets, except github push personal access token for skill repo - and even that is for simplicity) and worker should be responsible for doing all the heavy lifting - from linting, formatting, (and have ephemeral storage) .
+Controller is responsible for scheduling jobs and using LLMs (and containing secrets, except optional skill-sync credentials). Worker-light and worker-heavy perform execution workloads, with ephemeral session storage and explicit API boundaries.
 
 ### Database(s)
 
@@ -2463,13 +2516,16 @@ The repository should be in a monorepo structure and as follows:
 config/
 evals/
 frontend/
-worker/
+worker_light/
+worker_heavy/
 controller/
+shared/
+  workers/
 <!-- optionally, workspace, to store agent output during testing to not have them appear in the file. It is basically a tempdir.(perhaps, should be moved to `/tmp/`.)-->
 /workspace/ 
 ```
 
-and a schema with a OpenAPI schema.
+and OpenAPI schemas for controller and worker services (`worker_light` + `worker_heavy`).
 <!-- Ideally, The worker and controller have separate `pyproject.toml` and `uv` locks. But it's fine to ignore for now as they have shared tests.-->
 
 ### Logging
@@ -2516,7 +2572,7 @@ The temporal
 
 ### Strict API requirement
 
-The APIs are to be strict. OpenAPI schemas will be autogenerated on git commit hooks of controller and `schemathesis` will fuzz API endpoints. We have two schemas - one between worker and controller, another between the frontend and the controller.
+The APIs are to be strict. OpenAPI schemas will be autogenerated on git commit hooks of controller and `schemathesis` will fuzz API endpoints. We have strict schemas for: worker-light <-> controller, worker-heavy <-> controller, and frontend <-> controller.
 
 We use Pydantic, and we use Beartype for hard type checking.
 

@@ -149,7 +149,7 @@ async def electronics_engineer_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
-        worker_url=settings.spec_001_api_url, session_id=session_id
+        worker_light_url=settings.spec_001_api_url, session_id=session_id
     )
     node = ElectronicsEngineerNode(context=ctx)
     return await node(state)

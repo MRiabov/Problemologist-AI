@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 
 from shared.logging import configure_logging
 from worker_light.api.routes import light_router
-# from worker_light.skills.sync import sync_skills
+from worker_light.utils.git import sync_skills
+from worker_light.config import settings
 
 # Configure structured logging
 configure_logging("worker-light")
@@ -16,7 +17,11 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Sync skills
-    # sync_skills()
+    sync_skills(
+        repo_url=settings.git_repo_url,
+        pat=settings.git_pat,
+        skills_dir=settings.skills_dir,
+    )
     yield
     # Shutdown
     pass

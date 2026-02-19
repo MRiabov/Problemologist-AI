@@ -212,9 +212,11 @@ async def _execute_graph_streaming(
                 async with get_sessionmaker()() as db:
                     from controller.agent.config import settings
 
-                    worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+                    worker_light_url = os.getenv(
+                        "WORKER_LIGHT_URL", "http://worker-light:8001"
+                    )
                     client = WorkerClient(
-                        base_url=worker_url,
+                        base_url=worker_light_url,
                         session_id=str(session_id),
                         heavy_url=settings.worker_heavy_url,
                     )
@@ -359,10 +361,12 @@ async def _persist_session_assets(
                 from contextlib import suppress
                 from controller.agent.config import settings
 
-                worker_url = os.getenv("WORKER_URL", "http://worker:8001")
+                worker_light_url = os.getenv(
+                    "WORKER_LIGHT_URL", "http://worker-light:8001"
+                )
                 async with httpx.AsyncClient() as http_client:
                     client = WorkerClient(
-                        base_url=worker_url,
+                        base_url=worker_light_url,
                         session_id=str(session_id),
                         http_client=http_client,
                         heavy_url=settings.worker_heavy_url,

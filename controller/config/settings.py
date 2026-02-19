@@ -18,7 +18,10 @@ class Settings(BaseSettings):
 
     # Infrastructure Settings
     temporal_url: str = Field(default="127.0.0.1:17233", alias="TEMPORAL_URL")
-    worker_url: str = Field(default="http://127.0.0.1:18001", alias="WORKER_URL")
+    worker_light_url: str = Field(
+        default="http://127.0.0.1:18001",
+        validation_alias=AliasChoices("WORKER_LIGHT_URL", "WORKER_URL"),
+    )
     worker_heavy_url: str | None = Field(
         default="http://127.0.0.1:18002", alias="WORKER_HEAVY_URL"
     )

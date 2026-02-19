@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 class SharedNodeContext:
     """Consolidates shared dependencies for agent nodes."""
 
-    worker_url: str
+    worker_light_url: str
     session_id: str
     pm: PromptManager
     llm: ChatOpenAI
@@ -35,9 +35,9 @@ class SharedNodeContext:
     fs: RemoteFilesystemMiddleware
 
     @classmethod
-    def create(cls, worker_url: str, session_id: str) -> "SharedNodeContext":
+    def create(cls, worker_light_url: str, session_id: str) -> "SharedNodeContext":
         worker_client = WorkerClient(
-            base_url=worker_url,
+            base_url=worker_light_url,
             session_id=session_id,
             heavy_url=settings.worker_heavy_url,
         )
@@ -64,7 +64,7 @@ class SharedNodeContext:
             )
 
         return cls(
-            worker_url=worker_url,
+            worker_light_url=worker_light_url,
             session_id=session_id,
             pm=PromptManager(),
             llm=llm,

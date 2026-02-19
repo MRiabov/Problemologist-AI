@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 API_KEY = os.getenv(
     "CONTROLLER_API_KEY", "test-key"
@@ -42,7 +42,7 @@ constraints:
     max_weight_g: 10
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "objectives.yaml",
                 "content": objectives_content,
@@ -81,14 +81,14 @@ def build():
     return p
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "script.py", "content": script},
             headers={"X-Session-ID": session_id},
         )
 
         # 3. Trigger simulation
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -115,13 +115,13 @@ async def test_int_028_strict_api_schema_contract():
         assert "openapi" in schema
 
         # 2. Worker OpenAPI
-        resp = await client.get(f"{WORKER_URL}/openapi.json")
+        resp = await client.get(f"{WORKER_LIGHT_URL}/openapi.json")
         assert resp.status_code == 200
         worker_schema = resp.json()
 
         # 3. Validate a live response against the schema
         # We'll check /health response body
-        health_resp = await client.get(f"{WORKER_URL}/health")
+        health_resp = await client.get(f"{WORKER_LIGHT_URL}/health")
         assert health_resp.status_code == 200
 
         # Manual schema check since we don't have python-openapi-core installed in env

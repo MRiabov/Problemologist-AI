@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -52,7 +52,7 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
         # Verify that after search, no new files are created in a dummy session
         # (beyond journal entries which are allowed)
         ls_resp = await client.post(
-            f"{WORKER_URL}/fs/ls", json={"path": "."}, headers=base_headers
+            f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
         files = [f["name"] for f in ls_resp.json()]
         # Allow only journals or nothing
@@ -96,7 +96,7 @@ This should be rejected.
         if resp.status_code == 404:
             # Fallback: Maybe it's a worker-side tool?
             resp = await client.post(
-                f"{WORKER_URL}/benchmark/review",
+                f"{WORKER_LIGHT_URL}/benchmark/review",
                 json={"content": malformed_review},
                 headers=base_headers,
             )

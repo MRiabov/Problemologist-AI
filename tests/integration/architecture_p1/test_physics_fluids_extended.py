@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -27,7 +27,7 @@ moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_j
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "objectives.yaml",
                 "content": objectives_content,
@@ -44,7 +44,7 @@ def build():
     return b
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "script.py",
                 "content": script_content,
@@ -54,13 +54,13 @@ def build():
 
         # Trigger simulation with smoke_test_mode=True
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
         )
         assert resp.status_code == 200
-        from worker.api.schema import BenchmarkToolResponse
+        from shared.workers.schema import BenchmarkToolResponse
 
         data = BenchmarkToolResponse.model_validate(resp.json())
 
@@ -88,7 +88,7 @@ moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_j
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "objectives.yaml",
                 "content": objectives_content,
@@ -105,7 +105,7 @@ def build():
     return b
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "script.py",
                 "content": script_content,
@@ -114,7 +114,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=120.0,
@@ -134,7 +134,7 @@ def build():
 
         # Verify raw particle data absent from workspace
         ls_resp = await client.post(
-            f"{WORKER_URL}/fs/ls",
+            f"{WORKER_LIGHT_URL}/fs/ls",
             json={"path": "/"},
             headers={"X-Session-ID": session_id},
         )

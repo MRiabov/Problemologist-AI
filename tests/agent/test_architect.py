@@ -55,7 +55,7 @@ async def test_architect_node_logic(
     mock_fs.write_file = AsyncMock(return_value=True)
 
     mock_ctx = SharedNodeContext(
-        worker_url="http://worker",
+        worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
         llm=mock_llm,
@@ -98,7 +98,7 @@ async def test_architect_node_fallback(
     mock_fs.write_file = AsyncMock(return_value=True)
 
     mock_ctx = SharedNodeContext(
-        worker_url="http://worker",
+        worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
         llm=mock_llm,

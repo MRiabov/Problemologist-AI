@@ -123,13 +123,6 @@ pkill -f "uvicorn.*18001" || true
 pkill -f "uvicorn.*18002" || true
 pkill -f "python -m controller.temporal_worker" || true
 
-<<<<<<< HEAD
-# Start Worker (port 18001)
-uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
-WORKER_PID=$!
-echo $WORKER_PID > logs/worker.pid
-echo "Worker started (PID: $WORKER_PID)"
-=======
 # Start Worker Light (port 18001)
 export WORKER_TYPE=light
 uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > logs/worker_light.log 2>&1 &
@@ -141,7 +134,6 @@ export WORKER_TYPE=heavy
 uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > logs/worker_heavy.log 2>&1 &
 WORKER_HEAVY_PID=$!
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
->>>>>>> refactor-worker-split-11289969409766595800
 
 # Start Controller (port 18000)
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &

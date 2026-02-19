@@ -33,7 +33,8 @@ services:
       - OPENAI_API_BASE=${OPENAI_API_BASE}
       - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
-      - WORKER_URL=http://worker:8001
+      - WORKER_URL=http://worker-light:8001
+      - WORKER_HEAVY_URL=http://worker-heavy:8002
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/postgres
       - ASSET_S3_BUCKET=problemologist
       - BACKUP_S3_BUCKET=problemologist-backup
@@ -83,7 +84,8 @@ services:
       - OPENAI_API_BASE=${OPENAI_API_BASE}
       - IS_INTEGRATION_TEST=${IS_INTEGRATION_TEST:-false}
       - TEMPORAL_URL=temporal:7233
-      - WORKER_URL=http://worker:8001
+      - WORKER_URL=http://worker-light:8001
+      - WORKER_HEAVY_URL=http://worker-heavy:8002
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env

@@ -50,7 +50,7 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
         from controller.agent.nodes.base import SharedNodeContext
 
         mock_ctx = SharedNodeContext.create(
-            worker_url="http://worker", session_id="test"
+            worker_light_url="http://worker", session_id="test"
         )
         mock_ctx.llm = mock_llm
 
@@ -102,7 +102,7 @@ async def test_sidecar_git_conflict_resolution_abort_on_failure(mock_repo, mock_
         from controller.agent.nodes.base import SharedNodeContext
 
         mock_ctx = SharedNodeContext.create(
-            worker_url="http://worker", session_id="test"
+            worker_light_url="http://worker", session_id="test"
         )
         mock_ctx.llm = mock_llm
 

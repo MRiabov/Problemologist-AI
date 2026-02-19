@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Adjust URL to your worker
-WORKER_URL = "http://localhost:18001"
+WORKER_LIGHT_URL = "http://localhost:18001"
 
 # A simple valid script that does something
 SCRIPT_CONTENT = """
@@ -23,7 +23,7 @@ async def run_simulation(session_id: str):
     async with httpx.AsyncClient(timeout=120.0) as client:
         start_time = time.time()
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={
                 "script_path": "test_box.py",
                 "script_content": SCRIPT_CONTENT,
@@ -47,7 +47,7 @@ async def test_simulation_concurrency_serialization():
     async with httpx.AsyncClient() as client:
         for sid in session_ids:
             await client.post(
-                f"{WORKER_URL}/fs/write",
+                f"{WORKER_LIGHT_URL}/fs/write",
                 json={"path": "test_box.py", "content": SCRIPT_CONTENT},
                 headers={"X-Session-ID": sid},
             )

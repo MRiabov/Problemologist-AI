@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -42,7 +42,7 @@ constraints:
     max_weight_g: 10
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers={"X-Session-ID": session_id},
         )
@@ -58,14 +58,14 @@ def build():
     return p
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "script.py", "content": script},
             headers={"X-Session-ID": session_id},
         )
 
         # 3. Simulate
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -116,13 +116,13 @@ moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_j
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers={"X-Session-ID": session_id},
         )
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "script.py",
                 "content": """
@@ -139,7 +139,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -162,12 +162,12 @@ def build():
             "threshold: 0.95", "threshold: 1.1"
         )
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_fail},
             headers={"X-Session-ID": session_id},
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -202,13 +202,13 @@ moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_j
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers={"X-Session-ID": session_id},
         )
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "script.py",
                 "content": """
@@ -225,7 +225,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,
@@ -259,13 +259,13 @@ moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_j
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers={"X-Session-ID": session_id},
         )
 
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": "script.py",
                 "content": """
@@ -282,7 +282,7 @@ def build():
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/simulate",
+            f"{WORKER_LIGHT_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
             timeout=60.0,

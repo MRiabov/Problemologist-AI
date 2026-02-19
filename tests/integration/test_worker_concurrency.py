@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Assuming worker is running at http://localhost:18001
-WORKER_URL = "http://localhost:18001"
+WORKER_LIGHT_URL = "http://localhost:18001"
 
 
 async def run_session(session_id: str, filename: str, content: str):
@@ -19,7 +19,7 @@ async def run_session(session_id: str, filename: str, content: str):
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Write file
         resp = await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": filename, "content": content},
             headers=headers,
         )
@@ -35,7 +35,7 @@ assert "{filename}" in files, f"{{filename}} not in {{files}}"
 assert content == "{content}", f"Expected {{content}}, got {{content}}"
 """
         resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={"code": code, "timeout": 5},
             headers=headers,
         )

@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://127.0.0.1:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -111,7 +111,7 @@ async def setup_workspace(client, headers, files):
     for path, content in files.items():
         # Use overwrite=True to handle existing files (like objectives.yaml template)
         resp = await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={
                 "path": path,
                 "content": content if isinstance(content, str) else yaml.dump(content),
@@ -151,11 +151,13 @@ async def test_int_005_mandatory_artifacts_gate(
         await setup_workspace(client, base_headers, files)
         # Manually ensure plan.md is gone if it existed from previous step (though each session is new)
         await client.post(
-            f"{WORKER_URL}/fs/delete", json={"path": "plan.md"}, headers=base_headers
+            f"{WORKER_LIGHT_URL}/fs/delete",
+            json={"path": "plan.md"},
+            headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -167,10 +169,12 @@ async def test_int_005_mandatory_artifacts_gate(
         del files["todo.md"]
         await setup_workspace(client, base_headers, files)
         await client.post(
-            f"{WORKER_URL}/fs/delete", json={"path": "todo.md"}, headers=base_headers
+            f"{WORKER_LIGHT_URL}/fs/delete",
+            json={"path": "todo.md"},
+            headers=base_headers,
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -182,12 +186,12 @@ async def test_int_005_mandatory_artifacts_gate(
         del files["assembly_definition.yaml"]
         await setup_workspace(client, base_headers, files)
         await client.post(
-            f"{WORKER_URL}/fs/delete",
+            f"{WORKER_LIGHT_URL}/fs/delete",
             json={"path": "assembly_definition.yaml"},
             headers=base_headers,
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -215,7 +219,7 @@ async def test_int_006_plan_structure_validation(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -238,7 +242,7 @@ Just some text here, no list or table.
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -267,7 +271,7 @@ async def test_int_007_todo_integrity(
             client, base_headers, {**base_files, "todo.md": invalid_todo}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -280,7 +284,7 @@ async def test_int_007_todo_integrity(
             client, base_headers, {**base_files, "todo.md": uncompleted_todo}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -307,7 +311,7 @@ async def test_int_008_objectives_validation(
             client, base_headers, {**base_files, "objectives.yaml": template_content}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -319,7 +323,7 @@ async def test_int_008_objectives_validation(
             client, base_headers, {**base_files, "objectives.yaml": invalid_obj}
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -348,7 +352,7 @@ async def test_int_009_cost_estimation_validation(
             {**base_files, "assembly_definition.yaml": template_cost},
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -365,7 +369,7 @@ async def test_int_009_cost_estimation_validation(
             {**base_files, "assembly_definition.yaml": invalid_cost},
         )
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -404,13 +408,13 @@ async def test_int_011_planner_caps_enforcement(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -434,7 +438,7 @@ async def test_int_015_engineer_handover_immutability(
 ):
     """INT-015: Verify immutability of objectives.yaml during handover."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        await client.post(f"{WORKER_URL}/git/init", headers=base_headers)
+        await client.post(f"{WORKER_LIGHT_URL}/git/init", headers=base_headers)
 
         files = {
             "plan.md": valid_plan,
@@ -447,7 +451,7 @@ async def test_int_015_engineer_handover_immutability(
 
         # Baseline commit
         await client.post(
-            f"{WORKER_URL}/git/commit",
+            f"{WORKER_LIGHT_URL}/git/commit",
             json={"message": "Initial benchmark"},
             headers=base_headers,
         )
@@ -461,13 +465,13 @@ async def test_int_015_engineer_handover_immutability(
         )
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -507,13 +511,13 @@ def build():
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -559,13 +563,13 @@ async def test_int_010_planner_pricing_script_integration(
         await setup_workspace(client, base_headers, files)
         # Record validation
         await client.post(
-            f"{WORKER_URL}/benchmark/validate",
+            f"{WORKER_LIGHT_URL}/benchmark/validate",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )
@@ -612,13 +616,13 @@ async def test_int_018_validate_and_price_integration_gate(
 
         # Let's delete the cached validation results specifically if any
         await client.post(
-            f"{WORKER_URL}/fs/delete",
+            f"{WORKER_LIGHT_URL}/fs/delete",
             json={"path": "validation_results.json"},
             headers=base_headers,
         )
 
         resp = await client.post(
-            f"{WORKER_URL}/benchmark/submit",
+            f"{WORKER_LIGHT_URL}/benchmark/submit",
             json={"script_path": "solution.py"},
             headers=base_headers,
         )

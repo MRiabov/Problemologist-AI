@@ -136,8 +136,10 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
-    worker_url = global_settings.worker_url
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
     node = BenchmarkPlannerNode(context=ctx)
     return await node(state)
 
@@ -165,9 +167,11 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
-    worker_url = global_settings.worker_url
+    worker_light_url = global_settings.worker_light_url
 
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
     logger.info("coder_node_start", session_id=session_id)
 
     # Context construction
@@ -307,7 +311,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
                     )
 
                     async def _download(url_path):
-                        url = f"{worker_url}/assets/{url_path.lstrip('/')}"
+                        url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
                         try:
                             # We still need httpx for direct asset download
                             async with httpx.AsyncClient() as http_client:
@@ -378,8 +382,10 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
-    worker_url = global_settings.worker_url
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
     node = BenchmarkCOTSSearchNode(context=ctx)
     return await node(state)
 
@@ -492,7 +498,9 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
-    worker_url = global_settings.worker_url
-    ctx = SharedNodeContext.create(worker_url=worker_url, session_id=session_id)
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
     node = BenchmarkReviewerNode(context=ctx)
     return await node(state)

@@ -64,12 +64,15 @@ class FilesystemRouter:
         if not self.mount_points:
             # Set up default read-only mounts
             # These point to the worker's local directories
-            base = Path(__file__).parent.parent
-            root_dir = base.parent
+            # base is shared/workers
+            base = Path(__file__).parent.parent.parent
+            # project_root is the root of the repo
+            project_root = base.parent
+
             self.mount_points = [
                 MountPoint(
                     virtual_prefix="/utils",
-                    local_path=base / "utils",
+                    local_path=project_root / "worker_heavy" / "utils",
                     access_mode=AccessMode.READ_ONLY,
                 ),
                 MountPoint(
@@ -79,12 +82,12 @@ class FilesystemRouter:
                 ),
                 MountPoint(
                     virtual_prefix="/reviews",
-                    local_path=base / "reviews",
+                    local_path=project_root / "worker_heavy" / "reviews",
                     access_mode=AccessMode.READ_ONLY,
                 ),
                 MountPoint(
                     virtual_prefix="/config",
-                    local_path=root_dir / "config",
+                    local_path=project_root / "config",
                     access_mode=AccessMode.READ_ONLY,
                 ),
             ]

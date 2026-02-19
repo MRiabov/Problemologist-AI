@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # Constants
-WORKER_URL = os.getenv("WORKER_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def build():
     return p
 """
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "box.py", "content": script_content},
             headers=base_headers,
         )
@@ -55,7 +55,7 @@ msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
 assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 """
         resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={"code": code},
             headers=base_headers,
             timeout=60.0,
@@ -68,7 +68,7 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 
         # 3. Verify files exist in session
         ls_resp = await client.post(
-            f"{WORKER_URL}/fs/ls", json={"path": "."}, headers=base_headers
+            f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
         files = [f["name"] for f in ls_resp.json()]
         # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
@@ -82,7 +82,7 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
         # but we can try to write a malformed STL directly)
         bad_stl = "solid bad\nfacet normal 0 0 0\nouter loop\nvertex 0 0 0\nvertex 0 0 0\nvertex 0 0 0\nendloop\nendfacet\nendsolid"
         await client.post(
-            f"{WORKER_URL}/fs/write",
+            f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "bad.stl", "content": bad_stl},
             headers=base_headers,
         )
@@ -93,7 +93,7 @@ from worker_heavy.utils.mesh_utils import tetrahedralize
 tetrahedralize(Path("bad.stl"), Path("bad.msh"))
 """
         resp = await client.post(
-            f"{WORKER_URL}/runtime/execute",
+            f"{WORKER_LIGHT_URL}/runtime/execute",
             json={"code": code_fail},
             headers=base_headers,
             timeout=60.0,

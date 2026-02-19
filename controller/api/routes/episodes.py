@@ -67,8 +67,8 @@ async def get_episode_asset(
         # Fallback for older episodes or benchmarks where session_id might be the id itself
         worker_session_id = str(episode_id)
 
-    worker_url = settings.worker_url
-    asset_url = f"{worker_url}/assets/{path}"
+    worker_light_url = settings.worker_light_url
+    asset_url = f"{worker_light_url}/assets/{path}"
 
     async with httpx.AsyncClient() as client:
         try:
@@ -245,9 +245,9 @@ async def get_episode_schematic(
             episode.metadata_vars.get("worker_session_id") or worker_session_id
         )
 
-    worker_url = settings.worker_url
+    worker_light_url = settings.worker_light_url
     client = WorkerClient(
-        base_url=worker_url,
+        base_url=worker_light_url,
         session_id=worker_session_id,
         heavy_url=settings.worker_heavy_url,
     )

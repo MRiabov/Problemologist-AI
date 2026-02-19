@@ -51,4 +51,4 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Run worker tests
-        run: uv run pytest tests/worker
+        run: uv run pytest tests/worker_light tests/worker_heavy

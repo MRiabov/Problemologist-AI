@@ -12,7 +12,7 @@ class AgentSettings(BaseSettings):
     anthropic_api_key: str | None = None
 
     # URL for the Spec 001 Worker API
-    spec_001_api_url: str = global_settings.worker_url
+    spec_001_api_url: str = global_settings.worker_light_url
     worker_heavy_url: str | None = global_settings.worker_heavy_url
     is_integration_test: bool = global_settings.is_integration_test
 
