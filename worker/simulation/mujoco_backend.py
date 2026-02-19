@@ -186,7 +186,12 @@ class MuJoCoBackend(PhysicsBackend):
             mujoco.mj_contactForce(self.model, self.data, i, c_force)
 
             # c_force is in contact frame: [normal, tangential1, tangential2, torque1, torque2, torque3]
-            # Convert to world frame if needed
+            # contact.frame is the 3x3 rotation matrix from contact frame to world frame (flattened)
+            # R = contact.frame.reshape(3, 3)
+            # f_world = R @ c_force[:3]
+
+            R = contact.frame.reshape(3, 3)
+            f_world = R @ c_force[:3]
 
             body1_name = mujoco.mj_id2name(
                 self.model,
@@ -203,7 +208,7 @@ class MuJoCoBackend(PhysicsBackend):
                 ContactForce(
                     body1=body1_name or f"body_{self.model.geom_bodyid[contact.geom1]}",
                     body2=body2_name or f"body_{self.model.geom_bodyid[contact.geom2]}",
-                    force=tuple(c_force[:3].tolist()),
+                    force=tuple(f_world.tolist()),
                     position=tuple(contact.pos.tolist()),
                 )
             )

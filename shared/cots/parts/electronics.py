@@ -166,3 +166,38 @@ class Wire(COTSPart):
         data["price"] = data["price_per_m"]
 
         super().__init__(category="wire", part_number=size, data=data, children=[body])
+
+class Switch(COTSPart):
+    """
+    Represents a COTS Switch.
+    """
+
+    switch_data = {
+        "MTS-102-Toggle": {
+            "type": "SPDT Toggle",
+            "rating": "125V 6A",
+            "weight_g": 5.0,
+            "dims": (13.0, 8.0, 33.0),
+            "price": 0.50,
+        },
+        "KCD1-Rocker": {
+            "type": "SPST Rocker",
+            "rating": "250V 6A",
+            "weight_g": 8.0,
+            "dims": (21.0, 15.0, 25.0),
+            "price": 0.30,
+        },
+    }
+
+    def __init__(self, size: str = "MTS-102-Toggle", **kwargs):
+        if size not in self.switch_data:
+            super().__init__(
+                category="switch", part_number="UNKNOWN", data={}, children=[]
+            )
+            return
+
+        data = self.switch_data[size]
+        l, w, h = data["dims"]
+        body = Box(l, w, h)
+        body.color = Color("red")
+        super().__init__(category="switch", part_number=size, data=data, children=[body])
