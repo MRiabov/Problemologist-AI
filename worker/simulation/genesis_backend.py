@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 import structlog
+from scipy.spatial.transform import Rotation
 
 try:
     import genesis as gs
@@ -34,6 +35,7 @@ class GenesisBackend(PhysicsBackend):
         self.cameras = {}  # name -> gs.Camera
         self.motors = []  # part_name -> dict
         self.cables = []  # List of cable definitions
+        self.cable_rest_lengths = {}  # name -> float
         self.applied_controls = {}  # motor_id -> value
         self.current_time = 0.0
         self._last_max_stress = 0.0
@@ -127,6 +129,7 @@ class GenesisBackend(PhysicsBackend):
             self.cameras = {}
             self.motors = []
             self.cables = []
+            self.cable_rest_lengths = {}
             self.applied_controls = {}
             self._is_built = False
 
@@ -323,6 +326,36 @@ class GenesisBackend(PhysicsBackend):
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
                     self.cables = data.get("cables", [])
+
+                    # Calculate cable rest lengths
+                    self.cable_rest_lengths = {}
+                    for cable in self.cables:
+                        name = cable["name"]
+                        points = cable.get("points", [])
+                        if len(points) < 2:
+                            continue
+
+                        global_points = []
+                        for pt in points:
+                            local_pos = np.array(pt["pos"])
+                            parent = pt.get("parent")
+
+                            if parent and parent in self.entity_configs:
+                                parent_cfg = self.entity_configs[parent]
+                                parent_pos = np.array(parent_cfg["pos"])
+                                parent_euler = np.array(parent_cfg["euler"])
+                                R = Rotation.from_euler("xyz", parent_euler, degrees=True)
+                                global_pos = parent_pos + R.apply(local_pos)
+                            else:
+                                global_pos = local_pos
+
+                            global_points.append(global_pos)
+
+                        length = 0.0
+                        for i in range(len(global_points) - 1):
+                            length += np.linalg.norm(global_points[i + 1] - global_points[i])
+
+                        self.cable_rest_lengths[name] = length
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -906,18 +939,71 @@ class GenesisBackend(PhysicsBackend):
         return False
 
     def get_tendon_tension(self, tendon_name: str) -> float:
-        # Check if cable exists
-        found = False
+        # Find cable definition
+        cable = None
         for c in getattr(self, "cables", []):
             if c["name"] == tendon_name:
-                found = True
+                cable = c
                 break
 
-        if not found:
+        if not cable:
             raise ValueError(f"Tendon {tendon_name} not found")
 
-        # TODO: Implement actual cable tension simulation when Genesis supports it
-        return 0.0
+        rest_length = self.cable_rest_lengths.get(tendon_name)
+        if rest_length is None:
+            return 0.0
+
+        points = cable.get("points", [])
+        if len(points) < 2:
+            return 0.0
+
+        global_points = []
+        for pt in points:
+            local_pos = np.array(pt["pos"])
+            parent = pt.get("parent")
+
+            if parent and parent in self.entities:
+                entity = self.entities[parent]
+                pos = entity.get_pos()
+                quat = entity.get_quat()
+
+                # Convert to numpy if tensor
+                if hasattr(pos, "cpu"):
+                    pos = pos.cpu().numpy()
+                else:
+                    pos = np.array(pos)
+
+                if hasattr(quat, "cpu"):
+                    quat = quat.cpu().numpy()
+                else:
+                    quat = np.array(quat)
+
+                # Genesis quat is [w, x, y, z], Scipy is [x, y, z, w]
+                R = Rotation.from_quat([quat[1], quat[2], quat[3], quat[0]])
+                global_pos = pos + R.apply(local_pos)
+            elif parent and parent in self.entity_configs:
+                # Fallback to config if entity not initialized (should not happen during sim step)
+                parent_cfg = self.entity_configs[parent]
+                parent_pos = np.array(parent_cfg["pos"])
+                parent_euler = np.array(parent_cfg["euler"])
+                R = Rotation.from_euler("xyz", parent_euler, degrees=True)
+                global_pos = parent_pos + R.apply(local_pos)
+            else:
+                global_pos = local_pos
+
+            global_points.append(global_pos)
+
+        current_length = 0.0
+        for i in range(len(global_points) - 1):
+            current_length += np.linalg.norm(global_points[i + 1] - global_points[i])
+
+        # Hooke's Law
+        delta = current_length - rest_length
+        if delta <= 0:
+            return 0.0
+
+        stiffness = cable.get("stiffness", 1000.0)
+        return float(stiffness * delta)
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in Genesis using qpos."""

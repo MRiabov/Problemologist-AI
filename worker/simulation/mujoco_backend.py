@@ -339,11 +339,10 @@ class MuJoCoBackend(PhysicsBackend):
 
     def close(self) -> None:
         """Close MuJoCo backend."""
-        # MuJoCo doesn't have a specific close() but we can clear data
-        self.data = None
-        self.model = None
-
-    def close(self) -> None:
         if self.renderer:
             self.renderer.close()
             self.renderer = None
+
+        # MuJoCo doesn't have a specific close() but we can clear data
+        self.data = None
+        self.model = None

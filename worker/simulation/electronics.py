@@ -1,6 +1,8 @@
 import structlog
 
 from shared.models.schemas import ElectronicsSection
+from shared.circuit_builder import build_circuit_from_section
+from shared.pyspice_utils import validate_circuit
 
 logger = structlog.get_logger(__name__)
 
@@ -23,12 +25,49 @@ class ElectronicsManager:
         if not self.electronics:
             return
 
-        # T004: Inlined SPICE simulation logic (simulated for refactor)
-        # In a real implementation, this would call out to a SPICE engine.
         try:
-            # Placeholder for actual SPICE logic
-            # For now, always use fallback since SPICE is not implemented in this snippet
-            self._fallback_update()
+            # Build circuit with shunts for stability
+            circuit = build_circuit_from_section(
+                self.electronics, self.switch_states, add_shunts=True
+            )
+
+            # Validate/Simulate
+            result = validate_circuit(circuit, self.electronics.power_supply)
+
+            if not result.valid:
+                logger.warning("spice_sim_invalid", errors=result.errors)
+                self._fallback_update()
+                return
+
+            # Map voltages to powered state
+            # Heuristic: A component is 'powered' if its input terminal has voltage > 1.0V
+            # This is a simplification but works for current requirements.
+            for comp in self.electronics.components:
+                # Determine "input" or "positive" terminal node name based on circuit_builder naming
+                # circuit_builder uses: f"{comp_id}_{term}"
+                # For motors/sensors, usually 'a', '+', 'in', 'vcc'
+
+                # We check common positive terminal names
+                potential_terminals = ["+", "a", "in", "vcc", "v+"]
+                voltage = 0.0
+
+                for term in potential_terminals:
+                    node_name = f"{comp.component_id}_{term}"
+                    # Also check resolved names if wire connects directly?
+                    # circuit_builder resolves names explicitly.
+
+                    # If component is connected, its node should exist in node_voltages
+                    if node_name in result.node_voltages:
+                        voltage = result.node_voltages[node_name]
+                        break
+
+                # Special case for supply
+                if comp.type == "power_supply":
+                    self.is_powered_map[comp.component_id] = True
+                    continue
+
+                self.is_powered_map[comp.component_id] = voltage > 1.0
+
         except Exception as e:
             logger.warning("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
