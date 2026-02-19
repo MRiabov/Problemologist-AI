@@ -6,6 +6,8 @@ import tempfile
 import sys
 import os
 
+import numpy as np
+
 from worker.simulation.builder import GenesisSimulationBuilder
 from worker.simulation.genesis_backend import GenesisBackend
 import worker.workbenches.config
@@ -91,6 +93,52 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             backend.get_tendon_tension("non_existent_wire")
+
+    def test_tendon_tension_calculation(self):
+        backend = GenesisBackend()
+
+        # Setup two bodies
+        body1 = MagicMock()
+        # Mock methods for Rigid body fallback in get_body_state
+        body1.get_pos.return_value = np.array([0, 0, 0])
+        body1.get_quat.return_value = np.array([1, 0, 0, 0])
+        body1.get_vel.return_value = np.array([0, 0, 0])
+        body1.get_ang.return_value = np.array([0, 0, 0])
+        body1.get_state.return_value = MagicMock(spec=[])
+
+        body2 = MagicMock()
+        body2.get_pos.return_value = np.array([1, 0, 0])
+        body2.get_quat.return_value = np.array([1, 0, 0, 0])
+        body2.get_vel.return_value = np.array([0, 0, 0])
+        body2.get_ang.return_value = np.array([0, 0, 0])
+        body2.get_state.return_value = MagicMock(spec=[])
+
+        backend.entities = {
+            "body1": body1,
+            "body2": body2
+        }
+
+        # Define a cable connecting them
+        cable = {
+            "name": "cable1",
+            "stiffness": 1000.0,
+            "points": [
+                {"pos": [0, 0, 0], "parent": "body1"},
+                {"pos": [0, 0, 0], "parent": "body2"}
+            ]
+        }
+        backend.cables = [cable]
+
+        # Initial tension should be 0 (rest length = 1.0)
+        tension_init = backend.get_tendon_tension("cable1")
+        self.assertAlmostEqual(tension_init, 0.0)
+
+        # Move body2 further away (to x=2)
+        body2.get_pos.return_value = np.array([2, 0, 0])
+
+        # Expected tension = 1000 * 1.0 = 1000.0
+        tension_stretched = backend.get_tendon_tension("cable1")
+        self.assertAlmostEqual(tension_stretched, 1000.0)
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 import structlog
+from scipy.spatial.transform import Rotation
 
 try:
     import genesis as gs
@@ -323,6 +324,21 @@ class GenesisBackend(PhysicsBackend):
                     # 3. Add Motors / Controls
                     self.motors = data.get("motors", [])
                     self.cables = data.get("cables", [])
+
+                    # Initialize rest lengths for cables
+                    for cable in self.cables:
+                        try:
+                            length = self._calculate_cable_length(cable)
+                            cable["rest_length"] = length
+                        except Exception as e:
+                            logger.warning(
+                                "genesis_cable_length_calc_failed",
+                                cable=cable.get("name"),
+                                error=str(e),
+                            )
+                            # Default to 0 or handle gracefully?
+                            # If we can't calculate length, tension will be wrong.
+                            pass
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):
@@ -905,19 +921,74 @@ class GenesisBackend(PhysicsBackend):
 
         return False
 
+    def _get_global_pos(
+        self, local_pos: list[float] | np.ndarray, parent_name: str | None
+    ) -> np.ndarray:
+        if parent_name is None:
+            return np.array(local_pos)
+
+        # Get parent body state
+        state = self.get_body_state(parent_name)
+        body_pos = np.array(state.pos)
+        # Genesis uses (w, x, y, z) for quaternions
+        # Scipy uses (x, y, z, w)
+        quat_wxyz = state.quat
+        quat_xyzw = [quat_wxyz[1], quat_wxyz[2], quat_wxyz[3], quat_wxyz[0]]
+
+        rot = Rotation.from_quat(quat_xyzw)
+        local_vec = np.array(local_pos)
+        return body_pos + rot.apply(local_vec)
+
+    def _calculate_cable_length(self, cable: dict) -> float:
+        points = cable.get("points", [])
+        if len(points) < 2:
+            return 0.0
+
+        length = 0.0
+        prev_pos = None
+
+        for pt in points:
+            curr_pos = self._get_global_pos(pt["pos"], pt["parent"])
+            if prev_pos is not None:
+                dist = np.linalg.norm(curr_pos - prev_pos)
+                length += dist
+            prev_pos = curr_pos
+
+        return length
+
     def get_tendon_tension(self, tendon_name: str) -> float:
         # Check if cable exists
-        found = False
+        cable = None
         for c in getattr(self, "cables", []):
             if c["name"] == tendon_name:
-                found = True
+                cable = c
                 break
 
-        if not found:
+        if cable is None:
             raise ValueError(f"Tendon {tendon_name} not found")
 
-        # TODO: Implement actual cable tension simulation when Genesis supports it
-        return 0.0
+        # Calculate current length
+        try:
+            current_length = self._calculate_cable_length(cable)
+        except Exception:
+            return 0.0
+
+        # Get or calculate rest length
+        rest_length = cable.get("rest_length")
+        if rest_length is None:
+            # If not pre-calculated (e.g. manual injection), calculate now and store
+            rest_length = current_length
+            cable["rest_length"] = rest_length
+
+        if rest_length <= 0:
+            return 0.0
+
+        delta = current_length - rest_length
+        if delta <= 0:
+            return 0.0
+
+        stiffness = cable.get("stiffness", 1000.0)
+        return stiffness * delta
 
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in Genesis using qpos."""
