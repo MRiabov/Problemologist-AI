@@ -330,6 +330,7 @@ class SimulationLoop:
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         for step_idx in range(steps):
+            state = None
             # T015: Update electronics if state changed
             if self.electronics and self._electronics_dirty:
                 self._update_electronics()
@@ -571,6 +572,29 @@ class SimulationLoop:
                                     self.fail_reason
                                     or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
                                 )
+
+        # WP2: Evaluate Stress Objectives
+        if self.objectives and self.objectives.objectives:
+            for so in self.objectives.objectives.stress_objectives:
+                # Find matching summary for the part
+                summary = next(
+                    (s for s in self.stress_summaries if s.part_label == so.part_label),
+                    None,
+                )
+                if summary:
+                    # Convert limit from MPa (objective) to Pa (summary)
+                    if summary.max_von_mises_pa > so.max_von_mises_mpa * 1e6:
+                        self.fail_reason = (
+                            self.fail_reason
+                            or SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                        )
+                        logger.info(
+                            "stress_objective_exceeded",
+                            part=so.part_label,
+                            max_pa=summary.max_von_mises_pa,
+                            limit_mpa=so.max_von_mises_mpa,
+                        )
+                        break
 
         # Final success determination:
         # Success if no failures AND (goal achieved IF goals exist,
