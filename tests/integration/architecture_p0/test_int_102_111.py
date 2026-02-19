@@ -402,10 +402,12 @@ cnc:
         assert resp.status_code == 200
         data = resp.json()
 
-        # It might either be PHYSICS_INSTABILITY or success if it didn't explode
-        # but for INT-109 we want to verify the abort logic.
-        # If it happens, we assert it.
-        if "PHYSICS_INSTABILITY" in data["message"].upper():
-            assert any(
-                e["event_type"] == "physics_instability" for e in data.get("events", [])
-            )
+        # For INT-109 we want to verify the abort logic.
+        # We expect PHYSICS_INSTABILITY due to overlapping heavy geometries.
+        assert not data["success"], f"Simulation should have failed but succeeded: {data.get('message')}"
+        assert "PHYSICS_INSTABILITY" in data["message"].upper(), f"Expected PHYSICS_INSTABILITY but got: {data.get('message')}"
+
+        # Verify event emission
+        assert any(
+            e["event_type"] == "physics_instability" for e in data.get("events", [])
+        ), "Physics instability event was not emitted"

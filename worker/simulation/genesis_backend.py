@@ -308,18 +308,32 @@ class GenesisBackend(PhysicsBackend):
                                 "soft",
                                 "elastomer",
                             ]:
+                                # WP2: Density fallback logic to support both kg/m3 and g/cm3
+                                rho = 1100
+                                if mat_props:
+                                    if mat_props.density_kg_m3:
+                                        rho = mat_props.density_kg_m3
+                                    elif mat_props.density_g_cm3:
+                                        rho = mat_props.density_g_cm3 * 1000.0
+
                                 material = gs.materials.FEM.NeoHookean(
                                     E=mat_props.youngs_modulus_pa
-                                    if mat_props.youngs_modulus_pa
+                                    if mat_props and mat_props.youngs_modulus_pa
                                     else 5e6,
                                     nu=mat_props.poissons_ratio
-                                    if mat_props.poissons_ratio
+                                    if mat_props and mat_props.poissons_ratio
                                     else 0.49,
-                                    rho=mat_props.density_kg_m3
-                                    if mat_props.density_kg_m3
-                                    else 1100,
+                                    rho=rho,
                                 )
                             else:
+                                # WP2: Density fallback logic
+                                rho = 2700
+                                if mat_props:
+                                    if mat_props.density_kg_m3:
+                                        rho = mat_props.density_kg_m3
+                                    elif mat_props.density_g_cm3:
+                                        rho = mat_props.density_g_cm3 * 1000.0
+
                                 material = gs.materials.FEM.Elastic(
                                     E=mat_props.youngs_modulus_pa
                                     if mat_props and mat_props.youngs_modulus_pa
@@ -327,9 +341,7 @@ class GenesisBackend(PhysicsBackend):
                                     nu=mat_props.poissons_ratio
                                     if mat_props and mat_props.poissons_ratio
                                     else 0.33,
-                                    rho=mat_props.density_kg_m3
-                                    if mat_props and mat_props.density_kg_m3
-                                    else 2700,
+                                    rho=rho,
                                 )
                             # Load MSH or OBJ (Genesis can tetrahedralize OBJ)
                             file_path = scene_dir / ent_cfg["file"]
@@ -343,10 +355,16 @@ class GenesisBackend(PhysicsBackend):
                             )
                         else:
                             # Rigid Material
+                            # WP2: Density fallback logic
+                            rho = 2700
+                            if mat_props:
+                                if mat_props.density_kg_m3:
+                                    rho = mat_props.density_kg_m3
+                                elif mat_props.density_g_cm3:
+                                    rho = mat_props.density_g_cm3 * 1000.0
+
                             material = gs.materials.Rigid(
-                                rho=mat_props.density_kg_m3
-                                if mat_props and mat_props.density_kg_m3
-                                else 2700,
+                                rho=rho,
                                 friction=mat_props.friction_coef
                                 if mat_props and mat_props.friction_coef
                                 else 0.5,
