@@ -42,6 +42,7 @@ def test_repair_mesh_fails_after_max_attempts():
 
 @patch("gmsh.finalize")
 @patch("gmsh.write")
+@patch("gmsh.model.mesh.getElements")
 @patch("gmsh.model.mesh.optimize")
 @patch("gmsh.model.mesh.generate")
 @patch("gmsh.option.setNumber")
@@ -65,6 +66,7 @@ def test_tetrahedralize_gmsh_success(
     mock_set_num,
     mock_generate,
     mock_optimize,
+    mock_get_elements,
     mock_write,
     mock_finalize,
     tmp_path,
@@ -74,6 +76,7 @@ def test_tetrahedralize_gmsh_success(
         True,
     ]  # First for initialize check, second for finalize check
     mock_get_entities.return_value = [(2, 1)]
+    mock_get_elements.return_value = ([4], None, None)  # 4 is the type for tetrahedrons
 
     input_stl = tmp_path / "input.stl"
     input_stl.write_text("solid test\nendsolid test")
