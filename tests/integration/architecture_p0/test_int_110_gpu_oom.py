@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 
 
 @pytest.fixture
@@ -20,17 +21,12 @@ def base_headers(session_id):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_110_gpu_oom_retry(session_id, base_headers):
+async def test_int_110_gpu_oom_retry(session_id, base_headers, get_bundle):
     """
     INT-110: GPU OOM retry with particle reduction.
-    Note: We likely need to MOCK the OOM error unless we have a real GPU
-    and can force it. Since integration tests should run in CI,
-    we'll use a trigger or a simulated OOM if supported by the backend wrapper.
     """
     async with httpx.AsyncClient() as client:
-        # Forcing OOM is hard. We'll check if the code handles it by
-        # injecting a failure in the simulation loop or using a 'bomb' particle count.
-
+        # Write objectives and a simple script
         objectives_content = """
 physics:
   backend: "genesis"
@@ -42,21 +38,39 @@ simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
-        # If the environment has NO GPU, this might fail differently.
-        # But INT-110 says "Requires GPU environment; currently not tested."
-        # I will implement it as a "known-to-fail-or-skip-if-no-gpu" test.
+        script_content = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    b = Box(1, 1, 1)
+    b.label = "obj"
+    b.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return b
+"""
 
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
             headers=base_headers,
         )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "script.py", "content": script_content},
+            headers=base_headers,
+        )
+
+        # Get bundle for heavy worker
+        bundle64 = await get_bundle(client, session_id)
 
         # Trigger simulation with a huge particle count that exceeds typical RAM/VRAM
-        # (Though current worker caps at 100k, we might need a way to force OOM)
+        # to attempt to trigger OOM retry logic.
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "particle_budget": 10**9},
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json={
+                "script_path": "script.py",
+                "particle_budget": 10**9,
+                "bundle_base64": bundle64,
+            },
             headers=base_headers,
             timeout=180.0,
         )

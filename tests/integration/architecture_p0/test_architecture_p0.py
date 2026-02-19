@@ -12,19 +12,6 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
-async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
-    """Fetch gzipped workspace from light worker and return base64 string."""
-    resp = await client.post(
-        f"{WORKER_LIGHT_URL}/fs/bundle",
-        headers={"X-Session-ID": session_id},
-        timeout=60.0,
-    )
-    assert resp.status_code == 200, f"Failed to get bundle: {resp.text}"
-    import base64
-
-    return base64.b64encode(resp.content).decode("utf-8")
-
-
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_001_compose_boot_health_contract():
@@ -106,7 +93,7 @@ async def test_int_003_session_filesystem_isolation():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_004_simulation_serialization():
+async def test_int_004_simulation_serialization(get_bundle):
     """INT-004: Verify simulation serialization schema and concurrency."""
     async with httpx.AsyncClient() as client:
         # Create two sessions
@@ -184,7 +171,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_020_simulation_failure_taxonomy():
+async def test_int_020_simulation_failure_taxonomy(get_bundle):
     """INT-020: Verify simulation success/failure taxonomy."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-020-{int(time.time())}"
@@ -423,7 +410,7 @@ async def test_int_022_motor_overload_behavior():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_023_fastener_validity_rules():
+async def test_int_023_fastener_validity_rules(get_bundle):
     """INT-023: Verify fastener validity rules."""
     async with httpx.AsyncClient() as client:
         session_id = f"test-int-023-{int(time.time())}"

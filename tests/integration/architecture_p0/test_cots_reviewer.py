@@ -6,7 +6,10 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+
+
 
 
 @pytest.fixture
@@ -93,13 +96,6 @@ This should be rejected.
             json={"review_content": malformed_review},
         )
 
-        if resp.status_code == 404:
-            # Fallback: Maybe it's a worker-side tool?
-            resp = await client.post(
-                f"{WORKER_LIGHT_URL}/benchmark/review",
-                json={"content": malformed_review},
-                headers=base_headers,
-            )
 
         assert resp.status_code in [400, 422]
         assert "decision" in resp.text.lower()
