@@ -14,6 +14,7 @@ class AgentSettings(BaseSettings):
     # URL for the Spec 001 Worker API
     spec_001_api_url: str = global_settings.worker_url
     worker_heavy_url: str | None = global_settings.worker_heavy_url
+    is_integration_test: bool = global_settings.is_integration_test
 
     # DB connection for checkpointing (if using PostgresSaver in future)
     db_connection_string: str | None = None

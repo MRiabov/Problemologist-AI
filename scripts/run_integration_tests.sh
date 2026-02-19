@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+echo "Integration Tests Started at: $(date)"
+
 # Problemologist Integration Test Runner
 # This script uses local FastAPI servers instead of Docker containers for app services
 # to avoid long build times and heavy resource usage.
@@ -114,6 +116,11 @@ echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 # Ensure log directory exists
 mkdir -p logs
 
+# Pre-emptive cleanup of any stale processes from previous runs
+pkill -f "uvicorn.*18000" || true
+pkill -f "uvicorn.*18001" || true
+pkill -f "python -m controller.temporal_worker" || true
+
 # Start Worker (port 18001)
 uv run uvicorn worker.app:app --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
 WORKER_PID=$!
@@ -135,7 +142,14 @@ cleanup() {
   EXIT_STATUS=$?
   echo ""
   echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker: $WORKER_PID, Temporal: $TEMP_WORKER_PID)..."
+  
+  # Kill the captured PIDs
   kill $CONTROLLER_PID $WORKER_PID $TEMP_WORKER_PID 2>/dev/null || true
+  
+  # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
+  pkill -f "uvicorn.*18000" || true
+  pkill -f "uvicorn.*18001" || true
+  pkill -f "python -m controller.temporal_worker" || true
   
   echo "Bringing down infrastructure containers..."
   docker compose -f docker-compose.test.yaml down -v
@@ -150,6 +164,12 @@ echo "Waiting for servers to be healthy..."
 MAX_HEALTH_RETRIES=60
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+  if ! kill -0 $CONTROLLER_PID 2>/dev/null; then
+    echo "Controller process (PID: $CONTROLLER_PID) died unexpectedly!"
+    echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
+    tail -n 20 logs/controller.log
+    exit 1
+  fi
   if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
     echo "Controller is healthy!"
     break
@@ -162,6 +182,12 @@ done
 # Wait for Worker to be healthy
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+  if ! kill -0 $WORKER_PID 2>/dev/null; then
+    echo "Worker process (PID: $WORKER_PID) died unexpectedly!"
+    echo "--- LAST 20 LINES OF WORKER LOG ---"
+    tail -n 20 logs/worker.log
+    exit 1
+  fi
   if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
     echo "Worker is healthy!"
     break
@@ -170,6 +196,16 @@ while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
+
+# Final check that all processes are still alive
+if ! kill -0 $CONTROLLER_PID 2>/dev/null; then echo "Controller died!"; exit 1; fi
+if ! kill -0 $WORKER_PID 2>/dev/null; then echo "Worker died!"; exit 1; fi
+if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
+  echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
+  echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"
+  tail -n 20 logs/temporal_worker.log
+  exit 1
+fi
 
 if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
   echo "Timeout waiting for services to be healthy."
