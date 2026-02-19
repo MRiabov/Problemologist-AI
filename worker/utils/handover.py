@@ -83,10 +83,10 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         from .file_validation import validate_assembly_definition_yaml
 
         cost_content = cost_path.read_text(encoding="utf-8")
-        is_valid, result = validate_assembly_definition_yaml(cost_content)
+        is_valid, estimation = validate_assembly_definition_yaml(cost_content)
         if not is_valid:
-            logger.error("assembly_definition_yaml_invalid", errors=result)
-            raise ValueError(f"assembly_definition.yaml invalid: {result}")
+            logger.error("assembly_definition_yaml_invalid", errors=estimation)
+            raise ValueError(f"assembly_definition.yaml invalid: {estimation}")
     else:
         logger.error("assembly_definition_yaml_missing")
         raise ValueError(
@@ -110,8 +110,18 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
+    # T016: Extract method from assembly definition to avoid hardcoded CNC
+    method = ManufacturingMethod.CNC
+    if estimation.manufactured_parts:
+        # Use primary method from first part
+        raw_method = estimation.manufactured_parts[0].manufacturing_method
+        try:
+            method = ManufacturingMethod(raw_method)
+        except ValueError:
+            logger.warning("invalid_manufacturing_method", method=raw_method)
+
     validation_result = validate_and_price(
-        component, ManufacturingMethod.CNC, dfm_config, build_zone=build_zone
+        component, method, dfm_config, build_zone=build_zone
     )
 
     if not validation_result.is_manufacturable:
@@ -131,15 +141,13 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             )
             raise ValueError(f"Submission rejected (Cost): {msg}")
 
-        if (
-            constraints.max_weight
-            and validation_result.metadata.get("weight_kg", 0) > constraints.max_weight
-        ):
-            weight = validation_result.metadata.get("weight_kg", 0)
-            msg = f"Weight {weight:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
+        # Fix: weight_kg check was broken (using .get() on Pydantic model)
+        weight_kg = validation_result.weight_g / 1000.0
+        if constraints.max_weight and weight_kg > constraints.max_weight:
+            msg = f"Weight {weight_kg:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
             logger.error(
                 "submission_weight_limit_exceeded",
-                weight=weight,
+                weight=weight_kg,
                 limit=constraints.max_weight,
             )
             raise ValueError(f"Submission rejected (Weight): {msg}")
