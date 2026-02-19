@@ -39,6 +39,7 @@ class GenesisBackend(PhysicsBackend):
         self._last_max_stress = 0.0
         self.mfg_config = None
         self.current_particle_multiplier = 1.0
+        self.particle_budget = None
         self.smoke_test_mode = False
         self._is_built = False
         self._ensure_initialized()
@@ -369,8 +370,11 @@ class GenesisBackend(PhysicsBackend):
                         )
 
                         # Support Box and Sphere spawning volumes
-                        # T017: Apply particle multiplier to fidelity
-                        n_particles = int(10000 * self.current_particle_multiplier)
+                        # T017: Apply particle multiplier or manual budget override
+                        if self.particle_budget:
+                            n_particles = self.particle_budget
+                        else:
+                            n_particles = int(10000 * self.current_particle_multiplier)
 
                         if vol["type"] == "box":
                             self.scene.add_entity(

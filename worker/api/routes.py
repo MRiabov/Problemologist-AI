@@ -449,6 +449,7 @@ async def api_simulate(
             request.smoke_test_mode,
             backend_type,
             x_session_id,
+            request.particle_budget,
         )
 
         # Reconstruct model if needed
@@ -518,6 +519,7 @@ async def api_validate(
                 output_dir=fs_router.local_backend.root,
                 session_id=x_session_id,
                 smoke_test_mode=request.smoke_test_mode,
+                particle_budget=request.particle_budget,
             )
 
             # INT-102: Fetch objectives to check if FEM material validation is required
@@ -849,6 +851,7 @@ async def api_build(
         return BenchmarkToolResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
+
 
 # Include both routers in the main router for backward compatibility/single-node mode
 router.include_router(light_router)

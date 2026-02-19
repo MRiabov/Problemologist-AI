@@ -11,6 +11,7 @@ from worker.simulation.genesis_backend import GenesisBackend
 import worker.workbenches.config
 from shared.models.schemas import WireConfig, WireTerminal
 
+
 class TestGenesisBuilderElectronics(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -30,7 +31,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         mock_wire.wire_id = "wire_1"
         mock_wire.gauge_awg = 20
         mock_wire.routed_in_3d = True
-        mock_wire.waypoints = [(0,0,0), (1,1,1)]
+        mock_wire.waypoints = [(0, 0, 0), (1, 1, 1)]
         mock_wire.from_terminal = WireTerminal(component="comp1", terminal="t1")
         mock_wire.to_terminal = WireTerminal(component="comp2", terminal="t2")
 
@@ -39,12 +40,14 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         mock_electronics.components = []
 
         # Mock traverse to avoid complex logic
-        with patch("worker.simulation.builder.CommonAssemblyTraverser.traverse", return_value=[]):
+        with patch(
+            "worker.simulation.builder.CommonAssemblyTraverser.traverse",
+            return_value=[],
+        ):
             # Also patch load_config to avoid config loading issues
             with patch("worker.workbenches.config.load_config"):
-                 self.builder.build_from_assembly(
-                    assembly=mock_assembly,
-                    electronics=mock_electronics
+                self.builder.build_from_assembly(
+                    assembly=mock_assembly, electronics=mock_electronics
                 )
 
         scene_path = self.output_dir / "scene.json"
@@ -76,9 +79,13 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
     def test_tendon_support(self):
         backend = GenesisBackend()
         # Inject cables manually as if loaded from scene
-        backend.cables = [{"name": "wire_1", "radius": 0.001, "stiffness": 100, "points": []}]
+        backend.cables = [
+            {"name": "wire_1", "radius": 0.001, "stiffness": 100, "points": []}
+        ]
 
-        self.assertTrue(hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute")
+        self.assertTrue(
+            hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute"
+        )
 
         # Check get_all_tendon_names
         names = backend.get_all_tendon_names()
@@ -91,6 +98,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             backend.get_tendon_tension("non_existent_wire")
+
 
 if __name__ == "__main__":
     unittest.main()

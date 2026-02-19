@@ -29,6 +29,7 @@ def test_submit_for_review(mock_export_step, mock_validate, tmp_path):
     # Note: production code uses WorkbenchMetadata object, but tests often mock as dict
     # We should ideally use the object to match my fix
     from worker.workbenches.models import WorkbenchMetadata
+
     mock_val_result.metadata = WorkbenchMetadata()
     mock_validate.return_value = mock_val_result
 

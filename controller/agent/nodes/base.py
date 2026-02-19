@@ -190,7 +190,20 @@ class BaseNode:
                             f"{node_type}_dspy_invoke_start",
                             session_id=state.session_id,
                         )
-                        prediction = await asyncio.to_thread(program, **inputs)
+                        # Add a timeout to prevent infinite hangs in DSPy CodeAct
+                        try:
+                            prediction = await asyncio.wait_for(
+                                asyncio.to_thread(program, **inputs),
+                                timeout=300.0,  # 5 minutes
+                            )
+                        except asyncio.TimeoutError:
+                            logger.error(
+                                f"{node_type}_dspy_timeout", session_id=state.session_id
+                            )
+                            raise RuntimeError(
+                                f"DSPy program {node_type} timed out after 300s"
+                            )
+
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
                             session_id=state.session_id,

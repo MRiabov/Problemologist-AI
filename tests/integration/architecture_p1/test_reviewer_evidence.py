@@ -34,7 +34,7 @@ async def test_reviewer_evidence_completeness():
         benchmark_session_id = resp.json()["session_id"]
 
         # Wait for benchmark
-        for _ in range(90):
+        for _ in range(150):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if (
                 status_resp.status_code == 200

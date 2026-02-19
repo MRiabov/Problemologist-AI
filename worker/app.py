@@ -53,6 +53,7 @@ async def lifespan(app: FastAPI):
     worker_type = os.getenv("WORKER_TYPE")
     if worker_type == "heavy":
         import asyncio
+
         app.state.temporal_task = asyncio.create_task(start_temporal_worker())
 
     yield

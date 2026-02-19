@@ -27,6 +27,7 @@ def prerender_24_views(
     session_id: str | None = None,
     scene_path: str | Path | None = None,
     smoke_test_mode: bool = False,
+    particle_budget: int | None = None,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
@@ -43,6 +44,7 @@ def prerender_24_views(
         session_id=session_id,
         scene_path=str(scene_path) if scene_path else None,
         smoke_test_mode=smoke_test_mode,
+        particle_budget=particle_budget,
     )
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +69,10 @@ def prerender_24_views(
             from worker.simulation.factory import get_physics_backend
 
             backend = get_physics_backend(
-                backend_type, session_id=session_id, smoke_test_mode=smoke_test_mode
+                backend_type,
+                session_id=session_id,
+                smoke_test_mode=smoke_test_mode,
+                particle_budget=particle_budget,
             )
             scene = SimulationScene(scene_path=str(final_scene_path))
 
@@ -98,6 +103,11 @@ def prerender_24_views(
                 -45,
                 -75,
             ]  # MuJoCo uses negative elevation for looking down
+
+            if smoke_test_mode:
+                logger.info("smoke_test_mode_reducing_render_views")
+                angles = [45]
+                elevations = [-45]
 
             width, height = 640, 480
 

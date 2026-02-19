@@ -144,7 +144,9 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         # T019: Fix AttributeError by using weight_g from result instead of invalid metadata.get()
         weight_kg = validation_result.weight_g / 1000.0
         if constraints.max_weight and weight_kg > constraints.max_weight:
-            msg = f"Weight {weight_kg:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
+            msg = (
+                f"Weight {weight_kg:.3f}kg exceeds limit {constraints.max_weight:.3f}kg"
+            )
             logger.error(
                 "submission_weight_limit_exceeded",
                 weight=weight_kg,
