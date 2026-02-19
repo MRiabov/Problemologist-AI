@@ -65,6 +65,7 @@ class SimulationLoop:
             particle_budget=particle_budget,
         )
         self.smoke_test_mode = smoke_test_mode
+        self.backend_type = backend_type
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
             self.backend.smoke_test_mode = smoke_test_mode
@@ -170,7 +171,8 @@ class SimulationLoop:
         ]
 
         # Cache actuator limits for monitoring
-        self.actuators_to_monitor = []
+        self._monitor_names = []
+        self._monitor_limits = []
         for name in self.actuator_names:
             try:
                 state = self.backend.get_actuator_state(name)
@@ -180,10 +182,12 @@ class SimulationLoop:
                     and len(state.forcerange) >= 2
                     and state.forcerange[1] > state.forcerange[0]
                 ):
-                    self.actuators_to_monitor.append((name, state.forcerange[1]))
+                    self._monitor_names.append(name)
+                    self._monitor_limits.append(state.forcerange[1])
                 elif backend_type != SimulatorBackendType.MUJOCO:
                     # Default for other backends (e.g. Genesis)
-                    self.actuators_to_monitor.append((name, 1000.0))
+                    self._monitor_names.append(name)
+                    self._monitor_limits.append(1000.0)
             except Exception:
                 pass
 
@@ -296,10 +300,11 @@ class SimulationLoop:
             gated_controls[name] = val
         self.backend.apply_control(gated_controls)
 
-        # We assume backend has a fixed or default timestep
-        # For MuJoCo it's usually 0.002
-        # We'll use a small step and loop
-        dt = 0.002  # Default step for loop logic
+        # WP2: Use backend-specific dt to avoid over-simulating in smoke test mode
+        dt = SIMULATION_STEP_S
+        if self.smoke_test_mode and self.backend_type == SimulatorBackendType.GENESIS:
+            dt = 0.05
+
         steps = int(duration / dt)
 
         current_time = 0.0
@@ -395,7 +400,7 @@ class SimulationLoop:
                 break
 
             # Check Motor Overload
-            if self._check_motor_overload(actuator_states):
+            if self._check_motor_overload():
                 self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                 break
 
@@ -622,19 +627,19 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self, actuator_states: dict[str, ActuatorState]) -> bool:
+    def _check_motor_overload(self) -> bool:
         # Check all position/torque actuators for saturation
         from worker.simulation.loop import SIMULATION_STEP_S
 
-        if not self.actuators_to_monitor:
+        if not self._monitor_names:
             return False
 
-        names = [item[0] for item in self.actuators_to_monitor]
-        limits = [item[1] for item in self.actuators_to_monitor]
-        forces = [abs(actuator_states[n].force) for n in names]
+        forces = [
+            abs(self.backend.get_actuator_state(n).force) for n in self._monitor_names
+        ]
 
         return self.success_evaluator.check_motor_overload(
-            names, forces, limits, SIMULATION_STEP_S
+            self._monitor_names, forces, self._monitor_limits, SIMULATION_STEP_S
         )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
