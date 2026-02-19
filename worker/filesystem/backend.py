@@ -200,7 +200,7 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
 
             ensure_objectives_yaml(backend.root)
         except Exception as e:
-            logger.warning("objectives_template_write_failed", error=str(e))
+            logger.error("objectives_template_write_failed", error=str(e))
         return backend
 
     def _resolve(self, virtual_path: str) -> Path:

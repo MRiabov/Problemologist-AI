@@ -25,7 +25,7 @@ def collect_and_cleanup_events(session_root: Path) -> list[dict[str, Any]]:
             # Delete the file after reading to avoid cross-contamination between runs
             events_path.unlink()
     except Exception as e:
-        logger.warning("failed_to_collect_events", error=str(e))
+        logger.error("failed_to_collect_events", error=str(e))
     return events
 
 
@@ -42,4 +42,4 @@ def record_validation_result(
             encoding="utf-8",
         )
     except Exception as e:
-        logger.warning("failed_to_record_validation_result", error=str(e))
+        logger.error("failed_to_record_validation_result", error=str(e))
