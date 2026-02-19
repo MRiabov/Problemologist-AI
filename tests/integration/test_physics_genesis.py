@@ -93,7 +93,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
             runtime_jitter=(0, 0, 0),
             shape="box",
         ),
-        constraints=Constraints(max_unit_cost=100, max_weight=10),
+        constraints=Constraints(max_unit_cost=100, max_weight_g=10),
         fluids=[
             FluidDefinition(
                 fluid_id="water",
@@ -164,7 +164,7 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
             runtime_jitter=(0, 0, 0),
             shape="box",
         ),
-        constraints=Constraints(max_unit_cost=100, max_weight=10),
+        constraints=Constraints(max_unit_cost=100, max_weight_g=10),
     )
 
     # 2. Setup mock particles: 50 inside, 50 outside (ratio 0.5 < 0.9)

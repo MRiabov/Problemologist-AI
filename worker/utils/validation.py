@@ -7,6 +7,7 @@ import structlog
 import yaml
 from build123d import Compound
 
+from shared.enums import ElectronicComponentType, MotorControlMode
 from shared.models.schemas import (
     AssemblyDefinition,
     CotsPartEstimate,
@@ -278,7 +279,7 @@ def calculate_assembly_totals(
     # 2. Electronics and COTS parts
     if electronics:
         for comp in electronics.components:
-            if comp.type == "power_supply" and comp.cots_part_id:
+            if comp.type == ElectronicComponentType.POWER_SUPPLY and comp.cots_part_id:
                 from shared.cots.parts.electronics import PowerSupply
 
                 try:
@@ -291,7 +292,7 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
-            elif comp.type == "motor" and comp.cots_part_id:
+            elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
 
                 try:
@@ -421,6 +422,8 @@ def simulate(
         smoke_test_mode=smoke_test_mode,
     )
 
+    from worker.simulation.loop import SimulationLoop
+
     loop = SimulationLoop(
         str(scene_path),
         component=component,
@@ -440,11 +443,11 @@ def simulate(
 
             for part in assembly_definition.moving_parts:
                 if part.control:
-                    if part.control.mode == "sinusoidal":
+                    if part.control.mode == MotorControlMode.SINUSOIDAL:
                         dynamic_controllers[part.part_name] = lambda t, p=part.control: (
                             sinusoidal(t, p.speed, p.frequency or 1.0)
                         )
-                    elif part.control.mode == "constant":
+                    elif part.control.mode == MotorControlMode.CONSTANT:
                         control_inputs[part.part_name] = part.control.speed
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
@@ -473,6 +476,8 @@ def simulate(
                     reduced_particles=5000,
                 )
             )
+
+            from worker.simulation.loop import SimulationLoop
 
             # Re-create loop with reduced budget to force backend scene rebuild
             loop = SimulationLoop(

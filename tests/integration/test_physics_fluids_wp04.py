@@ -70,7 +70,7 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
             runtime_jitter=(0, 0, 0),
             shape="box",
         ),
-        constraints=Constraints(max_unit_cost=100, max_weight=10),
+        constraints=Constraints(max_unit_cost=100, max_weight_g=10),
     )
 
     # 2. Setup mock particles: moving across Z=0 plane
