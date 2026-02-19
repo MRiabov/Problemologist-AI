@@ -87,7 +87,7 @@ class SimulationLoop:
             )
         )
         scene = SimulationScene(
-            scene_path=xml_path, config={"particle_budget": self.particle_budget}
+            scene_path=str(xml_path), config={"particle_budget": self.particle_budget}
         )
         self.backend.load_scene(scene)
 
@@ -406,9 +406,44 @@ class SimulationLoop:
                 break
 
             # Check Motor Overload
-            if self._check_motor_overload():
+            if self._check_motor_overload(dt):
                 self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                 break
+
+            # 6. Real-time Fluid Tracking (T016)
+            if self.objectives and self.objectives.objectives and step_idx % 5 == 0:
+                particles = self.backend.get_particle_positions()
+                if particles is not None and len(particles) > 0:
+                    for fo in self.objectives.objectives.fluid_objectives:
+                        obj_id = f"{fo.fluid_id}_{fo.type}"
+
+                        if fo.type == FluidObjectiveType.FLOW_RATE:
+                            # Calculate current distances from gate plane
+                            p0 = np.array(fo.gate_plane_point)
+                            n = np.array(fo.gate_plane_normal)
+                            distances = np.dot(particles - p0, n)
+
+                            prev_distances = self.prev_particle_distances.get(obj_id)
+                            if prev_distances is not None and len(prev_distances) == len(distances):
+                                # Crossing from negative to positive side
+                                crossed = (prev_distances < 0) & (distances >= 0)
+                                count = np.sum(crossed)
+                                self.cumulative_crossed_count[obj_id] = self.cumulative_crossed_count.get(obj_id, 0) + count
+
+                            self.prev_particle_distances[obj_id] = distances
+
+                        elif fo.type == FluidObjectiveType.FLUID_CONTAINMENT:
+                            if getattr(fo, "eval_at", None) == FluidEvalAt.CONTINUOUS:
+                                zone = fo.containment_zone
+                                z_min = np.array(zone.min)
+                                z_max = np.array(zone.max)
+                                inside = np.all((particles >= z_min) & (particles <= z_max), axis=1)
+                                ratio = np.sum(inside) / len(particles)
+                                if ratio < fo.threshold:
+                                    self.fail_reason = SimulationFailureMode.FLUID_OBJECTIVE_FAILED
+                                    break
+                    if self.fail_reason:
+                        break
 
             # 7. Check Wire Failure (T015)
             if self.electronics:
@@ -597,8 +632,7 @@ class SimulationLoop:
             is_success = True
         else:
             # Stability test or goal-less benchmark
-            # (legacy behavior expects False if no goal)
-            is_success = False
+            is_success = True
 
         metrics = self.metric_collector.get_metrics()
 
@@ -633,10 +667,8 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, dt: float) -> bool:
         # Check all position/torque actuators for saturation
-        from worker.simulation.loop import SIMULATION_STEP_S
-
         if not self._monitor_names:
             return False
 
@@ -645,7 +677,7 @@ class SimulationLoop:
         ]
 
         return self.success_evaluator.check_motor_overload(
-            self._monitor_names, forces, self._monitor_limits, SIMULATION_STEP_S
+            self._monitor_names, forces, self._monitor_limits, dt
         )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
