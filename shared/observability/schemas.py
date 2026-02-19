@@ -167,6 +167,9 @@ class COTSSearchEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.COTS_SEARCH
     query: str
     results_count: int
+    catalog_version: str | None = None
+    bd_warehouse_commit: str | None = None
+    generated_at: str | None = None
 
 
 class PlanSubmissionBenchmarkEvent(BaseEvent):

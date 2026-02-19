@@ -43,7 +43,7 @@ class PlannerNode(BaseNode):
         # T006: Read skills
         skills_context = self._get_skills_context()
         # WP04: Extract steerability context
-        steer_context = self._get_steer_context(state.messages)
+        steer_context = await self._get_steer_context(state.messages)
 
         # Read objectives for context
         objectives = "# No objectives.yaml found."
