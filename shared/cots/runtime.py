@@ -18,13 +18,14 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
     with Session(engine) as session:
         stmt = session.query(COTSItemORM)
 
-        # Text query matching name or category
+        # Text query matching name, category or part_id
         if query.query:
             search_str = f"%{query.query}%"
             stmt = stmt.filter(
                 or_(
                     COTSItemORM.name.ilike(search_str),
                     COTSItemORM.category.ilike(search_str),
+                    COTSItemORM.part_id.ilike(search_str),
                 )
             )
 

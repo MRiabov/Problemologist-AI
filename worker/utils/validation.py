@@ -277,8 +277,13 @@ def calculate_assembly_totals(
 
     # 2. Electronics and COTS parts
     if electronics:
+        from shared.enums import ElectronicComponentType
+
         for comp in electronics.components:
-            if comp.type == "power_supply" and comp.cots_part_id:
+            if (
+                comp.type == ElectronicComponentType.POWER_SUPPLY
+                and comp.cots_part_id
+            ):
                 from shared.cots.parts.electronics import PowerSupply
 
                 try:
@@ -291,7 +296,7 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
-            elif comp.type == "motor" and comp.cots_part_id:
+            elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
 
                 try:
@@ -304,6 +309,32 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
+            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
+                from shared.cots.parts.electronics import ElectronicRelay
+
+                try:
+                    relay = ElectronicRelay(size=comp.cots_part_id)
+                    total_cost += getattr(relay, "price", 0.0)
+                    total_weight += getattr(relay, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_relay",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
+                from shared.cots.parts.electronics import Connector
+
+                try:
+                    conn = Connector(size=comp.cots_part_id)
+                    total_cost += getattr(conn, "price", 0.0)
+                    total_weight += getattr(conn, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_connector",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
 
         for wire in electronics.wiring:
             length_m = wire.length_mm / 1000.0
@@ -312,18 +343,29 @@ def calculate_assembly_totals(
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
+        from shared.cots.agent import DEFAULT_DB_PATH
+        from shared.cots.runtime import SearchQuery, search_parts
+
         for p in cots_parts:
             total_cost += p.unit_cost_usd * p.quantity
             # Weight is not always in CotsPartEstimate, but we can try to find it
-            # if we had a more detailed catalog access here.
-            # For now, we'll try to use metadata if we can find it in shared catalog.
-            import contextlib
-
-            with contextlib.suppress(Exception):
-                # Heuristic: try to look up weight if not provided
-                # In current schema CotsPartEstimate doesn't have weight_g
-                # But the indexer extracts it.
-                pass
+            # in the COTS catalog database.
+            try:
+                # Search by part_id (exact or partial)
+                sq = SearchQuery(query=p.part_id, limit=1)
+                results = search_parts(sq, DEFAULT_DB_PATH)
+                if results:
+                    total_weight += results[0].weight_g * p.quantity
+                else:
+                    # Fallback: try search by manufacturer + part_id if first failed
+                    sq2 = SearchQuery(query=f"{p.manufacturer} {p.part_id}", limit=1)
+                    results2 = search_parts(sq2, DEFAULT_DB_PATH)
+                    if results2:
+                        total_weight += results2[0].weight_g * p.quantity
+            except Exception as e:
+                logger.warning(
+                    "failed_to_lookup_cots_weight", part_id=p.part_id, error=str(e)
+                )
 
     return total_cost, total_weight
 
