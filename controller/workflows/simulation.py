@@ -30,29 +30,36 @@ class SimulationWorkflow:
         except:
             pass
 
+        from temporalio.common import RetryPolicy
+        retry_policy = RetryPolicy(maximum_attempts=3)
+
         try:
             mjcf_data = await workflow.execute_activity(
                 "compile_mjcf_activity",
                 args=[compound_json_str, simulate_failures],
                 start_to_close_timeout=timedelta(minutes=1),
+                retry_policy=retry_policy,
             )
 
             sim_results = await workflow.execute_activity(
                 "run_simulation_activity",
                 args=[mjcf_data, simulate_failures],
                 start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=retry_policy,
             )
 
             video_path = await workflow.execute_activity(
                 "render_video_activity",
                 args=[sim_results, simulate_failures],
                 start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=retry_policy,
             )
 
             s3_path = await workflow.execute_activity(
                 "upload_to_s3_activity",
                 args=[video_path, simulate_failures],
                 start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=retry_policy,
             )
 
             await workflow.execute_activity(
