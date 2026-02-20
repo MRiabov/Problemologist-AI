@@ -908,7 +908,11 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         # Load manufacturing config to check for deformable materials
         from worker_heavy.workbenches.config import load_config
 
-        mfg_config = load_config()
+        custom_cfg_path = self.output_dir / "manufacturing_config.yaml"
+        if custom_cfg_path.exists():
+            mfg_config = load_config(str(custom_cfg_path))
+        else:
+            mfg_config = load_config()
 
         for data in parts_data:
             # Check if deformable
@@ -952,7 +956,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 entity_info["is_electronics"] = True
 
             if is_deformable:
-                msh_path = mesh_path_base.with_suffix(".msh")
+                obj_path = mesh_path_base.with_suffix(".obj")
                 stl_path = mesh_path_base.with_suffix(".stl")
                 repaired_stl_path = mesh_path_base.with_suffix(".repaired.stl")
 
@@ -966,14 +970,16 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
 
                 from worker_heavy.utils.mesh_utils import (
                     repair_mesh_file,
-                    tetrahedralize,
                 )
 
                 try:
-                    # T008: Repair mesh before tetrahedralization
+                    # Repair mesh for cleaner tetrahedralization in backend
                     repair_mesh_file(stl_path, repaired_stl_path)
-                    # T007: Tetrahedralize the repaired mesh
-                    tetrahedralize(repaired_stl_path, msh_path)
+                    # Convert to OBJ for Genesis soft mesh loading
+                    import trimesh
+
+                    mesh = trimesh.load(str(repaired_stl_path))
+                    mesh.export(str(obj_path))
                 finally:
                     # Cleanup intermediate files
                     if stl_path.exists():
@@ -982,7 +988,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                         repaired_stl_path.unlink()
 
                 entity_info["type"] = "soft_mesh"
-                entity_info["file"] = str(msh_path.relative_to(self.assets_dir.parent))
+                entity_info["file"] = str(obj_path.relative_to(self.assets_dir.parent))
             else:
                 entity_info["type"] = "mesh"
                 entity_info["file"] = str(

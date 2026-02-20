@@ -25,6 +25,7 @@ from shared.workers.schema import (
     AnalyzeRequest,
     BenchmarkToolRequest,
     BenchmarkToolResponse,
+    ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
 )
@@ -32,7 +33,12 @@ from shared.workers.workbench_models import WorkbenchResult
 from shared.workers.loader import load_component_from_script
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.validation import validate_fem_manufacturability
-from worker_heavy.utils import simulate, submit_for_review, validate
+from worker_heavy.utils import (
+    simulate,
+    submit_for_review,
+    validate,
+    validate_circuit as utils_validate_circuit,
+)
 from worker_heavy.utils.preview import preview_design
 
 logger = structlog.get_logger(__name__)
@@ -46,7 +52,11 @@ from shared.workers.filesystem.router import create_filesystem_router
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
-        return create_filesystem_router(session_id=x_session_id)
+        from worker_heavy.config import settings
+
+        return create_filesystem_router(
+            session_id=x_session_id, base_dir=settings.sessions_dir
+        )
     except Exception as e:
         logger.error("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
@@ -69,12 +79,38 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
         tmp_root = Path(tmpdir)
         try:
             bundle_bytes = base64.b64decode(bundle_base64)
-            with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
-                tar.extractall(path=tmp_root, filter="fully_trusted")
-            logger.info("bundle_extracted", path=str(tmp_root), session_id=None)
+            # Use system tar for robustness against metadata/comparison bugs
+            import subprocess
+
+            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tf:
+                tf.write(bundle_bytes)
+                tf_path = tf.name
+            try:
+                # -z: gzip, -x: extract, -f: file, -C: directory
+                # --no-same-owner: avoid permission issues
+                # --no-same-permissions: avoid permission issues
+                subprocess.run(
+                    ["tar", "-zxf", tf_path, "-C", str(tmp_root), "--no-same-owner"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as spe:
+                logger.error("tar_subprocess_failed", stderr=spe.stderr)
+                raise RuntimeError(f"tar extraction failed: {spe.stderr}")
+            finally:
+                if Path(tf_path).exists():
+                    Path(tf_path).unlink()
+
+            logger.info(
+                "bundle_extracted_via_system_tar", path=str(tmp_root), session_id=None
+            )
             yield tmp_root
         except Exception as e:
-            logger.error("bundle_extraction_failed", error=str(e))
+            import traceback
+
+            tb = traceback.format_exc()
+            logger.error("bundle_extraction_failed", error=str(e), traceback=tb)
             raise HTTPException(
                 status_code=400, detail=f"Failed to extract bundle: {e}"
             ) from e
@@ -259,6 +295,31 @@ async def api_validate(
         return BenchmarkToolResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
+
+
+@heavy_router.post("/benchmark/validate_circuit", response_model=BenchmarkToolResponse)
+async def api_validate_circuit(
+    request: ElectronicsValidationRequest,
+    x_session_id: str = Header(...),
+):
+    """Run SPICE validation on the provided electronics section."""
+    try:
+        from shared.circuit_builder import build_circuit_from_section
+        from shared.pyspice_utils import validate_circuit
+
+        circuit = build_circuit_from_section(request.section)
+        res = validate_circuit(
+            circuit, request.section.power_supply, section=request.section
+        )
+
+        return BenchmarkToolResponse(
+            success=res.valid,
+            message="; ".join(res.errors) if not res.valid else "Circuit is valid",
+            artifacts={"circuit_validation_result": res.model_dump()},
+        )
+    except Exception as e:
+        logger.error("api_validate_circuit_failed", error=str(e))
+        return BenchmarkToolResponse(success=False, message=str(e))
 
 
 @heavy_router.post("/benchmark/analyze", response_model=WorkbenchResult)

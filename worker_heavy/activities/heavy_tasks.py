@@ -17,9 +17,25 @@ logger = structlog.get_logger(__name__)
 
 
 def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
-    """Extract gzipped tarball to target directory."""
-    with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
-        tar.extractall(path=target_dir, filter="fully_trusted")
+    """Extract gzipped tarball to target directory using system tar."""
+    import subprocess
+
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tf:
+        tf.write(bundle_bytes)
+        tf_path = tf.name
+    try:
+        subprocess.run(
+            ["tar", "-zxf", tf_path, "-C", str(target_dir), "--no-same-owner"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as spe:
+        logger.error("tar_subprocess_failed", stderr=spe.stderr)
+        raise RuntimeError(f"tar extraction failed: {spe.stderr}")
+    finally:
+        if Path(tf_path).exists():
+            Path(tf_path).unlink()
 
 
 @activity.defn(name="worker_run_simulation")

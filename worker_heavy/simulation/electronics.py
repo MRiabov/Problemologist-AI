@@ -33,7 +33,9 @@ class ElectronicsManager:
             circuit = build_circuit_from_section(
                 self.electronics, switch_states=self.switch_states, add_shunts=True
             )
-            validation = validate_circuit(circuit, self.electronics.power_supply)
+            validation = validate_circuit(
+                circuit, self.electronics.power_supply, section=self.electronics
+            )
 
             if validation.valid:
                 self.validation_error = None

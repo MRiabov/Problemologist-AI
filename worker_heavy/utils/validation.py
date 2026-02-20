@@ -589,9 +589,28 @@ def validate(
                     return (False, msg)
 
     bbox = component.bounding_box()
-    if build_zone:
-        b_min = build_zone.get("min", [-1000, -1000, -1000])
-        b_max = build_zone.get("max", [1000, 1000, 1000])
+
+    # Load build_zone from objectives.yaml if not provided
+    effective_build_zone = build_zone
+    if effective_build_zone is None and output_dir:
+        obj_path = output_dir / "objectives.yaml"
+        if obj_path.exists():
+            try:
+                content = obj_path.read_text(encoding="utf-8")
+                if "[TEMPLATE]" not in content:
+                    data = yaml.safe_load(content)
+                    if (
+                        data
+                        and "objectives" in data
+                        and "build_zone" in data["objectives"]
+                    ):
+                        effective_build_zone = data["objectives"]["build_zone"]
+            except Exception:
+                pass
+
+    if effective_build_zone:
+        b_min = effective_build_zone.get("min", [-1000, -1000, -1000])
+        b_max = effective_build_zone.get("max", [1000, 1000, 1000])
         if (
             b_min[0] > bbox.min.X
             or b_min[1] > bbox.min.Y

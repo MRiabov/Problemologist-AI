@@ -3,6 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
+from shared.models.schemas import ElectronicsSection
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingMethod
 
@@ -141,6 +142,12 @@ class AnalyzeRequest(BenchmarkToolRequest):
     )
 
 
+class ElectronicsValidationRequest(BaseModel):
+    """Request to validate an electronic circuit."""
+
+    section: "ElectronicsSection"
+
+
 class SimulationArtifacts(BaseModel):
     """Structured artifacts from a simulation run."""
 
@@ -148,6 +155,7 @@ class SimulationArtifacts(BaseModel):
     mjcf_content: StrictStr | None = None
     stress_summaries: list[dict[StrictStr, Any]] = Field(default_factory=list)
     fluid_metrics: list[dict[StrictStr, Any]] = Field(default_factory=list)
+    circuit_validation_result: dict[StrictStr, Any] | None = None
     scene_path: StrictStr | None = None
 
     model_config = {"extra": "allow"}

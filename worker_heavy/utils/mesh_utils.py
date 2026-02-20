@@ -137,6 +137,10 @@ def _tetrahedralize_gmsh(
         gmsh.option.setNumber("Mesh.Algorithm", 6)  # HXT for 3D
         gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 32)  # Refine near curves
 
+        # Force MSH v2.2 ASCII (more widely supported)
+        gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
+        gmsh.option.setNumber("Mesh.Binary", 0)
+
         # Generate 3D mesh
         gmsh.model.mesh.generate(3)
 
