@@ -29,12 +29,32 @@ def calculate_3dp_cost(
     if not three_dp_cfg:
         raise ValueError("3D Printing configuration missing")
 
-    # Default to abs for now
-    material_name = config.defaults.get("material", "abs")
-    if material_name not in three_dp_cfg.materials:
-        material_name = list(three_dp_cfg.materials.keys())[0]
+    # Resolve material from part metadata or fallback to default
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
 
-    material_cfg = three_dp_cfg.materials[material_name]
+    if material_name not in three_dp_cfg.materials:
+        # Fallback to first available if specific one is missing
+        if three_dp_cfg.materials:
+            material_name = list(three_dp_cfg.materials.keys())[0]
+        else:
+            material_name = "abs"
+
+    material_cfg = three_dp_cfg.materials.get(material_name)
+    if not material_cfg:
+        material_cfg = config.materials.get(material_name) or config.materials.get("abs")
+        if not material_cfg:
+            from shared.workers.workbench_models import MaterialDefinition
+            material_cfg = MaterialDefinition(
+                name="Fallback ABS",
+                density_g_cm3=1.04,
+                cost_per_kg=20.0,
+                machine_hourly_rate=20.0
+            )
 
     logger.info("calculating_3dp_cost", material=material_name, quantity=quantity)
 
@@ -134,11 +154,19 @@ def analyze_3dp(
         cost_breakdown = None
 
     # 4. Weight Calculation
-    material_name = config.defaults.get("material", "abs")
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
     three_dp_cfg = config.three_dp
     density = 1.04  # fallback (ABS)
-    if three_dp_cfg and material_name in three_dp_cfg.materials:
-        density = three_dp_cfg.materials[material_name].density_g_cm3
+
+    # Resolve density from config if possible
+    mat_cfg = (three_dp_cfg.materials.get(material_name) if three_dp_cfg else None) or config.materials.get(material_name)
+    if mat_cfg:
+        density = mat_cfg.density_g_cm3
 
     weight_g = (part.volume / 1000.0) * density
 
