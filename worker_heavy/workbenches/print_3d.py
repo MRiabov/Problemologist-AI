@@ -29,10 +29,20 @@ def calculate_3dp_cost(
     if not three_dp_cfg:
         raise ValueError("3D Printing configuration missing")
 
-    # Default to abs for now
-    material_name = config.defaults.get("material", "abs")
+    # Resolve material from part metadata or fallback to default
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
+
     if material_name not in three_dp_cfg.materials:
-        material_name = list(three_dp_cfg.materials.keys())[0]
+        # Fallback to first available if specific one is missing
+        if three_dp_cfg.materials:
+            material_name = list(three_dp_cfg.materials.keys())[0]
+        else:
+            material_name = "abs"
 
     material_cfg = three_dp_cfg.materials[material_name]
 
@@ -134,7 +144,12 @@ def analyze_3dp(
         cost_breakdown = None
 
     # 4. Weight Calculation
-    material_name = config.defaults.get("material", "abs")
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
     three_dp_cfg = config.three_dp
     density = 1.04  # fallback (ABS)
     if three_dp_cfg and material_name in three_dp_cfg.materials:
