@@ -49,6 +49,7 @@ async def test_architect_node_logic(
         return {
             "plan.md": "## 1. Solution Overview\nTest Overview\n## 2. Parts List\n- Part A\n## 3. Assembly Strategy\n1. Step 1\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Risk 1",
             "todo.md": "- [ ] Test Todo",
+            "assembly_definition.yaml": "version: '1.0'\nconstraints:\n  benchmark_max_unit_cost_usd: 100.0\n  benchmark_max_weight_g: 1000.0\n  planner_target_max_unit_cost_usd: 50.0\n  planner_target_max_weight_g: 500.0\nmanufactured_parts: []\ncots_parts: []\nfinal_assembly: []\ntotals:\n  estimated_unit_cost_usd: 10.0\n  estimated_weight_g: 100.0\n  estimate_confidence: medium",
         }.get(f, "")
 
     mock_fs.read_file = AsyncMock(side_effect=mock_read_file)

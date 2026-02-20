@@ -98,12 +98,7 @@ def validate_assembly_definition_yaml(
             return False, ["Empty or invalid YAML content"]
 
         # 1. Check for template placeholders in cost estimation too
-        placeholders = ["ramp_main", "guide_clip"]
-        # Only check if it looks EXACTLY like the template example
-        if any(p in content for p in placeholders):
-            return False, [
-                "assembly_definition.yaml still contains template placeholders"
-            ]
+        # Removed generic 'ramp_main' and 'guide_clip' as they are valid part names
 
         estimation = AssemblyDefinition(**data)
 
@@ -220,8 +215,6 @@ TEMPLATE_PLACEHOLDERS = [
     "[x, y, z]",
     "y_min",
     "z_min",  # objectives.yaml
-    "ramp_main",
-    "guide_clip",  # assembly_definition.yaml
     "[implement here]",
     "TODO:",
     "...",  # generic

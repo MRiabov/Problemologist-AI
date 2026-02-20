@@ -30,9 +30,9 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
 
         # Apply constraints from the query
         if query.constraints:
-            if "max_weight" in query.constraints:
+            if "max_weight_g" in query.constraints:
                 stmt = stmt.filter(
-                    COTSItemORM.weight_g <= float(query.constraints["max_weight"])
+                    COTSItemORM.weight_g <= float(query.constraints["max_weight_g"])
                 )
             if "max_cost" in query.constraints:
                 stmt = stmt.filter(
