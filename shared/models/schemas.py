@@ -359,6 +359,13 @@ class ReviewFrontmatter(BaseModel):
     decision: ReviewDecision
     comments: list[str] = []
 
+    @field_validator("comments", mode="before")
+    @classmethod
+    def coerce_comments(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return [v]
+        return v
+
     @field_validator("decision")
     @classmethod
     def validate_refusal_decisions(cls, v):
@@ -553,9 +560,7 @@ class AssemblyDefinition(BaseModel):
                                     "motor" if p_config.config.control else "passive"
                                 ),
                                 dofs=p_config.config.dofs,
-                                control=p_config.config.config
-                                if hasattr(p_config.config, "config")
-                                else p_config.config.control,
+                                control=p_config.config.control,
                             )
                         )
             elif isinstance(item, PartConfig) and item.config.dofs:
