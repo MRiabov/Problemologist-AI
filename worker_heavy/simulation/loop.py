@@ -12,9 +12,10 @@ from shared.observability.schemas import (
     ElectricalFailureEvent,
     SimulationBackendSelectedEvent,
 )
-from shared.simulation.backends import ActuatorState, SimulationScene
+from shared.simulation.backends import SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
-from shared.wire_utils import get_awg_properties, check_wire_clearance
+from shared.wire_utils import check_wire_clearance, get_awg_properties
+from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
 from worker_heavy.simulation.factory import get_physics_backend
@@ -22,7 +23,6 @@ from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.utils.rendering import VideoRenderer
 from worker_heavy.workbenches.config import load_config
-from shared.workers.workbench_models import ManufacturingMethod
 
 logger = structlog.get_logger(__name__)
 
@@ -104,8 +104,19 @@ class SimulationLoop:
             custom_config_path = working_dir / "manufacturing_config.yaml"
             if custom_config_path.exists():
                 self.config = load_config(custom_config_path)
+                logger.info(
+                    "loop_loaded_custom_config",
+                    path=str(custom_config_path),
+                    materials=list(self.config.cnc.materials.keys())
+                    if self.config.cnc
+                    else [],
+                )
             else:
                 self.config = load_config()
+                logger.info(
+                    "loop_loaded_default_config",
+                    materials=list(self.config.materials.keys()),
+                )
 
             fem_required = (
                 self.objectives.physics.fem_enabled
@@ -217,6 +228,9 @@ class SimulationLoop:
         self.success_evaluator = SuccessEvaluator(
             max_simulation_time=self.max_simulation_time,
             motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
+            simulation_bounds=self.objectives.simulation_bounds
+            if self.objectives
+            else None,
         )
 
         # T015: derive is_powered_map from electronics.circuit state
@@ -451,18 +465,17 @@ class SimulationLoop:
                     break
 
                 # Check Motor Overload
-                if self._check_motor_overload():
+                if self._check_motor_overload(dt * check_interval):
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                     break
 
-                # WP2: Check for part breakage (INT-103)
-                if self.objectives and self.objectives.physics.fem_enabled:
-                    broken_part = self._check_part_breakage()
-                    if broken_part:
-                        from shared.enums import SimulationFailureMode
-
-                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                        break
+            # WP2: Check for part breakage (INT-103)
+            if self.objectives and self.objectives.physics.fem_enabled:
+                broken_part = self._check_part_breakage()
+                if broken_part:
+                    self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                    # Return immediately from step loop on breakage
+                    break
 
                 # 7. Check Wire Failure (T015)
                 if self.electronics:
@@ -515,7 +528,13 @@ class SimulationLoop:
                 # For MuJoCo we can use "free" or a named camera.
                 # For Genesis we use "main".
                 try:
-                    frame = self.backend.render_camera("main", 640, 480)
+                    # T024: Use "main" if available, otherwise first camera, or fallback
+                    cameras = self.backend.get_all_camera_names()
+                    cam_to_use = "main"
+                    if "main" not in cameras and cameras:
+                        cam_to_use = cameras[0]
+
+                    frame = self.backend.render_camera(cam_to_use, 640, 480)
                     particles = self.backend.get_particle_positions()
                     video_renderer.add_frame(frame, particles=particles)
                 except Exception as e:
@@ -736,10 +755,8 @@ class SimulationLoop:
                     return label
         return None
 
-    def _check_motor_overload(self) -> bool:
+    def _check_motor_overload(self, dt: float) -> bool:
         # Check all position/torque actuators for saturation
-        from worker_heavy.simulation.loop import SIMULATION_STEP_S
-
         if not self._monitor_names:
             return False
 
@@ -748,7 +765,7 @@ class SimulationLoop:
         ]
 
         return self.success_evaluator.check_motor_overload(
-            self._monitor_names, forces, self._monitor_limits, SIMULATION_STEP_S
+            self._monitor_names, forces, self._monitor_limits, dt
         )
 
     def check_goal_with_vertices(self, body_name: str) -> bool:
