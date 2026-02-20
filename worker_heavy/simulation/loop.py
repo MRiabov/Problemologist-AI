@@ -14,7 +14,7 @@ from shared.observability.schemas import (
 )
 from shared.simulation.backends import ActuatorState, SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
-from shared.wire_utils import get_awg_properties
+from shared.wire_utils import get_awg_properties, check_wire_clearance
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
 from worker_heavy.simulation.factory import get_physics_backend
@@ -222,9 +222,34 @@ class SimulationLoop:
         # T015: derive is_powered_map from electronics.circuit state
         if self.electronics:
             self._update_electronics(force=True)
+            self.wire_clearance_error = self._validate_wire_clearance()
+        else:
+            self.wire_clearance_error = None
 
         # Reset metrics
         self.reset_metrics()
+
+    def _validate_wire_clearance(self) -> str | None:
+        """T011: Check wire clearance using shared util."""
+        # Only check if we have both electronics wiring and a component to check against
+        if not self.electronics or not self.electronics.wiring or not self.component:
+            return None
+
+        # Ensure component is a Compound (build123d API requirements for distance check)
+        check_comp = self.component
+        if isinstance(self.component, Part):
+            check_comp = Compound(children=[self.component])
+
+        for wire in self.electronics.wiring:
+            # Skip wires that don't have enough waypoints or aren't routed in 3D
+            if not wire.waypoints or len(wire.waypoints) < 2:
+                continue
+
+            # Using default clearance of 2.0mm for now, or could come from constraints
+            if not check_wire_clearance(wire.waypoints, check_comp, clearance_mm=2.0):
+                return f"Wire clearance violation detected for wire {wire.wire_id}."
+
+        return None
 
     def _update_electronics(self, force=False):
         """Update is_powered_map based on circuit state."""
@@ -292,6 +317,19 @@ class SimulationLoop:
                 max_velocity=0.0,
                 success=False,
                 fail_reason=self.electronics_validation_error,
+                fail_mode=self.fail_reason,
+                confidence="high",
+            )
+
+        # Check wire clearance validation status
+        if self.wire_clearance_error:
+            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            return SimulationMetrics(
+                total_time=0.0,
+                total_energy=0.0,
+                max_velocity=0.0,
+                success=False,
+                fail_reason=self.wire_clearance_error,
                 fail_mode=self.fail_reason,
                 confidence="high",
             )
