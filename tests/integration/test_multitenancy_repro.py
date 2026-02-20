@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 WORKER_LIGHT_URL = "http://localhost:18001"
+WORKER_HEAVY_URL = "http://localhost:18002"
 
 SCRIPT_1 = """
 from build123d import *
@@ -36,7 +37,7 @@ async def run_simulation(script: str, name: str):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"{WORKER_LIGHT_URL}/benchmark/simulate",
+                f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 headers={"x-session-id": f"test-multi-{name}"},
                 json={
                     "session_id": f"test-multi-{name}",
@@ -83,7 +84,7 @@ def build():
     async with httpx.AsyncClient() as client:
         print("Warmup round...")
         await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             headers={"x-session-id": "warmup"},
             json={
                 "session_id": "warmup",

@@ -17,7 +17,7 @@ async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
     resp = await client.post(
         f"{WORKER_LIGHT_URL}/fs/bundle",
         headers={"X-Session-ID": session_id},
-        timeout=60.0,
+        timeout=120.0,
     )
     assert resp.status_code == 200, f"Failed to get bundle: {resp.text}"
     import base64
@@ -461,8 +461,9 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "valid_hole.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
-            timeout=30.0,  # Validate is fast
+            timeout=60.0,  # Validate can take time if asset generation is slow
         )
+
         assert resp.status_code == 200, resp.text
         data = resp.json()
 

@@ -1167,59 +1167,6 @@
         }
       }
     },
-    "/benchmark/validate_circuit": {
-      "post": {
-        "tags": [
-          "worker-heavy"
-        ],
-        "summary": "Api Validate Circuit",
-        "description": "Run SPICE validation on the provided electronics section.",
-        "operationId": "api_validate_circuit_benchmark_validate_circuit_post",
-        "parameters": [
-          {
-            "name": "x-session-id",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "X-Session-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ElectronicsValidationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchmarkToolResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/benchmark/analyze": {
       "post": {
         "tags": [
@@ -2304,122 +2251,6 @@
         ],
         "title": "CostBreakdown"
       },
-      "ElectronicComponent": {
-        "properties": {
-          "component_id": {
-            "type": "string",
-            "title": "Component Id"
-          },
-          "type": {
-            "$ref": "#/components/schemas/ElectronicComponentType"
-          },
-          "cots_part_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cots Part Id"
-          },
-          "assembly_part_ref": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Assembly Part Ref"
-          },
-          "rated_voltage": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rated Voltage"
-          },
-          "stall_current_a": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stall Current A"
-          }
-        },
-        "type": "object",
-        "required": [
-          "component_id",
-          "type"
-        ],
-        "title": "ElectronicComponent",
-        "description": "A component in the electronic circuit."
-      },
-      "ElectronicComponentType": {
-        "type": "string",
-        "enum": [
-          "motor",
-          "power_supply",
-          "relay",
-          "switch",
-          "connector"
-        ],
-        "title": "ElectronicComponentType",
-        "description": "Types of electronic components supported in the netlist."
-      },
-      "ElectronicsSection": {
-        "properties": {
-          "power_supply": {
-            "$ref": "#/components/schemas/PowerSupplyConfig"
-          },
-          "wiring": {
-            "items": {
-              "$ref": "#/components/schemas/WireConfig"
-            },
-            "type": "array",
-            "title": "Wiring",
-            "default": []
-          },
-          "components": {
-            "items": {
-              "$ref": "#/components/schemas/ElectronicComponent"
-            },
-            "type": "array",
-            "title": "Components",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "power_supply"
-        ],
-        "title": "ElectronicsSection",
-        "description": "Electronics section of the assembly definition."
-      },
-      "ElectronicsValidationRequest": {
-        "properties": {
-          "section": {
-            "$ref": "#/components/schemas/ElectronicsSection"
-          }
-        },
-        "type": "object",
-        "required": [
-          "section"
-        ],
-        "title": "ElectronicsValidationRequest",
-        "description": "Request to validate an electronic circuit."
-      },
       "ManufacturingMethod": {
         "type": "string",
         "enum": [
@@ -2429,54 +2260,6 @@
         ],
         "title": "ManufacturingMethod",
         "description": "Supported manufacturing methods."
-      },
-      "PowerSupplyConfig": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": "mains_ac_rectified"
-          },
-          "voltage_dc": {
-            "type": "number",
-            "title": "Voltage Dc"
-          },
-          "max_current_a": {
-            "type": "number",
-            "title": "Max Current A"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "prefixItems": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "number"
-                  }
-                ],
-                "type": "array",
-                "maxItems": 3,
-                "minItems": 3
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Location"
-          }
-        },
-        "type": "object",
-        "required": [
-          "voltage_dc",
-          "max_current_a"
-        ],
-        "title": "PowerSupplyConfig",
-        "description": "Configuration for a DC power supply."
       },
       "PreviewDesignRequest": {
         "properties": {
@@ -2605,18 +2388,6 @@
             "type": "array",
             "title": "Fluid Metrics"
           },
-          "circuit_validation_result": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Circuit Validation Result"
-          },
           "scene_path": {
             "anyOf": [
               {
@@ -2641,83 +2412,6 @@
           "genesis"
         ],
         "title": "SimulatorBackendType"
-      },
-      "WireConfig": {
-        "properties": {
-          "wire_id": {
-            "type": "string",
-            "title": "Wire Id"
-          },
-          "from": {
-            "$ref": "#/components/schemas/WireTerminal"
-          },
-          "to": {
-            "$ref": "#/components/schemas/WireTerminal"
-          },
-          "gauge_awg": {
-            "type": "integer",
-            "title": "Gauge Awg"
-          },
-          "length_mm": {
-            "type": "number",
-            "title": "Length Mm"
-          },
-          "waypoints": {
-            "items": {
-              "prefixItems": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "number"
-                }
-              ],
-              "type": "array",
-              "maxItems": 3,
-              "minItems": 3
-            },
-            "type": "array",
-            "title": "Waypoints",
-            "default": []
-          },
-          "routed_in_3d": {
-            "type": "boolean",
-            "title": "Routed In 3D",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "wire_id",
-          "from",
-          "to",
-          "gauge_awg",
-          "length_mm"
-        ],
-        "title": "WireConfig",
-        "description": "Configuration for a physical wire in the assembly."
-      },
-      "WireTerminal": {
-        "properties": {
-          "component": {
-            "type": "string",
-            "title": "Component"
-          },
-          "terminal": {
-            "type": "string",
-            "title": "Terminal"
-          }
-        },
-        "type": "object",
-        "required": [
-          "component",
-          "terminal"
-        ],
-        "title": "WireTerminal",
-        "description": "A terminal on an electronic component."
       },
       "WorkbenchMetadata": {
         "properties": {

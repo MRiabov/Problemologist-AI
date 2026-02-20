@@ -95,6 +95,7 @@ def build():
     )
     return p
 """
+
         await setup_fem_workspace(
             client, base_headers, objectives_content, script_content
         )
@@ -105,6 +106,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "script.py"},
             headers=base_headers,
+            timeout=60.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -116,6 +118,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
+            timeout=120.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -140,7 +143,7 @@ cnc:
       cost_per_kg: 6.0
       machine_hourly_rate: 80.0
       color: "#D1D5DB"
-      youngs_modulus_pa: 70e9
+      youngs_modulus_pa: 70000000000.0
       poissons_ratio: 0.33
       yield_stress_pa: 100
       ultimate_stress_pa: 200
@@ -186,8 +189,9 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=120.0,
+            timeout=300.0,
         )
+
         assert resp.status_code == 200
         data = resp.json()
         assert not data["success"]

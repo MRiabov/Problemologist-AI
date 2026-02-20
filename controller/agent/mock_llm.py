@@ -235,6 +235,7 @@ class MockDSPyLM(dspy.LM):
         # Add node-specific fields
         if node_key == "planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
+            resp["summary"] = node_data.get("summary", "Plan generated.")
         elif node_key == "reviewer":
             resp["review"] = node_data.get(
                 "review",

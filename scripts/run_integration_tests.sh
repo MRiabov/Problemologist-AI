@@ -22,6 +22,10 @@ export WORKER_URL="http://127.0.0.1:18001"
 export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
 
+# Shared sessions directory for local integration tests
+export WORKER_SESSIONS_DIR=$(mktemp -d -t pb-sessions-XXXXXX)
+echo "Shared sessions directory: $WORKER_SESSIONS_DIR"
+
 # Ensure we are in project root
 cd "$(dirname "$0")/.."
 
@@ -114,8 +118,21 @@ uv run alembic upgrade head
 
 echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 
-# Ensure log directory exists
-mkdir -p logs
+# Ensure log directory exists and manage log history
+LOG_DIR="logs/integration_tests"
+ARCHIVE_DIR="logs/archives"
+mkdir -p "$LOG_DIR"
+mkdir -p "$ARCHIVE_DIR"
+
+# Archive previous logs if they exist
+if [ -d "$LOG_DIR" ] && [ "$(ls -A "$LOG_DIR")" ]; then
+  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+  mv "$LOG_DIR" "$ARCHIVE_DIR/run_${TIMESTAMP}"
+  mkdir -p "$LOG_DIR"
+fi
+
+# Clean up archives older than 24 hours
+find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 
 # Pre-emptive cleanup of any stale processes from previous runs
 pkill -f "uvicorn.*18000" || true
@@ -125,25 +142,25 @@ pkill -f "python -m controller.temporal_worker" || true
 
 # Start Worker Light (port 18001)
 export WORKER_TYPE=light
-uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > logs/worker_light.log 2>&1 &
+uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
-uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > logs/worker_heavy.log 2>&1 &
+uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
-uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
+uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
 CONTROLLER_PID=$!
 echo $CONTROLLER_PID > logs/controller.pid
 echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
-uv run python -m controller.temporal_worker > logs/temporal_worker.log 2>&1 &
+uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
@@ -167,6 +184,11 @@ cleanup() {
   # Remove PID files
   rm -f logs/worker.pid logs/controller.pid logs/temporal_worker.pid
   
+  # Clean up shared sessions directory
+  if [ -n "$WORKER_SESSIONS_DIR" ] && [ -d "$WORKER_SESSIONS_DIR" ]; then
+    rm -rf "$WORKER_SESSIONS_DIR"
+  fi
+
   echo "Bringing down infrastructure containers..."
   docker compose -f docker-compose.test.yaml down -v
   

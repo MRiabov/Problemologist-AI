@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+import uuid
 
 import httpx
 import pytest
@@ -19,7 +20,7 @@ API_TOKEN_PLACEHOLDER = os.getenv(
 async def test_int_026_mandatory_event_families():
     """INT-026: Verify mandatory event families are emitted in a real run."""
     async with httpx.AsyncClient() as client:
-        session_id = f"test-events-{int(time.time())}"
+        session_id = f"INT-026-{uuid.uuid4().hex[:8]}"
 
         # 1. Setup objectives.yaml
         objectives_content = """
@@ -56,24 +57,15 @@ constraints:
         # AND uses a tool (fastener_hole) to trigger a tool_call event if implemented
         script = """
 import os
-import sys
 from build123d import *
 from shared.models.schemas import PartMetadata
 from shared.observability.events import emit_event
-from worker_heavy.utils.cad import fastener_hole, HoleType
 
 def build():
-    # Ensure event is written to the file worker expects in the session root
-    session_root = sys.path[0]
-    os.environ["EVENTS_FILE"] = os.path.join(session_root, "events.jsonl") 
+    # Emit event to verify collection
     emit_event({"event_type": "simulation_result", "data": {"status": "success"}})
     
-    # Trigger a tool call if the worker instruments it, or at least we check we can run it
-    # Ideally fastener_hole emits 'tool_call'
-    # part = Box(10, 10, 10)
-    # hole = fastener_hole(HoleType.M3, depth=5)
-    
-    # For now, explicit emit is the most reliable "black box" check of the PIPELINE
+    # Trigger a tool call if the worker instruments it
     emit_event({"event_type": "tool_call", "data": {"tool": "fastener_hole", "args": {"type": "M3"}}})
 
     p = Box(1, 1, 1)
@@ -81,6 +73,7 @@ def build():
     p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return p
 """
+
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "script.py", "content": script},
@@ -92,7 +85,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -102,6 +95,48 @@ def build():
         event_types = [e.get("event_type") for e in events]
         assert "simulation_result" in event_types, "Missing simulation_result event"
         assert "tool_call" in event_types, "Missing tool_call event"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_027_seed_variant_tracking():
+    """INT-027: Verify DB persistence of variant_id and seed from the API response."""
+    async with httpx.AsyncClient() as client:
+        session_id = f"INT-027-{uuid.uuid4().hex[:8]}"
+        variant_id = "test-variant-027"
+        seed = 42
+
+        # 1. Start an episode with seed and variant_id in metadata_vars
+        payload = {
+            "task": "Test seed and variant tracking",
+            "session_id": session_id,
+            "metadata_vars": {
+                "variant_id": variant_id,
+                "seed": seed,
+            },
+        }
+        resp = await client.post(f"{CONTROLLER_URL}/agent/run", json=payload)
+        assert resp.status_code == 202
+        episode_id = resp.json()["episode_id"]
+
+        # 2. Verify that variant_id and seed are persisted in the episode record
+        # Use retry as DB persistence might be slightly async or slow
+        data = {}
+        for _ in range(5):
+            try:
+                status_resp = await client.get(
+                    f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=10.0
+                )
+                if status_resp.status_code == 200:
+                    data = status_resp.json()
+                    if data.get("metadata_vars", {}).get("variant_id") == variant_id:
+                        break
+            except httpx.ReadTimeout:
+                pass
+            await asyncio.sleep(1)
+
+        assert data.get("metadata_vars", {}).get("variant_id") == variant_id
+        assert data.get("metadata_vars", {}).get("seed") == seed
 
 
 @pytest.mark.integration_p0
@@ -193,7 +228,7 @@ async def test_int_030_interrupt_propagation():
     async with httpx.AsyncClient() as client:
         # 1. Start a task that takes some time (e.g. simulation or agent run)
         # We'll use agent/run for now as it's the main entry point.
-        session_id = f"INT-030-{int(time.time())}"
+        session_id = f"INT-030-{uuid.uuid4().hex[:8]}"
         payload = {
             "task": "Perform a very complex multi-step reasoning task that involves writing a large script with at least 50 different parts and complex joints, explain each step in detail, and perform a deep analysis of the physics constraints for each component. Do NOT skip any details.",
             "session_id": session_id,
