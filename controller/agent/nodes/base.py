@@ -1,11 +1,11 @@
 import asyncio
-import structlog
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import dspy
+import structlog
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 
@@ -17,7 +17,7 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
 
 if TYPE_CHECKING:
-    from controller.agent.state import AgentState
+    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -50,7 +50,10 @@ class SharedNodeContext:
             llm = MockChatOpenAI()
             dspy_lm = MockDSPyLM(session_id=session_id)
         else:
-            llm = ChatOpenAI(model=settings.llm_model, temperature=0)
+            # T025: Add timeouts to prevent thread leaks (Issue 1)
+            llm = ChatOpenAI(
+                model=settings.llm_model, temperature=0, request_timeout=120
+            )
 
             # T012: Initialize DSPy LM for CodeAct support
             api_key = "dummy"
@@ -61,6 +64,7 @@ class SharedNodeContext:
                 f"openai/{settings.llm_model}",
                 api_key=api_key,
                 cache=False,
+                timeout=120,
             )
 
         return cls(
@@ -210,7 +214,7 @@ class BaseNode:
                                 asyncio.to_thread(program, **inputs),
                                 timeout=300.0,  # 5 minutes
                             )
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             logger.error(
                                 f"{node_type}_dspy_timeout",
                                 session_id=self.ctx.session_id,
