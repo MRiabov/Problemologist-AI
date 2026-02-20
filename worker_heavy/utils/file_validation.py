@@ -29,6 +29,34 @@ from shared.simulation.schemas import SimulatorBackendType
 
 logger = structlog.get_logger(__name__)
 
+# Required sections for plan.md validation
+BENCHMARK_PLAN_REQUIRED_SECTIONS = [
+    "Learning Objective",
+    "Geometry",
+    "Objectives",
+]
+
+ENGINEERING_PLAN_REQUIRED_SECTIONS = [
+    "Solution Overview",
+    "Parts List",
+    "Assembly Strategy",
+    "Cost & Weight Budget",
+    "Risk Assessment",
+]
+
+TEMPLATE_PLACEHOLDERS = [
+    "x_min",
+    "x_max",
+    "[x, y, z]",
+    "y_min",
+    "z_min",  # objectives.yaml
+    "[implement here]",
+    "TODO:",
+    "...",  # generic
+    "[x_min",
+    "[x_max",  # generic
+]
+
 
 def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[str]]:
     """
@@ -47,9 +75,11 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
             return False, ["Empty or invalid YAML content"]
 
         # 1. Enforce that file is not the template
-        placeholders = ["x_min", "x_max", "[x_min", "[x, y, z]", "y_min", "z_min"]
-        if any(p in content for p in placeholders):
-            return False, ["objectives.yaml still contains template placeholders"]
+        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        if found_placeholders:
+            return False, [
+                f"objectives.yaml still contains template placeholders: {found_placeholders}"
+            ]
 
         objectives = ObjectivesYaml(**data)
 
@@ -98,7 +128,11 @@ def validate_assembly_definition_yaml(
             return False, ["Empty or invalid YAML content"]
 
         # 1. Check for template placeholders in cost estimation too
-        # Removed generic 'ramp_main' and 'guide_clip' as they are valid part names
+        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        if found_placeholders:
+            return False, [
+                f"assembly_definition.yaml still contains template placeholders: {found_placeholders}"
+            ]
 
         estimation = AssemblyDefinition(**data)
 
@@ -192,35 +226,6 @@ def validate_review_frontmatter(
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
         logger.error("review_frontmatter_validation_error", errors=errors)
         return False, errors
-
-
-# Required sections for plan.md validation
-BENCHMARK_PLAN_REQUIRED_SECTIONS = [
-    "Learning Objective",
-    "Geometry",
-    "Objectives",
-]
-
-ENGINEERING_PLAN_REQUIRED_SECTIONS = [
-    "Solution Overview",
-    "Parts List",
-    "Assembly Strategy",
-    "Cost & Weight Budget",
-    "Risk Assessment",
-]
-
-TEMPLATE_PLACEHOLDERS = [
-    "x_min",
-    "x_max",
-    "[x, y, z]",
-    "y_min",
-    "z_min",  # objectives.yaml
-    "[implement here]",
-    "TODO:",
-    "...",  # generic
-    "[x_min",
-    "[x_max",  # generic
-]
 
 
 def validate_node_output(
