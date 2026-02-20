@@ -23,9 +23,9 @@ prediction = await asyncio.wait_for(
 **Recommendation**: Consider using a subprocess-based execution for long-running, potentially hanging LLM programs, or ensure the underlying library (DSPy/OpenAI) has its own robust timeout mechanisms that propagate to the thread.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
-
+Doesn't DSPy have this stuff? Why not at least async, why give a whole thread to it? afaik, it's very light on CPU, why threading?
 ### 2. Inconsistent Units and Broken Formulas in Reward Metrics
 
 **File**: `controller/agent/dspy_utils.py`
@@ -38,7 +38,7 @@ prediction = await asyncio.wait_for(
 **Recommendation**: Standardize on grams across the entire pipeline. Align field names between the reward configuration, `PredictionMetrics`, and `ObjectivesYaml`.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
 
 ### 3. Performance Bottleneck in `MuJoCoBackend.check_collision`
@@ -59,9 +59,9 @@ Lines 232-243: The code iterates over all vertices of a mesh and performs a manu
 **Recommendation**: Use MuJoCo's built-in collision detection (contacts) or at least perform a broad-phase AABB check before iterating over vertices.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
-
+Agree, but what about genesis? I know it has a native collision check too
 ### 4. `SimulationLoop` Ignores `simulation_bounds` from Objectives
 
 **File**: `worker_heavy/simulation/loop.py` and `worker_heavy/simulation/evaluator.py`
@@ -73,8 +73,8 @@ Lines 232-243: The code iterates over all vertices of a mesh and performs a manu
 **Recommendation**: Pass `simulation_bounds` from `ObjectivesYaml` to `SuccessEvaluator` and use it to validate the object's position.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* Looks critical. However, however, maybe we rescale it? I doubt that we do. Anyway, it should come from objectives yaml.
 
 ### 5. Logic Bug in `AssemblyDefinition.moving_parts`
 
@@ -91,8 +91,8 @@ else p_config.config.control,
 **Recommendation**: Simplify to `control=p_config.config.control`.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* `hasattr` and `getattr` is always a code smell. refactor ofc
 
 ---
 
@@ -114,8 +114,8 @@ async def reviewer_node(state: AgentState) -> AgentState:
 **Recommendation**: Pass the context as part of the LangGraph's `config` or use a singleton/cached pattern for shared resources.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* Probably a singleton. But to be clear... we will soon optimize to dspy prompt optimization/compilation, so ???
 
 ### 7. Mixed Responsibilities in `SimulationLoop` Initialization
 
@@ -127,7 +127,7 @@ Lines 98-124: Calls `validate_and_price` and builds `material_lookup` inside `__
 **Recommendation**: Move pricing and pre-simulation validation to a separate orchestrator or factory.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
 
 ---
@@ -143,8 +143,8 @@ Line 414: `from worker_heavy.simulation.loop import SIMULATION_STEP_S`
 **Impact**: Very low, but indicates poor code organization and is confusing to read.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* huh?
 
 ### 9. Hardcoded Camera in Video Rendering
 
@@ -178,8 +178,8 @@ Lines 221-223:
 **Recommendation**: Pass the local `dt` variable to `_check_motor_overload`.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* It was done for simulaton speed, but it appears this is a bug that runs over the entire codebase now. double-check.
 
 ### 11. Hardcoded Wire Properties in Totals Calculation
 
@@ -195,8 +195,8 @@ total_weight += length_m * 20.0
 **Recommendation**: Use `shared.wire_utils.get_awg_properties` to get accurate weight and cost per meter.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* Wire is a COTS?
 
 ### 12. `ElectronicsManager` uses Stale Types in Fallback
 
