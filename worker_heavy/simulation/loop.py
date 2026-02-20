@@ -226,12 +226,12 @@ class SimulationLoop:
             if self.objectives and self.objectives.objectives:
                 particles = self.backend.get_particle_positions()
                 if particles is not None and len(particles) > 0:
-                    for fo in self.objectives.objectives.fluid_objectives:
+                    for i, fo in enumerate(self.objectives.objectives.fluid_objectives):
                         if fo.type == FluidObjectiveType.FLOW_RATE:
                             p0 = np.array(fo.gate_plane_point)
                             n = np.array(fo.gate_plane_normal)
                             distances = np.dot(particles - p0, n)
-                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            obj_id = f"{fo.fluid_id}_{fo.type}_{i}"
                             self.prev_particle_distances[obj_id] = distances
 
             self.electronics_manager = ElectronicsManager(self.electronics)
@@ -485,6 +485,41 @@ class SimulationLoop:
                     self.success = True
                     break
 
+                # T016: Track Flow Rate
+                if self.objectives and self.objectives.objectives:
+                    has_flow_rate = any(
+                        fo.type == FluidObjectiveType.FLOW_RATE
+                        for fo in self.objectives.objectives.fluid_objectives
+                    )
+                    if has_flow_rate:
+                        particles = self.backend.get_particle_positions()
+                        if particles is not None and len(particles) > 0:
+                            for i, fo in enumerate(
+                                self.objectives.objectives.fluid_objectives
+                            ):
+                                if fo.type == FluidObjectiveType.FLOW_RATE:
+                                    obj_id = f"{fo.fluid_id}_{fo.type}_{i}"
+                                    p0 = np.array(fo.gate_plane_point)
+                                    n = np.array(fo.gate_plane_normal)
+                                    current_distances = np.dot(particles - p0, n)
+                                    prev_distances = self.prev_particle_distances.get(
+                                        obj_id
+                                    )
+                                    if prev_distances is not None and len(
+                                        prev_distances
+                                    ) == len(current_distances):
+                                        crossed_pos = (prev_distances < 0) & (
+                                            current_distances >= 0
+                                        )
+                                        count = np.sum(crossed_pos)
+                                        self.cumulative_crossed_count[obj_id] = (
+                                            self.cumulative_crossed_count.get(obj_id, 0)
+                                            + count
+                                        )
+                                    self.prev_particle_distances[obj_id] = (
+                                        current_distances
+                                    )
+
                 # Check Motor Overload
                 if self._check_motor_overload(dt * check_interval):
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
@@ -577,7 +612,7 @@ class SimulationLoop:
 
         # Final fluid objectives evaluation (eval_at='end')
         if self.objectives and self.objectives.objectives:
-            for fo in self.objectives.objectives.fluid_objectives:
+            for i, fo in enumerate(self.objectives.objectives.fluid_objectives):
                 if not hasattr(fo, "eval_at") or fo.eval_at == FluidEvalAt.END:
                     particles = self.backend.get_particle_positions()
                     if particles is not None:
@@ -625,7 +660,7 @@ class SimulationLoop:
                         elif fo.type == FluidObjectiveType.FLOW_RATE:
                             # T016: Use cumulative crossed count for more accurate
                             # flow rate check
-                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            obj_id = f"{fo.fluid_id}_{fo.type}_{i}"
                             passed_count = self.cumulative_crossed_count.get(obj_id, 0)
 
                             # Heuristic: 1 particle ~= 0.001L (1ml) for MVP
