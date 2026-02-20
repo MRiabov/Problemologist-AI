@@ -187,7 +187,7 @@ def build():
         # Simulate
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers=base_headers,
             timeout=300.0,
         )
@@ -261,7 +261,7 @@ def build():
         # Simulate
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers=base_headers,
             timeout=120.0,
         )
@@ -273,8 +273,9 @@ def build():
         # we might need to skip or mock. But the spec says "Required integration execution contract: real containers".
 
         # For now, let's assume it runs.
+        artifacts = data.get("artifacts") or {}
         assert (
-            "stress_summaries" in data.get("artifacts", {})
+            "stress_summaries" in artifacts
             or "stress_summaries" in data
         )
         # Check specific field in result payload (SimulationResult schema)

@@ -205,7 +205,7 @@ async def test_int_029_api_key_enforcement():
 
         # Valid auth (using default from ops.py if not in env)
         # Note: In real integration, we'd use the env var.
-        valid_auth = os.getenv("BACKUP_SECRET", "default-dev-auth")
+        valid_auth = os.getenv("BACKUP_SECRET", "change-me-in-production")
         resp = await client.post(
             f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": valid_auth}
         )
