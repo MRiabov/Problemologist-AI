@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -81,7 +82,7 @@ def build():
         # 2. Test INT-111: validate_and_price gate
         # We expect this to fail because aluminum_6061 lacks FEM fields
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -92,7 +93,7 @@ def build():
 
         # 3. Test INT-102: simulate entry gate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -162,7 +163,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -235,7 +236,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -322,7 +323,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -394,7 +395,7 @@ cnc:
 
         # Skip geometric validation to allow intersection
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "skip_validate": True},
             headers=base_headers,
             timeout=120.0,

@@ -22,37 +22,24 @@ def base_headers(session_id):
 @pytest.mark.asyncio
 async def test_int_108_tetrahedralization_pipeline(session_id, base_headers):
     """
-    INT-108: Verify STL -> TetGen -> .msh flow.
+    INT-108: Verify STL -> Gmsh/TetGen -> .msh flow.
     """
     async with httpx.AsyncClient() as client:
-        # 1. Write a valid STL script
-        script_content = """
-from build123d import *
-from shared.models.schemas import PartMetadata
-def build():
-    p = Box(10, 10, 10)
-    p.label = "test_part"
-    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-    return p
-"""
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "box.py", "content": script_content},
-            headers=base_headers,
-        )
-
-        # 2. Trigger tetrahedralization (via a hypothetical worker endpoint if exists,
-        # or as part of Genesis simulation setup)
-        # Assuming we can trigger meshing via /runtime/execute for now to test the internal tool
+        # 1. Trigger tetrahedralization via /runtime/execute to test the internal tool
+        # This simulates how a subagent or internal utility would use Gmsh.
         code = """
 from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
 from build123d import Box, export_stl
 
+# Create a simple geometry
 part = Box(1, 1, 1)
 export_stl(part, "test.stl")
+
+# Tetrahedralize using default method (Gmsh)
 msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
 assert msh_path.exists(), f"Mesh file not created at {msh_path}"
+assert msh_path.stat().st_size > 0, "Mesh file is empty"
 """
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
@@ -66,16 +53,14 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
             f"Meshing script failed: {data['stdout']} {data['stderr']}"
         )
 
-        # 3. Verify files exist in session
+        # 2. Verify files exist in session
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
         files = [f["name"] for f in ls_resp.json()]
-        # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
-        # but the spec says "-> .msh". Our mesh_utils.py has a renaming logic.
-        assert "test.node" in files or "test.msh" in files, (
-            f"Missing mesh files. Found: {files}"
-        )
+        # Verify both input STL and output MSH exist
+        assert "test.stl" in files, f"Input STL missing. Found: {files}"
+        assert "test.msh" in files, f"Output MSH missing. Found: {files}"
 
         # 4. Fail path: Non-manifold geometry
         # (This might be hard to construct via build123d without it failing first,
