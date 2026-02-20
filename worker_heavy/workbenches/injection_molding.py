@@ -147,7 +147,17 @@ def _calculate_im_cost(
         else:
             material_name = "abs"
 
-    material_cfg = im_cfg.materials[material_name]
+    material_cfg = im_cfg.materials.get(material_name)
+    if not material_cfg:
+        material_cfg = config.materials.get(material_name) or config.materials.get("abs")
+        if not material_cfg:
+            from shared.workers.workbench_models import MaterialDefinition
+            material_cfg = MaterialDefinition(
+                name="Fallback ABS",
+                density_g_cm3=1.04,
+                cost_per_kg=2.5,
+                machine_hourly_rate=60.0
+            )
     costs_cfg = im_cfg.costs
 
     logger.info("calculating_im_cost", material=material_name, quantity=quantity)
