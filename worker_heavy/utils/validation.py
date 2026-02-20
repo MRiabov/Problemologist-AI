@@ -308,9 +308,30 @@ def calculate_assembly_totals(
                     )
 
         for wire in electronics.wiring:
+            from shared.wire_utils import get_awg_properties
+
             length_m = wire.length_mm / 1000.0
-            total_cost += length_m * 0.5
-            total_weight += length_m * 20.0
+            props = get_awg_properties(wire.gauge_awg)
+            # Estimate weight based on copper density and diameter
+            # Area (mm2) = pi * (d/2)^2
+            import math
+
+            area_mm2 = math.pi * (props["diameter_mm"] / 2.0) ** 2
+            # Weight (g/m) = Area (mm2) * Density (8.96 g/cm3)
+            # 1 mm2 * 1 m = 1000 mm3 = 1 cm3
+            weight_g_m = area_mm2 * 8.96
+
+            # Use cost from config if available, otherwise fallback to reasonable default
+            cost_per_m = 0.5  # default
+            if config.wires:
+                awg_key = f"awg{wire.gauge_awg}"
+                if hasattr(config.wires, awg_key):
+                    cost_per_m = getattr(config.wires, awg_key).cost_per_m
+                elif isinstance(config.wires, dict) and awg_key in config.wires:
+                    cost_per_m = config.wires[awg_key].get("cost_per_m", 0.5)
+
+            total_cost += length_m * cost_per_m
+            total_weight += length_m * weight_g_m
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
@@ -422,8 +443,6 @@ def simulate(
         electronics=electronics,
         smoke_test_mode=smoke_test_mode,
     )
-
-    from worker_heavy.simulation.loop import SimulationLoop
 
     loop = SimulationLoop(
         str(scene_path),
@@ -597,7 +616,11 @@ def validate(
         if obj_path.exists():
             try:
                 content = obj_path.read_text(encoding="utf-8")
-                if "[TEMPLATE]" not in content:
+                lines = content.splitlines()
+                # Check if it is a template (placeholder) file
+                if lines and "[TEMPLATE]" in lines[0]:
+                    effective_build_zone = None
+                else:
                     data = yaml.safe_load(content)
                     if (
                         data
@@ -671,7 +694,11 @@ def validate_fem_manufacturability(
         return True, None
 
     try:
-        data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
+        content = obj_path.read_text(encoding="utf-8")
+        if "[TEMPLATE]" in content:
+            return True, None
+
+        data = yaml.safe_load(content)
         objs = ObjectivesYaml(**data)
         if objs.physics and objs.physics.fem_enabled:
             config = load_config()

@@ -395,6 +395,7 @@ class ManufacturedPartEstimate(BaseModel):
                 if v_lower == m.value:
                     return m
         return v
+
     quantity: int
     part_volume_mm3: float
     stock_bbox_mm: dict[str, float]  # {x: float, y: float, z: float}
@@ -553,9 +554,7 @@ class AssemblyDefinition(BaseModel):
                                     "motor" if p_config.config.control else "passive"
                                 ),
                                 dofs=p_config.config.dofs,
-                                control=p_config.config.config
-                                if hasattr(p_config.config, "config")
-                                else p_config.config.control,
+                                control=p_config.config.control,
                             )
                         )
             elif isinstance(item, PartConfig) and item.config.dofs:
