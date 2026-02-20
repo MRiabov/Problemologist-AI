@@ -163,7 +163,13 @@ def _tetrahedralize_gmsh(
 
 def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
     """Fallback implementation using TetGen CLI."""
+    import shutil
     import subprocess
+
+    if not shutil.which("tetgen"):
+        raise MeshProcessingError(
+            "TetGen binary not found in PATH. Please install TetGen or use Gmsh."
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_stl = Path(tmpdir) / input_path.name
@@ -172,10 +178,10 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
         # -p: Tetrahedralize a piecewise linear complex
         # -q: Quality mesh generation. A minimum radius-edge ratio may be specified.
         cmd = ["tetgen", "-pq1.2", str(tmp_stl)]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            raise RuntimeError(f"TetGen failed: {result.stderr}")
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"TetGen failed: {e.stderr}") from e
 
         # TetGen produces .node and .ele files.
         # This is just a placeholder to show where we'd handle TetGen output.
