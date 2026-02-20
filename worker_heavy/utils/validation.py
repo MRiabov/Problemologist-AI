@@ -229,7 +229,7 @@ def to_mjcf(
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     builder = get_simulation_builder(
-        output_dir=renders_dir, backend_type=SimulatorBackendType.GENESIS
+        output_dir=renders_dir, backend_type=SimulatorBackendType.MUJOCO
     )
     scene_path = builder.build_from_assembly(component, smoke_test_mode=smoke_test_mode)
     return scene_path.read_text()
@@ -469,6 +469,15 @@ def simulate(
                         )
                     elif part.control.mode == MotorControlMode.CONSTANT:
                         control_inputs[part.part_name] = part.control.speed
+                    elif part.control.mode == MotorControlMode.ON_OFF:
+                        # T019: Handle ON_OFF mode using frequency toggle
+                        freq = part.control.frequency or 1.0
+                        period = 1.0 / freq
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control, per=period: (
+                                p.speed if (t % per) < (per / 2) else 0.0
+                            )
+                        )
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 

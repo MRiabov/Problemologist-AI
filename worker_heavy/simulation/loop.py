@@ -184,7 +184,9 @@ class SimulationLoop:
             # Performance optimizations: cache backend info
             self.actuator_names = self.backend.get_all_actuator_names()
             self.body_names = [
-                b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+                b
+                for b in self.backend.get_all_body_names()
+                if b not in ["world", "0"] and not b.startswith("zone_")
             ]
 
             # Cache actuator limits for monitoring
@@ -498,46 +500,46 @@ class SimulationLoop:
                     # Return immediately from step loop on breakage
                     break
 
-                # 7. Check Wire Failure (T015)
-                if self.electronics:
-                    wire_broken = False
-                    for wire in self.electronics.wiring:
-                        if getattr(wire, "routed_in_3d", False):
-                            try:
-                                tension = self.backend.get_tendon_tension(wire.wire_id)
-                                # T016: Use accurate tensile strength from AWG lookup
-                                props = get_awg_properties(wire.gauge_awg)
-                                limit = props["tensile_strength_n"]
-                                if tension > limit:
-                                    self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
-                                    emit_event(
-                                        ElectricalFailureEvent(
-                                            failure_type="wire_torn",
-                                            component_id=wire.wire_id,
-                                            message=(
-                                                f"Wire {wire.wire_id} torn due to "
-                                                f"high tension ({tension:.2f}N > "
-                                                f"{limit:.2f}N)"
-                                            ),
-                                        )
+            # 7. Check Wire Failure (T015) - Outside FEM block (T019)
+            if self.electronics:
+                wire_broken = False
+                for wire in self.electronics.wiring:
+                    if getattr(wire, "routed_in_3d", False):
+                        try:
+                            tension = self.backend.get_tendon_tension(wire.wire_id)
+                            # T016: Use accurate tensile strength from AWG lookup
+                            props = get_awg_properties(wire.gauge_awg)
+                            limit = props["tensile_strength_n"]
+                            if tension > limit:
+                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
+                                emit_event(
+                                    ElectricalFailureEvent(
+                                        failure_type="wire_torn",
+                                        component_id=wire.wire_id,
+                                        message=(
+                                            f"Wire {wire.wire_id} torn due to "
+                                            f"high tension ({tension:.2f}N > "
+                                            f"{limit:.2f}N)"
+                                        ),
                                     )
-                                    logger.info(
-                                        "simulation_fail",
-                                        reason="wire_torn",
-                                        wire=wire.wire_id,
-                                        tension=tension,
-                                    )
-                                    wire_broken = True
-                                    # If wire breaks, remove it and re-evaluate circuit
-                                    self.electronics.wiring.remove(wire)
-                                    self._electronics_dirty = True
-                                    self._update_electronics()
-                                    break
-                            except Exception:
-                                # Tendon might not be in backend if not routed
-                                pass
-                    if wire_broken:
-                        break
+                                )
+                                logger.info(
+                                    "simulation_fail",
+                                    reason="wire_torn",
+                                    wire=wire.wire_id,
+                                    tension=tension,
+                                )
+                                wire_broken = True
+                                # If wire breaks, remove it and re-evaluate circuit
+                                self.electronics.wiring.remove(wire)
+                                self._electronics_dirty = True
+                                self._update_electronics()
+                                break
+                        except Exception:
+                            # Tendon might not be in backend if not routed
+                            pass
+                if wire_broken:
+                    break
 
             if render_callback:
                 # This might need adjustment as render_callback usually takes model/data
