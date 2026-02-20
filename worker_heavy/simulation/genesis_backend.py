@@ -37,6 +37,7 @@ class GenesisBackend(PhysicsBackend):
         self.mjcf_actuators = {}  # name -> {joint: str, force_range: tuple}
         self.cables = {}  # name -> gs.Entity
         self.applied_controls = {}  # name -> float
+        self.electronics_names = []  # list of entity names marked as electronics
         self.current_time = 0.0
         self._last_max_stress = 0.0
         self.mfg_config = None
@@ -155,6 +156,7 @@ class GenesisBackend(PhysicsBackend):
             self.mjcf_actuators = {}
             self.cables = {}
             self.applied_controls = {}
+            self.electronics_names = []
             self._is_built = False
 
             if "gs_scene" in scene.assets:
@@ -211,6 +213,11 @@ class GenesisBackend(PhysicsBackend):
                     else:
                         logger.error("failed_to_build_genesis_scene", error=str(e))
                         raise
+
+    def set_electronics(self, names: list[str]) -> None:
+        """Identify entities for proximity-based fluid damage detection."""
+        self.electronics_names = names
+        logger.info("genesis_set_electronics", names=names)
 
     @property
     def is_built(self) -> bool:
@@ -566,29 +573,41 @@ class GenesisBackend(PhysicsBackend):
 
     def _check_electronics_fluid_damage(self) -> str | None:
         """Check if any fluid particles are touching electronic components."""
-        # WP3 Forward Compatibility: detect if particles are within bounding boxes
-        # of entities marked as electronics in the assembly definition.
         particles = self.get_particle_positions()
         if particles is None or len(particles) == 0:
             return None
 
-        # We need to know which entities are electronics.
-        # This information would typically come from the assembly definition.
-        # For now, we'll check if the entity has 'is_electronics' in its config.
-        for name, entity in self.entities.items():
-            cfg = self.entity_configs.get(name, {})
+        # 1. Use explicitly set electronics names
+        # 2. Fallback to 'is_electronics' in config
+        targets = set(self.electronics_names)
+        for name, cfg in self.entity_configs.items():
             if cfg.get("is_electronics"):
-                # Get bounding box of the entity
-                # This is simplified; ideally we use the mesh collision
+                targets.add(name)
+
+        for name in targets:
+            entity = self.entities.get(name)
+            if not entity:
+                continue
+
+            # Get center of the entity
+            try:
                 state = entity.get_state()
                 if hasattr(state, "pos"):
-                    # Check distance from each particle to entity center
-                    # (Very rough approximation for MVP)
-                    center = np.mean(state.pos[0].cpu().numpy(), axis=0)
+                    # state.pos is [1, n_nodes, 3] for soft/MPM, or [n_envs, 3] for rigid?
+                    # Genesis RigidEntity.get_pos() returns [n_envs, 3]
+                    pos = entity.get_pos().cpu().numpy()
+                    if pos.ndim > 1:
+                        center = pos[0]
+                    else:
+                        center = pos
+
                     dist = np.linalg.norm(particles - center, axis=1)
                     if np.any(dist < 0.05):  # 5cm threshold
                         logger.info("electronics_fluid_damage", part=name)
                         return f"ELECTRONICS_FLUID_DAMAGE:{name}"
+            except Exception as e:
+                logger.debug("failed_to_check_fluid_damage", part=name, error=str(e))
+
         return None
 
     def get_body_state(self, body_id: str) -> BodyState:

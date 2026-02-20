@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from shared.cots.database.models import COTSItemORM
+from shared.cots.database.models import CatalogMetadataORM, COTSItemORM
 
 # Initialize router
 router = APIRouter(prefix="/cots", tags=["cots"])
@@ -65,3 +65,25 @@ def search_cots(
         )
 
     return response
+
+
+@router.get("/metadata")
+def get_catalog_metadata(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """
+    Get the catalog metadata (version, commit, etc.).
+    """
+    stmt = select(CatalogMetadataORM).order_by(CatalogMetadataORM.id.desc()).limit(1)
+    result = db.scalar(stmt)
+
+    if not result:
+        return {
+            "catalog_version": "unknown",
+            "bd_warehouse_commit": "unknown",
+            "generated_at": None,
+        }
+
+    return {
+        "catalog_version": result.catalog_version,
+        "bd_warehouse_commit": result.bd_warehouse_commit,
+        "generated_at": result.generated_at.isoformat() if result.generated_at else None,
+    }

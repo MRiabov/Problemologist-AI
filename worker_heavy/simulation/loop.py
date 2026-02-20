@@ -210,6 +210,12 @@ class SimulationLoop:
         self.prev_particle_distances = {}  # objective_id -> distances array
         self.cumulative_crossed_count = {}  # objective_id -> int
 
+        # T017: Set electronics for fluid damage detection
+        if self.electronics:
+            elec_names = [comp.component_id for comp in self.electronics.components]
+            if hasattr(self.backend, "set_electronics"):
+                self.backend.set_electronics(elec_names)
+
         # Initial capture of distances for flow rate objectives
         if self.objectives and self.objectives.objectives:
             particles = self.backend.get_particle_positions()
