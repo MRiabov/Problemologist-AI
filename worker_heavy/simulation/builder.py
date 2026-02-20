@@ -768,14 +768,23 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
 
         # 3. Add actuators for moving parts (T011)
         if moving_parts:
+            from shared.enums import MotorControlMode
             for mp in moving_parts:
                 if mp.type == "motor":
+                    # T019: Determine actuator type based on control mode
+                    actuator_type = "position"
+                    if mp.control:
+                        if mp.control.mode == MotorControlMode.CONSTANT:
+                            actuator_type = "velocity"
+                        elif mp.control.mode == MotorControlMode.ON_OFF:
+                            actuator_type = "motor"  # Direct force/torque control
+
                     # We assume the joint name follows the convention {part_name}_joint
                     # which is what add_body uses.
                     self.compiler.add_actuator(
                         name=mp.part_name,
                         joint=f"{mp.part_name}_joint",
-                        actuator_type="position",  # Defaulting to position for servos
+                        actuator_type=actuator_type,
                         cots_id=cots_lookup.get(mp.part_name),
                     )
 
