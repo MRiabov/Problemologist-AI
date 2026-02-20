@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from controller.clients.worker import WorkerClient
 from shared.observability.schemas import ObservabilityEventType
@@ -115,7 +115,11 @@ class WorkerInterpreter:
 
     async def _execute_remote(self, code: str):
         """Internal async execution call."""
-        return await self.worker_client.execute_python(code)
+        # T025: Add timeout to prevent thread leak in BaseNode (Issue 1)
+        # 120s is enough for most simulations (capped at 30s) + overhead.
+        return await asyncio.wait_for(
+            self.worker_client.execute_python(code), timeout=120.0
+        )
 
     def shutdown(self):
         """Cleanup if needed."""
@@ -198,9 +202,20 @@ def cad_simulation_metric(
                     break
         if hasattr(obj, "objectives"):
             obj_yaml = obj.objectives
-            for k in ["max_unit_cost", "max_weight", "max_power"]:
-                if hasattr(obj_yaml, k):
-                    context[k] = getattr(obj_yaml, k)
+            # Map from ObjectivesYaml nested structure
+            if hasattr(obj_yaml, "constraints"):
+                context["max_unit_cost"] = obj_yaml.constraints.max_unit_cost
+                context["max_weight_g"] = obj_yaml.constraints.max_weight_g
+                # Fallback for legacy formulas
+                context["max_weight"] = obj_yaml.constraints.max_weight_g
+
+            if (
+                hasattr(obj_yaml, "electronics_requirements")
+                and obj_yaml.electronics_requirements
+            ):
+                ps = obj_yaml.electronics_requirements.power_supply_available
+                if ps:
+                    context["max_power"] = ps.voltage_dc * ps.max_current_a
 
     error_msg = getattr(prediction, "error", None)
 
@@ -369,7 +384,7 @@ def map_events_to_prediction(
                     data.get("weight_g", 0.0)
                     if isinstance(data, dict)
                     else getattr(data, "weight_g", 0.0)
-                ) / 1000.0
+                )
                 metrics.actual_cost = max(metrics.actual_cost, val_cost)
                 metrics.actual_weight = max(metrics.actual_weight, val_weight)
                 metrics.estimated_cost = max(metrics.estimated_cost, val_cost)
