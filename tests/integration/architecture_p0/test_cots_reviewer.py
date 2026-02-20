@@ -124,9 +124,9 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers):
         # We need a valid review payload
         review_content = """---
 decision: rejected
+comments: ["Not good enough"]
 evidence:
   files_checked: ["plan.md"]
-  comments: "Not good enough"
 ---
 Refusing this plan.
 """
