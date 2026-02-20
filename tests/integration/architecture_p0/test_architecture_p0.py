@@ -91,14 +91,14 @@ async def test_int_003_session_filesystem_isolation():
         # Write to A
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "secret.txt", "content": "secret_data"},
+            json={"path": "data.txt", "content": "some_data"},
             headers={"X-Session-ID": session_a},
         )
 
         # Try read from B
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
-            json={"path": "secret.txt"},
+            json={"path": "data.txt"},
             headers={"X-Session-ID": session_b},
         )
         assert resp.status_code == 404
