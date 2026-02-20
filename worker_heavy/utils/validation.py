@@ -733,3 +733,122 @@ def validate_fem_manufacturability(
         return False, f"FEM manufacturability check failed: {e!s}"
 
     return True, None
+
+def verify(
+    component: Compound,
+    output_dir: Path | None = None,
+    fem_enabled: bool | None = None,
+    particle_budget: int | None = None,
+    smoke_test_mode: bool = False,
+    backend: SimulatorBackendType | None = None,
+    session_id: str | None = None,
+    num_runs: int = 5,
+    jitter_range: list[float] | None = None,
+) -> dict:
+    """Run robustness verification using multiple simulations with jitter."""
+    from worker_heavy.simulation.verification import verify_with_jitter
+
+    logger.info(
+        "verify_start",
+        fem_enabled=fem_enabled,
+        particle_budget=particle_budget,
+        backend=backend,
+        session_id=session_id,
+        num_runs=num_runs,
+    )
+    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    renders_dir = working_dir / "renders"
+    renders_dir.mkdir(parents=True, exist_ok=True)
+
+    objectives = None
+    assembly_definition = None
+    objectives_path = working_dir / "objectives.yaml"
+    if objectives_path.exists():
+        content = objectives_path.read_text(encoding="utf-8")
+        if "[TEMPLATE]" not in content:
+            try:
+                data = yaml.safe_load(content)
+                objectives = ObjectivesYaml(**data)
+            except Exception as e:
+                logger.error("failed_to_load_objectives", error=str(e))
+
+    cost_est_path = working_dir / "assembly_definition.yaml"
+    if cost_est_path.exists():
+        try:
+            data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
+            assembly_definition = AssemblyDefinition(**data)
+        except Exception as e:
+            logger.error("failed_to_load_assembly_definition", error=str(e))
+
+    backend_type = backend
+    if backend_type is None:
+        backend_type = SimulatorBackendType.GENESIS
+        if objectives and getattr(objectives, "physics", None):
+            backend_type = SimulatorBackendType(objectives.physics.backend)
+
+    builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
+    moving_parts = assembly_definition.moving_parts if assembly_definition else []
+    electronics = assembly_definition.electronics if assembly_definition else None
+
+    scene_path = builder.build_from_assembly(
+        component,
+        objectives=objectives,
+        moving_parts=moving_parts,
+        electronics=electronics,
+        smoke_test_mode=smoke_test_mode,
+    )
+
+    jitter = tuple(jitter_range) if jitter_range else (0.002, 0.002, 0.001)
+
+    result = verify_with_jitter(
+        str(scene_path),
+        component=component,
+        electronics=electronics,
+        objectives=objectives,
+        moving_parts=moving_parts,
+        jitter_range=jitter,
+        num_runs=num_runs,
+        duration=0.5 if smoke_test_mode else 10.0,
+        backend_type=backend_type,
+        smoke_test_mode=smoke_test_mode,
+        session_id=session_id,
+        particle_budget=particle_budget,
+    )
+
+    # Convert MultiRunResult to dict for API response artifacts
+    return result.model_dump()
+
+def verify_subprocess(
+    script_path: str,
+    session_root: str,
+    script_content: str | None = None,
+    output_dir: Path | None = None,
+    smoke_test_mode: bool = False,
+    backend: Any | None = None,
+    session_id: str | None = None,
+    particle_budget: int | None = None,
+    num_runs: int = 5,
+    jitter_range: list[float] | None = None,
+) -> dict:
+    """Serializable entry point for verification."""
+    if session_root:
+        os.environ["EVENTS_FILE"] = str(Path(session_root) / "events.jsonl")
+
+    from shared.workers.loader import load_component_from_script
+    from worker_heavy.utils.validation import verify
+
+    component = load_component_from_script(
+        script_path=script_path,
+        session_root=session_root,
+        script_content=script_content,
+    )
+    return verify(
+        component=component,
+        output_dir=output_dir,
+        smoke_test_mode=smoke_test_mode,
+        backend=backend,
+        session_id=session_id,
+        particle_budget=particle_budget,
+        num_runs=num_runs,
+        jitter_range=jitter_range,
+    )

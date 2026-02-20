@@ -128,6 +128,16 @@ class BenchmarkToolRequest(BaseModel):
     )
 
 
+class VerifyRequest(BenchmarkToolRequest):
+    """Request to run robustness verification."""
+
+    num_runs: int = Field(default=5, ge=1, description="Number of verification runs.")
+    jitter_range: list[float] = Field(
+        default_factory=lambda: [0.002, 0.002, 0.001],
+        description="Position jitter [x, y, z] in meters.",
+    )
+
+
 class AnalyzeRequest(BenchmarkToolRequest):
     """Request to run manufacturing analysis."""
 
