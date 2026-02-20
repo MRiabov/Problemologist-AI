@@ -46,11 +46,15 @@ if [ -f .env ]; then
   done < .env
 fi
 
+# Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
+# DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
+bash scripts/ensure_docker_vfs.sh
+
 echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
 docker compose -f docker-compose.test.yaml up -d
 
 echo "Waiting for infra to be ready..."
-MAX_INFRA_RETRIES=15
+MAX_INFRA_RETRIES=60
 
 # Wait for Postgres
 INFRA_COUNT=0
@@ -70,7 +74,8 @@ done
 
 # Wait for Temporal
 INFRA_COUNT=0
-until nc -z 127.0.0.1 17233 > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
+# Using python3 instead of nc for portability as nc is missing in some environments
+until python3 -c "import socket; socket.create_connection(('127.0.0.1', 17233), timeout=1)" > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
   echo "Waiting for Temporal... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
   sleep 2
   INFRA_COUNT=$((INFRA_COUNT + 1))
