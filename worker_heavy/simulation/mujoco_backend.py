@@ -291,6 +291,17 @@ class MuJoCoBackend(PhysicsBackend):
             for i in range(self.model.ntendon)
         ]
 
+    def get_all_camera_names(self) -> list[str]:
+        names = [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, i)
+            for i in range(self.model.ncam)
+        ]
+        # Include custom cameras
+        for name in self.custom_cameras:
+            if name not in names:
+                names.append(name)
+        return names
+
     def check_collision(self, body_name: str, site_name: str) -> bool:
         bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, body_name)
         sid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, site_name)
@@ -313,7 +324,7 @@ class MuJoCoBackend(PhysicsBackend):
             v_local = diff @ site_mat
             if zone_type == mujoco.mjtGeom.mjGEOM_BOX:
                 return all(np.abs(v_local) <= zone_size[:3])
-            elif zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
+            if zone_type == mujoco.mjtGeom.mjGEOM_SPHERE:
                 return np.linalg.norm(diff) <= zone_size[0]
             return False
 
@@ -322,6 +333,14 @@ class MuJoCoBackend(PhysicsBackend):
             geom_type = self.model.geom_type[geom_id]
             geom_pos = self.data.geom_xpos[geom_id]
             geom_mat = self.data.geom_xmat[geom_id].reshape(3, 3)
+
+            # Broadphase check: skip if geom is clearly outside zone
+            geom_rbound = self.model.geom_rbound[geom_id]
+            # Max possible distance from site center to site bounds
+            max_site_dist = np.max(zone_size[:3])
+            dist = np.linalg.norm(geom_pos - zone_pos)
+            if dist > geom_rbound + max_site_dist + 0.01:
+                continue
 
             vertices = []
             if geom_type == mujoco.mjtGeom.mjGEOM_MESH:

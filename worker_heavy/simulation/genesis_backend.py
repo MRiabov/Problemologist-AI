@@ -727,6 +727,10 @@ class GenesisBackend(PhysicsBackend):
             nodes = state.pos[0].cpu().numpy()
             stress = state.von_mises[0].cpu().numpy()
             return StressField(nodes=nodes, stress=stress)
+        else:
+            logger.debug(
+                "state_missing_von_mises", body_id=body_id, attributes=dir(state)
+            )
 
         return None
 
@@ -1036,6 +1040,9 @@ class GenesisBackend(PhysicsBackend):
 
     def get_all_tendon_names(self) -> list[str]:
         return list(self.cables.keys())
+
+    def get_all_camera_names(self) -> list[str]:
+        return list(self.cameras.keys())
 
     def check_collision(self, body_name: str, site_name: str) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""

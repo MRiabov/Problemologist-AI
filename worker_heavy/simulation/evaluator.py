@@ -1,17 +1,22 @@
 import numpy as np
 
 from shared.enums import SimulationFailureMode
+from shared.models.schemas import BoundingBox
 
 
 class SuccessEvaluator:
     """Evaluates simulation success or failure conditions."""
 
     def __init__(
-        self, max_simulation_time: float, motor_overload_threshold: float = 2.0
+        self,
+        max_simulation_time: float,
+        motor_overload_threshold: float = 2.0,
+        simulation_bounds: BoundingBox | None = None,
     ):
         self.max_simulation_time = max_simulation_time
         self.motor_overload_threshold = motor_overload_threshold
         self.motor_overload_timer: dict[str, float] = {}
+        self.simulation_bounds = simulation_bounds
 
     def check_failure(
         self,
@@ -33,11 +38,15 @@ class SuccessEvaluator:
             if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
                 return SimulationFailureMode.PHYSICS_INSTABILITY
 
-        # 3. Fell off world
-        # Heuristic: Z < -2.0
-        # Assume free joint: qpos[2] is Z
-        if qpos is not None and len(qpos) >= 3 and qpos[2] < -2.0:
-            return SimulationFailureMode.OUT_OF_BOUNDS
+        # 3. Fell off world / Out of Bounds
+        if qpos is not None and len(qpos) >= 3:
+            if self.simulation_bounds:
+                b_min = np.array(self.simulation_bounds.min)
+                b_max = np.array(self.simulation_bounds.max)
+                if np.any(qpos < b_min) or np.any(qpos > b_max):
+                    return SimulationFailureMode.OUT_OF_BOUNDS
+            elif qpos[2] < -2.0:  # Legacy heuristic fallback
+                return SimulationFailureMode.OUT_OF_BOUNDS
 
         return None
 
