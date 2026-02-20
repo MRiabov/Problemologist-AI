@@ -116,9 +116,9 @@ class WorkerInterpreter:
     async def _execute_remote(self, code: str):
         """Internal async execution call."""
         # T025: Add timeout to prevent thread leak in BaseNode (Issue 1)
-        # 120s is enough for most simulations (capped at 30s) + overhead.
+        # 600s provides a safe buffer for complex simulations.
         return await asyncio.wait_for(
-            self.worker_client.execute_python(code), timeout=120.0
+            self.worker_client.execute_python(code), timeout=600.0
         )
 
     def shutdown(self):
