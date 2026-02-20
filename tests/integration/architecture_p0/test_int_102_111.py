@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -61,7 +62,27 @@ simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
-        # Script using a material that LACKS FEM fields (aluminum_6061 from default config)
+        # 1b. Setup custom material config that LACKS FEM fields
+        # (aluminum_6061 in default config now HAS them, so we must override)
+        custom_config = """
+cnc:
+  materials:
+    no_fem_material:
+      name: "No FEM Material"
+      density_g_cm3: 2.7
+      cost_per_kg: 6.0
+      machine_hourly_rate: 80.0
+      color: "#D1D5DB"
+      # missing youngs_modulus_pa, yield_stress_pa, etc.
+      compatibility: ["cnc"]
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            headers=base_headers,
+        )
+
+        # Script using the material that LACKS FEM fields
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
@@ -70,7 +91,7 @@ def build():
     p = Box(1, 1, 1)
     p.label = "test_part"
     p.metadata = PartMetadata(
-        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum_6061"
+        manufacturing_method=ManufacturingMethod.CNC, material_id="no_fem_material"
     )
     return p
 """
@@ -81,7 +102,7 @@ def build():
         # 2. Test INT-111: validate_and_price gate
         # We expect this to fail because aluminum_6061 lacks FEM fields
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/validate",
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -92,7 +113,7 @@ def build():
 
         # 3. Test INT-102: simulate entry gate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
         )
@@ -162,7 +183,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -235,7 +256,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -322,7 +343,7 @@ def build():
 
         # Simulate
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
             timeout=120.0,
@@ -394,7 +415,7 @@ cnc:
 
         # Skip geometric validation to allow intersection
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "skip_validate": True},
             headers=base_headers,
             timeout=120.0,

@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 
 
 @pytest.fixture
@@ -55,7 +56,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         # Trigger simulation with a huge particle count that exceeds typical RAM/VRAM
         # (Though current worker caps at 100k, we might need a way to force OOM)
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/benchmark/simulate",
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "particle_budget": 10**9},
             headers=base_headers,
             timeout=180.0,

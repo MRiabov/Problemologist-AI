@@ -132,11 +132,32 @@ def _calculate_im_cost(
     if not im_cfg:
         raise ValueError("Injection Molding configuration missing")
 
-    material_name = config.defaults.get("material", "abs")
-    if material_name not in im_cfg.materials:
-        material_name = list(im_cfg.materials.keys())[0]
+    # Resolve material from part metadata or fallback to default
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
 
-    material_cfg = im_cfg.materials[material_name]
+    if material_name not in im_cfg.materials:
+        # Fallback to first available if specific one is missing
+        if im_cfg.materials:
+            material_name = list(im_cfg.materials.keys())[0]
+        else:
+            material_name = "abs"
+
+    material_cfg = im_cfg.materials.get(material_name)
+    if not material_cfg:
+        material_cfg = config.materials.get(material_name) or config.materials.get("abs")
+        if not material_cfg:
+            from shared.workers.workbench_models import MaterialDefinition
+            material_cfg = MaterialDefinition(
+                name="Fallback ABS",
+                density_g_cm3=1.04,
+                cost_per_kg=2.5,
+                machine_hourly_rate=60.0
+            )
     costs_cfg = im_cfg.costs
 
     logger.info("calculating_im_cost", material=material_name, quantity=quantity)
@@ -243,7 +264,12 @@ def analyze_im(
     cost_breakdown = _calculate_im_cost(part, config, quantity=quantity)
 
     # 5. Weight Calculation
-    material_name = config.defaults.get("material", "abs")
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "abs")
+    ) or config.defaults.get("material", "abs")
     im_cfg = config.injection_molding
     density = 1.04  # fallback (ABS)
     if im_cfg and material_name in im_cfg.materials:
