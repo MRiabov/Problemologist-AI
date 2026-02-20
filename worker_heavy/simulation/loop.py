@@ -74,180 +74,195 @@ class SimulationLoop:
 
         self.particle_budget = particle_budget or (5000 if smoke_test_mode else 100000)
 
-        # Emit backend selection event (WP2)
-        emit_event(
-            SimulationBackendSelectedEvent(
-                backend=backend_type.value
-                if hasattr(backend_type, "value")
-                else backend_type,
-                fem_enabled=objectives.physics.fem_enabled if objectives else False,
-                compute_target=objectives.physics.compute_target
-                if objectives
-                else "auto",
-            )
-        )
-        scene = SimulationScene(
-            scene_path=str(xml_path), config={"particle_budget": self.particle_budget}
-        )
-        self.backend.load_scene(scene)
-
-        self.component = component
-        self.electronics = electronics
-        self.objectives = objectives
-        self.is_powered_map = {}
-        self.validation_report = None
-        self.electronics_validation_error = None
-
-        if self.component:
-            # WP2: Load custom configuration from working directory if present
-            working_dir = Path(xml_path).parent
-            custom_config_path = working_dir / "manufacturing_config.yaml"
-            if custom_config_path.exists():
-                self.config = load_config(custom_config_path)
-                logger.info(
-                    "loop_loaded_custom_config",
-                    path=str(custom_config_path),
-                    materials=list(self.config.cnc.materials.keys())
-                    if self.config.cnc
-                    else [],
+        try:
+            # Emit backend selection event (WP2)
+            emit_event(
+                SimulationBackendSelectedEvent(
+                    backend=backend_type.value
+                    if hasattr(backend_type, "value")
+                    else backend_type,
+                    fem_enabled=objectives.physics.fem_enabled if objectives else False,
+                    compute_target=objectives.physics.compute_target
+                    if objectives
+                    else "auto",
                 )
+            )
+            scene = SimulationScene(
+                scene_path=str(xml_path),
+                config={"particle_budget": self.particle_budget},
+            )
+            self.backend.load_scene(scene)
+
+            self.component = component
+            self.electronics = electronics
+            self.objectives = objectives
+            self.is_powered_map = {}
+            self.validation_report = None
+            self.electronics_validation_error = None
+
+            if self.component:
+                # WP2: Load custom configuration from working directory if present
+                working_dir = Path(xml_path).parent
+                custom_config_path = working_dir / "manufacturing_config.yaml"
+                if custom_config_path.exists():
+                    self.config = load_config(custom_config_path)
+                    logger.info(
+                        "loop_loaded_custom_config",
+                        path=str(custom_config_path),
+                        materials=list(self.config.cnc.materials.keys())
+                        if self.config.cnc
+                        else [],
+                    )
+                else:
+                    self.config = load_config()
+                    logger.info(
+                        "loop_loaded_default_config",
+                        materials=list(self.config.materials.keys()),
+                    )
+
+                fem_required = (
+                    self.objectives.physics.fem_enabled
+                    if self.objectives and self.objectives.physics
+                    else False
+                )
+
+                # Resolve manufacturing method from component metadata
+                mfg_method = ManufacturingMethod.CNC
+                children = getattr(self.component, "children", [])
+                if not children:
+                    children = [self.component]
+
+                for child in children:
+                    meta = getattr(child, "metadata", None)
+                    if meta and getattr(meta, "manufacturing_method", None):
+                        mfg_method = meta.manufacturing_method
+                        break
+
+                self.validation_report = validate_and_price(
+                    self.component,
+                    mfg_method,
+                    self.config,
+                    fem_required=fem_required,
+                )
+
+                # Build material lookup
+                self.material_lookup = {}
+                children = getattr(self.component, "children", [])
+                if not children:
+                    children = [self.component]
+                for child in children:
+                    label = getattr(child, "label", None)
+                    if label:
+                        metadata = getattr(child, "metadata", None)
+                        self.material_lookup[label] = getattr(
+                            metadata, "material_id", None
+                        )
             else:
-                self.config = load_config()
-                logger.info(
-                    "loop_loaded_default_config",
-                    materials=list(self.config.materials.keys()),
-                )
+                self.config = None
+                self.material_lookup = {}
 
-            fem_required = (
-                self.objectives.physics.fem_enabled
-                if self.objectives and self.objectives.physics
-                else False
+            # Cache zone names for forbidden zones
+            self.forbidden_sites = []
+            self.goal_sites = []
+            for name in self.backend.get_all_site_names():
+                if name and name.startswith("zone_forbid"):
+                    self.forbidden_sites.append(name)
+                elif name and name.startswith("zone_goal"):
+                    self.goal_sites.append(name)
+
+            logger.info(
+                "SimulationLoop_init",
+                goal_sites=self.goal_sites,
+                forbidden_sites=self.forbidden_sites,
             )
 
-            # Resolve manufacturing method from component metadata
-            mfg_method = ManufacturingMethod.CNC
-            children = getattr(self.component, "children", [])
-            if not children:
-                children = [self.component]
-
-            for child in children:
-                meta = getattr(child, "metadata", None)
-                if meta and getattr(meta, "manufacturing_method", None):
-                    mfg_method = meta.manufacturing_method
-                    break
-
-            self.validation_report = validate_and_price(
-                self.component,
-                mfg_method,
-                self.config,
-                fem_required=fem_required,
+            # Configurable timeout (capped at hard limit)
+            self.max_simulation_time = min(
+                max_simulation_time, MAX_SIMULATION_TIME_SECONDS
             )
 
-            # Build material lookup
-            self.material_lookup = {}
-            children = getattr(self.component, "children", [])
-            if not children:
-                children = [self.component]
-            for child in children:
-                label = getattr(child, "label", None)
-                if label:
-                    metadata = getattr(child, "metadata", None)
-                    self.material_lookup[label] = getattr(metadata, "material_id", None)
-        else:
-            self.config = None
-            self.material_lookup = {}
+            # Performance optimizations: cache backend info
+            self.actuator_names = self.backend.get_all_actuator_names()
+            self.body_names = [
+                b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
+            ]
 
-        # Cache zone names for forbidden zones
-        self.forbidden_sites = []
-        self.goal_sites = []
-        for name in self.backend.get_all_site_names():
-            if name and name.startswith("zone_forbid"):
-                self.forbidden_sites.append(name)
-            elif name and name.startswith("zone_goal"):
-                self.goal_sites.append(name)
+            # Cache actuator limits for monitoring
+            self._monitor_names = []
+            self._monitor_limits = []
+            for name in self.actuator_names:
+                try:
+                    state = self.backend.get_actuator_state(name)
+                    # Only monitor if there is a non-zero force range
+                    if (
+                        state.forcerange
+                        and len(state.forcerange) >= 2
+                        and state.forcerange[1] > state.forcerange[0]
+                    ):
+                        self._monitor_names.append(name)
+                        self._monitor_limits.append(state.forcerange[1])
+                    elif backend_type != SimulatorBackendType.MUJOCO:
+                        # Default for other backends (e.g. Genesis)
+                        self._monitor_names.append(name)
+                        self._monitor_limits.append(1000.0)
+                except Exception:
+                    pass
 
-        logger.info(
-            "SimulationLoop_init",
-            goal_sites=self.goal_sites,
-            forbidden_sites=self.forbidden_sites,
-        )
+            self.stress_summaries = []
+            self.fluid_metrics = []
+            self.actuator_clamp_duration = {}
 
-        # Configurable timeout (capped at hard limit)
-        self.max_simulation_time = min(max_simulation_time, MAX_SIMULATION_TIME_SECONDS)
+            # T016: Persistent state for flow rate tracking
+            self.prev_particle_distances = {}  # objective_id -> distances array
+            self.cumulative_crossed_count = {}  # objective_id -> int
 
-        # Performance optimizations: cache backend info
-        self.actuator_names = self.backend.get_all_actuator_names()
-        self.body_names = [
-            b for b in self.backend.get_all_body_names() if b not in ["world", "0"]
-        ]
+            # T017: Set electronics for fluid damage detection
+            if self.electronics:
+                elec_names = [comp.component_id for comp in self.electronics.components]
+                if hasattr(self.backend, "set_electronics"):
+                    self.backend.set_electronics(elec_names)
 
-        # Cache actuator limits for monitoring
-        self._monitor_names = []
-        self._monitor_limits = []
-        for name in self.actuator_names:
-            try:
-                state = self.backend.get_actuator_state(name)
-                # Only monitor if there is a non-zero force range
-                if (
-                    state.forcerange
-                    and len(state.forcerange) >= 2
-                    and state.forcerange[1] > state.forcerange[0]
-                ):
-                    self._monitor_names.append(name)
-                    self._monitor_limits.append(state.forcerange[1])
-                elif backend_type != SimulatorBackendType.MUJOCO:
-                    # Default for other backends (e.g. Genesis)
-                    self._monitor_names.append(name)
-                    self._monitor_limits.append(1000.0)
-            except Exception:
-                pass
+            # Initial capture of distances for flow rate objectives
+            if self.objectives and self.objectives.objectives:
+                particles = self.backend.get_particle_positions()
+                if particles is not None and len(particles) > 0:
+                    for fo in self.objectives.objectives.fluid_objectives:
+                        if fo.type == FluidObjectiveType.FLOW_RATE:
+                            p0 = np.array(fo.gate_plane_point)
+                            n = np.array(fo.gate_plane_normal)
+                            distances = np.dot(particles - p0, n)
+                            obj_id = f"{fo.fluid_id}_{fo.type}"
+                            self.prev_particle_distances[obj_id] = distances
 
-        self.stress_summaries = []
-        self.fluid_metrics = []
-        self.actuator_clamp_duration = {}
+            self.electronics_manager = ElectronicsManager(self.electronics)
+            self._electronics_dirty = False
+            self.metric_collector = MetricCollector()
+            self.success_evaluator = SuccessEvaluator(
+                max_simulation_time=self.max_simulation_time,
+                motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
+                simulation_bounds=self.objectives.simulation_bounds
+                if self.objectives
+                else None,
+            )
 
-        # T016: Persistent state for flow rate tracking
-        self.prev_particle_distances = {}  # objective_id -> distances array
-        self.cumulative_crossed_count = {}  # objective_id -> int
+            # T015: derive is_powered_map from electronics.circuit state
+            if self.electronics:
+                self._update_electronics(force=True)
+                self.wire_clearance_error = self._validate_wire_clearance()
+            else:
+                self.wire_clearance_error = None
 
-        # T017: Set electronics for fluid damage detection
-        if self.electronics:
-            elec_names = [comp.component_id for comp in self.electronics.components]
-            if hasattr(self.backend, "set_electronics"):
-                self.backend.set_electronics(elec_names)
+            # Reset metrics
+            self.reset_metrics()
+        except Exception as e:
+            import traceback
 
-        # Initial capture of distances for flow rate objectives
-        if self.objectives and self.objectives.objectives:
-            particles = self.backend.get_particle_positions()
-            if particles is not None and len(particles) > 0:
-                for fo in self.objectives.objectives.fluid_objectives:
-                    if fo.type == FluidObjectiveType.FLOW_RATE:
-                        p0 = np.array(fo.gate_plane_point)
-                        n = np.array(fo.gate_plane_normal)
-                        distances = np.dot(particles - p0, n)
-                        obj_id = f"{fo.fluid_id}_{fo.type}"
-                        self.prev_particle_distances[obj_id] = distances
-
-        self.electronics_manager = ElectronicsManager(self.electronics)
-        self._electronics_dirty = False
-        self.metric_collector = MetricCollector()
-        self.success_evaluator = SuccessEvaluator(
-            max_simulation_time=self.max_simulation_time,
-            motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
-            simulation_bounds=self.objectives.simulation_bounds
-            if self.objectives
-            else None,
-        )
-
-        # T015: derive is_powered_map from electronics.circuit state
-        if self.electronics:
-            self._update_electronics(force=True)
-            self.wire_clearance_error = self._validate_wire_clearance()
-        else:
-            self.wire_clearance_error = None
-
-        # Reset metrics
-        self.reset_metrics()
+            logger.error(
+                "SimulationLoop_init_failed",
+                error=str(e),
+                traceback=traceback.format_exc(),
+            )
+            raise
 
     def _validate_wire_clearance(self) -> str | None:
         """T011: Check wire clearance using shared util."""
