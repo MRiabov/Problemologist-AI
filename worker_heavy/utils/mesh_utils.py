@@ -165,6 +165,8 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
     """Fallback implementation using TetGen CLI."""
     import subprocess
 
+    import gmsh
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_stl = Path(tmpdir) / input_path.name
         tmp_stl.write_bytes(input_path.read_bytes())
@@ -177,10 +179,77 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
         if result.returncode != 0:
             raise RuntimeError(f"TetGen failed: {result.stderr}")
 
-        # TetGen produces .node and .ele files.
-        # This is just a placeholder to show where we'd handle TetGen output.
-        # For Genesis, we really want .msh format which Gmsh provides natively.
-        # If we must use TetGen, we'd need a converter.
-        raise NotImplementedError(
-            "TetGen to MSH conversion is not yet implemented. Use Gmsh."
-        )
+        # Parse .node file
+        node_file = tmp_stl.with_suffix(".1.node")
+        if not node_file.exists():
+            raise FileNotFoundError(f"TetGen output .node file not found: {node_file}")
+
+        nodes = []
+        node_tags = []
+        with node_file.open() as f:
+            # First line: <# nodes> <dim (3)> <# attributes> <# boundary markers>
+            _header = f.readline()
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                # <index> <x> <y> <z> ...
+                idx = int(parts[0])
+                x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
+                nodes.extend([x, y, z])
+                node_tags.append(idx)
+
+        # Parse .ele file
+        ele_file = tmp_stl.with_suffix(".1.ele")
+        if not ele_file.exists():
+            raise FileNotFoundError(f"TetGen output .ele file not found: {ele_file}")
+
+        element_tags = []
+        node_indices = []  # flat list of node tags for elements
+        with ele_file.open() as f:
+            # First line: <# tetrahedra> <nodes per tet (4)> <# attributes>
+            _header = f.readline()
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                # <index> <n1> <n2> <n3> <n4> ...
+                idx = int(parts[0])
+                # Append 4 node tags
+                node_indices.extend(
+                    [int(parts[1]), int(parts[2]), int(parts[3]), int(parts[4])]
+                )
+                element_tags.append(idx)
+
+        # Use Gmsh to write MSH file
+        try:
+            if not gmsh.isInitialized():
+                gmsh.initialize()
+
+            gmsh.model.add("TetGenModel")
+
+            # Add a discrete volume entity (tag 1)
+            vol_tag = 1
+            gmsh.model.addDiscreteEntity(3, vol_tag)
+
+            # Add nodes
+            # addNodes(dim, entityTag, nodeTags, coord, parametricCoord=None)
+            gmsh.model.mesh.addNodes(3, vol_tag, node_tags, nodes)
+
+            # Add elements
+            # addElements(dim, entityTag, elementTypes, elementTags, nodeTags)
+            # Type 4 is 4-node tetrahedron
+            gmsh.model.mesh.addElements(
+                3, vol_tag, [4], [element_tags], [node_indices]
+            )
+
+            output_msh_path.parent.mkdir(parents=True, exist_ok=True)
+            gmsh.write(str(output_msh_path))
+
+            return output_msh_path
+
+        finally:
+            if gmsh.isInitialized():
+                gmsh.finalize()
