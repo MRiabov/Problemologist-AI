@@ -52,7 +52,7 @@ class SharedNodeContext:
         else:
             # T025: Add timeouts to prevent thread leaks (Issue 1)
             llm = ChatOpenAI(
-                model=settings.llm_model, temperature=0, request_timeout=120
+                model=settings.llm_model, temperature=0, request_timeout=600
             )
 
             # T012: Initialize DSPy LM for CodeAct support
@@ -64,7 +64,7 @@ class SharedNodeContext:
                 f"openai/{settings.llm_model}",
                 api_key=api_key,
                 cache=False,
-                timeout=120,
+                timeout=600,
             )
 
         return cls(
