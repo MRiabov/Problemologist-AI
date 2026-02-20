@@ -32,7 +32,7 @@ def search_cots_catalog(
     """
     constraints = {}
     if max_weight_g is not None:
-        constraints["max_weight"] = max_weight_g
+        constraints["max_weight_g"] = max_weight_g
     if max_cost is not None:
         constraints["max_cost"] = max_cost
     if category is not None:
