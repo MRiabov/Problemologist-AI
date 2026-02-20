@@ -32,6 +32,13 @@ def configure_logging(_service_name: str):
         ),
     ]
 
+    # Session context processor
+    def add_session_context(logger, method_name, event_dict):
+        # We can also add other context here
+        return event_dict
+
+    processors.insert(0, add_session_context)
+
     # Add trace_id and span_id if they exist in contextvars
     # These are usually added via middleware or explicitly
 
@@ -92,3 +99,36 @@ def set_trace_context(trace_id: str, span_id: str | None = None):
     structlog.contextvars.bind_contextvars(trace_id=trace_id)
     if span_id:
         structlog.contextvars.bind_contextvars(span_id=span_id)
+
+
+def log_marker_middleware():
+    """
+    Returns a FastAPI middleware that extracts session and test IDs
+    and binds them to the structlog context.
+    """
+    from fastapi import Request
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class LogMarkerMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            # Extract markers
+            session_id = request.headers.get("X-Session-ID")
+            test_id = request.headers.get("X-Integration-Test-ID")
+            query_marker = request.query_params.get("marker")
+
+            # Clear context and bind new markers
+            structlog.contextvars.clear_contextvars()
+            if session_id:
+                structlog.contextvars.bind_contextvars(session_id=session_id)
+            if test_id:
+                structlog.contextvars.bind_contextvars(test_id=test_id)
+
+            if query_marker:
+                # Log a prominent marker if requested via query param
+                logger = structlog.get_logger("marker")
+                logger.info(f"\n\n{'=' * 20} {query_marker} {'=' * 20}\n")
+
+            response = await call_next(request)
+            return response
+
+    return LogMarkerMiddleware
