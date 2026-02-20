@@ -108,10 +108,21 @@ def calculate_cnc_cost(
     if not cnc_cfg:
         raise ValueError("CNC configuration missing")
 
-    # Default to aluminum_6061 for now
-    material_name = config.defaults.get("material", "aluminum_6061")
+    # Resolve material from part metadata or fallback to default
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "aluminum_6061")
+    ) or config.defaults.get("material", "aluminum_6061")
+
     if material_name not in cnc_cfg.materials:
-        material_name = list(cnc_cfg.materials.keys())[0]
+        # Fallback to the first available CNC material if specifically requested one is missing
+        if cnc_cfg.materials:
+            material_name = list(cnc_cfg.materials.keys())[0]
+        else:
+            # Absolute fallback if config is empty
+            material_name = "aluminum_6061"
 
     material_cfg = cnc_cfg.materials[material_name]
     mrr = cnc_cfg.constraints.get("mrr_mm3_per_min", 1000.0)
@@ -214,9 +225,14 @@ def analyze_cnc(
     cost_breakdown = calculate_cnc_cost(part, config, quantity=quantity)
 
     # 4. Weight Calculation
-    material_name = config.defaults.get("material", "aluminum_6061")
+    metadata = getattr(part, "metadata", None)
+    material_name = (
+        getattr(metadata, "material_id", None)
+        if metadata
+        else config.defaults.get("material", "aluminum_6061")
+    ) or config.defaults.get("material", "aluminum_6061")
     cnc_cfg = config.cnc
-    density = 2.7  # fallback
+    density = 2.7  # fallback (aluminum)
     if cnc_cfg and material_name in cnc_cfg.materials:
         density = cnc_cfg.materials[material_name].density_g_cm3
 

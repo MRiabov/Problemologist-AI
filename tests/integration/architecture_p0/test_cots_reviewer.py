@@ -6,6 +6,7 @@ import pytest
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -96,7 +97,7 @@ This should be rejected.
         if resp.status_code == 404:
             # Fallback: Maybe it's a worker-side tool?
             resp = await client.post(
-                f"{WORKER_LIGHT_URL}/benchmark/review",
+                f"{WORKER_HEAVY_URL}/benchmark/review",
                 json={"content": malformed_review},
                 headers=base_headers,
             )
