@@ -426,10 +426,12 @@ class SimulationLoop:
 
                 target_vel = 0.0
                 target_pos = None
+                target_vel_vec = np.zeros(3)
                 if target_body_name:
                     state = self.backend.get_body_state(target_body_name)
                     target_vel = np.linalg.norm(state.vel)
                     target_pos = state.pos
+                    target_vel_vec = state.vel
 
                 max_stress = self.backend.get_max_stress()
                 self.metric_collector.update(
@@ -440,18 +442,19 @@ class SimulationLoop:
                 fail_reason = self.success_evaluator.check_failure(
                     current_time,
                     target_pos,
-                    state.vel if target_pos is not None else np.zeros(3),
+                    target_vel_vec,
                 )
                 if fail_reason:
                     self.fail_reason = fail_reason
                     break
 
                 if not res.success:
-                    self.fail_reason = (
-                        res.failure_reason
-                        if isinstance(res.failure_reason, SimulationFailureMode)
-                        else SimulationFailureMode.PHYSICS_INSTABILITY
-                    )
+                    if isinstance(res.failure_reason, SimulationFailureMode):
+                        self.fail_reason = res.failure_reason
+                    elif res.failure_reason and "out of memory" in res.failure_reason.lower():
+                        self.fail_reason = SimulationFailureMode.OUT_OF_MEMORY
+                    else:
+                        self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
                     break
 
                 # Check Forbidden Zones (T018 optimization: skip if no zones)

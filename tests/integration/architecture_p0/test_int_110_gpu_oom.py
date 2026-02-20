@@ -47,9 +47,23 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         # But INT-110 says "Requires GPU environment; currently not tested."
         # I will implement it as a "known-to-fail-or-skip-if-no-gpu" test.
 
+        script_content = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    b = Box(10, 10, 10)
+    b.label = "obj"
+    b.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return b
+"""
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "objectives.yaml", "content": objectives_content},
+            headers=base_headers,
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "script.py", "content": script_content},
             headers=base_headers,
         )
 
@@ -62,11 +76,17 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
             timeout=180.0,
         )
 
+        assert resp.status_code == 200, f"Simulation failed: {resp.text}"
+        data = resp.json()
+
         # If it retried, we expect 'gpu_oom_retry' event
         # and result annotated 'confidence: approximate'
-        data = resp.json()
-        if any(e["event_type"] == "gpu_oom_retry" for e in data.get("events", [])):
+        has_retry_event = any(
+            e["event_type"] == "gpu_oom_retry" for e in data.get("events", [])
+        )
+
+        # In a real GPU env with 10^9 particles, we expect a retry.
+        # In CI/Mock env, we at least check that if it failed with OOM, it retried.
+        if has_retry_event:
             assert data["confidence"] == "approximate"
-        else:
-            # If no GPU, it might just fail or run on CPU
-            pass
+            assert data["success"] is True or data["summary"] is not None

@@ -85,6 +85,7 @@ class SimulationFailureMode(StrEnum):
 
     # WP2 Fluids & Physics failures
     ASSET_GENERATION_FAILED = "asset_generation_failed"
+    OUT_OF_MEMORY = "out_of_memory"
     FLUID_OBJECTIVE_FAILED = "fluid_objective_failed"
     STRESS_OBJECTIVE_EXCEEDED = "stress_objective_exceeded"
     ELECTRONICS_FLUID_DAMAGE = "electronics_fluid_damage"

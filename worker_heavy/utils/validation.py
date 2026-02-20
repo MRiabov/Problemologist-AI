@@ -483,7 +483,10 @@ def simulate(
         )
 
         # WP2: T017: GPU OOM Retry Logic
-        if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
+        if metrics.fail_reason and (
+            "out of memory" in metrics.fail_reason.lower()
+            or "out_of_memory" in metrics.fail_reason.lower()
+        ):
             from shared.observability.events import emit_event
             from shared.observability.schemas import GpuOomRetryEvent
 
