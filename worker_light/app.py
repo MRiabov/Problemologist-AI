@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from shared.logging import configure_logging
+from shared.logging import configure_logging, log_marker_middleware
 from worker_light.api.routes import light_router
 from worker_light.utils.git import sync_skills
 from worker_light.config import settings
@@ -33,6 +33,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.add_middleware(log_marker_middleware())
 
 # Add CORS middleware
 app.add_middleware(

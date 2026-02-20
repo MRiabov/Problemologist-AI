@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from shared.logging import configure_logging
+from shared.logging import configure_logging, log_marker_middleware
 from worker_heavy.api.routes import heavy_router
 
 # Configure structured logging
@@ -59,6 +59,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.add_middleware(log_marker_middleware())
 
 # Add CORS middleware
 app.add_middleware(
@@ -81,4 +82,8 @@ async def health_check():
 @app.get("/")
 async def root():
     """Root endpoint returning API information."""
-    return {"name": "Problemologist Worker (Heavy)", "version": "0.1.0", "docs": "/docs"}
+    return {
+        "name": "Problemologist Worker (Heavy)",
+        "version": "0.1.0",
+        "docs": "/docs",
+    }

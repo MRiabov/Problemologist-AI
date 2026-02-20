@@ -1,5 +1,6 @@
 import threading
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 import structlog
@@ -103,14 +104,23 @@ class GenesisBackend(PhysicsBackend):
                         logger.error("genesis_init_failed", error=str(e))
                         raise
 
-    def _load_mfg_config(self):
-        if self.mfg_config is None:
-            try:
-                from worker_heavy.workbenches.config import load_config
+    def _load_mfg_config(self, config_dir: Optional["Path"] = None):
+        try:
+            from worker_heavy.workbenches.config import load_config
 
+            if config_dir:
+                custom_path = config_dir / "manufacturing_config.yaml"
+                if custom_path.exists():
+                    self.mfg_config = load_config(str(custom_path))
+                    logger.info(
+                        "genesis_loaded_custom_mfg_config", path=str(custom_path)
+                    )
+                    return
+
+            if self.mfg_config is None:
                 self.mfg_config = load_config()
-            except Exception as e:
-                logger.error("failed_to_load_mfg_config", error=str(e))
+        except Exception as e:
+            logger.error("failed_to_load_mfg_config", error=str(e))
 
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
@@ -134,7 +144,8 @@ class GenesisBackend(PhysicsBackend):
                 raise ImportError("Genesis not installed")
 
             self.scene_meta = scene
-            self._load_mfg_config()
+            config_dir = Path(scene.scene_path).parent if scene.scene_path else None
+            self._load_mfg_config(config_dir=config_dir)
 
             # Reset state for new scene
             self.entities = {}

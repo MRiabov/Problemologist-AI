@@ -16,6 +16,8 @@ class WorkerSettings(BaseSettings):
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")
     git_pat: str | None = Field(default=None, alias="GIT_PAT")
 
+    sessions_dir: str | None = Field(default=None, alias="WORKER_SESSIONS_DIR")
+
     @property
     def skills_dir(self) -> Path:
         """Get the effective skills directory."""

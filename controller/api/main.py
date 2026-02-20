@@ -12,7 +12,7 @@ from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ResponseStatus
-from shared.logging import configure_logging, get_logger
+from shared.logging import configure_logging, get_logger, log_marker_middleware
 
 # Configure logging
 configure_logging("controller")
@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Problemologist Controller", lifespan=lifespan)
+app.add_middleware(log_marker_middleware())
 
 
 @app.get("/")

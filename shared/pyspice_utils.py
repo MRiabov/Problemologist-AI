@@ -1,4 +1,4 @@
-import logging
+import structlog
 from typing import Any
 
 from PySpice.Spice.Netlist import Circuit
@@ -35,7 +35,7 @@ def _patched_send_char(message_c, ngspice_id, user_data):
 
 NgSpiceShared._send_char = _patched_send_char
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def create_circuit(name: str) -> Circuit:
@@ -44,7 +44,9 @@ def create_circuit(name: str) -> Circuit:
 
 
 def validate_circuit(
-    circuit: Circuit, psu_config: PowerSupplyConfig | None = None
+    circuit: Circuit,
+    psu_config: PowerSupplyConfig | None = None,
+    section: ElectronicsSection | None = None,
 ) -> CircuitValidationResult:
     """
     Run DC operating point analysis on the circuit.
@@ -124,6 +126,53 @@ def validate_circuit(
                 f"exceeds PSU rating {max_current:.2f}A"
             )
 
+        # T007: Per-wire overcurrent check (INT-123)
+        if section and section.wiring:
+            from shared.wire_utils import get_awg_properties
+
+            for wire in section.wiring:
+                # Resolve nodes as in circuit_builder.py
+                def resolve_node_name(comp_id, term):
+                    if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
+                        return "supply_v+"
+                    if term == "0" or (comp_id == "supply" and term == "0"):
+                        return "0"
+                    if term == "a":
+                        term = "+"
+                    if term == "b":
+                        term = "-"
+                    return f"{comp_id}_{term}"
+
+                n_from = resolve_node_name(
+                    wire.from_terminal.component, wire.from_terminal.terminal
+                )
+                n_to = resolve_node_name(
+                    wire.to_terminal.component, wire.to_terminal.terminal
+                )
+
+                v1 = node_voltages.get(n_from, 0.0)
+                v2 = node_voltages.get(n_to, 0.0)
+
+                # Get resistance from circuit if possible, or recalculate
+                # Actually, circuit elements are stored in circuit.elements
+                # But it's easier to just recalculate for validation
+                # or look it up: R_wire_id
+                r_val = 0.01
+                if f"R{wire.wire_id}" in circuit.element_names:
+                    r_val = float(circuit[wire.wire_id].resistance)
+                elif wire.gauge_awg and wire.length_mm:
+                    props = get_awg_properties(wire.gauge_awg)
+                    r_val = props["resistance_ohm_m"] * (wire.length_mm / 1000.0)
+
+                current = abs(v1 - v2) / max(r_val, 0.0001)
+
+                limit = get_awg_properties(wire.gauge_awg)["max_current_a"]
+                if current > limit:
+                    errors.append(
+                        f"FAILED_OVERCURRENT_WIRE: Wire {wire.wire_id} (AWG {wire.gauge_awg}) "
+                        f"carrying {current:.2f}A exceeds limit {limit:.2f}A"
+                    )
+
         # Detect floating nodes: check if any node has near-zero conductance to everything else
         # PySpice usually throws an exception for this, but we can also check for extremely high voltages
         # or non-finite values if SPICE managed to return something.
@@ -142,7 +191,7 @@ def validate_circuit(
             warnings=warnings,
         )
     except Exception as e:
-        error_msg = str(e)
+        error_msg = str(e).strip()
         if "Singular matrix" in error_msg or "indefinite matrix" in error_msg:
             return CircuitValidationResult(
                 valid=False,
@@ -152,6 +201,7 @@ def validate_circuit(
                 ],
                 total_draw_a=0.0,
             )
+
         return CircuitValidationResult(
             valid=False,
             errors=[f"Circuit simulation failed: {error_msg}"],

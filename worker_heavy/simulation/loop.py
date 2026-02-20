@@ -455,6 +455,15 @@ class SimulationLoop:
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
                     break
 
+                # WP2: Check for part breakage (INT-103)
+                if self.objectives and self.objectives.physics.fem_enabled:
+                    broken_part = self._check_part_breakage()
+                    if broken_part:
+                        from shared.enums import SimulationFailureMode
+
+                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        break
+
                 # 7. Check Wire Failure (T015)
                 if self.electronics:
                     wire_broken = False
@@ -677,6 +686,55 @@ class SimulationLoop:
                     "stress": field.stress.tolist(),
                 }
         return fields
+
+    def _check_part_breakage(self) -> str | None:
+        """Checks if any FEM part has exceeded its ultimate stress limit."""
+        summaries = self.backend.get_stress_summaries()
+        if not summaries:
+            # Check max stress as fallback
+            max_s = self.backend.get_max_stress()
+            if max_s > 1e9:  # Just for debug
+                logger.info("high_max_stress_no_summaries", max_stress=max_s)
+
+        for summary in summaries:
+            label = summary.part_label
+            mat_id = self.material_lookup.get(label)
+            logger.info(
+                "checking_breakage",
+                label=label,
+                mat_id=mat_id,
+                max_stress=summary.max_von_mises_pa,
+            )
+            if not mat_id:
+                continue
+
+            # Look up material properties
+            mat_def = self.config.materials.get(mat_id)
+            # Try method-specific if not found globally
+            if not mat_def and self.config.cnc:
+                mat_def = self.config.cnc.materials.get(mat_id)
+
+            if mat_def and mat_def.ultimate_stress_pa:
+                if summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
+                    from shared.observability.events import emit_event
+                    from shared.observability.schemas import PartBreakageEvent
+
+                    emit_event(
+                        PartBreakageEvent(
+                            part_label=label,
+                            material_id=mat_id,
+                            max_stress_pa=summary.max_von_mises_pa,
+                            ultimate_stress_pa=mat_def.ultimate_stress_pa,
+                        )
+                    )
+                    logger.info(
+                        "part_breakage_detected",
+                        part=label,
+                        stress=summary.max_von_mises_pa,
+                        limit=mat_def.ultimate_stress_pa,
+                    )
+                    return label
+        return None
 
     def _check_motor_overload(self) -> bool:
         # Check all position/torque actuators for saturation

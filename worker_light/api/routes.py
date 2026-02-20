@@ -63,7 +63,11 @@ light_router = APIRouter()
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
-        return create_filesystem_router(session_id=x_session_id)
+        from worker_light.config import settings
+
+        return create_filesystem_router(
+            session_id=x_session_id, base_dir=settings.sessions_dir
+        )
     except Exception as e:
         logger.error("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")

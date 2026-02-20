@@ -472,19 +472,21 @@ class FilesystemRouter:
 def create_filesystem_router(
     session_id: str,
     custom_mounts: list[MountPoint] | None = None,
+    base_dir: Path | str | None = None,
 ) -> FilesystemRouter:
     """Create a filesystem router with standard configuration.
 
     Args:
         session_id: Session ID for local path isolation.
         custom_mounts: Optional custom mount points.
-
-    Returns:
-        Configured FilesystemRouter instance.
+        base_dir: Optional base directory for sessions.
     """
     from .backend import LocalFilesystemBackend
 
-    local_backend = LocalFilesystemBackend.create(session_id)
+    if base_dir and isinstance(base_dir, str):
+        base_dir = Path(base_dir)
+
+    local_backend = LocalFilesystemBackend.create(session_id, base_dir=base_dir)
 
     if custom_mounts:
         return FilesystemRouter(local_backend=local_backend, mount_points=custom_mounts)
