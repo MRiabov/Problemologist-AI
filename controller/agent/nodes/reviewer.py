@@ -112,6 +112,8 @@ class ReviewerNode(BaseNode):
             ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
             ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
             ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+            ReviewDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.FAILED,
+            ReviewDecision.REJECT_PLAN_REFUSAL: AgentStatus.PLAN_REJECTED,
         }
 
         # Emit ReviewDecisionEvent for observability

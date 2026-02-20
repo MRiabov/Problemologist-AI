@@ -26,8 +26,10 @@ from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     ElectronicsValidationRequest,
+    MultiRunResult,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    VerifyRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
 from shared.workers.loader import load_component_from_script
@@ -38,6 +40,7 @@ from worker_heavy.utils import (
     submit_for_review,
     validate,
     validate_circuit as utils_validate_circuit,
+    verify,
 )
 from worker_heavy.utils.preview import preview_design
 
@@ -178,6 +181,35 @@ async def run_simulation_task(
     )
 
 
+async def run_verification_task(
+    script_path,
+    root,
+    script_content,
+    num_runs,
+    jitter_range,
+    smoke_test_mode,
+    backend_type,
+    x_session_id,
+):
+    """Helper to run verification in executor."""
+    from worker_heavy.utils.validation import verify_subprocess
+
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        SIMULATION_EXECUTOR,
+        verify_subprocess,
+        script_path,
+        root,
+        script_content,
+        root,
+        num_runs,
+        jitter_range,
+        smoke_test_mode,
+        backend_type,
+        x_session_id,
+    )
+
+
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
 async def api_simulate(
     request: BenchmarkToolRequest,
@@ -238,6 +270,47 @@ async def api_simulate(
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
+
+
+@heavy_router.post("/benchmark/verify", response_model=MultiRunResult)
+async def api_verify(
+    request: VerifyRequest,
+    x_session_id: str = Header(...),
+    fs_router=Depends(get_router),
+):
+    """Physics-backed robustness verification in isolated session."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    try:
+        from shared.simulation.schemas import SimulatorBackendType
+
+        backend_type = request.backend
+        if isinstance(backend_type, str):
+            backend_type = SimulatorBackendType(backend_type)
+
+        async with HEAVY_OPERATION_LOCK:
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                result = await run_verification_task(
+                    str(root / request.script_path)
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    root,
+                    request.script_content,
+                    request.num_runs,
+                    request.jitter_range,
+                    request.smoke_test_mode,
+                    backend_type,
+                    x_session_id,
+                )
+                return result
+
+    except Exception as e:
+        logger.error("api_benchmark_verify_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 
@@ -347,6 +420,8 @@ async def api_analyze(
                     analyze_component,
                     component,
                     output_dir=root,
+                    method=request.method,
+                    quantity=request.quantity,
                 )
                 return result
     except Exception as e:

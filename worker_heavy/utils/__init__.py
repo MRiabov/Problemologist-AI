@@ -17,6 +17,8 @@ from .validation import (
     set_soft_mesh,
     simulate,
     validate,
+    verify,
+    verify_subprocess,
 )
 
 __all__ = [
@@ -40,4 +42,6 @@ __all__ = [
     "validate",
     "validate_and_price",
     "validate_circuit",
+    "verify",
+    "verify_subprocess",
 ]

@@ -12,9 +12,12 @@ from controller.observability.middleware_helper import (
 )
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
+    HeavyAnalyzeWorkflow,
+    HeavyCircuitValidationWorkflow,
     HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
+    HeavyVerificationWorkflow,
 )
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -29,6 +32,8 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
+from shared.enums import ManufacturingMethod
+from shared.models.schemas import ElectronicsSection
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import EditOp
 
@@ -240,6 +245,39 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
+    async def verify(
+        self,
+        script_path: str | Path,
+        num_runs: int = 5,
+        jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
+        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    ) -> dict[str, Any]:
+        """Trigger physics verification via worker client (with bundling)."""
+        p_str = str(script_path)
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            res = await self.temporal_client.execute_workflow(
+                HeavyVerificationWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "num_runs": num_runs,
+                    "jitter_range": jitter_range,
+                    "backend": backend.value,
+                    "smoke_test_mode": False,
+                    "session_id": self.client.session_id,
+                },
+                id=f"ver-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+            return res
+
+        result = await self.client.verify(
+            p_str, num_runs=num_runs, jitter_range=jitter_range, backend=backend
+        )
+        return result.model_dump()
+
     async def preview(
         self,
         script_path: str | Path,
@@ -301,6 +339,63 @@ class RemoteFilesystemMiddleware:
         )
 
         return res_dict
+
+    async def analyze(
+        self,
+        script_path: str | Path,
+        method: ManufacturingMethod | str = ManufacturingMethod.CNC,
+        quantity: int = 1,
+    ) -> dict[str, Any]:
+        """Trigger manufacturing analysis via worker client (with bundling)."""
+        p_str = str(script_path)
+        m_method = ManufacturingMethod(method) if isinstance(method, str) else method
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            return await self.temporal_client.execute_workflow(
+                HeavyAnalyzeWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "method": m_method.value,
+                    "quantity": quantity,
+                },
+                id=f"ana-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+
+        result = await self.client.analyze(m_method, p_str, quantity=quantity)
+        return result.model_dump()
+
+    async def validate_circuit(
+        self,
+        section: ElectronicsSection | dict,
+    ) -> dict[str, Any]:
+        """Trigger circuit validation via worker client."""
+        sec = (
+            ElectronicsSection.model_validate(section)
+            if isinstance(section, dict)
+            else section
+        )
+
+        if self.temporal_client:
+            return await self.temporal_client.execute_workflow(
+                HeavyCircuitValidationWorkflow.run,
+                {
+                    "section": sec.model_dump(mode="json"),
+                },
+                id=f"cv-{self.client.session_id}-{abs(hash(str(section))) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+
+        result = await self.client.validate_circuit(sec)
+        return result.model_dump()
+
+    async def build(self, script_path: str | Path) -> dict[str, Any]:
+        """Trigger asset build via worker client."""
+        p_str = str(script_path)
+        result = await self.client.build(p_str)
+        return result.model_dump()
 
     async def submit(self, script_path: str | Path) -> dict[str, Any]:
         """Trigger handover to review via worker client."""

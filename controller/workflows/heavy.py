@@ -46,3 +46,45 @@ class HeavyPreviewWorkflow:
             start_to_close_timeout=timedelta(minutes=2),
             task_queue="heavy-tasks-queue",
         )
+
+
+@type_check
+@workflow.defn
+class HeavyVerificationWorkflow:
+    @workflow.run
+    async def run(self, params: dict) -> dict:
+        """Run physics verification on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_verify_design",
+            params,
+            start_to_close_timeout=timedelta(minutes=30),
+            task_queue="heavy-tasks-queue",
+        )
+
+
+@type_check
+@workflow.defn
+class HeavyAnalyzeWorkflow:
+    @workflow.run
+    async def run(self, params: dict) -> dict:
+        """Run manufacturing analysis on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_analyze_design",
+            params,
+            start_to_close_timeout=timedelta(minutes=5),
+            task_queue="heavy-tasks-queue",
+        )
+
+
+@type_check
+@workflow.defn
+class HeavyCircuitValidationWorkflow:
+    @workflow.run
+    async def run(self, params: dict) -> dict:
+        """Run circuit validation on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_validate_circuit",
+            params,
+            start_to_close_timeout=timedelta(minutes=5),
+            task_queue="heavy-tasks-queue",
+        )

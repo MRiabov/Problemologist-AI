@@ -4,6 +4,7 @@ from typing import Literal, Any
 
 import httpx
 
+from shared.models.schemas import ElectronicsSection
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolResponse,
@@ -13,6 +14,7 @@ from shared.workers.schema import (
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
+    MultiRunResult,
 )
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
@@ -239,6 +241,31 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def build(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+    ) -> BenchmarkToolResponse:
+        """Trigger simulation asset rebuild via worker."""
+        client = await self._get_client()
+        try:
+            payload = {"script_path": script_path}
+            if script_content is not None:
+                payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/build",
+                json=payload,
+                headers=self.headers,
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            return BenchmarkToolResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
     async def preview(
         self,
         script_path: str = "script.py",
@@ -328,6 +355,39 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def verify(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        num_runs: int = 5,
+        jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
+        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    ) -> MultiRunResult:
+        """Trigger physics verification via worker."""
+        client = await self._get_client()
+        try:
+            payload = {
+                "script_path": script_path,
+                "num_runs": num_runs,
+                "jitter_range": jitter_range,
+                "backend": backend,
+            }
+            if script_content is not None:
+                payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/verify",
+                json=payload,
+                headers=self.headers,
+                timeout=600.0,
+            )
+            response.raise_for_status()
+            return MultiRunResult.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
     async def validate(
         self, script_path: str = "script.py", script_content: str | None = None
     ) -> BenchmarkToolResponse:
@@ -342,6 +402,25 @@ class WorkerClient:
 
             response = await client.post(
                 f"{self.heavy_url}/benchmark/validate",
+                json=payload,
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return BenchmarkToolResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
+    async def validate_circuit(
+        self,
+        section: ElectronicsSection,
+    ) -> BenchmarkToolResponse:
+        """Trigger circuit validation via worker."""
+        client = await self._get_client()
+        try:
+            payload = {"section": section.model_dump(mode="json")}
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/validate_circuit",
                 json=payload,
                 headers=self.headers,
                 timeout=30.0,

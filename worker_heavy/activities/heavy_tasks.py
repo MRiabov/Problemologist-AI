@@ -10,8 +10,9 @@ from temporalio import activity
 
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.loader import load_component_from_script
-from worker_heavy.utils.validation import simulate_subprocess, validate
+from worker_heavy.utils.validation import simulate_subprocess, validate, verify_subprocess
 from worker_heavy.utils.preview import preview_design
+from worker_heavy.utils.topology import analyze_component
 
 logger = structlog.get_logger(__name__)
 
@@ -130,3 +131,86 @@ async def preview_design_activity(params: dict[str, Any]) -> dict[str, Any]:
             "image_bytes": image_path.read_bytes() if image_path.exists() else None,
             "filename": image_path.name if image_path.exists() else None,
         }
+
+
+@activity.defn(name="worker_verify_design")
+async def verify_design_activity(params: dict[str, Any]) -> dict[str, Any]:
+    """Execute physics verification from a session bundle."""
+    bundle_bytes = params["bundle_bytes"]
+    script_path = params["script_path"]
+    num_runs = params.get("num_runs", 5)
+    jitter_range = params.get("jitter_range", (0.002, 0.002, 0.001))
+    backend = params["backend"]
+    smoke_test_mode = params.get("smoke_test_mode", False)
+    session_id = params["session_id"]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _extract_bundle(bundle_bytes, root)
+
+        backend_type = SimulatorBackendType(backend)
+
+        result = await asyncio.to_thread(
+            verify_subprocess,
+            script_path=str(root / script_path),
+            session_root=str(root),
+            output_dir=root,
+            num_runs=num_runs,
+            jitter_range=jitter_range,
+            smoke_test_mode=smoke_test_mode,
+            backend=backend_type,
+            session_id=session_id,
+        )
+        return result.model_dump()
+
+
+@activity.defn(name="worker_analyze_design")
+async def analyze_design_activity(params: dict[str, Any]) -> dict[str, Any]:
+    """Execute manufacturing analysis from a session bundle."""
+    bundle_bytes = params["bundle_bytes"]
+    script_path = params["script_path"]
+    method = params["method"]
+    quantity = params.get("quantity", 1)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _extract_bundle(bundle_bytes, root)
+
+        component = load_component_from_script(
+            script_path=root / script_path,
+            session_root=root,
+        )
+
+        from shared.workers.workbench_models import ManufacturingMethod
+        m_method = ManufacturingMethod(method)
+
+        result = await asyncio.to_thread(
+            analyze_component,
+            component,
+            output_dir=root,
+            method=m_method,
+            quantity=quantity,
+        )
+        return result.model_dump()
+
+
+@activity.defn(name="worker_validate_circuit")
+async def validate_circuit_activity(params: dict[str, Any]) -> dict[str, Any]:
+    """Execute circuit validation."""
+    from shared.models.schemas import ElectronicsSection
+    from shared.circuit_builder import build_circuit_from_section
+    from shared.pyspice_utils import validate_circuit
+
+    section_data = params["section"]
+    section = ElectronicsSection.model_validate(section_data)
+
+    circuit = build_circuit_from_section(section)
+    res = validate_circuit(
+        circuit, section.power_supply, section=section
+    )
+
+    return {
+        "success": res.valid,
+        "message": "; ".join(res.errors) if not res.valid else "Circuit is valid",
+        "artifacts": {"circuit_validation_result": res.model_dump()},
+    }
