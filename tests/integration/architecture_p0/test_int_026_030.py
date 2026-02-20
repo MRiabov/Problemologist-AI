@@ -9,8 +9,8 @@ import pytest
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-API_KEY = os.getenv(
-    "CONTROLLER_API_KEY", "none"
+API_TOKEN_PLACEHOLDER = os.getenv(
+    "CONTROLLER_API_KEY", "unset"
 )  # Adjust as needed based on investigation
 
 
@@ -162,17 +162,17 @@ async def test_int_029_api_key_enforcement():
         resp = await client.post(f"{CONTROLLER_URL}/ops/backup")
         assert resp.status_code == 403
 
-        # Invalid key
+        # Invalid auth
         resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": "none"}
+            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": "invalid-auth-val"}
         )
         assert resp.status_code == 403
 
-        # Valid key (using default from ops.py if not in env)
+        # Valid auth (using default from ops.py if not in env)
         # Note: In real integration, we'd use the env var.
-        valid_key = os.getenv("BACKUP_SECRET", "dev")
+        valid_auth = os.getenv("BACKUP_SECRET", "default-dev-auth")
         resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": valid_key}
+            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": valid_auth}
         )
         # 202 because it triggers a temporal workflow which might fail if temporal is down,
         # but the AUTH should pass.
