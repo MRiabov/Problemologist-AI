@@ -45,6 +45,8 @@ class GenesisBackend(PhysicsBackend):
         self.particle_budget = None
         self.smoke_test_mode = False
         self._is_built = False
+        self._fem_entities = set()
+        self._fem_identified = False
         self._ensure_initialized()
 
     def _ensure_initialized(self):
@@ -158,6 +160,8 @@ class GenesisBackend(PhysicsBackend):
             self.applied_controls = {}
             self.electronics_names = []
             self._is_built = False
+            self._fem_entities = set()
+            self._fem_identified = False
 
             if "gs_scene" in scene.assets:
                 self.scene = scene.assets["gs_scene"]
@@ -480,11 +484,32 @@ class GenesisBackend(PhysicsBackend):
                     raise
             self._is_built = True
 
+            # Pre-identify FEM entities if possible
+            self._identify_fem_entities()
+
+    def _identify_fem_entities(self) -> None:
+        """Identify which entities support FEM stress tracking."""
+        if not self.entities:
+            return
+        self._fem_entities = set()
+        for name, entity in self.entities.items():
+            try:
+                # Use a lightweight check if possible, or get_state()
+                state = entity.get_state()
+                if hasattr(state, "von_mises"):
+                    self._fem_entities.add(name)
+            except Exception:
+                continue
+        self._fem_identified = True
+
     def step(self, dt: float) -> StepResult:
         with self._lock:
             if self.scene is None:
                 self.current_time += dt
                 return StepResult(time=self.current_time, success=True)
+
+        if not self._fem_identified and self.entities:
+            self._identify_fem_entities()
 
         if not self._is_built:
             # Fallback for unexpected state
@@ -523,7 +548,7 @@ class GenesisBackend(PhysicsBackend):
 
             # T012: Part Breakage Detection & Global Stress Tracking
             self._last_max_stress = 0.0
-            for name in self.entities:
+            for name in self._fem_entities:
                 field = self.get_stress_field(name)
                 if field is not None and len(field.stress) > 0:
                     max_stress = np.max(field.stress)
@@ -611,7 +636,6 @@ class GenesisBackend(PhysicsBackend):
         return None
 
     def get_body_state(self, body_id: str) -> BodyState:
-        logger.debug("genesis_get_body_state_request", body_id=body_id)
         try:
             if body_id not in self.entities:
                 # Check links within MJCF entities (from WP07)
@@ -627,7 +651,6 @@ class GenesisBackend(PhysicsBackend):
                                     break
 
                         if target_link:
-                            logger.debug("genesis_link_state_found", body_id=body_id)
 
                             # Use get_pos() etc. if they exist, or fallback to properties
                             # T001: Genesis returns batched tensors, take [0] and ensure it's on CPU
@@ -674,13 +697,9 @@ class GenesisBackend(PhysicsBackend):
                                 vel=vel,
                                 angvel=angvel,
                             )
-                    except Exception as e:
-                        logger.debug(
-                            "genesis_get_link_failed", body_id=body_id, error=str(e)
-                        )
+                    except Exception:
                         continue
 
-                logger.debug("genesis_body_not_found", body_id=body_id)
                 return BodyState(
                     pos=[0.0, 0.0, 0.0],
                     quat=[1.0, 0.0, 0.0, 0.0],
@@ -689,9 +708,7 @@ class GenesisBackend(PhysicsBackend):
                 )
 
             entity = self.entities[body_id]
-            logger.debug("genesis_calling_get_state", body_id=body_id)
             state = entity.get_state()
-            logger.debug("genesis_get_state_returned", body_id=body_id)
 
             def _to_flat_list(val):
                 if hasattr(val, "cpu"):
@@ -746,10 +763,6 @@ class GenesisBackend(PhysicsBackend):
             nodes = state.pos[0].cpu().numpy()
             stress = state.von_mises[0].cpu().numpy()
             return StressField(nodes=nodes, stress=stress)
-        else:
-            logger.debug(
-                "state_missing_von_mises", body_id=body_id, attributes=dir(state)
-            )
 
         return None
 
@@ -758,7 +771,11 @@ class GenesisBackend(PhysicsBackend):
 
     def get_stress_summaries(self) -> list[StressSummary]:
         summaries = []
-        for name, _ in self.entities.items():
+        if not self._fem_identified and self.entities:
+            self._identify_fem_entities()
+
+        targets = self._fem_entities if self._fem_identified else self.entities.keys()
+        for name in targets:
             field = self.get_stress_field(name)
             if field is not None:
                 max_stress = np.max(field.stress)
