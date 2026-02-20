@@ -37,7 +37,11 @@ constraints:
 
 
 def test_validate_node_output_planner_success():
-    files = {"plan.md": VALID_ENGINEERING_PLAN, "todo.md": "- [ ] task 1"}
+    files = {
+        "plan.md": VALID_ENGINEERING_PLAN,
+        "todo.md": "- [ ] task 1",
+        "assembly_definition.yaml": "totals:\n  estimated_unit_cost_usd: 10.0\n  estimated_weight_g: 100.0\n  estimate_confidence: high\nconstraints:\n  benchmark_max_unit_cost_usd: 100.0\n  benchmark_max_weight_g: 1000.0\n  planner_target_max_unit_cost_usd: 50.0\n  planner_target_max_weight_g: 500.0\n",
+    }
     is_valid, errors = validate_node_output("planner", files)
     assert is_valid, f"Validation failed with errors: {errors}"
     assert not errors
