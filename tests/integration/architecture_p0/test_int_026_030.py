@@ -10,7 +10,7 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 API_KEY = os.getenv(
-    "CONTROLLER_API_KEY", "placeholder-api-key"
+    "CONTROLLER_API_KEY", "none"
 )  # Adjust as needed based on investigation
 
 
@@ -164,13 +164,13 @@ async def test_int_029_api_key_enforcement():
 
         # Invalid key
         resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": "invalid-placeholder-key"}
+            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": "none"}
         )
         assert resp.status_code == 403
 
         # Valid key (using default from ops.py if not in env)
         # Note: In real integration, we'd use the env var.
-        valid_key = os.getenv("BACKUP_SECRET", "placeholder-backup-secret")
+        valid_key = os.getenv("BACKUP_SECRET", "dev")
         resp = await client.post(
             f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": valid_key}
         )
