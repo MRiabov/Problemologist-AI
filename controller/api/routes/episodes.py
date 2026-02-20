@@ -26,7 +26,7 @@ from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType, ReviewDecision
 
 logger = structlog.get_logger(__name__)
 
@@ -179,9 +179,14 @@ async def review_episode(
 
     # Update episode based on decision
     decision = review_data.decision
-    if decision == "approved":
+    if decision == ReviewDecision.APPROVED:
         episode.status = EpisodeStatus.COMPLETED
-    elif decision == "rejected":
+    elif decision in (
+        ReviewDecision.REJECTED,
+        ReviewDecision.REJECT_PLAN,
+        ReviewDecision.REJECT_CODE,
+        ReviewDecision.CONFIRM_PLAN_REFUSAL,
+    ):
         episode.status = EpisodeStatus.FAILED
 
     # Emit review event

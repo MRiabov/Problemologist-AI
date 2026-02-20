@@ -359,6 +359,13 @@ class ReviewFrontmatter(BaseModel):
     decision: ReviewDecision
     comments: list[str] = []
 
+    @field_validator("comments", mode="before")
+    @classmethod
+    def coerce_comments(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return [v]
+        return v
+
     @field_validator("decision")
     @classmethod
     def validate_refusal_decisions(cls, v):
