@@ -80,23 +80,41 @@ echo "Running migrations..."
 uv run alembic upgrade head
 
 echo "Starting Application Servers..."
-mkdir -p logs
+
+# Ensure log directory exists and manage log history
+LOG_DIR="logs/integration_tests"
+ARCHIVE_DIR="logs/archives"
+mkdir -p "$LOG_DIR"
+mkdir -p "$ARCHIVE_DIR"
+
+# Archive previous logs if they exist
+if [ -d "$LOG_DIR" ] && [ "$(ls -A "$LOG_DIR")" ]; then
+  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+  mv "$LOG_DIR" "$ARCHIVE_DIR/run_${TIMESTAMP}"
+  mkdir -p "$LOG_DIR"
+fi
+
+# Clean up archives older than 24 hours
+find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 
 # Start Worker (port 18001)
-uv run fastapi run worker/app.py --host 0.0.0.0 --port 18001 > logs/worker.log 2>&1 &
-echo $! > logs/worker.pid
-echo "Worker started (PID: $(cat logs/worker.pid))"
+uv run fastapi run worker/app.py --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker.log" 2>&1 &
+WORKER_PID=$!
+echo $WORKER_PID > logs/worker.pid
+echo "Worker started (PID: $WORKER_PID)"
 
 # Start Controller (port 18000)
-uv run fastapi run controller/api/main.py --host 0.0.0.0 --port 18000 > logs/controller.log 2>&1 &
-echo $! > logs/controller.pid
-echo "Controller started (PID: $(cat logs/controller.pid))"
+uv run fastapi run controller/api/main.py --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
+CONTROLLER_PID=$!
+echo $CONTROLLER_PID > logs/controller.pid
+echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
-uv run python -m controller.temporal_worker > logs/temporal_worker.log 2>&1 &
-echo $! > logs/temporal_worker.pid
-echo "Temporal Worker started (PID: $(cat logs/temporal_worker.pid))"
+uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
+TEMP_WORKER_PID=$!
+echo $TEMP_WORKER_PID > logs/temporal_worker.pid
+echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
 echo "Waiting for services to be healthy..."
 sleep 5
