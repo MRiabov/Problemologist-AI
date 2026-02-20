@@ -26,7 +26,7 @@ def test_genesis_load_scene_soft_mesh(mock_gs, tmp_path):
             {
                 "name": "soft_part",
                 "type": "soft_mesh",
-                "file": "part.msh",
+                "file": "part.obj",
                 "pos": [0, 0, 0],
                 "euler": [0, 0, 0],
                 "material_id": "silicone_rubber",
