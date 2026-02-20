@@ -1,7 +1,26 @@
-from sqlalchemy import JSON, Column, Float, String, Text
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
+
+
+class CatalogMetadataORM(Base):
+    __tablename__ = "catalog_metadata"
+
+    id = Column(Integer, primary_key=True)
+    catalog_version = Column(String, nullable=False)
+    bd_warehouse_commit = Column(String, nullable=False)
+    generated_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class COTSItemORM(Base):

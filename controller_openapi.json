@@ -776,6 +776,30 @@
         }
       }
     },
+    "/cots/metadata": {
+      "get": {
+        "tags": [
+          "cots"
+        ],
+        "summary": "Get Catalog Metadata",
+        "description": "Get the catalog metadata (version, commit, etc.).",
+        "operationId": "get_catalog_metadata_cots_metadata_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Catalog Metadata Cots Metadata Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/simulation/run": {
       "post": {
         "tags": [

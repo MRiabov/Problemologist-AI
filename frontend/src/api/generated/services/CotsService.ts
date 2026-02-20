@@ -30,4 +30,16 @@ export class CotsService {
             },
         });
     }
+    /**
+     * Get Catalog Metadata
+     * Get the catalog metadata (version, commit, etc.).
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getCatalogMetadataCotsMetadataGet(): CancelablePromise<Record<string, any>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/cots/metadata',
+        });
+    }
 }

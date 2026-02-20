@@ -10,8 +10,9 @@ from langchain_core.runnables import RunnableConfig
 from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
-from controller.observability.tracing import sync_asset
+from controller.observability.tracing import record_worker_events, sync_asset
 from controller.utils.git import GitManager
+from shared.observability.schemas import SkillEditEvent
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -87,6 +88,17 @@ class SkillsNode(BaseNode):
                 if deletions > 15:
                     logger.warning(
                         "skill_update_blocked_too_many_deletions", deletions=deletions
+                    )
+                    # Emit safety event
+                    await record_worker_events(
+                        episode_id=self.ctx.session_id,
+                        events=[
+                            SkillEditEvent(
+                                skill_name=clean_title,
+                                action="update_blocked",
+                                lines_changed=deletions,
+                            )
+                        ],
                     )
                     return f"Error: Update blocked. You deleted {deletions} lines, but the limit is 15 lines of deletion to prevent skill loss."
 

@@ -18,7 +18,7 @@ from shared.models.schemas import BoundingBox, COTSMetadata
 from shared.type_checking import type_check
 
 from .database.init import init_db
-from .database.models import COTSItemORM
+from .database.models import CatalogMetadataORM, COTSItemORM
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -198,6 +198,15 @@ class Indexer:
 
                 session.commit()
                 logger.info(f"Indexed {count} items for {class_name}")
+
+            # Add catalog metadata for reproducibility
+            metadata_record = CatalogMetadataORM(
+                catalog_version="1.0.0",
+                bd_warehouse_commit="a048a73",  # Placeholder from current repo
+            )
+            session.merge(metadata_record)
+            session.commit()
+            logger.info("Catalog metadata stored.")
 
 
 if __name__ == "__main__":

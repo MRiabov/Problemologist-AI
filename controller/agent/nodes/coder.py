@@ -5,7 +5,7 @@ import structlog
 from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState
+from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
 
@@ -27,6 +27,7 @@ class CoderSignature(dspy.Signature):
     todo = dspy.InputField()
     assembly_definition = dspy.InputField()
     objectives = dspy.InputField()
+    steer_context = dspy.InputField(default="")
     feedback = dspy.InputField(desc="Feedback from previous review steps", default="")
     journal = dspy.OutputField(
         desc="A summary of the implementation done for this step"
@@ -50,6 +51,9 @@ class CoderNode(BaseNode):
                 update={"journal": state.journal + "\nNo more steps in TODO."}
             )
 
+        # WP04: Extract steerability context
+        steer_context = await self._get_steer_context(state.messages)
+
         # Read objectives and assembly_definition for context
         objectives = "# No objectives.yaml found."
         with suppress(Exception):
@@ -70,6 +74,7 @@ class CoderNode(BaseNode):
             "todo": todo,
             "assembly_definition": assembly_definition,
             "objectives": objectives,
+            "steer_context": steer_context,
             "feedback": state.feedback,
         }
         validate_files = [

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from shared.observability.events import emit_event
 from shared.observability.schemas import COTSSearchEvent
 
-from .database.models import COTSItemORM
+from .database.models import CatalogMetadataORM, COTSItemORM
 from .models import COTSItem, SearchQuery
 
 
@@ -65,10 +65,35 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
                 )
             )
 
+    # Fetch catalog metadata for reproducibility
+    catalog_version = None
+    bd_warehouse_commit = None
+    generated_at = None
+
+    with Session(engine) as session:
+        meta_stmt = (
+            session.query(CatalogMetadataORM)
+            .order_by(CatalogMetadataORM.id.desc())
+            .limit(1)
+        )
+        meta_result = meta_stmt.first()
+        if meta_result:
+            catalog_version = meta_result.catalog_version
+            bd_warehouse_commit = meta_result.bd_warehouse_commit
+            generated_at = (
+                meta_result.generated_at.isoformat()
+                if meta_result.generated_at
+                else None
+            )
+
     # Emit search event
     emit_event(
         COTSSearchEvent(
-            query=query.query or str(query.constraints), results_count=len(results)
+            query=query.query or str(query.constraints),
+            results_count=len(results),
+            catalog_version=catalog_version,
+            bd_warehouse_commit=bd_warehouse_commit,
+            generated_at=generated_at,
         )
     )
 

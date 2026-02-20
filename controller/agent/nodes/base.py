@@ -1,4 +1,5 @@
 import asyncio
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -120,7 +121,7 @@ class BaseNode:
             skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
         return "\n".join([f"- {s}" for s in skills])
 
-    def _get_steer_context(self, messages: list[BaseMessage]) -> str:
+    async def _get_steer_context(self, messages: list[BaseMessage]) -> str:
         if not messages:
             return ""
         last_msg = messages[-1]
@@ -129,10 +130,29 @@ class BaseNode:
             if hasattr(last_msg, "additional_kwargs")
             else None
         )
-        if not steer_data:
-            return ""
 
         lines = []
+
+        # T015: Parse @file:line-line from message content if not already in code_references
+        content = last_msg.content if isinstance(last_msg.content, str) else ""
+        # Matches @path/to/file.ext:start-end
+        matches = re.finditer(r"@([\w\./\-]+\.\w+):(\d+)-(\d+)", content)
+        parsed_refs = []
+        for match in matches:
+            parsed_refs.append(
+                {
+                    "file_path": match.group(1),
+                    "start_line": int(match.group(2)),
+                    "end_line": int(match.group(3)),
+                }
+            )
+
+        if not steer_data and not parsed_refs:
+            return ""
+
+        steer_data = steer_data or {}
+        code_refs = steer_data.get("code_references", []) + parsed_refs
+
         if steer_data.get("selections"):
             lines.append("Geometric Selections:")
             for sel in steer_data["selections"]:
@@ -142,13 +162,31 @@ class BaseNode:
                     f"Center: ({center_str})"
                 )
 
-        if steer_data.get("code_references"):
+        if code_refs:
             lines.append("Code References:")
-            for ref in steer_data["code_references"]:
-                lines.append(
-                    f"  - File: {ref['file_path']}, "
-                    f"Lines: {ref['start_line']}-{ref['end_line']}"
-                )
+            for ref in code_refs:
+                file_path = ref["file_path"]
+                start = ref["start_line"]
+                end = ref["end_line"]
+                try:
+                    # Resolve snippet from worker
+                    file_content = await self.ctx.fs.read_file(file_path)
+                    file_lines = file_content.splitlines()
+                    if start < 1 or end > len(file_lines) or start > end:
+                        lines.append(
+                            f"  - File: {file_path}, Lines: {start}-{end} "
+                            f"[ERROR: Invalid line range. File has {len(file_lines)} lines]"
+                        )
+                    else:
+                        snippet = "\n".join(file_lines[start - 1 : end])
+                        lines.append(f"  - File: {file_path}, Lines: {start}-{end}:")
+                        lines.append("```python")
+                        lines.append(snippet)
+                        lines.append("```")
+                except Exception as e:
+                    lines.append(
+                        f"  - File: {file_path}, Lines: {start}-{end} [ERROR: {e}]"
+                    )
 
         if steer_data.get("mentions"):
             lines.append(f"Mentions: {', '.join(steer_data['mentions'])}")
