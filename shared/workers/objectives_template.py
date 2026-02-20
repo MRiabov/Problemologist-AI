@@ -21,26 +21,26 @@ OBJECTIVES_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 objectives:
   # SUCCESS: The moved_object's center enters this volume
   goal_zone:
-    min: [x_min, y_min, z_min]
-    max: [x_max, y_max, z_max]
+    min: [0.0, 0.0, 0.0]
+    max: [0.0, 0.0, 0.0]
 
   # FAILURE: Any contact with these volumes fails the simulation
   forbid_zones:
     - name: "obstacle_collision_zone"
-      min: [x1, y1, z1]
-      max: [x2, y2, z2]
+      min: [0.0, 0.0, 0.0]
+      max: [0.0, 0.0, 0.0]
     # Additional forbid zones may be listed here
 
   # CONSTRAINT: Your entire design MUST fit within these bounds
   # Parts placed outside will fail validation
   build_zone:
-    min: [x, y, z]
-    max: [x, y, z]
+    min: [0.0, 0.0, 0.0]
+    max: [0.0, 0.0, 0.0]
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
-  min: [-50, -50, 0]
-  max: [50, 50, 100]
+  min: [-50.0, -50.0, 0.0]
+  max: [50.0, 50.0, 100.0]
 
 # -----------------------------------------------------------------------------
 # THE OBJECT YOU MUST DELIVER
@@ -52,11 +52,11 @@ moved_object:
   shape: "sphere"
   # Static randomization: shape varies between benchmark runs
   static_randomization:
-    radius: [5, 10]  # [min, max] - actual value chosen per benchmark variant
-  start_position: [x, y, z]
+    radius: [5.0, 10.0]  # [min, max] - actual value chosen per benchmark variant
+  start_position: [0.0, 0.0, 0.0]
   # Runtime jitter: small position variation per simulation run
   # Your solution must handle ALL positions within this range
-  runtime_jitter: [2, 2, 1]  # [+/-x, +/-y, +/-z] mm
+  runtime_jitter: [2.0, 2.0, 1.0]  # [+/-x, +/-y, +/-z] mm
 
 # -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS
@@ -64,7 +64,7 @@ moved_object:
 # These are challenging but achievable. Exceeding them = rejection.
 constraints:
   max_unit_cost: 50.00  # USD - total cost of your manufactured parts
-  max_weight: 1.2       # kg - total weight of your design
+  max_weight_g: 1200.0  # grams - total weight of your design
 
 # Randomization metadata (for reproducibility)
 randomization:

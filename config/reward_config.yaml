@@ -55,9 +55,9 @@ benchmark_generator:
       weight_within_cap:
         weight: 0.05
         description: >
-          Planner-estimated weight <= max_weight. Same continuous penalty as cost.
+          Planner-estimated weight <= max_weight_g. Same continuous penalty as cost.
         partial: true
-        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight - 1.0))"
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight_g - 1.0))"
 
       # Gate 5 — environment geometry is self-consistent
       geometry_consistent:
@@ -200,9 +200,9 @@ engineer:
       weight_within_cap:
         weight: 0.05
         description: >
-          Planner-estimated weight <= max_weight.
+          Planner-estimated weight <= max_weight_g.
         partial: true
-        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight - 1.0))"
+        penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight_g - 1.0))"
 
       # Gate 5 — COTS parts valid
       cots_ids_valid:
@@ -278,9 +278,9 @@ engineer:
       weight_within_cap:
         weight: 0.05
         description: >
-          Validated assembly weight <= max_weight.
+          Validated assembly weight <= max_weight_g.
         partial: true
-        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_weight / max_weight - 1.0))"
+        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_weight / max_weight_g - 1.0))"
         success_feedback: "Assembly weight is within the maximum limit."
         failure_feedback: "Assembly weight exceeds the limit. Use lighter materials or hollow out solid regions."
 
