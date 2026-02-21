@@ -293,6 +293,11 @@ def validate_node_output(
             if not is_valid:
                 # obj_res is list[str] on failure
                 errors.extend([f"objectives.yaml: {e}" for e in obj_res])
+        elif filename == "assembly_definition.yaml":
+            is_valid, asm_res = validate_assembly_definition_yaml(content)
+            if not is_valid:
+                # asm_res is list[str] on failure
+                errors.extend([f"assembly_definition.yaml: {e}" for e in asm_res])
 
     return len(errors) == 0, errors
 
