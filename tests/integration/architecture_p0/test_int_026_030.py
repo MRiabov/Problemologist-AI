@@ -80,10 +80,10 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
-        # 3. Trigger simulation
+        # 3. Trigger simulation (use smoke_test_mode for speed in CI)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )

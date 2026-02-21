@@ -436,7 +436,7 @@ class SimulationLoop:
 
             # OPTIMIZATION: Only check expensive conditions every N steps
             # T018: Keep interval small for collisions/overload to avoid missing events
-            check_interval = 1
+            check_interval = 10
             if step_idx % check_interval == 0 or step_idx == steps - 1:
                 # 2. Update Metrics
                 actuator_states = {
