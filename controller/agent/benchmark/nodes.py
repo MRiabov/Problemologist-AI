@@ -9,7 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
-from controller.agent.nodes.reviewer import ReviewResult
+from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
 from shared.simulation.schemas import (
     RandomizationStrategy,

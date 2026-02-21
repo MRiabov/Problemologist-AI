@@ -1,16 +1,15 @@
 from contextlib import suppress
-from enum import StrEnum
 
 import dspy
 import structlog
 from langchain_core.messages import AIMessage
-from pydantic import BaseModel, Field
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import ReviewDecision
+from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
@@ -19,18 +18,11 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
-class ReviewResult(BaseModel):
-    """Structured output for the reviewer."""
-
-    decision: ReviewDecision
-    reason: str
-    required_fixes: list[str] = Field(default_factory=list)
-
-
-class ReviewerSignature(dspy.Signature):
+class PlanReviewerSignature(dspy.Signature):
     """
-    Reviewer node: Evaluates the Coder's output based on simulation and workbench reports.
-    You must use the provided tools to read 'simulation_report.json' and 'workbench_report.md'.
+    Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
+    You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
+    Ensure the plan is physically feasible, within budget, and complete.
     When done, use SUBMIT to provide your final ReviewResult.
     """
 
@@ -44,15 +36,13 @@ class ReviewerSignature(dspy.Signature):
 
 
 @type_check
-class ReviewerNode(BaseNode):
+class PlanReviewerNode(BaseNode):
     """
-    Reviewer node: Evaluates the Coder's output based on simulation and workbench reports.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Plan Reviewer node: Evaluates the engineering plan before implementation.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
-        # T015: Use DSPy to evaluate success
-        # Read objectives if possible for context
+        # Read objectives and assembly_definition for context
         objectives = "# No objectives.yaml found."
         with suppress(Exception):
             if await self.ctx.worker_client.exists("objectives.yaml"):
@@ -74,24 +64,23 @@ class ReviewerNode(BaseNode):
             "journal": state.journal,
         }
 
-        # Validate existence of key reports
-        validate_files = ["simulation_result.json", "assembly_definition.yaml"]
+        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            dspy.CodeAct,
-            ReviewerSignature,
-            state,
-            inputs,
-            get_engineer_tools,
-            validate_files,
-            "reviewer",
+            program_cls=dspy.CodeAct,
+            signature_cls=PlanReviewerSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="plan_reviewer",
         )
 
         if not prediction:
             return state.model_copy(
                 update={
-                    "status": AgentStatus.CODE_REJECTED,
-                    "feedback": f"Reviewer failed to complete: {journal_entry}",
+                    "status": AgentStatus.PLAN_REJECTED,
+                    "feedback": f"Plan Reviewer failed to complete: {journal_entry}",
                     "journal": state.journal + journal_entry,
                     "turn_count": state.turn_count + 1,
                 }
@@ -105,16 +94,15 @@ class ReviewerNode(BaseNode):
                 [f"- {f}" for f in review.required_fixes]
             )
 
-        journal_entry += f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
+        journal_entry += f"\nPlan Critic Decision: {decision.value}\nFeedback: {feedback}"
 
         status_map = {
             ReviewDecision.APPROVED: AgentStatus.APPROVED,
-            ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
+            ReviewDecision.REJECTED: AgentStatus.PLAN_REJECTED,
             ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
-            ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
         }
 
-        # Emit ReviewDecisionEvent for observability
+        # Emit ReviewDecisionEvent
         await record_worker_events(
             episode_id=state.session_id,
             events=[
@@ -122,8 +110,7 @@ class ReviewerNode(BaseNode):
                     decision=decision,
                     reason=feedback,
                     evidence_stats={
-                        "has_sim_report": True,
-                        "has_mfg_report": True,
+                        "is_plan_review": True,
                     },
                 )
             ],
@@ -131,11 +118,11 @@ class ReviewerNode(BaseNode):
 
         return state.model_copy(
             update={
-                "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
+                "status": status_map.get(decision, AgentStatus.PLAN_REJECTED),
                 "feedback": feedback,
                 "journal": state.journal + journal_entry,
                 "messages": state.messages
-                + [AIMessage(content=f"Review decision: {decision.value}")],
+                + [AIMessage(content=f"Plan Review decision: {decision.value}")],
                 "turn_count": state.turn_count + 1,
             }
         )
@@ -143,11 +130,10 @@ class ReviewerNode(BaseNode):
 
 # Factory function for LangGraph
 @type_check
-async def reviewer_node(state: AgentState) -> AgentState:
-    # Use session_id from state
+async def plan_reviewer_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url, session_id=session_id
     )
-    node = ReviewerNode(context=ctx)
+    node = PlanReviewerNode(context=ctx)
     return await node(state)
