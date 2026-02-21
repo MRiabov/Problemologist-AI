@@ -27,6 +27,7 @@ from worker_heavy.workbenches.config import load_config
 
 from .dfm import validate_and_price
 from .rendering import prerender_24_views
+from shared.wire_utils import check_wire_clearance
 
 logger = structlog.get_logger(__name__)
 
@@ -716,6 +717,39 @@ def validate(
                 False,
                 f"Boundary constraint violation: size {bbox.size} exceeds 1000.0",
             )
+
+    # Check wire clearance if assembly definition is available
+    if output_dir:
+        asm_path = output_dir / "assembly_definition.yaml"
+        if asm_path.exists():
+            try:
+                data = yaml.safe_load(asm_path.read_text(encoding="utf-8"))
+                if data and "electronics" in data and "wiring" in data["electronics"]:
+                    wires_data = data["electronics"]["wiring"]
+                    # We need to reconstruct WireConfig objects or parse manually
+                    # Since check_wire_clearance only needs waypoints, we can parse manually
+                    for w in wires_data:
+                        wire_id = w.get("wire_id", "unknown")
+                        waypoints = w.get("waypoints")
+                        routed_in_3d = w.get("routed_in_3d", False)
+
+                        if not waypoints or len(waypoints) < 2 or not routed_in_3d:
+                            continue
+
+                        # Convert to list of tuples if needed
+                        pts = []
+                        for p in waypoints:
+                            if isinstance(p, (list, tuple)) and len(p) >= 3:
+                                pts.append((float(p[0]), float(p[1]), float(p[2])))
+
+                        if len(pts) >= 2:
+                            if not check_wire_clearance(pts, component, clearance_mm=2.0):
+                                return (
+                                    False,
+                                    f"Wire clearance violation detected for wire {wire_id}.",
+                                )
+            except Exception as e:
+                logger.warning("wire_clearance_check_failed_during_validate", error=str(e))
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
