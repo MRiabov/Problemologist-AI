@@ -15,7 +15,7 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import get_langfuse_callback
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
-from shared.enums import AssetType, EpisodeStatus
+from shared.enums import AssetType, EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
@@ -63,7 +63,7 @@ def define_graph():
     )
 
     # Conditional edges for reviewer
-    async def reviewer_router(  # FIXME: flaky! why can't we just pass proper enums and/or deterministic state?
+    async def reviewer_router(
         state: BenchmarkGeneratorState,
     ) -> Literal["steer", "coder", "planner", "skills"]:
         # Check for steering first
@@ -76,10 +76,19 @@ def define_graph():
             )
             return "skills"
 
+        # Use structured decision if available
+        if state.review_decision:
+            if state.review_decision == ReviewDecision.APPROVED:
+                return "skills"
+            if state.review_decision == ReviewDecision.REJECT_PLAN:
+                return "planner"
+            return "coder"
+
+        # Fallback for legacy behavior
         feedback = (state.review_feedback or "").lower()
-        if "approved" in feedback:  # FIXME: flaky!
+        if "approved" in feedback:
             return "skills"
-        if feedback.startswith("Steering:"):  # FIXME: flaky!
+        if feedback.startswith("steering:"):
             return "planner"
         return "coder"
 
@@ -167,11 +176,16 @@ async def _execute_graph_streaming(
             elif node_name == "coder":
                 new_status = SessionStatus.VALIDATING
             elif node_name == "reviewer":
-                feedback = final_state.review_feedback or ""
-                if feedback == "Approved":
+                if final_state.review_decision == ReviewDecision.APPROVED:
                     new_status = SessionStatus.ACCEPTED
-                else:
+                elif final_state.review_decision:
                     new_status = SessionStatus.REJECTED
+                else:
+                    feedback = final_state.review_feedback or ""
+                    if "approved" in feedback.lower():
+                        new_status = SessionStatus.ACCEPTED
+                    else:
+                        new_status = SessionStatus.REJECTED
             elif (
                 node_name == "skills"
                 and final_state.session.status == SessionStatus.ACCEPTED
