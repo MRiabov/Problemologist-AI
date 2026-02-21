@@ -185,7 +185,7 @@
 - "Workbenches" - manufacturability verification (2211)
 - CAD and and design validation (2218)
   - Tools (2222)
-    - "Agent-native" tools (callable by LangChain) (2224)
+    - "Agent-native" tools (callable by DSPy.ReAct runtime) (2224)
     - The "tools" as Python functions - Utils (2261)
       - Engineer tools (2265)
       - Benchmark generator (CAD editor) tools (2278)
@@ -553,11 +553,11 @@ Database:
 
 ### Agentic framework
 
-We use LangChain and LangGraph for the agentic infrastructure. Langfuse is used for observability.
+We use DSPy.ReAct as the primary agent runtime (reasoning + tool use) and LangGraph to manage agent architecture/orchestration. Langfuse is used for observability.
 
 #### Implementation
 
-We create two LangGraph graphs for agents - a Benchmark Generator graph, consisting of:
+We create two LangGraph-managed workflows with DSPy.ReAct-driven agent nodes - a Benchmark Generator workflow, consisting of:
 
 - Planner,
 - Implementer,
@@ -578,7 +578,7 @@ The Engineer consists of
 
 I decided to split the electrical planner because of complexity and different skills that may be involved in electrical engineering.
 
-We trace all graphs with LangFuse.
+We trace all workflows with LangFuse.
 
 ### Filesystem
 
@@ -1671,7 +1671,7 @@ All important updates must be persisted into the DB (for observability, as below
 
 #### Separation
 
-The Agent (managed by LangGraph) never "knows" about distributed workers. It only calls an async Python function (a tool). It is the job of the tool to dispatch a job and handle the retry. In this case, retries and persistence are handled by Temporal. LangGraph handles the retries in case the LLM call fails.
+The agent runtime (DSPy.ReAct modules/signatures inside LangGraph-managed orchestration) never "knows" about distributed workers. It only calls an async Python function (a tool). It is the job of the tool to dispatch a job and handle retries. In this case, durable retries and persistence are handled by Temporal, while LLM call retries are handled in our runtime wrappers.
 
 #### Temporal
 
@@ -2308,7 +2308,7 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 ### Tools
 
-#### "Agent-native" tools (callable by LangChain)
+#### "Agent-native" tools (callable by DSPy.ReAct runtime)
 
 The following agents have the exact same set of tools: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`.
 
@@ -2343,7 +2343,7 @@ Importantly, we have all these methods as async functions, their names with `are
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
 
-Note: we use Langchain `create_agent` (or the deprecated `LangGraph.prebuilt.create_react_agent`) for the implementation. We don't write our own loops.
+Note: runtime is DSPy.ReAct-first with LangGraph-managed architecture. We do not use LangChain `create_agent`; orchestration is implemented in our LangGraph workflows and Python runtime wrappers.
 
 #### The "tools" as Python functions - Utils
 
@@ -2374,7 +2374,7 @@ Validated under all environment randomization.
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
-<!-- Note 2: LangGraph supports subagents this is what we'll use here.-->
+<!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
 #### Planner tools
 
@@ -2482,7 +2482,7 @@ The workbench validation (as well as other util infrastructure are read-only in 
 
 ### Off-the-shelf parts (COTS)
 
-It is self-understanding that engineers will use off-the-shelf parts - motors, fasteners, gears, etc. The catalog is well-defined in spec 007, but the model should have an access to a CLI tool or a set of python scripts to find something in a codebase. Again, we use CodeAct.
+It is self-understanding that engineers will use off-the-shelf parts - motors, fasteners, gears, etc. The catalog is well-defined in spec 007, but the model should have an access to a CLI tool or a set of python scripts to find something in a codebase. Again, we use DSPy.ReAct.
 
 I suggest using a subagent for this. Give a prompt of what's necessary and let the subagent execute a series of read-only SQL prompts over a catalog DB. The agent will return a series of catalogs to use.
 
@@ -2656,7 +2656,7 @@ tool calls are just python imports:
   reason: >
     I don't see how agents can reliably run a `simulate.py` script in a function. E.g., the agent would run a command like `python3 simulate.py --source_file solution.py` The issue with this is that - how would we get the exact build123d "result" assembly from it? I don't know. Not without some subprocesses. And with subprocesses, how would we get the part by label? I don't know.
 
-    Why not create a separate tool? because the agents are proven to work better with calling scripts through code and not through tool calls - tool calls confuse them. (reference CodeAct framework for it, if you wish.)
+    Why not create a separate tool? because the agents are proven to work better with calling scripts through code and not through tool calls - tool calls confuse them. (reference DSPy.ReAct framework for it, if you wish.)
   additional issues: 
     the real issue is that literally all the submitted scripts would have a `submit()` or similar commands in the end. It's not really a blocked, but it kind of is a code smell. On the brighter side, it will lead to deterministic execution where LLMs can't break business logic - they, for example, could, if the LLM would override an abstract class and would write it's logic in the base class. 
     Not exactly a blocker, but just complexity. 
