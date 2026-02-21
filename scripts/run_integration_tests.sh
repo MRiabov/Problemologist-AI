@@ -22,6 +22,10 @@ export WORKER_URL="http://127.0.0.1:18001"
 export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
 
+# Headless MuJoCo rendering
+export MUJOCO_GL=osmesa
+export OPENAI_API_KEY=mock-key
+
 # Shared sessions directory for local integration tests
 export WORKER_SESSIONS_DIR=$(mktemp -d -t pb-sessions-XXXXXX)
 echo "Shared sessions directory: $WORKER_SESSIONS_DIR"
@@ -120,6 +124,9 @@ sleep 5
 
 echo "Running migrations..."
 uv run alembic upgrade head
+
+echo "Initializing COTS database..."
+uv run python3 -m shared.cots.indexer
 
 echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 
