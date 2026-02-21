@@ -165,9 +165,7 @@ def validate_todo_md(
 
     if require_completion:
         # Only [x]/[X] (completed) or [-] (skipped) are acceptable at submission
-        invalid_states = [
-            s for s in valid_checkboxes if s.lower() not in ("x", "-")
-        ]
+        invalid_states = [s for s in valid_checkboxes if s.lower() not in ("x", "-")]
         if invalid_states:
             violations.append(
                 "All TODO items must be completed or skipped before submission "

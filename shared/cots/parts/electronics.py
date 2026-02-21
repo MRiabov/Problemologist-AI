@@ -137,7 +137,9 @@ class Switch(COTSPart):
         l, w, h = data["dims"]
         body = Box(l, w, h)
         body.color = Color("red")
-        super().__init__(category="switch", part_number=size, data=data, children=[body])
+        super().__init__(
+            category="switch", part_number=size, data=data, children=[body]
+        )
 
 
 class Connector(COTSPart):

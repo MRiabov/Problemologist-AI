@@ -85,5 +85,7 @@ def get_catalog_metadata(db: Session = Depends(get_db)) -> dict[str, Any]:
     return {
         "catalog_version": result.catalog_version,
         "bd_warehouse_commit": result.bd_warehouse_commit,
-        "generated_at": result.generated_at.isoformat() if result.generated_at else None,
+        "generated_at": result.generated_at.isoformat()
+        if result.generated_at
+        else None,
     }

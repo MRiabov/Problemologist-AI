@@ -224,9 +224,16 @@ def set_soft_mesh(
 
 
 def to_mjcf(
-    component: Compound, renders_dir: Path | None = None, smoke_test_mode: bool = False
+    component: Compound,
+    renders_dir: Path | None = None,
+    smoke_test_mode: bool | None = None,
 ) -> str:
     """Convert a build123d Compound to a MuJoCo XML (MJCF) string."""
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
+
     if not renders_dir:
         renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
     renders_dir.mkdir(parents=True, exist_ok=True)
@@ -398,7 +405,7 @@ def simulate_subprocess(
     session_root: str,
     script_content: str | None = None,
     output_dir: Path | None = None,
-    smoke_test_mode: bool = False,
+    smoke_test_mode: bool | None = None,
     backend: Any | None = None,
     session_id: str | None = None,
     particle_budget: int | None = None,
@@ -409,6 +416,10 @@ def simulate_subprocess(
         os.environ["EVENTS_FILE"] = str(Path(session_root) / "events.jsonl")
 
     from shared.workers.loader import load_component_from_script
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
 
     component = load_component_from_script(
         script_path=script_path,
@@ -430,17 +441,22 @@ def simulate(
     output_dir: Path | None = None,
     fem_enabled: bool | None = None,
     particle_budget: int | None = None,
-    smoke_test_mode: bool = False,
+    smoke_test_mode: bool | None = None,
     backend: SimulatorBackendType | None = None,
     session_id: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
     from worker_heavy.simulation.loop import SimulationLoop
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
 
     logger.info(
         "simulate_start",
         fem_enabled=fem_enabled,
         particle_budget=particle_budget,
+        smoke_test_mode=smoke_test_mode,
         backend=backend,
         session_id=session_id,
     )
@@ -652,10 +668,15 @@ def validate(
     build_zone: dict | None = None,
     output_dir: Path | None = None,
     session_id: str | None = None,
-    smoke_test_mode: bool = False,
+    smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
 ) -> tuple[bool, str | None]:
     """Verify geometric validity."""
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
+
     logger.info(
         "validate_start",
         session_id=session_id,
@@ -750,11 +771,17 @@ def validate(
                         if len(pts) >= 2:
                             wire_count += 1
                             # Calculate length for observability
-                            total_length += calculate_path_length(pts, use_spline=routed_in_3d)
+                            total_length += calculate_path_length(
+                                pts, use_spline=routed_in_3d
+                            )
 
                             if routed_in_3d:
-                                if not check_wire_clearance(pts, component, clearance_mm=2.0):
-                                    wire_errors.append(f"Wire clearance violation: {wire_id}")
+                                if not check_wire_clearance(
+                                    pts, component, clearance_mm=2.0
+                                ):
+                                    wire_errors.append(
+                                        f"Wire clearance violation: {wire_id}"
+                                    )
 
                     # Emit observability event for validation result
                     if wire_count > 0:
@@ -771,7 +798,9 @@ def validate(
                         return (False, "; ".join(wire_errors))
 
             except Exception as e:
-                logger.warning("wire_clearance_check_failed_during_validate", error=str(e))
+                logger.warning(
+                    "wire_clearance_check_failed_during_validate", error=str(e)
+                )
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None

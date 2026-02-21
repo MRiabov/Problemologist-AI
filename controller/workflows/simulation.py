@@ -31,6 +31,7 @@ class SimulationWorkflow:
             pass
 
         from temporalio.common import RetryPolicy
+
         retry_policy = RetryPolicy(maximum_attempts=3)
 
         try:

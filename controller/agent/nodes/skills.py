@@ -55,7 +55,7 @@ class SkillsNode(BaseNode):
 
     async def _sync_git(self, commit_message: str):
         """Sync changes with git via GitManager."""
-        await self.git.sync_changes(commit_message, llm=self.ctx.llm, pm=self.ctx.pm)
+        await self.git.sync_changes(commit_message, lm=self.ctx.dspy_lm)
 
     async def __call__(
         self, state: AgentState, config: RunnableConfig | None = None

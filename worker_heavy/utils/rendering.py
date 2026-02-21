@@ -26,13 +26,18 @@ def prerender_24_views(
     backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
     session_id: str | None = None,
     scene_path: str | Path | None = None,
-    smoke_test_mode: bool = False,
+    smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
     Saves to output_dir.
     """
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
+
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
 

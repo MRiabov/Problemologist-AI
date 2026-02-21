@@ -8,6 +8,7 @@ from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
 
+
 def analyze_component(
     component: Part | Compound,
     output_dir: Path,
@@ -29,7 +30,9 @@ def analyze_component(
         try:
             method = ManufacturingMethod(method_str.lower())
         except ValueError:
-            logger.warning("invalid_manufacturing_method_in_metadata", method=method_str)
+            logger.warning(
+                "invalid_manufacturing_method_in_metadata", method=method_str
+            )
             method = ManufacturingMethod.CNC
 
     return validate_and_price(
