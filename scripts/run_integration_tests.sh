@@ -10,6 +10,10 @@ echo "Integration Tests Started at: $(date)"
 export IS_INTEGRATION_TEST=true
 export LOG_LEVEL=${LOG_LEVEL:-INFO}
 
+# Headless rendering for MuJoCo
+export MUJOCO_GL=osmesa
+export PYOPENGL_PLATFORM=osmesa
+
 # Networking for local services (infra is still in Docker but exposed on host)
 export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres"
 export TEMPORAL_URL="127.0.0.1:17233"
@@ -123,6 +127,9 @@ sleep 5
 
 echo "Running migrations..."
 uv run alembic upgrade head
+
+echo "Initializing COTS catalog (parts.db)..."
+uv run python3 -m shared.cots.indexer
 
 echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 
