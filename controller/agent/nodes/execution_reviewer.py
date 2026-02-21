@@ -1,10 +1,8 @@
 from contextlib import suppress
-from enum import StrEnum
 
 import dspy
 import structlog
 from langchain_core.messages import AIMessage
-from pydantic import BaseModel, Field
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
@@ -69,7 +67,7 @@ class ExecutionReviewerNode(BaseNode):
         # Validate existence of key reports
         validate_files = ["simulation_result.json", "assembly_definition.yaml"]
 
-        prediction, artifacts, journal_entry = await self._run_program(
+        prediction, _artifacts, journal_entry = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=ExecutionReviewerSignature,
             state=state,
@@ -126,8 +124,10 @@ class ExecutionReviewerNode(BaseNode):
                 "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
                 "feedback": feedback,
                 "journal": state.journal + journal_entry,
-                "messages": state.messages
-                + [AIMessage(content=f"Review decision: {decision.value}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Review decision: {decision.value}"),
+                ],
                 "turn_count": state.turn_count + 1,
             }
         )

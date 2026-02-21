@@ -66,7 +66,7 @@ class PlanReviewerNode(BaseNode):
 
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
-        prediction, artifacts, journal_entry = await self._run_program(
+        prediction, _artifacts, journal_entry = await self._run_program(
             program_cls=dspy.CodeAct,
             signature_cls=PlanReviewerSignature,
             state=state,
@@ -94,7 +94,9 @@ class PlanReviewerNode(BaseNode):
                 [f"- {f}" for f in review.required_fixes]
             )
 
-        journal_entry += f"\nPlan Critic Decision: {decision.value}\nFeedback: {feedback}"
+        journal_entry += (
+            f"\nPlan Critic Decision: {decision.value}\nFeedback: {feedback}"
+        )
 
         status_map = {
             ReviewDecision.APPROVED: AgentStatus.APPROVED,
@@ -121,8 +123,10 @@ class PlanReviewerNode(BaseNode):
                 "status": status_map.get(decision, AgentStatus.PLAN_REJECTED),
                 "feedback": feedback,
                 "journal": state.journal + journal_entry,
-                "messages": state.messages
-                + [AIMessage(content=f"Plan Review decision: {decision.value}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Plan Review decision: {decision.value}"),
+                ],
                 "turn_count": state.turn_count + 1,
             }
         )
