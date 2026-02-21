@@ -460,13 +460,18 @@ class SimulationLoop:
                 )
 
                 # 4. Check Success/Failure conditions
-                fail_reason = self.success_evaluator.check_failure(
-                    current_time,
-                    target_pos,
-                    state.vel if target_pos is not None else np.zeros(3),
-                )
-                if fail_reason:
-                    self.fail_reason = fail_reason
+                # T018: Check all active bodies for out-of-bounds, not just the target
+                for bname in self.body_names:
+                    bstate = self.backend.get_body_state(bname)
+                    fail_reason = self.success_evaluator.check_failure(
+                        current_time,
+                        bstate.pos,
+                        bstate.vel,
+                    )
+                    if fail_reason:
+                        self.fail_reason = fail_reason
+                        break
+                if self.fail_reason:
                     break
 
                 if not res.success:
