@@ -262,6 +262,11 @@ while [[ $# -gt 0 ]]; do
       REVERSE_FLAG="--reverse"
       shift
       ;;
+    --no-smoke)
+      echo "High-fidelity simulation ENABLED (smoke test mode DISABLED)"
+      export SMOKE_TEST_MODE=false
+      shift
+      ;;
     *)
       PYTEST_ARGS+=("$1")
       shift

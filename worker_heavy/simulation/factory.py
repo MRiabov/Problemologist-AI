@@ -16,7 +16,7 @@ MAX_ACTIVE_SESSIONS = 4
 def get_physics_backend(
     backend_type: SimulatorBackendType,
     session_id: str | None = None,
-    smoke_test_mode: bool = False,
+    smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
 ) -> PhysicsBackend:
     """
@@ -31,6 +31,11 @@ def get_physics_backend(
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )
+
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
 
     if session_id in BACKEND_CACHE:
         logger.debug("backend_cache_hit", session_id=session_id)
@@ -70,7 +75,9 @@ def _create_backend(
     if backend_type == SimulatorBackendType.MUJOCO:
         from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 
-        return MuJoCoBackend()
+        backend = MuJoCoBackend()
+        backend.smoke_test_mode = smoke_test_mode
+        return backend
     if backend_type == SimulatorBackendType.GENESIS:
         from worker_heavy.simulation.genesis_backend import GenesisBackend
 

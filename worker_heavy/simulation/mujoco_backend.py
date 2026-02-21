@@ -25,12 +25,17 @@ class MuJoCoBackend(PhysicsBackend):
         self.data = None
         self.renderer = None
         self.custom_cameras = {}  # name -> mjvCamera
+        self.smoke_test_mode = False
 
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
             if scene.scene_path:
                 self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
                 self.data = mujoco.MjData(self.model)
+
+                if self.smoke_test_mode:
+                    # Accelerate simulation for smoke tests
+                    self.model.opt.timestep = 0.05
             else:
                 raise ValueError("MuJoCoBackend requires scene_path")
 
