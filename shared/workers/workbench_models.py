@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictStr
+from pydantic import BaseModel, Field
 
 from shared.enums import ManufacturingMethod
 
@@ -13,14 +13,14 @@ class BuildZone(BaseModel):
 
 
 class CostBreakdown(BaseModel):
-    process: StrictStr
-    total_cost: StrictFloat
-    unit_cost: StrictFloat
-    material_cost_per_unit: StrictFloat
-    setup_cost: StrictFloat
-    is_reused: StrictBool
-    details: dict[StrictStr, Any] = Field(default_factory=dict)
-    pricing_explanation: StrictStr = ""
+    process: str
+    total_cost: float
+    unit_cost: float
+    material_cost_per_unit: float
+    setup_cost: float
+    is_reused: bool
+    details: dict[str, Any] = Field(default_factory=dict)
+    pricing_explanation: str = ""
 
 
 class WorkbenchMetadata(BaseModel):
@@ -35,49 +35,54 @@ class WorkbenchMetadata(BaseModel):
 
 
 class WorkbenchResult(BaseModel):
-    is_manufacturable: StrictBool
-    unit_cost: StrictFloat
-    weight_g: StrictFloat = 0.0
-    violations: list[StrictStr] = Field(default_factory=list)
+    is_manufacturable: bool
+    unit_cost: float
+    weight_g: float = 0.0
+    violations: list[str] = Field(default_factory=list)
     metadata: WorkbenchMetadata = Field(default_factory=WorkbenchMetadata)
 
 
 class DFMReport(BaseModel):
-    overall_status: StrictBool
-    results: dict[StrictStr, WorkbenchResult]
+    overall_status: bool
+    results: dict[str, WorkbenchResult]
 
 
 class MaterialDefinition(BaseModel):
-    name: StrictStr
-    density_g_cm3: StrictFloat
-    density_kg_m3: StrictFloat | None = None
-    cost_per_kg: StrictFloat
-    color: StrictStr = "#FFFFFF"
-    elongation_stress_mpa: StrictFloat = 0.0
-    restitution: StrictFloat = 0.5
-    friction_coef: StrictFloat = 0.5
-    machine_hourly_rate: StrictFloat = 0.0
+    name: str
+    density_g_cm3: float
+    density_kg_m3: float | None = None
+    cost_per_kg: float
+    color: str = "#FFFFFF"
+    elongation_stress_mpa: float = 0.0
+    restitution: float = 0.5
+    friction_coef: float = 0.61  # Default for aluminum
+    machine_hourly_rate: float = 0.0
     compatibility: list[ManufacturingMethod] = Field(default_factory=list)
 
     # NEW - FEM fields (WP2)
-    youngs_modulus_pa: StrictFloat | None = None
-    poissons_ratio: StrictFloat | None = None
-    yield_stress_pa: StrictFloat | None = None
-    ultimate_stress_pa: StrictFloat | None = None
-    elongation_at_break: StrictFloat | None = None
-    material_class: StrictStr = "rigid"  # "rigid" | "soft" | "elastomer"
+    youngs_modulus_pa: float | None = None
+    poissons_ratio: float | None = None
+    yield_stress_pa: float | None = None
+    ultimate_stress_pa: float | None = None
+    elongation_at_break: float | None = None
+    material_class: str = "rigid"  # "rigid" | "soft" | "elastomer"
+
+
+class WireDefinition(BaseModel):
+    cost_per_m: float
 
 
 class MethodConfig(BaseModel):
-    materials: dict[StrictStr, MaterialDefinition]
-    constraints: dict[StrictStr, Any] = Field(default_factory=dict)
-    parameters: dict[StrictStr, Any] = Field(default_factory=dict)
-    costs: dict[StrictStr, Any] = Field(default_factory=dict)
+    materials: dict[str, MaterialDefinition]
+    constraints: dict[str, Any] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    costs: dict[str, Any] = Field(default_factory=dict)
 
 
 class ManufacturingConfig(BaseModel):
-    defaults: dict[StrictStr, Any] = Field(default_factory=dict)
-    materials: dict[StrictStr, MaterialDefinition] = Field(default_factory=dict)
+    defaults: dict[str, Any] = Field(default_factory=dict)
+    materials: dict[str, MaterialDefinition] = Field(default_factory=dict)
+    wires: dict[str, WireDefinition] = Field(default_factory=dict)
     cnc: MethodConfig | None = None
     injection_molding: MethodConfig | None = None
     three_dp: MethodConfig | None = None
