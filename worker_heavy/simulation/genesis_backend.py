@@ -262,8 +262,26 @@ class GenesisBackend(PhysicsBackend):
         )
 
         # T014: Particle visualization options from WP06
+        mpm_options = None
+        if hasattr(scene.config, "simulation_bounds") or (
+            isinstance(scene.config, dict) and "simulation_bounds" in scene.config
+        ):
+            bounds = (
+                scene.config["simulation_bounds"]
+                if isinstance(scene.config, dict)
+                else scene.config.simulation_bounds
+            )
+            # Add some safety margin as Genesis MPM boundaries are strict
+            margin = 5.0
+            mpm_options = gs.options.MPMOptions(
+                lower_bound=tuple(np.array(bounds["min"]) - margin),
+                upper_bound=tuple(np.array(bounds["max"]) + margin),
+                grid_density=16,
+            )
+
         self.scene = gs.Scene(
             sim_options=sim_options,
+            mpm_options=mpm_options,
             show_viewer=False,
             vis_options=gs.options.VisOptions(
                 particle_size_scale=1.0,
@@ -442,13 +460,6 @@ class GenesisBackend(PhysicsBackend):
                         # Convert 0-255 to 0-1 and add alpha for transparency
                         color_f = tuple([c / 255.0 for c in color] + [0.8])
 
-                        # MPM Material based on FluidDefinition
-                        material = gs.materials.MPM.Liquid(
-                            rho=props.get("density_kg_m3", 1000),
-                            viscosity=props.get("viscosity_cp", 1.0)
-                            * 0.001,  # Convert cP to Pa.s
-                        )
-
                         # Support Box and Sphere spawning volumes
                         # T017: Apply particle multiplier or manual budget override
                         if self.particle_budget:
@@ -456,27 +467,37 @@ class GenesisBackend(PhysicsBackend):
                         else:
                             n_particles = int(10000 * self.current_particle_multiplier)
 
+                        # MPM Material based on FluidDefinition
+                        material = gs.materials.MPM.Liquid(
+                            rho=props.get("density_kg_m3", 1000),
+                            mu=props.get("viscosity_cp", 1.0)
+                            * 0.001,  # Convert cP to Pa.s
+                            viscous=True,
+                            sampler=f"pbs-{n_particles}",
+                        )
+
+                        surface = gs.surfaces.Default(
+                            color=color_f[:3],
+                            opacity=color_f[3] if len(color_f) > 3 else 0.8,
+                        )
+
                         if vol["type"] == "box":
                             self.scene.add_entity(
                                 gs.morphs.Box(
                                     pos=vol["center"],
                                     size=vol.get("size", [0.1, 0.1, 0.1]),
-                                    sampler="grid",
-                                    n_particles=n_particles,
-                                    color=color_f,
                                 ),
                                 material=material,
+                                surface=surface,
                             )
                         elif vol["type"] == "sphere":
                             self.scene.add_entity(
                                 gs.morphs.Sphere(
                                     pos=vol["center"],
                                     radius=vol.get("radius", 0.05),
-                                    sampler="grid",
-                                    n_particles=n_particles,
-                                    color=color_f,
                                 ),
                                 material=material,
+                                surface=surface,
                             )
 
             except Exception as e:

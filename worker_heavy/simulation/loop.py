@@ -91,9 +91,15 @@ class SimulationLoop:
                     else "auto",
                 )
             )
+            scene_config = {"particle_budget": self.particle_budget}
+            if objectives and objectives.simulation_bounds:
+                scene_config["simulation_bounds"] = (
+                    objectives.simulation_bounds.model_dump()
+                )
+
             scene = SimulationScene(
                 scene_path=str(xml_path),
-                config={"particle_budget": self.particle_budget},
+                config=scene_config,
             )
             self.backend.load_scene(scene)
 
