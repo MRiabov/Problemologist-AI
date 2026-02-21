@@ -69,7 +69,8 @@ fi
 
 # Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
-bash scripts/ensure_docker_vfs.sh
+# We source this to pick up environment variables (MUJOCO_GL, etc.) set by the script.
+source scripts/ensure_docker_vfs.sh
 
 # Ensure ngspice is installed for electronics validation
 bash scripts/ensure_ngspice.sh
@@ -124,6 +125,9 @@ sleep 5
 echo "Running migrations..."
 uv run alembic upgrade head
 
+echo "Initializing COTS database..."
+uv run python -m shared.cots.indexer
+
 echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 
 # Ensure log directory exists and manage log history
@@ -156,7 +160,7 @@ echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
-uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
+uv run xvfb-run -a uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 

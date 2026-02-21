@@ -23,8 +23,10 @@ fi
 CURRENT_DRIVER=$(docker info -f '{{.Driver}}' 2>/dev/null || echo "unknown")
 
 if [ "$CURRENT_DRIVER" = "vfs" ]; then
-    echo "Docker is already using vfs storage driver."
-    exit 0
+    echo "Docker is already using vfs storage driver. Applying headless rendering fixes for sandboxed environment..."
+    export MUJOCO_GL=osmesa
+    export PYOPENGL_PLATFORM=osmesa
+    (return 0 2>/dev/null) && return 0 || exit 0
 fi
 
 echo "Current Docker storage driver: $CURRENT_DRIVER"
@@ -33,10 +35,14 @@ echo "Current Docker storage driver: $CURRENT_DRIVER"
 # Using a mirror as preferred in this environment
 if docker run --rm mirror.gcr.io/library/alpine:latest true >/dev/null 2>&1; then
     echo "Docker is working correctly with $CURRENT_DRIVER."
-    exit 0
+    # Main test platform - no special rendering env vars needed (uses default/xvfb)
+    (return 0 2>/dev/null) && return 0 || exit 0
 fi
 
 echo "Docker seems to be failing with $CURRENT_DRIVER (likely a Docker-in-Docker environment). Attempting to switch to vfs..."
+# Sandboxed/DinD environment - use osmesa for rendering
+export MUJOCO_GL=osmesa
+export PYOPENGL_PLATFORM=osmesa
 
 if ! command -v sudo >/dev/null 2>&1; then
     echo "Error: sudo is required to change Docker configuration but not found."
