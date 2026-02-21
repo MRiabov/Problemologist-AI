@@ -347,6 +347,8 @@ async def api_analyze(
                     analyze_component,
                     component,
                     output_dir=root,
+                    method=request.method,
+                    quantity=request.quantity,
                 )
                 return result
     except Exception as e:
