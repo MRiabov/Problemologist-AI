@@ -6,6 +6,7 @@ import structlog
 from temporalio import activity
 
 from controller.clients.worker import WorkerClient
+from controller.config.settings import settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
@@ -13,8 +14,8 @@ from shared.observability.storage import S3Client, S3Config
 from shared.type_checking import type_check
 
 # Configuration for activities
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://worker-light:8001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL")
+WORKER_LIGHT_URL = settings.worker_light_url
+WORKER_HEAVY_URL = settings.worker_heavy_url
 logger = structlog.get_logger(__name__)
 
 
