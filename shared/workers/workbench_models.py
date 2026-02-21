@@ -81,6 +81,7 @@ class ManufacturingConfig(BaseModel):
     cnc: MethodConfig | None = None
     injection_molding: MethodConfig | None = None
     three_dp: MethodConfig | None = None
+    wires: dict[StrictStr, Any] | None = None
 
     def __getitem__(self, key: str) -> Any:
         # Support dict-like access for backward compatibility with existing workbenches
