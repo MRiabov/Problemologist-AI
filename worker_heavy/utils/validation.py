@@ -293,6 +293,45 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
+            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
+                from shared.cots.parts.electronics import ElectronicRelay
+
+                try:
+                    relay = ElectronicRelay(size=comp.cots_part_id)
+                    total_cost += getattr(relay, "price", 0.0)
+                    total_weight += getattr(relay, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_relay",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
+                from shared.cots.parts.electronics import Switch
+
+                try:
+                    sw = Switch(size=comp.cots_part_id)
+                    total_cost += getattr(sw, "price", 0.0)
+                    total_weight += getattr(sw, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_switch",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
+                from shared.cots.parts.electronics import Connector
+
+                try:
+                    conn = Connector(size=comp.cots_part_id)
+                    total_cost += getattr(conn, "price", 0.0)
+                    total_weight += getattr(conn, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_connector",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
             elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
 
@@ -403,6 +442,12 @@ def simulate(
         session_id=session_id,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    logger.info(
+        "DEBUG_simulate",
+        working_dir=str(working_dir),
+        exists=working_dir.exists(),
+        files=list(working_dir.iterdir()) if working_dir.exists() else [],
+    )
     renders_dir = working_dir / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
@@ -415,7 +460,17 @@ def simulate(
             try:
                 data = yaml.safe_load(content)
                 objectives = ObjectivesYaml(**data)
+                logger.info(
+                    "DEBUG_objectives_loaded",
+                    physics=objectives.physics.model_dump()
+                    if objectives.physics
+                    else None,
+                )
             except Exception as e:
+                import traceback
+
+                print(f"FAILED TO LOAD OBJECTIVES: {e}")
+                traceback.print_exc()
                 logger.error("failed_to_load_objectives", error=str(e))
 
     cost_est_path = working_dir / "assembly_definition.yaml"

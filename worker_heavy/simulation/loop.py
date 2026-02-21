@@ -44,10 +44,14 @@ class SimulationLoop:
         backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
-        smoke_test_mode: bool = False,
+        smoke_test_mode: bool | None = None,
         session_id: str | None = None,
         particle_budget: int | None = None,
     ):
+        from worker_heavy.config import settings
+
+        if smoke_test_mode is None:
+            smoke_test_mode = settings.smoke_test_mode
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if (
             backend_type == SimulatorBackendType.MUJOCO
@@ -460,13 +464,18 @@ class SimulationLoop:
                 )
 
                 # 4. Check Success/Failure conditions
-                fail_reason = self.success_evaluator.check_failure(
-                    current_time,
-                    target_pos,
-                    state.vel if target_pos is not None else np.zeros(3),
-                )
-                if fail_reason:
-                    self.fail_reason = fail_reason
+                # T018: Check all active bodies for out-of-bounds, not just the target
+                for bname in self.body_names:
+                    bstate = self.backend.get_body_state(bname)
+                    fail_reason = self.success_evaluator.check_failure(
+                        current_time,
+                        bstate.pos,
+                        bstate.vel,
+                    )
+                    if fail_reason:
+                        self.fail_reason = fail_reason
+                        break
+                if self.fail_reason:
                     break
 
                 if not res.success:
