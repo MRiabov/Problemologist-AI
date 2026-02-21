@@ -71,6 +71,9 @@ fi
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
 bash scripts/ensure_docker_vfs.sh
 
+# Ensure ngspice is installed for electronics validation
+bash scripts/ensure_ngspice.sh
+
 echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
 docker compose -f docker-compose.test.yaml up -d
 
