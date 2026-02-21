@@ -556,8 +556,9 @@ scenarios:
     coder:
       thought: "Running simulate which emits events."
       generated_code: |
-        with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')
-        simulate(backend="mujoco")
+        from build123d import *
+        from shared.utils.agent import simulate
+        simulate(Box(1,1,1), backend="mujoco")
       finished: true
     reviewer:
       review:
@@ -569,15 +570,43 @@ scenarios:
     planner:
       thought: "Generating plan for INT-027."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nTest.')
+        plan_content = """
+        ## 1. Solution Overview
+        Test solution.
+        ## 2. Parts List
+        - Part 1
+        ## 3. Assembly Strategy
+        1. Step 1
+        ## 4. Cost & Weight Budget
+        - $10, 100g
+        ## 5. Risk Assessment
+        - Low risk.
+        """
+        with open('plan.md', 'w') as f: f.write(plan_content.strip())
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 100, max_weight_g: 1000.0}')
+        objectives_content = """
+        objectives:
+          goal_zone: {min: [80, 80, 0], max: [100, 100, 20]}
+          forbid_zones: []
+          build_zone: {min: [-100, -100, 0], max: [100, 100, 100]}
+        simulation_bounds: {min: [-150, -150, 0], max: [150, 150, 200]}
+        moved_object:
+          label: ball
+          shape: sphere
+          start_position: [0, 0, 10]
+          runtime_jitter: [1, 1, 0]
+        constraints:
+          max_unit_cost: 100.0
+          max_weight_g: 1000.0
+        """
+        with open('objectives.yaml', 'w') as f: f.write(objectives_content.strip())
     coder:
       thought: "Running simulate."
       generated_code: |
-        with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
-        simulate(backend="mujoco")
+        from build123d import *
+        from shared.utils.agent import simulate
+        simulate(Box(10,10,10), backend="mujoco")
       finished: true
     reviewer:
       review:
@@ -590,7 +619,19 @@ scenarios:
     planner:
       thought: "Default planner response."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nDefault')
+        plan_content = """
+        ## 1. Solution Overview
+        Default solution.
+        ## 2. Parts List
+        - Default part
+        ## 3. Assembly Strategy
+        1. Default step
+        ## 4. Cost & Weight Budget
+        - Default budget
+        ## 5. Risk Assessment
+        - Default risk
+        """
+        with open('plan.md', 'w') as f: f.write(plan_content.strip())
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
