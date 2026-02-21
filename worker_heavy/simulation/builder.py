@@ -45,6 +45,7 @@ class AssemblyPartData(BaseModel):
     zone_type: str | None = None
     zone_size: list[float] | None = None
     constraint: str | None = None
+    weld_target: str | None = None
 
 
 class CommonAssemblyTraverser:
@@ -69,6 +70,11 @@ class CommonAssemblyTraverser:
                 label, electronics
             )
 
+            constraint = getattr(child, "constraint", None)
+            weld_target = None
+            if constraint and constraint.startswith("weld:"):
+                weld_target = constraint.split(":")[1]
+
             parts_data.append(
                 AssemblyPartData(
                     label=label,
@@ -85,7 +91,8 @@ class CommonAssemblyTraverser:
                     is_zone=zone_info["is_zone"],
                     zone_type=zone_info["type"],
                     zone_size=zone_info["size"],
-                    constraint=getattr(child, "constraint", None),
+                    constraint=constraint,
+                    weld_target=weld_target,
                 )
             )
         return parts_data
@@ -713,9 +720,8 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         cots_lookup = {d.label: d.cots_id for d in parts_data}
 
         for data in parts_data:
-            if data.constraint and data.constraint.startswith("weld:"):
-                target = data.constraint.split(":")[1]
-                weld_constraints.append((data.label, target))
+            if data.weld_target:
+                weld_constraints.append((data.label, data.weld_target))
 
         for data in parts_data:
             if data.is_zone:
@@ -760,22 +766,29 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 )
                 body_locations[data.label] = (data.pos, data.euler)
 
-        # Apply collected constraints (welds are handled as joints in traverse for now,
-        # but manual welds metadata can be added to traverse if needed)
-        # TODO: Unified weld resolution in traverse
+        # Apply collected constraints
         for body1, body2 in weld_constraints:
             self.compiler.add_weld(body1, body2)
 
         # 3. Add actuators for moving parts (T011)
         if moving_parts:
+            from shared.enums import MotorControlMode
             for mp in moving_parts:
                 if mp.type == "motor":
+                    # T019: Determine actuator type based on control mode
+                    actuator_type = "position"
+                    if mp.control:
+                        if mp.control.mode == MotorControlMode.CONSTANT:
+                            actuator_type = "velocity"
+                        elif mp.control.mode == MotorControlMode.ON_OFF:
+                            actuator_type = "motor"  # Direct force/torque control
+
                     # We assume the joint name follows the convention {part_name}_joint
                     # which is what add_body uses.
                     self.compiler.add_actuator(
                         name=mp.part_name,
                         joint=f"{mp.part_name}_joint",
-                        actuator_type="position",  # Defaulting to position for servos
+                        actuator_type=actuator_type,
                         cots_id=cots_lookup.get(mp.part_name),
                     )
 

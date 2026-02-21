@@ -345,8 +345,8 @@ async def test_int_009_cost_estimation_validation(
             "solution.py": minimal_script,
         }
 
-        # 1. Template placeholders (ramp_main)
-        template_cost = "version: '1.0'\ntotals:\n  estimated_unit_cost_usd: 10.0\n  ramp_main: True"
+        # 1. Template placeholders ([implement here])
+        template_cost = "version: '1.0'\ntotals:\n  estimated_unit_cost_usd: 10.0\n  note: [implement here]"
         await setup_workspace(
             client,
             base_headers,

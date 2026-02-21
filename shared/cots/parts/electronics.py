@@ -32,6 +32,20 @@ class PowerSupply(COTSPart):
             "price": 20.00,
             "type": "Desktop adapter",
         },
+        "6V-Battery": {
+            "voltage_dc": 6.0,
+            "max_current_a": 4.0,
+            "weight_g": 150.0,
+            "dims": (50.0, 30.0, 20.0),
+            "price": 5.00,
+        },
+        "12V-Battery": {
+            "voltage_dc": 12.0,
+            "max_current_a": 7.0,
+            "weight_g": 450.0,
+            "dims": (151.0, 65.0, 94.0),
+            "price": 20.00,
+        },
     }
 
     def __init__(self, size: str = "DR-120-24", **kwargs):
@@ -88,6 +102,42 @@ class ElectronicRelay(COTSPart):
         body.color = Color("blue")
 
         super().__init__(category="relay", part_number=size, data=data, children=[body])
+
+
+class Switch(COTSPart):
+    """
+    Represents a COTS Electrical Switch.
+    """
+
+    switch_data = {
+        "Rocker-Switch": {
+            "voltage_max": 250.0,
+            "current_max": 6.0,
+            "weight_g": 5.0,
+            "dims": (21.0, 15.0, 25.0),
+            "price": 0.50,
+        },
+        "Toggle-Switch": {
+            "voltage_max": 250.0,
+            "current_max": 15.0,
+            "weight_g": 20.0,
+            "dims": (30.0, 15.0, 50.0),
+            "price": 2.00,
+        },
+    }
+
+    def __init__(self, size: str = "Rocker-Switch", **kwargs):
+        if size not in self.switch_data:
+            super().__init__(
+                category="switch", part_number="UNKNOWN", data={}, children=[]
+            )
+            return
+
+        data = self.switch_data[size]
+        l, w, h = data["dims"]
+        body = Box(l, w, h)
+        body.color = Color("red")
+        super().__init__(category="switch", part_number=size, data=data, children=[body])
 
 
 class Connector(COTSPart):

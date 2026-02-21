@@ -40,13 +40,17 @@ class SuccessEvaluator:
 
         # 3. Fell off world / Out of Bounds
         if qpos is not None and len(qpos) >= 3:
+            # Always prioritize simulation_bounds if provided
             if self.simulation_bounds:
                 b_min = np.array(self.simulation_bounds.min)
                 b_max = np.array(self.simulation_bounds.max)
                 if np.any(qpos < b_min) or np.any(qpos > b_max):
                     return SimulationFailureMode.OUT_OF_BOUNDS
-            elif qpos[2] < -2.0:  # Legacy heuristic fallback
-                return SimulationFailureMode.OUT_OF_BOUNDS
+            else:
+                # Default safety bounds if none specified (prevents infinite falls)
+                # We use a broad range but catch anything falling significantly below floor (z=0)
+                if qpos[2] < -5.0 or np.any(np.abs(qpos[:2]) > 500.0):
+                    return SimulationFailureMode.OUT_OF_BOUNDS
 
         return None
 
