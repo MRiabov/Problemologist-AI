@@ -3,8 +3,11 @@ import datetime
 import json
 import uuid
 from typing import Any
+from uuid import UUID
 
 import structlog
+from langchain_core.callbacks import AsyncCallbackHandler
+from langchain_core.outputs import LLMResult
 from pydantic import BaseModel
 from opentelemetry import trace
 
@@ -29,13 +32,14 @@ class TraceBroadcast(BaseModel):
     langfuse_trace_id: str | None
 
 
-class DatabaseCallbackHandler:
+class DatabaseCallbackHandler(AsyncCallbackHandler):
     """Standalone recorder that stores traces in the database."""
 
     def __init__(
         self,
         episode_id: str | uuid.UUID,
     ):
+        super().__init__()
         if isinstance(episode_id, str):
             try:
                 self.episode_id = uuid.UUID(episode_id)
@@ -64,7 +68,20 @@ class DatabaseCallbackHandler:
             self.episode_id, payload.model_dump(mode="json")
         )
 
-    async def on_chain_start(self, name: str | None) -> None:
+    async def on_chain_start(
+        self,
+        serialized: dict[str, Any],
+        inputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        name = (serialized.get("name") if serialized else None) or (
+            metadata.get("run_name") if metadata else None
+        )
         logger.info(
             "chain_start",
             name=name,
@@ -81,7 +98,19 @@ class DatabaseCallbackHandler:
             pass
         return None
 
-    async def on_llm_start(self, name: str | None, prompt: str) -> None:
+    async def on_llm_start(
+        self,
+        serialized: dict[str, Any],
+        prompts: list[str],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        name = serialized.get("name") if serialized else "LLM"
+        prompt = prompts[0] if prompts else ""
         logger.info(
             "llm_start",
             model=name,
@@ -106,7 +135,18 @@ class DatabaseCallbackHandler:
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_tool_start(self, name: str | None, input_str: str) -> None:
+    async def on_tool_start(
+        self,
+        serialized: dict[str, Any],
+        input_str: str,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        name = serialized.get("name") if serialized else "Tool"
         # Try to ensure valid JSON content
         clean_content = input_str
         if (
@@ -149,7 +189,14 @@ class DatabaseCallbackHandler:
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_tool_end(self, output: Any) -> None:
+    async def on_tool_end(
+        self,
+        output: Any,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> None:
         # Ensure output is JSON serializable
         if isinstance(output, (dict, list)):
             content = json.dumps(output)
@@ -186,7 +233,23 @@ class DatabaseCallbackHandler:
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_llm_end(self, response_text: str) -> None:
+    async def on_llm_end(
+        self,
+        response: LLMResult,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> None:
+        response_text = ""
+        if response.generations:
+            # Flatten all generations into a single string for the trace
+            texts = []
+            for gen_list in response.generations:
+                for gen in gen_list:
+                    texts.append(gen.text)
+            response_text = "\n".join(texts)
+
         logger.info("llm_end", content=response_text, episode_id=str(self.episode_id))
 
         try:

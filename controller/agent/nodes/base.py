@@ -186,6 +186,7 @@ class BaseNode:
         tool_factory: Callable,
         validate_files: list[str],
         node_type: str,
+        state: Any = None,
         max_retries: int = 3,
     ) -> tuple[Any, dict[str, Any], str]:
         """
