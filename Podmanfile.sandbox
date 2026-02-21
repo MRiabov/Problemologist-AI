@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     libglfw3 \
     postgresql-client \
     libngspice0 \
+    libngspice0-dev \
+    ngspice \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies

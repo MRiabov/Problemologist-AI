@@ -2,8 +2,15 @@ import structlog
 from typing import Any
 
 from PySpice.Spice.Netlist import Circuit
+import ctypes.util
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
 from PySpice.Unit import *
+
+# Robustly find ngspice library
+if not NgSpiceShared.LIBRARY_PATH or "{}" in NgSpiceShared.LIBRARY_PATH:
+    _lib = ctypes.util.find_library("ngspice")
+    if _lib:
+        NgSpiceShared.LIBRARY_PATH = _lib
 
 from shared.models.schemas import (
     CircuitValidationResult,
