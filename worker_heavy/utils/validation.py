@@ -607,6 +607,21 @@ def simulate(
             cots_parts=assembly_definition.cots_parts if assembly_definition else None,
         )
 
+        # T021: Enforce cost and weight constraints from objectives.yaml
+        if metrics.success and objectives and objectives.constraints:
+            if cost > objectives.constraints.max_unit_cost:
+                metrics.success = False
+                status_msg = (
+                    f"FAILED_COST_CONSTRAINT: Total cost ${cost:.2f} "
+                    f"exceeds limit ${objectives.constraints.max_unit_cost:.2f}"
+                )
+            elif weight > objectives.constraints.max_weight_g:
+                metrics.success = False
+                status_msg = (
+                    f"FAILED_WEIGHT_CONSTRAINT: Total weight {weight:.2f}g "
+                    f"exceeds limit {objectives.constraints.max_weight_g:.2f}g"
+                )
+
         result = SimulationResult(
             success=metrics.success,
             summary=status_msg,

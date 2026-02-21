@@ -404,6 +404,9 @@ class GenesisBackend(PhysicsBackend):
                             material=material,
                         )
                         self.cables[name] = cable
+                    # T021: Also add to entities for common lookups and flag as electronics
+                    self.entities[name] = cable
+                    self.entity_configs[name] = cable_cfg
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.get("fluids", []):

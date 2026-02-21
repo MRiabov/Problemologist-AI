@@ -224,7 +224,10 @@ class SimulationLoop:
 
             # T017: Set electronics for fluid damage detection
             if self.electronics:
+                # T021: Include both components AND wires in electronics detection
                 elec_names = [comp.component_id for comp in self.electronics.components]
+                elec_names.extend([wire.wire_id for wire in self.electronics.wiring])
+
                 if hasattr(self.backend, "set_electronics"):
                     self.backend.set_electronics(elec_names)
 
@@ -351,27 +354,38 @@ class SimulationLoop:
 
         # Check electronics validation status
         if self.electronics_validation_error:
-            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            # T021: Map specific validation errors to failure modes
+            self.fail_reason = self.electronics_validation_error
+            fail_mode = SimulationFailureMode.VALIDATION_FAILED
+            if "SHORT_CIRCUIT" in self.electronics_validation_error:
+                fail_mode = SimulationFailureMode.SHORT_CIRCUIT
+            elif "OVERCURRENT" in self.electronics_validation_error:
+                fail_mode = SimulationFailureMode.OVERCURRENT
+            elif "OVERVOLTAGE" in self.electronics_validation_error:
+                fail_mode = SimulationFailureMode.OVERVOLTAGE
+            elif "OPEN_CIRCUIT" in self.electronics_validation_error:
+                fail_mode = SimulationFailureMode.OPEN_CIRCUIT
+
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
                 fail_reason=self.electronics_validation_error,
-                fail_mode=self.fail_reason,
+                fail_mode=fail_mode,
                 confidence="high",
             )
 
         # Check wire clearance validation status
         if self.wire_clearance_error:
-            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            self.fail_reason = self.wire_clearance_error
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
                 fail_reason=self.wire_clearance_error,
-                fail_mode=self.fail_reason,
+                fail_mode=SimulationFailureMode.VALIDATION_FAILED,
                 confidence="high",
             )
 
@@ -479,11 +493,31 @@ class SimulationLoop:
                     break
 
                 if not res.success:
-                    self.fail_reason = (
-                        res.failure_reason
-                        if isinstance(res.failure_reason, SimulationFailureMode)
-                        else SimulationFailureMode.PHYSICS_INSTABILITY
-                    )
+                    # T021: Improved failure reason parsing for backend strings (e.g. PART_BREAKAGE:part)
+                    reason = res.failure_reason
+                    if isinstance(reason, str):
+                        # Extract enum part if it contains a colon
+                        base_reason = reason.split(":")[0] if ":" in reason else reason
+                        try:
+                            # Try to match against enum (ignoring case)
+                            found_mode = False
+                            for mode in SimulationFailureMode:
+                                if mode.value.lower() == base_reason.lower():
+                                    self.fail_reason = mode
+                                    found_mode = True
+                                    break
+                            if not found_mode:
+                                self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+                        except Exception:
+                            self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+
+                        # Preserve full detail in fail_reason if it was a string with extra info
+                        if ":" in reason:
+                            self.fail_reason = reason
+                    elif isinstance(reason, SimulationFailureMode):
+                        self.fail_reason = reason
+                    else:
+                        self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
                     break
 
                 # Check Forbidden Zones (T018 optimization: skip if no zones)
@@ -742,6 +776,32 @@ class SimulationLoop:
 
         metrics = self.metric_collector.get_metrics()
 
+        # T021: Extract fail_mode from fail_reason string if necessary
+        fail_mode = None
+        if isinstance(self.fail_reason, SimulationFailureMode):
+            fail_mode = self.fail_reason
+        elif isinstance(self.fail_reason, str):
+            # Try to map back from string (handles "PART_BREAKAGE:part_1" or "short_circuit")
+            base = self.fail_reason.split(":")[0].lower()
+            for m in SimulationFailureMode:
+                if m.value.lower() == base:
+                    fail_mode = m
+                    break
+            if not fail_mode:
+                # Special cases for validation error strings
+                if "SHORT_CIRCUIT" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.SHORT_CIRCUIT
+                elif "OVERCURRENT" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.OVERCURRENT
+                elif "OVERVOLTAGE" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.OVERVOLTAGE
+                elif "OPEN_CIRCUIT" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.OPEN_CIRCUIT
+                elif "COST_CONSTRAINT" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.VALIDATION_FAILED
+                elif "WEIGHT_CONSTRAINT" in self.fail_reason:
+                    fail_mode = SimulationFailureMode.VALIDATION_FAILED
+
         return SimulationMetrics(
             total_time=current_time,
             total_energy=metrics.total_energy,
@@ -749,9 +809,7 @@ class SimulationLoop:
             max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
-            fail_mode=self.fail_reason
-            if isinstance(self.fail_reason, SimulationFailureMode)
-            else None,
+            fail_mode=fail_mode,
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,

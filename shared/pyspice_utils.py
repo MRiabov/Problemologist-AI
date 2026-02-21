@@ -110,7 +110,8 @@ def validate_circuit(
             current_val = float(current)
 
             # Detect extreme currents which indicate shorts
-            if abs(current_val) > 1000.0:
+            # T021: Use 100A threshold as mandated by system requirements
+            if abs(current_val) > 100.0:
                 errors.append(
                     f"FAILED_SHORT_CIRCUIT: Extreme current in branch {name}: "
                     f"{current_val:.2f}A"
@@ -159,7 +160,7 @@ def validate_circuit(
                 # or look it up: R_wire_id
                 r_val = 0.01
                 if f"R{wire.wire_id}" in circuit.element_names:
-                    r_val = float(circuit[wire.wire_id].resistance)
+                    r_val = float(circuit[f"R{wire.wire_id}"].resistance)
                 elif wire.gauge_awg and wire.length_mm:
                     props = get_awg_properties(wire.gauge_awg)
                     r_val = props["resistance_ohm_m"] * (wire.length_mm / 1000.0)
@@ -171,6 +172,32 @@ def validate_circuit(
                     errors.append(
                         f"FAILED_OVERCURRENT_WIRE: Wire {wire.wire_id} (AWG {wire.gauge_awg}) "
                         f"carrying {current:.2f}A exceeds limit {limit:.2f}A"
+                    )
+
+        # T021: Component overvoltage check
+        if section and section.components:
+            for comp in section.components:
+                if comp.type == "power_supply":
+                    continue
+
+                # Check voltage across component terminals
+                v_node = f"{comp.component_id}_+"
+                v_node_neg = f"{comp.component_id}_-"
+
+                # Some components use _in/_out
+                if comp.type in ["switch", "relay"]:
+                    v_node = f"{comp.component_id}_in"
+                    v_node_neg = f"{comp.component_id}_out"
+
+                v_pos = node_voltages.get(v_node, 0.0)
+                v_neg = node_voltages.get(v_node_neg, 0.0)
+                v_diff = abs(v_pos - v_neg)
+
+                rated = comp.rated_voltage
+                if rated and v_diff > rated * 1.2:  # 20% tolerance
+                    errors.append(
+                        f"FAILED_OVERVOLTAGE_COMPONENT: Component {comp.component_id} "
+                        f"received {v_diff:.2f}V, exceeds rated {rated:.2f}V"
                     )
 
         # Detect floating nodes: check if any node has near-zero conductance to everything else

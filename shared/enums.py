@@ -80,6 +80,7 @@ class SimulationFailureMode(StrEnum):
     # Electronics failures
     SHORT_CIRCUIT = "short_circuit"
     OVERCURRENT = "overcurrent"
+    OVERVOLTAGE = "overvoltage"
     WIRE_TORN = "wire_torn"
     OPEN_CIRCUIT = "open_circuit"
 
