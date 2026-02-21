@@ -347,7 +347,7 @@ class WireRoutingEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.WIRE_ROUTING
     wire_count: int
     total_length_mm: float
-    clearance_passed: bool
+    clearance_passed: bool | None
     errors: list[str] = Field(default_factory=list)
 
 
