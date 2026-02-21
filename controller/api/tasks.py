@@ -126,10 +126,8 @@ async def execute_agent_task(
                 await db.commit()
                 await db.refresh(initial_trace)
 
-                # Setup real-time tracing to DB, pass langfuse_callback for linking
-                db_callback = DatabaseCallbackHandler(
-                    episode_id, langfuse_callback=langfuse_callback
-                )
+                # Setup real-time tracing to DB
+                db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
 
                 # Broadcast initial trace (refresh to get ID)
                 await db.refresh(initial_trace)
@@ -242,7 +240,6 @@ async def execute_agent_task(
 
                     await calculate_and_report_automated_score(
                         episode_id=episode_id,
-                        session_id=session_id,
                         trace_id=trace_id,
                         agent_name=agent_name,
                         db=db,
@@ -435,9 +432,7 @@ async def continue_agent_task(
                 await db.refresh(user_trace)
 
                 # Setup callbacks
-                db_callback = DatabaseCallbackHandler(
-                    episode_id, langfuse_callback=langfuse_callback
-                )
+                db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
                 await db_callback._broadcast_trace(user_trace)
 
                 callbacks = [db_callback]
@@ -503,7 +498,6 @@ async def continue_agent_task(
 
                     await calculate_and_report_automated_score(
                         episode_id=episode_id,
-                        session_id=session_id,
                         trace_id=trace_id,
                         agent_name=agent_name,
                         db=db,

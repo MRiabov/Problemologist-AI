@@ -6,30 +6,8 @@ from pathlib import Path
 import dspy
 import structlog
 import yaml
-from langchain_core.messages import BaseMessage, AIMessage
-from langchain_core.outputs import ChatResult, ChatGeneration
-from langchain_openai import ChatOpenAI
 
 logger = structlog.get_logger(__name__)
-
-
-class MockChatOpenAI(ChatOpenAI):
-    """Mock LangChain ChatOpenAI for integration tests."""
-
-    model_name: str = "mock-model"
-
-    def _generate(
-        self,
-        messages: list[BaseMessage],
-        stop: list[str] | None = None,
-        **_kwargs: Any,
-    ) -> ChatResult:
-        logger.info("mock_chat_openai_generate", messages_count=len(messages))
-        content = "Understood. I will complete the task."
-
-        message = AIMessage(content=content)
-        generation = ChatGeneration(message=message)
-        return ChatResult(generations=[generation])
 
 
 class MockDSPyLM(dspy.LM):

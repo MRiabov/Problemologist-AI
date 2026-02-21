@@ -1,10 +1,9 @@
 import shutil
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
 from git import GitCommandError
-from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.skills import SkillsNode
 from shared.type_checking import type_check
@@ -16,24 +15,19 @@ def mock_repo():
         repo_instance = mock.return_value
         repo_instance.git.status.return_value = "UU conflict.md"
         repo_instance.git.diff.return_value = "conflict.md"
+        repo_instance.working_tree_dir = "."
         yield repo_instance
 
 
 @pytest.fixture
-def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
-        instance = mock.return_value
-        instance.ainvoke = AsyncMock()
-        # Mocking the conflict resolution response
-        instance.ainvoke.return_value = AIMessage(
-            content="Resolved content without markers"
-        )
-        yield instance
+def mock_dspy_lm():
+    mock_lm = MagicMock()
+    return mock_lm
 
 
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
+async def test_sidecar_git_conflict_resolution(mock_repo, mock_dspy_lm):
     # Setup
     test_dir = Path("test_suggested_skills_conflict")
     if test_dir.exists():
@@ -52,7 +46,7 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
         mock_ctx = SharedNodeContext.create(
             worker_light_url="http://worker", session_id="test"
         )
-        mock_ctx.llm = mock_llm
+        mock_ctx.dspy_lm = mock_dspy_lm
 
         node = SkillsNode(context=mock_ctx, suggested_skills_dir=str(test_dir))
 
@@ -62,21 +56,20 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
         # Mock unmerged files
         mock_repo.git.diff.return_value = "conflict.md"
 
-        await node._sync_git("Test commit")
+        # Mock DSPy Predict call
+        with patch("dspy.Predict") as mock_predict:
+            mock_resolver = mock_predict.return_value
+            mock_resolver.return_value = MagicMock(
+                resolved_content="Resolved content without markers"
+            )
 
-        # Verification
+            await node._sync_git("Test commit")
 
-        # 1. Verify LLM was called
-        mock_llm.ainvoke.assert_called()
-
-        # 2. Verify resolved content was written
-        assert conflict_file.read_text() == "Resolved content without markers"
-
-        # 3. Verify git add was called
-        mock_repo.git.add.assert_any_call("conflict.md")
-
-        # 4. Verify rebase --continue was called
-        mock_repo.git.rebase.assert_called_with("--continue")
+            # Verification
+            mock_predict.assert_called()
+            assert conflict_file.read_text() == "Resolved content without markers"
+            mock_repo.git.add.assert_any_call("conflict.md")
+            mock_repo.git.rebase.assert_called_with("--continue")
 
     # Cleanup
     if test_dir.exists():
@@ -85,7 +78,9 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_llm):
 
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_git_conflict_resolution_abort_on_failure(mock_repo, mock_llm):
+async def test_sidecar_git_conflict_resolution_abort_on_failure(
+    mock_repo, mock_dspy_lm
+):
     # Setup
     test_dir = Path("test_suggested_skills_abort")
     if test_dir.exists():
@@ -104,7 +99,7 @@ async def test_sidecar_git_conflict_resolution_abort_on_failure(mock_repo, mock_
         mock_ctx = SharedNodeContext.create(
             worker_light_url="http://worker", session_id="test"
         )
-        mock_ctx.llm = mock_llm
+        mock_ctx.dspy_lm = mock_dspy_lm
 
         node = SkillsNode(context=mock_ctx, suggested_skills_dir=str(test_dir))
 
@@ -114,14 +109,16 @@ async def test_sidecar_git_conflict_resolution_abort_on_failure(mock_repo, mock_
         # Mock unmerged files
         mock_repo.git.diff.return_value = "conflict.md"
 
-        # Mock LLM to raise Exception
-        mock_llm.ainvoke.side_effect = Exception("LLM failed")
+        # Mock DSPy Predict to raise Exception
+        with patch("dspy.Predict") as mock_predict:
+            mock_resolver = mock_predict.return_value
+            mock_resolver.side_effect = Exception("DSPy failed")
 
-        with pytest.raises(Exception, match="LLM failed"):
-            await node._sync_git("Test commit")
+            with pytest.raises(Exception, match="DSPy failed"):
+                await node._sync_git("Test commit")
 
-        # Push was NOT called
-        mock_repo.git.push.assert_not_called()
+            # Push was NOT called
+            mock_repo.git.push.assert_not_called()
 
     # Cleanup
     if test_dir.exists():
