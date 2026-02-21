@@ -97,9 +97,14 @@ async def test_check_steering():
 
 
 @pytest.mark.asyncio
+@patch("controller.agent.nodes.planner.record_worker_events")
 @patch("controller.agent.nodes.planner.dspy.CodeAct")
-@patch("worker_heavy.utils.file_validation.validate_node_output", return_value=(True, []))
-async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
+@patch(
+    "worker_heavy.utils.file_validation.validate_node_output", return_value=(True, [])
+)
+async def test_planner_node_steer_context(
+    mock_validate, mock_codeact_cls, mock_record_events
+):
     from controller.agent.nodes.planner import planner_node
 
     session_id = str(uuid4())
@@ -120,20 +125,24 @@ async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
     state = AgentState(session_id=session_id, messages=[steer_msg], task="Test task")
 
     with (
-        patch("controller.agent.nodes.base.ChatOpenAI") as mock_llm,
+        patch("controller.agent.nodes.planner.SharedNodeContext") as mock_ctx_class,
         patch("controller.agent.dspy_utils.WorkerInterpreter") as mock_interpreter,
-        patch("controller.agent.nodes.base.WorkerClient") as mock_worker,
     ):
+        mock_ctx = mock_ctx_class.create.return_value
+        mock_ctx.pm = MagicMock()
+        mock_ctx.pm.render.return_value = "Rendered prompt"
+        mock_ctx.dspy_lm = MagicMock()
+        mock_ctx.fs = MagicMock()
+        mock_ctx.fs.read_file = AsyncMock(side_effect=lambda f: "content")
+        mock_ctx.fs.write_file = AsyncMock(return_value=True)
+        mock_ctx.worker_client = MagicMock()
+        mock_ctx.worker_client.read_file = AsyncMock(side_effect=lambda f: "content")
+        mock_ctx.worker_client.exists = AsyncMock(return_value=True)
+
         # Mock DSPy Program
         mock_program = MagicMock()
         mock_program.return_value = MagicMock(summary="Plan generated")
         mock_codeact_cls.return_value = mock_program
-
-        # Mock WorkerClient/Filesystem bits
-        mock_worker_instance = mock_worker.return_value
-        mock_worker_instance.write_file = AsyncMock()
-        mock_worker_instance.read_file = AsyncMock(side_effect=lambda f: "content")
-        mock_worker_instance.exists = AsyncMock(return_value=True)
 
         await planner_node(state)
 

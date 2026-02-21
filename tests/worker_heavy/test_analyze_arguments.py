@@ -9,14 +9,18 @@ from worker_heavy.app import app
 
 client = TestClient(app)
 
+
 @patch("worker_heavy.api.routes.create_filesystem_router")
 @patch("worker_heavy.api.routes.load_component_from_script")
 @patch("worker_heavy.utils.topology.validate_and_price")
-def test_analyze_passes_method_and_quantity(mock_validate_and_price, mock_load, mock_get_router):
+def test_analyze_passes_method_and_quantity(
+    mock_validate_and_price, mock_load, mock_get_router
+):
     # Setup mocks
     mock_load.return_value = MagicMock()
     mock_router = MagicMock()
     from pathlib import Path
+
     mock_router.local_backend.root = Path("/tmp")
     mock_get_router.return_value = mock_router
 
@@ -32,12 +36,8 @@ def test_analyze_passes_method_and_quantity(mock_validate_and_price, mock_load, 
     # Send request with specific method (3dp) and quantity (50)
     response = client.post(
         "/benchmark/analyze",
-        json={
-            "script_path": "impl.py",
-            "method": "3dp",
-            "quantity": 50
-        },
-        headers={"X-Session-ID": "test-session"}
+        json={"script_path": "impl.py", "method": "3dp", "quantity": 50},
+        headers={"X-Session-ID": "test-session"},
     )
 
     assert response.status_code == 200

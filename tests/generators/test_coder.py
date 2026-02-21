@@ -86,6 +86,7 @@ async def test_coder_node_success(mock_state):
 @pytest.mark.asyncio
 async def test_coder_node_with_feedback(mock_state):
     from shared.enums import SessionStatus
+
     mock_state.session.status = SessionStatus.REJECTED
     mock_state.review_feedback = "Make it larger"
     from shared.simulation.schemas import ValidationResult

@@ -54,6 +54,12 @@ def test_normalization_logic():
     mock_lm.node_type = "benchmark_reviewer"
     assert json_thought(mock_lm(prompt)) == "R"
 
+    mock_lm.node_type = "plan_reviewer"
+    assert json_thought(mock_lm(prompt)) == "R"
+
+    mock_lm.node_type = "execution_reviewer"
+    assert json_thought(mock_lm(prompt)) == "R"
+
 
 def json_thought(responses):
     import json

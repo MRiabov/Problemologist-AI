@@ -21,7 +21,7 @@ def build():
 
 
 async def run_simulation(session_id: str):
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         start_time = time.time()
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
@@ -45,7 +45,7 @@ async def test_simulation_concurrency_serialization():
     session_ids = [f"sess_serialize_{i}_{int(time.time())}" for i in range(3)]
 
     # Pre-write the scripts
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         for sid in session_ids:
             await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",

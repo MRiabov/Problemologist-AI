@@ -2113,16 +2113,10 @@
             "default": "genesis"
           },
           "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
           },
           "particle_budget": {
             "anyOf": [
@@ -2193,16 +2187,10 @@
             "default": "genesis"
           },
           "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
+            "description": "If true: cap particles to 5000, label results as approximate.",
+            "default": false
           },
           "particle_budget": {
             "anyOf": [
@@ -2537,18 +2525,6 @@
             "title": "Yaw",
             "description": "Camera azimuth angle in degrees (clockwise from front).",
             "default": 45.0
-          },
-          "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
           }
         },
         "type": "object",

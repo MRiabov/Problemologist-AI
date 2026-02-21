@@ -9,6 +9,7 @@ from worker_heavy.utils.validation import (
     save_simulation_result,
 )
 
+
 def test_get_stress_report_logic(tmp_path):
     # Setup mock simulation result
     summaries = [

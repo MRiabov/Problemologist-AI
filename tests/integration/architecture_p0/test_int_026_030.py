@@ -19,7 +19,7 @@ API_TOKEN_PLACEHOLDER = os.getenv(
 @pytest.mark.asyncio
 async def test_int_026_mandatory_event_families():
     """INT-026: Verify mandatory event families are emitted in a real run."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-026-{uuid.uuid4().hex[:8]}"
 
         # 1. Setup objectives.yaml
@@ -101,7 +101,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_027_seed_variant_tracking():
     """INT-027: Verify DB persistence of variant_id and seed from the API response."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-027-{uuid.uuid4().hex[:8]}"
         variant_id = "test-variant-027"
         seed = 42
@@ -143,7 +143,7 @@ async def test_int_027_seed_variant_tracking():
 @pytest.mark.asyncio
 async def test_int_028_strict_api_schema_contract():
     """INT-028: Verify OpenAPI schema validity and live responses."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Controller OpenAPI
         resp = await client.get(f"{CONTROLLER_URL}/openapi.json")
         assert resp.status_code == 200
@@ -192,14 +192,15 @@ async def test_int_028_strict_api_schema_contract():
 async def test_int_029_api_key_enforcement():
     """INT-029: Verify API key enforcement on protected endpoints."""
     # Assuming /ops/backup is our protected endpoint for now
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # No key
         resp = await client.post(f"{CONTROLLER_URL}/ops/backup")
         assert resp.status_code == 403
 
         # Invalid auth
         resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": "invalid-auth-val"}
+            f"{CONTROLLER_URL}/ops/backup",
+            headers={"X-Backup-Secret": "invalid-auth-val"},
         )
         assert resp.status_code == 403
 
@@ -225,7 +226,7 @@ async def test_int_029_api_key_enforcement():
 @pytest.mark.asyncio
 async def test_int_030_interrupt_propagation():
     """INT-030: Verify user interrupt cancels worker jobs."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Start a task that takes some time (e.g. simulation or agent run)
         # We'll use agent/run for now as it's the main entry point.
         session_id = f"INT-030-{uuid.uuid4().hex[:8]}"

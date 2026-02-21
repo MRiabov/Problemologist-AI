@@ -24,6 +24,7 @@ def test_builder_wire_tendons(tmp_path):
     box2.location = Location((50, 0, 0))
 
     from shared.models.schemas import PartMetadata
+
     box1.metadata = PartMetadata(material_id="aluminum_6061")
     box2.metadata = PartMetadata(material_id="aluminum_6061")
     assembly = Compound(children=[box1, box2])

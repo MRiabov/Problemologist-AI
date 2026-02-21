@@ -1,9 +1,16 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from build123d import Box, Compound, Vector
-from shared.models.schemas import ElectronicsSection, WireConfig, WireTerminal, PowerSupplyConfig, ElectronicComponent
+from shared.models.schemas import (
+    ElectronicsSection,
+    WireConfig,
+    WireTerminal,
+    PowerSupplyConfig,
+    ElectronicComponent,
+)
 from shared.enums import ElectronicComponentType
 from worker_heavy.simulation.loop import SimulationLoop
+
 
 @patch("worker_heavy.simulation.loop.get_physics_backend")
 @patch("shared.pyspice_utils.validate_circuit")
@@ -28,20 +35,26 @@ def test_wire_clearance_violation(mock_validate_circuit, mock_get_backend):
         gauge_awg=20,
         length_mm=20.0,
         waypoints=[(-10.0, 0.0, 0.0), (10.0, 0.0, 0.0)],
-        routed_in_3d=True
+        routed_in_3d=True,
     )
 
     electronics = ElectronicsSection(
         power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),
         wiring=[wire],
         components=[
-            ElectronicComponent(component_id="src", type=ElectronicComponentType.CONNECTOR),
-            ElectronicComponent(component_id="dst", type=ElectronicComponentType.CONNECTOR)
-        ]
+            ElectronicComponent(
+                component_id="src", type=ElectronicComponentType.CONNECTOR
+            ),
+            ElectronicComponent(
+                component_id="dst", type=ElectronicComponentType.CONNECTOR
+            ),
+        ],
     )
 
     # Mock validate_circuit to avoid libngspice dependency and ensure valid circuit
-    mock_validate_circuit.return_value = MagicMock(valid=True, errors=[], node_voltages={})
+    mock_validate_circuit.return_value = MagicMock(
+        valid=True, errors=[], node_voltages={}
+    )
 
     # 3. Initialize SimulationLoop
     # Note: We need to mock validate_and_price because it requires config loading
@@ -53,7 +66,7 @@ def test_wire_clearance_violation(mock_validate_circuit, mock_get_backend):
                 xml_path="dummy.xml",
                 component=component,
                 electronics=electronics,
-                smoke_test_mode=True
+                smoke_test_mode=True,
             )
 
             # 4. Check if initialization detected the error
@@ -65,11 +78,14 @@ def test_wire_clearance_violation(mock_validate_circuit, mock_get_backend):
             assert metrics.success is False
             assert metrics.fail_reason == loop.wire_clearance_error
 
+
 @patch("worker_heavy.simulation.loop.get_physics_backend")
 @patch("shared.pyspice_utils.validate_circuit")
 def test_wire_clearance_success(mock_validate_circuit, mock_get_backend):
     # Mock validate_circuit
-    mock_validate_circuit.return_value = MagicMock(valid=True, errors=[], node_voltages={})
+    mock_validate_circuit.return_value = MagicMock(
+        valid=True, errors=[], node_voltages={}
+    )
 
     # Setup mock backend
     mock_backend = MagicMock()
@@ -94,15 +110,15 @@ def test_wire_clearance_success(mock_validate_circuit, mock_get_backend):
             (-10.0, 0.0, 0.0),
             (-10.0, 20.0, 0.0),
             (10.0, 20.0, 0.0),
-            (10.0, 0.0, 0.0)
+            (10.0, 0.0, 0.0),
         ],
-        routed_in_3d=True
+        routed_in_3d=True,
     )
 
     electronics = ElectronicsSection(
         power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),
         wiring=[wire],
-        components=[]
+        components=[],
     )
 
     with patch("worker_heavy.simulation.loop.validate_and_price") as mock_validate:
@@ -112,7 +128,7 @@ def test_wire_clearance_success(mock_validate_circuit, mock_get_backend):
                 xml_path="dummy.xml",
                 component=component,
                 electronics=electronics,
-                smoke_test_mode=True
+                smoke_test_mode=True,
             )
 
             # 4. Check if initialization passed

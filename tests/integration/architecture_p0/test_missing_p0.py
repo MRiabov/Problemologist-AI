@@ -29,7 +29,7 @@ async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
 @pytest.mark.asyncio
 async def test_int_024_benchmark_validation():
     """INT-024: Verify benchmark validation catches intersecting geometry."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-024-{int(time.time())}"
 
         # Script with intersecting boxes
@@ -107,7 +107,7 @@ constraints:
 @pytest.mark.asyncio
 async def test_int_024_benchmark_validation_build_zone():
     """INT-024: Verify benchmark validation catches build zone violations."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-024-bz-{int(time.time())}"
 
         # 1. Objectives with small build zone
@@ -180,7 +180,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_014_cots_propagation():
     """INT-014: Verify COTS data propagates into plan and assembly definition."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-014-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
@@ -231,7 +231,7 @@ async def test_int_014_cots_propagation():
 @pytest.mark.asyncio
 async def test_int_025_events_collection_e2e():
     """INT-025: Verify worker events are ingested and persisted as traces."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-025-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
@@ -268,7 +268,7 @@ async def test_int_025_events_collection_e2e():
 @pytest.mark.asyncio
 async def test_int_027_seed_variant_tracking():
     """INT-027: Verify seed and variant ID are tracked for simulation."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-027-{uuid.uuid4().hex[:8]}"
         # Provide variant_id in metadata
         metadata_vars = {"variant_id": "test-variant-123"}

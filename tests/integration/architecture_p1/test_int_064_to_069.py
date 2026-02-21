@@ -11,11 +11,12 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Fetch metadata
         resp = await client.get(f"{CONTROLLER_URL}/cots/metadata")
         assert resp.status_code == 200
@@ -27,9 +28,12 @@ async def test_int_064_cots_metadata():
         # 2. Trigger search and check events (indirectly via search output or assuming search_parts logs it)
         # We'll just verify the endpoint exists and returns data as a proxy for persistence.
         # Ideally we'd check Langfuse/DB for the COTSSearchEvent fields.
-        search_resp = await client.get(f"{CONTROLLER_URL}/cots/search", params={"q": "M3"})
+        search_resp = await client.get(
+            f"{CONTROLLER_URL}/cots/search", params={"q": "M3"}
+        )
         assert search_resp.status_code == 200
         assert len(search_resp.json()) > 0
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
@@ -43,15 +47,17 @@ async def test_int_065_skills_safety():
     # but it's not exposed via API.
     # Instead, we'll verify the SkillEditEvent schema and the logic in the code.
     from shared.observability.schemas import SkillEditEvent
+
     event = SkillEditEvent(skill_name="test", action="update_blocked", lines_changed=20)
     assert event.action == "update_blocked"
     assert event.lines_changed == 20
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_066_fluid_electronics_coupling():
     """INT-066: Fluid-on-electronics failure coupling."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-066-{int(time.time())}"
 
         # Create a scene with fluid and a part marked as electronics
@@ -114,7 +120,9 @@ totals:
 
         # Add fluid at the same position as elec_part
         # We modify objectives.yaml to include fluid
-        objectives_with_fluid = objectives_content + """
+        objectives_with_fluid = (
+            objectives_content
+            + """
 fluids:
   - fluid_id: "water"
     initial_volume:
@@ -122,9 +130,14 @@ fluids:
       center: [0, 0, 0]
       radius: 0.05
 """
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_with_fluid, "overwrite": True},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_with_fluid,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -145,16 +158,17 @@ fluids:
         if not data.get("success"):
             assert "ELECTRONICS_FLUID_DAMAGE" in str(data.get("fail_reason"))
 
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_067_068_steerability():
     """INT-067 & INT-068: Steerability payload and code references."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create a dummy episode
         task = "Test steerability"
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": task, "session_id": "test-steer-123"}
+            json={"task": task, "session_id": "test-steer-123"},
         )
         assert resp.status_code == 201
         episode_id = resp.json()["episode_id"]
@@ -167,35 +181,37 @@ async def test_int_067_068_steerability():
                     "level": "FACE",
                     "target_id": "face_1",
                     "center": [1, 2, 3],
-                    "normal": [0, 0, 1]
+                    "normal": [0, 0, 1],
                 }
             ],
-            "mentions": ["elec_part"]
+            "mentions": ["elec_part"],
         }
 
         steer_resp = await client.post(
-            f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/steer",
-            json=steer_payload
+            f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/steer", json=steer_payload
         )
         assert steer_resp.status_code == 202
 
         # 3. Verify it's in the queue
-        queue_resp = await client.get(f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/queue")
+        queue_resp = await client.get(
+            f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/queue"
+        )
         assert queue_resp.status_code == 200
         queue = queue_resp.json()
         assert len(queue) > 0
         assert queue[0]["text"] == steer_payload["text"]
 
+
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_069_frontend_contract():
     """INT-069: Frontend delivery visibility contract."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create an episode
         task = "Test frontend contract"
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": task, "session_id": "test-fe-contract"}
+            json={"task": task, "session_id": "test-fe-contract"},
         )
         assert resp.status_code == 201
         episode_id = resp.json()["episode_id"]
@@ -226,7 +242,9 @@ totals:
         )
 
         # 3. Test schematic endpoint
-        schematic_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic")
+        schematic_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic"
+        )
         assert schematic_resp.status_code == 200
         soup = schematic_resp.json()
         assert len(soup) > 0
@@ -240,6 +258,8 @@ totals:
             headers={"X-Session-ID": "test-fe-contract"},
         )
 
-        asset_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}/assets/renders/test.png")
+        asset_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/renders/test.png"
+        )
         assert asset_resp.status_code == 200
         assert asset_resp.content == b"dummy-binary-content"

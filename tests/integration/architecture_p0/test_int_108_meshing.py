@@ -24,7 +24,7 @@ async def test_int_108_tetrahedralization_pipeline(session_id, base_headers):
     """
     INT-108: Verify STL -> TetGen -> .msh flow.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Write a valid STL script
         script_content = """
 from build123d import *

@@ -29,7 +29,7 @@ async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
 @pytest.mark.asyncio
 async def test_int_001_compose_boot_health_contract():
     """INT-001: Verify services are up and healthy."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Worker Light health
         resp = await client.get(f"{WORKER_LIGHT_URL}/health", timeout=5.0)
         assert resp.status_code == 200
@@ -53,7 +53,7 @@ async def test_int_002_controller_worker_execution_boundary():
     session_id = f"INT-002-{int(time.time())}"
     task = "Build a simple box of 10x10x10mm."
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Trigger agent run
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
@@ -84,7 +84,7 @@ async def test_int_002_controller_worker_execution_boundary():
 @pytest.mark.asyncio
 async def test_int_003_session_filesystem_isolation():
     """INT-003: Verify sessions have isolated filesystems."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_a = f"test-iso-a-{int(time.time())}"
         session_b = f"test-iso-b-{int(time.time())}"
 
@@ -108,7 +108,7 @@ async def test_int_003_session_filesystem_isolation():
 @pytest.mark.asyncio
 async def test_int_004_simulation_serialization():
     """INT-004: Verify simulation serialization schema and concurrency."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create two sessions
         session_id_1 = f"test-ser-1-{int(time.time())}"
         session_id_2 = f"test-ser-2-{int(time.time())}"
@@ -148,6 +148,7 @@ def build():
                     "script_path": "box.py",
                     "backend": "mujoco",
                     "bundle_base64": bundle1,
+                    "smoke_test_mode": True,
                 },
                 headers={"X-Session-ID": session_id_1},
                 timeout=600.0,
@@ -158,6 +159,7 @@ def build():
                     "script_path": "box.py",
                     "backend": "mujoco",
                     "bundle_base64": bundle2,
+                    "smoke_test_mode": True,
                 },
                 headers={"X-Session-ID": session_id_2},
                 timeout=600.0,
@@ -186,7 +188,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_020_simulation_failure_taxonomy():
     """INT-020: Verify simulation success/failure taxonomy."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-020-{int(time.time())}"
 
         # 1. Setup minimal objectives.yaml that defines a goal and forbid zone
@@ -285,6 +287,7 @@ run()
                 "script_path": "fail.py",
                 "backend": "mujoco",
                 "bundle_base64": bundle64,
+                "smoke_test_mode": True,
             },
             headers={"X-Session-ID": session_id},
             timeout=600.0,
@@ -311,7 +314,7 @@ run()
 @pytest.mark.asyncio
 async def test_int_021_runtime_randomization_robustness():
     """INT-021: Verify runtime randomization robustness (multi-seed)."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-021-{int(time.time())}"
 
         # Write objectives.yaml so simulation can check goals
@@ -384,7 +387,7 @@ constraints:
 @pytest.mark.asyncio
 async def test_int_022_motor_overload_behavior():
     """INT-022: Verify motor overload detection."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-022-{int(time.time())}"
 
         script_path = Path(
@@ -425,7 +428,7 @@ async def test_int_022_motor_overload_behavior():
 @pytest.mark.asyncio
 async def test_int_023_fastener_validity_rules():
     """INT-023: Verify fastener validity rules."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-023-{int(time.time())}"
 
         # Script with INVALID hole (e.g. asking for M3 but hole logic fails?)

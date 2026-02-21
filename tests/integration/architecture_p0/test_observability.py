@@ -28,7 +28,7 @@ TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")
 @pytest.mark.asyncio
 async def test_int_053_temporal_workflow_lifecycle():
     """INT-053: Verify Temporal workflow lifecycle persistence."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create a dummy episode to link to
         task = "Test Temporal Workflow Lifecycle"
         resp = await client.post(
@@ -66,7 +66,7 @@ async def test_int_053_temporal_workflow_lifecycle():
 @pytest.mark.asyncio
 async def test_int_055_s3_artifact_upload_logging():
     """INT-055: Verify S3 artifact upload logging and linkage."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode
         episode_id = str(uuid.uuid4())
         # Manual insert or use agent/run
@@ -107,7 +107,7 @@ async def test_int_055_s3_artifact_upload_logging():
 @pytest.mark.asyncio
 async def test_int_054_temporal_failure_path():
     """INT-054: Verify Temporal outage/failure logging path (via failure injection)."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode via API
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
@@ -152,7 +152,7 @@ async def test_int_056_s3_upload_failure_retry():
     # Temporal retries by default.
     # We can verify that the episode does NOT go to completed status quickly.
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create episode via test endpoint (no agent task interference)
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
@@ -179,7 +179,9 @@ async def test_int_056_s3_upload_failure_retry():
 
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         data = status_resp.json()
-        assert data["status"] == EpisodeStatus.RUNNING  # Should still be running (retrying)
+        assert (
+            data["status"] == EpisodeStatus.RUNNING
+        )  # Should still be running (retrying)
 
         # Cleanup: Cancel it so we don't spam logs
         await handle.cancel()

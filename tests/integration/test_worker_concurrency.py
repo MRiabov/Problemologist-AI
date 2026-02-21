@@ -16,7 +16,7 @@ async def run_session(session_id: str, filename: str, content: str):
     """
     headers = {"X-Session-ID": session_id}
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Write file
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",

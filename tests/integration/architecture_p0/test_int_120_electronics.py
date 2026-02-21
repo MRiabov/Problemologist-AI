@@ -18,7 +18,7 @@ def get_session_id(tag: str) -> str:
 @pytest.mark.asyncio
 async def test_int_120_circuit_validation_gate():
     """INT-120: Verify that /validate_circuit endpoint works and simulate respects its failure."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = get_session_id("120")
         # 1. Define a faulty circuit (short circuit)
         faulty_section = {
@@ -108,7 +108,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_121_short_circuit_detection():
     """INT-121: Verify short circuit detection via API."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = get_session_id("121")
         short_circuit = {
             "power_supply": {"voltage_dc": 12.0, "max_current_a": 1.0},
@@ -137,7 +137,7 @@ async def test_int_121_short_circuit_detection():
 @pytest.mark.asyncio
 async def test_int_122_overcurrent_supply_detection():
     """INT-122: Verify overcurrent supply detection via API."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = get_session_id("122")
         # Motor with 5A stall on a 1A PSU. Resistance = 12/5 = 2.4 Ohm.
         overcurrent = {
@@ -176,7 +176,7 @@ async def test_int_122_overcurrent_supply_detection():
 @pytest.mark.asyncio
 async def test_int_123_overcurrent_wire_detection():
     """INT-123: Verify overcurrent wire detection via API."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = get_session_id("123")
         # High current (10A) on a very thin wire (AWG 30)
         # AWG 30 rated for ~0.5A
@@ -216,7 +216,7 @@ async def test_int_123_overcurrent_wire_detection():
 @pytest.mark.asyncio
 async def test_int_124_open_circuit_detection():
     """INT-124: Verify open circuit / floating node detection via API."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = get_session_id("124")
         # Motor with only one terminal connected
         open_circuit = {

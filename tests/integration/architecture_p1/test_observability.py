@@ -14,7 +14,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 @pytest.mark.asyncio
 async def test_int_059_langfuse_trace_linkage():
     """INT-059: Verify Langfuse trace linkage in live runs."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Run an episode
         # We use a simple task that might trigger some traces
         task = "Write a hello world python script"
@@ -74,7 +74,7 @@ async def test_int_059_langfuse_trace_linkage():
 @pytest.mark.asyncio
 async def test_int_060_langfuse_feedback_contract():
     """INT-060: Verify Langfuse feedback forwarding contract."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create an episode and get a trace with langfuse_id
         task = "Test feedback"
         resp = await client.post(

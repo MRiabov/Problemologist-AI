@@ -8,37 +8,11 @@ from controller.agent.nodes.planner import planner_node
 from controller.agent.state import AgentState
 
 
-@pytest.fixture
-def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
-        instance = mock.return_value
-        instance.ainvoke = AsyncMock(
-            return_value=AIMessage(
-                content="""# PLAN
-## 1. Solution Overview
-Test Overview
-## 2. Parts List
-- Part A
-## 3. Assembly Strategy
-1. Step 1
-## 4. Cost & Weight Budget
-- $10
-## 5. Risk Assessment
-- Risk 1
-# TODO
-- [ ] Test Todo"""
-            )
-        )
-        yield instance
-
-
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
 @patch("controller.agent.nodes.planner.dspy.CodeAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
-async def test_architect_node_logic(
-    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
-):
+async def test_architect_node_logic(mock_ctx_cls, mock_codeact_cls, mock_record_events):
     # Create a real SharedNodeContext but with mocked attributes to satisfy beartype
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -59,7 +33,6 @@ async def test_architect_node_logic(
         worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
-        llm=mock_llm,
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
@@ -89,7 +62,7 @@ async def test_architect_node_logic(
 @patch("controller.agent.nodes.planner.dspy.CodeAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_fallback(
-    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
+    mock_ctx_cls, mock_codeact_cls, mock_record_events
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -102,7 +75,6 @@ async def test_architect_node_fallback(
         worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
-        llm=mock_llm,
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
