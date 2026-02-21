@@ -1,9 +1,19 @@
 import structlog
 from typing import Any
 
+import ctypes.util
+
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
 from PySpice.Unit import *
+
+# Robustly locate ngspice library if not found by default
+if NgSpiceShared.LIBRARY_PATH.startswith("libngspice"):
+    # ctypes.util.find_library might find it in non-standard paths
+    # or handle the .so.0 vs .so issue
+    lib_path = ctypes.util.find_library("ngspice")
+    if lib_path:
+        NgSpiceShared.LIBRARY_PATH = lib_path
 
 from shared.models.schemas import (
     CircuitValidationResult,
@@ -13,27 +23,33 @@ from shared.models.schemas import (
 
 # NGSpice 42 compatibility monkeypatch
 # NGSpice 42 sends "Using SPARSE 1.3" to stderr, which PySpice treats as an error.
-_original_send_char = NgSpiceShared._send_char
+if not hasattr(NgSpiceShared, "_patched_problemologist"):
+    _original_send_char = NgSpiceShared._send_char
 
+    @staticmethod
+    def _patched_send_char(message_c, ngspice_id, user_data):
+        from PySpice.Spice.NgSpice.Shared import ffi, ffi_string_utf8
 
-@staticmethod
-def _patched_send_char(message_c, ngspice_id, user_data):
-    from PySpice.Spice.NgSpice.Shared import ffi, ffi_string_utf8
+        try:
+            # Safely resolve self and message
+            self = ffi.from_handle(user_data)
+            message = ffi_string_utf8(message_c)
+        except Exception:
+            return 0
 
-    self = ffi.from_handle(user_data)
-    message = ffi_string_utf8(message_c)
-    prefix, _, content = message.partition(" ")
-    if prefix == "stderr" and (
-        "SPARSE" in content
-        or content.startswith("Note:")
-        or "singular matrix" in content.lower()
-    ):
-        self._stdout.append(content)
-        return 0
-    return _original_send_char(message_c, ngspice_id, user_data)
+        prefix, _, content = message.partition(" ")
+        if prefix == "stderr" and (
+            "SPARSE" in content
+            or content.startswith("Note:")
+            or "singular matrix" in content.lower()
+        ):
+            if hasattr(self, "_stdout"):
+                self._stdout.append(content)
+            return 0
+        return _original_send_char(message_c, ngspice_id, user_data)
 
-
-NgSpiceShared._send_char = _patched_send_char
+    NgSpiceShared._send_char = _patched_send_char
+    NgSpiceShared._patched_problemologist = True
 
 logger = structlog.get_logger(__name__)
 
@@ -53,6 +69,26 @@ def validate_circuit(
     Detects short circuits, overcurrent, and floating nodes.
     """
     max_current = psu_config.max_current_a if psu_config else 10.0
+    errors = []
+    warnings = []
+
+    # Proactive open-circuit check (INT-124)
+    if section:
+        connected_terminals = set()
+        for wire in section.wiring:
+            connected_terminals.add((wire.from_terminal.component, wire.from_terminal.terminal))
+            connected_terminals.add((wire.to_terminal.component, wire.to_terminal.terminal))
+
+        for comp in section.components:
+            required = []
+            if comp.type == "motor":
+                required = ["+", "-"]
+            elif comp.type in ["switch", "relay"]:
+                required = ["in", "out"]
+
+            for term in required:
+                if (comp.component_id, term) not in connected_terminals:
+                    errors.append(f"FAILED_OPEN_CIRCUIT: Component {comp.component_id} terminal {term} is not connected.")
 
     try:
         simulator = circuit.simulator()
@@ -90,8 +126,6 @@ def validate_circuit(
         }
 
         total_draw = 0.0
-        errors = []
-        warnings = []
 
         # Check for short circuit at PSU nodes
         vcc_node = "supply_v+"
@@ -109,8 +143,8 @@ def validate_circuit(
         for name, current in branch_currents.items():
             current_val = float(current)
 
-            # Detect extreme currents which indicate shorts
-            if abs(current_val) > 1000.0:
+            # Detect extreme currents which indicate shorts (INT-120)
+            if abs(current_val) > 100.0:
                 errors.append(
                     f"FAILED_SHORT_CIRCUIT: Extreme current in branch {name}: "
                     f"{current_val:.2f}A"
@@ -156,10 +190,11 @@ def validate_circuit(
                 # Get resistance from circuit if possible, or recalculate
                 # Actually, circuit elements are stored in circuit.elements
                 # But it's easier to just recalculate for validation
-                # or look it up: R_wire_id
+                # or look it up: R_wire_id. PySpice prepends 'R' to resistors.
                 r_val = 0.01
-                if f"R{wire.wire_id}" in circuit.element_names:
-                    r_val = float(circuit[wire.wire_id].resistance)
+                element_name = f"R{wire.wire_id}"
+                if element_name in circuit.element_names:
+                    r_val = float(circuit[element_name].resistance)
                 elif wire.gauge_awg and wire.length_mm:
                     props = get_awg_properties(wire.gauge_awg)
                     r_val = props["resistance_ohm_m"] * (wire.length_mm / 1000.0)
