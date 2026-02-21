@@ -59,6 +59,48 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    @tool
+    async def simulate(script_path: str = "script.py"):
+        """Trigger physics simulation and return stability report."""
+        return await fs.simulate(script_path)
+
+    @tool
+    async def validate(script_path: str = "script.py"):
+        """Trigger geometric validation check."""
+        return await fs.validate(script_path)
+
+    @tool
+    async def validate_and_price(
+        script_path: str = "script.py", method: str = "cnc", quantity: int = 1
+    ):
+        """Trigger manufacturing analysis for cost and manufacturability."""
+        return await fs.validate_and_price(script_path, method=method, quantity=quantity)
+
+    @tool
+    async def preview_design(script_path: str = "script.py"):
+        """Generate a 3D render preview of the design."""
+        return await fs.preview_design(script_path)
+
+    @tool
+    async def submit(script_path: str = "script.py"):
+        """Handover the current design for review."""
+        return await fs.submit(script_path)
+
+    @tool
+    async def validate_circuit():
+        """Validate the electronics circuit defined in assembly_definition.yaml."""
+        import yaml
+
+        if not await fs.exists("assembly_definition.yaml"):
+            return "Error: assembly_definition.yaml not found."
+
+        content = await fs.read_file("assembly_definition.yaml")
+        data = yaml.safe_load(content)
+        if "electronics" not in data or not data["electronics"]:
+            return "Error: No electronics section found in assembly_definition.yaml"
+
+        return await fs.validate_circuit(data["electronics"])
+
     return [
         list_files,
         read_file,
@@ -68,6 +110,12 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        simulate,
+        validate,
+        validate_and_price,
+        preview_design,
+        submit,
+        validate_circuit,
     ]
 
 

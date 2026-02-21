@@ -104,17 +104,25 @@ def verify_with_jitter(
         )
 
         # Apply position jitter via backend-agnostic method if possible
-        # For now, we manually apply it to the target body if it exists
+        # Resolve target body name (match SimulationLoop logic)
         target_body_name = "target_box"
+        all_bodies = loop.backend.get_all_body_names()
+        if target_body_name not in all_bodies:
+            target_body_name = None
+            for name in all_bodies:
+                if "target" in name.lower() or "bucket" in name.lower():
+                    target_body_name = name
+                    break
 
-        jitter = [
-            rng.uniform(-jitter_range[0], jitter_range[0]),
-            rng.uniform(-jitter_range[1], jitter_range[1]),
-            rng.uniform(-jitter_range[2], jitter_range[2]),
-        ]
+        if target_body_name:
+            jitter = [
+                rng.uniform(-jitter_range[0], jitter_range[0]),
+                rng.uniform(-jitter_range[1], jitter_range[1]),
+                rng.uniform(-jitter_range[2], jitter_range[2]),
+            ]
 
-        # Use backend-agnostic jitter application (WP01)
-        loop.backend.apply_jitter(target_body_name, jitter)
+            # Use backend-agnostic jitter application (WP01)
+            loop.backend.apply_jitter(target_body_name, jitter)
 
         # Run simulation
         metrics = loop.step(
@@ -129,28 +137,6 @@ def verify_with_jitter(
             success=metrics.success,
             fail_reason=metrics.fail_reason,
         )
-
-    # Aggregate results
-    success_count = sum(1 for r in results if r.success)
-    success_rate = success_count / num_runs if num_runs > 0 else 0.0
-
-    # Check consistency: all runs should agree
-    outcomes = [r.success for r in results]
-    is_consistent = len(set(outcomes)) == 1
-
-    # Collect unique failure reasons
-    fail_reasons = list(
-        set(r.fail_reason for r in results if r.fail_reason is not None)
-    )
-
-    return MultiRunResult(
-        num_runs=num_runs,
-        success_count=success_count,
-        success_rate=success_rate,
-        is_consistent=is_consistent,
-        individual_results=results,
-        fail_reasons=fail_reasons,
-    )
 
     # Aggregate results
     success_count = sum(1 for r in results if r.success)

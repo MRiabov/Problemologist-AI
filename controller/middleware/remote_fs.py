@@ -12,6 +12,8 @@ from controller.observability.middleware_helper import (
 )
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
+    HeavyAnalyzeWorkflow,
+    HeavyCircuitValidationWorkflow,
     HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
@@ -29,6 +31,8 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
+from shared.enums import ManufacturingMethod
+from shared.models.schemas import ElectronicsSection
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import EditOp
 
@@ -240,7 +244,7 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def preview(
+    async def preview_design(
         self,
         script_path: str | Path,
         pitch: float = -45.0,
@@ -264,6 +268,10 @@ class RemoteFilesystemMiddleware:
             )
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+
+    async def preview(self, *args, **kwargs):
+        """Deprecated alias for preview_design."""
+        return await self.preview_design(*args, **kwargs)
 
     async def validate(self, script_path: str | Path) -> dict[str, Any]:
         """Trigger geometric validation via worker client (with bundling)."""
@@ -301,6 +309,67 @@ class RemoteFilesystemMiddleware:
         )
 
         return res_dict
+
+    async def validate_and_price(
+        self,
+        script_path: str | Path,
+        method: ManufacturingMethod | str = ManufacturingMethod.CNC,
+        quantity: int = 1,
+    ) -> dict[str, Any]:
+        """Trigger manufacturing analysis via worker client (with bundling)."""
+        p_str = str(script_path)
+        m_method = ManufacturingMethod(method) if isinstance(method, str) else method
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            return await self.temporal_client.execute_workflow(
+                HeavyAnalyzeWorkflow.run,
+                {
+                    "bundle_bytes": bundle,
+                    "script_path": p_str,
+                    "method": m_method.value,
+                    "quantity": quantity,
+                },
+                id=f"ana-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+
+        result = await self.client.analyze(m_method, p_str, quantity=quantity)
+        return result.model_dump()
+
+    async def analyze(self, *args, **kwargs):
+        """Deprecated alias for validate_and_price."""
+        return await self.validate_and_price(*args, **kwargs)
+
+    async def validate_circuit(
+        self,
+        section: ElectronicsSection | dict,
+    ) -> dict[str, Any]:
+        """Trigger circuit validation via worker client."""
+        sec = (
+            ElectronicsSection.model_validate(section)
+            if isinstance(section, dict)
+            else section
+        )
+
+        if self.temporal_client:
+            return await self.temporal_client.execute_workflow(
+                HeavyCircuitValidationWorkflow.run,
+                {
+                    "section": sec.model_dump(mode="json"),
+                },
+                id=f"cv-{self.client.session_id}-{abs(hash(str(section))) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+
+        result = await self.client.validate_circuit(sec)
+        return result.model_dump()
+
+    async def build(self, script_path: str | Path) -> dict[str, Any]:
+        """Trigger asset build via worker client."""
+        p_str = str(script_path)
+        result = await self.client.build(p_str)
+        return result.model_dump()
 
     async def submit(self, script_path: str | Path) -> dict[str, Any]:
         """Trigger handover to review via worker client."""

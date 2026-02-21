@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
 from shared.models.schemas import ElectronicsSection
+from shared.models.simulation import SimulationMetrics
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingMethod
 
