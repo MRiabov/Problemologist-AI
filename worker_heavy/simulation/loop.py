@@ -474,6 +474,11 @@ class SimulationLoop:
                     dt * check_interval, energy, target_vel, max_stress
                 )
 
+                # 3. Update Stress Summaries (INT-107, INT-103 optimization)
+                # Only fetch if FEM is enabled to avoid redundant backend calls in rigid sims
+                if self.objectives and self.objectives.physics.fem_enabled:
+                    self.stress_summaries = self.backend.get_stress_summaries()
+
                 # 4. Check Success/Failure conditions
                 # WP2: Check Stress Objectives (INT-107) first to prioritize objective violations
                 if self.objectives and self.objectives.objectives:
@@ -486,27 +491,30 @@ class SimulationLoop:
                             ),
                             None,
                         )
-                        if not summary:
-                            # Fallback: get summary directly if not cached
-                            summaries = self.backend.get_stress_summaries()
-                            summary = next(
-                                (s for s in summaries if s.part_label == so.part_label),
-                                None,
-                            )
 
-                        if summary and summary.max_von_mises_pa > (
-                            so.max_von_mises_mpa * 1e6
-                        ):
-                            self.fail_reason = (
-                                SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
-                            )
-                            logger.info(
-                                "stress_objective_exceeded",
-                                part=so.part_label,
-                                stress=summary.max_von_mises_pa,
-                                limit=so.max_von_mises_mpa * 1e6,
-                            )
-                            break
+                        if summary:
+                            is_violated = False
+                            if np.isnan(summary.max_von_mises_pa):
+                                # If the simulation exploded (NaN), we treat it as an objective violation
+                                # if there was an objective assigned to this part.
+                                logger.warning(
+                                    "stress_objective_nan_detected", part=so.part_label
+                                )
+                                is_violated = True
+                            elif summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6):
+                                is_violated = True
+
+                            if is_violated:
+                                self.fail_reason = (
+                                    SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                                )
+                                logger.info(
+                                    "stress_objective_exceeded",
+                                    part=so.part_label,
+                                    stress=summary.max_von_mises_pa,
+                                    limit=so.max_von_mises_mpa * 1e6,
+                                )
+                                break
                     if self.fail_reason:
                         break
 
@@ -525,7 +533,9 @@ class SimulationLoop:
                         else:
                             # Re-check breakage as generic instability might be a side effect
                             if self.objectives and self.objectives.physics.fem_enabled:
-                                broken_part = self._check_part_breakage()
+                                broken_part = self._check_part_breakage(
+                                    summaries=self.stress_summaries
+                                )
                                 if broken_part:
                                     self.fail_reason = (
                                         SimulationFailureMode.PART_BREAKAGE
@@ -541,7 +551,9 @@ class SimulationLoop:
                     else:
                         # Re-check breakage
                         if self.objectives and self.objectives.physics.fem_enabled:
-                            broken_part = self._check_part_breakage()
+                            broken_part = self._check_part_breakage(
+                                summaries=self.stress_summaries
+                            )
                             if broken_part:
                                 self.fail_reason = SimulationFailureMode.PART_BREAKAGE
                             else:
@@ -556,7 +568,9 @@ class SimulationLoop:
 
                 # WP2: Check for part breakage (INT-103) - moved here to prioritize over out-of-bounds
                 if self.objectives and self.objectives.physics.fem_enabled:
-                    broken_part = self._check_part_breakage()
+                    broken_part = self._check_part_breakage(
+                        summaries=self.stress_summaries
+                    )
                     if broken_part:
                         self.fail_reason = SimulationFailureMode.PART_BREAKAGE
                         break
@@ -863,9 +877,11 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_part_breakage(self) -> str | None:
+    def _check_part_breakage(self, summaries: list | None = None) -> str | None:
         """Checks if any FEM part has exceeded its ultimate stress limit."""
-        summaries = self.backend.get_stress_summaries()
+        if summaries is None:
+            summaries = self.backend.get_stress_summaries()
+
         if not summaries:
             # Check max stress as fallback
             max_s = self.backend.get_max_stress()
