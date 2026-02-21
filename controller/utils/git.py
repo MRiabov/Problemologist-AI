@@ -2,10 +2,17 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import dspy
 from git import GitCommandError, Repo
-from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
+
+
+class GitResolver(dspy.Signature):
+    """Resolve git merge conflicts while maintaining intended logic."""
+
+    conflict_content = dspy.InputField(desc="File content with git conflict markers")
+    resolved_content = dspy.OutputField(desc="File content with conflicts resolved")
 
 
 class GitManager:
@@ -52,7 +59,7 @@ class GitManager:
             logger.error(f"Failed to initialize git repo: {e}")
             self.repo = None
 
-    async def sync_changes(self, commit_message: str, llm: Any = None, pm: Any = None):
+    async def sync_changes(self, commit_message: str, lm: dspy.LM = None):
         """Commit and push changes with rebase strategy and conflict resolution."""
         if not self.repo:
             return
@@ -65,8 +72,8 @@ class GitManager:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
                 logger.warning("Rebase conflict detected. Attempting resolution...")
-                if llm and pm:
-                    await self._resolve_conflicts(llm, pm)
+                if lm:
+                    await self._resolve_conflicts(lm)
                     try:
                         self.repo.git.rebase("--continue")
                         logger.info("Conflict resolved via LLM.")
@@ -86,7 +93,7 @@ class GitManager:
         except GitCommandError as e:
             logger.error(f"Git sync failed: {e}")
 
-    async def _resolve_conflicts(self, llm: Any, pm: Any):
+    async def _resolve_conflicts(self, lm: dspy.LM):
         """Resolve git conflicts using LLM."""
         unmerged = self.repo.git.diff("--name-only", "--diff-filter=U").splitlines()
 
@@ -96,13 +103,16 @@ class GitManager:
                 continue
 
             content = full_path.read_text()
-            prompt = pm.render("git_resolver", content=content)
 
+            # WP09: Use DSPy for conflict resolution
             logger.info(f"Resolving conflict in {file_path}...")
-            response = await llm.ainvoke([HumanMessage(content=prompt)])
-            resolved_content = str(response.content)
 
-            # Basic markdown code block stripping
+            with dspy.settings.context(lm=lm):
+                resolver = dspy.Predict(GitResolver)
+                prediction = resolver(conflict_content=content)
+                resolved_content = prediction.resolved_content
+
+            # Basic markdown code block stripping (DSPy might still return blocks)
             if "```" in resolved_content:
                 lines = resolved_content.splitlines()
                 if lines and lines[0].strip().startswith("```"):

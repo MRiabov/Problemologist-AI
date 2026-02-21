@@ -5,9 +5,8 @@ import uuid
 from typing import Any
 
 import structlog
-from langchain_core.callbacks import AsyncCallbackHandler
-from langchain_core.outputs import LLMResult
 from pydantic import BaseModel
+from opentelemetry import trace
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
@@ -30,13 +29,12 @@ class TraceBroadcast(BaseModel):
     langfuse_trace_id: str | None
 
 
-class DatabaseCallbackHandler(AsyncCallbackHandler):
-    """Callback handler that stores traces in the database."""
+class DatabaseCallbackHandler:
+    """Standalone recorder that stores traces in the database."""
 
     def __init__(
         self,
         episode_id: str | uuid.UUID,
-        langfuse_callback: Any | None = None,
     ):
         if isinstance(episode_id, str):
             try:
@@ -49,7 +47,6 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
-        self.langfuse_callback = langfuse_callback
 
     async def _broadcast_trace(self, trace: Trace) -> None:
         """Helper to broadcast a new trace."""
@@ -67,29 +64,27 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
             self.episode_id, payload.model_dump(mode="json")
         )
 
-    async def on_chain_start(
-        self, serialized: dict[str, Any], inputs: dict[str, Any], **_kwargs: Any
-    ) -> None:
+    async def on_chain_start(self, name: str | None) -> None:
         logger.info(
             "chain_start",
-            name=(serialized or {}).get("name"),
+            name=name,
             episode_id=str(self.episode_id),
         )
 
     def _get_langfuse_id(self) -> str | None:
-        if self.langfuse_callback and hasattr(self.langfuse_callback, "get_trace_id"):
-            try:
-                return self.langfuse_callback.get_trace_id()
-            except Exception:
-                return None
+        """Extract trace ID from current OpenTelemetry span context."""
+        try:
+            span = trace.get_current_span()
+            if span and span.get_span_context().is_valid:
+                return f"{span.get_span_context().trace_id:032x}"
+        except Exception:
+            pass
         return None
 
-    async def on_llm_start(
-        self, serialized: dict[str, Any], prompts: list[str], **_kwargs: Any
-    ) -> None:
+    async def on_llm_start(self, name: str | None, prompt: str) -> None:
         logger.info(
             "llm_start",
-            model=(serialized or {}).get("name"),
+            model=name,
             episode_id=str(self.episode_id),
         )
 
@@ -98,8 +93,8 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.LLM_START,
-                    name=serialized.get("name"),
-                    content=prompts[0] if prompts else "",
+                    name=name,
+                    content=prompt,
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
                 db.add(trace)
@@ -111,9 +106,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_tool_start(
-        self, serialized: dict[str, Any], input_str: str, **_kwargs: Any
-    ) -> None:
+    async def on_tool_start(self, name: str | None, input_str: str) -> None:
         # Try to ensure valid JSON content
         clean_content = input_str
         if (
@@ -131,7 +124,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
 
         logger.info(
             "tool_start",
-            name=(serialized or {}).get("name"),
+            name=name,
             input=clean_content,
             episode_id=str(self.episode_id),
         )
@@ -141,7 +134,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.TOOL_START,
-                    name=(serialized or {}).get("name"),
+                    name=name,
                     content=clean_content,
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
@@ -156,7 +149,7 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_tool_end(self, output: Any, **_kwargs: Any) -> None:
+    async def on_tool_end(self, output: Any) -> None:
         # Ensure output is JSON serializable
         if isinstance(output, (dict, list)):
             content = json.dumps(output)
@@ -193,23 +186,15 @@ class DatabaseCallbackHandler(AsyncCallbackHandler):
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_llm_new_token(self, token: str, **_kwargs: Any) -> None:
-        pass
-
-    async def on_llm_end(self, response: LLMResult, **_kwargs: Any) -> None:
-        # Extract content from the first generation
-        content = ""
-        if response.generations and response.generations[0]:
-            content = response.generations[0][0].text
-
-        logger.info("llm_end", content=content, episode_id=str(self.episode_id))
+    async def on_llm_end(self, response_text: str) -> None:
+        logger.info("llm_end", content=response_text, episode_id=str(self.episode_id))
 
         try:
             async with self.session_factory() as db:
                 trace = Trace(
                     episode_id=self.episode_id,
                     trace_type=TraceType.LLM_END,
-                    content=content,
+                    content=response_text,
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
                 db.add(trace)

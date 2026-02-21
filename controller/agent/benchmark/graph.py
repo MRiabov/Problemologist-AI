@@ -12,8 +12,8 @@ from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import get_langfuse_callback
 from controller.persistence.db import get_sessionmaker
+from opentelemetry import trace
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import SimulatorBackendType
@@ -116,14 +116,9 @@ async def _execute_graph_streaming(
     """Helper to run the graph with streaming and persistence."""
     final_state = initial_state
 
-    # Langfuse tracing
-    langfuse_callback = get_langfuse_callback(
-        name="benchmark_generator", session_id=str(session_id)
-    )
+    # Database tracing
     db_callback = DatabaseCallbackHandler(episode_id=str(session_id))
     callbacks = [db_callback]
-    if langfuse_callback:
-        callbacks.append(langfuse_callback)
 
     async for output in app.astream(initial_state, config={"callbacks": callbacks}):
         for node_name, state_update in output.items():
@@ -212,38 +207,38 @@ async def _execute_graph_streaming(
                 return final_state
 
     # Report automated score to Langfuse
-    if langfuse_callback:
-        try:
-            from controller.observability.langfuse import (
-                calculate_and_report_automated_score,
-            )
+    try:
+        from controller.observability.langfuse import (
+            calculate_and_report_automated_score,
+        )
 
-            trace_id = None
-            if hasattr(langfuse_callback, "get_trace_id"):
-                trace_id = langfuse_callback.get_trace_id()
+        # Get trace_id from OpenTelemetry context
+        trace_id = None
+        span = trace.get_current_span()
+        if span and span.get_span_context().is_valid:
+            trace_id = f"{span.get_span_context().trace_id:032x}"
 
-            if trace_id:
-                async with get_sessionmaker()() as db:
-                    from controller.agent.config import settings
+        if trace_id:
+            async with get_sessionmaker()() as db:
+                from controller.agent.config import settings
 
-                    worker_light_url = os.getenv(
-                        "WORKER_LIGHT_URL", "http://worker-light:8001"
-                    )
-                    client = WorkerClient(
-                        base_url=worker_light_url,
-                        session_id=str(session_id),
-                        heavy_url=settings.worker_heavy_url,
-                    )
-                    await calculate_and_report_automated_score(
-                        episode_id=session_id,
-                        session_id=str(session_id),
-                        trace_id=trace_id,
-                        agent_name="benchmark_generator",
-                        db=db,
-                        worker_client=client,
-                    )
-        except Exception as e:
-            logger.error("failed_to_report_benchmark_automated_score", error=str(e))
+                worker_light_url = os.getenv(
+                    "WORKER_LIGHT_URL", "http://worker-light:8001"
+                )
+                client = WorkerClient(
+                    base_url=worker_light_url,
+                    session_id=str(session_id),
+                    heavy_url=settings.worker_heavy_url,
+                )
+                await calculate_and_report_automated_score(
+                    episode_id=session_id,
+                    trace_id=trace_id,
+                    agent_name="benchmark_generator",
+                    db=db,
+                    worker_client=client,
+                )
+    except Exception as e:
+        logger.error("failed_to_report_benchmark_automated_score", error=str(e))
 
     return final_state
 
