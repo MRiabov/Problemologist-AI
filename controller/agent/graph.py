@@ -26,6 +26,9 @@ async def should_continue(state: AgentState) -> str:
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 
+    if state.status == AgentStatus.COTS_SEARCHING:
+        return "cots_search"
+
     if state.status == AgentStatus.APPROVED:
         # T010: Check if there are more steps in TODO before finishing
         if "- [ ]" in state.todo:
@@ -58,8 +61,32 @@ builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
 builder.add_edge(START, "planner")
-builder.add_edge("planner", "electronics_planner")
-builder.add_edge("electronics_planner", "plan_reviewer")
+
+
+def route_planner(state: AgentState) -> str:
+    if state.status == AgentStatus.COTS_SEARCHING:
+        return "cots_search"
+    return "electronics_planner"
+
+
+builder.add_conditional_edges(
+    "planner",
+    route_planner,
+    {"cots_search": "cots_search", "electronics_planner": "electronics_planner"},
+)
+
+
+def route_electronics_planner(state: AgentState) -> str:
+    if state.status == AgentStatus.COTS_SEARCHING:
+        return "cots_search"
+    return "plan_reviewer"
+
+
+builder.add_conditional_edges(
+    "electronics_planner",
+    route_electronics_planner,
+    {"cots_search": "cots_search", "plan_reviewer": "plan_reviewer"},
+)
 
 builder.add_conditional_edges(
     "plan_reviewer",
@@ -69,6 +96,7 @@ builder.add_conditional_edges(
         "planner": "planner",
         "skills": "skills",
         "steer": "steer",
+        "cots_search": "cots_search",
     },
 )
 
@@ -93,6 +121,7 @@ builder.add_conditional_edges(
         "planner": "planner",
         "skills": "skills",
         "steer": "steer",
+        "cots_search": "cots_search",
     },
 )
 

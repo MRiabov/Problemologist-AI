@@ -28,6 +28,7 @@ from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
 from shared.enums import (
     AssetType,
+    ElectronicComponentType,
     EpisodeStatus,
     ResponseStatus,
     TraceType,
@@ -278,10 +279,33 @@ async def get_episode_schematic(
         # Map to tscircuit Soup JSON format
         soup = []
 
-        # 1. Add components
+        # 1. Collect all used terminals per component
+        component_terminals = {
+            comp.component_id: set() for comp in assembly.electronics.components
+        }
+        for wire in assembly.electronics.wiring:
+            if wire.from_terminal.component in component_terminals:
+                component_terminals[wire.from_terminal.component].add(
+                    wire.from_terminal.terminal
+                )
+            if wire.to_terminal.component in component_terminals:
+                component_terminals[wire.to_terminal.component].add(
+                    wire.to_terminal.terminal
+                )
+
+        # 2. Add components and their pins
         for i, comp in enumerate(assembly.electronics.components):
-            # schematic_component
             comp_id = f"comp_{comp.component_id}"
+
+            # Map component type to symbol
+            symbol_map = {
+                ElectronicComponentType.MOTOR: "resistor",  # Placeholder for motor
+                ElectronicComponentType.POWER_SUPPLY: "battery",
+                ElectronicComponentType.SWITCH: "switch",
+                ElectronicComponentType.RELAY: "relay",
+            }
+            symbol_name = symbol_map.get(comp.type, "generic_component")
+
             soup.append(
                 {
                     "type": "schematic_component",
@@ -289,40 +313,49 @@ async def get_episode_schematic(
                     "name": comp.component_id,
                     "center": {"x": 10 + i * 40, "y": 10},
                     "rotation": 0,
-                    "symbol_name": "resistor"
-                    if comp.type == "motor"
-                    else "generic_component",
+                    "symbol_name": symbol_name,
                 }
             )
 
-            # Add some pins
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p1",
-                    "component_id": comp_id,
-                    "name": "1",
-                    "center": {"x": 10 + i * 40 - 10, "y": 10},
-                }
-            )
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p2",
-                    "component_id": comp_id,
-                    "name": "2",
-                    "center": {"x": 10 + i * 40 + 10, "y": 10},
-                }
-            )
+            # Add pins
+            terms = list(component_terminals[comp.component_id])
+            # Ensure standard pins are present for common components even if not wired
+            standard_pins = {
+                ElectronicComponentType.MOTOR: ["+", "-"],
+                ElectronicComponentType.POWER_SUPPLY: ["v+", "0"],
+                ElectronicComponentType.SWITCH: ["in", "out"],
+                ElectronicComponentType.RELAY: ["in", "out"],
+            }.get(comp.type, [])
 
-        # 2. Add traces (simplified)
+            for p in standard_pins:
+                if p not in terms:
+                    terms.append(p)
+
+            if not terms:
+                terms = ["p1", "p2"]
+
+            for j, term in enumerate(sorted(terms)):
+                soup.append(
+                    {
+                        "type": "schematic_pin",
+                        "id": f"{comp_id}_{term}",
+                        "component_id": comp_id,
+                        "name": term,
+                        "center": {
+                            "x": 10 + i * 40 + (j * 10 - 5),
+                            "y": 10 + 10,
+                        },
+                    }
+                )
+
+        # 3. Add traces
         for wire in assembly.electronics.wiring:
             soup.append(
                 {
                     "type": "schematic_trace",
                     "id": f"trace_{wire.wire_id}",
-                    "source": f"comp_{wire.from_terminal.component}_p1",  # Simplified mapping
-                    "target": f"comp_{wire.to_terminal.component}_p2",
+                    "source": f"comp_{wire.from_terminal.component}_{wire.from_terminal.terminal}",
+                    "target": f"comp_{wire.to_terminal.component}_{wire.to_terminal.terminal}",
                 }
             )
 

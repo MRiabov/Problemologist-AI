@@ -57,11 +57,14 @@ class COTSSearchNode(BaseNode):
                 }
             )
 
+        from ..state import AgentStatus
+
         summary = getattr(prediction, "summary", "No summary provided.")
         new_journal = state.journal + f"\n[COTS Search] {summary}" + journal_entry
 
         return state.model_copy(
             update={
+                "status": AgentStatus.IDLE,
                 "journal": new_journal,
                 "messages": state.messages
                 + [AIMessage(content=f"COTS Search summary: {summary}")],

@@ -16,6 +16,7 @@ class AgentStatus(StrEnum):
     APPROVED = "approved"
     PLAN_REJECTED = "plan_rejected"
     CODE_REJECTED = "code_rejected"
+    COTS_SEARCHING = "cots_searching"
 
 
 class AgentState(BaseModel):

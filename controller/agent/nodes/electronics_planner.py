@@ -28,7 +28,7 @@ class ElectronicsPlannerSignature(dspy.Signature):
     skills = dspy.InputField()
     mechanical_plan = dspy.InputField()
     feedback = dspy.InputField()
-    summary = dspy.OutputField(desc="A summary of the electrical plan created")
+    summary = dspy.OutputField(desc="A summary of the electrical plan created. Include 'SEARCH_COTS' if you need to perform a detailed search for parts.")
 
 
 @type_check
@@ -93,10 +93,15 @@ class ElectronicsPlannerNode(BaseNode):
         )
 
         summary = getattr(prediction, "summary", "No summary provided.")
+        status = state.status
+        if "SEARCH_COTS" in summary:
+            status = AgentStatus.COTS_SEARCHING
+
         return state.model_copy(
             update={
                 "plan": artifacts.get("plan.md", state.plan),
                 "todo": artifacts.get("todo.md", state.todo),
+                "status": status,
                 "journal": state.journal
                 + f"\n[Electronics Planner] {summary}"
                 + journal_entry,

@@ -15,8 +15,10 @@ if NgSpiceShared.LIBRARY_PATH.startswith("libngspice"):
     if lib_path:
         NgSpiceShared.LIBRARY_PATH = lib_path
 
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import (
     CircuitValidationResult,
+    ElectronicComponent,
     ElectronicsSection,
     PowerSupplyConfig,
 )
@@ -177,10 +179,30 @@ def validate_circuit(
                         return "supply_v+"
                     if term == "0" or (comp_id == "supply" and term == "0"):
                         return "0"
-                    if term == "a":
-                        term = "+"
-                    if term == "b":
-                        term = "-"
+
+                    term = str(term).lower()
+                    # Context-aware normalization
+                    for comp in section.components:
+                        if comp.component_id == comp_id:
+                            if comp.type == ElectronicComponentType.MOTOR:
+                                if term in ["p1", "1", "a", "pos", "positive", "+"]:
+                                    term = "+"
+                                elif term in ["p2", "2", "b", "neg", "negative", "-"]:
+                                    term = "-"
+                            elif comp.type in [
+                                ElectronicComponentType.SWITCH,
+                                ElectronicComponentType.RELAY,
+                            ]:
+                                if term in ["p1", "1", "in"]:
+                                    term = "in"
+                                elif term in ["p2", "2", "out"]:
+                                    term = "out"
+                            break
+                    else:
+                        if term in ["a", "p1", "1", "pos", "positive"]:
+                            term = "+"
+                        elif term in ["b", "p2", "2", "neg", "negative"]:
+                            term = "-"
                     return f"{comp_id}_{term}"
 
                 n_from = resolve_node_name(
