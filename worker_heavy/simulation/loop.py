@@ -392,7 +392,11 @@ class SimulationLoop:
         elif hasattr(self.backend, "model") and hasattr(self.backend.model, "opt"):
             dt = self.backend.model.opt.timestep
         elif self.smoke_test_mode and self.backend_type == SimulatorBackendType.GENESIS:
-            dt = 0.05
+            # FEM requires smaller timesteps for stability
+            if self.objectives and self.objectives.physics.fem_enabled:
+                dt = 0.002
+            else:
+                dt = 0.05
         else:
             dt = SIMULATION_STEP_S
 
@@ -415,6 +419,7 @@ class SimulationLoop:
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         for step_idx in range(steps):
+            self.current_step_idx = step_idx
             # T015: Update electronics if state changed
             if self.electronics and self._electronics_dirty:
                 self._update_electronics()
@@ -470,14 +475,7 @@ class SimulationLoop:
                 )
 
                 # 4. Check Success/Failure conditions
-                # WP2: Check for part breakage (INT-103) - moved here to prioritize over out-of-bounds
-                if self.objectives and self.objectives.physics.fem_enabled:
-                    broken_part = self._check_part_breakage()
-                    if broken_part:
-                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                        break
-
-                # WP2: Check Stress Objectives (INT-107)
+                # WP2: Check Stress Objectives (INT-107) first to prioritize objective violations
                 if self.objectives and self.objectives.objectives:
                     for so in self.objectives.objectives.stress_objectives:
                         summary = next(
@@ -512,6 +510,57 @@ class SimulationLoop:
                     if self.fail_reason:
                         break
 
+                # WP2: Check for backend success to catch specific errors (e.g. PART_BREAKAGE)
+                # before generic instability (NaN) checks catch it.
+                if not res.success and not self.fail_reason:
+                    if isinstance(res.failure_reason, SimulationFailureMode):
+                        self.fail_reason = res.failure_reason
+                    elif isinstance(res.failure_reason, str):
+                        if res.failure_reason.startswith("PART_BREAKAGE"):
+                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
+                            self.fail_reason = (
+                                SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
+                            )
+                        else:
+                            # Re-check breakage as generic instability might be a side effect
+                            if self.objectives and self.objectives.physics.fem_enabled:
+                                broken_part = self._check_part_breakage()
+                                if broken_part:
+                                    self.fail_reason = (
+                                        SimulationFailureMode.PART_BREAKAGE
+                                    )
+                                else:
+                                    self.fail_reason = (
+                                        SimulationFailureMode.PHYSICS_INSTABILITY
+                                    )
+                            else:
+                                self.fail_reason = (
+                                    SimulationFailureMode.PHYSICS_INSTABILITY
+                                )
+                    else:
+                        # Re-check breakage
+                        if self.objectives and self.objectives.physics.fem_enabled:
+                            broken_part = self._check_part_breakage()
+                            if broken_part:
+                                self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                            else:
+                                self.fail_reason = (
+                                    SimulationFailureMode.PHYSICS_INSTABILITY
+                                )
+                        else:
+                            self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+                    break
+                elif not res.success:
+                    break
+
+                # WP2: Check for part breakage (INT-103) - moved here to prioritize over out-of-bounds
+                if self.objectives and self.objectives.physics.fem_enabled:
+                    broken_part = self._check_part_breakage()
+                    if broken_part:
+                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        break
+
                 # T018: Check all active bodies for out-of-bounds, not just the target
                 for bname in self.body_names:
                     bstate = self.backend.get_body_state(bname)
@@ -533,46 +582,6 @@ class SimulationLoop:
                         self.fail_reason = fail_reason
                         break
                 if self.fail_reason:
-                    break
-
-                if not res.success and not self.fail_reason:
-                    if isinstance(res.failure_reason, SimulationFailureMode):
-                        self.fail_reason = res.failure_reason
-                    elif isinstance(res.failure_reason, str):
-                        if res.failure_reason.startswith("PART_BREAKAGE"):
-                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                        elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
-                            self.fail_reason = (
-                                SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
-                            )
-                        else:
-                            # Re-check breakage as generic instability might be a side effect
-                            if self.objectives and self.objectives.physics.fem_enabled:
-                                if self._check_part_breakage():
-                                    self.fail_reason = (
-                                        SimulationFailureMode.PART_BREAKAGE
-                                    )
-                                else:
-                                    self.fail_reason = (
-                                        SimulationFailureMode.PHYSICS_INSTABILITY
-                                    )
-                            else:
-                                self.fail_reason = (
-                                    SimulationFailureMode.PHYSICS_INSTABILITY
-                                )
-                    else:
-                        # Re-check breakage
-                        if self.objectives and self.objectives.physics.fem_enabled:
-                            if self._check_part_breakage():
-                                self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                            else:
-                                self.fail_reason = (
-                                    SimulationFailureMode.PHYSICS_INSTABILITY
-                                )
-                        else:
-                            self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
-                    break
-                elif not res.success:
                     break
 
                 # Check Forbidden Zones (T018 optimization: skip if no zones)
@@ -882,16 +891,28 @@ class SimulationLoop:
                 mat_def = self.config.cnc.materials.get(mat_id)
 
             if mat_def and mat_def.ultimate_stress_pa:
-                if summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
+                # Treat NaNs as breakage if FEM is enabled, as it usually indicates
+                # the simulation exploded due to stress limits.
+                is_broken = False
+                if np.isnan(summary.max_von_mises_pa):
+                    logger.warning("part_breakage_nan_detected", part=label)
+                    is_broken = True
+                elif summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
+                    is_broken = True
+
+                if is_broken:
                     from shared.observability.events import emit_event
                     from shared.observability.schemas import PartBreakageEvent
 
                     emit_event(
                         PartBreakageEvent(
                             part_label=label,
-                            material_id=mat_id,
-                            max_stress_pa=summary.max_von_mises_pa,
-                            ultimate_stress_pa=mat_def.ultimate_stress_pa,
+                            stress_mpa=summary.max_von_mises_pa / 1e6
+                            if not np.isnan(summary.max_von_mises_pa)
+                            else 0.0,
+                            ultimate_mpa=mat_def.ultimate_stress_pa / 1e6,
+                            location=summary.location_of_max or (0, 0, 0),
+                            step=getattr(self, "current_step_idx", 0),
                         )
                     )
                     logger.info(

@@ -27,9 +27,9 @@ with bundle_context(request.bundle_base64, fs_router.local_backend.root) as root
 **Recommendation**: Artifacts generated in a temporary context must be moved to a persistent location or returned as base64/binary in the response before the cleanup happens.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [ ] Agree - [x] Disagree
 > *Comments:*
-
+That's OK. the files are temporary by definition. Why would you think otherwise? they are uploaded to s3. Anyway.
 ### 2. Dead Node in LangGraph Agent Orchestration
 
 **File**: `controller/agent/graph.py`
@@ -45,9 +45,9 @@ builder.add_edge("cots_search", "planner")  # Exit path exists
 **Recommendation**: Either add a conditional edge from `planner` or `coder` to `cots_search` when parts are missing, or remove the dead node from the graph definition.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [ ] Agree - [x] Disagree
 > *Comments:*
-
+I suppose the search util does it?
 ### 3. Inconsistent AWG Resistance Logic
 
 **Files**: `shared/wire_utils.py`, `shared/circuit_builder.py`, `worker_heavy/utils/validation.py`
@@ -60,7 +60,7 @@ builder.add_edge("cots_search", "planner")  # Exit path exists
 **Recommendation**: Centralize all AWG-related math into `shared/wire_utils.py` and ensure `circuit_builder.py` and `validation.py` use the same source of truth.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
 
 ---
@@ -86,6 +86,7 @@ def get_engine():
 > **User Review**:
 > [ ] Agree - [ ] Disagree
 > *Comments:*
+I don't know what to say. I mena, I never seen neither of these patterns.
 
 ### 5. Violation of "Enum Mandate" in `GenerationSession`
 
@@ -102,7 +103,7 @@ status: Mapped[str | None] = mapped_column(
 **Recommendation**: Update the model to use `SQLEnum(SessionStatus)`.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
 
 ### 6. Lying in Observability Events (Placeholder Logic)
@@ -124,7 +125,7 @@ emit_event(
 > **User Review**:
 > [ ] Agree - [ ] Disagree
 > *Comments:*
-
+Don't know either, but I know we did something with WireRoutingEvent and observability today. Maybe resolved already
 ---
 
 ## 🧹 Implementation Smells

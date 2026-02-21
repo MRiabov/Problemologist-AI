@@ -234,6 +234,18 @@ class GenesisBackend(PhysicsBackend):
             return self.scene.sim_options.dt
         return 0.002
 
+    def _get_mat_props(self, material_id: str) -> Optional["MaterialDefinition"]:
+        if not self.mfg_config:
+            return None
+        res = self.mfg_config.materials.get(material_id)
+        if not res and self.mfg_config.cnc:
+            res = self.mfg_config.cnc.materials.get(material_id)
+        if not res and self.mfg_config.injection_molding:
+            res = self.mfg_config.injection_molding.materials.get(material_id)
+        if not res and self.mfg_config.three_dp:
+            res = self.mfg_config.three_dp.materials.get(material_id)
+        return res
+
     def _load_scene_internal(
         self, scene: SimulationScene, render_only: bool = False
     ) -> None:
@@ -320,11 +332,8 @@ class GenesisBackend(PhysicsBackend):
                             continue
 
                         material_id = ent_cfg.get("material_id", "aluminum_6061")
-                        mat_props = (
-                            self.mfg_config.materials.get(material_id)
-                            if self.mfg_config
-                            else None
-                        )
+                        # WP2 Fix: Robust material lookup across all methods
+                        mat_props = self._get_mat_props(material_id)
 
                         # Genesis Material
                         if ent_cfg["type"] == "soft_mesh":
@@ -333,6 +342,11 @@ class GenesisBackend(PhysicsBackend):
                                 "soft",
                                 "elastomer",
                             ]:
+                                logger.info(
+                                    "genesis_using_fem_neohookean",
+                                    name=name,
+                                    mat_id=material_id,
+                                )
                                 material = gs.materials.FEM.NeoHookean(
                                     E=mat_props.youngs_modulus_pa
                                     if mat_props.youngs_modulus_pa
@@ -345,6 +359,14 @@ class GenesisBackend(PhysicsBackend):
                                     else 1100,
                                 )
                             else:
+                                logger.info(
+                                    "genesis_using_fem_elastic",
+                                    name=name,
+                                    mat_id=material_id,
+                                    mat_props=mat_props.model_dump()
+                                    if mat_props
+                                    else None,
+                                )
                                 material = gs.materials.FEM.Elastic(
                                     E=mat_props.youngs_modulus_pa
                                     if mat_props and mat_props.youngs_modulus_pa
@@ -541,11 +563,7 @@ class GenesisBackend(PhysicsBackend):
                     # Fetch ultimate stress
                     ent_cfg = self.entity_configs.get(name, {})
                     material_id = ent_cfg.get("material_id", "aluminum_6061")
-                    mat_props = (
-                        self.mfg_config.materials.get(material_id)
-                        if self.mfg_config
-                        else None
-                    )
+                    mat_props = self._get_mat_props(material_id)
                     ultimate_stress = (
                         mat_props.ultimate_stress_pa
                         if mat_props and mat_props.ultimate_stress_pa
@@ -748,10 +766,25 @@ class GenesisBackend(PhysicsBackend):
         entity = self.entities[body_id]
         state = entity.get_state()
 
+        # Debug: log attributes of entity and state
+        if body_id == "test_part" or body_id == "weak_link":
+            logger.debug(
+                "genesis_stress_field_debug",
+                body_id=body_id,
+                entity_attrs=dir(entity),
+                state_attrs=dir(state),
+            )
+
         # Check if it's an FEM entity
         if hasattr(state, "von_mises"):
             nodes = state.pos[0].cpu().numpy()
             stress = state.von_mises[0].cpu().numpy()
+            return StressField(nodes=nodes, stress=stress)
+        elif hasattr(state, "pos") and state.pos.ndim == 3:
+            # It's a node-based entity (FEM). If von_mises is missing, it might have exploded.
+            nodes = state.pos[0].cpu().numpy()
+            # Return NaNs to indicate we know it's FEM but stress is unavailable (likely due to instability)
+            stress = np.full(len(nodes), np.nan)
             return StressField(nodes=nodes, stress=stress)
         else:
             logger.debug(
@@ -774,11 +807,7 @@ class GenesisBackend(PhysicsBackend):
 
                 ent_cfg = self.entity_configs.get(name, {})
                 material_id = ent_cfg.get("material_id", "aluminum_6061")
-                mat_props = (
-                    self.mfg_config.materials.get(material_id)
-                    if self.mfg_config
-                    else None
-                )
+                mat_props = self._get_mat_props(material_id)
                 ultimate_stress = (
                     mat_props.ultimate_stress_pa
                     if mat_props and mat_props.ultimate_stress_pa
