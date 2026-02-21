@@ -162,8 +162,8 @@ def test_timeout_capped_at_30s(tmp_path):
 
 def test_target_fell_off_world(sim_loop):
     """Test failure detection when target falls below Z threshold."""
-    # Set target Z to -3.0 (below -2.0 threshold)
-    sim_loop.backend.data.qpos[2] = -3.0
+    # Set target Z to -6.0 (below -5.0 default threshold)
+    sim_loop.backend.data.qpos[2] = -6.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)

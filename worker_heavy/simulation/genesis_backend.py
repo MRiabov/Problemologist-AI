@@ -79,8 +79,10 @@ class GenesisBackend(PhysicsBackend):
                     )
                     break
                 except Exception as e:
-                    if "EGL_BAD_DISPLAY" in str(e) and attempt < max_init_retries - 1:
-                        logger.warning("genesis_init_egl_retry", attempt=attempt + 1)
+                    if (
+                        "EGL_BAD_DISPLAY" in str(e) or "glGetError" in str(e)
+                    ) and attempt < max_init_retries - 1:
+                        logger.warning("genesis_init_retry", attempt=attempt + 1, error=str(e))
                         time.sleep(1.0)
                         continue
 
