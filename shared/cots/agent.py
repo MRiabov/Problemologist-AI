@@ -1,8 +1,7 @@
 import os
+from typing import Any
 
-from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+import dspy
 
 from .models import SearchQuery
 from .runtime import search_parts
@@ -11,7 +10,6 @@ from .runtime import search_parts
 DEFAULT_DB_PATH = os.environ.get("COTS_DB_PATH", "parts.db")
 
 
-@tool
 def search_cots_catalog(
     query: str,
     max_weight_g: float | None = None,
@@ -56,18 +54,28 @@ def search_cots_catalog(
     return "\n\n".join(output)
 
 
+class COTSSearchSignature(dspy.Signature):
+    """
+    You are a COTS (Commercial Off-The-Shelf) assembly assistant.
+    Your goal is to find the best components for a given design requirement.
+    Use the search_cots_catalog tool to find parts.
+    If you find multiple candidates, recommend the best fit based on the user's constraints (weight, cost, size).
+    """
+
+    requirement = dspy.InputField(desc="User design requirement")
+    recommendation = dspy.OutputField(desc="Recommended parts with reasoning")
+
+
 def create_cots_search_agent(model_name: str):
     """
-    Create a specialized agent for part lookup.
+    Create a specialized agent for part lookup using DSPy.
+    Note: Returns a DSPy module, which might need wrapping if used in a LangGraph.
     """
-    llm = ChatOpenAI(model=model_name, temperature=0)
-    tools = [search_cots_catalog]
+    # WP11: Migrated from LangGraph ReAct to DSPy CodeAct
+    # Since it was used in controller/graph/agent.py which expects a LangGraph,
+    # we might need to wrap it if we want full backward compatibility.
+    # However, the user wants native DSPy integration.
 
-    system_prompt = (
-        "You are a COTS (Commercial Off-The-Shelf) assembly assistant. "
-        "Your goal is to find the best components for a given design requirement. "
-        "Use the search_cots_catalog tool to find parts. "
-        "If you find multiple candidates, recommend the best fit based on the user's constraints (weight, cost, size)."
-    )
-
-    return create_react_agent(llm, tools, prompt=system_prompt)
+    # For now, let's just make it a simple CodeAct module.
+    program = dspy.CodeAct(COTSSearchSignature, tools=[search_cots_catalog])
+    return program

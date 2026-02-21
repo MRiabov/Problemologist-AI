@@ -7,15 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
-from langchain_core.messages import BaseMessage
-from langchain_openai import ChatOpenAI
 
 from controller.agent.config import settings
 from controller.agent.prompt_manager import PromptManager
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import get_langfuse_callback
+from controller.observability.langfuse import init_tracing
 
 if TYPE_CHECKING:
     pass
@@ -30,7 +28,6 @@ class SharedNodeContext:
     worker_light_url: str
     session_id: str
     pm: PromptManager
-    llm: ChatOpenAI
     dspy_lm: dspy.LM
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
@@ -45,16 +42,13 @@ class SharedNodeContext:
 
         # WP05: Support mock LLMs for integration tests
         if settings.is_integration_test:
-            from controller.agent.mock_llm import MockChatOpenAI, MockDSPyLM
+            from controller.agent.mock_llm import MockDSPyLM
 
             logger.info("using_mock_llms_for_integration_test", session_id=session_id)
-            llm = MockChatOpenAI()
             dspy_lm = MockDSPyLM(session_id=session_id)
         else:
-            # T025: Add timeouts to prevent thread leaks (Issue 1)
-            llm = ChatOpenAI(
-                model=settings.llm_model, temperature=0, request_timeout=600
-            )
+            # T025: Initialize native tracing
+            init_tracing()
 
             # T012: Initialize DSPy LM for CodeAct support
             api_key = "dummy"
@@ -72,23 +66,17 @@ class SharedNodeContext:
             worker_light_url=worker_light_url,
             session_id=session_id,
             pm=PromptManager(),
-            llm=llm,
             dspy_lm=dspy_lm,
             worker_client=worker_client,
             fs=RemoteFilesystemMiddleware(worker_client),
         )
 
-    def get_callbacks(self, name: str, session_id: str | None = None):
-        """Creates observability callbacks."""
+    def get_database_recorder(
+        self, session_id: str | None = None
+    ) -> DatabaseCallbackHandler:
+        """Creates a database recorder for traces."""
         sid = session_id or self.session_id
-        langfuse_callback = get_langfuse_callback(name=name, session_id=sid)
-        db_callback = DatabaseCallbackHandler(
-            episode_id=sid, langfuse_callback=langfuse_callback
-        )
-        callbacks = [db_callback]
-        if langfuse_callback:
-            callbacks.append(langfuse_callback)
-        return callbacks
+        return DatabaseCallbackHandler(episode_id=sid)
 
 
 class BaseNode:
@@ -98,20 +86,17 @@ class BaseNode:
         self.ctx = context
 
     def _get_tool_functions(self, tool_factory: Callable) -> dict[str, Callable]:
-        """Extracts raw functions from LangChain tools for DSPy compatibility."""
+        """Collects tool functions for DSPy compatibility."""
         tools = tool_factory(self.ctx.fs, self.ctx.session_id)
         tool_fns = {}
         for t in tools:
-            # LangChain tools often wrap the actual function
-            func = getattr(t, "func", getattr(t, "_run", None))
-            if func:
-                # WP06: Ensure the function signature is compatible with DSPy
-                # We might need to wrap it to remove 'callbacks' etc. if they exist
-                tool_fns[t.name] = func
+            # Now tools are already raw functions or wrapped in search_cots_catalog
+            name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
+            tool_fns[name] = t
         return tool_fns
 
-    def _get_callbacks(self, name: str, session_id: str):
-        return self.ctx.get_callbacks(name, session_id)
+    def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
+        return self.ctx.get_database_recorder(session_id)
 
     def _get_skills_context(self) -> str:
         # Note: Skills are currently local to the controller
@@ -121,7 +106,7 @@ class BaseNode:
             skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
         return "\n".join([f"- {s}" for s in skills])
 
-    async def _get_steer_context(self, messages: list[BaseMessage]) -> str:
+    async def _get_steer_context(self, messages: list[Any]) -> str:
         if not messages:
             return ""
         last_msg = messages[-1]
@@ -197,7 +182,6 @@ class BaseNode:
         self,
         program_cls: type[dspy.Module],
         signature_cls: type[dspy.Signature],
-        state: Any,
         inputs: dict[str, Any],
         tool_factory: Callable,
         validate_files: list[str],
