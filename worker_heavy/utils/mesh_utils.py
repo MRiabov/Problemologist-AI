@@ -167,7 +167,17 @@ def _tetrahedralize_gmsh(
 
 def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
     """Fallback implementation using TetGen CLI."""
+    import shutil
     import subprocess
+
+    import gmsh
+
+    # Check for tetgen binary
+    tetgen_bin = shutil.which("tetgen")
+    if not tetgen_bin:
+        raise FileNotFoundError(
+            "TetGen binary not found. Please install tetgen or use gmsh method."
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_stl = Path(tmpdir) / input_path.name
@@ -175,16 +185,80 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
 
         # -p: Tetrahedralize a piecewise linear complex
         # -q: Quality mesh generation. A minimum radius-edge ratio may be specified.
-        cmd = ["tetgen", "-pq1.2", str(tmp_stl)]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        cmd = [tetgen_bin, "-pq1.2", str(tmp_stl)]
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"TetGen failed: {e.stderr}")
 
-        if result.returncode != 0:
-            raise RuntimeError(f"TetGen failed: {result.stderr}")
+        # TetGen produces .node and .ele files (and .face, .edge)
+        # We need to convert this to .msh using Gmsh
+        base_name = tmp_stl.stem
+        node_file = Path(tmpdir) / f"{base_name}.1.node"
+        ele_file = Path(tmpdir) / f"{base_name}.1.ele"
 
-        # TetGen produces .node and .ele files.
-        # This is just a placeholder to show where we'd handle TetGen output.
-        # For Genesis, we really want .msh format which Gmsh provides natively.
-        # If we must use TetGen, we'd need a converter.
-        raise NotImplementedError(
-            "TetGen to MSH conversion is not yet implemented. Use Gmsh."
-        )
+        if not node_file.exists() or not ele_file.exists():
+            raise RuntimeError("TetGen did not produce .node or .ele files.")
+
+        try:
+            if not gmsh.isInitialized():
+                gmsh.initialize()
+            gmsh.model.add("TetGenImport")
+
+            # Parse .node file
+            nodes = []
+            with open(node_file, "r") as f:
+                lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+                header = lines[0].split()
+                num_nodes = int(header[0])
+                for line in lines[1 : num_nodes + 1]:
+                    parts = line.split()
+                    # index, x, y, z
+                    nodes.append((float(parts[1]), float(parts[2]), float(parts[3])))
+
+            # Parse .ele file
+            elements = []
+            with open(ele_file, "r") as f:
+                lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+                header = lines[0].split()
+                num_eles = int(header[0])
+                for line in lines[1 : num_eles + 1]:
+                    parts = line.split()
+                    # index, n1, n2, n3, n4
+                    elements.append([int(p) for p in parts[1:5]])
+
+            # Add to Gmsh
+            node_tags = []
+            flat_coords = []
+            for i, (x, y, z) in enumerate(nodes):
+                node_tags.append(i + 1)
+                flat_coords.extend([x, y, z])
+
+            # Add discrete entity to hold mesh
+            tag = 1
+            gmsh.model.addDiscreteEntity(3, tag)
+
+            gmsh.model.mesh.addNodes(3, tag, node_tags, flat_coords)
+
+            # Add elements (tetrahedrons = type 4)
+            # Flatten element list
+            ele_tags = list(range(1, len(elements) + 1))
+            flat_eles = []
+            for el in elements:
+                flat_eles.extend(el)
+
+            gmsh.model.mesh.addElements(3, tag, [4], [ele_tags], [flat_eles])
+
+            # Force MSH v2.2 ASCII (more widely supported)
+            gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)
+            gmsh.option.setNumber("Mesh.Binary", 0)
+
+            # Save as .msh
+            output_msh_path.parent.mkdir(parents=True, exist_ok=True)
+            gmsh.write(str(output_msh_path))
+
+            return output_msh_path
+
+        finally:
+            if gmsh.isInitialized():
+                gmsh.finalize()

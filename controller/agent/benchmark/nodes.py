@@ -482,6 +482,7 @@ class BenchmarkReviewerNode(BaseNode):
                 return state
 
             review = prediction.review
+            state.review_decision = review.decision
             state.review_feedback = f"{review.decision.value}: {review.reason}"
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
