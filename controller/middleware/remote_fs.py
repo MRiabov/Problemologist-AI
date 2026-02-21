@@ -17,11 +17,15 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
 )
 from shared.observability.schemas import (
+    CopyFileToolEvent,
+    DeleteFileToolEvent,
     EditFileToolEvent,
     GrepToolEvent,
     LibraryUsageEvent,
     LsFilesToolEvent,
     ManufacturabilityCheckEvent,
+    MkdirToolEvent,
+    MoveFileToolEvent,
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
     RunCommandToolEvent,
@@ -116,17 +120,17 @@ class RemoteFilesystemMiddleware:
 
         if success:
             # Track library usage (new)
-            if path.lstrip("/").startswith(("skills/", "utils/")):
+            if str(path).lstrip("/").startswith(("skills/", "utils/")):
                 module_name = (
-                    path.lstrip("/").split("/")[1]
-                    if "/" in path.lstrip("/")[7:]
-                    else path.lstrip("/")[7:]
+                    str(path).lstrip("/").split("/")[1]
+                    if "/" in str(path).lstrip("/")[7:]
+                    else str(path).lstrip("/")[7:]
                 )
                 await record_events(
                     episode_id=self.client.session_id,
                     events=[
                         LibraryUsageEvent(
-                            module_name=module_name, usage_type="new", path=path
+                            module_name=module_name, usage_type="new", path=str(path)
                         )
                     ],
                 )
@@ -135,6 +139,58 @@ class RemoteFilesystemMiddleware:
             await broadcast_file_update(self.client.session_id, p_str, content)
 
         return success
+
+    async def delete_file(self, path: str | Path) -> bool:
+        """Delete file via the Worker client."""
+        p_str = str(path)
+        if self._is_read_only(p_str):
+            raise PermissionError(f"Path '{p_str}' is read-only.")
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[DeleteFileToolEvent(path=p_str)],
+        )
+        return await self.client.delete_file(p_str)
+
+    async def move_file(self, source: str | Path, destination: str | Path) -> bool:
+        """Move file via the Worker client."""
+        src_str = str(source)
+        dst_str = str(destination)
+        if self._is_read_only(src_str):
+            raise PermissionError(f"Source path '{src_str}' is read-only.")
+        if self._is_read_only(dst_str):
+            raise PermissionError(f"Destination path '{dst_str}' is read-only.")
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[MoveFileToolEvent(source=src_str, destination=dst_str)],
+        )
+        return await self.client.move_file(src_str, dst_str)
+
+    async def copy_file(self, source: str | Path, destination: str | Path) -> bool:
+        """Copy file via the Worker client."""
+        src_str = str(source)
+        dst_str = str(destination)
+        if self._is_read_only(dst_str):
+            raise PermissionError(f"Destination path '{dst_str}' is read-only.")
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[CopyFileToolEvent(source=src_str, destination=dst_str)],
+        )
+        return await self.client.copy_file(src_str, dst_str)
+
+    async def mkdir(self, path: str | Path) -> bool:
+        """Create directory via the Worker client."""
+        p_str = str(path)
+        if self._is_read_only(p_str):
+            raise PermissionError(f"Path '{p_str}' is read-only.")
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[MkdirToolEvent(path=p_str)],
+        )
+        return await self.client.mkdir(p_str)
 
     async def edit_file(self, path: str | Path, edits: list[EditOp]) -> bool:
         """Edit a file via the Worker client."""

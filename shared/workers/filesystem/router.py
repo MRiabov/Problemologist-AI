@@ -388,6 +388,78 @@ class FilesystemRouter:
 
         self.local_backend.delete(path)
 
+    def move(self, source: str, destination: str) -> None:
+        """Move or rename a file or directory.
+
+        Args:
+            source: Virtual source path.
+            destination: Virtual destination path.
+
+        Raises:
+            PermissionError: If source or destination is in a read-only directory.
+        """
+        logger.debug("router_move", source=source, destination=destination)
+
+        if self._is_read_only(source):
+            raise WritePermissionError(f"Cannot move from read-only path: {source}")
+        if self._is_read_only(destination):
+            raise WritePermissionError(f"Cannot move to read-only path: {destination}")
+
+        res = self.local_backend.move(source, destination)
+        if res.error:
+            raise OSError(res.error)
+
+    def copy(self, source: str, destination: str) -> None:
+        """Copy a file or directory.
+
+        Args:
+            source: Virtual source path.
+            destination: Virtual destination path.
+
+        Raises:
+            PermissionError: If destination is in a read-only directory.
+        """
+        logger.debug("router_copy", source=source, destination=destination)
+
+        if self._is_read_only(destination):
+            raise WritePermissionError(f"Cannot copy to read-only path: {destination}")
+
+        # Note: We allow copying FROM read-only paths if we can resolve them
+        normalized_src = source if source.startswith("/") else f"/{source}"
+        mount = self._get_mount_point(normalized_src)
+        if mount:
+            local_src = self._resolve_local_path(normalized_src, mount)
+            local_dst = self.local_backend._resolve(destination)
+            local_dst.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+
+            if local_src.is_dir():
+                shutil.copytree(local_src, local_dst)
+            else:
+                shutil.copy2(local_src, local_dst)
+        else:
+            res = self.local_backend.copy(source, destination)
+            if res.error:
+                raise OSError(res.error)
+
+    def mkdir(self, path: str) -> None:
+        """Create a directory.
+
+        Args:
+            path: Virtual path to create.
+
+        Raises:
+            PermissionError: If path is in a read-only directory.
+        """
+        logger.debug("router_mkdir", path=path)
+
+        if self._is_read_only(path):
+            raise WritePermissionError(f"Cannot create directory in read-only path: {path}")
+
+        res = self.local_backend.mkdir(path)
+        if res.error:
+            raise OSError(res.error)
+
     def grep_raw(
         self, pattern: str, path: str | None = None, glob: str | None = None
     ) -> list[GrepMatch] | str:
@@ -452,14 +524,19 @@ class FilesystemRouter:
                 for f in matched_files:
                     if f.is_file():
                         try:
-                            content = f.read_text(encoding="utf-8")
                             virt_f = f"{mount.virtual_prefix}/{f.relative_to(mount.local_path)}"
-                            for line_num, line in enumerate(content.splitlines(), 1):
-                                if regex.search(line):
-                                    results.append(
-                                        {"path": virt_f, "line": line_num, "text": line}
-                                    )
-                        except:
+                            # Use line-by-line reading to avoid loading large files into memory
+                            with f.open("r", encoding="utf-8", errors="ignore") as file:
+                                for line_num, line in enumerate(file, 1):
+                                    if regex.search(line):
+                                        results.append(
+                                            GrepMatch(
+                                                path=virt_f,
+                                                line=line_num,
+                                                text=line.rstrip(),
+                                            )
+                                        )
+                        except Exception:
                             continue
             except Exception as e:
                 logger.warning(
