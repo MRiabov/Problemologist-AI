@@ -8,8 +8,10 @@ from controller.graph.steerability_node import check_steering, steerability_node
 from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
 from .nodes.electronics_engineer import electronics_engineer_node
+from .nodes.electronics_planner import electronics_planner_node
+from .nodes.execution_reviewer import execution_reviewer_node
+from .nodes.plan_reviewer import plan_reviewer_node
 from .nodes.planner import planner_node
-from .nodes.reviewer import reviewer_node
 from .nodes.skills import skills_node
 from .state import AgentState, AgentStatus
 
@@ -45,16 +47,30 @@ builder = StateGraph(AgentState)
 
 # Add nodes
 builder.add_node("planner", planner_node)
+builder.add_node("electronics_planner", electronics_planner_node)
+builder.add_node("plan_reviewer", plan_reviewer_node)
 builder.add_node("coder", coder_node)
 builder.add_node("electronics_engineer", electronics_engineer_node)
-builder.add_node("reviewer", reviewer_node)
+builder.add_node("execution_reviewer", execution_reviewer_node)
 builder.add_node("cots_search", cots_search_node)
 builder.add_node("skills", skills_node)
 builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
 builder.add_edge(START, "planner")
-builder.add_edge("planner", "coder")
+builder.add_edge("planner", "electronics_planner")
+builder.add_edge("electronics_planner", "plan_reviewer")
+
+builder.add_conditional_edges(
+    "plan_reviewer",
+    should_continue,
+    {
+        "coder": "coder",
+        "planner": "planner",
+        "skills": "skills",
+        "steer": "steer",
+    },
+)
 
 builder.add_conditional_edges(
     "coder",
@@ -65,12 +81,12 @@ builder.add_conditional_edges(
 builder.add_conditional_edges(
     "electronics_engineer",
     check_steering,
-    {"steer": "steer", "next": "reviewer"},
+    {"steer": "steer", "next": "execution_reviewer"},
 )
 
-# Conditional routing from reviewer
+# Conditional routing from execution reviewer
 builder.add_conditional_edges(
-    "reviewer",
+    "execution_reviewer",
     should_continue,
     {
         "coder": "coder",
@@ -82,12 +98,8 @@ builder.add_conditional_edges(
 
 builder.add_edge("steer", "planner")
 
-# We can also add edges to cots_search if needed, but for now we'll keep it simple
-# Maybe coder can decide to go to cots_search?
-# For now let's just make it reachable or at least present.
-
 builder.add_edge("skills", END)
-builder.add_edge("cots_search", "planner")  # Example path back
+builder.add_edge("cots_search", "planner")
 
 # T026: Implement Checkpointing
 memory = MemorySaver()
