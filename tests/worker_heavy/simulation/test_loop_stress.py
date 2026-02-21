@@ -9,6 +9,10 @@ class TestSimulationLoopStress:
     def test_stress_collection(self, mock_get_backend):
         # Setup mock backend
         mock_backend = MagicMock()
+        # Prevent magicmock from returning a mock for timestep/model attributes
+        # which would cause dt to be a mock and int(duration/dt) to be 1.
+        del mock_backend.timestep
+        del mock_backend.model
         mock_get_backend.return_value = mock_backend
 
         mock_backend.get_all_site_names.return_value = []
