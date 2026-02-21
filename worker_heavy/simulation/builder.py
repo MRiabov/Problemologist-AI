@@ -1062,6 +1062,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                         "radius": radius,
                         "gauge_awg": wire.gauge_awg,
                         "stiffness": stiffness,
+                        "is_electronics": True,
                     }
                 )
 
