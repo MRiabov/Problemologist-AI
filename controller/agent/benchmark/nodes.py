@@ -9,6 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.observability.tracing import record_worker_events
 from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
 from shared.simulation.schemas import (
@@ -16,6 +17,8 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
 )
 from shared.type_checking import type_check
+
+from shared.observability.schemas import ReviewDecisionEvent
 
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_tools
@@ -486,6 +489,20 @@ class BenchmarkReviewerNode(BaseNode):
             state.review_feedback = f"{review.decision.value}: {review.reason}"
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+
+            # Record review decision event
+            await record_worker_events(
+                episode_id=str(state.session.session_id),
+                events=[
+                    ReviewDecisionEvent(
+                        decision=review.decision,
+                        reason=review.reason,
+                        evidence_stats={
+                            "has_sim_report": True,
+                        },
+                    )
+                ],
+            )
         except Exception as e:
             logger.error("benchmark_reviewer_node_failed", error=str(e))
             state.review_feedback = "Rejected: Internal error"

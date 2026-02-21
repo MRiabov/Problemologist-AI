@@ -14,6 +14,55 @@ from shared.workers.workbench_models import ManufacturingMethod
 logger = structlog.get_logger(__name__)
 
 
+def refuse_plan(
+    reason: str,
+    current_price: float | None = None,
+    current_weight: float | None = None,
+    cwd: Path = Path(),
+):
+    """
+    Standardized refusal of a plan by an Engineer.
+    Logic:
+    - Log the refusal reason.
+    - Emit an EscalationRequestEvent for observability.
+    - Persist a 'refusal.json' to the workspace for the Reviewer.
+    """
+    logger.info(
+        "plan_refusal_started",
+        reason=reason,
+        price=current_price,
+        weight=current_weight,
+    )
+
+    # Emit observability event
+    from shared.observability.events import emit_event
+    from shared.observability.schemas import EscalationRequestEvent
+
+    emit_event(
+        EscalationRequestEvent(
+            reason=reason,
+            current_price=current_price,
+            current_weight=current_weight,
+        )
+    )
+
+    refusal_path = cwd / "refusal.json"
+    refusal_data = {
+        "status": "plan_refused",
+        "reason": reason,
+        "current_price": current_price,
+        "current_weight": current_weight,
+        "timestamp": os.getenv("TIMESTAMP"),
+        "session_id": os.getenv("SESSION_ID", "default"),
+    }
+
+    with refusal_path.open("w", encoding="utf-8") as f:
+        json.dump(refusal_data, f)
+
+    logger.info("plan_refusal_complete", path=str(refusal_path))
+    return True
+
+
 def submit_for_review(component: Compound, cwd: Path = Path()):
     """
     Standardized handover from Coder to Reviewer.

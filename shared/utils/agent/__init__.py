@@ -88,16 +88,34 @@ def submit_for_review(compound: Compound) -> bool:
     res = _call_heavy_worker("/benchmark/submit", payload)
     return res.get("success", False)
 
-def refuse_plan(reason: str) -> bool:
+def refuse_plan(
+    reason: str,
+    current_price: float | None = None,
+    current_weight: float | None = None,
+) -> bool:
     """Refuse the current plan."""
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.handover import refuse_plan as real_refuse
-        return real_refuse(reason)
+        return real_refuse(reason, current_price=current_price, current_weight=current_weight)
+
+    # Emit observability event even in light worker
+    from shared.observability.events import emit_event
+    from shared.observability.schemas import EscalationRequestEvent
+
+    emit_event(
+        EscalationRequestEvent(
+            reason=reason,
+            current_price=current_price,
+            current_weight=current_weight,
+        )
+    )
 
     import json
     refusal_data = {
         "status": "plan_refused",
         "reason": reason,
+        "current_price": current_price,
+        "current_weight": current_weight,
         "timestamp": os.getenv("TIMESTAMP"),
         "session_id": os.getenv("SESSION_ID", "default"),
     }

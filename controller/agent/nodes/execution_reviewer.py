@@ -107,19 +107,36 @@ class ExecutionReviewerNode(BaseNode):
         }
 
         # Emit ReviewDecisionEvent for observability
-        await record_worker_events(
-            episode_id=state.session_id,
-            events=[
-                ReviewDecisionEvent(
-                    decision=decision,
-                    reason=feedback,
-                    evidence_stats={
-                        "has_sim_report": True,
-                        "has_mfg_report": True,
-                    },
+        events = [
+            ReviewDecisionEvent(
+                decision=decision,
+                reason=feedback,
+                evidence_stats={
+                    "has_sim_report": True,
+                    "has_mfg_report": True,
+                },
+            )
+        ]
+
+        # T013: Emit EscalationDecisionEvent if applicable
+        if decision in (
+            ReviewDecision.CONFIRM_PLAN_REFUSAL,
+            ReviewDecision.REJECT_PLAN_REFUSAL,
+        ):
+            from shared.observability.schemas import EscalationDecisionEvent
+
+            events.append(
+                EscalationDecisionEvent(
+                    decision=(
+                        "approved"
+                        if decision == ReviewDecision.CONFIRM_PLAN_REFUSAL
+                        else "rejected"
+                    ),
+                    comments=[feedback],
                 )
-            ],
-        )
+            )
+
+        await record_worker_events(episode_id=state.session_id, events=events)
 
         return state.model_copy(
             update={
