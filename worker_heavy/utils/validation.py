@@ -510,6 +510,26 @@ def simulate(
     moving_parts = assembly_definition.moving_parts if assembly_definition else []
     electronics = assembly_definition.electronics if assembly_definition else None
 
+    # T021: Proactive electronics validation before starting expensive physics backend (INT-120)
+    if electronics:
+        from .electronics import build_circuit_from_section, validate_circuit
+
+        try:
+            circuit = build_circuit_from_section(electronics)
+            cv_res = validate_circuit(
+                circuit, psu_config=electronics.power_supply, section=electronics
+            )
+            if not cv_res.valid:
+                error_msg = "; ".join(cv_res.errors)
+                logger.error("electronics_validation_failed_gate", errors=error_msg)
+                return SimulationResult(
+                    success=False,
+                    summary=error_msg,
+                    confidence="high",
+                )
+        except Exception as e:
+            logger.warning("electronics_pre_validation_skipped", error=str(e))
+
     scene_path = builder.build_from_assembly(
         component,
         objectives=objectives,
