@@ -723,7 +723,6 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
             if data.weld_target:
                 weld_constraints.append((data.label, data.weld_target))
 
-        for data in parts_data:
             if data.is_zone:
                 self.compiler.add_body(
                     name=data.label,
@@ -767,12 +766,14 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 body_locations[data.label] = (data.pos, data.euler)
 
         # Apply collected constraints
+
         for body1, body2 in weld_constraints:
             self.compiler.add_weld(body1, body2)
 
         # 3. Add actuators for moving parts (T011)
         if moving_parts:
             from shared.enums import MotorControlMode
+
             for mp in moving_parts:
                 if mp.type == "motor":
                     # T019: Determine actuator type based on control mode
