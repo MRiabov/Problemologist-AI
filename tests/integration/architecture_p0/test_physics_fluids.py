@@ -31,8 +31,8 @@ objectives:
     min: [0, 0, 0]
     max: [100, 100, 100]
 simulation_bounds:
-    min: [-100, -100, -100]
-    max: [100, 100, 100]
+    min: [-10, -10, -10]
+    max: [10, 10, 10]
 moved_object:
     label: "test_obj"
     shape: "sphere"
@@ -44,7 +44,11 @@ constraints:
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -101,6 +105,10 @@ async def test_int_105_fluid_containment_evaluation():
         objectives_content = """
 physics:
   backend: "genesis"
+fluids:
+  - fluid_id: "water"
+    properties: {viscosity_cp: 1.0, density_kg_m3: 1000.0}
+    initial_volume: {type: "sphere", center: [0,0,0], radius: 1.0}
 objectives:
   goal_zone: {min: [10,10,10], max: [12,12,12]}
   build_zone: {min: [-100,-100,-100], max: [100,100,100]}
@@ -112,13 +120,17 @@ objectives:
         max: [5, 5, 5]
       threshold: 0.95
       eval_at: "end"
-simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
+simulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -147,9 +159,11 @@ def build():
         )
         assert resp.status_code == 200
         data = resp.json()
+        assert data["success"], f"Simulation failed: {data['message']}"
 
         # Verify fluid metrics in result
-        fluid_metrics = data.get("artifacts", {}).get("fluid_metrics", [])
+        artifacts = data.get("artifacts") or {}
+        fluid_metrics = artifacts.get("fluid_metrics", [])
         assert len(fluid_metrics) > 0
         metric = fluid_metrics[0]
         assert metric["metric_type"] == "fluid_containment"
@@ -164,7 +178,11 @@ def build():
         )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_fail},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_fail,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
         resp = await client.post(
@@ -204,7 +222,11 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
@@ -261,7 +283,11 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={
+                "path": "objectives.yaml",
+                "content": objectives_content,
+                "overwrite": True,
+            },
             headers={"X-Session-ID": session_id},
         )
 
