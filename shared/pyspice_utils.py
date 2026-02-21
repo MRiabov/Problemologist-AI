@@ -76,8 +76,12 @@ def validate_circuit(
     if section:
         connected_terminals = set()
         for wire in section.wiring:
-            connected_terminals.add((wire.from_terminal.component, wire.from_terminal.terminal))
-            connected_terminals.add((wire.to_terminal.component, wire.to_terminal.terminal))
+            connected_terminals.add(
+                (wire.from_terminal.component, wire.from_terminal.terminal)
+            )
+            connected_terminals.add(
+                (wire.to_terminal.component, wire.to_terminal.terminal)
+            )
 
         for comp in section.components:
             required = []
@@ -88,7 +92,9 @@ def validate_circuit(
 
             for term in required:
                 if (comp.component_id, term) not in connected_terminals:
-                    errors.append(f"FAILED_OPEN_CIRCUIT: Component {comp.component_id} terminal {term} is not connected.")
+                    errors.append(
+                        f"FAILED_OPEN_CIRCUIT: Component {comp.component_id} terminal {term} is not connected."
+                    )
 
     try:
         simulator = circuit.simulator()

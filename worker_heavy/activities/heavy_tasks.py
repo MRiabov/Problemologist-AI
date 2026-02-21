@@ -44,7 +44,7 @@ async def run_simulation_activity(params: dict[str, Any]) -> dict[str, Any]:
     bundle_bytes = params["bundle_bytes"]
     script_path = params["script_path"]
     backend = params["backend"]
-    smoke_test_mode = params.get("smoke_test_mode", False)
+    smoke_test_mode = params.get("smoke_test_mode")  # Default to None
     session_id = params["session_id"]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -72,6 +72,7 @@ async def validate_design_activity(params: dict[str, Any]) -> dict[str, Any]:
     bundle_bytes = params["bundle_bytes"]
     script_path = params["script_path"]
     session_id = params["session_id"]
+    smoke_test_mode = params.get("smoke_test_mode")  # Default to None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -87,6 +88,7 @@ async def validate_design_activity(params: dict[str, Any]) -> dict[str, Any]:
             component,
             output_dir=root,
             session_id=session_id,
+            smoke_test_mode=smoke_test_mode,
         )
 
         return {"success": is_valid, "message": message}

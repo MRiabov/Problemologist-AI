@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,8 +12,18 @@ class WorkerSettings(BaseSettings):
 
     # Heavy worker doesn't strictly need skills sync but we keep it for consistency if needed
     skills_dir_override: str | None = Field(default=None, alias="SKILLS_DIR")
-    # FIXME: all git is unnecessary indeed.
-    smoke_test_mode: bool = Field(default=True, alias="SMOKE_TEST_MODE")
+
+    # Defaults to None so we can apply logic in validator
+    smoke_test_mode: bool = Field(default=False, alias="SMOKE_TEST_MODE")
+
+    @model_validator(mode="after")
+    def adjust_smoke_test_mode(self) -> "WorkerSettings":
+        """Default smoke_test_mode to True if in integration test and not explicitly set."""
+        import os
+
+        if "SMOKE_TEST_MODE" not in os.environ and self.is_integration_test:
+            self.smoke_test_mode = True
+        return self
 
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")
     git_pat: str | None = Field(default=None, alias="GIT_PAT")

@@ -225,8 +225,14 @@ class BaseNode:
 
         # Prepare explicit DB logger for UI events
         db_callback = None
-        if state.episode_id:
-            db_callback = DatabaseCallbackHandler(episode_id=state.episode_id)
+        episode_id = getattr(state, "episode_id", None) or getattr(
+            state, "session_id", None
+        )
+        if not episode_id and hasattr(state, "session"):
+            episode_id = getattr(state.session, "session_id", None)
+
+        if episode_id:
+            db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
 
         try:
             while retry_count < max_retries:

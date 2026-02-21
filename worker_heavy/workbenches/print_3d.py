@@ -46,14 +46,17 @@ def calculate_3dp_cost(
 
     material_cfg = three_dp_cfg.materials.get(material_name)
     if not material_cfg:
-        material_cfg = config.materials.get(material_name) or config.materials.get("abs")
+        material_cfg = config.materials.get(material_name) or config.materials.get(
+            "abs"
+        )
         if not material_cfg:
             from shared.workers.workbench_models import MaterialDefinition
+
             material_cfg = MaterialDefinition(
                 name="Fallback ABS",
                 density_g_cm3=1.04,
                 cost_per_kg=20.0,
-                machine_hourly_rate=20.0
+                machine_hourly_rate=20.0,
             )
 
     logger.info("calculating_3dp_cost", material=material_name, quantity=quantity)

@@ -127,14 +127,17 @@ def calculate_cnc_cost(
     material_cfg = cnc_cfg.materials.get(material_name)
     if not material_cfg:
         # Emergency fallback to global or dummy material
-        material_cfg = config.materials.get(material_name) or config.materials.get("aluminum_6061")
+        material_cfg = config.materials.get(material_name) or config.materials.get(
+            "aluminum_6061"
+        )
         if not material_cfg:
             from shared.workers.workbench_models import MaterialDefinition
+
             material_cfg = MaterialDefinition(
                 name="Fallback Aluminum",
                 density_g_cm3=2.7,
                 cost_per_kg=6.0,
-                machine_hourly_rate=80.0
+                machine_hourly_rate=80.0,
             )
     mrr = cnc_cfg.constraints.get("mrr_mm3_per_min", 1000.0)
 
@@ -246,7 +249,9 @@ def analyze_cnc(
     density = 2.7  # fallback (aluminum)
 
     # Resolve density from config if possible
-    mat_cfg = (cnc_cfg.materials.get(material_name) if cnc_cfg else None) or config.materials.get(material_name)
+    mat_cfg = (
+        cnc_cfg.materials.get(material_name) if cnc_cfg else None
+    ) or config.materials.get(material_name)
     if mat_cfg:
         density = mat_cfg.density_g_cm3
 

@@ -118,8 +118,8 @@ class BenchmarkToolRequest(BaseModel):
         default=SimulatorBackendType.GENESIS,
         description="Physics backend to use.",
     )
-    smoke_test_mode: bool = Field(
-        default=False,
+    smoke_test_mode: bool | None = Field(
+        default=None,
         description="If true: cap particles to 5000, label results as approximate.",
     )
     particle_budget: int | None = Field(
@@ -234,6 +234,10 @@ class PreviewDesignRequest(BaseModel):
         ge=0.0,
         lt=360.0,
         description="Camera azimuth angle in degrees (clockwise from front).",
+    )
+    smoke_test_mode: bool | None = Field(
+        default=None,
+        description="If true: cap particles to 5000, label results as approximate.",
     )
 
 
