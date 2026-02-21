@@ -110,7 +110,7 @@ def validate_circuit(
             current_val = float(current)
 
             # Detect extreme currents which indicate shorts
-            if abs(current_val) > 1000.0:
+            if abs(current_val) > 100.0:
                 errors.append(
                     f"FAILED_SHORT_CIRCUIT: Extreme current in branch {name}: "
                     f"{current_val:.2f}A"
@@ -159,7 +159,7 @@ def validate_circuit(
                 # or look it up: R_wire_id
                 r_val = 0.01
                 if f"R{wire.wire_id}" in circuit.element_names:
-                    r_val = float(circuit[wire.wire_id].resistance)
+                    r_val = float(circuit[f"R{wire.wire_id}"].resistance)
                 elif wire.gauge_awg and wire.length_mm:
                     props = get_awg_properties(wire.gauge_awg)
                     r_val = props["resistance_ohm_m"] * (wire.length_mm / 1000.0)
