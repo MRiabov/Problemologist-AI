@@ -1,7 +1,10 @@
 import numpy as np
+import structlog
 
 from shared.enums import SimulationFailureMode
 from shared.models.schemas import BoundingBox
+
+logger = structlog.get_logger(__name__)
 
 
 class SuccessEvaluator:
@@ -31,11 +34,21 @@ class SuccessEvaluator:
         """
         # 1. Timeout
         if total_time >= self.max_simulation_time:
+            logger.info(
+                "timeout_triggered",
+                total_time=total_time,
+                max_simulation_time=self.max_simulation_time,
+            )
             return SimulationFailureMode.TIMEOUT
 
-        # 2. Physics Instability (NaNs)
-        if qpos is not None and qvel is not None:
-            if np.any(np.isnan(qpos)) or np.any(np.isnan(qvel)):
+        # 2. Physics Instability (NaNs or extreme values)
+        if qpos is not None:
+            if np.any(np.isnan(qpos)) or (qvel is not None and np.any(np.isnan(qvel))):
+                return SimulationFailureMode.PHYSICS_INSTABILITY
+
+            # Extreme values (explosion)
+            if np.any(np.abs(qpos) > 10000.0):
+                logger.warning("physics_explosion_detected", pos=list(qpos))
                 return SimulationFailureMode.PHYSICS_INSTABILITY
 
         # 3. Fell off world / Out of Bounds
@@ -64,11 +77,18 @@ class SuccessEvaluator:
         """Identify motors stalled at their limit."""
         for i, name in enumerate(motor_names):
             limit = limits[i]
-            if abs(forces[i]) >= limit * 0.99:
+            # Use a slightly more relaxed threshold (0.9 instead of 0.99) for robustness
+            if abs(forces[i]) >= limit * 0.9:
                 self.motor_overload_timer[name] = (
                     self.motor_overload_timer.get(name, 0) + dt
                 )
                 if self.motor_overload_timer[name] >= self.motor_overload_threshold:
+                    logger.info(
+                        "motor_overload_triggered",
+                        motor=name,
+                        force=forces[i],
+                        limit=limit,
+                    )
                     return True
             else:
                 self.motor_overload_timer[name] = 0

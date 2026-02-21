@@ -7,11 +7,18 @@ cd "$(dirname "$0")/.."
 
 echo "Stopping Application Servers..."
 
-if [ -f logs/worker.pid ]; then
-  PID=$(cat logs/worker.pid)
-  echo "Stopping Worker (PID: $PID)..."
+if [ -f logs/worker_light.pid ]; then
+  PID=$(cat logs/worker_light.pid)
+  echo "Stopping Worker Light (PID: $PID)..."
   kill $PID 2>/dev/null || true
-  rm logs/worker.pid
+  rm logs/worker_light.pid
+fi
+
+if [ -f logs/worker_heavy.pid ]; then
+  PID=$(cat logs/worker_heavy.pid)
+  echo "Stopping Worker Heavy (PID: $PID)..."
+  kill $PID 2>/dev/null || true
+  rm logs/worker_heavy.pid
 fi
 
 if [ -f logs/controller.pid ]; then
@@ -31,6 +38,7 @@ fi
 # Also kill any leftover FastAPI/Uvicorn processes just in case
 pkill -9 -f "uvicorn.*18000" || true
 pkill -9 -f "uvicorn.*18001" || true
+pkill -9 -f "uvicorn.*18002" || true
 pkill -9 -f "fastapi run" || true
 pkill -9 -f "controller.temporal_worker" || true
 pkill -9 -f "uv run uvicorn" || true

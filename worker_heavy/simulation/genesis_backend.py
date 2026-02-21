@@ -228,6 +228,12 @@ class GenesisBackend(PhysicsBackend):
             return self.scene.is_built
         return self._is_built
 
+    @property
+    def timestep(self) -> float:
+        if self.scene and hasattr(self.scene, "sim_options"):
+            return self.scene.sim_options.dt
+        return 0.002
+
     def _load_scene_internal(
         self, scene: SimulationScene, render_only: bool = False
     ) -> None:
@@ -235,11 +241,12 @@ class GenesisBackend(PhysicsBackend):
         if gs is None:
             raise ImportError("Genesis not installed")
 
-        # Optimization for smoke tests
+        # Optimization for smoke tests: substeps help with MPM/FEM.
+        # We use production dt for stability.
         is_smoke = getattr(self, "smoke_test_mode", False)
         sim_options = gs.options.SimOptions(
-            dt=0.05 if is_smoke else 0.002,
-            substeps=1 if is_smoke else 10,
+            dt=0.002,
+            substeps=4 if is_smoke else 10,
         )
 
         # T014: Particle visualization options from WP06
