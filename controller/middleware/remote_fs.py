@@ -17,7 +17,6 @@ from controller.workflows.heavy import (
     HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
-    HeavyVerificationWorkflow,
 )
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -245,40 +244,7 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def verify(
-        self,
-        script_path: str | Path,
-        num_runs: int = 5,
-        jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
-    ) -> dict[str, Any]:
-        """Trigger physics verification via worker client (with bundling)."""
-        p_str = str(script_path)
-
-        if self.temporal_client:
-            bundle = await self.client.bundle_session()
-            res = await self.temporal_client.execute_workflow(
-                HeavyVerificationWorkflow.run,
-                {
-                    "bundle_bytes": bundle,
-                    "script_path": p_str,
-                    "num_runs": num_runs,
-                    "jitter_range": jitter_range,
-                    "backend": backend.value,
-                    "smoke_test_mode": False,
-                    "session_id": self.client.session_id,
-                },
-                id=f"ver-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
-                task_queue="simulation-task-queue",
-            )
-            return res
-
-        result = await self.client.verify(
-            p_str, num_runs=num_runs, jitter_range=jitter_range, backend=backend
-        )
-        return result.model_dump()
-
-    async def preview(
+    async def preview_design(
         self,
         script_path: str | Path,
         pitch: float = -45.0,
@@ -302,6 +268,10 @@ class RemoteFilesystemMiddleware:
             )
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+
+    async def preview(self, *args, **kwargs):
+        """Deprecated alias for preview_design."""
+        return await self.preview_design(*args, **kwargs)
 
     async def validate(self, script_path: str | Path) -> dict[str, Any]:
         """Trigger geometric validation via worker client (with bundling)."""
@@ -340,7 +310,7 @@ class RemoteFilesystemMiddleware:
 
         return res_dict
 
-    async def analyze(
+    async def validate_and_price(
         self,
         script_path: str | Path,
         method: ManufacturingMethod | str = ManufacturingMethod.CNC,
@@ -366,6 +336,10 @@ class RemoteFilesystemMiddleware:
 
         result = await self.client.analyze(m_method, p_str, quantity=quantity)
         return result.model_dump()
+
+    async def analyze(self, *args, **kwargs):
+        """Deprecated alias for validate_and_price."""
+        return await self.validate_and_price(*args, **kwargs)
 
     async def validate_circuit(
         self,

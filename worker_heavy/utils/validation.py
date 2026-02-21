@@ -31,125 +31,6 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
-def verify_subprocess(
-    script_path: str,
-    session_root: str,
-    script_content: str | None = None,
-    output_dir: Path | None = None,
-    num_runs: int = 5,
-    jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-    smoke_test_mode: bool = False,
-    backend: Any | None = None,
-    session_id: str | None = None,
-):
-    """Serializable entry point for verification."""
-    if session_root:
-        os.environ["EVENTS_FILE"] = str(Path(session_root) / "events.jsonl")
-
-    from shared.workers.loader import load_component_from_script
-
-    component = load_component_from_script(
-        script_path=script_path,
-        session_root=session_root,
-        script_content=script_content,
-    )
-    return verify(
-        component=component,
-        output_dir=output_dir,
-        num_runs=num_runs,
-        jitter_range=jitter_range,
-        smoke_test_mode=smoke_test_mode,
-        backend=backend,
-        session_id=session_id,
-    )
-
-
-def verify(
-    component: Compound,
-    output_dir: Path | None = None,
-    num_runs: int = 5,
-    jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-    smoke_test_mode: bool = False,
-    backend: SimulatorBackendType | None = None,
-    session_id: str | None = None,
-):
-    """Multi-run verification with jitter."""
-    from worker_heavy.simulation.verification import verify_with_jitter
-    from worker_heavy.simulation.factory import get_simulation_builder
-
-    working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-
-    objectives = None
-    assembly_definition = None
-    objectives_path = working_dir / "objectives.yaml"
-    if objectives_path.exists():
-        try:
-            data = yaml.safe_load(objectives_path.read_text(encoding="utf-8"))
-            objectives = ObjectivesYaml(**data)
-        except Exception as e:
-            logger.error("failed_to_load_objectives", error=str(e))
-
-    cost_est_path = working_dir / "assembly_definition.yaml"
-    if cost_est_path.exists():
-        try:
-            data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
-            assembly_definition = AssemblyDefinition(**data)
-        except Exception as e:
-            logger.error("failed_to_load_assembly_definition", error=str(e))
-
-    backend_type = backend
-    if backend_type is None:
-        backend_type = SimulatorBackendType.GENESIS
-        if objectives and objectives.physics:
-            backend_type = SimulatorBackendType(objectives.physics.backend)
-
-    builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
-    moving_parts = assembly_definition.moving_parts if assembly_definition else []
-    electronics = assembly_definition.electronics if assembly_definition else None
-
-    scene_path = builder.build_from_assembly(
-        component,
-        objectives=objectives,
-        moving_parts=moving_parts,
-        electronics=electronics,
-        smoke_test_mode=smoke_test_mode,
-    )
-
-    # Extract control inputs
-    control_inputs = {}
-    dynamic_controllers = {}
-    if assembly_definition and assembly_definition.moving_parts:
-        from worker_heavy.utils.controllers import sinusoidal
-
-        for part in assembly_definition.moving_parts:
-            if part.control:
-                if part.control.mode == MotorControlMode.CONSTANT:
-                    control_inputs[part.part_name] = part.control.speed
-                elif part.control.mode == MotorControlMode.SINUSOIDAL:
-                    dynamic_controllers[part.part_name] = lambda t, p=part.control: (
-                        sinusoidal(t, p.speed, p.frequency or 1.0)
-                    )
-                elif part.control.mode == MotorControlMode.ON_OFF:
-                    freq = part.control.frequency or 1.0
-                    period = 1.0 / freq
-                    dynamic_controllers[part.part_name] = (
-                        lambda t, p=part.control, per=period: (
-                            p.speed if (t % per) < (per / 2) else 0.0
-                        )
-                    )
-
-    return verify_with_jitter(
-        xml_path=str(scene_path),
-        control_inputs=control_inputs,
-        jitter_range=jitter_range,
-        num_runs=num_runs,
-        duration=0.5 if smoke_test_mode else 10.0,
-        dynamic_controllers=dynamic_controllers,
-        backend_type=backend_type.value
-        if hasattr(backend_type, "value")
-        else backend_type,
-        session_id=session_id,
-    )
 
 
 def load_simulation_result(path: Path) -> SimulationResult | None:
@@ -605,51 +486,121 @@ def simulate(
     try:
         video_path = renders_dir / "simulation.mp4" if not smoke_test_mode else None
         sim_duration = 0.5 if smoke_test_mode else 30.0
-        metrics = loop.step(
-            control_inputs=control_inputs,
-            duration=sim_duration,
-            dynamic_controllers=dynamic_controllers,
-            video_path=video_path,
-        )
 
-        # WP2: T017: GPU OOM Retry Logic
-        if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
-            from shared.observability.events import emit_event
-            from shared.observability.schemas import GpuOomRetryEvent
+        # WP01: Multi-run robustness check (Runtime randomization verification)
+        num_runs = 1 if smoke_test_mode else 5
+        jitter_range = (0.002, 0.002, 0.001)
 
-            logger.warning("gpu_oom_detected_retrying_smoke_mode")
+        import numpy as np
 
-            # Emit event for observability
-            emit_event(
-                GpuOomRetryEvent(
-                    original_particles=loop.particle_budget,
-                    reduced_particles=5000,
+        rng = np.random.default_rng(42)
+        all_metrics = []
+
+        # Find target body name (match SimulationLoop logic)
+        target_body_name = "target_box"
+        all_bodies = loop.backend.get_all_body_names()
+        if target_body_name not in all_bodies:
+            target_body_name = None
+            for name in all_bodies:
+                if "target" in name.lower() or "bucket" in name.lower():
+                    target_body_name = name
+                    break
+
+        for i in range(num_runs):
+            if i > 0:
+                # Re-create loop for subsequent jittered runs to ensure fresh state
+                # T025: Reuse same scene_path and backend_type
+                loop = SimulationLoop(
+                    str(scene_path),
+                    component=component,
+                    backend_type=backend_type,
+                    electronics=electronics,
+                    objectives=objectives,
+                    smoke_test_mode=smoke_test_mode,
+                    session_id=session_id,
+                    particle_budget=particle_budget,
                 )
-            )
 
-            from worker_heavy.simulation.loop import SimulationLoop
+            if target_body_name and not smoke_test_mode:
+                jitter = [
+                    rng.uniform(-jitter_range[0], jitter_range[0]),
+                    rng.uniform(-jitter_range[1], jitter_range[1]),
+                    rng.uniform(-jitter_range[2], jitter_range[2]),
+                ]
+                loop.backend.apply_jitter(target_body_name, jitter)
 
-            # Re-create loop with reduced budget to force backend scene rebuild
-            loop = SimulationLoop(
-                str(scene_path),
-                component=component,
-                backend_type=backend_type,
-                electronics=electronics,
-                objectives=objectives,
-                smoke_test_mode=True,
-                session_id=session_id,
-                particle_budget=5000,
-            )
             metrics = loop.step(
                 control_inputs=control_inputs,
                 duration=sim_duration,
                 dynamic_controllers=dynamic_controllers,
-                video_path=None,  # No video on retry
+                video_path=video_path if i == 0 else None,  # Only render video for first run
             )
 
-        status_msg = metrics.fail_reason or (
-            "Goal achieved." if metrics.success else "Simulation stable."
-        )
+            # WP2: T017: GPU OOM Retry Logic (only on first run for simplicity)
+            if (
+                i == 0
+                and metrics.fail_reason
+                and "out of memory" in metrics.fail_reason.lower()
+            ):
+                from shared.observability.events import emit_event
+                from shared.observability.schemas import GpuOomRetryEvent
+
+                logger.warning("gpu_oom_detected_retrying_smoke_mode")
+                emit_event(
+                    GpuOomRetryEvent(
+                        original_particles=loop.particle_budget,
+                        reduced_particles=5000,
+                    )
+                )
+
+                loop = SimulationLoop(
+                    str(scene_path),
+                    component=component,
+                    backend_type=backend_type,
+                    electronics=electronics,
+                    objectives=objectives,
+                    smoke_test_mode=True,
+                    session_id=session_id,
+                    particle_budget=5000,
+                )
+                metrics = loop.step(
+                    control_inputs=control_inputs,
+                    duration=sim_duration,
+                    dynamic_controllers=dynamic_controllers,
+                    video_path=None,
+                )
+
+            all_metrics.append(metrics)
+
+            # Optimization: if a run fails in production, we might want to fail fast?
+            # Architecture says "ensure consistency", so maybe run all.
+            # But for large numbers, fail fast is better.
+            if not metrics.success and not smoke_test_mode:
+                logger.info("simulate_run_failed_failing_fast", run=i)
+                break
+
+        # Aggregate results
+        success_count = sum(1 for m in all_metrics if m.success)
+        total_executed = len(all_metrics)
+        overall_success = success_count == num_runs if not smoke_test_mode else all_metrics[0].success
+
+        # Use metrics from the first run (or first failed run) for reporting
+        final_metrics = all_metrics[0]
+        for m in all_metrics:
+            if not m.success:
+                final_metrics = m
+                break
+
+        if smoke_test_mode:
+            status_msg = final_metrics.fail_reason or (
+                "Goal achieved." if final_metrics.success else "Simulation stable."
+            )
+        else:
+            if overall_success:
+                status_msg = f"Mechanical robustness verified: {success_count}/{num_runs} runs passed."
+            else:
+                fail_reason = final_metrics.fail_reason or "flaky performance"
+                status_msg = f"Robustness check failed: {success_count}/{num_runs} runs passed. Reason: {fail_reason}"
 
         if not smoke_test_mode:
             render_paths = prerender_24_views(

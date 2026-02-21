@@ -14,7 +14,6 @@ from shared.workers.schema import (
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
-    MultiRunResult,
 )
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
@@ -352,39 +351,6 @@ class WorkerClient:
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
-        finally:
-            await self._close_client(client)
-
-    async def verify(
-        self,
-        script_path: str = "script.py",
-        script_content: str | None = None,
-        num_runs: int = 5,
-        jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
-    ) -> MultiRunResult:
-        """Trigger physics verification via worker."""
-        client = await self._get_client()
-        try:
-            payload = {
-                "script_path": script_path,
-                "num_runs": num_runs,
-                "jitter_range": jitter_range,
-                "backend": backend,
-            }
-            if script_content is not None:
-                payload["script_content"] = script_content
-
-            await self._add_bundle_to_payload(payload)
-
-            response = await client.post(
-                f"{self.heavy_url}/benchmark/verify",
-                json=payload,
-                headers=self.headers,
-                timeout=600.0,
-            )
-            response.raise_for_status()
-            return MultiRunResult.model_validate(response.json())
         finally:
             await self._close_client(client)
 

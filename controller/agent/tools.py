@@ -65,26 +65,21 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         return await fs.simulate(script_path)
 
     @tool
-    async def verify(script_path: str = "script.py", num_runs: int = 5):
-        """Trigger multi-run physics verification with position jitter."""
-        return await fs.verify(script_path, num_runs=num_runs)
-
-    @tool
     async def validate(script_path: str = "script.py"):
         """Trigger geometric validation check."""
         return await fs.validate(script_path)
 
     @tool
-    async def analyze(
+    async def validate_and_price(
         script_path: str = "script.py", method: str = "cnc", quantity: int = 1
     ):
         """Trigger manufacturing analysis for cost and manufacturability."""
-        return await fs.analyze(script_path, method=method, quantity=quantity)
+        return await fs.validate_and_price(script_path, method=method, quantity=quantity)
 
     @tool
-    async def preview(script_path: str = "script.py"):
+    async def preview_design(script_path: str = "script.py"):
         """Generate a 3D render preview of the design."""
-        return await fs.preview(script_path)
+        return await fs.preview_design(script_path)
 
     @tool
     async def submit(script_path: str = "script.py"):
@@ -116,10 +111,9 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         inspect_topology,
         search_cots_catalog,
         simulate,
-        verify,
         validate,
-        analyze,
-        preview,
+        validate_and_price,
+        preview_design,
         submit,
         validate_circuit,
     ]

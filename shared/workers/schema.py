@@ -129,32 +129,6 @@ class BenchmarkToolRequest(BaseModel):
     )
 
 
-class VerifyRequest(BenchmarkToolRequest):
-    """Request to run multi-run verification."""
-
-    num_runs: int = Field(
-        default=5,
-        ge=1,
-        le=20,
-        description="Number of simulation runs with jitter.",
-    )
-    jitter_range: tuple[float, float, float] = Field(
-        default=(0.002, 0.002, 0.001),
-        description="Position jitter range (±x, ±y, ±z) in simulation units.",
-    )
-
-
-class MultiRunResult(BaseModel):
-    """Result of multi-run verification."""
-
-    num_runs: int
-    success_count: int
-    success_rate: float
-    is_consistent: bool
-    individual_results: list[SimulationMetrics]
-    fail_reasons: list[str]
-
-
 class AnalyzeRequest(BenchmarkToolRequest):
     """Request to run manufacturing analysis."""
 
