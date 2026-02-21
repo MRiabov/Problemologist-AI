@@ -79,6 +79,8 @@ class SimulationScene(BaseModel):
 class PhysicsBackend(Protocol):
     """Interface for physics simulators."""
 
+    smoke_test_mode: bool = False
+
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None: ...
 
     def step(self, dt: float) -> StepResult: ...

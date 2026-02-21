@@ -44,10 +44,14 @@ class SimulationLoop:
         backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
-        smoke_test_mode: bool = False,
+        smoke_test_mode: bool | None = None,
         session_id: str | None = None,
         particle_budget: int | None = None,
     ):
+        from worker_heavy.config import settings
+
+        if smoke_test_mode is None:
+            smoke_test_mode = settings.smoke_test_mode
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if (
             backend_type == SimulatorBackendType.MUJOCO
