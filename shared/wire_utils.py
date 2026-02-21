@@ -250,7 +250,7 @@ def route_wire(
         WireRoutingEvent(
             wire_count=1,
             total_length_mm=length,
-            clearance_passed=True,  # Placeholder until check_wire_clearance is integrated in tool
+            clearance_passed=None,  # Validation happens during SimulationLoop initialization (requires assembly context)
             errors=[],
         )
     )
@@ -295,7 +295,7 @@ def route_wire_legacy(
         WireRoutingEvent(
             wire_count=1,
             total_length_mm=length,
-            clearance_passed=True,
+            clearance_passed=None,
             errors=errors,
         )
     )
