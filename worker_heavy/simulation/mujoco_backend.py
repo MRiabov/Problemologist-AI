@@ -385,10 +385,23 @@ class MuJoCoBackend(PhysicsBackend):
         if body_id == -1:
             return
 
-        # Assuming free joint is at the beginning of qpos for simplicity
-        # or we find the joint index if more complex
-        self.data.qpos[0:3] += np.array(jitter)
-        mujoco.mj_forward(self.model, self.data)
+        # T019: Locate the free joint of the body to apply jitter instead of hardcoded indices
+        jnt_adr = self.model.body_jntadr[body_id]
+        jnt_num = self.model.body_jntnum[body_id]
+
+        for i in range(jnt_num):
+            j_id = jnt_adr + i
+            if self.model.jnt_type[j_id] == mujoco.mjtJoint.mjJNT_FREE:
+                q_adr = self.model.jnt_qposadr[j_id]
+                self.data.qpos[q_adr : q_adr + 3] += np.array(jitter)
+                mujoco.mj_forward(self.model, self.data)
+                return
+
+        # If no free joint found, we might be trying to jitter a fixed body or one with specific joints.
+        # Fallback to legacy behavior if it's the first body (usually the target)
+        if body_id == 1:
+            self.data.qpos[0:3] += np.array(jitter)
+            mujoco.mj_forward(self.model, self.data)
 
     def close(self) -> None:
         """Close MuJoCo backend and release resources."""

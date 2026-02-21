@@ -229,7 +229,7 @@ def to_mjcf(
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     builder = get_simulation_builder(
-        output_dir=renders_dir, backend_type=SimulatorBackendType.GENESIS
+        output_dir=renders_dir, backend_type=SimulatorBackendType.MUJOCO
     )
     scene_path = builder.build_from_assembly(component, smoke_test_mode=smoke_test_mode)
     return scene_path.read_text()
@@ -290,6 +290,45 @@ def calculate_assembly_totals(
                 except Exception as e:
                     logger.error(
                         "failed_to_price_psu",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
+                from shared.cots.parts.electronics import ElectronicRelay
+
+                try:
+                    relay = ElectronicRelay(size=comp.cots_part_id)
+                    total_cost += getattr(relay, "price", 0.0)
+                    total_weight += getattr(relay, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_relay",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
+                from shared.cots.parts.electronics import Switch
+
+                try:
+                    sw = Switch(size=comp.cots_part_id)
+                    total_cost += getattr(sw, "price", 0.0)
+                    total_weight += getattr(sw, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_switch",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
+            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
+                from shared.cots.parts.electronics import Connector
+
+                try:
+                    conn = Connector(size=comp.cots_part_id)
+                    total_cost += getattr(conn, "price", 0.0)
+                    total_weight += getattr(conn, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_connector",
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
@@ -485,6 +524,15 @@ def simulate(
                         )
                     elif part.control.mode == MotorControlMode.CONSTANT:
                         control_inputs[part.part_name] = part.control.speed
+                    elif part.control.mode == MotorControlMode.ON_OFF:
+                        # T019: Handle ON_OFF mode using frequency toggle
+                        freq = part.control.frequency or 1.0
+                        period = 1.0 / freq
+                        dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control, per=period: (
+                                p.speed if (t % per) < (per / 2) else 0.0
+                            )
+                        )
         except Exception as e:
             logger.warning("failed_to_load_controllers", error=str(e))
 
