@@ -6,7 +6,7 @@ Implements runtime randomization verification per architecture spec:
 - Use MuJoCo's support for parallel simulations
 """
 
-import logging
+import structlog
 from typing import Any
 
 import numpy as np
@@ -19,7 +19,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop, SimulationMetrics
 from worker_heavy.utils.controllers import sinusoidal
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Default number of verification runs
 DEFAULT_NUM_RUNS = 5
@@ -28,7 +28,7 @@ DEFAULT_NUM_RUNS = 5
 class MultiRunResult(BaseModel):
     """Result of multi-run verification."""
 
-    num_runs: int
+    num_simulations: int
     success_count: int
     success_rate: float
     is_consistent: bool  # True if all runs agree on success/fail
@@ -43,7 +43,7 @@ def verify_with_jitter(
     objectives: ObjectivesYaml | None = None,
     moving_parts: list[AssemblyPartConfig] | None = None,
     jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-    num_runs: int = DEFAULT_NUM_RUNS,
+    num_simulations: int = DEFAULT_NUM_RUNS,
     duration: float = 10.0,
     seed: int = 42,
     backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
@@ -103,7 +103,7 @@ def verify_with_jitter(
             logger.warning("failed_to_load_controllers_verification", error=str(e))
 
 
-    for run_idx in range(num_runs):
+    for run_idx in range(num_simulations):
         # Create fresh simulation state for each run
         loop = SimulationLoop(
             scene_path,
@@ -145,7 +145,7 @@ def verify_with_jitter(
 
     # Aggregate results
     success_count = sum(1 for r in results if r.success)
-    success_rate = success_count / num_runs if num_runs > 0 else 0.0
+    success_rate = success_count / num_simulations if num_simulations > 0 else 0.0
 
     # Check consistency: all runs should agree
     outcomes = [r.success for r in results]
@@ -157,7 +157,7 @@ def verify_with_jitter(
     )
 
     return MultiRunResult(
-        num_runs=num_runs,
+        num_simulations=num_simulations,
         success_count=success_count,
         success_rate=success_rate,
         is_consistent=is_consistent,

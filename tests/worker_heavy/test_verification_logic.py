@@ -29,10 +29,10 @@ def test_verify_with_jitter_logic(mock_loop_cls):
 
     result = verify_with_jitter(
         scene_path="test.xml",
-        num_runs=5
+        num_simulations=5
     )
 
-    assert result.num_runs == 5
+    assert result.num_simulations == 5
     assert result.success_count == 5
     assert result.success_rate == 1.0
     assert result.is_consistent is True

@@ -187,7 +187,7 @@ async def run_verification_task(
     backend_type,
     x_session_id,
     particle_budget,
-    num_runs,
+    num_simulations,
     jitter_range,
 ):
     """Helper to run verification in executor."""
@@ -205,7 +205,7 @@ async def run_verification_task(
         backend_type,
         x_session_id,
         particle_budget,
-        num_runs,
+        num_simulations,
         jitter_range,
     )
 
@@ -305,7 +305,7 @@ async def api_verify(
                     backend_type,
                     x_session_id,
                     request.particle_budget,
-                    request.num_runs,
+                    request.num_simulations,
                     request.jitter_range,
                 )
 

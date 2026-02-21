@@ -742,7 +742,7 @@ def verify(
     smoke_test_mode: bool = False,
     backend: SimulatorBackendType | None = None,
     session_id: str | None = None,
-    num_runs: int = 5,
+    num_simulations: int = 5,
     jitter_range: list[float] | None = None,
 ) -> dict:
     """Run robustness verification using multiple simulations with jitter."""
@@ -754,7 +754,7 @@ def verify(
         particle_budget=particle_budget,
         backend=backend,
         session_id=session_id,
-        num_runs=num_runs,
+        num_simulations=num_simulations,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     renders_dir = working_dir / "renders"
@@ -807,7 +807,7 @@ def verify(
         objectives=objectives,
         moving_parts=moving_parts,
         jitter_range=jitter,
-        num_runs=num_runs,
+        num_simulations=num_simulations,
         duration=0.5 if smoke_test_mode else 10.0,
         backend_type=backend_type,
         smoke_test_mode=smoke_test_mode,
@@ -827,7 +827,7 @@ def verify_subprocess(
     backend: Any | None = None,
     session_id: str | None = None,
     particle_budget: int | None = None,
-    num_runs: int = 5,
+    num_simulations: int = 5,
     jitter_range: list[float] | None = None,
 ) -> dict:
     """Serializable entry point for verification."""
@@ -849,6 +849,6 @@ def verify_subprocess(
         backend=backend,
         session_id=session_id,
         particle_budget=particle_budget,
-        num_runs=num_runs,
+        num_simulations=num_simulations,
         jitter_range=jitter_range,
     )

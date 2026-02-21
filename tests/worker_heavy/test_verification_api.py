@@ -12,7 +12,7 @@ client = TestClient(app)
 @patch("worker_heavy.api.routes.run_verification_task")
 def test_benchmark_verify_success(mock_verify, mock_get_router):
     mock_verify.return_value = {
-        "num_runs": 5,
+        "num_simulations": 5,
         "success_count": 5,
         "success_rate": 1.0,
         "is_consistent": True,
@@ -28,7 +28,7 @@ def test_benchmark_verify_success(mock_verify, mock_get_router):
         "/benchmark/verify",
         json={
             "script_path": "impl.py",
-            "num_runs": 5,
+            "num_simulations": 5,
             "jitter_range": [0.002, 0.002, 0.001]
         },
         headers={"X-Session-ID": "test-session"}
