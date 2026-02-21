@@ -28,7 +28,7 @@ class PlannerSignature(dspy.Signature):
     skills = dspy.InputField()
     steer_context = dspy.InputField()
     feedback = dspy.InputField()
-    summary = dspy.OutputField(desc="A summary of the plan created")
+    summary = dspy.OutputField(desc="A summary of the plan created. Include 'SEARCH_COTS' if you need to perform a detailed search for parts.")
 
 
 @type_check
@@ -98,11 +98,15 @@ class PlannerNode(BaseNode):
         )
 
         summary = getattr(prediction, "summary", "No summary provided.")
+        status = AgentStatus.EXECUTING
+        if "SEARCH_COTS" in summary:
+            status = AgentStatus.COTS_SEARCHING
+
         return state.model_copy(
             update={
                 "plan": artifacts.get("plan.md", ""),
                 "todo": artifacts.get("todo.md", ""),
-                "status": AgentStatus.EXECUTING,
+                "status": status,
                 "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
                 "messages": state.messages
                 + [AIMessage(content=f"Plan summary: {summary}")],

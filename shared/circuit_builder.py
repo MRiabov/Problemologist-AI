@@ -85,11 +85,37 @@ def build_circuit_from_section(
             if term == "0" or (comp_id == "supply" and term == "0"):
                 return gnd_node
 
-            # Normalization for motor terminals in this builder
-            if term == "a":
-                term = "+"
-            if term == "b":
-                term = "-"
+            # Normalize term
+            term = str(term).lower()
+
+            # Search component type for context-aware normalization FIRST
+            for comp in section.components:
+                if comp.component_id == comp_id:
+                    if comp.type == ElectronicComponentType.MOTOR:
+                        if term in ["p1", "1", "a", "pos", "positive", "+"]:
+                            term = "+"
+                        elif term in ["p2", "2", "b", "neg", "negative", "-"]:
+                            term = "-"
+                    elif comp.type in [
+                        ElectronicComponentType.SWITCH,
+                        ElectronicComponentType.RELAY,
+                    ]:
+                        if term in ["p1", "1", "in"]:
+                            term = "in"
+                        elif term in ["p2", "2", "out"]:
+                            term = "out"
+                    elif comp.type == ElectronicComponentType.POWER_SUPPLY:
+                        if term in ["p1", "1", "v+", "plus"]:
+                            term = "v+"
+                        elif term in ["p2", "2", "0", "gnd", "minus"]:
+                            term = "0"
+                    break
+            else:
+                # General fallback normalization if component not found or other type
+                if term in ["a", "p1", "1", "pos", "positive"]:
+                    term = "+"
+                elif term in ["b", "p2", "2", "neg", "negative"]:
+                    term = "-"
 
             return f"{comp_id}_{term}"
 
