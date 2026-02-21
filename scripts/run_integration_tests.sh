@@ -69,7 +69,8 @@ fi
 
 # Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
-bash scripts/ensure_docker_vfs.sh
+# We source this to pick up environment variables (MUJOCO_GL, etc.) set by the script.
+source scripts/ensure_docker_vfs.sh
 
 # Ensure ngspice is installed for electronics validation
 bash scripts/ensure_ngspice.sh
@@ -123,6 +124,9 @@ sleep 5
 
 echo "Running migrations..."
 uv run alembic upgrade head
+
+echo "Initializing COTS database..."
+uv run python -m shared.cots.indexer
 
 echo "Starting Application Servers (Controller, Worker, Temporal Worker)..."
 

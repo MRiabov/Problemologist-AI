@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 import structlog
+from langchain_core.callbacks import AsyncCallbackHandler
 from pydantic import BaseModel
 from opentelemetry import trace
 
@@ -29,7 +30,7 @@ class TraceBroadcast(BaseModel):
     langfuse_trace_id: str | None
 
 
-class DatabaseCallbackHandler:
+class DatabaseCallbackHandler(AsyncCallbackHandler):
     """Standalone recorder that stores traces in the database."""
 
     def __init__(

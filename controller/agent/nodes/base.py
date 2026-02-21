@@ -187,6 +187,7 @@ class BaseNode:
         validate_files: list[str],
         node_type: str,
         max_retries: int = 3,
+        state: dict[str, Any] | None = None,
     ) -> tuple[Any, dict[str, Any], str]:
         """
         Reusable execution loop for DSPy nodes with retries and validation.
