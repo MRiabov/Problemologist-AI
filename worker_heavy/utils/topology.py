@@ -11,6 +11,8 @@ logger = structlog.get_logger(__name__)
 def analyze_component(
     component: Part | Compound,
     output_dir: Path,
+    method: ManufacturingMethod | None = None,
+    quantity: int = 1,
 ) -> WorkbenchResult:
     """
     Analyzes a component for manufacturability and cost.
@@ -19,18 +21,20 @@ def analyze_component(
     # Load default manufacturing config
     config = load_config()
 
-    # Heuristic: try to get manufacturing method from component metadata
-    # Default to CNC if not specified
-    metadata = getattr(component, "metadata", None)
-    method_str = getattr(metadata, "manufacturing_method", "cnc")
-    try:
-        method = ManufacturingMethod(method_str.lower())
-    except ValueError:
-        logger.warning("invalid_manufacturing_method_in_metadata", method=method_str)
-        method = ManufacturingMethod.CNC
+    if method is None:
+        # Heuristic: try to get manufacturing method from component metadata
+        # Default to CNC if not specified
+        metadata = getattr(component, "metadata", None)
+        method_str = getattr(metadata, "manufacturing_method", "cnc")
+        try:
+            method = ManufacturingMethod(method_str.lower())
+        except ValueError:
+            logger.warning("invalid_manufacturing_method_in_metadata", method=method_str)
+            method = ManufacturingMethod.CNC
 
     return validate_and_price(
         component,
         method=method,
         config=config,
+        quantity=quantity,
     )
