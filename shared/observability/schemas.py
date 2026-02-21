@@ -57,6 +57,10 @@ class ObservabilityEventType(StrEnum):
     TOOL_RUN_COMMAND = "run_command_tool"
     TOOL_GIT_INIT = "git_init_tool"
     TOOL_GIT_COMMIT = "git_commit_tool"
+    TOOL_DELETE_FILE = "delete_file_tool"
+    TOOL_MOVE_FILE = "move_file_tool"
+    TOOL_COPY_FILE = "copy_file_tool"
+    TOOL_MKDIR = "mkdir_tool"
 
     # 20. Simulation instability
     SIMULATION_INSTABILITY = "simulation_instability"
@@ -262,6 +266,28 @@ class EditFileToolEvent(BaseEvent):
 class RunCommandToolEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.TOOL_RUN_COMMAND
     command: str
+
+
+class DeleteFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_DELETE_FILE
+    path: str
+
+
+class MoveFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_MOVE_FILE
+    source: str
+    destination: str
+
+
+class CopyFileToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_COPY_FILE
+    source: str
+    destination: str
+
+
+class MkdirToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_MKDIR
+    path: str
 
 
 class GitInitToolEvent(BaseEvent):

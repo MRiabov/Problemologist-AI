@@ -17,6 +17,7 @@ from fastapi import (
 from shared.enums import ResponseStatus
 from shared.workers.persistence import collect_and_cleanup_events
 from shared.workers.schema import (
+    CopyFileRequest,
     DeleteFileRequest,
     EditFileRequest,
     ExecuteRequest,
@@ -34,6 +35,8 @@ from shared.workers.schema import (
     LintRequest,
     LintResponse,
     ListFilesRequest,
+    MkdirRequest,
+    MoveFileRequest,
     ReadFileRequest,
     ReadFileResponse,
     StatusResponse,
@@ -267,6 +270,45 @@ async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router))
         raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.error("api_delete_failed", path=request.path, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@light_router.post("/fs/move", response_model=StatusResponse)
+async def move_file(request: MoveFileRequest, fs_router=Depends(get_router)):
+    """Move or rename a file or directory."""
+    try:
+        fs_router.move(request.source, request.destination)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except Exception as e:
+        logger.error("api_move_failed", source=request.source, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@light_router.post("/fs/copy", response_model=StatusResponse)
+async def copy_file(request: CopyFileRequest, fs_router=Depends(get_router)):
+    """Copy a file or directory."""
+    try:
+        fs_router.copy(request.source, request.destination)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except Exception as e:
+        logger.error("api_copy_failed", source=request.source, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@light_router.post("/fs/mkdir", response_model=StatusResponse)
+async def mkdir(request: MkdirRequest, fs_router=Depends(get_router)):
+    """Create a directory."""
+    try:
+        fs_router.mkdir(request.path)
+        return StatusResponse(status=ResponseStatus.SUCCESS)
+    except WritePermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except Exception as e:
+        logger.error("api_mkdir_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
