@@ -345,6 +345,14 @@ class EpisodeMetadata(BaseModel):
 # =============================================================================
 
 
+class ReviewResult(BaseModel):
+    """Structured output for the reviewer."""
+
+    decision: ReviewDecision
+    reason: str
+    required_fixes: list[str] = Field(default_factory=list)
+
+
 class ReviewFrontmatter(BaseModel):
     """
     YAML frontmatter schema for review documents.

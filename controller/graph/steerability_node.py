@@ -3,7 +3,6 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage
 
-from controller.agent.benchmark.state import BenchmarkGeneratorState
 from controller.agent.state import AgentStatus, AgentState
 from controller.services.steerability.service import steerability_service
 
@@ -14,7 +13,7 @@ def get_session_id(state: Any) -> str | None:
     """Extract session_id from either AgentState or BenchmarkGeneratorState."""
     if isinstance(state, AgentState):
         return state.session_id
-    if isinstance(state, BenchmarkGeneratorState):
+    if type(state).__name__ == "BenchmarkGeneratorState":
         return str(state.session.session_id)
 
     if isinstance(state, dict):
