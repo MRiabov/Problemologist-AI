@@ -3,6 +3,7 @@ import logging
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit import *
 
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import ElectronicsSection
 
 logger = logging.getLogger(__name__)
@@ -34,10 +35,10 @@ def build_circuit_from_section(
 
     # 2. Add Components
     for comp in section.components:
-        if comp.type == "power_supply":
+        if comp.type == ElectronicComponentType.POWER_SUPPLY:
             continue
 
-        if comp.type == "motor":
+        if comp.type == ElectronicComponentType.MOTOR:
             # Model motor as a resistive load for DC analysis
             # Use provided specs or defaults if missing
             v_rated = comp.rated_voltage or section.power_supply.voltage_dc
@@ -54,7 +55,10 @@ def build_circuit_from_section(
                 resistance @ u_Ohm,
             )
 
-        elif comp.type == "switch" or comp.type == "relay":
+        elif (
+            comp.type == ElectronicComponentType.SWITCH
+            or comp.type == ElectronicComponentType.RELAY
+        ):
             # Model as a very low resistance when closed, or high when open.
             # Default to CLOSED (0.01 Ohm) if not specified in switch_states.
             is_closed = switch_states.get(comp.component_id, True)
@@ -65,6 +69,12 @@ def build_circuit_from_section(
                 f"{comp.component_id}_out",
                 resistance @ u_Ohm,
             )
+
+        elif comp.type == ElectronicComponentType.CONNECTOR:
+            # Connectors are treated as passive junction points (nodes).
+            # No explicit resistance is modeled between pins unless we knew the internal schematic.
+            # Wires connect to "connector_id_pin" nodes, which implicitly joins them.
+            pass
 
     # 3. Add Wiring
     for wire in section.wiring:
