@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 import dspy
 
@@ -59,23 +58,45 @@ class COTSSearchSignature(dspy.Signature):
     You are a COTS (Commercial Off-The-Shelf) assembly assistant.
     Your goal is to find the best components for a given design requirement.
     Use the search_cots_catalog tool to find parts.
-    If you find multiple candidates, recommend the best fit based on the user's constraints (weight, cost, size).
+    If you find multiple candidates, recommend the best fit based on constraints.
     """
 
     requirement = dspy.InputField(desc="User design requirement")
     recommendation = dspy.OutputField(desc="Recommended parts with reasoning")
 
 
-def create_cots_search_agent(model_name: str):
+class DSPyLangGraphWrapper:
+    """Wrapper to make a DSPy module look like a LangGraph for ainvoke."""
+
+    def __init__(self, program: dspy.Module):
+        self.program = program
+
+    async def ainvoke(self, input_data: dict, _config: dict | None = None) -> dict:
+        """Compatibility layer for execute_agent_task."""
+        # Extract the task/message from input_data
+        messages = input_data.get("messages", [])
+        if messages:
+            task = messages[-1].content
+        else:
+            task = input_data.get("task", "Search for a COTS part.")
+
+        # Run the DSPy program. COTSSearchSignature uses 'requirement'.
+        result = self.program(requirement=task)
+
+        # Return in a format expected by tasks.py
+        from langchain_core.messages import AIMessage
+
+        # Access recommendation field safely
+        content = (
+            result.recommendation if hasattr(result, "recommendation") else str(result)
+        )
+        return {"messages": [AIMessage(content=content)]}
+
+
+def create_cots_search_agent(_model_name: str):
     """
     Create a specialized agent for part lookup using DSPy.
-    Note: Returns a DSPy module, which might need wrapping if used in a LangGraph.
+    Returns a wrapped DSPy module for LangGraph compatibility.
     """
-    # WP11: Migrated from LangGraph ReAct to DSPy CodeAct
-    # Since it was used in controller/graph/agent.py which expects a LangGraph,
-    # we might need to wrap it if we want full backward compatibility.
-    # However, the user wants native DSPy integration.
-
-    # For now, let's just make it a simple CodeAct module.
     program = dspy.CodeAct(COTSSearchSignature, tools=[search_cots_catalog])
-    return program
+    return DSPyLangGraphWrapper(program)

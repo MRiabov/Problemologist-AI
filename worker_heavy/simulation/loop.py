@@ -385,10 +385,16 @@ class SimulationLoop:
             gated_controls[name] = val
         self.backend.apply_control(gated_controls)
 
-        # WP2: Use backend-specific dt to avoid over-simulating in smoke test mode
-        dt = SIMULATION_STEP_S
-        if self.smoke_test_mode and self.backend_type == SimulatorBackendType.GENESIS:
+        # WP2: Use backend-specific dt to avoid over-simulating
+        # If backend has a preferred timestep (e.g. from MJCF or smoke mode), use it
+        if hasattr(self.backend, "timestep"):
+            dt = self.backend.timestep
+        elif hasattr(self.backend, "model") and hasattr(self.backend.model, "opt"):
+            dt = self.backend.model.opt.timestep
+        elif self.smoke_test_mode and self.backend_type == SimulatorBackendType.GENESIS:
             dt = 0.05
+        else:
+            dt = SIMULATION_STEP_S
 
         steps = int(duration / dt)
 
@@ -464,6 +470,48 @@ class SimulationLoop:
                 )
 
                 # 4. Check Success/Failure conditions
+                # WP2: Check for part breakage (INT-103) - moved here to prioritize over out-of-bounds
+                if self.objectives and self.objectives.physics.fem_enabled:
+                    broken_part = self._check_part_breakage()
+                    if broken_part:
+                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        break
+
+                # WP2: Check Stress Objectives (INT-107)
+                if self.objectives and self.objectives.objectives:
+                    for so in self.objectives.objectives.stress_objectives:
+                        summary = next(
+                            (
+                                s
+                                for s in self.stress_summaries
+                                if s.part_label == so.part_label
+                            ),
+                            None,
+                        )
+                        if not summary:
+                            # Fallback: get summary directly if not cached
+                            summaries = self.backend.get_stress_summaries()
+                            summary = next(
+                                (s for s in summaries if s.part_label == so.part_label),
+                                None,
+                            )
+
+                        if summary and summary.max_von_mises_pa > (
+                            so.max_von_mises_mpa * 1e6
+                        ):
+                            self.fail_reason = (
+                                SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                            )
+                            logger.info(
+                                "stress_objective_exceeded",
+                                part=so.part_label,
+                                stress=summary.max_von_mises_pa,
+                                limit=so.max_von_mises_mpa * 1e6,
+                            )
+                            break
+                    if self.fail_reason:
+                        break
+
                 # T018: Check all active bodies for out-of-bounds, not just the target
                 for bname in self.body_names:
                     bstate = self.backend.get_body_state(bname)
@@ -473,17 +521,58 @@ class SimulationLoop:
                         bstate.vel,
                     )
                     if fail_reason:
+                        if fail_reason == SimulationFailureMode.OUT_OF_BOUNDS:
+                            logger.warning(
+                                "out_of_bounds_detected",
+                                body=bname,
+                                pos=bstate.pos,
+                                bounds=self.objectives.simulation_bounds.model_dump()
+                                if self.objectives and self.objectives.simulation_bounds
+                                else None,
+                            )
                         self.fail_reason = fail_reason
                         break
                 if self.fail_reason:
                     break
 
-                if not res.success:
-                    self.fail_reason = (
-                        res.failure_reason
-                        if isinstance(res.failure_reason, SimulationFailureMode)
-                        else SimulationFailureMode.PHYSICS_INSTABILITY
-                    )
+                if not res.success and not self.fail_reason:
+                    if isinstance(res.failure_reason, SimulationFailureMode):
+                        self.fail_reason = res.failure_reason
+                    elif isinstance(res.failure_reason, str):
+                        if res.failure_reason.startswith("PART_BREAKAGE"):
+                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
+                            self.fail_reason = (
+                                SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
+                            )
+                        else:
+                            # Re-check breakage as generic instability might be a side effect
+                            if self.objectives and self.objectives.physics.fem_enabled:
+                                if self._check_part_breakage():
+                                    self.fail_reason = (
+                                        SimulationFailureMode.PART_BREAKAGE
+                                    )
+                                else:
+                                    self.fail_reason = (
+                                        SimulationFailureMode.PHYSICS_INSTABILITY
+                                    )
+                            else:
+                                self.fail_reason = (
+                                    SimulationFailureMode.PHYSICS_INSTABILITY
+                                )
+                    else:
+                        # Re-check breakage
+                        if self.objectives and self.objectives.physics.fem_enabled:
+                            if self._check_part_breakage():
+                                self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                            else:
+                                self.fail_reason = (
+                                    SimulationFailureMode.PHYSICS_INSTABILITY
+                                )
+                        else:
+                            self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+                    break
+                elif not res.success:
                     break
 
                 # Check Forbidden Zones (T018 optimization: skip if no zones)
@@ -534,14 +623,6 @@ class SimulationLoop:
                 # Check Motor Overload
                 if self._check_motor_overload(dt * check_interval):
                     self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
-                    break
-
-            # WP2: Check for part breakage (INT-103)
-            if self.objectives and self.objectives.physics.fem_enabled:
-                broken_part = self._check_part_breakage()
-                if broken_part:
-                    self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                    # Return immediately from step loop on breakage
                     break
 
             # 7. Check Wire Failure (T015) - Outside FEM block (T019)

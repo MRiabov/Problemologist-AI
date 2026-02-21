@@ -78,13 +78,13 @@ class ReviewerNode(BaseNode):
         validate_files = ["simulation_result.json", "assembly_definition.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=ReviewerSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_engineer_tools,
-            validate_files=validate_files,
-            node_type="reviewer",
+            dspy.CodeAct,
+            ReviewerSignature,
+            state,
+            inputs,
+            get_engineer_tools,
+            validate_files,
+            "reviewer",
         )
 
         if not prediction:

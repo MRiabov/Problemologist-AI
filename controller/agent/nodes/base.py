@@ -16,7 +16,7 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
 
 if TYPE_CHECKING:
-    pass
+    from controller.agent.state import AgentState
 
 logger = structlog.get_logger(__name__)
 
@@ -182,6 +182,7 @@ class BaseNode:
         self,
         program_cls: type[dspy.Module],
         signature_cls: type[dspy.Signature],
+        state: "AgentState",
         inputs: dict[str, Any],
         tool_factory: Callable,
         validate_files: list[str],
@@ -222,9 +223,20 @@ class BaseNode:
         prediction = None
         artifacts = {}
 
+        # Prepare explicit DB logger for UI events
+        db_callback = None
+        if state.episode_id:
+            db_callback = DatabaseCallbackHandler(episode_id=state.episode_id)
+
         try:
             while retry_count < max_retries:
                 try:
+                    # WP10: Explicitly record node start for UI
+                    if db_callback:
+                        await db_callback.record_node_start(
+                            node_type, input_data=str(inputs.get("task", ""))
+                        )
+
                     with dspy.settings.context(lm=self.ctx.dspy_lm):
                         logger.info(
                             f"{node_type}_dspy_invoke_start",
@@ -248,6 +260,12 @@ class BaseNode:
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
                             session_id=self.ctx.session_id,
+                        )
+
+                    # WP10: Explicitly record node end for UI
+                    if db_callback:
+                        await db_callback.record_node_end(
+                            node_type, output_data=str(prediction)
                         )
 
                     results = await asyncio.gather(

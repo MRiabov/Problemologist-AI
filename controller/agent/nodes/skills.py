@@ -132,14 +132,16 @@ class SkillsNode(BaseNode):
             "journal": state.journal,
         }
 
+        validate_files = []
+
         prediction, _, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=SkillsSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_skills_tools,
-            validate_files=[],
-            node_type="skill_learner",
+            dspy.CodeAct,
+            SkillsSignature,
+            state,
+            inputs,
+            get_skills_tools,
+            validate_files,
+            "skill_learner",
         )
 
         if not prediction:

@@ -94,13 +94,13 @@ class ElectronicsEngineerNode(BaseNode):
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=ElectronicsSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_engineer_tools,
-            validate_files=validate_files,
-            node_type="electronics_engineer",
+            dspy.CodeAct,
+            ElectronicsSignature,
+            state,
+            inputs,
+            get_engineer_tools,
+            validate_files,
+            "electronics_engineer",
         )
 
         if not prediction:

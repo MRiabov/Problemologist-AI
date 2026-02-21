@@ -30,7 +30,7 @@ class TraceBroadcast(BaseModel):
 
 
 class DatabaseCallbackHandler:
-    """Standalone recorder that stores traces in the database."""
+    """Standalone recorder that stores explicit traces in the database."""
 
     def __init__(
         self,
@@ -40,35 +40,26 @@ class DatabaseCallbackHandler:
             try:
                 self.episode_id = uuid.UUID(episode_id)
             except ValueError:
-                # Fallback: create a deterministic UUID from the string
-                # This ensures we don't crash and maintain consistency for the same string
                 self.episode_id = uuid.uuid5(uuid.NAMESPACE_DNS, episode_id)
         else:
             self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
 
-    async def _broadcast_trace(self, trace: Trace) -> None:
+    async def _broadcast_trace(self, trace_obj: Trace) -> None:
         """Helper to broadcast a new trace."""
-        created_at = trace.created_at or datetime.datetime.now(datetime.UTC)
+        created_at = trace_obj.created_at or datetime.datetime.now(datetime.UTC)
         payload = TraceBroadcast(
-            id=trace.id,
+            id=trace_obj.id,
             created_at=created_at.isoformat(),
-            trace_type=trace.trace_type,
-            name=trace.name,
-            content=trace.content,
-            metadata=trace.metadata_vars,
-            langfuse_trace_id=trace.langfuse_trace_id,
+            trace_type=trace_obj.trace_type,
+            name=trace_obj.name,
+            content=trace_obj.content,
+            metadata=trace_obj.metadata_vars,
+            langfuse_trace_id=trace_obj.langfuse_trace_id,
         )
         await self.broadcaster.broadcast(
             self.episode_id, payload.model_dump(mode="json")
-        )
-
-    async def on_chain_start(self, name: str | None) -> None:
-        logger.info(
-            "chain_start",
-            name=name,
-            episode_id=str(self.episode_id),
         )
 
     def _get_langfuse_id(self) -> str | None:
@@ -81,131 +72,49 @@ class DatabaseCallbackHandler:
             pass
         return None
 
-    async def on_llm_start(self, name: str | None, prompt: str) -> None:
-        logger.info(
-            "llm_start",
-            model=name,
-            episode_id=str(self.episode_id),
-        )
-
+    async def record_node_start(self, node_name: str, input_data: str = "") -> None:
+        """Explicitly log the start of an agent node (e.g., Planner, Coder)."""
+        logger.info("node_start", name=node_name, episode_id=str(self.episode_id))
         try:
             async with self.session_factory() as db:
-                trace = Trace(
+                trace_obj = Trace(
                     episode_id=self.episode_id,
-                    trace_type=TraceType.LLM_START,
-                    name=name,
-                    content=prompt,
+                    trace_type=TraceType.LOG,  # Use log for transitions
+                    name=node_name,
+                    content=f"Starting task phase: {node_name}. Input: {input_data[:100]}...",
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
-                db.add(trace)
+                db.add(trace_obj)
                 await db.commit()
-                await db.refresh(trace)
-                await self._broadcast_trace(trace)
+                await db.refresh(trace_obj)
+                await self._broadcast_trace(trace_obj)
         except Exception as e:
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_tool_start(self, name: str | None, input_str: str) -> None:
-        # Try to ensure valid JSON content
-        clean_content = input_str
-        if (
-            input_str
-            and not input_str.startswith("{")
-            and not input_str.startswith("[")
-        ):
-            # If it looks like a Python dict string, try to convert to JSON
-            try:
-                data = ast.literal_eval(input_str)
-                if isinstance(data, (dict, list)):
-                    clean_content = json.dumps(data)
-            except Exception:
-                pass
-
-        logger.info(
-            "tool_start",
-            name=name,
-            input=clean_content,
-            episode_id=str(self.episode_id),
-        )
-
+    async def record_node_end(self, node_name: str, output_data: str = "") -> None:
+        """Explicitly log the end of an agent node."""
+        logger.info("node_end", name=node_name, episode_id=str(self.episode_id))
         try:
             async with self.session_factory() as db:
-                trace = Trace(
+                trace_obj = Trace(
                     episode_id=self.episode_id,
-                    trace_type=TraceType.TOOL_START,
-                    name=name,
-                    content=clean_content,
+                    trace_type=TraceType.LOG,
+                    name=node_name,
+                    content=f"Completed task phase: {node_name}. Result: {output_data[:100]}...",
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
-                db.add(trace)
+                db.add(trace_obj)
                 await db.commit()
-                await db.refresh(trace)
-                await self._broadcast_trace(trace)
-        except Exception as e:
-            # Silently fail or log a warning if DB is unavailable/constraint fails
-            # This is critical for standalone evals or transient issues
-            logger.warning(
-                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
-            )
-
-    async def on_tool_end(self, output: Any) -> None:
-        # Ensure output is JSON serializable
-        if isinstance(output, (dict, list)):
-            content = json.dumps(output)
-        elif isinstance(output, (str, int, float, bool, type(None))):
-            content = str(output) if output is not None else "null"
-        else:
-            # Fallback for complex objects (like Pydantic models)
-            try:
-                if hasattr(output, "model_dump"):
-                    content = json.dumps(output.model_dump())
-                elif hasattr(output, "dict"):
-                    content = json.dumps(output.dict())
-                else:
-                    content = str(output)
-            except Exception:
-                content = str(output)
-
-        logger.info("tool_end", output=content, episode_id=str(self.episode_id))
-
-        try:
-            async with self.session_factory() as db:
-                trace = Trace(
-                    episode_id=self.episode_id,
-                    trace_type=TraceType.TOOL_END,
-                    content=content,
-                    langfuse_trace_id=self._get_langfuse_id(),
-                )
-                db.add(trace)
-                await db.commit()
-                await db.refresh(trace)
-                await self._broadcast_trace(trace)
+                await db.refresh(trace_obj)
+                await self._broadcast_trace(trace_obj)
         except Exception as e:
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def on_llm_end(self, response_text: str) -> None:
-        logger.info("llm_end", content=response_text, episode_id=str(self.episode_id))
-
-        try:
-            async with self.session_factory() as db:
-                trace = Trace(
-                    episode_id=self.episode_id,
-                    trace_type=TraceType.LLM_END,
-                    content=response_text,
-                    langfuse_trace_id=self._get_langfuse_id(),
-                )
-                db.add(trace)
-                await db.commit()
-                await db.refresh(trace)
-                await self._broadcast_trace(trace)
-        except Exception as e:
-            logger.warning(
-                "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
-            )
-
+    # Keep generic event recording
     async def record_events(self, events: list[dict[str, Any]]) -> None:
         """Record domain-specific events in the database."""
         if not events:
@@ -221,7 +130,7 @@ class DatabaseCallbackHandler:
                         else str(data)
                     )
 
-                    trace = Trace(
+                    trace_obj = Trace(
                         episode_id=self.episode_id,
                         trace_type=TraceType.EVENT,
                         name=event_data.get("event_type", "generic_event"),
@@ -229,16 +138,10 @@ class DatabaseCallbackHandler:
                         metadata_vars=event_data,
                         langfuse_trace_id=self._get_langfuse_id(),
                     )
-                    db.add(trace)
+                    db.add(trace_obj)
 
                 await db.commit()
         except Exception as e:
             logger.warning(
                 "database_events_failed", error=str(e), episode_id=str(self.episode_id)
             )
-            # We don't necessarily need to broadcast every event individually
-            # if there are many, but for now we do it for consistency.
-            # However, _broadcast_trace expects a Trace object with an ID.
-            # Since we added many, we might need to refresh them.
-            # To keep it simple, I'll just broadcast them if it doesn't hurt.
-            # Actually, let's skip broadcasting individual events for now to avoid flooding the UI.

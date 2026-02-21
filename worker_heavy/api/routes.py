@@ -126,10 +126,12 @@ def _init_genesis_worker():
     try:
         import genesis as gs
         import torch
+        import time
 
         # Basic init
         has_gpu = torch.cuda.is_available()
         gs.init(backend=gs.gpu if has_gpu else gs.cpu, logging_level="warning")
+        time.sleep(1.0)  # Give it a second to stabilize
 
         # Build a tiny scene to trigger kernel compilation
         scene = gs.Scene(show_viewer=False)

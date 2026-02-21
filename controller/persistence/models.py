@@ -55,7 +55,6 @@ class Episode(Base):
     status: Mapped[EpisodeStatus] = mapped_column(
         SQLEnum(EpisodeStatus),
         default=EpisodeStatus.RUNNING,
-        insert_default=EpisodeStatus.RUNNING,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

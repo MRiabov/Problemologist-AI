@@ -133,8 +133,8 @@ async def execute_agent_task(
                 await db.refresh(initial_trace)
                 await db_callback._broadcast_trace(initial_trace)
 
-                # Prepare callbacks for agent run
-                callbacks = [db_callback]
+                # Prepare callbacks list (only langfuse if present, since DB callback is now explicit)
+                callbacks = []
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
 
@@ -146,6 +146,7 @@ async def execute_agent_task(
                     initial_input = {
                         "task": task,
                         "session_id": session_id,
+                        "episode_id": str(episode_id),
                         "messages": [HumanMessage(content=task)],
                     }
                 elif agent_name.startswith("benchmark"):
@@ -170,11 +171,13 @@ async def execute_agent_task(
                         "messages": [HumanMessage(content=task)],
                         "current_script": "",
                         "review_round": 0,
+                        "episode_id": str(episode_id),
                     }
                 else:
                     initial_input = {
                         "messages": [HumanMessage(content=task)],
                         "session_id": session_id,
+                        "episode_id": str(episode_id),
                     }
 
                 # Run the agent with tracing
@@ -187,7 +190,10 @@ async def execute_agent_task(
                     initial_input,
                     config={
                         "callbacks": callbacks,
-                        "metadata": {"episode_id": str(episode_id)},
+                        "metadata": {
+                            "episode_id": str(episode_id),
+                            "langfuse_trace_id": trace_id,
+                        },
                         "run_name": agent_name,
                         "configurable": {"thread_id": thread_id},
                     },
@@ -212,7 +218,8 @@ async def execute_agent_task(
                 )
                 db.add(final_trace)
 
-                # Also add a dedicated LLM_END trace for the full final response to ensure it shows in chat
+                # Also add a dedicated LLM_END trace for the full final response
+                # to ensure it shows in chat
                 final_llm_trace = Trace(
                     episode_id=episode_id,
                     trace_type=TraceType.LLM_END,
@@ -225,7 +232,10 @@ async def execute_agent_task(
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
                     episode.status = EpisodeStatus.COMPLETED
-                    episode.plan = f"Agent completed task: {task}\n\nResult: {final_output[:500]}..."
+                    episode.plan = (
+                        f"Agent completed task: {task}\n\n"
+                        f"Result: {final_output[:500]}..."
+                    )
 
                 await db.commit()
                 # Broadcast final message
@@ -252,8 +262,7 @@ async def execute_agent_task(
 
                     async def sync_dir(dir_path: str):
                         try:
-                            # Use new session for sync to avoid sharing with main loop if needed,
-                            # but here we are at the end so it's fine.
+                            # Use new session for sync to avoid sharing with main loop
                             files = await client.list_files(dir_path)
                         except Exception as e:
                             logger.warning(
@@ -266,7 +275,7 @@ async def execute_agent_task(
                         for file_info in files:
                             path = file_info.path
                             if file_info.is_dir:
-                                # Recursively sync directories, but skip some obvious ones
+                                # Recursively sync directories
                                 if not any(
                                     path.lower().endswith(s)
                                     for s in ["__pycache__", ".git", ".venv", "renders"]
@@ -372,19 +381,7 @@ async def continue_agent_task(
                 )
                 return
 
-            # Helper to broadcast status
-            async def broadcast_status(status):
-                episode.status = status
-                await db.commit()
-                # Broadcast logic could be added here if not handled by db commit hooks or manually
-                # For now rely on polling or implement direct broadcast if manager is available
-                # But manager is in api.manager. We need to import it carefully to avoid circular deps if any.
-                # Actually manager is imported at top level.
-
             # Update status to RUNNING
-            # We don't change status immediately here because execute_agent_task didn't?
-            # actually execute_agent_task created episode as RUNNING.
-            # Here we might be resuming from COMPLETED or WAITING.
             if episode.status != EpisodeStatus.RUNNING:
                 episode.status = EpisodeStatus.RUNNING
                 await db.commit()
@@ -404,10 +401,6 @@ async def continue_agent_task(
 
                 # Check if agent name is stored, otherwise default check
                 agent_name = "engineer_coder"
-                if episode.skill_git_hash and "benchmark" in episode.task.lower():
-                    # Heuristic if not stored. Ideally store agent_name in episode.
-                    # For now assume engineer_coder unless we have metadata.
-                    pass
 
                 agent, langfuse_callback = create_agent_graph(
                     agent_name=agent_name,
@@ -418,7 +411,7 @@ async def continue_agent_task(
                 # Add trace for user message
                 user_trace = Trace(
                     episode_id=episode_id,
-                    trace_type=TraceType.LOG,  # Or maybe a specialized USER_MESSAGE type?
+                    trace_type=TraceType.LOG,
                     content=f"User message: {message}",
                     langfuse_trace_id=trace_id,
                     metadata_vars={
@@ -440,22 +433,26 @@ async def continue_agent_task(
                     callbacks.append(langfuse_callback)
 
                 # Invoke agent with new message
-                # We use the same thread_id to resume state
                 thread_id = str(episode_id)
 
-                # LangGraph state update: append message to 'messages' key
-                # Support steerability metadata in additional_kwargs (Story 2 & 4)
+                # Support steerability metadata in additional_kwargs
                 human_message = HumanMessage(
                     content=message,
                     additional_kwargs={"steerability": metadata} if metadata else {},
                 )
-                input_update = {"messages": [human_message]}
+                input_update = {
+                    "messages": [human_message],
+                    "episode_id": str(episode_id),
+                }
 
                 result = await agent.ainvoke(
                     input_update,
                     config={
                         "callbacks": callbacks,
-                        "metadata": {"episode_id": str(episode_id)},
+                        "metadata": {
+                            "episode_id": str(episode_id),
+                            "langfuse_trace_id": trace_id,
+                        },
                         "run_name": agent_name,
                         "configurable": {"thread_id": thread_id},
                     },
@@ -484,8 +481,6 @@ async def continue_agent_task(
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
                     episode.status = EpisodeStatus.COMPLETED
-                    # Append result to plan/journal?
-                    # For now just update status.
 
                 await db.commit()
                 await db_callback._broadcast_trace(final_trace)
