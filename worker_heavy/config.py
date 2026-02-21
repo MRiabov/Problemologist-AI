@@ -12,6 +12,8 @@ class WorkerSettings(BaseSettings):
 
     # Heavy worker doesn't strictly need skills sync but we keep it for consistency if needed
     skills_dir_override: str | None = Field(default=None, alias="SKILLS_DIR")
+    # FIXME: all git is unnecessary indeed.
+    smoke_test_mode: bool = Field(default=True, alias="SMOKE_TEST_MODE")
 
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")
     git_pat: str | None = Field(default=None, alias="GIT_PAT")

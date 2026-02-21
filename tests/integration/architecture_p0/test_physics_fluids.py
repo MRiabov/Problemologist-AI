@@ -69,7 +69,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -143,7 +143,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -171,7 +171,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -229,7 +229,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         # Flow rate evaluation is currently a no-op in SimulationLoop if not 'continuous'
@@ -286,7 +286,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()

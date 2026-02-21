@@ -403,6 +403,12 @@ def simulate(
         session_id=session_id,
     )
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
+    logger.info(
+        "DEBUG_simulate",
+        working_dir=str(working_dir),
+        exists=working_dir.exists(),
+        files=list(working_dir.iterdir()) if working_dir.exists() else [],
+    )
     renders_dir = working_dir / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
@@ -415,7 +421,17 @@ def simulate(
             try:
                 data = yaml.safe_load(content)
                 objectives = ObjectivesYaml(**data)
+                logger.info(
+                    "DEBUG_objectives_loaded",
+                    physics=objectives.physics.model_dump()
+                    if objectives.physics
+                    else None,
+                )
             except Exception as e:
+                import traceback
+
+                print(f"FAILED TO LOAD OBJECTIVES: {e}")
+                traceback.print_exc()
                 logger.error("failed_to_load_objectives", error=str(e))
 
     cost_est_path = working_dir / "assembly_definition.yaml"
