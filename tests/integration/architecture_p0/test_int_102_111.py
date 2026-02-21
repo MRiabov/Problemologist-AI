@@ -149,6 +149,7 @@ cnc:
       ultimate_stress_pa: 200
       compatibility: ["cnc"]
 """
+
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
@@ -174,6 +175,7 @@ from shared.workers.workbench_models import ManufacturingMethod
 def build():
     # Large box to ensure it interacts/stresses
     p = Box(10, 10, 1)
+    p = p.move(Pos(0, 0, 0.5))
     p.label = "test_part"
     p.metadata = PartMetadata(
         manufacturing_method=ManufacturingMethod.CNC, material_id="fragile_material"
@@ -274,10 +276,7 @@ def build():
 
         # For now, let's assume it runs.
         artifacts = data.get("artifacts") or {}
-        assert (
-            "stress_summaries" in artifacts
-            or "stress_summaries" in data
-        )
+        assert "stress_summaries" in artifacts or "stress_summaries" in data
         # Check specific field in result payload (SimulationResult schema)
         summaries = data.get("stress_summaries", [])
         if data["success"]:  # Only assert content if it didn't crash early
@@ -324,6 +323,7 @@ cnc:
       ultimate_stress_pa: 400e6
       compatibility: ["cnc"]
 """
+
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json={"path": "manufacturing_config.yaml", "content": custom_config},
@@ -336,12 +336,14 @@ from shared.models.schemas import PartMetadata
 from shared.workers.workbench_models import ManufacturingMethod
 def build():
     p = Box(1, 1, 1)
+    p = p.move(Pos(0, 0, 0.5))
     p.label = "weak_link"
     p.metadata = PartMetadata(
         manufacturing_method=ManufacturingMethod.CNC, material_id="strong_steel"
     )
     return p
 """
+
         await setup_fem_workspace(
             client, base_headers, objectives_content, script_content
         )

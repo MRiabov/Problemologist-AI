@@ -16,34 +16,30 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
-class PlannerSignature(dspy.Signature):
+class ElectronicsPlannerSignature(dspy.Signature):
     """
-    Planner node: Analyzes the task and creates plan.md and todo.md using tools.
-    You must use the provided tools to create 'plan.md' and 'todo.md' directly.
-    When done, use SUBMIT to provide a summary of your plan.
+    Electronics Planner node: Designs the electrical system and power budget.
+    You must use the provided tools to update 'plan.md' and 'todo.md' with electronics tasks.
+    When done, use SUBMIT to provide a summary of your electrical plan.
     """
 
     task = dspy.InputField()
     objectives = dspy.InputField()
     skills = dspy.InputField()
-    steer_context = dspy.InputField()
+    mechanical_plan = dspy.InputField()
     feedback = dspy.InputField()
-    summary = dspy.OutputField(desc="A summary of the plan created")
+    summary = dspy.OutputField(desc="A summary of the electrical plan created")
 
 
 @type_check
-class PlannerNode(BaseNode):
+class ElectronicsPlannerNode(BaseNode):
     """
-    Planner node: Analyzes the task and creates plan.md and todo.md using tools.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Electronics Planner node: Specialized electrical system planning.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
-        """Execute the planner node logic."""
-        # T006: Read skills
+        """Execute the electronics planner node logic."""
         skills_context = self._get_skills_context()
-        # WP04: Extract steerability context
-        steer_context = await self._get_steer_context(state.messages)
 
         # Read objectives for context
         objectives = "# No objectives.yaml found."
@@ -55,23 +51,23 @@ class PlannerNode(BaseNode):
             "task": state.task,
             "objectives": objectives,
             "skills": skills_context,
-            "steer_context": steer_context,
+            "mechanical_plan": state.plan,
             "feedback": (
                 state.feedback
                 if state.status == AgentStatus.PLAN_REJECTED
-                else "New planning. No rejection feedback."
+                else "New electronics planning. No rejection feedback."
             ),
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            dspy.CodeAct,
-            PlannerSignature,
-            state,
-            inputs,
-            get_engineer_tools,
-            validate_files,
-            "planner",
+            program_cls=dspy.CodeAct,
+            signature_cls=ElectronicsPlannerSignature,
+            state=state,
+            inputs=inputs,
+            tool_factory=get_engineer_tools,
+            validate_files=validate_files,
+            node_type="electronics_planner",
         )
 
         if not prediction:
@@ -84,7 +80,6 @@ class PlannerNode(BaseNode):
             )
 
         # Success
-
         await record_worker_events(
             episode_id=state.session_id,
             events=[
@@ -100,12 +95,13 @@ class PlannerNode(BaseNode):
         summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", ""),
-                "todo": artifacts.get("todo.md", ""),
-                "status": AgentStatus.EXECUTING,
-                "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
+                "plan": artifacts.get("plan.md", state.plan),
+                "todo": artifacts.get("todo.md", state.todo),
+                "journal": state.journal
+                + f"\n[Electronics Planner] {summary}"
+                + journal_entry,
                 "messages": state.messages
-                + [AIMessage(content=f"Plan summary: {summary}")],
+                + [AIMessage(content=f"Electronics Plan summary: {summary}")],
                 "turn_count": state.turn_count + 1,
             }
         )
@@ -113,11 +109,10 @@ class PlannerNode(BaseNode):
 
 # Factory function for LangGraph
 @type_check
-async def planner_node(state: AgentState) -> AgentState:
-    # Use session_id from state, fallback to default if not set (e.g. tests)
+async def electronics_planner_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url, session_id=session_id
     )
-    node = PlannerNode(context=ctx)
+    node = ElectronicsPlannerNode(context=ctx)
     return await node(state)

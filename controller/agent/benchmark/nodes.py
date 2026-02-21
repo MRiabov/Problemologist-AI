@@ -9,7 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
-from controller.agent.nodes.reviewer import ReviewResult
+from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
 from shared.simulation.schemas import (
     RandomizationStrategy,
@@ -109,13 +109,13 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         prediction, _, _ = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=BenchmarkPlannerSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_benchmark_tools,
-            validate_files=[],
-            node_type="benchmark_planner",
+            dspy.CodeAct,
+            BenchmarkPlannerSignature,
+            state,
+            inputs,
+            get_benchmark_tools,
+            [],
+            "benchmark_planner",
         )
 
         if not prediction:
@@ -363,13 +363,13 @@ class BenchmarkCOTSSearchNode(BaseNode):
         inputs = {"prompt": state.session.prompt}
 
         prediction, _, _ = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=BenchmarkCOTSSearchSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_benchmark_tools,
-            validate_files=[],
-            node_type="cots_search",
+            dspy.CodeAct,
+            BenchmarkCOTSSearchSignature,
+            state,
+            inputs,
+            get_benchmark_tools,
+            [],
+            "cots_search",
         )
 
         summary = getattr(prediction, "search_summary", "No summary provided.")
@@ -468,13 +468,13 @@ class BenchmarkReviewerNode(BaseNode):
 
         try:
             prediction, _, _ = await self._run_program(
-                program_cls=dspy.CodeAct,
-                signature_cls=BenchmarkReviewerSignature,
-                state=state,
-                inputs=inputs,
-                tool_factory=get_reviewer_tools,
-                validate_files=[],
-                node_type="benchmark_reviewer",
+                dspy.CodeAct,
+                BenchmarkReviewerSignature,
+                state,
+                inputs,
+                get_reviewer_tools,
+                [],
+                "benchmark_reviewer",
             )
 
             if not prediction:

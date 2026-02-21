@@ -40,13 +40,13 @@ class COTSSearchNode(BaseNode):
         }
 
         prediction, _, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
-            signature_cls=COTSSearchSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_engineer_tools,
-            validate_files=[],
-            node_type="cots_search",
+            dspy.CodeAct,
+            COTSSearchSignature,
+            state,
+            inputs,
+            get_engineer_tools,
+            [],
+            "cots_search",
         )
 
         if not prediction:
