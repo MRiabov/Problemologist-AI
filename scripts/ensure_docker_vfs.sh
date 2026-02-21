@@ -23,7 +23,7 @@ fi
 CURRENT_DRIVER=$(docker info -f '{{.Driver}}' 2>/dev/null || echo "unknown")
 
 if [ "$CURRENT_DRIVER" = "vfs" ]; then
-    echo "Docker is already using vfs storage driver. Applying headless rendering fixes..."
+    echo "Docker is already using vfs storage driver. Applying headless rendering fixes for sandboxed environment..."
     export MUJOCO_GL=osmesa
     export PYOPENGL_PLATFORM=osmesa
     (return 0 2>/dev/null) && return 0 || exit 0
@@ -35,8 +35,7 @@ echo "Current Docker storage driver: $CURRENT_DRIVER"
 # Using a mirror as preferred in this environment
 if docker run --rm mirror.gcr.io/library/alpine:latest true >/dev/null 2>&1; then
     echo "Docker is working correctly with $CURRENT_DRIVER."
-    # Main test platform - use default headless backend
-    export MUJOCO_GL=egl
+    # Main test platform - no special rendering env vars needed (uses default/xvfb)
     (return 0 2>/dev/null) && return 0 || exit 0
 fi
 

@@ -160,7 +160,7 @@ echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
-uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
+uv run xvfb-run -a uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
