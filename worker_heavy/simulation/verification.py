@@ -6,16 +6,20 @@ Implements runtime randomization verification per architecture spec:
 - Use MuJoCo's support for parallel simulations
 """
 
-import logging
+import structlog
 from typing import Any
 
-# import mujoco  # Moved to lazy imports
 import numpy as np
+from build123d import Compound
 from pydantic import BaseModel
 
+from shared.enums import MotorControlMode
+from shared.models.schemas import ElectronicsSection, ObjectivesYaml, AssemblyPartConfig
+from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop, SimulationMetrics
+from worker_heavy.utils.controllers import sinusoidal
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Default number of verification runs
 DEFAULT_NUM_RUNS = 5
@@ -24,7 +28,7 @@ DEFAULT_NUM_RUNS = 5
 class MultiRunResult(BaseModel):
     """Result of multi-run verification."""
 
-    num_runs: int
+    num_simulations: int
     success_count: int
     success_rate: float
     is_consistent: bool  # True if all runs agree on success/fail
@@ -32,75 +36,84 @@ class MultiRunResult(BaseModel):
     fail_reasons: list[str]  # Unique failure reasons across runs
 
 
-def apply_position_jitter(
-    data: Any,
-    target_body_id: int,
-    jitter_range: tuple[float, float, float],
-    rng: np.random.Generator,
-) -> None:
-    """Apply random position jitter to a body.
-
-    Args:
-        data: MuJoCo data object.
-        target_body_id: ID of the body to jitter.
-        jitter_range: (±x, ±y, ±z) jitter in simulation units.
-        rng: NumPy random generator for reproducibility.
-    """
-    if target_body_id == -1:
-        return
-
-    # For free joints, qpos indices are: x, y, z, qw, qx, qy, qz
-    # We only jitter position (first 3 values)
-    jitter = np.array(
-        [
-            rng.uniform(-jitter_range[0], jitter_range[0]),
-            rng.uniform(-jitter_range[1], jitter_range[1]),
-            rng.uniform(-jitter_range[2], jitter_range[2]),
-        ]
-    )
-
-    # Find qpos address for this body (assuming free joint is first)
-    data.qpos[0:3] += jitter
-
-
 def verify_with_jitter(
-    xml_path: str,
-    control_inputs: dict[str, float],
+    scene_path: str,
+    component: Compound | None = None,
+    electronics: ElectronicsSection | None = None,
+    objectives: ObjectivesYaml | None = None,
+    moving_parts: list[AssemblyPartConfig] | None = None,
     jitter_range: tuple[float, float, float] = (0.002, 0.002, 0.001),
-    num_runs: int = DEFAULT_NUM_RUNS,
+    num_simulations: int = DEFAULT_NUM_RUNS,
     duration: float = 10.0,
     seed: int = 42,
-    dynamic_controllers: dict[str, Any] | None = None,
-    backend_type: str = "mujoco",
+    backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    smoke_test_mode: bool = False,
     session_id: str | None = None,
+    particle_budget: int | None = None,
 ) -> MultiRunResult:
     """Run simulation multiple times with perturbed initial positions.
 
     Args:
-        xml_path: Path to MJCF/Scene file.
-        control_inputs: Static control inputs for actuators.
+        scene_path: Path to scene file (MJCF/XML/JSON).
+        component: The CAD component being simulated.
+        electronics: Electronics configuration.
+        objectives: Simulation objectives.
+        moving_parts: List of moving parts configurations.
         jitter_range: (±x, ±y, ±z) position jitter in simulation units.
         num_runs: Number of verification runs.
         duration: Duration of each simulation run.
         seed: Base random seed for reproducibility.
-        dynamic_controllers: Optional dynamic controller functions.
         backend_type: Physics backend to use.
+        smoke_test_mode: Whether to run in smoke test mode.
         session_id: Optional session ID for backend caching.
+        particle_budget: Optional particle budget override.
 
     Returns:
         MultiRunResult with aggregated statistics.
     """
-    from shared.simulation.schemas import SimulatorBackendType
-
     results: list[SimulationMetrics] = []
     rng = np.random.default_rng(seed)
 
-    for run_idx in range(num_runs):
+    # Prepare dynamic controllers and control inputs base
+    # Note: We re-create lambda functions for each run if needed, but the logic is static per assembly
+    # However, to be safe and consistent with simulate(), we'll set them up here.
+    base_dynamic_controllers = {}
+    base_control_inputs = {}
+
+    if moving_parts:
+        try:
+            for part in moving_parts:
+                if part.control:
+                    if part.control.mode == MotorControlMode.SINUSOIDAL:
+                        base_dynamic_controllers[part.part_name] = lambda t, p=part.control: (
+                            sinusoidal(t, p.speed, p.frequency or 1.0)
+                        )
+                    elif part.control.mode == MotorControlMode.CONSTANT:
+                        base_control_inputs[part.part_name] = part.control.speed
+                    elif part.control.mode == MotorControlMode.ON_OFF:
+                        # T019: Handle ON_OFF mode using frequency toggle
+                        freq = part.control.frequency or 1.0
+                        period = 1.0 / freq
+                        base_dynamic_controllers[part.part_name] = (
+                            lambda t, p=part.control, per=period: (
+                                p.speed if (t % per) < (per / 2) else 0.0
+                            )
+                        )
+        except Exception as e:
+            logger.warning("failed_to_load_controllers_verification", error=str(e))
+
+
+    for run_idx in range(num_simulations):
         # Create fresh simulation state for each run
         loop = SimulationLoop(
-            xml_path,
-            backend_type=SimulatorBackendType(backend_type),
+            scene_path,
+            component=component,
+            backend_type=backend_type,
+            electronics=electronics,
+            objectives=objectives,
+            smoke_test_mode=smoke_test_mode,
             session_id=session_id,
+            particle_budget=particle_budget,
         )
 
         # Apply position jitter via backend-agnostic method if possible
@@ -118,9 +131,9 @@ def verify_with_jitter(
 
         # Run simulation
         metrics = loop.step(
-            control_inputs,
+            control_inputs=base_control_inputs.copy(),
             duration=duration,
-            dynamic_controllers=dynamic_controllers,
+            dynamic_controllers=base_dynamic_controllers.copy(),
         )
 
         results.append(metrics)
@@ -132,7 +145,7 @@ def verify_with_jitter(
 
     # Aggregate results
     success_count = sum(1 for r in results if r.success)
-    success_rate = success_count / num_runs if num_runs > 0 else 0.0
+    success_rate = success_count / num_simulations if num_simulations > 0 else 0.0
 
     # Check consistency: all runs should agree
     outcomes = [r.success for r in results]
@@ -144,29 +157,7 @@ def verify_with_jitter(
     )
 
     return MultiRunResult(
-        num_runs=num_runs,
-        success_count=success_count,
-        success_rate=success_rate,
-        is_consistent=is_consistent,
-        individual_results=results,
-        fail_reasons=fail_reasons,
-    )
-
-    # Aggregate results
-    success_count = sum(1 for r in results if r.success)
-    success_rate = success_count / num_runs if num_runs > 0 else 0.0
-
-    # Check consistency: all runs should agree
-    outcomes = [r.success for r in results]
-    is_consistent = len(set(outcomes)) == 1
-
-    # Collect unique failure reasons
-    fail_reasons = list(
-        set(r.fail_reason for r in results if r.fail_reason is not None)
-    )
-
-    return MultiRunResult(
-        num_runs=num_runs,
+        num_simulations=num_simulations,
         success_count=success_count,
         success_rate=success_rate,
         is_consistent=is_consistent,
