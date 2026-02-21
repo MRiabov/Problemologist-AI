@@ -29,12 +29,19 @@ async def test_smoke_e2e(fresh_graph):
         }
     )
 
+    mock_electronics_planner = AsyncMock(
+        return_value={"journal": "Electronics planned"}
+    )
+    mock_plan_reviewer = AsyncMock(
+        return_value={"status": "approved", "feedback": "Plan OK"}
+    )
+
     mock_coder = AsyncMock(
         return_value={
             "journal": "Created cube successfully",
             "current_step": "Create cube",
             "todo": "- [x] Create cube",
-            "status": "approved",  # reviewer will check this
+            "status": "approved",
         }
     )
 
@@ -44,7 +51,7 @@ async def test_smoke_e2e(fresh_graph):
         }
     )
 
-    mock_reviewer = AsyncMock(
+    mock_execution_reviewer = AsyncMock(
         return_value={"status": "approved", "feedback": "Perfect cube."}
     )
 
@@ -52,12 +59,23 @@ async def test_smoke_e2e(fresh_graph):
 
     with (
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
+        patch(
+            "controller.agent.nodes.electronics_planner.electronics_planner_node",
+            mock_electronics_planner,
+        ),
+        patch(
+            "controller.agent.nodes.plan_reviewer.plan_reviewer_node",
+            mock_plan_reviewer,
+        ),
         patch("controller.agent.nodes.coder.coder_node", mock_coder),
         patch(
             "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
             mock_electronics_engineer,
         ),
-        patch("controller.agent.nodes.reviewer.reviewer_node", mock_reviewer),
+        patch(
+            "controller.agent.nodes.execution_reviewer.execution_reviewer_node",
+            mock_execution_reviewer,
+        ),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
     ):
         graph = fresh_graph()
@@ -73,9 +91,11 @@ async def test_smoke_e2e(fresh_graph):
         # Verify the sequence of nodes
         node_sequence = [list(e.keys())[0] for e in events]
         assert "planner" in node_sequence
+        assert "electronics_planner" in node_sequence
+        assert "plan_reviewer" in node_sequence
         assert "coder" in node_sequence
         assert "electronics_engineer" in node_sequence
-        assert "reviewer" in node_sequence
+        assert "execution_reviewer" in node_sequence
         assert "skills" in node_sequence
 
         # Verify last state

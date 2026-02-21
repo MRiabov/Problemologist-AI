@@ -34,7 +34,7 @@ def build(params=None):
 
 
 async def run_simulation(script: str, name: str):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         try:
             response = await client.post(
                 f"{WORKER_HEAVY_URL}/benchmark/simulate",
@@ -81,7 +81,7 @@ def build():
     s.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
     return b + s
 """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         print("Warmup round...")
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",

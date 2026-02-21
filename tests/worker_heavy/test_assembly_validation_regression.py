@@ -1,5 +1,6 @@
 from worker_heavy.utils.file_validation import validate_node_output
 
+
 def test_assembly_definition_validation_gap():
     # Setup
     valid_plan = """
@@ -32,7 +33,7 @@ totals:
     files_content_map = {
         "plan.md": valid_plan,
         "todo.md": valid_todo,
-        "assembly_definition.yaml": invalid_assembly_def
+        "assembly_definition.yaml": invalid_assembly_def,
     }
 
     # Execute
@@ -41,16 +42,21 @@ totals:
 
     print(f"Validation result: {is_valid}, Errors: {errors}")
 
-    assert is_valid == False, "Validation PASSED (Bug still present or new logic flawed)!"
+    assert is_valid == False, (
+        "Validation PASSED (Bug still present or new logic flawed)!"
+    )
 
     # Assert that errors about assembly_definition.yaml EXIST
     has_yaml_error = any("assembly_definition.yaml" in e for e in errors)
-    assert has_yaml_error, "No assembly_definition.yaml errors found! (Validation might have run but not caught the issue?)"
+    assert has_yaml_error, (
+        "No assembly_definition.yaml errors found! (Validation might have run but not caught the issue?)"
+    )
 
     # Check for specific pydantic error if possible
     has_type_error = any("Input should be a valid number" in e for e in errors)
     if has_type_error:
         print("Found expected type error.")
+
 
 if __name__ == "__main__":
     try:

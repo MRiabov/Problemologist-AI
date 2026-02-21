@@ -5,7 +5,11 @@ import numpy as np
 import pytest
 
 from worker_heavy.simulation.loop import SimulationLoop
-from worker_heavy.utils.controllers.position_based import hold_position, oscillate, waypoint
+from worker_heavy.utils.controllers.position_based import (
+    hold_position,
+    oscillate,
+    waypoint,
+)
 
 # XML with a POSITION actuator (not motor)
 # CRITICAL: PD gains must be tuned relative to inertia to avoid numerical instability.

@@ -57,9 +57,7 @@ def test_validate_and_price_uses_metadata_material(mock_config):
         manufacturing_method=ManufacturingMethod.CNC, material_id="steel"
     )
 
-    result = validate_and_price(
-        part, ManufacturingMethod.CNC, mock_config, quantity=1
-    )
+    result = validate_and_price(part, ManufacturingMethod.CNC, mock_config, quantity=1)
 
     # Steel density is 7.8, Vol is 1000mm3 = 1cm3.
     # Weight should be 1 * 7.8 = 7.8g.
@@ -105,9 +103,7 @@ def test_validate_and_price_no_metadata_uses_default(mock_config):
         del part.metadata
 
     # Should not crash and should use default (aluminum_6061)
-    result = validate_and_price(
-        part, ManufacturingMethod.CNC, mock_config, quantity=1
-    )
+    result = validate_and_price(part, ManufacturingMethod.CNC, mock_config, quantity=1)
 
     # Aluminum density is 2.7. Weight should be 1 * 2.7 = 2.7g.
     assert result.weight_g == pytest.approx(2.7)
@@ -123,7 +119,5 @@ def test_validate_and_price_empty_config_fallback():
     part = Box(10, 10, 10)
 
     # Should not crash and use hardcoded fallback
-    result = validate_and_price(
-        part, ManufacturingMethod.CNC, empty_config, quantity=1
-    )
+    result = validate_and_price(part, ManufacturingMethod.CNC, empty_config, quantity=1)
     assert result.weight_g > 0

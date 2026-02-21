@@ -88,7 +88,10 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
 
     with (
         patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get,
-        patch("worker_heavy.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
+        patch(
+            "worker_heavy.simulation.loop.SimulationMetrics",
+            new=SharedSimulationMetrics,
+        ),
     ):
         mock_get.return_value = genesis_backend
 

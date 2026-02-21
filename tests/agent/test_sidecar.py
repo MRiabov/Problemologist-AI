@@ -10,19 +10,9 @@ from controller.agent.state import AgentState
 from shared.type_checking import type_check
 
 
-@pytest.fixture
-def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
-        instance = mock.return_value
-        instance.ainvoke = AsyncMock()
-        # default return value
-        instance.ainvoke.return_value = AIMessage(content="No skills needed.")
-        yield instance
-
-
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_node_suggest_skill(mock_llm):
+async def test_sidecar_node_suggest_skill():
     test_dir = Path("test_suggested_skills")
     if test_dir.exists():
         shutil.rmtree(test_dir)
@@ -33,7 +23,7 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker", session_id="test-session"
     )
-    mock_ctx.llm = mock_llm
+    mock_ctx.dspy_lm = MagicMock()
 
     # Mock DSPy Program
     with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
@@ -63,7 +53,7 @@ async def test_sidecar_node_suggest_skill(mock_llm):
 
 @type_check
 @pytest.mark.asyncio
-async def test_sidecar_node_no_skill(mock_llm):
+async def test_sidecar_node_no_skill():
     test_dir = Path("test_suggested_skills_none")
     # Mock SharedNodeContext
     from controller.agent.nodes.base import SharedNodeContext
@@ -71,7 +61,7 @@ async def test_sidecar_node_no_skill(mock_llm):
     mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker", session_id="test-session"
     )
-    mock_ctx.llm = mock_llm
+    mock_ctx.dspy_lm = MagicMock()
 
     with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
         mock_program = MagicMock()

@@ -100,4 +100,6 @@ def test_model_produced_script_integration(tmp_path):
         sim_result = simulate(component, output_dir=tmp_path, smoke_test_mode=True)
 
     assert sim_result.success is True
-    assert any(msg in sim_result.summary for msg in ["Simulation stable", "Goal achieved"])
+    assert any(
+        msg in sim_result.summary for msg in ["Simulation stable", "Goal achieved"]
+    )

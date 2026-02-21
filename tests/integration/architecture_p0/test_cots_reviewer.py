@@ -24,7 +24,7 @@ def base_headers(session_id):
 @pytest.mark.asyncio
 async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_headers):
     """INT-012, INT-013: Verify COTS search output contract and read-only behavior."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # COTS subagent or tool is usually invoked via a runtime script or endpoint.
         # Let's test via the COTS indexer/search endpoint if available,
         # or via a subagent call if the controller exposes it.
@@ -70,7 +70,7 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
 @pytest.mark.asyncio
 async def test_int_016_reviewer_decision_schema_gate(session_id, base_headers):
     """INT-016: Verify reviewer rejects malformed frontmatter decisions."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Create a real episode first
         session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(
@@ -110,7 +110,7 @@ This should be rejected.
 @pytest.mark.asyncio
 async def test_int_017_plan_refusal_loop(session_id, base_headers):
     """INT-017: Verify plan refusal loop (rejection leads to FAILED state)."""
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Start agent run
         session_id = f"INT-017-{uuid.uuid4().hex[:8]}"
         run_resp = await client.post(

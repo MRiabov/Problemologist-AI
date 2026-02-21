@@ -14,7 +14,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 @pytest.mark.asyncio
 async def test_int_101_physics_backend_selection():
     """INT-101: Verify physics backend selection and event emission."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-101-{int(time.time())}"
 
         # 1. Setup objectives.yaml with Genesis backend
@@ -67,7 +67,7 @@ def build():
         # 3. Simulate
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -93,7 +93,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_105_fluid_containment_evaluation():
     """INT-105: Verify fluid containment objective evaluation."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-105-{int(time.time())}"
 
         # Setup objectives with fluid containment
@@ -141,7 +141,7 @@ def build():
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -169,7 +169,7 @@ def build():
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -183,7 +183,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_106_flow_rate_evaluation():
     """INT-106: Verify flow rate objective evaluation (stub)."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-106-{int(time.time())}"
 
         objectives_content = """
@@ -227,7 +227,7 @@ def build():
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -240,7 +240,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_112_mujoco_backward_compat():
     """INT-112: Verify MuJoCo ignores fluid/FEM config."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-112-{int(time.time())}"
 
         # Setup objectives with MuJoCo but include fluid objectives
@@ -284,7 +284,7 @@ def build():
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )

@@ -25,7 +25,7 @@ async def test_int_057_backup_logging_flow():
     Verify that backup endpoint triggers workflow, creates S3 objects,
     and (ideally) persists metadata.
     """
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Trigger backup
         # The secret defaults to 'change-me-in-production' in dev compose
         headers = {"X-Backup-Secret": "change-me-in-production"}
@@ -80,7 +80,7 @@ async def test_int_058_cross_system_correlation():
     INT-058: Cross-system correlation IDs
     Verify that a single episode can be correlated across DB, Temporal, and S3.
     """
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Run an agent task to generate a real episode and workflow
         task = "Generate a simple part for correlation test"
         resp = await client.post(

@@ -4,6 +4,7 @@ from build123d import Box, Compound
 from shared.models.schemas import PartMetadata
 from worker_heavy.simulation.builder import SimulationBuilder
 
+
 def test_weld_constraint_generation(tmp_path):
     """
     Test that 'constraint="weld:target"' on a part generates a weld in the MJCF.
@@ -38,7 +39,7 @@ def test_weld_constraint_generation(tmp_path):
 
     assert "<equality>" in xml_content
     # The attributes might be in any order, so check for substrings
-    assert 'weld' in xml_content
+    assert "weld" in xml_content
     assert 'body1="part_1"' in xml_content
     assert 'body2="part_2"' in xml_content
 

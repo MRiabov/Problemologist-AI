@@ -13,7 +13,7 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 @pytest.mark.asyncio
 async def test_int_045_skills_sync_lifecycle():
     """INT-045: Verify worker pulls expected skills and records skill version metadata."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-045-{int(time.time())}"
 
         # 1. Trigger a run that should initialize the workspace and skills

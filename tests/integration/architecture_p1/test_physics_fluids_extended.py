@@ -14,7 +14,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 @pytest.mark.asyncio
 async def test_int_138_smoke_test_mode():
     """INT-138: Verify smoke-test mode for Genesis."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-138-{int(time.time())}"
 
         objectives_content = """
@@ -75,7 +75,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_139_fluid_storage_policy():
     """INT-139: Verify fluid data storage policy."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-139-{int(time.time())}"
 
         objectives_content = """

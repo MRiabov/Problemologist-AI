@@ -80,9 +80,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         backend = GenesisBackend()
         # Inject cables manually as if loaded from scene
         # It should be a dict mapping name to entity
-        backend.cables = {
-            "wire_1": MagicMock()
-        }
+        backend.cables = {"wire_1": MagicMock()}
 
         self.assertTrue(
             hasattr(backend, "cables"), "GenesisBackend has no 'cables' attribute"
@@ -96,7 +94,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         # Check get_tendon_tension
         # Mocking the tendon tension logic which uses waypoint distances
         backend.tendon_rest_lengths = {"wire_1": 1.0}
-        backend.tendon_waypoints = {"wire_1": [(0,0,0), (1,0,0)]}
+        backend.tendon_waypoints = {"wire_1": [(0, 0, 0), (1, 0, 0)]}
 
         # We need to mock gs if we want it to actually run distance calc,
         # or just mock get_tendon_tension if we can.

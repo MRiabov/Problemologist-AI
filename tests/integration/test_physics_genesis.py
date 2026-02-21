@@ -31,7 +31,10 @@ _SHARED_BACKEND_MOCK = MagicMock()
 def mock_genesis_backend():
     with (
         patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get,
-        patch("worker_heavy.simulation.loop.SimulationMetrics", new=SharedSimulationMetrics),
+        patch(
+            "worker_heavy.simulation.loop.SimulationMetrics",
+            new=SharedSimulationMetrics,
+        ),
     ):
         backend = _SHARED_BACKEND_MOCK
         mock_get.return_value = backend

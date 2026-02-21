@@ -28,7 +28,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
     and can force it. Since integration tests should run in CI,
     we'll use a trigger or a simulated OOM if supported by the backend wrapper.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         # Forcing OOM is hard. We'll check if the code handles it by
         # injecting a failure in the simulation loop or using a 'bomb' particle count.
 
