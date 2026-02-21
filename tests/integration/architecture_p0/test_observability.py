@@ -110,65 +110,37 @@ async def test_int_054_temporal_failure_path():
     async with httpx.AsyncClient() as client:
         # 1. Create episode via API
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/test/episodes",
             json={"task": "Test Failure Injection", "session_id": "INT-054-fail"},
         )
-        assert resp.status_code == 202
+        assert resp.status_code == 201
         episode_id = resp.json()["episode_id"]
 
         # 2. Trigger workflow with MJCF failure injection
         temporal = await Client.connect(TEMPORAL_URL)
 
-        # We expect this to raise WorkflowFailureError eventually
-        # But since we use start_workflow, we get a handle. Calling result() waits/raises.
-        # We set a short timeout for the activity in the workflow, but we can't change it dynamically easily.
-        # However, the activity raises exception immediately.
-        # Temporal retry policy defaults to retrying.
-        # We need to ensure it fails fast or we wait for retries?
-        # SimulationWorkflow code uses default retry policy (which is infinite retries).
-        # THIS IS A PROBLEM for testing failure.
-        # We should probably pass a retry policy override or accept that it will hang?
-        # NO, we can just check the status in DB if we assume the workflow *eventually* fails or we can cancel it?
-        # Actually, for INT-054 "outage/failure", if it retries indefinitely, it never reaches "failed" state in DB.
-        # So we verify that it *doesn't* report success?
-        # Or better: The test should assert that *if* it fails, it logs.
-        # To make it fail fast, I'd need to change workflow code to accept retry policy config.
-        # Or I can just check that while it's failing (retrying), the status is NOT completed.
+        params = {
+            "compound_json": "{}",
+            "episode_id": str(episode_id),
+            "simulate_failures": {"mjcf_compilation": True},
+        }
 
-        # WAIT: I modified the workflow to catch exception?
-        # "except Exception as e: ... raise e"
-        # The exception is raised inside activity. Temporal retries ACTIVITY.
-        # So the `except` block in workflow is NEVER REACHED until activity retries are exhausted!
-        # This means my code change to SimulationWorkflow `try/except` handles *non-activity* errors or *exhausted* retries.
+        handle = await temporal.start_workflow(
+            "SimulationWorkflow",
+            params,
+            id=f"test-fail-{episode_id}",
+            task_queue="simulation-task-queue",
+        )
 
-        # To test this efficiently, I need the activity to FAIL permanently quickly.
-        # I can't easily configure RetryPolicy from params without changing workflow code further.
+        # 3. Wait for workflow failure (it should fail after 3 attempts due to our retry policy)
+        with pytest.raises(Exception):
+            await handle.result()
 
-        # Alternative for INT-054: Verify that a *Workflow* level error (e.g. invalid params) is caught?
-        # But params are just dict.
-
-        # Let's assume for this test we skip the "wait for failure" and just verify it doesn't succeed?
-        # Or we rely on the fact that I can't easily fix the retry policy issue without more code changes.
-
-        # UPDATE: I'll add retry_options to execute_activity in workflow if I want to support this.
-        # But for now, let's just implement the test structure and mark it as potentially slow or skip if we can't wait.
-        # actually, if I inject failure in compile_mjcf and it retries,
-        # I can just assert that it is NOT completed after some seconds,
-        # and maybe check if I can see retries in history (hard via API).
-
-        # Let's cancel the workflow and see if it handles cancellation?
-        # INT-030 tests cancellation.
-
-        # Let's Modify the test to assert it DOES NOT complete.
-        pass
-
-    # SKIPPING INT-054 re-write for a moment to think.
-    # If I want to verify "explicit failure persisted", I need the workflow to actually fail.
-    # To make it fail, I need to exhaust retries.
-    # I can't change activity retry policy dynamically from params easily (it's in ValidatedActivity usually or decorator).
-    # `workflow.execute_activity(..., retry_policy=...)`.
-    # I should update SimulationWorkflow to use a non-infinite retry policy for these activities!
-    pass
+        # 4. Verify episode status is FAILED in DB
+        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        assert status_resp.status_code == 200
+        data = status_resp.json()
+        assert data["status"] == EpisodeStatus.FAILED
 
 
 @pytest.mark.integration_p0
@@ -201,11 +173,13 @@ async def test_int_056_s3_upload_failure_retry():
         )
 
         # Wait a bit. It should be retrying.
-        await asyncio.sleep(5)
+        # With maximum_attempts=3 and 1s initial backoff, it fails around 3-4s.
+        # So we check at 1s.
+        await asyncio.sleep(1)
 
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         data = status_resp.json()
-        assert data["status"] == "running"  # Should still be running (retrying)
+        assert data["status"] == EpisodeStatus.RUNNING  # Should still be running (retrying)
 
         # Cleanup: Cancel it so we don't spam logs
         await handle.cancel()
