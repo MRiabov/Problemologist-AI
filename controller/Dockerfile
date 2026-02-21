@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsm6 \
     libngspice0 \
+    libngspice0-dev \
+    ngspice \
     libvulkan1 \
     libxcursor1 \
     libxinerama1 \

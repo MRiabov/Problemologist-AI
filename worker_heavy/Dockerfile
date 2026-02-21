@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     xauth \
     libngspice0 \
+    libngspice0-dev \
+    ngspice \
     libvulkan1 \
     vulkan-tools \
     libxcursor1 \
