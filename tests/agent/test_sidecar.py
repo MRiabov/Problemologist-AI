@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import dspy
 import pytest
 from langchain_core.messages import AIMessage
 
@@ -12,7 +13,7 @@ from shared.type_checking import type_check
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
+    with patch("dspy.LM") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         # default return value
@@ -33,15 +34,14 @@ async def test_sidecar_node_suggest_skill(mock_llm):
     mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker", session_id="test-session"
     )
-    mock_ctx.llm = mock_llm
 
     # Mock DSPy Program
-    with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
+    with patch("controller.agent.nodes.skills.dspy.ReAct") as mock_react_cls:
         mock_program = MagicMock()
         mock_program.return_value = MagicMock(
             summary="Identified and recorded 1 new skills."
         )
-        mock_codeact_cls.return_value = mock_program
+        mock_react_cls.return_value = mock_program
 
         # Mock GitManager
         with patch("controller.agent.nodes.skills.GitManager") as mock_git:
@@ -71,12 +71,10 @@ async def test_sidecar_node_no_skill(mock_llm):
     mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker", session_id="test-session"
     )
-    mock_ctx.llm = mock_llm
-
-    with patch("controller.agent.nodes.skills.dspy.CodeAct") as mock_codeact_cls:
+    with patch("controller.agent.nodes.skills.dspy.ReAct") as mock_react_cls:
         mock_program = MagicMock()
         mock_program.return_value = MagicMock(summary="No new skills identified.")
-        mock_codeact_cls.return_value = mock_program
+        mock_react_cls.return_value = mock_program
 
         # Mock GitManager
         with patch("controller.agent.nodes.skills.GitManager") as mock_git:

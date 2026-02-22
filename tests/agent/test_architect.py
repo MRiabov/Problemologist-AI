@@ -10,7 +10,7 @@ from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
+    with patch("dspy.LM") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock(
             return_value=AIMessage(
@@ -34,7 +34,7 @@ Test Overview
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
-@patch("controller.agent.nodes.planner.dspy.CodeAct")
+@patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_logic(
     mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
@@ -59,7 +59,7 @@ async def test_architect_node_logic(
         worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
-        llm=mock_llm,
+
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
@@ -86,7 +86,7 @@ async def test_architect_node_logic(
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
-@patch("controller.agent.nodes.planner.dspy.CodeAct")
+@patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_fallback(
     mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
@@ -102,7 +102,7 @@ async def test_architect_node_fallback(
         worker_light_url="http://worker",
         session_id="test-session",
         pm=mock_pm,
-        llm=mock_llm,
+
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,

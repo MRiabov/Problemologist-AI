@@ -53,7 +53,7 @@ async def test_coder_node_success(mock_state):
         patch(
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
-        patch("controller.agent.benchmark.nodes.dspy.CodeAct") as mock_codeact,
+        patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_codeact,
         patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
         mock_ctx = MagicMock()
@@ -101,7 +101,7 @@ async def test_coder_node_with_feedback(mock_state):
         patch(
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
-        patch("controller.agent.benchmark.nodes.dspy.CodeAct") as mock_codeact,
+        patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_codeact,
         patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
         mock_ctx = MagicMock()

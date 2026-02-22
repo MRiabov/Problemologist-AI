@@ -37,7 +37,7 @@ class SkillsSignature(dspy.Signature):
 class SkillsNode(BaseNode):
     """
     Skills node: Analyzes the journal to suggest new skills.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
 
     def __init__(
@@ -55,12 +55,12 @@ class SkillsNode(BaseNode):
 
     async def _sync_git(self, commit_message: str):
         """Sync changes with git via GitManager."""
-        await self.git.sync_changes(commit_message, llm=self.ctx.llm, pm=self.ctx.pm)
+        await self.git.sync_changes(commit_message, lm=self.ctx.dspy_lm)
 
     async def __call__(
         self, state: AgentState, config: RunnableConfig | None = None
     ) -> AgentState:
-        """Execute the sidecar node logic using DSPy CodeAct."""
+        """Execute the sidecar node logic using DSPy ReAct."""
 
         async def save_suggested_skill(title: str, content: str) -> str:
             """
@@ -135,7 +135,7 @@ class SkillsNode(BaseNode):
         validate_files = []
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             SkillsSignature,
             state,
             inputs,

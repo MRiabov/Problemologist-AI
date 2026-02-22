@@ -9,7 +9,7 @@ from controller.agent.state import AgentState
 
 @pytest.fixture
 def mock_llm():
-    with patch("controller.agent.nodes.base.ChatOpenAI") as mock:
+    with patch("dspy.LM") as mock:
         instance = mock.return_value
         instance.ainvoke = AsyncMock()
         instance.ainvoke.return_value = AIMessage(

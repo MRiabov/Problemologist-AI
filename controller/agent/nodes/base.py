@@ -50,7 +50,7 @@ class SharedNodeContext:
             # T025: Initialize native tracing
             init_tracing()
 
-            # T012: Initialize DSPy LM for CodeAct support
+            # T012: Initialize DSPy LM for Agent support
             api_key = "dummy"
             if settings.openai_api_key:
                 api_key = settings.openai_api_key
@@ -207,9 +207,13 @@ class BaseNode:
         if instructions:
             signature_cls = signature_cls.with_instructions(instructions)
 
-        program = program_cls(
-            signature_cls, tools=list(tool_fns.values()), interpreter=interpreter
-        )
+        if program_cls == dspy.ReAct:
+            program = program_cls(signature_cls, tools=list(tool_fns.values()))
+        else:
+            # Fallback for CodeAct or other modules
+            program = program_cls(
+                signature_cls, tools=list(tool_fns.values()), interpreter=interpreter
+            )
 
         # WP07: Try to load compiled prompt if available
         self.ctx.pm.load_compiled_program(node_type, program)
@@ -225,8 +229,9 @@ class BaseNode:
 
         # Prepare explicit DB logger for UI events
         db_callback = None
-        if state.episode_id:
-            db_callback = DatabaseCallbackHandler(episode_id=state.episode_id)
+        episode_id = getattr(state, "episode_id", None)
+        if episode_id and str(episode_id).strip():
+            db_callback = DatabaseCallbackHandler(episode_id=episode_id)
 
         try:
             while retry_count < max_retries:
@@ -242,7 +247,7 @@ class BaseNode:
                             f"{node_type}_dspy_invoke_start",
                             session_id=self.ctx.session_id,
                         )
-                        # Add a timeout to prevent infinite hangs in DSPy CodeAct
+                        # Add a timeout to prevent infinite hangs in DSPy ReAct
                         try:
                             prediction = await asyncio.wait_for(
                                 asyncio.to_thread(program, **inputs),

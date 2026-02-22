@@ -109,7 +109,7 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         prediction, _, _ = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             BenchmarkPlannerSignature,
             state,
             inputs,
@@ -162,7 +162,7 @@ class BenchmarkCoderSignature(dspy.Signature):
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Generates build123d script and validates it.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
@@ -201,10 +201,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         if func:
             tool_functions[t.name] = func
 
-    program = dspy.CodeAct(
+    program = dspy.ReAct(
         BenchmarkCoderSignature.with_instructions(ctx.pm.render("benchmark_coder")),
         tools=list(tool_functions.values()),
-        interpreter=interpreter,
     )
 
     # WP08: Set node_type on mock LM if available for explicit lookup
@@ -363,7 +362,7 @@ class BenchmarkCOTSSearchNode(BaseNode):
         inputs = {"prompt": state.session.prompt}
 
         prediction, _, _ = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             BenchmarkCOTSSearchSignature,
             state,
             inputs,
@@ -468,7 +467,7 @@ class BenchmarkReviewerNode(BaseNode):
 
         try:
             prediction, _, _ = await self._run_program(
-                dspy.CodeAct,
+                dspy.ReAct,
                 BenchmarkReviewerSignature,
                 state,
                 inputs,

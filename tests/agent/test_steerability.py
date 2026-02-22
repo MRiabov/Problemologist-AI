@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import dspy
 import pytest
 from langchain_core.messages import HumanMessage
 
@@ -97,9 +98,10 @@ async def test_check_steering():
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.planner.dspy.CodeAct")
+@patch("controller.agent.nodes.planner.record_worker_events")
+@patch("controller.agent.nodes.base.BaseNode._run_program")
 @patch("worker_heavy.utils.file_validation.validate_node_output", return_value=(True, []))
-async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
+async def test_planner_node_steer_context(mock_validate, mock_run_program, mock_record_events):
     from controller.agent.nodes.planner import planner_node
 
     session_id = str(uuid4())
@@ -120,34 +122,30 @@ async def test_planner_node_steer_context(mock_validate, mock_codeact_cls):
     state = AgentState(session_id=session_id, messages=[steer_msg], task="Test task")
 
     with (
-        patch("controller.agent.nodes.base.ChatOpenAI") as mock_llm,
-        patch("controller.agent.dspy_utils.WorkerInterpreter") as mock_interpreter,
         patch("controller.agent.nodes.base.WorkerClient") as mock_worker,
     ):
-        # Mock DSPy Program
-        mock_program = MagicMock()
-        mock_program.return_value = MagicMock(summary="Plan generated")
-        mock_codeact_cls.return_value = mock_program
+        # Mock _run_program return: (prediction, artifacts, journal_entry)
+        mock_run_program.return_value = (MagicMock(summary="Plan generated"), {}, "")
 
         # Mock WorkerClient/Filesystem bits
         mock_worker_instance = mock_worker.return_value
-        mock_worker_instance.write_file = AsyncMock()
         mock_worker_instance.read_file = AsyncMock(side_effect=lambda f: "content")
         mock_worker_instance.exists = AsyncMock(return_value=True)
 
         await planner_node(state)
 
-        # Verify DSPy program called with steer_context
-        args, kwargs = mock_program.call_args
-        assert "steer_context" in kwargs
-        assert "Geometric Selections:" in kwargs["steer_context"]
-        assert "Code References:" in kwargs["steer_context"]
-        assert "Mentions: @user" in kwargs["steer_context"]
+        # Verify _run_program called with steer_context in inputs
+        args, kwargs = mock_run_program.call_args
+        inputs = args[3]  # inputs is the 4th argument
+        assert "steer_context" in inputs
+        assert "Geometric Selections:" in inputs["steer_context"]
+        assert "Code References:" in inputs["steer_context"]
+        assert "Mentions: @user" in inputs["steer_context"]
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.benchmark.nodes.dspy.CodeAct")
-async def test_benchmark_planner_node_steer(mock_codeact_cls):
+@patch("controller.agent.nodes.base.BaseNode._run_program")
+async def test_benchmark_planner_node_steer(mock_run_program):
     from controller.agent.benchmark.nodes import planner_node as benchmark_planner
 
     session_id = uuid4()
@@ -167,15 +165,8 @@ async def test_benchmark_planner_node_steer(mock_codeact_cls):
         patch("controller.agent.benchmark.nodes.SharedNodeContext") as mock_ctx_class,
     ):
         mock_ctx = mock_ctx_class.create.return_value
-
-        # Mock DSPy Program
-        mock_program = MagicMock()
         from shared.simulation.schemas import RandomizationStrategy
-
-        mock_program.return_value = MagicMock(
-            plan=RandomizationStrategy(theme="test", reasoning="test")
-        )
-        mock_codeact_cls.return_value = mock_program
+        mock_run_program.return_value = (MagicMock(plan=RandomizationStrategy(theme="test", reasoning="test")), {}, "")
 
         # Mock WorkerClient methods that might be called
         mock_worker_instance = mock_ctx.worker_client
@@ -186,7 +177,8 @@ async def test_benchmark_planner_node_steer(mock_codeact_cls):
 
         await benchmark_planner(state)
 
-        # Verify program called with history including steer_msg
-        args, kwargs = mock_program.call_args
-        history = kwargs["history"]
+        # Verify _run_program called with history including steer_msg
+        args, kwargs = mock_run_program.call_args
+        inputs = args[3]
+        history = inputs["history"]
         assert "Steering prompt" in history

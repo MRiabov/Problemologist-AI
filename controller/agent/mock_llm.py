@@ -77,12 +77,12 @@ class MockDSPyLM(dspy.LM):
 
         if count > 5:
             logger.warning("mock_dspy_lm_loop_detected", node=node_key, count=count)
-            return self._handle_finish(node_key, node_data, is_json)
+            return self._handle_finish(lookup_key, node_data, is_json)
 
         if self._is_finishing(full_text):
-            return self._handle_finish(node_key, node_data, is_json)
+            return self._handle_finish(lookup_key, node_data, is_json)
 
-        return self._handle_action(node_key, node_data, is_json)
+        return self._handle_action(lookup_key, node_data, is_json)
 
     def _get_full_text(
         self, prompt: str | None, messages: list[dict[str, Any]] | None
@@ -214,6 +214,9 @@ class MockDSPyLM(dspy.LM):
         if node_key == "planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
+            # Support BenchmarkPlannerSignature
+            if "plan" in node_data and isinstance(node_data["plan"], dict):
+                resp["plan"] = node_data["plan"]
         elif node_key == "reviewer":
             resp["review"] = node_data.get(
                 "review",
