@@ -530,6 +530,17 @@ def simulate(
         except Exception as e:
             logger.warning("electronics_pre_validation_skipped", error=str(e))
 
+    # T021: Proactive FEM validation before starting expensive physics backend (INT-111)
+    if objectives and objectives.physics and objectives.physics.fem_enabled:
+        fem_valid, fem_msg = validate_fem_manufacturability(component, working_dir)
+        if not fem_valid:
+            logger.error("fem_validation_failed_gate", error=fem_msg)
+            return SimulationResult(
+                success=False,
+                summary=fem_msg,
+                confidence="high",
+            )
+
     scene_path = builder.build_from_assembly(
         component,
         objectives=objectives,

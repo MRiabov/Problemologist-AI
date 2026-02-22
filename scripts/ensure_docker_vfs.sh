@@ -17,14 +17,19 @@ set -e
 
 if ! command -v docker >/dev/null 2>&1; then
     echo "Docker not found, skipping storage driver check."
-    exit 0
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then exit 0; else return 0; fi
 fi
 
 CURRENT_DRIVER=$(docker info -f '{{.Driver}}' 2>/dev/null || echo "unknown")
 
 if [ "$CURRENT_DRIVER" = "vfs" ]; then
     echo "Docker is already using vfs storage driver."
-    exit 0
+    # T024: Headless rendering configuration for sandboxed/DinD environments
+    export MUJOCO_GL=osmesa
+    export PYOPENGL_PLATFORM=osmesa
+    export GALLIUM_DRIVER=llvmpipe
+    echo "Headless rendering configured (OSMesa/llvmpipe)."
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then exit 0; else return 0; fi
 fi
 
 echo "Current Docker storage driver: $CURRENT_DRIVER"
@@ -33,14 +38,17 @@ echo "Current Docker storage driver: $CURRENT_DRIVER"
 # Using a mirror as preferred in this environment
 if docker run --rm mirror.gcr.io/library/alpine:latest true >/dev/null 2>&1; then
     echo "Docker is working correctly with $CURRENT_DRIVER."
-    exit 0
+    # Default to EGL for standard environments
+    export MUJOCO_GL=egl
+    echo "Headless rendering configured (EGL)."
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then exit 0; else return 0; fi
 fi
 
 echo "Docker seems to be failing with $CURRENT_DRIVER (likely a Docker-in-Docker environment). Attempting to switch to vfs..."
 
 if ! command -v sudo >/dev/null 2>&1; then
     echo "Error: sudo is required to change Docker configuration but not found."
-    exit 1
+    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then exit 1; else return 1; fi
 fi
 
 # Create or update daemon.json
@@ -89,6 +97,14 @@ echo "New Docker storage driver: $NEW_DRIVER"
 
 if [ "$NEW_DRIVER" = "vfs" ]; then
     echo "Successfully switched to vfs."
+    # T024: Headless rendering configuration for sandboxed/DinD environments
+    export MUJOCO_GL=osmesa
+    export PYOPENGL_PLATFORM=osmesa
+    export GALLIUM_DRIVER=llvmpipe
+    echo "Headless rendering configured (OSMesa/llvmpipe)."
 else
     echo "Warning: Failed to switch to vfs or Docker did not restart correctly."
+    # Default to EGL for standard environments
+    export MUJOCO_GL=egl
+    echo "Headless rendering configured (EGL)."
 fi

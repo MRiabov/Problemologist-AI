@@ -67,6 +67,7 @@ class GenesisBackend(PhysicsBackend):
             max_init_retries = 3
             for attempt in range(max_init_retries):
                 try:
+                    logger.info("genesis_init_attempt", attempt=attempt, backend=str(backend))
                     # Reduce logging in smoke test mode
                     gs.init(
                         backend=backend,
@@ -79,8 +80,14 @@ class GenesisBackend(PhysicsBackend):
                     )
                     break
                 except Exception as e:
-                    if "EGL_BAD_DISPLAY" in str(e) and attempt < max_init_retries - 1:
-                        logger.warning("genesis_init_egl_retry", attempt=attempt + 1)
+                    err_msg = str(e)
+                    if (
+                        "EGL_BAD_DISPLAY" in err_msg
+                        or "glGetError" in err_msg
+                        or "NoSuchDisplayException" in err_msg
+                        or "NoneType" in err_msg
+                    ) and attempt < max_init_retries - 1:
+                        logger.warning("genesis_init_retry", attempt=attempt + 1, error=str(e))
                         time.sleep(1.0)
                         continue
 

@@ -118,7 +118,9 @@ def test_validation_hook_failure(tmp_path):
         )
 
         # Pass a dummy component to trigger validation
-        loop = SimulationLoop(str(xml_path), component=Box(1, 1, 1))
+        loop = SimulationLoop(
+            str(xml_path), component=Box(1, 1, 1), backend_type=SimulatorBackendType.MUJOCO
+        )
 
         metrics = loop.step({})
         assert metrics.success is False
@@ -134,7 +136,9 @@ def test_timeout_configurable(tmp_path):
     xml_path.write_text(TEST_XML)
 
     # Set a very short timeout (0.05s = 50ms)
-    loop = SimulationLoop(str(xml_path), max_simulation_time=0.05)
+    loop = SimulationLoop(
+        str(xml_path), max_simulation_time=0.05, backend_type=SimulatorBackendType.MUJOCO
+    )
 
     # Run for longer than timeout
     metrics = loop.step({}, duration=1.0)
@@ -153,7 +157,9 @@ def test_timeout_capped_at_30s(tmp_path):
     xml_path.write_text(TEST_XML)
 
     # Try to set a timeout longer than 30s
-    loop = SimulationLoop(str(xml_path), max_simulation_time=60.0)
+    loop = SimulationLoop(
+        str(xml_path), max_simulation_time=60.0, backend_type=SimulatorBackendType.MUJOCO
+    )
 
     # Should be capped at 30s
     assert loop.max_simulation_time == MAX_SIMULATION_TIME_SECONDS
@@ -162,8 +168,8 @@ def test_timeout_capped_at_30s(tmp_path):
 
 def test_target_fell_off_world(sim_loop):
     """Test failure detection when target falls below Z threshold."""
-    # Set target Z to -3.0 (below -2.0 threshold)
-    sim_loop.backend.data.qpos[2] = -3.0
+    # Set target Z to -6.0 (below -5.0 default threshold)
+    sim_loop.backend.data.qpos[2] = -6.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
