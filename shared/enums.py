@@ -65,33 +65,37 @@ class TraceType(StrEnum):
     EVENT = "event"
 
 
-class SimulationFailureMode(StrEnum):
+class FailureReason(StrEnum):
     """Unified failure modes for physics and electronics simulation."""
 
-    NONE = "none"
-    TIMEOUT = "timeout"
-    OUT_OF_BOUNDS = "out_of_bounds"
-    FORBID_ZONE_HIT = "forbid_zone_hit"
-    PART_BREAKAGE = "part_breakage"
-    MOTOR_OVERLOAD = "motor_overload"
-    STABILITY_ISSUE = "stability_issue"
-    PHYSICS_INSTABILITY = "physics_instability"
+    NONE = "NONE"
+    TIMEOUT = "TIMEOUT"
+    OUT_OF_BOUNDS = "OUT_OF_BOUNDS"
+    FORBID_ZONE_HIT = "FORBID_ZONE_HIT"
+    PART_BREAKAGE = "PART_BREAKAGE"
+    MOTOR_OVERLOAD = "MOTOR_OVERLOAD"
+    STABILITY_ISSUE = "STABILITY_ISSUE"
+    PHYSICS_INSTABILITY = "PHYSICS_INSTABILITY"
 
     # Electronics failures
-    SHORT_CIRCUIT = "short_circuit"
-    OVERCURRENT = "overcurrent"
-    WIRE_TORN = "wire_torn"
-    OPEN_CIRCUIT = "open_circuit"
+    SHORT_CIRCUIT = "SHORT_CIRCUIT"
+    OVERCURRENT = "OVERCURRENT"
+    WIRE_TORN = "WIRE_TORN"
+    OPEN_CIRCUIT = "OPEN_CIRCUIT"
 
     # WP2 Fluids & Physics failures
-    ASSET_GENERATION_FAILED = "asset_generation_failed"
-    FLUID_OBJECTIVE_FAILED = "fluid_objective_failed"
-    STRESS_OBJECTIVE_EXCEEDED = "stress_objective_exceeded"
-    ELECTRONICS_FLUID_DAMAGE = "electronics_fluid_damage"
+    ASSET_GENERATION_FAILED = "ASSET_GENERATION_FAILED"
+    FLUID_OBJECTIVE_FAILED = "FLUID_OBJECTIVE_FAILED"
+    STRESS_OBJECTIVE_EXCEEDED = "STRESS_OBJECTIVE_EXCEEDED"
+    ELECTRONICS_FLUID_DAMAGE = "ELECTRONICS_FLUID_DAMAGE"
 
     # Validation failures
-    VALIDATION_FAILED = "validation_failed"
-    MANUFACTURABILITY_FAILED = "manufacturability_failed"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    MANUFACTURABILITY_FAILED = "MANUFACTURABILITY_FAILED"
+
+
+# Alias for backward compatibility
+SimulationFailureMode = FailureReason
 
 
 class ElectronicComponentType(StrEnum):

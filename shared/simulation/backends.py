@@ -1,9 +1,9 @@
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from shared.models.simulation import FluidMetricResult, StressSummary
+from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
 
 
 class BodyState(BaseModel):
@@ -43,7 +43,33 @@ class SiteState(BaseModel):
 class StepResult(BaseModel):
     time: float
     success: bool
-    failure_reason: str | None = None
+    failure: SimulationFailure | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_failure_reason(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "failure_reason" in data and "failure" not in data:
+            reason_str = data.pop("failure_reason")
+            if reason_str:
+                from shared.enums import FailureReason
+
+                # Try to parse legacy string format
+                parts = reason_str.split(":", 1)
+                try:
+                    reason_enum = FailureReason(parts[0].upper())
+                    detail = parts[1] if len(parts) > 1 else None
+                    data["failure"] = SimulationFailure(reason=reason_enum, detail=detail)
+                except ValueError:
+                    # If it's not a valid enum member, treat whole string as detail
+                    data["failure"] = SimulationFailure(
+                        reason=FailureReason.STABILITY_ISSUE, detail=reason_str
+                    )
+        return data
+
+    @property
+    def failure_reason(self) -> str | None:
+        """Legacy access to stringified failure reason."""
+        return str(self.failure) if self.failure else None
 
 
 class SceneConfig(BaseModel):
