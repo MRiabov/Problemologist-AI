@@ -152,11 +152,12 @@ fluids:
         data = resp.json()
 
         # Check for electronics fluid damage failure
-        # In mock mode it might not fail, but if running real Genesis it should.
-        # Given we are in integration tests, it might use real Genesis if configured.
-        # If it doesn't fail, we at least check if the field exists in the response.
         if not data.get("success"):
-            assert "ELECTRONICS_FLUID_DAMAGE" in str(data.get("fail_reason"))
+            failure = data.get("artifacts", {}).get("failure")
+            assert failure is not None
+            assert (
+                failure.get("reason") == SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
+            )
 
 
 @pytest.mark.integration_p1

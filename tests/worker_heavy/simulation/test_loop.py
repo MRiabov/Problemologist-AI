@@ -123,8 +123,8 @@ def test_validation_hook_failure(tmp_path):
 
         metrics = loop.step({})
         assert metrics.success is False
-        assert metrics.fail_mode == FailureReason.VALIDATION_FAILED
-        assert "Part too large" in metrics.fail_reason
+        assert metrics.failure.matches(FailureReason.VALIDATION_FAILED)
+        assert "Part too large" in metrics.failure.detail
         # Check that it didn't step (total_time should be 0.0)
         assert metrics.total_time == 0.0
 

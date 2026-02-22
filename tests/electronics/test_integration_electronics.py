@@ -5,6 +5,10 @@ from unittest.mock import MagicMock
 
 from build123d import Box, Compound
 
+from shared.enums import (
+    ElectronicComponentType,
+    FailureReason,
+)
 from shared.models.schemas import (
     ElectronicComponent,
     ElectronicsSection,
@@ -139,7 +143,7 @@ def test_int_126_wire_tear_failure(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
 
     assert metrics.success is False
-    assert "wire_torn:wire_torn_test" in metrics.fail_reason
+    assert metrics.failure.matches(FailureReason.WIRE_TORN, "wire_torn_test")
 
 
 def test_int_120_circuit_validation_pre_gate(monkeypatch):
@@ -152,7 +156,7 @@ def test_int_120_circuit_validation_pre_gate(monkeypatch):
     )
 
     # Mock validation to fail generically
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False,
             errors=["electronics_validation_failed: random_error"],
@@ -169,9 +173,7 @@ def test_int_120_circuit_validation_pre_gate(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
 
     assert metrics.success is False
-    assert "validation_failed" in str(
-        metrics.fail_reason
-    ) or "electronics_validation_failed" in str(metrics.fail_reason)
+    assert metrics.failure.reason == FailureReason.VALIDATION_FAILED
 
 
 def test_int_121_short_circuit_detection(monkeypatch):
@@ -183,7 +185,7 @@ def test_int_121_short_circuit_detection(monkeypatch):
     )
 
     # Mock validation failure
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False, errors=["FAILED_SHORT_CIRCUIT"], node_voltages={}
         )
@@ -197,7 +199,9 @@ def test_int_121_short_circuit_detection(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
     # Expect failure reason to propagate
-    assert "FAILED_SHORT_CIRCUIT" in str(metrics.fail_reason)
+    assert metrics.failure.matches(
+        FailureReason.VALIDATION_FAILED, "FAILED_SHORT_CIRCUIT"
+    )
 
 
 def test_int_122_overcurrent_supply_detection(monkeypatch):
@@ -208,7 +212,7 @@ def test_int_122_overcurrent_supply_detection(monkeypatch):
         components=[],
     )
 
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False,
             errors=["FAILED_OVERCURRENT_SUPPLY"],
@@ -224,7 +228,9 @@ def test_int_122_overcurrent_supply_detection(monkeypatch):
 
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
-    assert "FAILED_OVERCURRENT_SUPPLY" in str(metrics.fail_reason)
+    assert metrics.failure.matches(
+        FailureReason.VALIDATION_FAILED, "FAILED_OVERCURRENT_SUPPLY"
+    )
 
 
 def test_int_124_open_circuit_detection(monkeypatch):
@@ -235,7 +241,7 @@ def test_int_124_open_circuit_detection(monkeypatch):
         components=[],
     )
 
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False, errors=["FAILED_OPEN_CIRCUIT:node_x"], node_voltages={}
         )
@@ -248,7 +254,9 @@ def test_int_124_open_circuit_detection(monkeypatch):
 
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
-    assert "FAILED_OPEN_CIRCUIT" in str(metrics.fail_reason)
+    assert metrics.failure.matches(
+        FailureReason.VALIDATION_FAILED, "FAILED_OPEN_CIRCUIT:node_x"
+    )
 
 
 def test_int_127_backward_compat():

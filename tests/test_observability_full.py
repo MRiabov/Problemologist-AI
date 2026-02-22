@@ -79,19 +79,22 @@ def test_render_requests():
 
 
 def test_simulation_events():
+    from shared.models.simulation import SimulationFailure
+
     req = SimulationRequestEvent(script_path="sim.py")
     assert req.event_type == ObservabilityEventType.SIMULATION_REQUEST
 
+    failure_obj = SimulationFailure(reason=SimulationFailureMode.TIMEOUT, detail="test")
     res = SimulationResultEvent(
         success=False,
         failure_reason=SimulationFailureMode.TIMEOUT,
-        failure={"reason": "TIMEOUT", "detail": "test"},
+        failure=failure_obj,
         time_elapsed_s=10.5,
         compute_time_ms=500.0,
     )
     assert res.event_type == ObservabilityEventType.SIMULATION_RESULT
-    assert res.failure_reason == "TIMEOUT"
-    assert res.failure["detail"] == "test"
+    assert res.failure_reason == SimulationFailureMode.TIMEOUT
+    assert res.failure.matches(SimulationFailureMode.TIMEOUT, "test")
 
 
 def test_cots_search_event():
