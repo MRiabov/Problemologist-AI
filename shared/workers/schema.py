@@ -157,6 +157,7 @@ class SimulationArtifacts(BaseModel):
     fluid_metrics: list[dict[StrictStr, Any]] = Field(default_factory=list)
     circuit_validation_result: dict[StrictStr, Any] | None = None
     scene_path: StrictStr | None = None
+    failure: dict[StrictStr, Any] | None = None
 
     model_config = {"extra": "allow"}
 

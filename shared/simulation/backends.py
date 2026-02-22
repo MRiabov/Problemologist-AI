@@ -48,7 +48,11 @@ class StepResult(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def handle_legacy_failure_reason(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "failure_reason" in data and "failure" not in data:
+        if (
+            isinstance(data, dict)
+            and "failure_reason" in data
+            and "failure" not in data
+        ):
             reason_str = data.pop("failure_reason")
             if reason_str:
                 from shared.enums import FailureReason
@@ -58,7 +62,9 @@ class StepResult(BaseModel):
                 try:
                     reason_enum = FailureReason(parts[0].upper())
                     detail = parts[1] if len(parts) > 1 else None
-                    data["failure"] = SimulationFailure(reason=reason_enum, detail=detail)
+                    data["failure"] = SimulationFailure(
+                        reason=reason_enum, detail=detail
+                    )
                 except ValueError:
                     # If it's not a valid enum member, treat whole string as detail
                     data["failure"] = SimulationFailure(
