@@ -384,18 +384,34 @@ def calculate_assembly_totals(
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
+        import sqlite3
+
+        db_path = Path("parts.db")
+        conn = None
+        if db_path.exists():
+            conn = sqlite3.connect(db_path)
+
         for p in cots_parts:
             total_cost += p.unit_cost_usd * p.quantity
             # Weight is not always in CotsPartEstimate, but we can try to find it
             # if we had a more detailed catalog access here.
             # For now, we'll try to use metadata if we can find it in shared catalog.
-            import contextlib
+            if conn:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT weight_g FROM parts WHERE part_id = ?", (p.part_id,)
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        total_weight += row[0] * p.quantity
+                except Exception as e:
+                    logger.warning(
+                        "failed_to_lookup_cots_weight", part_id=p.part_id, error=str(e)
+                    )
 
-            with contextlib.suppress(Exception):
-                # Heuristic: try to look up weight if not provided
-                # In current schema CotsPartEstimate doesn't have weight_g
-                # But the indexer extracts it.
-                pass
+        if conn:
+            conn.close()
 
     return total_cost, total_weight
 

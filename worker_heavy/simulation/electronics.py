@@ -83,6 +83,8 @@ class ElectronicsManager:
             for c in self.electronics.components
             if c.type == ElectronicComponentType.POWER_SUPPLY
         ]
+        # Include the main power supply (often referred to as 'supply' in wiring)
+        sources.append("supply")
 
         # Simplified BFS for power propagation
         queue = list(sources)
