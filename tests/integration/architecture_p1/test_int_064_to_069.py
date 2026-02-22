@@ -65,10 +65,11 @@ async def test_int_066_fluid_electronics_coupling():
 physics:
   backend: "genesis"
 objectives:
-  goal_zone: {min: [10,10,10], max: [12,12,12]}
-  build_zone: {min: [-100,-100,-100], max: [100,100,100]}
-simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
+  goal_zone: {min: [0.5,0.5,0.5], max: [0.6,0.6,0.6]}
+  build_zone: {min: [-1,-1,-1], max: [1,1,1]}
+simulation_bounds: {min: [-1,-1,-1], max: [1,1,1]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
+
 constraints: {max_unit_cost: 100, max_weight_g: 1000}
 """
         await client.post(
@@ -107,6 +108,9 @@ electronics:
   power_supply: {{voltage_dc: 12, max_current_a: 10}}
   components:
     - {{component_id: "elec_part", type: "motor", assembly_part_ref: "elec_part"}}
+  wiring:
+    - {{wire_id: "w1", from: {{component: "supply", terminal: "v+"}}, to: {{component: "elec_part", terminal: "+"}}, gauge_awg: 22, length_mm: 50}}
+    - {{wire_id: "w2", from: {{component: "elec_part", terminal: "-"}}, to: {{component: "supply", terminal: "0"}}, gauge_awg: 22, length_mm: 50}}
 totals:
   estimated_unit_cost_usd: 10
   estimated_weight_g: 100

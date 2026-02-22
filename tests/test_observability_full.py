@@ -94,7 +94,8 @@ def test_simulation_events():
     )
     assert res.event_type == ObservabilityEventType.SIMULATION_RESULT
     assert res.failure_reason == SimulationFailureMode.TIMEOUT
-    assert res.failure.matches(SimulationFailureMode.TIMEOUT, "test")
+    assert res.failure == SimulationFailureMode.TIMEOUT
+    assert res.failure.detail == "test"
 
 
 def test_cots_search_event():
