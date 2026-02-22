@@ -127,7 +127,9 @@ class BenchmarkPlannerNode(BaseNode):
             return state
 
         state.plan = prediction.plan
-        state.journal += f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
+        state.journal += (
+            f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
+        )
         state.messages.append(
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
