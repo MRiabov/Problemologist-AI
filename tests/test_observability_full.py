@@ -23,7 +23,7 @@ from shared.observability.schemas import (
     ReviewDecisionEvent,
     RunCommandToolEvent,
     SceneValidationEvent,
-    SimulationFailureMode,
+    FailureReason as SimulationFailureMode,
     SimulationInstabilityEvent,
     SimulationRequestEvent,
     SimulationResultEvent,
@@ -85,11 +85,13 @@ def test_simulation_events():
     res = SimulationResultEvent(
         success=False,
         failure_reason=SimulationFailureMode.TIMEOUT,
+        failure={"reason": "TIMEOUT", "detail": "test"},
         time_elapsed_s=10.5,
         compute_time_ms=500.0,
     )
     assert res.event_type == ObservabilityEventType.SIMULATION_RESULT
-    assert res.failure_reason == "timeout"
+    assert res.failure_reason == "TIMEOUT"
+    assert res.failure["detail"] == "test"
 
 
 def test_cots_search_event():

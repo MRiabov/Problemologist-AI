@@ -2,7 +2,19 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from shared.simulation.schemas import SimulationFailureMode
+from shared.enums import FailureReason
+
+
+class SimulationFailure(BaseModel):
+    """Structured failure information for simulation."""
+
+    reason: FailureReason
+    detail: str | None = None
+
+    def __str__(self) -> str:
+        if self.detail:
+            return f"{self.reason}:{self.detail}"
+        return str(self.reason)
 
 
 class StressSummary(BaseModel):
@@ -36,7 +48,8 @@ class SimulationMetrics(BaseModel):
     max_stress: float = 0.0
     success: bool = False
     fail_reason: str | None = None
-    fail_mode: SimulationFailureMode | None = None
+    fail_mode: FailureReason | None = None
+    failure: SimulationFailure | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
     stress_fields: dict[str, StressFieldData] = Field(
         default_factory=dict
@@ -50,7 +63,8 @@ class SimulationResult(BaseModel):
     success: bool
     summary: str
     failure_reason: str | None = None
-    fail_mode: SimulationFailureMode | None = None
+    fail_mode: FailureReason | None = None
+    failure: SimulationFailure | None = None
     render_paths: list[str] = Field(default_factory=list)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)

@@ -14,7 +14,11 @@ from shared.models.schemas import (
     ObjectivesYaml,
     PhysicsConfig,
 )
-from shared.models.simulation import SimulationMetrics as SharedSimulationMetrics
+from shared.enums import FailureReason
+from shared.models.simulation import (
+    SimulationFailure,
+    SimulationMetrics as SharedSimulationMetrics,
+)
 from shared.simulation.backends import (
     BodyState,
     StepResult,
@@ -49,6 +53,11 @@ def mock_genesis_backend():
 
         # Default behavior: success on step
         backend.step.return_value = StepResult(time=0.002, success=True)
+        backend.get_max_stress.return_value = 0.0
+        # Explicitly remove timestep to fall back to default dt in SimulationLoop
+        if hasattr(backend, "timestep"):
+            del backend.timestep
+
         backend.get_all_body_names.return_value = ["world", "bucket"]
         backend.get_body_state.return_value = BodyState(
             pos=(0, 0, 0), quat=(1, 0, 0, 0), vel=(0, 0, 0), angvel=(0, 0, 0)
@@ -201,10 +210,8 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
     metrics = loop.step({}, duration=0.1)
 
     # 3. Verify failure
-    # NOTE: Due to a bug in SimulationLoop.step (duplicate success check using local fail_reason),
-    # success is currently True even if fluid objectives fail.
-    assert metrics.success is True
-    assert metrics.fail_reason == "fluid_objective_failed"
+    assert metrics.success is False
+    assert metrics.failure.reason == FailureReason.FLUID_OBJECTIVE_FAILED
     assert metrics.fluid_metrics[0].passed is False
     assert metrics.fluid_metrics[0].measured_value == 0.5
 
@@ -212,7 +219,9 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
 def test_part_breakage_integration(mock_genesis_backend, tmp_path):
     # Setup mock backend to return failure on step
     mock_genesis_backend.step.return_value = StepResult(
-        time=0.002, success=False, failure_reason="PART_BREAKAGE:world"
+        time=0.002,
+        success=False,
+        failure=SimulationFailure(reason=FailureReason.PART_BREAKAGE, detail="world"),
     )
 
     xml_path = tmp_path / "scene.xml"
@@ -225,4 +234,5 @@ def test_part_breakage_integration(mock_genesis_backend, tmp_path):
     metrics = loop.step({}, duration=0.1)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "physics_instability"
+    assert metrics.failure.reason == FailureReason.PART_BREAKAGE
+    assert metrics.failure.detail == "world"

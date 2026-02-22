@@ -75,6 +75,12 @@ bash scripts/ensure_docker_vfs.sh
 # Ensure ngspice is installed for electronics validation
 bash scripts/ensure_ngspice.sh
 
+# Ensure COTS database is populated
+if [ ! -s parts.db ]; then
+  echo "parts.db missing or empty. Populating COTS database..."
+  PYTHONPATH=. uv run python -m shared.cots.indexer
+fi
+
 echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
 docker compose -f docker-compose.test.yaml up -d
 
@@ -148,6 +154,21 @@ pkill -f "uvicorn.*18000" || true
 pkill -f "uvicorn.*18001" || true
 pkill -f "uvicorn.*18002" || true
 pkill -f "python -m controller.temporal_worker" || true
+pkill Xvfb || true
+
+# Start Xvfb for headless rendering
+echo "Starting Xvfb for headless rendering..."
+Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+XVFB_PID=$!
+export DISPLAY=:99
+
+# Verify Xvfb is running
+sleep 2
+if ! kill -0 $XVFB_PID 2>/dev/null; then
+  echo "Xvfb failed to start. Headless rendering might fail."
+else
+  echo "Xvfb started (PID: $XVFB_PID) on $DISPLAY"
+fi
 
 # Start Worker Light (port 18001)
 export WORKER_TYPE=light
@@ -186,10 +207,10 @@ cleanup() {
   # Record the exit status of the test command
   EXIT_STATUS=$?
   echo ""
-  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID)..."
+  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID, Xvfb: $XVFB_PID)..."
   
   # Kill the captured PIDs
-  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID 2>/dev/null || true
+  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID 2>/dev/null || true
   
   # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
   # We use -9 here as some processes (especially when uv run is involved) can hang

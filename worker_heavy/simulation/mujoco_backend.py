@@ -4,7 +4,8 @@ from typing import Any
 import mujoco
 import numpy as np
 
-from shared.models.simulation import FluidMetricResult, StressSummary
+from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
+from shared.enums import FailureReason
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -104,7 +105,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure=SimulationFailure(reason=FailureReason.PHYSICS_INSTABILITY),
                 )
 
             mujoco.mj_step(self.model, self.data)
@@ -114,7 +115,7 @@ class MuJoCoBackend(PhysicsBackend):
                 return StepResult(
                     time=self.data.time,
                     success=False,
-                    failure_reason="instability_detected",
+                    failure=SimulationFailure(reason=FailureReason.PHYSICS_INSTABILITY),
                 )
 
         return StepResult(time=self.data.time, success=True)
