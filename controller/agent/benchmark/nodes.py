@@ -1,6 +1,9 @@
 import asyncio
+import os
 import re
+import uuid
 from contextlib import suppress
+from pathlib import Path
 
 import dspy
 import httpx
@@ -9,8 +12,11 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.utils.git import GitManager
+from controller.observability.tracing import record_worker_events, sync_asset
 from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
+from shared.observability.schemas import SkillEditEvent
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -390,9 +396,155 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     return await node(state)
 
 
+class BenchmarkSkillsSignature(dspy.Signature):
+    """
+    Skills node: Analyzes the journal to suggest new skills.
+    You must use the provided tools to analyze the work and save new skills.
+    If you identify a valuable skill or pattern, use the `save_suggested_skill` tool to record it.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    task = dspy.InputField()
+    journal = dspy.InputField()
+    summary = dspy.OutputField(desc="A summary of the skills identified and saved")
+
+
+@type_check
+class BenchmarkSkillsNode(BaseNode):
+    """
+    Skills node: Analyzes the journal to suggest new skills.
+    Refactored to use DSPy ReAct with remote worker execution.
+    """
+
+    def __init__(
+        self, context: SharedNodeContext, suggested_skills_dir: str = "suggested_skills"
+    ):
+        super().__init__(context)
+        self.suggested_skills_dir = Path(suggested_skills_dir)
+        self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
+        self.git = GitManager(
+            repo_path=self.suggested_skills_dir,
+            repo_url=os.getenv("GIT_REPO_URL"),
+            pat=os.getenv("GIT_PAT"),
+        )
+        self.git.ensure_repo()
+
+    async def _sync_git(self, commit_message: str):
+        """Sync changes with git via GitManager."""
+        await self.git.sync_changes(commit_message, lm=self.ctx.dspy_lm)
+
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        """Execute the sidecar node logic using DSPy ReAct."""
+
+        async def save_suggested_skill(title: str, content: str) -> str:
+            """
+            Saves a new suggested skill to the repository.
+            Args:
+                title: A concise title for the skill (e.g., 'motor_initialization').
+                content: The markdown content describing the skill.
+            """
+            clean_title = title.strip().lower().replace(" ", "_").replace(".md", "")
+            file_path = self.suggested_skills_dir / f"{clean_title}.md"
+
+            # T030: Safety toggle for deletions
+            if file_path.exists():
+                import difflib
+
+                old_lines = file_path.read_text().splitlines()
+                new_lines = content.splitlines()
+                diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
+                # Count lines starting with '-' but not '---'
+                deletions = sum(
+                    1
+                    for line in diff
+                    if line.startswith("-") and not line.startswith("---")
+                )
+                if deletions > 15:
+                    logger.warning(
+                        "skill_update_blocked_too_many_deletions", deletions=deletions
+                    )
+                    # Emit safety event
+                    await record_worker_events(
+                        episode_id=self.ctx.session_id,
+                        events=[
+                            SkillEditEvent(
+                                skill_name=clean_title,
+                                action="update_blocked",
+                                lines_changed=deletions,
+                            )
+                        ],
+                    )
+                    return f"Error: Update blocked. You deleted {deletions} lines, but the limit is 15 lines of deletion to prevent skill loss."
+
+            try:
+                with file_path.open("w") as f:
+                    f.write(content)
+
+                # Sync to Database as Asset
+                try:
+                    episode_uuid = uuid.UUID(self.ctx.session_id)
+                    await sync_asset(
+                        episode_uuid, f"suggested_skills/{clean_title}.md", content
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to sync skill asset: {e}")
+
+                # Sync to Git
+                await self._sync_git(f"Add skill: {clean_title}")
+
+                return f"Skill '{clean_title}' saved and synced successfully."
+            except Exception as e:
+                return f"Error saving skill: {e}"
+
+        def get_skills_tools(fs, session_id):
+            tools = get_benchmark_tools(fs, session_id)
+            # Add specialized tool
+            tools.append(save_suggested_skill)
+            return tools
+
+        # Construct synthetic journal from messages and validation logs
+        journal_content = "\n".join([str(m.content) for m in state.messages])
+        if state.session.validation_logs:
+             journal_content += "\n\nValidation Logs:\n" + "\n".join(state.session.validation_logs)
+
+        inputs = {
+            "task": state.session.prompt,
+            "journal": journal_content,
+        }
+
+        validate_files = []
+
+        prediction, _, journal_entry = await self._run_program(
+            dspy.ReAct,
+            BenchmarkSkillsSignature,
+            state,
+            inputs,
+            get_skills_tools,
+            validate_files,
+            "skill_learner",
+        )
+
+        if not prediction:
+            # We don't fail the session if skills fail, just log it
+            logger.warning("benchmark_skills_node_failed_no_prediction")
+            return state
+
+        summary = getattr(prediction, "summary", "No summary provided.")
+        state.messages.append(AIMessage(content=f"Skills update: {summary}"))
+
+        return state
+
+
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    # No changes needed
-    return state
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
+    node = BenchmarkSkillsNode(context=ctx)
+    return await node(state)
 
 
 class BenchmarkReviewerSignature(dspy.Signature):
