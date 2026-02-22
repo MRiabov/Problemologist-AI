@@ -490,8 +490,8 @@ class SimulationLoop:
                         )
 
                         if summary and (
-                            np.isnan(summary.max_von_mises_pa)
-                            or summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6)
+                            (summary.max_von_mises_pa is not None and np.isnan(summary.max_von_mises_pa))
+                            or (summary.max_von_mises_pa is not None and summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6))
                         ):
                             self.fail_reason = (
                                 SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
@@ -892,10 +892,10 @@ class SimulationLoop:
                 # Treat NaNs as breakage if FEM is enabled, as it usually indicates
                 # the simulation exploded due to stress limits.
                 is_broken = False
-                if np.isnan(summary.max_von_mises_pa):
+                if summary.max_von_mises_pa is not None and np.isnan(summary.max_von_mises_pa):
                     logger.warning("part_breakage_nan_detected", part=label)
                     is_broken = True
-                elif summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
+                elif summary.max_von_mises_pa is not None and summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
                     is_broken = True
 
                 if is_broken:
@@ -906,7 +906,7 @@ class SimulationLoop:
                         PartBreakageEvent(
                             part_label=label,
                             stress_mpa=summary.max_von_mises_pa / 1e6
-                            if not np.isnan(summary.max_von_mises_pa)
+                            if (summary.max_von_mises_pa is not None and not np.isnan(summary.max_von_mises_pa))
                             else 0.0,
                             ultimate_mpa=mat_def.ultimate_stress_pa / 1e6,
                             location=summary.location_of_max or (0, 0, 0),

@@ -75,10 +75,19 @@ source scripts/ensure_docker_vfs.sh
 # Start Xvfb for headless rendering if not already running
 if ! xset q >/dev/null 2>&1; then
   if command -v Xvfb >/dev/null 2>&1; then
-    echo "Starting Xvfb..."
+    echo "Starting Xvfb on :99..."
     Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
     export DISPLAY=:99
-    sleep 2
+    export XVFB_PID=$!
+    sleep 3
+    # Verify Xvfb is running
+    if ! xset q >/dev/null 2>&1; then
+        echo "Warning: Xvfb failed to start or is not responding."
+    else
+        echo "Xvfb started successfully."
+    fi
+  else
+    echo "Xvfb not found. Rendering may fail in headless environment."
   fi
 fi
 

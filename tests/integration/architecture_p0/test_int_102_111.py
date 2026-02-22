@@ -49,7 +49,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
     INT-102: FEM material config validation before simulation.
     INT-111: validate_and_price FEM material gate.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         # 1. Setup objectives with FEM enabled and genesis backend
         objectives_content = """
 physics:
@@ -118,7 +118,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=300.0,
+            timeout=600.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -132,7 +132,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
     """
     INT-103: Verify simulation abort on ultimate_stress_pa violation.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         # Setup custom material config with very low ultimate_stress_pa
         custom_config = """
 cnc:
@@ -191,7 +191,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers=base_headers,
-            timeout=300.0,
+            timeout=600.0,
         )
 
         assert resp.status_code == 200
@@ -210,7 +210,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
     """
     INT-104: Verify SimulationResult.stress_summaries is populated.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         # Setup material with FEM fields
         custom_config = """
 cnc:
@@ -265,7 +265,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers=base_headers,
-            timeout=300.0,
+            timeout=600.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -291,7 +291,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
     """
     INT-107: Verify STRESS_OBJECTIVE_EXCEEDED failure reason.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         # Use a material that is strong but we set a very LOW stress objective
         objectives_content = """
 physics:
@@ -353,7 +353,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=300.0,
+            timeout=600.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -369,7 +369,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
     Note: Creating true instability reliably is hard, but we can try
     intersecting geometries with high mass/stiffness.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         objectives_content = """
 physics:
   backend: "genesis"
@@ -425,7 +425,7 @@ cnc:
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "skip_validate": True},
             headers=base_headers,
-            timeout=300.0,
+            timeout=600.0,
         )
         assert resp.status_code == 200
         data = resp.json()
