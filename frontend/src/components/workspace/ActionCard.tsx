@@ -1,25 +1,27 @@
+import { memo } from "react";
 import { Search, List, Eye, FileEdit, PlayCircle, Zap } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { getFileIconInfo } from "../../lib/fileIcons";
-import { useEpisodes } from "../../context/EpisodeContext";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
+import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 
 interface ActionCardProps {
   trace: TraceResponse;
   resultCount?: number;
   className?: string;
+  assets?: AssetResponse[];
+  setActiveArtifactId: (id: string | null) => void;
 }
 
-export function ActionCard({ trace, resultCount, className }: ActionCardProps) {
-  const { setActiveArtifactId, selectedEpisode } = useEpisodes();
+export const ActionCard = memo(({ trace, resultCount, className, assets, setActiveArtifactId }: ActionCardProps) => {
   const toolName = (trace.name || "").toLowerCase();
   
   if (trace.trace_type !== 'tool_start') return null;
 
-  let args: any = {};
+  let args: Record<string, any> = {};
   try {
     if (trace.content) args = JSON.parse(trace.content);
-  } catch (e) {
+  } catch {
     // Basic extraction for non-JSON content - handles quoted and unquoted paths
     const match = trace.content?.match(/(?:TargetFile|AbsolutePath|path)["']?\s*[:=]\s*["']?([^"'\s,]+)["']?/);
     if (match) args.path = match[1];
@@ -44,8 +46,8 @@ export function ActionCard({ trace, resultCount, className }: ActionCardProps) {
     : { icon: getToolIcon(), color: undefined };
 
   const handleActionClick = () => {
-    if (!filePath || !selectedEpisode) return;
-    const asset = selectedEpisode.assets?.find(a => 
+    if (!filePath) return;
+    const asset = assets?.find(a =>
       a.s3_path.toLowerCase().endsWith(filePath.toLowerCase()) || 
       a.s3_path.toLowerCase() === filePath.toLowerCase()
     );
@@ -91,4 +93,6 @@ export function ActionCard({ trace, resultCount, className }: ActionCardProps) {
       )}
     </div>
   );
-}
+});
+
+ActionCard.displayName = 'ActionCard';

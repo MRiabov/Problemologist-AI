@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -8,7 +8,7 @@ interface ThoughtBlockProps {
   className?: string;
 }
 
-export function ThoughtBlock({ duration = 0, content, className }: ThoughtBlockProps) {
+export const ThoughtBlock = memo(({ duration = 0, content, className }: ThoughtBlockProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!content && duration === 0) return null;
@@ -30,4 +30,6 @@ export function ThoughtBlock({ duration = 0, content, className }: ThoughtBlockP
       )}
     </div>
   );
-}
+});
+
+ThoughtBlock.displayName = 'ThoughtBlock';
