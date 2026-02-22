@@ -5,6 +5,19 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.coder import coder_node
 from controller.agent.state import AgentState
+
+
+@pytest.fixture
+def mock_llm():
+    with patch("dspy.LM") as mock:
+        instance = mock.return_value
+        instance.ainvoke = AsyncMock()
+        instance.ainvoke.return_value = AIMessage(
+            content="```python\nprint('hello')\n```"
+        )
+        yield instance
+
+
 from shared.workers.schema import ExecuteResponse
 
 
@@ -44,7 +57,7 @@ def mock_record_events():
     "worker_heavy.utils.file_validation.validate_node_output", return_value=(True, [])
 )
 async def test_engineer_node_success(
-    mock_validate, mock_run_program, mock_worker, mock_record_events
+    mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
     # Mock _run_program return value: (prediction, artifacts, journal_entry)
     mock_prediction = MagicMock(journal="Step done.")
@@ -70,8 +83,15 @@ async def test_engineer_node_success(
     "worker_heavy.utils.file_validation.validate_node_output", return_value=(True, [])
 )
 async def test_engineer_node_retry_then_success(
-    mock_validate, mock_run_program, mock_worker, mock_record_events
+    mock_validate, mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
+    # In the new architecture, retries are HANDLED INSIDE _run_program.
+    # So we can just mock it returning the successful result after what looks like a failed attempt
+    # OR we can mock the internal behavior if we want to test retries explicitly.
+    # BUT since we are testing coder_node -> CoderNode -> _run_program,
+    # and _run_program itself handles retries, a "retry test" for CoderNode
+    # should probably verify that coder_node handles the response from _run_program correctly.
+
     mock_prediction = MagicMock(journal="Fixed.")
     mock_run_program.return_value = (
         mock_prediction,
@@ -95,7 +115,7 @@ async def test_engineer_node_retry_then_success(
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.base.BaseNode._run_program")
 async def test_engineer_node_all_fail(
-    mock_run_program, mock_worker, mock_record_events
+    mock_run_program, mock_llm, mock_worker, mock_record_events
 ):
     # Mock _run_program returning failed state (prediction=None)
     mock_run_program.return_value = (None, {}, "\nMax retries reached.")
