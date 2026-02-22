@@ -20,6 +20,7 @@ class PromptManager:
         templates = {
             # Engineer Agent
             "planner": data["engineer"]["planner"]["system"],
+            "electronics_planner": data["engineer"]["electronics_planner"]["system"],
             "coder": data["engineer"]["engineer"]["system"],
             "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
             "plan_reviewer": data["engineer"]["critic"]["system"],
@@ -37,7 +38,7 @@ class PromptManager:
         # Add fallbacks for things not in prompts.yaml yet
         templates.update(
             {
-                "sidecar": """You are the Sidecar Learner. 
+                "sidecar": """You are the Skill Learner. 
 Analyze the execution journal for the task: {{ task }}
 
 Journal:
