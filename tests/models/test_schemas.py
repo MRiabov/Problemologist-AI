@@ -4,7 +4,10 @@ import pytest
 from pydantic import ValidationError
 
 from shared.models.schemas import (
+    AssemblyConstraints,
+    AssemblyDefinition,
     BoundingBox,
+    CostTotals,
     MovingPart,
     ObjectivesYaml,
     ReviewFrontmatter,
@@ -119,3 +122,39 @@ class TestObjectivesYaml:
         del valid_objectives_data["objectives"]
         with pytest.raises(ValidationError):
             ObjectivesYaml(**valid_objectives_data)
+
+
+class TestAssemblyDefinition:
+    """Tests for AssemblyDefinition schema and validation rules (INT-010, INT-011)."""
+
+    @pytest.fixture
+    def valid_assembly_data(self):
+        return {
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 100.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 90.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "totals": {
+                "estimated_unit_cost_usd": 85.0,
+                "estimated_weight_g": 850.0,
+                "estimate_confidence": "high",
+            },
+        }
+
+    def test_valid_assembly(self, valid_assembly_data):
+        ad = AssemblyDefinition(**valid_assembly_data)
+        assert ad.totals.estimated_unit_cost_usd == 85.0
+
+    def test_planner_cap_exceeds_benchmark_cap(self, valid_assembly_data):
+        valid_assembly_data["constraints"]["planner_target_max_unit_cost_usd"] = 110.0
+        with pytest.raises(ValidationError) as excinfo:
+            AssemblyDefinition(**valid_assembly_data)
+        assert "Planner target cost" in str(excinfo.value)
+
+    def test_estimated_total_exceeds_planner_cap(self, valid_assembly_data):
+        valid_assembly_data["totals"]["estimated_unit_cost_usd"] = 95.0
+        with pytest.raises(ValidationError) as excinfo:
+            AssemblyDefinition(**valid_assembly_data)
+        assert "Estimated unit cost" in str(excinfo.value)

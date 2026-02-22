@@ -9,7 +9,9 @@ def test_metric_benchmark_planner_basic():
     """Test using benchmark_planner milestones from reward_config.yaml"""
     gold = SimpleNamespace(
         agent_name="benchmark_planner",
-        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
+        objectives=SimpleNamespace(
+            constraints=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0)
+        ),
     )
     # Give it all milestones except reviewer_accepted
     prediction = SimpleNamespace(
@@ -24,7 +26,7 @@ def test_metric_benchmark_planner_basic():
         reviewer_accepted=False,
     )
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # Weights for benchmark_planner:
     # present: 0.05
     # schema: 0.10
@@ -33,13 +35,15 @@ def test_metric_benchmark_planner_basic():
     # geometry: 0.10
     # cots: 0.05
     # Sum: 0.45
-    assert score == pytest.approx(0.45)
+    assert result.score == pytest.approx(0.45)
 
 
 def test_metric_benchmark_planner_cost_overage():
     gold = SimpleNamespace(
         agent_name="benchmark_planner",
-        objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
+        objectives=SimpleNamespace(
+            constraints=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0)
+        ),
     )
     # 20% over cost cap -> penalty 0.8
     prediction = SimpleNamespace(
@@ -53,18 +57,20 @@ def test_metric_benchmark_planner_cost_overage():
         reviewer_accepted=False,
     )
 
-    score = cad_simulation_metric(gold, prediction)
+    result = cad_simulation_metric(gold, prediction)
     # present: 0.05
     # schema: 0.10
     # cost: 0.10 * 0.8 = 0.08
-    assert score == pytest.approx(0.05 + 0.10 + 0.08)
+    assert result.score == pytest.approx(0.05 + 0.10 + 0.08)
 
 
 def test_metric_cad_engineer_failure_formula():
     """Verify that cad_engineer simulation failure formula is used."""
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=SimpleNamespace(
+            constraints=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0)
+        ),
     )
     prediction = SimpleNamespace(
         script_compiled=True,
@@ -81,8 +87,8 @@ def test_metric_cad_engineer_failure_formula():
     # Base: 0.05(script) + 0.08(cad) + 0.07(mfg) + 0.05(zone) + 0.10(cost) + 0.05(weight) = 0.40
     # Failure formula: 0.60 * (1 - 7/10) * 0.4 = 0.60 * 0.3 * 0.4 = 0.072
     # Total: 0.472
-    score = cad_simulation_metric(gold, prediction)
-    assert score == pytest.approx(0.472)
+    result = cad_simulation_metric(gold, prediction)
+    assert result.score == pytest.approx(0.472)
 
 
 def test_metric_reviewer_generic_binary():
@@ -92,5 +98,5 @@ def test_metric_reviewer_generic_binary():
         review_artifacts_complete=True, decision_correct=True, review_actionable=True
     )
     # reviewer weights: 0.10, 0.60, 0.30 -> Sum 1.0
-    score = cad_simulation_metric(gold, prediction)
-    assert score == pytest.approx(1.0)
+    result = cad_simulation_metric(gold, prediction)
+    assert result.score == pytest.approx(1.0)
