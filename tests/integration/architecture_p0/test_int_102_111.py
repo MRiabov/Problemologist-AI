@@ -57,8 +57,8 @@ physics:
   fem_enabled: true
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
@@ -162,8 +162,8 @@ physics:
   fem_enabled: true
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
@@ -239,8 +239,8 @@ physics:
   fem_enabled: true
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
@@ -299,11 +299,11 @@ physics:
   fem_enabled: true
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
   stress_objectives:
     - part_label: "weak_link"
       max_von_mises_mpa: 0.0001 # Extremely low threshold
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """
@@ -375,8 +375,8 @@ physics:
   backend: "genesis"
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """

@@ -14,6 +14,7 @@ cd "$(dirname "$0")/.."
 # Networking for local services (infra is still in Docker but exposed on host)
 export IS_INTEGRATION_TEST=true
 export LOG_LEVEL=${LOG_LEVEL:-INFO}
+export PYTHONUNBUFFERED=1
 export WORKER_SESSIONS_DIR="/tmp/pb-sessions-integration"
 mkdir -p "$WORKER_SESSIONS_DIR"
 
@@ -132,6 +133,12 @@ nohup uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.lo
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
+
+# Create convenience symlinks in the logs/ root for the current environment
+ln -sf "integration_tests/controller.log" logs/controller.log
+ln -sf "integration_tests/worker_light.log" logs/worker_light.log
+ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
+ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
 
 echo "Waiting for services to be healthy..."
 sleep 5

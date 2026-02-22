@@ -496,8 +496,24 @@ class SimulationLoop:
                             # Fallback: get summary directly if not cached
                             summaries = self.backend.get_stress_summaries()
                             summary = next(
-                                (s for s in summaries if s.part_label == so.part_label),
+                                (
+                                    s
+                                    for s in summaries
+                                    if s.part_label.lower() == so.part_label.lower()
+                                ),
                                 None,
+                            )
+
+                        if summary:
+                            logger.info(
+                                "DEBUG_stress_check",
+                                part=so.part_label,
+                                current=summary.max_von_mises_pa,
+                                limit=so.max_von_mises_mpa * 1e6,
+                            )
+                        else:
+                            logger.warning(
+                                "DEBUG_stress_summary_missing", part=so.part_label
                             )
 
                         if summary and summary.max_von_mises_pa > (
@@ -519,11 +535,34 @@ class SimulationLoop:
                 # WP2: Check for backend success to catch specific errors (e.g. PART_BREAKAGE)
                 # before generic instability (NaN) checks catch it.
                 if not res.success and not self.fail_reason:
+                    logger.info("DEBUG_backend_failure", reason=res.failure_reason)
                     if isinstance(res.failure_reason, SimulationFailureMode):
                         self.fail_reason = res.failure_reason
                     elif isinstance(res.failure_reason, str):
                         if res.failure_reason.startswith("PART_BREAKAGE"):
-                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                            # WP2: If a part broke, check if it also had a stress objective.
+                            # The objective violation is more specific than general breakage.
+                            part_name = (
+                                res.failure_reason.split(":")[1]
+                                if ":" in res.failure_reason
+                                else None
+                            )
+                            if (
+                                part_name
+                                and self.objectives
+                                and self.objectives.objectives
+                            ):
+                                for so in self.objectives.objectives.stress_objectives:
+                                    if so.part_label.lower() == part_name.lower():
+                                        self.fail_reason = SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                                        logger.info(
+                                            "stress_objective_exceeded_via_breakage",
+                                            part=part_name,
+                                        )
+                                        break
+
+                            if not self.fail_reason:
+                                self.fail_reason = SimulationFailureMode.PART_BREAKAGE
                         elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
                             self.fail_reason = (
                                 SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
@@ -561,10 +600,26 @@ class SimulationLoop:
                     break
 
                 # WP2: Check for part breakage (INT-103) - moved here to prioritize over out-of-bounds
-                if self.objectives and self.objectives.physics.fem_enabled:
+                if (
+                    self.objectives
+                    and self.objectives.physics.fem_enabled
+                    and not self.fail_reason
+                ):
                     broken_part = self._check_part_breakage()
                     if broken_part:
-                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        # WP2: Check if this broken part also has a stress objective
+                        is_obj_violation = False
+                        if self.objectives.objectives:
+                            for so in self.objectives.objectives.stress_objectives:
+                                if so.part_label.lower() == broken_part.lower():
+                                    self.fail_reason = (
+                                        SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                                    )
+                                    is_obj_violation = True
+                                    break
+
+                        if not is_obj_violation:
+                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
                         break
 
                 # T018: Check all active bodies for out-of-bounds, not just the target

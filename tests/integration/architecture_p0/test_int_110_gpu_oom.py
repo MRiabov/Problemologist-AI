@@ -38,8 +38,8 @@ physics:
   compute_target: "cuda"
 objectives:
   goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-100, -100, -100], max: [100, 100, 100]}
-simulation_bounds: {min: [-100, -100, -100], max: [100, 100, 100]}
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
 constraints: {max_unit_cost: 100, max_weight_g: 10}
 """

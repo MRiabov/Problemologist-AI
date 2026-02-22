@@ -26,14 +26,14 @@ async def test_int_026_mandatory_event_families():
         objectives_content = """
 objectives:
   goal_zone:
-    min: [10, 10, 10]
+    min: [8, 8, 8]
     max: [12, 12, 12]
   build_zone:
     min: [0, 0, 0]
-    max: [100, 100, 100]
+    max: [20, 20, 20]
 simulation_bounds:
-    min: [-100, -100, -100]
-    max: [100, 100, 100]
+    min: [-10, -10, -10]
+    max: [30, 30, 30]
 moved_object:
     label: "test_obj"
     shape: "sphere"

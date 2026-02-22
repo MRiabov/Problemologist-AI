@@ -4,10 +4,14 @@ scenarios:
     planner:
       thought: "I will generate the engineering plan for the 10x10x10mm box."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nBuild a box.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nBuild a box.\n## 2. Parts List\n- Box\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Step 1')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics needed."
+      generated_code: "with open('todo.md', 'a') as f: f.write('\\n- [x] Check electronics')"
+      finished: true
     coder:
       thought: "I will implement the box in build123d and run simulation."
       generated_code: |
@@ -28,7 +32,7 @@ scenarios:
       plan:
         theme: "path_planning_with_wall"
         reasoning: "Creating a simple path planning task to verify movement."
-        params: { wall_height: 50, goal_pos: [100, 100, 0] }
+        params: { wall_height: 5, goal_pos: [10, 10, 0] }
     coder:
       thought: "Implementing benchmark script and setting up mandatory files."
       generated_code: |
@@ -37,17 +41,17 @@ scenarios:
 
         objectives_content = """
         objectives:
-          goal_zone: {min: [80, 80, 0], max: [100, 100, 20]}
+          goal_zone: {min: [8, 8, 0], max: [10, 10, 2]}
           forbid_zones: []
-          build_zone: {min: [-100, -100, 0], max: [100, 100, 100]}
+          build_zone: {min: [-10, -10, 0], max: [10, 10, 10]}
         physics:
           backend: genesis
-        simulation_bounds: {min: [-150, -150, 0], max: [150, 150, 200]}
+        simulation_bounds: {min: [-15, -15, 0], max: [15, 15, 20]}
         moved_object:
           label: ball
           shape: sphere
           static_randomization: {radius: [5, 5]}
-          start_position: [0, 0, 10]
+          start_position: [0, 0, 1]
           runtime_jitter: [1, 1, 0]
         constraints:
           max_unit_cost: 100.0
@@ -73,13 +77,25 @@ scenarios:
     planner:
       thought: "Generating INT-002 plan."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nBuild a box.')
-        with open('todo.md', 'w') as f: f.write('- [x] Done')
-        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('plan.md', 'w') as f:
+            f.write('## 1. Solution Overview\nBuild a box.\n## 2. Parts List\n- Box\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
+        with open('todo.md', 'w') as f:
+            f.write('- [x] Done')
+        with open('assembly_definition.yaml', 'w') as f:
+            f.write('version: "1.0"\nconstraints:\n  benchmark_max_unit_cost_usd: 100\n  benchmark_max_weight_g: 1000\n  planner_target_max_unit_cost_usd: 50\n  planner_target_max_weight_g: 500\ntotals:\n  estimated_unit_cost_usd: 10\n  estimated_weight_g: 100\n  estimate_confidence: high')
+        with open('objectives.yaml', 'w') as f:
+            f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
+    electronics_planner:
+      thought: "Adding electronics plan for INT-002."
+      generated_code: |
+        with open('plan.md', 'a') as f:
+            f.write('\n## Electrical Strategy\nSimple box, no electronics needed.')
+        with open('todo.md', 'a') as f:
+            f.write('\n- [x] Review electronics')
+      finished: true
     coder:
       thought: "Implementing box."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(10,10,10)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')"
       finished: true
     reviewer:
       review:
@@ -91,13 +107,16 @@ scenarios:
     planner:
       thought: "Review schema test for INT-016."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running review schema task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -109,13 +128,16 @@ scenarios:
     planner:
       thought: "Refusal loop test for INT-017."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running refusal task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -127,10 +149,13 @@ scenarios:
     planner:
       thought: "Starting a long task for INT-030..."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Executing long task..."
       generated_code: "import time; time.sleep(10)"
@@ -138,12 +163,12 @@ scenarios:
   INT-031:
     planner:
       thought: "Designing benchmark for INT-031."
-      plan: "## 1. Solution Overview\nA wall and a goal.\n## 2. Parts List\n- Wall\n- Goal\n## 3. Assembly Strategy\nPlace wall.\n## 4. Cost & Weight Budget\n$10, 100g\n## 5. Risk Assessment\nLow."
+      plan: "## 1. Learning Objective\nA wall and a goal.\n## 2. Geometry\nA wall.\n## 3. Objectives\nGoal at corner."
     coder:
       thought: "Implementing benchmark geometry."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nWall.')
-        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [10,10,10], max: [20,20,20]}, build_zone: {min: [-50,-50,0], max: [50,50,50]}}\nsimulation_bounds: {min: [-100,-100,0], max: [100,100,100]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
+        with open('plan.md', 'w') as f: f.write('## 1. Learning Objective\nWall.\n## 2. Geometry\nWall.\n## 3. Objectives\nGoal.')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [1,1,1], max: [2,2,2]}, build_zone: {min: [-5,-5,0], max: [5,5,5]}}\nsimulation_bounds: {min: [-10,-10,0], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     reviewer:
       review:
         decision: "approved"
@@ -154,13 +179,16 @@ scenarios:
     planner:
       thought: "Engineering loop for INT-033."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nStack.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nStack.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 5, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing stacking solution."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -172,13 +200,16 @@ scenarios:
     planner:
       thought: "Engineering loop for INT-034."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTrivial.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTrivial.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 1, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing trivial solution."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -190,13 +221,16 @@ scenarios:
     planner:
       thought: "Batch execution test for INT-043."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running batch task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -208,13 +242,16 @@ scenarios:
     planner:
       thought: "Correlation test for INT-058."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running correlation task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -226,13 +263,16 @@ scenarios:
     planner:
       thought: "Langfuse linkage test for INT-059."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running Langfuse task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -244,13 +284,16 @@ scenarios:
     planner:
       thought: "Langfuse feedback test for INT-060."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running feedback task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -262,10 +305,13 @@ scenarios:
     planner:
       thought: "Checking materials for INT-035."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Testing Aluminum 6061."
       generated_code: |
@@ -281,10 +327,13 @@ scenarios:
     planner:
       thought: "Checking workbench methods for INT-036."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Testing CNC/3D Print."
       generated_code: |
@@ -300,13 +349,16 @@ scenarios:
     planner:
       thought: "Designing door for INT-037."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing RevoluteJoint."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -318,13 +370,16 @@ scenarios:
     planner:
       thought: "Designing oscillator for INT-038."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing sinusoidal controller."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -336,13 +391,16 @@ scenarios:
     planner:
       thought: "Generating cube for INT-039."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing cube."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -354,13 +412,16 @@ scenarios:
     planner:
       thought: "Creating part for INT-040."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing linkage_test."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -371,6 +432,9 @@ scenarios:
   INT-042:
     planner:
       thought: "Quick hello for INT-042."
+      finished: true
+    electronics_planner:
+      thought: "No electronics."
       finished: true
     coder:
       thought: "Finishing immediately."
@@ -385,13 +449,16 @@ scenarios:
     planner:
       thought: "Skills sync test for INT-045."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running skills sync task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -403,13 +470,16 @@ scenarios:
     planner:
       thought: "Fidelity regression for INT-046."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Reconstructing..."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -421,13 +491,16 @@ scenarios:
     planner:
       thought: "Transfer uplift for INT-047."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Designing bracket."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -439,13 +512,16 @@ scenarios:
     planner:
       thought: "Optimality check for INT-048."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Optimizing..."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -457,13 +533,16 @@ scenarios:
     planner:
       thought: "Observability test for INT-053."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running observability task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -475,13 +554,16 @@ scenarios:
     planner:
       thought: "Failure injection for INT-054."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running failure task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -493,13 +575,16 @@ scenarios:
     planner:
       thought: "S3 test for INT-055."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running S3 task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -511,13 +596,16 @@ scenarios:
     planner:
       thought: "S3 retry test for INT-056."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running S3 retry task."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -529,15 +617,17 @@ scenarios:
     planner:
       thought: "Searching for COTS parts and creating plan."
       generated_code: |
-        results = search_cots_catalog(query="servo motor")
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nUse motor MOCK-MOTOR-ID.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nUse motor MOCK-MOTOR-ID.\n## 2. Parts List\n- Motor\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $25\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f:
             f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ncots_parts: [{part_id: "MOCK-MOTOR-ID", manufacturer: "MockCorp", unit_cost_usd: 25.0, quantity: 1, source: "parts.db"}]\\ntotals: {estimated_unit_cost_usd: 25, estimated_weight_g: 50, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 100, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Implementing plan."
-      generated_code: "with open('solution.py', 'w') as f: f.write('Box(1,1,1)')"
+      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       finished: true
     reviewer:
       review:
@@ -549,15 +639,18 @@ scenarios:
     planner:
       thought: "Generating plan for INT-025."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nTest.')
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 100, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running simulate which emits events."
       generated_code: |
         from build123d import *
-        from shared.utils.agent import simulate
+        from worker_heavy.utils.cad import simulate
         simulate(Box(1,1,1), backend="mujoco")
       finished: true
     reviewer:
@@ -587,25 +680,28 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         objectives_content = """
         objectives:
-          goal_zone: {min: [80, 80, 0], max: [100, 100, 20]}
+          goal_zone: {min: [8, 8, 0], max: [10, 10, 2]}
           forbid_zones: []
-          build_zone: {min: [-100, -100, 0], max: [100, 100, 100]}
-        simulation_bounds: {min: [-150, -150, 0], max: [150, 150, 200]}
+          build_zone: {min: [-10, -10, 0], max: [10, 10, 10]}
+        simulation_bounds: {min: [-15, -15, 0], max: [15, 15, 20]}
         moved_object:
           label: ball
           shape: sphere
-          start_position: [0, 0, 10]
+          start_position: [0, 0, 1]
           runtime_jitter: [1, 1, 0]
         constraints:
           max_unit_cost: 100.0
           max_weight_g: 1000.0
         """
         with open('objectives.yaml', 'w') as f: f.write(objectives_content.strip())
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Running simulate."
       generated_code: |
         from build123d import *
-        from shared.utils.agent import simulate
+        from worker_heavy.utils.cad import simulate
         simulate(Box(10,10,10), backend="mujoco")
       finished: true
     reviewer:
@@ -634,7 +730,10 @@ scenarios:
         with open('plan.md', 'w') as f: f.write(plan_content.strip())
         with open('todo.md', 'w') as f: f.write('- [x] Done')
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    electronics_planner:
+      thought: "No electronics."
+      finished: true
     coder:
       thought: "Default coder response."
       generated_code: "with open('solution.py', 'w') as f: f.write('# Default')"
