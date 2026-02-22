@@ -3,10 +3,13 @@ import pytest
 import dspy
 from controller.agent.nodes.summarizer import summarizer_node
 from controller.agent.state import AgentState
-from controller.agent.benchmark.nodes import summarizer_node as benchmark_summarizer_node
+from controller.agent.benchmark.nodes import (
+    summarizer_node as benchmark_summarizer_node,
+)
 from controller.agent.benchmark.state import BenchmarkGeneratorState
 from controller.agent.benchmark.models import GenerationSession
 import uuid
+
 
 @pytest.fixture
 def mock_worker():
@@ -16,11 +19,13 @@ def mock_worker():
         instance.exists = AsyncMock(return_value=True)
         yield instance
 
+
 @pytest.mark.asyncio
 async def test_summarizer_node_skips_short_journal(mock_worker):
     state = AgentState(journal="Short journal", session_id="test-session")
     result = await summarizer_node(state)
     assert result.journal == "Short journal"
+
 
 @pytest.mark.asyncio
 async def test_summarizer_node_compresses_long_journal(mock_worker):
@@ -35,6 +40,7 @@ async def test_summarizer_node_compresses_long_journal(mock_worker):
 
     assert "Summarized Journal" in result.journal
     assert "Summarized content" in result.journal
+
 
 @pytest.mark.asyncio
 async def test_benchmark_summarizer_node_compresses_long_journal(mock_worker):

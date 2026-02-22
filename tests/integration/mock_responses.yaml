@@ -159,7 +159,7 @@ scenarios:
 
   INT-030:
     planner:
-      thought: "Starting a long task for INT-030[placeholder]"
+      thought: "Starting a long task for INT-030DUMMY"
       generated_code: |
         with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
@@ -175,7 +175,7 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       
     coder:
-      thought: "Executing long task[placeholder]"
+      thought: "Executing long taskDUMMY"
       generated_code: "import time; time.sleep(10)"
 
   INT-031:
@@ -586,7 +586,7 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       
     coder:
-      thought: "Reconstructing[placeholder]"
+      thought: "ReconstructingDUMMY"
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       
     reviewer:
@@ -640,7 +640,7 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       
     coder:
-      thought: "Optimizing[placeholder]"
+      thought: "OptimizingDUMMY"
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
       
     reviewer:

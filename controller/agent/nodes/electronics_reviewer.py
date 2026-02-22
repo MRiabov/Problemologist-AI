@@ -95,7 +95,9 @@ class ElectronicsReviewerNode(BaseNode):
                 [f"- {f}" for f in review.required_fixes]
             )
 
-        journal_entry += f"\nElectronics Review Decision: {decision.value}\nFeedback: {feedback}"
+        journal_entry += (
+            f"\nElectronics Review Decision: {decision.value}\nFeedback: {feedback}"
+        )
 
         status_map = {
             ReviewDecision.APPROVED: AgentStatus.APPROVED,
