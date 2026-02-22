@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 from worker_heavy.simulation.loop import SimulationLoop
+from shared.enums import FailureReason
 
 # XML with position actuator and strict forcerange to trigger overload
 TEST_OVERLOAD_XML = """
@@ -36,9 +37,10 @@ async def run(_ctx=None):
         # This will keep the motor saturated
         metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
 
-        if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason.lower():
+        if metrics.fail_mode != FailureReason.MOTOR_OVERLOAD:
             raise RuntimeError(
-                f"Expected motor_overload failure, but got: {metrics.fail_reason}"
+                f"Expected motor_overload failure, but got: {metrics.fail_reason} "
+                f"(mode: {metrics.fail_mode})"
             )
 
         return metrics.dict()
