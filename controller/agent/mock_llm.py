@@ -53,7 +53,7 @@ class MockDSPyLM(dspy.LM):
         full_text = self._get_full_text(prompt, messages)
         is_json = "output fields" in full_text.lower() and "json" in full_text.lower()
 
-        # WP09: Extract expected fields for ReAct compatibility
+        # Extract expected fields for ReAct compatibility
         expected_fields = []
         if is_json:
             # First, try to extract from the error message in the prompt (for retries)
@@ -252,7 +252,7 @@ class MockDSPyLM(dspy.LM):
             "generated_code": node_data.get("generated_code", None),
         }
 
-        # WP09: ReAct compatibility - handle intermediate tool calling phase
+        # ReAct compatibility - handle intermediate tool calling phase
         if "next_tool_name" in expected_fields:
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
