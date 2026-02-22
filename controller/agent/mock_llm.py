@@ -125,15 +125,25 @@ class MockDSPyLM(dspy.LM):
         low_text = text.lower()
 
         # 1. Specific Role Headers (Highest Priority)
-        if "sidecar learner" in low_text:
+        if (
+            "electronics planner" in low_text
+            or "electrical engineer (planner)" in low_text
+        ):
+            return "electronics_planner"
+        if "sidecar learner" in low_text or "skill learner" in low_text:
             return "skill_learner"
-        if "expert designer of spatial" in low_text:
-            return "planner"
-        if "lead mechanical engineer (planner)" in low_text:
+        if (
+            "expert designer of spatial" in low_text
+            or "lead mechanical engineer (planner)" in low_text
+        ):
             return "planner"
         if "cad engineer" in low_text or "build123d script" in low_text:
             return "coder"
-        if "design reviewer" in low_text or "benchmark auditor" in low_text:
+        if (
+            "design reviewer" in low_text
+            or "benchmark auditor" in low_text
+            or "plan reviewer" in low_text
+        ):
             return "reviewer"
         if "commercial off-the-shelf" in low_text or "cots search" in low_text:
             return "cots_search"
@@ -154,26 +164,12 @@ class MockDSPyLM(dspy.LM):
         if "summary" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            # summary is common in skills/sidecar
             return "skill_learner"
         if "search_summary" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
             return "cots_search"
 
-        # 3. Fallbacks by loose role keywords
-        if any(kw in low_text for kw in ["skill", "sidecar", "learner"]):
-            return "skill_learner"
-        if any(kw in low_text for kw in ["reviewer", "critic", "auditor"]):
-            return "reviewer"
-        if "cots" in low_text or "search" in low_text:
-            return "cots_search"
-        if any(
-            kw in low_text for kw in ["cad engineer", "build123d", "coder", "implement"]
-        ):
-            return "coder"
-        if "planner" in low_text:
-            return "planner"
         return "planner"
 
     def _is_finishing(self, text: str) -> bool:
@@ -207,14 +203,29 @@ class MockDSPyLM(dspy.LM):
             "thought": thought,
             "reasoning": reasoning,
             "finished": finished,
-            "generated_code": node_data.get("generated_code", None),
         }
+        if "generated_code" in node_data:
+            resp["generated_code"] = node_data["generated_code"]
+        elif finished:
+            resp["generated_code"] = None
+        else:
+            # Multi-turn mock needs something to avoid infinite loop if not finished
+            resp["generated_code"] = node_data.get(
+                "generated_code", "# No code provided in mock"
+            )
+
+        # Normalize node key for field lookup
+        lookup_key = node_key
+        if "_" in node_key:
+            parts = node_key.split("_")
+            if parts[-1] in ["planner", "coder", "reviewer"]:
+                lookup_key = parts[-1]
 
         # Add node-specific fields
-        if node_key == "planner":
+        if lookup_key == "planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
-        elif node_key == "reviewer":
+        elif lookup_key == "reviewer":
             resp["review"] = node_data.get(
                 "review",
                 {
@@ -223,14 +234,14 @@ class MockDSPyLM(dspy.LM):
                     "required_fixes": [],
                 },
             )
-        elif node_key == "coder":
+        elif lookup_key == "coder":
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
-        elif node_key == "skill_learner":
+        elif lookup_key == "skill_learner":
             resp["summary"] = node_data.get("summary", "Skills identified.")
             resp["journal"] = node_data.get("journal", "Learning complete.")
-        elif node_key == "cots_search":
+        elif lookup_key == "cots_search":
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
 
         if is_json:
