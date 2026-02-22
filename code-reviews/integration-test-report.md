@@ -8,8 +8,10 @@ A full run of 45 integration test files was conducted. The results reveal severa
 **FAILED**: 34
 **SKIPPED**: 2 (Environment/Hang issues)
 
-### Note on Methodology
-To execute 45 tests efficiently within session limits, a custom batching approach was used that kept the local infrastructure (Postgres, Temporal, Minio) active between test files. This was necessary because the standard `./scripts/run_integration_tests.sh` script performs a full teardown and setup of the Docker infrastructure for every single file, which adds approximately 30-60 seconds of overhead per test, making a full run impossible within a single session.
+### Methodology & Raw Logs
+To execute 45 tests efficiently within session limits, a custom batching approach was used that kept the local infrastructure (Postgres, Temporal, Minio) active between test files.
+
+**Exact terminal outputs for every test file are available in `code-reviews/raw-integration-logs/`.**
 
 ---
 
