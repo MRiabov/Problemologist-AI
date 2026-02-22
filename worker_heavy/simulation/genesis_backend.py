@@ -277,6 +277,7 @@ class GenesisBackend(PhysicsBackend):
                 lower_bound=tuple(np.array(bounds["min"]) - margin),
                 upper_bound=tuple(np.array(bounds["max"]) + margin),
                 grid_density=16,
+                use_sparse_grid=True,
             )
 
         self.scene = gs.Scene(
