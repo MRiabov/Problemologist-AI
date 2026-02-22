@@ -53,6 +53,30 @@ class MockDSPyLM(dspy.LM):
         full_text = self._get_full_text(prompt, messages)
         is_json = "output fields" in full_text.lower() and "json" in full_text.lower()
 
+        # Extract expected fields for ReAct compatibility
+        expected_fields = []
+        if is_json:
+            # First, try to extract from the error message in the prompt (for retries)
+            match = re.search(
+                r"Expected to find output fields in the LM response: \[([^\]]+)\]",
+                full_text,
+            )
+            if match:
+                expected_fields = [f.strip() for f in match.group(1).split(",")]
+            else:
+                # For initial calls, detect from the instructions or signature schema
+                # We also check for 'next_thought' as it is part of ReAct
+                if "next_tool_name" in full_text or "next_thought" in full_text:
+                    expected_fields = ["next_thought", "next_tool_name", "next_tool_args"]
+
+                # Check for standard output fields
+                for field in ["reasoning", "thought", "summary", "review", "journal", "plan", "finished", "generated_code"]:
+                    if field in full_text:
+                        expected_fields.append(field)
+
+                # Remove duplicates and preserve order if possible
+                expected_fields = list(dict.fromkeys(expected_fields))
+
         # 1. Detect Scenario from session_id
         scenario_id = self._get_scenario_id()
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
@@ -70,6 +94,7 @@ class MockDSPyLM(dspy.LM):
                 lookup_key = parts[-1]
 
         node_data = scenario.get(lookup_key, {})
+        logger.info("mock_dspy_lm_data_found", scenario=scenario_id, node=lookup_key, has_data=bool(node_data))
 
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(node_key, 0)
@@ -77,12 +102,12 @@ class MockDSPyLM(dspy.LM):
 
         if count > 5:
             logger.warning("mock_dspy_lm_loop_detected", node=node_key, count=count)
-            return self._handle_finish(lookup_key, node_data, is_json)
+            return self._handle_finish(lookup_key, node_data, is_json, expected_fields)
 
         if self._is_finishing(full_text):
-            return self._handle_finish(lookup_key, node_data, is_json)
+            return self._handle_finish(lookup_key, node_data, is_json, expected_fields)
 
-        return self._handle_action(lookup_key, node_data, is_json)
+        return self._handle_action(lookup_key, node_data, is_json, expected_fields)
 
     def _get_full_text(
         self, prompt: str | None, messages: list[dict[str, Any]] | None
@@ -178,29 +203,46 @@ class MockDSPyLM(dspy.LM):
 
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
-        return "stdout:" in low_text or "stderr:" in low_text
+        # dspy.ReAct adds "Observation:" to the trajectory.
+        # We look for "observation_" or specific tool output markers to avoid instruction overlap.
+        return (
+            "stdout:" in low_text or "stderr:" in low_text or "observation_" in low_text
+        )
 
-    def _handle_finish(self, node_key: str, node_data: dict, is_json: bool):
-        return self._generate_response(node_key, node_data, is_json, finished=True)
+    def _handle_finish(
+        self, node_key: str, node_data: dict, is_json: bool, expected_fields: list[str]
+    ):
+        return self._generate_response(
+            node_key, node_data, is_json, finished=True, expected_fields=expected_fields
+        )
 
-    def _handle_action(self, node_key: str, node_data: dict, is_json: bool):
-        # Force finish for reviewer and planner to avoid loops in mock
-        force_finish = node_key in ["reviewer", "planner"]
+    def _handle_action(
+        self, node_key: str, node_data: dict, is_json: bool, expected_fields: list[str]
+    ):
+        # Force finish for reviewer to avoid loops in mock
+        force_finish = node_key in ["reviewer"]
         return self._generate_response(
             node_key,
             node_data,
             is_json,
             finished=node_data.get("finished", force_finish),
+            expected_fields=expected_fields,
         )
 
     def _generate_response(
-        self, node_key: str, node_data: dict, is_json: bool, finished: bool
+        self,
+        node_key: str,
+        node_data: dict,
+        is_json: bool,
+        finished: bool,
+        expected_fields: list[str] | None = None,
     ):
         """Unified response generator ensures all required fields are present."""
         logger.info("mock_dspy_lm_generate", node=node_key, finished=finished)
 
         thought = node_data.get("thought", "Task in progress.")
         reasoning = node_data.get("reasoning", "Verified all requirements.")
+        expected_fields = expected_fields or []
 
         # Base schema for DSPy JSONAdapter/CodeAct
         resp = {
@@ -210,7 +252,24 @@ class MockDSPyLM(dspy.LM):
             "generated_code": node_data.get("generated_code", None),
         }
 
-        # Add node-specific fields
+        # ReAct compatibility - handle intermediate tool calling phase
+        if "next_tool_name" in expected_fields:
+            resp["next_thought"] = thought
+            code = node_data.get("generated_code")
+            if code and not finished:
+                # Wrap multi-line code safely for shell execution
+                import base64
+
+                b64_code = base64.b64encode(code.encode()).decode()
+                cmd = f"python3 -c \"import base64; exec(base64.b64decode('{b64_code}'))\""
+
+                resp["next_tool_name"] = "execute_command"
+                resp["next_tool_args"] = {"command": cmd}
+            else:
+                resp["next_tool_name"] = "finish"
+                resp["next_tool_args"] = {}
+
+        # Add node-specific fields (for CodeAct or ReAct extraction phase)
         if node_key == "planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
@@ -228,7 +287,7 @@ class MockDSPyLM(dspy.LM):
             )
         elif node_key == "coder":
             resp["journal"] = node_data.get("journal", "Work completed.")
-            if not finished:
+            if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
         elif node_key == "skill_learner":
             resp["summary"] = node_data.get("summary", "Skills identified.")
@@ -237,6 +296,11 @@ class MockDSPyLM(dspy.LM):
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
 
         if is_json:
+            # Only return fields that were actually requested to avoid Adapter errors
+            if expected_fields:
+                filtered_resp = {k: v for k, v in resp.items() if k in expected_fields}
+                # If we filtered everything, fallback to original resp
+                return [json.dumps(filtered_resp or resp)]
             return [json.dumps(resp)]
 
         # Fallback for plain text (rare in our CodeAct setups)
