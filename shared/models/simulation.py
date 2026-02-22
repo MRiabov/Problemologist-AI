@@ -16,13 +16,14 @@ class SimulationFailure(BaseModel):
             return f"{self.reason}:{self.detail}"
         return str(self.reason)
 
-    def matches(self, reason: FailureReason, detail: str | None = None) -> bool:
-        """Check if failure matches reason and optionally detail."""
-        if self.reason != reason:
-            return False
-        if detail is not None and self.detail != detail:
-            return False
-        return True
+    def __eq__(self, other: Any) -> bool:
+        """
+        Supports exact match with another SimulationFailure or
+        a reason-only match with a FailureReason enum.
+        """
+        if isinstance(other, FailureReason):
+            return self.reason == other
+        return super().__eq__(other)
 
 
 class StressSummary(BaseModel):

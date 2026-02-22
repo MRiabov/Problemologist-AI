@@ -481,10 +481,13 @@ class SimulationLoop:
             )
 
         if self.electronics_validation_error:
-            self.fail_reason = SimulationFailure(
-                reason=FailureReason.VALIDATION_FAILED,
-                detail=str(self.electronics_validation_error),
-            )
+            if isinstance(self.electronics_validation_error, SimulationFailure):
+                self.fail_reason = self.electronics_validation_error
+            else:
+                self.fail_reason = SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED,
+                    detail=str(self.electronics_validation_error),
+                )
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,

@@ -19,6 +19,7 @@ from pydantic import (
 
 from shared.enums import (
     ElectronicComponentType,
+    FailureReason,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,
@@ -27,6 +28,7 @@ from shared.enums import (
     MovingPartType,
     ReviewDecision,
 )
+from shared.models.simulation import SimulationFailure
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 # =============================================================================
@@ -232,6 +234,7 @@ class CircuitValidationResult(BaseModel):
     branch_currents: dict[str, float] = {}
     total_draw_a: float = 0.0
     errors: list[str] = []
+    failures: list[SimulationFailure] = []
     warnings: list[str] = []
 
 
