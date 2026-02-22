@@ -36,7 +36,7 @@ async def run(_ctx=None):
         # This will keep the motor saturated
         metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
 
-        if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason:
+        if not metrics.fail_reason or "motor_overload" not in metrics.fail_reason.lower():
             raise RuntimeError(
                 f"Expected motor_overload failure, but got: {metrics.fail_reason}"
             )
