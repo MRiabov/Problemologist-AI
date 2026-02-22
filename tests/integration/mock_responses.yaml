@@ -10,8 +10,8 @@ scenarios:
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
       thought: "No electronics needed."
-      generated_code: "with open('todo.md', 'a') as f: f.write('\\n- [x] Check electronics')"
-      finished: true
+      generated_code: "with open('todo.md', 'w') as f: f.write('\\n- [x] Check electronics')"
+      
     coder:
       thought: "I will implement the box in build123d and run simulation."
       generated_code: |
@@ -90,13 +90,13 @@ scenarios:
       generated_code: |
         with open('plan.md', 'a') as f:
             f.write('\n## Electrical Strategy\nSimple box, no electronics needed.')
-        with open('todo.md', 'a') as f:
+        with open('todo.md', 'w') as f:
             f.write('\n- [x] Review electronics')
-      finished: true
+      
     coder:
       thought: "Implementing box."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -115,16 +115,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running review schema task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -143,16 +142,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running refusal task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -161,7 +159,7 @@ scenarios:
 
   INT-030:
     planner:
-      thought: "Starting a long task for INT-030..."
+      thought: "Starting a long task for INT-030[placeholder]"
       generated_code: |
         with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nTest.\n## 2. Parts List\n- Part\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $10\n## 5. Risk Assessment\n- Low.')
         with open('todo.md', 'w') as f: f.write('- [x] Done')
@@ -171,14 +169,13 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
-      thought: "Executing long task..."
+      thought: "Executing long task[placeholder]"
       generated_code: "import time; time.sleep(10)"
 
   INT-031:
@@ -208,16 +205,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing stacking solution."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -236,16 +232,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing trivial solution."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -264,16 +259,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running batch task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -292,16 +286,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running correlation task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -320,16 +313,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running Langfuse task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -348,16 +340,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running feedback task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -376,17 +367,16 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Testing Aluminum 6061."
       generated_code: |
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -405,17 +395,16 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Testing CNC/3D Print."
       generated_code: |
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 15, estimated_weight_g: 100, estimate_confidence: high}')
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -434,16 +423,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing RevoluteJoint."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -462,16 +450,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing sinusoidal controller."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -490,16 +477,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing cube."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -518,16 +504,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing linkage_test."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -542,12 +527,11 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Finishing immediately."
       finished: true
@@ -569,16 +553,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running skills sync task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -597,16 +580,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
-      thought: "Reconstructing..."
+      thought: "Reconstructing[placeholder]"
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -625,16 +607,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Designing bracket."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -653,16 +634,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
-      thought: "Optimizing..."
+      thought: "Optimizing[placeholder]"
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -681,16 +661,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running observability task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -709,16 +688,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running failure task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -737,16 +715,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running S3 task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -765,16 +742,15 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running S3 retry task."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -785,25 +761,38 @@ scenarios:
     planner:
       thought: "Searching for COTS parts and creating plan."
       generated_code: |
-        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\\nUse motor MOCK-MOTOR-ID.\n## 2. Parts List\n- Motor\n## 3. Assembly Strategy\n1. Connect.\n## 4. Cost & Weight Budget\n- $25\n## 5. Risk Assessment\n- Low.')
-        with open('todo.md', 'w') as f: f.write('- [x] Done')
+        plan_content = """## 1. Solution Overview
+        Use motor MOCK-MOTOR-ID.
+        ## 2. Parts List
+        - Motor: MOCK-MOTOR-ID
+        ## 3. Assembly Strategy
+        1. Connect motor.
+        ## 4. Cost & Weight Budget
+        - Cost: $25
+        - Weight: 50g
+        ## 5. Risk Assessment
+        - Low risk."""
+        # Remove indentation from plan_content
+        import textwrap
+        plan_content = "\n".join([line.strip() for line in plan_content.splitlines()])
+        with open('plan.md', 'w') as f: f.write(plan_content)
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan')
         with open('assembly_definition.yaml', 'w') as f:
-            f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ncots_parts: [{part_id: "MOCK-MOTOR-ID", manufacturer: "MockCorp", unit_cost_usd: 25.0, quantity: 1, source: "parts.db"}]\\ntotals: {estimated_unit_cost_usd: 25, estimated_weight_g: 50, estimate_confidence: high}')
+            f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ncots_parts: [{part_id: "MOCK-MOTOR-ID", manufacturer: "MockCorp", unit_cost_usd: 25.0, quantity: 1, source: "parts.db"}]\ntotals: {estimated_unit_cost_usd: 25, estimated_weight_g: 50, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     electronics_planner:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Implementing plan."
       generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -822,19 +811,18 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running simulate which emits events."
       generated_code: |
         from build123d import *
         from worker_heavy.utils.cad import simulate
         simulate(Box(1,1,1), backend="mujoco")
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -880,19 +868,18 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Running simulate."
       generated_code: |
         from build123d import *
         from worker_heavy.utils.cad import simulate
         simulate(Box(10,10,10), backend="mujoco")
-      finished: true
+      
     reviewer:
       review:
         decision: "approved"
@@ -924,12 +911,11 @@ scenarios:
       thought: "No electronics needed."
       generated_code: |
         with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
-        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
-        # Ensure assembly_definition.yaml is preserved/valid
+        with open('todo.md', 'w') as f: f.write('- [x] Initial plan\n- [x] Check electronics')
         import yaml
         with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
-      finished: true
+      
     coder:
       thought: "Default coder response."
       generated_code: "with open('solution.py', 'w') as f: f.write('# Default')"

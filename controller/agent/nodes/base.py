@@ -92,7 +92,21 @@ class BaseNode:
         for t in tools:
             # Now tools are already raw functions or wrapped in search_cots_catalog
             name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
-            tool_fns[name] = t
+
+            # WP11: ReAct (sync) needs sync functions. Wrap async tools.
+            if asyncio.iscoroutinefunction(t):
+
+                def sync_wrapper(*args, _t=t, **kwargs):
+                    new_loop = asyncio.new_event_loop()
+                    try:
+                        return new_loop.run_until_complete(_t(*args, **kwargs))
+                    finally:
+                        new_loop.close()
+
+                sync_wrapper.__name__ = name
+                tool_fns[name] = sync_wrapper
+            else:
+                tool_fns[name] = t
         return tool_fns
 
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:

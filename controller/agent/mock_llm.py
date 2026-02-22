@@ -97,14 +97,14 @@ class MockDSPyLM(dspy.LM):
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
         node_key = self.node_type or self._detect_node_key(full_text)
 
-        # Normalize benchmark_planner -> planner, etc. for scenario lookup
+        # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
-        if "_" in node_key:
-            # benchmark_planner -> planner
-            # skill_learner -> skill_learner (kept if matches)
-            parts = node_key.split("_")
-            if parts[-1] in ["planner", "coder", "reviewer"]:
-                lookup_key = parts[-1]
+        if node_key == "benchmark_planner":
+            lookup_key = "planner"
+        elif node_key == "benchmark_coder":
+            lookup_key = "coder"
+        elif node_key == "benchmark_reviewer":
+            lookup_key = "reviewer"
 
         node_data = scenario.get(lookup_key, {})
         logger.info(
@@ -180,6 +180,8 @@ class MockDSPyLM(dspy.LM):
             return "reviewer"
         if "commercial off-the-shelf" in low_text or "cots search" in low_text:
             return "cots_search"
+        if "electrical strategy" in low_text or "electronics engineer" in low_text:
+            return "electronics_planner"
 
         # 2. Field-based detection (DSPy standard prompts)
         if "journal" in low_text and (
@@ -288,13 +290,18 @@ class MockDSPyLM(dspy.LM):
                 resp["next_tool_args"] = {}
 
         # Add node-specific fields (for CodeAct or ReAct extraction phase)
-        if node_key == "planner":
+        # Signature fields should be present even in ReAct finish responses
+        if node_key == "planner" or node_key == "benchmark_planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
             # Support BenchmarkPlannerSignature
             if "plan" in node_data and isinstance(node_data["plan"], dict):
                 resp["plan"] = node_data["plan"]
-        elif node_key == "reviewer":
+        elif (
+            node_key == "reviewer"
+            or node_key == "plan_reviewer"
+            or node_key == "execution_reviewer"
+        ):
             resp["review"] = node_data.get(
                 "review",
                 {
@@ -303,7 +310,7 @@ class MockDSPyLM(dspy.LM):
                     "required_fixes": [],
                 },
             )
-        elif node_key == "coder":
+        elif node_key == "coder" or node_key == "benchmark_coder":
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
@@ -312,13 +319,32 @@ class MockDSPyLM(dspy.LM):
             resp["journal"] = node_data.get("journal", "Learning complete.")
         elif node_key == "cots_search":
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
+        elif node_key == "electronics_planner":
+            resp["reasoning"] = reasoning
+            resp["summary"] = node_data.get("summary", "Electronics plan added.")
 
         if is_json:
             # Only return fields that were actually requested to avoid Adapter errors
             if expected_fields:
-                filtered_resp = {k: v for k, v in resp.items() if k in expected_fields}
-                # If we filtered everything, fallback to original resp
-                return [json.dumps(filtered_resp or resp)]
+                # Add signature fields to expected_fields if they are present in resp
+                # but NOT already in expected_fields.
+                # ReAct often asks for [next_thought, next_tool_name, next_tool_args]
+                # but then fails if [summary] is missing in the result dict if it's the last turn.
+                filtered_resp = {
+                    k: v
+                    for k, v in resp.items()
+                    if k in expected_fields
+                    or k
+                    in [
+                        "reasoning",
+                        "summary",
+                        "plan",
+                        "review",
+                        "journal",
+                        "search_summary",
+                    ]
+                }
+                return [json.dumps(filtered_resp)]
             return [json.dumps(resp)]
 
         # Fallback for plain text (rare in our CodeAct setups)
