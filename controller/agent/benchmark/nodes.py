@@ -101,6 +101,7 @@ class BenchmarkPlannerNode(BaseNode):
         inputs = {
             "prompt": state.session.prompt,
             "history": str(state.messages or []),
+            "journal": state.journal,
             "review_feedback": (
                 state.review_feedback
                 if state.session.status == SessionStatus.REJECTED
@@ -108,7 +109,7 @@ class BenchmarkPlannerNode(BaseNode):
             ),
         }
 
-        prediction, _, _ = await self._run_program(
+        prediction, _, journal_entry = await self._run_program(
             dspy.CodeAct,
             BenchmarkPlannerSignature,
             state,
@@ -122,9 +123,11 @@ class BenchmarkPlannerNode(BaseNode):
             state.plan = RandomizationStrategy(
                 theme="error", reasoning="Failed to plan"
             )
+            state.journal += f"\n[Planner] Failed: {journal_entry}"
             return state
 
         state.plan = prediction.plan
+        state.journal += f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
         state.messages.append(
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
@@ -212,6 +215,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         ctx.dspy_lm.node_type = "benchmark_coder"
 
     # Invoke DSPy Program
+    journal_entry = ""
     try:
         with dspy.settings.context(lm=ctx.dspy_lm):
             logger.info("coder_dspy_invoke_start", session_id=session_id)
@@ -233,9 +237,11 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
             logger.info("coder_dspy_invoke_complete", session_id=session_id)
 
             new_journal = getattr(prediction, "journal", "No journal provided.")
+            state.journal += f"\n[Coder] {new_journal}"
             state.messages.append(AIMessage(content=f"Work summary: {new_journal}"))
     except Exception as e:
         logger.error("coder_dspy_failed", error=str(e))
+        state.journal += f"\n[Coder] Failed: {e}"
     finally:
         interpreter.shutdown()
 
@@ -395,6 +401,64 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
     return state
 
 
+class SummarizerSignature(dspy.Signature):
+    """
+    Summarizer node: Compresses the journal to stay within token limits.
+    Provide a concise summary of the key decisions, attempts, and outcomes recorded in the journal.
+    Maintain critical technical details while reducing verbosity.
+    """
+
+    journal = dspy.InputField()
+    summarized_journal = dspy.OutputField(desc="A concise summary of the journal")
+
+
+@type_check
+class BenchmarkSummarizerNode(BaseNode):
+    """
+    Summarizer node: Compresses the journal when it exceeds length limits.
+    """
+
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        if not state.journal or len(state.journal) < 5000:
+            return state
+
+        logger.info(
+            "summarizing_benchmark_journal",
+            journal_length=len(state.journal),
+            session_id=str(state.session.session_id),
+        )
+
+        inputs = {"journal": state.journal}
+        program = dspy.Predict(SummarizerSignature)
+
+        with dspy.settings.context(lm=self.ctx.dspy_lm):
+            prediction = await asyncio.to_thread(program, **inputs)
+
+        summarized = getattr(prediction, "summarized_journal", state.journal)
+
+        logger.info(
+            "benchmark_journal_summarized",
+            old_length=len(state.journal),
+            new_length=len(summarized),
+        )
+
+        state.journal = f"[Summarized Journal]\n{summarized}"
+        return state
+
+
+@type_check
+async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
+    node = BenchmarkSummarizerNode(context=ctx)
+    return await node(state)
+
+
 class BenchmarkReviewerSignature(dspy.Signature):
     """
     Agentic review of the generated benchmark.
@@ -467,7 +531,7 @@ class BenchmarkReviewerNode(BaseNode):
         }
 
         try:
-            prediction, _, _ = await self._run_program(
+            prediction, _, journal_entry = await self._run_program(
                 dspy.CodeAct,
                 BenchmarkReviewerSignature,
                 state,
@@ -479,11 +543,13 @@ class BenchmarkReviewerNode(BaseNode):
 
             if not prediction:
                 state.review_feedback = "Error: Reviewer failed to complete."
+                state.journal += f"\n[Reviewer] Failed: {journal_entry}"
                 return state
 
             review = prediction.review
             state.review_decision = review.decision
             state.review_feedback = f"{review.decision.value}: {review.reason}"
+            state.journal += f"\n[Reviewer] {state.review_feedback}\n{journal_entry}"
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
         except Exception as e:

@@ -25,6 +25,7 @@ from .nodes import (
     planner_node,
     reviewer_node,
     skills_node,
+    summarizer_node,
 )
 from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
@@ -44,6 +45,7 @@ def define_graph():
     workflow.add_node("reviewer", reviewer_node)
     workflow.add_node("cots_search", cots_search_node)
     workflow.add_node("skills", skills_node)
+    workflow.add_node("summarizer", summarizer_node)
     workflow.add_node("steer", steerability_node)
 
     # Define transitions
@@ -65,10 +67,14 @@ def define_graph():
     # Conditional edges for reviewer
     async def reviewer_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal["steer", "coder", "planner", "skills"]:
+    ) -> Literal["steer", "coder", "planner", "skills", "summarizer"]:
         # Check for steering first
         if await check_steering(state) == "steer":
             return "steer"
+
+        # Check for summarization need
+        if len(state.journal or "") > 5000:
+            return "summarizer"
 
         if state.review_round > 10:
             logger.warning(
@@ -95,10 +101,17 @@ def define_graph():
     workflow.add_conditional_edges(
         "reviewer",
         reviewer_router,
-        {"steer": "steer", "coder": "coder", "planner": "planner", "skills": "skills"},
+        {
+            "steer": "steer",
+            "coder": "coder",
+            "planner": "planner",
+            "skills": "skills",
+            "summarizer": "summarizer",
+        },
     )
 
     workflow.add_edge("skills", END)
+    workflow.add_edge("summarizer", "planner")
     workflow.add_edge("steer", "planner")
 
     # cots_search can be reached from planner or coder if we add those edges

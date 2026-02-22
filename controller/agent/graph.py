@@ -9,9 +9,11 @@ from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
 from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.electronics_planner import electronics_planner_node
+from .nodes.electronics_reviewer import electronics_reviewer_node
 from .nodes.execution_reviewer import execution_reviewer_node
 from .nodes.plan_reviewer import plan_reviewer_node
 from .nodes.planner import planner_node
+from .nodes.summarizer import summarizer_node
 from .nodes.skills import skills_node
 from .state import AgentState, AgentStatus
 
@@ -22,6 +24,10 @@ async def should_continue(state: AgentState) -> str:
     """Route after reviewer based on approval status."""
     if await check_steering(state) == "steer":
         return "steer"
+
+    # Check for summarization need if journal is long
+    if len(state.journal) > 5000:
+        return "summarizer"
 
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
@@ -51,9 +57,11 @@ builder.add_node("electronics_planner", electronics_planner_node)
 builder.add_node("plan_reviewer", plan_reviewer_node)
 builder.add_node("coder", coder_node)
 builder.add_node("electronics_engineer", electronics_engineer_node)
+builder.add_node("electronics_reviewer", electronics_reviewer_node)
 builder.add_node("execution_reviewer", execution_reviewer_node)
 builder.add_node("cots_search", cots_search_node)
 builder.add_node("skills", skills_node)
+builder.add_node("summarizer", summarizer_node)
 builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
@@ -69,6 +77,7 @@ builder.add_conditional_edges(
         "planner": "planner",
         "skills": "skills",
         "steer": "steer",
+        "summarizer": "summarizer",
     },
 )
 
@@ -80,6 +89,12 @@ builder.add_conditional_edges(
 
 builder.add_conditional_edges(
     "electronics_engineer",
+    check_steering,
+    {"steer": "steer", "next": "electronics_reviewer"},
+)
+
+builder.add_conditional_edges(
+    "electronics_reviewer",
     check_steering,
     {"steer": "steer", "next": "execution_reviewer"},
 )
@@ -93,12 +108,14 @@ builder.add_conditional_edges(
         "planner": "planner",
         "skills": "skills",
         "steer": "steer",
+        "summarizer": "summarizer",
     },
 )
 
 builder.add_edge("steer", "planner")
 
 builder.add_edge("skills", END)
+builder.add_edge("summarizer", "planner")
 builder.add_edge("cots_search", "planner")
 
 # T026: Implement Checkpointing
