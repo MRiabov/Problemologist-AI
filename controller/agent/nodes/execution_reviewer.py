@@ -68,7 +68,7 @@ class ExecutionReviewerNode(BaseNode):
         validate_files = ["simulation_result.json", "assembly_definition.yaml"]
 
         prediction, _artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
+            program_cls=dspy.ReAct,
             signature_cls=ExecutionReviewerSignature,
             state=state,
             inputs=inputs,

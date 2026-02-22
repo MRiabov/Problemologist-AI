@@ -38,7 +38,7 @@ class CoderSignature(dspy.Signature):
 class CoderNode(BaseNode):
     """
     Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
@@ -86,7 +86,7 @@ class CoderNode(BaseNode):
         ]
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             CoderSignature,
             state,
             inputs,

@@ -35,7 +35,7 @@ class PlannerSignature(dspy.Signature):
 class PlannerNode(BaseNode):
     """
     Planner node: Analyzes the task and creates plan.md and todo.md using tools.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
@@ -65,7 +65,7 @@ class PlannerNode(BaseNode):
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             PlannerSignature,
             state,
             inputs,

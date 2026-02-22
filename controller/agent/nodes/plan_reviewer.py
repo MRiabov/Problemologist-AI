@@ -67,7 +67,7 @@ class PlanReviewerNode(BaseNode):
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
         prediction, _artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
+            program_cls=dspy.ReAct,
             signature_cls=PlanReviewerSignature,
             state=state,
             inputs=inputs,

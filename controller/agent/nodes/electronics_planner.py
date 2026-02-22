@@ -61,7 +61,7 @@ class ElectronicsPlannerNode(BaseNode):
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.CodeAct,
+            program_cls=dspy.ReAct,
             signature_cls=ElectronicsPlannerSignature,
             state=state,
             inputs=inputs,
