@@ -67,10 +67,23 @@ class MockDSPyLM(dspy.LM):
                 # For initial calls, detect from the instructions or signature schema
                 # We also check for 'next_thought' as it is part of ReAct
                 if "next_tool_name" in full_text or "next_thought" in full_text:
-                    expected_fields = ["next_thought", "next_tool_name", "next_tool_args"]
+                    expected_fields = [
+                        "next_thought",
+                        "next_tool_name",
+                        "next_tool_args",
+                    ]
 
                 # Check for standard output fields
-                for field in ["reasoning", "thought", "summary", "review", "journal", "plan", "finished", "generated_code"]:
+                for field in [
+                    "reasoning",
+                    "thought",
+                    "summary",
+                    "review",
+                    "journal",
+                    "plan",
+                    "finished",
+                    "generated_code",
+                ]:
                     if field in full_text:
                         expected_fields.append(field)
 
@@ -94,7 +107,12 @@ class MockDSPyLM(dspy.LM):
                 lookup_key = parts[-1]
 
         node_data = scenario.get(lookup_key, {})
-        logger.info("mock_dspy_lm_data_found", scenario=scenario_id, node=lookup_key, has_data=bool(node_data))
+        logger.info(
+            "mock_dspy_lm_data_found",
+            scenario=scenario_id,
+            node=lookup_key,
+            has_data=bool(node_data),
+        )
 
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(node_key, 0)
