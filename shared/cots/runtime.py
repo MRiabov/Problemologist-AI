@@ -53,6 +53,20 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
 
         orm_items = stmt.all()
         for item in orm_items:
+            # In-memory filtering for min_size
+            if query.constraints and "min_size" in query.constraints:
+                min_size = float(query.constraints["min_size"])
+                meta = item.metadata_dict
+                if meta and "bbox" in meta:
+                    bbox = meta["bbox"]
+                    # Calculate dimensions from bbox
+                    dims = [
+                        bbox["max"][i] - bbox["min"][i] for i in range(3)
+                    ]
+                    max_dim = max(dims)
+                    if max_dim < min_size:
+                        continue
+
             results.append(
                 COTSItem(
                     part_id=item.part_id,
