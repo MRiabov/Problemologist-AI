@@ -1,9 +1,13 @@
 import sqlite3
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from shared.cots.database.init import init_db
-from shared.cots.models import COTSItem
+from shared.cots.database.models import COTSItemORM
+from shared.cots.models import COTSItem, SearchQuery
+from shared.cots.runtime import search_parts
 from shared.type_checking import type_check
 
 
@@ -67,3 +71,39 @@ def test_init_db(tmp_path):
     assert "metadata" in columns
 
     conn.close()
+
+
+@type_check
+def test_cots_min_size_filtering(tmp_path):
+    db_file = tmp_path / "test_parts_search.db"
+    init_db(str(db_file))
+    engine = create_engine(f"sqlite:///{db_file}")
+
+    with Session(engine) as session:
+        small_part = COTSItemORM(
+            part_id="small_part",
+            name="Small Part",
+            category="fastener",
+            unit_cost=0.1,
+            weight_g=1.0,
+            import_recipe="part = Box(5, 5, 5)",
+            metadata_dict={"bbox": {"min": [0, 0, 0], "max": [5, 5, 5]}},
+        )
+        large_part = COTSItemORM(
+            part_id="large_part",
+            name="Large Part",
+            category="fastener",
+            unit_cost=0.5,
+            weight_g=10.0,
+            import_recipe="part = Box(20, 20, 20)",
+            metadata_dict={"bbox": {"min": [0, 0, 0], "max": [20, 20, 20]}},
+        )
+        session.add_all([small_part, large_part])
+        session.commit()
+
+    query = SearchQuery(query="", constraints={"min_size": 10}, limit=10)
+    results = search_parts(query, str(db_file))
+
+    ids = [r.part_id for r in results]
+    assert "small_part" not in ids
+    assert "large_part" in ids

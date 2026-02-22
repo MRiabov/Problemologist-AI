@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from PySpice.Unit import *
 
@@ -196,6 +198,56 @@ def test_floating_node_detection():
         or "singular" in e.lower()
         for e in result.errors
     )
+
+
+@patch("shared.pyspice_utils.resolve_node_name")
+def test_voltage_sag_error_reported(mock_resolve):
+    """Verify that voltage sag error reporting is WORKING."""
+    import numpy as np
+
+    mock_resolve.side_effect = lambda c, t: f"{c}_{t}"
+
+    # Mock circuit and simulator
+    mock_circuit = MagicMock()
+    mock_simulator = MagicMock()
+    mock_circuit.simulator.return_value = mock_simulator
+
+    class MockNode:
+        def __init__(self, name, value):
+            self.name = name
+            self.value = float(value)
+
+        def __str__(self):
+            return self.name
+
+        def __array__(self, dtype=None):
+            return np.array(self.value, dtype=dtype)
+
+        def item(self):
+            return self.value
+
+    # Mock analysis result
+    mock_analysis = MagicMock()
+    # supply_v+ has 10V, but PSU is 12V -> Sag!
+    mock_analysis.nodes = {
+        "supply_v+": MockNode("supply_v+", 10.0),  # 10V < 12V * 0.9 (10.8V)
+        "gnd": MockNode("gnd", 0.0),
+    }
+    mock_analysis.branches = {
+        "vsupply": MockNode("vsupply", -5.0)  # 5A draw
+    }
+    mock_simulator.operating_point.return_value = mock_analysis
+
+    # Config
+    psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
+
+    # Run validation
+    result = validate_circuit(mock_circuit, psu_config)
+
+    sag_errors = [
+        e for e in result.errors if "FAILED_VOLTAGE_SAG" in e or "voltage dropped" in e
+    ]
+    assert len(sag_errors) > 0, "Voltage sag error should be reported"
 
 
 if __name__ == "__main__":

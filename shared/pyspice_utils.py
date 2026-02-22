@@ -143,10 +143,14 @@ def validate_circuit(
         vcc_node = "supply_v+"
         if vcc_node in node_voltages:
             v_vcc = node_voltages[vcc_node]
-            if v_vcc < (psu_config.voltage_dc * 0.9 if psu_config else 0.1):
+            nominal = psu_config.voltage_dc if psu_config else 0.1
+            if v_vcc < nominal * 0.9:
                 # If PSU voltage is dragged down significantly, it might be a short
                 # but ONLY if we are actually supplying power.
-                pass
+                errors.append(
+                    f"FAILED_VOLTAGE_SAG: Supply voltage dropped to {v_vcc:.2f}V "
+                    f"(nominal {nominal:.2f}V). Potential overload or short."
+                )
 
         # In PySpice, current through a voltage source is positive if it flows from + to - terminal (passive sign convention).
         # A power supply supplying power will have NEGATIVE current in PySpice's Vsource.
