@@ -10,6 +10,7 @@ try:
 except ImportError:
     gs = None
 
+from shared.enums import FailureReason
 from shared.models.simulation import FluidMetricResult, StressSummary
 from shared.simulation.backends import (
     ActuatorState,
@@ -598,7 +599,7 @@ class GenesisBackend(PhysicsBackend):
                         return StepResult(
                             time=self.current_time,
                             success=False,
-                            failure_reason=f"PART_BREAKAGE:{name}",
+                            failure_reason=f"{FailureReason.PART_BREAKAGE}:{name}",
                         )
 
             # T017: ELECTRONICS_FLUID_DAMAGE check
@@ -651,7 +652,7 @@ class GenesisBackend(PhysicsBackend):
                     dist = np.linalg.norm(particles - center, axis=1)
                     if np.any(dist < 0.05):  # 5cm threshold
                         logger.info("electronics_fluid_damage", part=name)
-                        return f"ELECTRONICS_FLUID_DAMAGE:{name}"
+                        return f"{FailureReason.ELECTRONICS_FLUID_DAMAGE}:{name}"
             except Exception as e:
                 logger.debug("failed_to_check_fluid_damage", part=name, error=str(e))
 

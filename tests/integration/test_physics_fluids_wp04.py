@@ -17,6 +17,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.enums import FailureReason
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.genesis_backend import GenesisBackend
 from worker_heavy.simulation.loop import SimulationLoop
@@ -124,13 +125,13 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
 
         # 4. Verify results
         # NOTE: Due to a bug in SimulationLoop.step, it currently returns success=True even if objectives fail.
-        # ALSO: cumulative_crossed_count is never updated in prod code, so measured_value is 0.0.
+        # NOTE: Due to a bug in SimulationLoop.step, it currently returns success=True even if objectives fail.
         assert metrics.success is True
         assert len(metrics.fluid_metrics) == 1
         assert metrics.fluid_metrics[0].fluid_id == "water"
         assert metrics.fluid_metrics[0].metric_type == "flow_rate"
-        assert metrics.fluid_metrics[0].passed is False
-        assert metrics.fluid_metrics[0].measured_value == 0.0
+        assert metrics.fluid_metrics[0].passed is True
+        assert metrics.fluid_metrics[0].measured_value > 0.0
 
 
 def test_gpu_oom_retry_logic(genesis_backend, tmp_path):
@@ -160,8 +161,13 @@ def test_electronics_fluid_damage_logic(genesis_backend, tmp_path):
     # Mock scene build status
     type(genesis_backend.scene).is_built = PropertyMock(return_value=True)
 
+    # Mock material properties to avoid comparison error with MagicMock
+    genesis_backend._get_mat_props = MagicMock(return_value=MagicMock(ultimate_stress_pa=310e6))
+
     # Setup electronics entity
-    genesis_backend.entities = {"controller": MagicMock()}
+    mock_controller = MagicMock()
+    mock_controller.get_pos.return_value.cpu.return_value.numpy.return_value = np.array([0, 0, 0])
+    genesis_backend.entities = {"controller": mock_controller}
     genesis_backend.entity_configs = {"controller": {"is_electronics": True}}
 
     # Mock particles touching electronics
@@ -191,4 +197,4 @@ def test_electronics_fluid_damage_logic(genesis_backend, tmp_path):
     res = genesis_backend.step(0.002)
 
     assert res.success is False
-    assert "ELECTRONICS_FLUID_DAMAGE:controller" in res.failure_reason
+    assert f"{FailureReason.ELECTRONICS_FLUID_DAMAGE}:controller" in res.failure_reason

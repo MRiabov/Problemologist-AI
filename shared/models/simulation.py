@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from shared.simulation.schemas import SimulationFailureMode
+from shared.enums import FailureReason as SimulationFailureMode
 
 
 class StressSummary(BaseModel):
