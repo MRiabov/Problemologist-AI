@@ -4,8 +4,8 @@ from typing import Any
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.observability.tracing import record_worker_events, sync_asset
+from shared.enums import FailureReason as SimulationFailureMode
 from shared.observability.schemas import (
-    SimulationFailureMode,
     SimulationInstabilityEvent,
     SimulationResultEvent,
 )
@@ -51,25 +51,27 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
     if res_dict.get("success", True):
         return SimulationFailureMode.NONE
 
-    raw_reason = res_dict.get("failure_reason", "").lower()
-    if "timeout" in raw_reason:
+    raw_reason = str(res_dict.get("failure_reason", "")).upper()
+    if "TIMEOUT" in raw_reason:
         return SimulationFailureMode.TIMEOUT
-    if "out of bounds" in raw_reason:
+    if "OUT_OF_BOUNDS" in raw_reason:
         return SimulationFailureMode.OUT_OF_BOUNDS
-    if "forbid" in raw_reason:
+    if "FORBID" in raw_reason:
         return SimulationFailureMode.FORBID_ZONE_HIT
-    if "break" in raw_reason or "stress" in raw_reason:
+    if "BREAK" in raw_reason or "STRESS" in raw_reason:
         return SimulationFailureMode.PART_BREAKAGE
-    if "nan" in raw_reason or "instability" in raw_reason:
+    if "NAN" in raw_reason or "INSTABILITY" in raw_reason:
         return SimulationFailureMode.PHYSICS_INSTABILITY
-    if "short_circuit" in raw_reason:
+    if "SHORT_CIRCUIT" in raw_reason:
         return SimulationFailureMode.SHORT_CIRCUIT
-    if "overcurrent" in raw_reason:
+    if "OVERCURRENT" in raw_reason:
         return SimulationFailureMode.OVERCURRENT
-    if "wire_torn" in raw_reason:
+    if "WIRE_TORN" in raw_reason:
         return SimulationFailureMode.WIRE_TORN
-    if "open_circuit" in raw_reason:
+    if "OPEN_CIRCUIT" in raw_reason:
         return SimulationFailureMode.OPEN_CIRCUIT
+    if "ELECTRONICS_FLUID_DAMAGE" in raw_reason:
+        return SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
 
     return SimulationFailureMode.NONE
 

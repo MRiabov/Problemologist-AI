@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from shared.enums import SimulationFailureMode
+from shared.enums import FailureReason as SimulationFailureMode
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop

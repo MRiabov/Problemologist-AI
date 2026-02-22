@@ -3,7 +3,7 @@ from shared.observability.schemas import (
     LibraryUsageEvent,
     ObservabilityEventType,
     ReviewDecisionEvent,
-    SimulationFailureMode,
+    FailureReason as SimulationFailureMode,
     SimulationInstabilityEvent,
     SubmissionValidationEvent,
 )
@@ -63,13 +63,13 @@ def test_library_usage_event():
 
 def test_review_decision_event():
     event = ReviewDecisionEvent(
-        decision="approve", reason="Looks good", evidence_stats={"simulations_run": 5}
+        decision="approved", reason="Looks good", evidence_stats={"simulations_run": 5}
     )
     assert event.event_type == ObservabilityEventType.REVIEW_DECISION
     data = event.model_dump(mode="json")
-    assert data["decision"] == "approve"
+    assert data["decision"] == "approved"
     assert data["evidence_stats"]["simulations_run"] == 5
 
 
 def test_simulation_failure_mode_enum():
-    assert SimulationFailureMode.STABILITY_ISSUE == "stability_issue"
+    assert SimulationFailureMode.STABILITY_ISSUE == "STABILITY_ISSUE"

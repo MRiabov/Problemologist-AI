@@ -5,10 +5,13 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.enums import (
+    FailureReason,
     ManufacturingMethod,
     ReviewDecision,
-    SimulationFailureMode,
 )
+
+# Alias for backward compatibility
+SimulationFailureMode = FailureReason
 
 
 class ObservabilityEventType(StrEnum):
