@@ -6,6 +6,7 @@ from controller.observability.broadcast import EpisodeBroadcaster
 from controller.observability.tracing import record_worker_events, sync_asset
 from shared.enums import FailureReason as SimulationFailureMode
 from shared.observability.schemas import (
+    ObservabilityEventType,
     SimulationInstabilityEvent,
     SimulationResultEvent,
 )
@@ -84,23 +85,41 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
     return SimulationFailureMode.NONE
 
 
-async def record_simulation_result(episode_id: str, res_dict: dict[str, Any]):
+async def record_simulation_result(
+    episode_id: str,
+    res_dict: dict[str, Any],
+    worker_events: list[dict[str, Any]] | None = None,
+):
     """Records simulation result and instability events."""
     failure_reason = map_simulation_failure_reason(res_dict)
 
-    await record_worker_events(
-        episode_id=episode_id,
-        events=[
-            SimulationResultEvent(
-                success=res_dict.get("success", True),
-                failure_reason=failure_reason,
-                failure=res_dict.get("failure"),
-                time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
-                compute_time_ms=res_dict.get("compute_time_ms", 0.0),
-                metadata=res_dict,
+    # Avoid duplicate simulation_result events if the worker already emitted one
+    has_result_event = False
+    if worker_events:
+        for event in worker_events:
+            etype = (
+                event.get("event_type")
+                if isinstance(event, dict)
+                else getattr(event, "event_type", None)
             )
-        ],
-    )
+            if etype == ObservabilityEventType.SIMULATION_RESULT:
+                has_result_event = True
+                break
+
+    if not has_result_event:
+        await record_worker_events(
+            episode_id=episode_id,
+            events=[
+                SimulationResultEvent(
+                    success=res_dict.get("success", True),
+                    failure_reason=failure_reason,
+                    failure=res_dict.get("failure"),
+                    time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
+                    compute_time_ms=res_dict.get("compute_time_ms", 0.0),
+                    metadata=res_dict,
+                )
+            ],
+        )
 
     # Detect instability
     if not res_dict.get("success", True):

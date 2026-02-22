@@ -7,7 +7,7 @@ import structlog
 import yaml
 from build123d import Compound
 
-from shared.enums import ElectronicComponentType, MotorControlMode
+from shared.enums import ElectronicComponentType, MotorControlMode, FailureReason
 from shared.models.schemas import (
     AssemblyDefinition,
     CotsPartEstimate,
@@ -28,7 +28,11 @@ from worker_heavy.workbenches.config import load_config
 from .dfm import validate_and_price
 from .rendering import prerender_24_views
 from shared.observability.events import emit_event
-from shared.observability.schemas import WireRoutingEvent
+from shared.observability.schemas import (
+    SimulationMetadata,
+    SimulationResultEvent,
+    WireRoutingEvent,
+)
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 
 logger = structlog.get_logger(__name__)
@@ -587,7 +591,6 @@ def simulate(
 
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
-            from shared.observability.events import emit_event
             from shared.observability.schemas import GpuOomRetryEvent
 
             logger.warning("gpu_oom_detected_retrying_smoke_mode")
@@ -649,6 +652,8 @@ def simulate(
         result = SimulationResult(
             success=metrics.success,
             summary=status_msg,
+            fail_mode=metrics.fail_mode,
+            failure=metrics.failure,
             render_paths=render_paths,
             mjcf_content=mjcf_content,
             stress_summaries=metrics.stress_summaries,
@@ -676,6 +681,20 @@ def simulate(
             save_simulation_result(result, working_dir / "simulation_result.json")
         except Exception as e:
             logger.error("failed_to_save_simulation_result", error=str(e))
+
+        # T026: Emit simulation_result event for observability traces
+        emit_event(
+            SimulationResultEvent(
+                success=result.success,
+                failure_reason=result.fail_mode or FailureReason.NONE,
+                failure=result.failure,
+                time_elapsed_s=metrics.total_time,
+                compute_time_ms=metrics.total_time * 1000.0,
+                metadata=SimulationMetadata(
+                    num_steps=int(metrics.total_time / 0.002),  # Approximate
+                ),
+            )
+        )
 
         return result
     except Exception as e:

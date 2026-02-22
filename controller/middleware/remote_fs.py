@@ -181,7 +181,10 @@ class RemoteFilesystemMiddleware:
             )
         # Fallback to direct client call if Temporal is not available
         result = await self.client.execute_python(code, timeout=timeout)
-        return result.model_dump()
+        res_dict = result.model_dump()
+        if res_dict.get("events"):
+            await record_events(self.client.session_id, res_dict["events"])
+        return res_dict
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:
@@ -229,14 +232,26 @@ class RemoteFilesystemMiddleware:
                 id=f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
                 task_queue="simulation-task-queue",
             )
-            await record_simulation_result(self.client.session_id, res)
+            worker_events = res.get("events", [])
+            if worker_events:
+                await record_events(self.client.session_id, worker_events)
+            await record_simulation_result(
+                self.client.session_id, res, worker_events=worker_events
+            )
             return res
 
         result = await self.client.simulate(p_str, backend=backend)
         res_dict = result.model_dump()
 
-        # Record result and detect instability via helper
-        await record_simulation_result(self.client.session_id, res_dict)
+        # Record events from worker (including automatic simulation_result)
+        worker_events = res_dict.get("events", [])
+        if worker_events:
+            await record_events(self.client.session_id, worker_events)
+
+        # Record result and detect instability via helper (handles fallback and instability events)
+        await record_simulation_result(
+            self.client.session_id, res_dict, worker_events=worker_events
+        )
 
         return res_dict
 
@@ -263,7 +278,10 @@ class RemoteFilesystemMiddleware:
                 task_queue="simulation-task-queue",
             )
 
-        return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+        res_dict = await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+        if res_dict.get("events"):
+            await record_events(self.client.session_id, res_dict["events"])
+        return res_dict
 
     async def validate(self, script_path: str | Path) -> dict[str, Any]:
         """Trigger geometric validation via worker client (with bundling)."""
@@ -284,6 +302,10 @@ class RemoteFilesystemMiddleware:
         else:
             result = await self.client.validate(p_str)
             res_dict = result.model_dump()
+
+        # Record events from worker
+        if res_dict.get("events"):
+            await record_events(self.client.session_id, res_dict["events"])
 
         # Record as ManufacturabilityCheckEvent
         await record_events(
@@ -307,6 +329,10 @@ class RemoteFilesystemMiddleware:
         p_str = str(script_path)
         result = await self.client.submit(p_str)
         res_dict = result.model_dump()
+
+        # Record events from worker
+        if res_dict.get("events"):
+            await record_events(self.client.session_id, res_dict["events"])
 
         # Record as PlanSubmissionEngineerEvent
         await record_events(
