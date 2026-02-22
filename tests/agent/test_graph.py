@@ -25,19 +25,11 @@ async def test_full_graph_flow(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_electronics_planner = AsyncMock(
-        return_value={"journal": "Electronics planned"}
-    )
     mock_coder = AsyncMock(
         return_value={"journal": "Worked", "current_step": "Step", "todo": "- [x] Task"}
     )
     mock_electronics = AsyncMock(return_value={"journal": "Electronics worked"})
-    mock_plan_reviewer = AsyncMock(
-        return_value={"status": "approved", "feedback": "Good"}
-    )
-    mock_execution_reviewer = AsyncMock(
-        return_value={"status": "approved", "feedback": "Good"}
-    )
+    mock_reviewer = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
     mock_skills = AsyncMock(return_value={"journal": "Learned"})
     mock_cots = AsyncMock(return_value={})
 
@@ -45,20 +37,17 @@ async def test_full_graph_flow(fresh_graph):
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
         patch(
             "controller.agent.nodes.electronics_planner.electronics_planner_node",
-            mock_electronics_planner,
-        ),
-        patch(
-            "controller.agent.nodes.plan_reviewer.plan_reviewer_node",
-            mock_plan_reviewer,
+            mock_planner,
         ),
         patch("controller.agent.nodes.coder.coder_node", mock_coder),
         patch(
             "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
             mock_electronics,
         ),
+        patch("controller.agent.nodes.plan_reviewer.plan_reviewer_node", mock_reviewer),
         patch(
             "controller.agent.nodes.execution_reviewer.execution_reviewer_node",
-            mock_execution_reviewer,
+            mock_reviewer,
         ),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
         patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
@@ -71,10 +60,8 @@ async def test_full_graph_flow(fresh_graph):
         final_state = await graph.ainvoke(initial_state, config=config)
 
         assert mock_planner.called
-        assert mock_electronics_planner.called
-        assert mock_plan_reviewer.called
         assert mock_coder.called
-        assert mock_execution_reviewer.called
+        assert mock_reviewer.called
         assert mock_skills.called
 
         assert final_state["status"] == "approved"
@@ -88,21 +75,21 @@ async def test_graph_rejection_loop(fresh_graph):
     mock_planner = AsyncMock(
         return_value={"task": "Planned", "plan": "Plan", "todo": "- [ ] Task"}
     )
-    mock_electronics_planner = AsyncMock(
-        return_value={"journal": "Electronics planned"}
-    )
     mock_coder = AsyncMock(
         return_value={"journal": "Worked", "current_step": "Step", "todo": "- [x] Task"}
     )
     mock_electronics = AsyncMock(return_value={"journal": "Electronics worked"})
 
-    mock_plan_reviewer = AsyncMock(
-        return_value={"status": "approved", "feedback": "Plan OK"}
-    )
-    mock_execution_reviewer = AsyncMock()
-    mock_execution_reviewer.side_effect = [
-        {"status": "code_rejected", "feedback": "Fix it", "iteration": 1},
-        {"status": "approved", "feedback": "Fixed"},
+    mock_reviewer = AsyncMock()
+    mock_reviewer.side_effect = [
+        {"status": "approved", "feedback": "Plan OK"},  # plan_reviewer 1
+        {
+            "status": "code_rejected",
+            "feedback": "Fix it",
+            "iteration": 1,
+        },  # execution_reviewer 1
+        {"status": "approved", "feedback": "Plan OK"},  # plan_reviewer 2
+        {"status": "approved", "feedback": "Fixed"},  # execution_reviewer 2
     ]
 
     mock_skills = AsyncMock(return_value={})
@@ -112,20 +99,17 @@ async def test_graph_rejection_loop(fresh_graph):
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
         patch(
             "controller.agent.nodes.electronics_planner.electronics_planner_node",
-            mock_electronics_planner,
-        ),
-        patch(
-            "controller.agent.nodes.plan_reviewer.plan_reviewer_node",
-            mock_plan_reviewer,
+            mock_planner,
         ),
         patch("controller.agent.nodes.coder.coder_node", mock_coder),
         patch(
             "controller.agent.nodes.electronics_engineer.electronics_engineer_node",
             mock_electronics,
         ),
+        patch("controller.agent.nodes.plan_reviewer.plan_reviewer_node", mock_reviewer),
         patch(
             "controller.agent.nodes.execution_reviewer.execution_reviewer_node",
-            mock_execution_reviewer,
+            mock_reviewer,
         ),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
         patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
@@ -138,5 +122,5 @@ async def test_graph_rejection_loop(fresh_graph):
         final_state = await graph.ainvoke(initial_state, config=config)
 
         assert mock_coder.call_count == 2
-        assert mock_execution_reviewer.call_count == 2
+        assert mock_reviewer.call_count == 3
         assert final_state["status"] == "approved"

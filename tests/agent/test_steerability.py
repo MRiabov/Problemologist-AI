@@ -98,12 +98,12 @@ async def test_check_steering():
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
-@patch("controller.agent.nodes.planner.dspy.CodeAct")
+@patch("controller.agent.nodes.planner.PlannerNode._run_program")
 @patch(
     "worker_heavy.utils.file_validation.validate_node_output", return_value=(True, [])
 )
 async def test_planner_node_steer_context(
-    mock_validate, mock_codeact_cls, mock_record_events
+    mock_validate, mock_run_program, mock_record_events
 ):
     from controller.agent.nodes.planner import planner_node
 
@@ -126,37 +126,45 @@ async def test_planner_node_steer_context(
 
     with (
         patch("controller.agent.nodes.planner.SharedNodeContext") as mock_ctx_class,
-        patch("controller.agent.dspy_utils.WorkerInterpreter") as mock_interpreter,
     ):
-        mock_ctx = mock_ctx_class.create.return_value
-        mock_ctx.pm = MagicMock()
-        mock_ctx.pm.render.return_value = "Rendered prompt"
-        mock_ctx.dspy_lm = MagicMock()
-        mock_ctx.fs = MagicMock()
-        mock_ctx.fs.read_file = AsyncMock(side_effect=lambda f: "content")
-        mock_ctx.fs.write_file = AsyncMock(return_value=True)
-        mock_ctx.worker_client = MagicMock()
-        mock_ctx.worker_client.read_file = AsyncMock(side_effect=lambda f: "content")
-        mock_ctx.worker_client.exists = AsyncMock(return_value=True)
+        from controller.agent.nodes.base import SharedNodeContext
 
-        # Mock DSPy Program
-        mock_program = MagicMock()
-        mock_program.return_value = MagicMock(summary="Plan generated")
-        mock_codeact_cls.return_value = mock_program
+        mock_ctx = MagicMock(spec=SharedNodeContext)
+        mock_ctx.session_id = session_id
+        mock_ctx.worker_light_url = "http://worker"
+        mock_ctx.pm = MagicMock()
+        mock_ctx.dspy_lm = MagicMock()
+        mock_ctx.worker_client = MagicMock()
+        mock_ctx.worker_client.exists = AsyncMock(return_value=True)
+        mock_ctx.worker_client.read_file = AsyncMock(return_value="content")
+        mock_ctx.fs = MagicMock()
+        mock_ctx.fs.read_file = AsyncMock(return_value="file content")
+
+        mock_ctx_class.create.return_value = mock_ctx
+
+        # Mock _run_program return value
+        mock_prediction = MagicMock(summary="Plan generated")
+        mock_run_program.return_value = (
+            mock_prediction,
+            {"plan.md": "plan", "todo.md": "todo"},
+            "\nJournal",
+        )
 
         await planner_node(state)
 
-        # Verify DSPy program called with steer_context
-        args, kwargs = mock_program.call_args
-        assert "steer_context" in kwargs
-        assert "Geometric Selections:" in kwargs["steer_context"]
-        assert "Code References:" in kwargs["steer_context"]
-        assert "Mentions: @user" in kwargs["steer_context"]
+        # Verify _run_program called with inputs containing steer_context
+        args, kwargs = mock_run_program.call_args
+        # args[3] is the inputs dict in _run_program(self, program_cls, signature_cls, state, inputs, ...)
+        inputs = args[3]
+        assert "steer_context" in inputs
+        assert "Geometric Selections:" in inputs["steer_context"]
+        assert "Code References:" in inputs["steer_context"]
+        assert "Mentions: @user" in inputs["steer_context"]
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.benchmark.nodes.dspy.CodeAct")
-async def test_benchmark_planner_node_steer(mock_codeact_cls):
+@patch("controller.agent.benchmark.nodes.BenchmarkPlannerNode._run_program")
+async def test_benchmark_planner_node_steer(mock_run_program):
     from controller.agent.benchmark.nodes import planner_node as benchmark_planner
 
     session_id = uuid4()
@@ -176,26 +184,22 @@ async def test_benchmark_planner_node_steer(mock_codeact_cls):
         patch("controller.agent.benchmark.nodes.SharedNodeContext") as mock_ctx_class,
     ):
         mock_ctx = mock_ctx_class.create.return_value
+        mock_ctx.worker_client.read_file = AsyncMock(return_value="{}")
+        mock_ctx.worker_client.exists = AsyncMock(return_value=False)
+        mock_ctx.worker_client.git_init = AsyncMock()
 
-        # Mock DSPy Program
-        mock_program = MagicMock()
+        # Mock _run_program
         from shared.simulation.schemas import RandomizationStrategy
 
-        mock_program.return_value = MagicMock(
+        mock_prediction = MagicMock(
             plan=RandomizationStrategy(theme="test", reasoning="test")
         )
-        mock_codeact_cls.return_value = mock_program
-
-        # Mock WorkerClient methods that might be called
-        mock_worker_instance = mock_ctx.worker_client
-        mock_worker_instance.read_file = AsyncMock(return_value="{}")
-        mock_worker_instance.write_file = AsyncMock()
-        mock_worker_instance.git_init = AsyncMock()
-        mock_worker_instance.exists = AsyncMock(return_value=False)
+        mock_run_program.return_value = (mock_prediction, {}, "\nJournal")
 
         await benchmark_planner(state)
 
-        # Verify program called with history including steer_msg
-        args, kwargs = mock_program.call_args
-        history = kwargs["history"]
+        # Verify _run_program called with inputs containing history with steer_msg
+        args, kwargs = mock_run_program.call_args
+        inputs = args[3]
+        history = inputs["history"]
         assert "Steering prompt" in history
