@@ -221,6 +221,11 @@ async def run_python_code_async(
                 stderr_length=len(stderr),
             )
 
+            if exit_code != 0:
+                logger.error(
+                    "runtime_execute_async_failed", stderr=stderr.decode("utf-8")
+                )
+
             return ExecutionResult(
                 stdout=stdout.decode("utf-8"),
                 stderr=stderr.decode("utf-8"),

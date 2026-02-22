@@ -24,8 +24,8 @@ The `_update_electronics` method does not clear the flag.
 **Recommendation**: Reset `self._electronics_dirty = False` at the end of `_update_electronics`.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [x] Disagree
+> *Comments:* Okay, but can't confirm. If the wire breaks, the simulation should stop. 
 
 ### 2. Broken Entry Point: Outdated `main.py`
 
@@ -40,8 +40,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Update `main.py` to point to the correct entry points (e.g., `controller.api.app:app`) or remove it if service-specific entry points are preferred.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [] Agree - [ ] Disagree
+> *Comments:* Can't say anything. probably just remove it. because yes, we have a "monorepo"
 
 ---
 
@@ -55,8 +55,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Batch implementation tasks or allow the `coder` to complete all mechanical tasks before a single "Integration & Simulation" phase.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* FIXME wtf is this?! the todo list is executed once by a coder it's a misinterpretation, obviously. No, the coder shoud start the todo list and go until it's finished, then submit.
 
 ### 4. Unsafe "Async-over-Sync-over-Async" Pattern
 
@@ -66,8 +66,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Transition to a fully async DSPy integration if possible, or use a dedicated background thread with a stable event loop for all worker interactions.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:*It's a completely strange pattern. Why do a thread if you can simply async it? Doesn't dspy handle this natively? Neither we want to use a thread for it - it's async bound and cpu-light, shouldn't be thread-based.
 
 ### 5. Excessive Reviewer Permissions
 
@@ -77,8 +77,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Create a `get_reviewer_tools` factory that only provides read-only filesystem access and reporting tools.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [ ] Agree - [x] Disagree
+> *Comments:* because reviewer should write their reviews to a file like reviews/review-round-1.md!
 
 ---
 
@@ -92,8 +92,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Extract concerns into sub-managers (e.g., `ObjectiveEvaluator`, `MediaRecorder`).
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* Yep, split it.
 
 ### 7. Fragile Clearance Logic for Short Wires
 
@@ -103,8 +103,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Make `ignore_endpoints_dist` proportional to wire length or use a more precise "terminal exclusion zone" based on component geometry.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* at least 5 points per wire, or something like this. if collision happened, refine the points at least to 2.5mm so that it doesn't collide due to numerical imprecisions in linear patterns (if this a thing, anyway). Also unit test it. Also add this line to @desired_architecture.md or desired_architecture_WP3.md
 
 ### 8. Expensive Constructor Side-Effects in `SkillsNode`
 
@@ -114,8 +114,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Move git synchronization to an explicit startup task or a background worker.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* it should run ONLY at the initialization of the session. 
 
 ### 9. Dead Node: `cots_search`
 
@@ -125,8 +125,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Clean up or properly integrate.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [ ] Agree - [x] Disagree
+> *Comments:* I think this was already integrated. See @desired_architecture.md for how it should be working anyway.
 
 ### 10. Inconsistent Skill Directories
 
@@ -136,8 +136,8 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Unify the directory path for skills storage and retrieval.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* make an env var with pydantic config so it's explicit. it should simply be in `skills/`
 
 ### 11. Competing Skill Sync Logic
 
@@ -148,7 +148,7 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree
-> *Comments:*
+> *Comments:* I agree for only 50%. Anyway, see desired arch spec document. 
 
 ### 12. Duplicated Node Resolution Logic
 
@@ -158,7 +158,7 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Centralize in a helper function.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
+> [x] Agree - [ ] Disagree
 > *Comments:*
 
 ### 13. Non-Polymorphic COTS Pricing
@@ -169,5 +169,5 @@ The project structure uses `controller/`, `worker_heavy/`, etc., and no `src/` d
 **Recommendation**: Use a registry of COTS handlers.
 
 > **User Review**:
-> [ ] Agree - [ ] Disagree
-> *Comments:*
+> [x] Agree - [ ] Disagree
+> *Comments:* FFS it should fetch prices from a database! and then just multiply their qty*values. 
