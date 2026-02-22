@@ -51,6 +51,14 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
     if res_dict.get("success", True):
         return SimulationFailureMode.NONE
 
+    # Structured failure from SimulationFailure model
+    failure_data = res_dict.get("failure")
+    if isinstance(failure_data, dict) and "reason" in failure_data:
+        try:
+            return SimulationFailureMode(failure_data["reason"])
+        except ValueError:
+            pass
+
     raw_reason = str(res_dict.get("failure_reason", "")).upper()
     if "TIMEOUT" in raw_reason:
         return SimulationFailureMode.TIMEOUT
@@ -86,6 +94,7 @@ async def record_simulation_result(episode_id: str, res_dict: dict[str, Any]):
             SimulationResultEvent(
                 success=res_dict.get("success", True),
                 failure_reason=failure_reason,
+                failure=res_dict.get("failure"),
                 time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
                 compute_time_ms=res_dict.get("compute_time_ms", 0.0),
                 metadata=res_dict,

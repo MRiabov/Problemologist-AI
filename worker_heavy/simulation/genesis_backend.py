@@ -11,7 +11,7 @@ except ImportError:
     gs = None
 
 from shared.enums import FailureReason
-from shared.models.simulation import FluidMetricResult, StressSummary
+from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -599,7 +599,9 @@ class GenesisBackend(PhysicsBackend):
                         return StepResult(
                             time=self.current_time,
                             success=False,
-                            failure_reason=f"{FailureReason.PART_BREAKAGE}:{name}",
+                            failure=SimulationFailure(
+                                reason=FailureReason.PART_BREAKAGE, detail=name
+                            ),
                         )
 
             # T017: ELECTRONICS_FLUID_DAMAGE check
@@ -608,7 +610,7 @@ class GenesisBackend(PhysicsBackend):
                 return StepResult(
                     time=self.current_time,
                     success=False,
-                    failure_reason=failure,
+                    failure=failure,
                 )
 
         except Exception as e:
@@ -619,7 +621,7 @@ class GenesisBackend(PhysicsBackend):
 
         return StepResult(time=self.current_time, success=True)
 
-    def _check_electronics_fluid_damage(self) -> str | None:
+    def _check_electronics_fluid_damage(self) -> SimulationFailure | None:
         """Check if any fluid particles are touching electronic components."""
         particles = self.get_particle_positions()
         if particles is None or len(particles) == 0:
@@ -652,7 +654,9 @@ class GenesisBackend(PhysicsBackend):
                     dist = np.linalg.norm(particles - center, axis=1)
                     if np.any(dist < 0.05):  # 5cm threshold
                         logger.info("electronics_fluid_damage", part=name)
-                        return f"{FailureReason.ELECTRONICS_FLUID_DAMAGE}:{name}"
+                        return SimulationFailure(
+                            reason=FailureReason.ELECTRONICS_FLUID_DAMAGE, detail=name
+                        )
             except Exception as e:
                 logger.debug("failed_to_check_fluid_damage", part=name, error=str(e))
 
