@@ -22,8 +22,11 @@ def test_apply_control(genesis_backend):
 
     genesis_backend.apply_control({"motor1": 10.0})
 
-    # Check if set_dofs_force was called with a numpy array containing 10.0
-    args, kwargs = mock_entity.set_dofs_force.call_args
+    # Check if control_dofs_force or set_dofs_force was called
+    # GenesisBackend tries control_dofs_force first
+    call_args = mock_entity.control_dofs_force.call_args or mock_entity.set_dofs_force.call_args
+    assert call_args is not None
+    args, kwargs = call_args
     assert np.allclose(args[0], np.array([10.0]))
 
 

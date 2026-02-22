@@ -15,11 +15,11 @@ from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 
 
-def test_simulation_loop_with_mujoco():
-    # Use the minimal XML created for testing
-    xml_path = Path("tests/worker/minimal.xml")
+def test_simulation_loop_with_mujoco(tmp_path):
+    # Use a temporary XML path
+    xml_path = tmp_path / "minimal.xml"
     if not xml_path.exists():
-        # Recreate minimal.xml if it was also deleted
+        # Create minimal.xml
         with xml_path.open("w") as f:
             f.write("""<mujoco model="test_model">
     <worldbody>

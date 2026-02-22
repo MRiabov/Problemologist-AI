@@ -6,6 +6,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 from build123d import Box
+from shared.models.schemas import PartMetadata
 
 from shared.models.simulation import SimulationMetrics, StressSummary
 from worker_heavy.utils import validation
@@ -71,6 +72,7 @@ def test_simulation_persistence(tmp_path, mock_simulation_dependencies):
 
     # Create a dummy component
     component = Box(10, 10, 10)
+    component.metadata = PartMetadata(material_id="abs")
 
     # 1. Run simulation
     # We pass output_dir=tmp_path

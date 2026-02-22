@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from build123d import Box, BuildPart, Compound
+from shared.models.schemas import PartMetadata
 
 from tests.observability.test_observability_utils import (
     assert_event_emitted,
@@ -16,6 +17,7 @@ def test_geometric_validation():
     # 1. Valid box
     with BuildPart() as p:
         Box(10, 10, 10)
+    p.part.metadata = PartMetadata(material_id="abs")
 
     success, msg = validate(p.part)
     assert success, f"Validating single box failed: {msg}"
@@ -23,8 +25,10 @@ def test_geometric_validation():
     # 2. Overlapping boxes
     with BuildPart() as p1:
         Box(10, 10, 10)
+    p1.part.metadata = PartMetadata(material_id="abs")
     with BuildPart() as p2:
         Box(10, 10, 10)
+    p2.part.metadata = PartMetadata(material_id="abs")
 
     comp = Compound(label="overlapping", children=[p1.part, p2.part])
     success, msg = validate(comp)
@@ -61,12 +65,13 @@ def test_plan_validation_events():
 
 @pytest.mark.integration
 @pytest.mark.xdist_group(name="physics_sims")
-def test_simulation():
+def test_simulation(tmp_path):
     # Valid stable box
     with BuildPart() as p:
         Box(10, 10, 10)
+    p.part.metadata = PartMetadata(material_id="abs")
 
-    res = simulate(p.part)
+    res = simulate(p.part, output_dir=tmp_path)
     assert res.success, f"Simulation failed: {res.summary}"
 
 
@@ -75,6 +80,7 @@ def test_handover():
 
     with BuildPart() as p:
         Box(10, 10, 10)
+    p.part.metadata = PartMetadata(material_id="abs")
 
     os.environ["SESSION_ID"] = "test_session"
     plan_path = Path("plan.md")
