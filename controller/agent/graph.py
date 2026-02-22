@@ -6,7 +6,6 @@ from controller.config.settings import settings
 from controller.graph.steerability_node import check_steering, steerability_node
 
 from .nodes.coder import coder_node
-from .nodes.cots_search import cots_search_node
 from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.electronics_planner import electronics_planner_node
 from .nodes.execution_reviewer import execution_reviewer_node
@@ -52,7 +51,6 @@ builder.add_node("plan_reviewer", plan_reviewer_node)
 builder.add_node("coder", coder_node)
 builder.add_node("electronics_engineer", electronics_engineer_node)
 builder.add_node("execution_reviewer", execution_reviewer_node)
-builder.add_node("cots_search", cots_search_node)
 builder.add_node("skills", skills_node)
 builder.add_node("steer", steerability_node)
 
@@ -99,7 +97,6 @@ builder.add_conditional_edges(
 builder.add_edge("steer", "planner")
 
 builder.add_edge("skills", END)
-builder.add_edge("cots_search", "planner")
 
 # T026: Implement Checkpointing
 memory = MemorySaver()

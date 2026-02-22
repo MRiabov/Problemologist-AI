@@ -10,11 +10,11 @@ from controller.tools.fs import create_fs_tools
 def mock_observability():
     with (
         patch(
-            "controller.middleware.remote_fs.record_worker_events",
+            "controller.middleware.remote_fs.record_events",
             new_callable=AsyncMock,
         ) as m1,
         patch(
-            "controller.middleware.remote_fs.sync_asset", new_callable=AsyncMock
+            "controller.middleware.remote_fs.sync_file_asset", new_callable=AsyncMock
         ) as m2,
         patch(
             "controller.observability.broadcast.EpisodeBroadcaster",
