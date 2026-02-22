@@ -85,7 +85,7 @@ class WorkerInterpreter:
         """Execute code on the worker and return the output."""
         logger.debug("worker_interpreter_execute_start", code_len=len(code))
 
-        # DSPy CodeAct expects a synchronous call.
+        # DSPy ReAct expects a synchronous call.
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:

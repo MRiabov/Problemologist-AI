@@ -37,7 +37,7 @@ class ElectronicsSignature(dspy.Signature):
 class ElectronicsEngineerNode(BaseNode):
     """
     Electronics Engineer node: Designs circuits and routes wires.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
@@ -94,7 +94,7 @@ class ElectronicsEngineerNode(BaseNode):
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             ElectronicsSignature,
             state,
             inputs,

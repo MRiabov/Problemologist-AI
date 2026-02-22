@@ -29,7 +29,7 @@ class COTSSearchSignature(dspy.Signature):
 class COTSSearchNode(BaseNode):
     """
     COTS Search node: Searches for components based on current needs.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
@@ -40,7 +40,7 @@ class COTSSearchNode(BaseNode):
         }
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             COTSSearchSignature,
             state,
             inputs,

@@ -1,5 +1,6 @@
 import pytest
 
+from shared.enums import FailureReason
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
@@ -98,7 +99,7 @@ def test_forbidden_zone_trigger(sim_loop):
     # Collision detection relies on contacts.
     # Just setting position might not generate contacts immediately if no step is running?
     # instability_detection usually returns physics_instability
-    assert metrics.fail_reason == "forbid_zone_hit"
+    assert metrics.fail_mode == FailureReason.FORBID_ZONE_HIT
 
 
 def test_validation_hook_failure(tmp_path):
@@ -122,7 +123,7 @@ def test_validation_hook_failure(tmp_path):
 
         metrics = loop.step({})
         assert metrics.success is False
-        assert "validation_failed" in metrics.fail_reason
+        assert metrics.fail_mode == FailureReason.VALIDATION_FAILED
         assert "Part too large" in metrics.fail_reason
         # Check that it didn't step (total_time should be 0.0)
         assert metrics.total_time == 0.0
@@ -141,7 +142,7 @@ def test_timeout_configurable(tmp_path):
 
     # Should timeout before reaching goal
     assert metrics.success is False
-    assert metrics.fail_reason == "timeout"
+    assert metrics.fail_mode == FailureReason.TIMEOUT
     assert metrics.total_time >= 0.05  # At least ran until timeout
 
 
@@ -162,14 +163,14 @@ def test_timeout_capped_at_30s(tmp_path):
 
 def test_target_fell_off_world(sim_loop):
     """Test failure detection when target falls below Z threshold."""
-    # Set target Z to -3.0 (below -2.0 threshold)
-    sim_loop.backend.data.qpos[2] = -3.0
+    # Set target Z to -6.0 (below default -5.0 threshold)
+    sim_loop.backend.data.qpos[2] = -6.0
 
     # Run step
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "out_of_bounds"
+    assert metrics.fail_mode == FailureReason.OUT_OF_BOUNDS
 
 
 def test_instability_detection(sim_loop):
@@ -183,4 +184,4 @@ def test_instability_detection(sim_loop):
     metrics = sim_loop.step({}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.fail_reason == "physics_instability"
+    assert metrics.fail_mode == FailureReason.PHYSICS_INSTABILITY
