@@ -1,24 +1,18 @@
 import xml.etree.ElementTree as ET
-
+import pytest
 from shared.cots.parts.motors import ServoMotor
 from worker_heavy.simulation.builder import SceneCompiler
 
-
-def test_add_actuator_cots_derivation():
-    """Test that add_actuator derives params from COTS data."""
+def test_add_actuator_cots_derivation_sg90():
+    """Test that add_actuator derives params from SG90 COTS data."""
     compiler = SceneCompiler()
 
-    # SG90 specs: torque ~0.176 Nm
-    # Heuristic kp = 0.176 / 0.2 = 0.88
-    # Heuristic kv = 0.088
-
+    # Heuristic: find SG90 in name
     compiler.add_actuator(
         name="Servo_SG90_joint", joint="joint1", actuator_type="position"
     )
 
     xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
-
-    # Parse back to check attributes
     root = ET.fromstring(xml_str)
     actuator = root.find(".//actuator/position")
 
@@ -30,7 +24,6 @@ def test_add_actuator_cots_derivation():
     kv = float(actuator.get("kv"))
     forcerange = actuator.get("forcerange")
 
-    # Expected values
     expected_torque = ServoMotor.motor_data["SG90"]["torque_nm"]
     expected_kp = expected_torque / 0.2
     expected_kv = expected_kp * 0.1
@@ -38,11 +31,46 @@ def test_add_actuator_cots_derivation():
     assert abs(kp - expected_kp) < 1e-4
     assert abs(kv - expected_kv) < 1e-4
 
-    # Check forcerange string "-0.176 0.176"
     fr_vals = [float(x) for x in forcerange.split()]
     assert abs(fr_vals[0] - (-expected_torque)) < 1e-4
     assert abs(fr_vals[1] - expected_torque) < 1e-4
 
+def test_add_actuator_cots_id_direct():
+    """Test that passing cots_id directly works."""
+    compiler = SceneCompiler()
+
+    compiler.add_actuator(
+        name="custom_name", joint="joint1", cots_id="MG996R"
+    )
+
+    xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
+    root = ET.fromstring(xml_str)
+    actuator = root.find(".//actuator/position")
+
+    assert actuator is not None
+    assert actuator.get("name") == "custom_name"
+
+    expected_torque = ServoMotor.motor_data["MG996R"]["torque_nm"]
+    forcerange = actuator.get("forcerange")
+    fr_vals = [float(x) for x in forcerange.split()]
+    assert abs(fr_vals[1] - expected_torque) < 1e-4
+
+def test_add_actuator_ds3218():
+    """Test derivation for DS3218 motor."""
+    compiler = SceneCompiler()
+
+    compiler.add_actuator(
+        name="motor_DS3218", joint="joint_ds"
+    )
+
+    xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
+    root = ET.fromstring(xml_str)
+    actuator = root.find(".//actuator/position")
+
+    assert actuator is not None
+    expected_torque = ServoMotor.motor_data["DS3218"]["torque_nm"]
+    fr_vals = [float(x) for x in actuator.get("forcerange").split()]
+    assert abs(fr_vals[1] - expected_torque) < 1e-4
 
 def test_add_actuator_manual_override():
     """Test that manual params override COTS derivation."""
@@ -63,7 +91,6 @@ def test_add_actuator_manual_override():
     assert float(actuator.get("kp")) == 50.0
     assert float(actuator.get("kv")) == 5.0
     assert actuator.get("forcerange") == "-1.0 1.0"
-
 
 def test_add_actuator_unknown_motor():
     """Test fallback for unknown motors."""
