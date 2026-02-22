@@ -4,9 +4,13 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
-from shared.enums import FluidEvalAt, FluidObjectiveType, SimulationFailureMode
+from shared.enums import FluidEvalAt, FluidObjectiveType, FailureReason
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
-from shared.models.simulation import FluidMetricResult, SimulationMetrics
+from shared.models.simulation import (
+    FluidMetricResult,
+    SimulationFailure,
+    SimulationMetrics,
+)
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
     ElectricalFailureEvent,
@@ -345,39 +349,50 @@ class SimulationLoop:
                 "unknown error"
             ]
             msg = f"validation_failed: {', '.join(map(str, violations))}"
-            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            self.fail_reason = SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED, detail=msg
+            )
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=msg,
-                fail_mode=self.fail_reason,
+                fail_reason=str(self.fail_reason),
+                fail_mode=self.fail_reason.reason,
+                failure=self.fail_reason,
             )
 
         # Check electronics validation status
         if self.electronics_validation_error:
-            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            self.fail_reason = SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED,
+                detail=self.electronics_validation_error,
+            )
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=self.electronics_validation_error,
-                fail_mode=self.fail_reason,
+                fail_reason=str(self.fail_reason),
+                fail_mode=self.fail_reason.reason,
+                failure=self.fail_reason,
                 confidence="high",
             )
 
         # Check wire clearance validation status
         if self.wire_clearance_error:
-            self.fail_reason = SimulationFailureMode.VALIDATION_FAILED
+            self.fail_reason = SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED,
+                detail=self.wire_clearance_error,
+            )
             return SimulationMetrics(
                 total_time=0.0,
                 total_energy=0.0,
                 max_velocity=0.0,
                 success=False,
-                fail_reason=self.wire_clearance_error,
-                fail_mode=self.fail_reason,
+                fail_reason=str(self.fail_reason),
+                fail_mode=self.fail_reason.reason,
+                failure=self.fail_reason,
                 confidence="high",
             )
 
@@ -503,8 +518,9 @@ class SimulationLoop:
                         if summary and summary.max_von_mises_pa > (
                             so.max_von_mises_mpa * 1e6
                         ):
-                            self.fail_reason = (
-                                SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
+                            self.fail_reason = SimulationFailure(
+                                reason=FailureReason.STRESS_OBJECTIVE_EXCEEDED,
+                                detail=so.part_label,
                             )
                             logger.info(
                                 "stress_objective_exceeded",
@@ -519,43 +535,25 @@ class SimulationLoop:
                 # WP2: Check for backend success to catch specific errors (e.g. PART_BREAKAGE)
                 # before generic instability (NaN) checks catch it.
                 if not res.success and not self.fail_reason:
-                    if isinstance(res.failure_reason, SimulationFailureMode):
-                        self.fail_reason = res.failure_reason
-                    elif isinstance(res.failure_reason, str):
-                        if res.failure_reason.startswith("PART_BREAKAGE"):
-                            self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                        elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
-                            self.fail_reason = (
-                                SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
-                            )
-                        else:
-                            # Re-check breakage as generic instability might be a side effect
-                            if self.objectives and self.objectives.physics.fem_enabled:
-                                broken_part = self._check_part_breakage()
-                                if broken_part:
-                                    self.fail_reason = (
-                                        SimulationFailureMode.PART_BREAKAGE
-                                    )
-                                else:
-                                    self.fail_reason = (
-                                        SimulationFailureMode.PHYSICS_INSTABILITY
-                                    )
-                            else:
-                                self.fail_reason = (
-                                    SimulationFailureMode.PHYSICS_INSTABILITY
-                                )
+                    if res.failure:
+                        self.fail_reason = res.failure
                     else:
-                        # Re-check breakage
+                        # Re-check breakage as generic instability might be a side effect
                         if self.objectives and self.objectives.physics.fem_enabled:
                             broken_part = self._check_part_breakage()
                             if broken_part:
-                                self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                                self.fail_reason = SimulationFailure(
+                                    reason=FailureReason.PART_BREAKAGE,
+                                    detail=broken_part,
+                                )
                             else:
-                                self.fail_reason = (
-                                    SimulationFailureMode.PHYSICS_INSTABILITY
+                                self.fail_reason = SimulationFailure(
+                                    reason=FailureReason.PHYSICS_INSTABILITY
                                 )
                         else:
-                            self.fail_reason = SimulationFailureMode.PHYSICS_INSTABILITY
+                            self.fail_reason = SimulationFailure(
+                                reason=FailureReason.PHYSICS_INSTABILITY
+                            )
                     break
                 elif not res.success:
                     break
@@ -564,19 +562,21 @@ class SimulationLoop:
                 if self.objectives and self.objectives.physics.fem_enabled:
                     broken_part = self._check_part_breakage()
                     if broken_part:
-                        self.fail_reason = SimulationFailureMode.PART_BREAKAGE
+                        self.fail_reason = SimulationFailure(
+                            reason=FailureReason.PART_BREAKAGE, detail=broken_part
+                        )
                         break
 
                 # T018: Check all active bodies for out-of-bounds, not just the target
                 for bname in self.body_names:
                     bstate = self.backend.get_body_state(bname)
-                    fail_reason = self.success_evaluator.check_failure(
+                    fail_mode = self.success_evaluator.check_failure(
                         current_time,
                         bstate.pos,
                         bstate.vel,
                     )
-                    if fail_reason:
-                        if fail_reason == SimulationFailureMode.OUT_OF_BOUNDS:
+                    if fail_mode:
+                        if fail_mode == FailureReason.OUT_OF_BOUNDS:
                             logger.warning(
                                 "out_of_bounds_detected",
                                 body=bname,
@@ -585,15 +585,21 @@ class SimulationLoop:
                                 if self.objectives and self.objectives.simulation_bounds
                                 else None,
                             )
-                        self.fail_reason = fail_reason
+                        self.fail_reason = SimulationFailure(
+                            reason=fail_mode, detail=bname
+                        )
                         break
                 if self.fail_reason:
                     break
 
                 # Check Forbidden Zones (T018 optimization: skip if no zones)
-                if self.forbidden_sites and self._check_forbidden_collision():
-                    self.fail_reason = SimulationFailureMode.FORBID_ZONE_HIT
-                    break
+                if self.forbidden_sites:
+                    colliding_body = self._check_forbidden_collision()
+                    if colliding_body:
+                        self.fail_reason = SimulationFailure(
+                            reason=FailureReason.FORBID_ZONE_HIT, detail=colliding_body
+                        )
+                        break
 
                 # Check Goal Zone
                 if target_body_name and self.check_goal_with_vertices(target_body_name):
@@ -636,8 +642,11 @@ class SimulationLoop:
                                     )
 
                 # Check Motor Overload
-                if self._check_motor_overload(dt * check_interval):
-                    self.fail_reason = SimulationFailureMode.MOTOR_OVERLOAD
+                overloaded_motor = self._check_motor_overload(dt * check_interval)
+                if overloaded_motor:
+                    self.fail_reason = SimulationFailure(
+                        reason=FailureReason.MOTOR_OVERLOAD, detail=overloaded_motor
+                    )
                     break
 
             # 7. Check Wire Failure (T015) - Outside FEM block (T019)
@@ -651,7 +660,9 @@ class SimulationLoop:
                             props = get_awg_properties(wire.gauge_awg)
                             limit = props["tensile_strength_n"]
                             if tension > limit:
-                                self.fail_reason = f"{SimulationFailureMode.WIRE_TORN.value}:{wire.wire_id}"
+                                self.fail_reason = SimulationFailure(
+                                    reason=FailureReason.WIRE_TORN, detail=wire.wire_id
+                                )
                                 emit_event(
                                     ElectricalFailureEvent(
                                         failure_type="wire_torn",
@@ -760,9 +771,9 @@ class SimulationLoop:
                                 )
                             )
                             if not passed:
-                                self.fail_reason = (
-                                    self.fail_reason
-                                    or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
+                                self.fail_reason = self.fail_reason or SimulationFailure(
+                                    reason=FailureReason.FLUID_OBJECTIVE_FAILED,
+                                    detail=fo.fluid_id,
                                 )
                         elif fo.type == FluidObjectiveType.FLOW_RATE:
                             # T016: Use cumulative crossed count for more accurate
@@ -803,9 +814,9 @@ class SimulationLoop:
                                 )
                             )
                             if not passed:
-                                self.fail_reason = (
-                                    self.fail_reason
-                                    or SimulationFailureMode.FLUID_OBJECTIVE_FAILED
+                                self.fail_reason = self.fail_reason or SimulationFailure(
+                                    reason=FailureReason.FLUID_OBJECTIVE_FAILED,
+                                    detail=fo.fluid_id,
                                 )
 
         # Final success determination:
@@ -845,9 +856,8 @@ class SimulationLoop:
             max_stress=metrics.max_stress,
             success=is_success,
             fail_reason=str(self.fail_reason) if self.fail_reason else None,
-            fail_mode=self.fail_reason
-            if isinstance(self.fail_reason, SimulationFailureMode)
-            else None,
+            fail_mode=self.fail_reason.reason if self.fail_reason else None,
+            failure=self.fail_reason,
             stress_summaries=self.stress_summaries,
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
@@ -930,10 +940,10 @@ class SimulationLoop:
                     return label
         return None
 
-    def _check_motor_overload(self, dt: float) -> bool:
+    def _check_motor_overload(self, dt: float) -> str | None:
         # Check all position/torque actuators for saturation
         if not self._monitor_names:
-            return False
+            return None
 
         forces = [
             abs(self.backend.get_actuator_state(n).force) for n in self._monitor_names
@@ -950,9 +960,10 @@ class SimulationLoop:
             for goal_site in self.goal_sites
         )
 
-    def _check_forbidden_collision(self) -> bool:
-        return any(
-            self.backend.check_collision(b, z)
-            for b in self.body_names
-            for z in self.forbidden_sites
-        )
+    def _check_forbidden_collision(self) -> str | None:
+        """Check for collisions with forbidden zones. Returns the name of the colliding body."""
+        for b in self.body_names:
+            for z in self.forbidden_sites:
+                if self.backend.check_collision(b, z):
+                    return b
+        return None

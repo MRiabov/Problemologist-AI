@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from shared.enums import SimulationFailureMode
+from shared.enums import FailureReason as SimulationFailureMode
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
@@ -49,5 +49,5 @@ def test_fem_breakage_detection(tmp_path):
         metrics = loop.step(control_inputs={}, duration=0.1)
 
         assert not metrics.success
-        assert SimulationFailureMode.PART_BREAKAGE in metrics.fail_reason
-        assert "deformable_part" in metrics.fail_reason
+        assert metrics.failure.reason == SimulationFailureMode.PART_BREAKAGE
+        assert metrics.failure.detail == "deformable_part"

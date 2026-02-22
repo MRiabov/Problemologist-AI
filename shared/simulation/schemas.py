@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from shared.enums import SimulationFailureMode
+from shared.enums import FailureReason as SimulationFailureMode
 
 
 class SimulatorBackendType(StrEnum):

@@ -5,7 +5,7 @@ import uuid
 
 import httpx
 import pytest
-from shared.enums import ReviewDecision, SimulationFailureMode
+from shared.enums import ReviewDecision, FailureReason as SimulationFailureMode
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")

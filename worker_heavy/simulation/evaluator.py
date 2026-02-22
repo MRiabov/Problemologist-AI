@@ -1,7 +1,7 @@
 import numpy as np
 import structlog
 
-from shared.enums import SimulationFailureMode
+from shared.enums import FailureReason as SimulationFailureMode
 from shared.models.schemas import BoundingBox
 
 logger = structlog.get_logger(__name__)
