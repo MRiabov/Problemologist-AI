@@ -71,7 +71,8 @@ class TestMotorOverload:
         metrics = overload_loop.step({}, duration=3.0, dynamic_controllers=controllers)
 
         assert not metrics.success
-        assert metrics.failure.matches(FailureReason.MOTOR_OVERLOAD, "servo")
+        assert metrics.failure.reason == FailureReason.MOTOR_OVERLOAD
+        assert metrics.failure.detail == "servo"
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""

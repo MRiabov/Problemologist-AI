@@ -143,7 +143,9 @@ def test_int_126_wire_tear_failure(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
 
     assert metrics.success is False
-    assert metrics.failure.matches(FailureReason.WIRE_TORN, "wire_torn_test")
+    assert metrics.failure == SimulationFailure(
+        reason=FailureReason.WIRE_TORN, detail="wire_torn_test"
+    )
 
 
 def test_int_120_circuit_validation_pre_gate(monkeypatch):
@@ -184,10 +186,13 @@ def test_int_121_short_circuit_detection(monkeypatch):
         components=[],
     )
 
+    from shared.models.simulation import SimulationFailure
+
     # Mock validation failure
     def mock_validate(*args, **kwargs):
+        f = SimulationFailure(reason=FailureReason.SHORT_CIRCUIT)
         return CircuitValidationResult(
-            valid=False, errors=["FAILED_SHORT_CIRCUIT"], node_voltages={}
+            valid=False, errors=[str(f)], failures=[f], node_voltages={}
         )
 
     monkeypatch.setattr("shared.pyspice_utils.validate_circuit", mock_validate)
@@ -199,9 +204,7 @@ def test_int_121_short_circuit_detection(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
     # Expect failure reason to propagate
-    assert metrics.failure.matches(
-        FailureReason.VALIDATION_FAILED, "FAILED_SHORT_CIRCUIT"
-    )
+    assert metrics.failure == FailureReason.SHORT_CIRCUIT
 
 
 def test_int_122_overcurrent_supply_detection(monkeypatch):
@@ -212,10 +215,14 @@ def test_int_122_overcurrent_supply_detection(monkeypatch):
         components=[],
     )
 
+    from shared.models.simulation import SimulationFailure
+
     def mock_validate(*args, **kwargs):
+        f = SimulationFailure(reason=FailureReason.OVERCURRENT)
         return CircuitValidationResult(
             valid=False,
-            errors=["FAILED_OVERCURRENT_SUPPLY"],
+            errors=[str(f)],
+            failures=[f],
             node_voltages={},
             total_draw_a=100.0,
         )
@@ -228,9 +235,7 @@ def test_int_122_overcurrent_supply_detection(monkeypatch):
 
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
-    assert metrics.failure.matches(
-        FailureReason.VALIDATION_FAILED, "FAILED_OVERCURRENT_SUPPLY"
-    )
+    assert metrics.failure == FailureReason.OVERCURRENT
 
 
 def test_int_124_open_circuit_detection(monkeypatch):
@@ -241,9 +246,12 @@ def test_int_124_open_circuit_detection(monkeypatch):
         components=[],
     )
 
+    from shared.models.simulation import SimulationFailure
+
     def mock_validate(*args, **kwargs):
+        f = SimulationFailure(reason=FailureReason.OPEN_CIRCUIT, detail="node_x")
         return CircuitValidationResult(
-            valid=False, errors=["FAILED_OPEN_CIRCUIT:node_x"], node_voltages={}
+            valid=False, errors=[str(f)], failures=[f], node_voltages={}
         )
 
     monkeypatch.setattr("shared.pyspice_utils.validate_circuit", mock_validate)
@@ -254,9 +262,8 @@ def test_int_124_open_circuit_detection(monkeypatch):
 
     metrics = loop.step(control_inputs={}, duration=0.01)
     assert metrics.success is False
-    assert metrics.failure.matches(
-        FailureReason.VALIDATION_FAILED, "FAILED_OPEN_CIRCUIT:node_x"
-    )
+    assert metrics.failure == FailureReason.OPEN_CIRCUIT
+    assert metrics.failure.detail == "node_x"
 
 
 def test_int_127_backward_compat():
