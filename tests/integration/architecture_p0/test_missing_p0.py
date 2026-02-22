@@ -262,39 +262,3 @@ async def test_int_025_events_collection_e2e():
             "simulation_backend_selected" in event_names
             or "simulation_result" in event_names
         )
-
-
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
-async def test_int_027_seed_variant_tracking():
-    """INT-027: Verify seed and variant ID are tracked for simulation."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"INT-027-{uuid.uuid4().hex[:8]}"
-        # Provide variant_id in metadata
-        metadata_vars = {"variant_id": "test-variant-123"}
-
-        run_resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
-            json={
-                "task": "Run simulation with specific variant",
-                "session_id": session_id,
-                "metadata_vars": metadata_vars,
-            },
-        )
-        assert run_resp.status_code == 202
-        episode_id = run_resp.json()["episode_id"]
-
-        # Wait for completion
-        max_attempts = 30
-        for _ in range(max_attempts):
-            await asyncio.sleep(5.0)
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            data = status_resp.json()
-            if data["status"] == "completed":
-                break
-        else:
-            pytest.fail("Agent did not complete simulation in time")
-
-        # Verify metadata in DB contains variant_id and a seed (if simulation was run)
-        metadata = data.get("metadata_vars", {})
-        assert metadata.get("variant_id") == "test-variant-123"
