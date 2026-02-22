@@ -9,6 +9,24 @@ from shared.models.schemas import ElectronicsSection
 logger = logging.getLogger(__name__)
 
 
+def resolve_node_name(comp_id: str, term: str) -> str:
+    """
+    Resolves a component ID and terminal to a standard circuit node name.
+    """
+    if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
+        return "supply_v+"
+    if term == "0" or (comp_id == "supply" and term == "0"):
+        return "0"
+
+    # Normalization for motor terminals
+    if term == "a":
+        term = "+"
+    if term == "b":
+        term = "-"
+
+    return f"{comp_id}_{term}"
+
+
 def build_circuit_from_section(
     section: ElectronicsSection,
     switch_states: dict[str, bool] | None = None,
@@ -36,6 +54,15 @@ def build_circuit_from_section(
     # 2. Add Components
     for comp in section.components:
         if comp.type == ElectronicComponentType.POWER_SUPPLY:
+            # Add secondary power supply (e.g. battery)
+            # Use rated_voltage if available, otherwise default to main supply voltage (fallback)
+            voltage = comp.rated_voltage or section.power_supply.voltage_dc
+            circuit.V(
+                f"{comp.component_id}",
+                f"{comp.component_id}_+",
+                f"{comp.component_id}_-",
+                voltage @ u_V,
+            )
             continue
 
         if comp.type == ElectronicComponentType.MOTOR:
@@ -78,25 +105,12 @@ def build_circuit_from_section(
 
     # 3. Add Wiring
     for wire in section.wiring:
-        # Resolve terminals to circuit nodes
-        def resolve_node(comp_id, term):
-            if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
-                return vcc_node
-            if term == "0" or (comp_id == "supply" and term == "0"):
-                return gnd_node
-
-            # Normalization for motor terminals in this builder
-            if term == "a":
-                term = "+"
-            if term == "b":
-                term = "-"
-
-            return f"{comp_id}_{term}"
-
-        node_from = resolve_node(
+        node_from = resolve_node_name(
             wire.from_terminal.component, wire.from_terminal.terminal
         )
-        node_to = resolve_node(wire.to_terminal.component, wire.to_terminal.terminal)
+        node_to = resolve_node_name(
+            wire.to_terminal.component, wire.to_terminal.terminal
+        )
 
         # Model wire as a small resistor
         resistance = 0.01  # Default

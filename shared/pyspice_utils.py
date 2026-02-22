@@ -20,6 +20,7 @@ from shared.models.schemas import (
     ElectronicsSection,
     PowerSupplyConfig,
 )
+from shared.circuit_builder import resolve_node_name
 
 # NGSpice 42 compatibility monkeypatch
 # NGSpice 42 sends "Using SPARSE 1.3" to stderr, which PySpice treats as an error.
@@ -74,13 +75,15 @@ def validate_circuit(
 
     # Proactive open-circuit check (INT-124)
     if section:
-        connected_terminals = set()
+        resolved_connected_nodes = set()
         for wire in section.wiring:
-            connected_terminals.add(
-                (wire.from_terminal.component, wire.from_terminal.terminal)
+            resolved_connected_nodes.add(
+                resolve_node_name(
+                    wire.from_terminal.component, wire.from_terminal.terminal
+                )
             )
-            connected_terminals.add(
-                (wire.to_terminal.component, wire.to_terminal.terminal)
+            resolved_connected_nodes.add(
+                resolve_node_name(wire.to_terminal.component, wire.to_terminal.terminal)
             )
 
         for comp in section.components:
@@ -89,9 +92,12 @@ def validate_circuit(
                 required = ["+", "-"]
             elif comp.type in ["switch", "relay"]:
                 required = ["in", "out"]
+            elif comp.type == "power_supply":
+                required = ["+", "-"]
 
             for term in required:
-                if (comp.component_id, term) not in connected_terminals:
+                target_node = resolve_node_name(comp.component_id, term)
+                if target_node not in resolved_connected_nodes:
                     errors.append(
                         f"FAILED_OPEN_CIRCUIT: Component {comp.component_id} terminal {term} is not connected."
                     )
@@ -146,8 +152,11 @@ def validate_circuit(
         # A power supply supplying power will have NEGATIVE current in PySpice's Vsource.
         # total_draw from PSU should be the absolute value of current through the supply Vsource.
 
+        sources_draw = {}  # source_name -> current_draw
+
         for name, current in branch_currents.items():
             current_val = float(current)
+            name_lower = name.lower()
 
             # Detect extreme currents which indicate shorts (INT-120)
             if abs(current_val) > 100.0:
@@ -156,33 +165,36 @@ def validate_circuit(
                     f"{current_val:.2f}A"
                 )
 
-            # Assume any voltage source starting with 'vsupply' is our PSU
-            if name.lower().startswith("vsupply"):
-                total_draw += abs(current_val)
+            if name_lower.startswith("v"):
+                sources_draw[name_lower] = abs(current_val)
 
-        if total_draw > max_current:
-            errors.append(
-                f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A "
-                f"exceeds PSU rating {max_current:.2f}A"
-            )
+        if "vsupply" in sources_draw:
+            total_draw = sources_draw["vsupply"]
+            if total_draw > max_current:
+                errors.append(
+                    f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A "
+                    f"exceeds PSU rating {max_current:.2f}A"
+                )
+
+        if section:
+            for comp in section.components:
+                if comp.type == "power_supply":
+                    v_name = f"v{comp.component_id}".lower()
+                    if v_name in sources_draw:
+                        draw = sources_draw[v_name]
+                        # Use stall_current_a as max_current for now
+                        limit = comp.stall_current_a or 10.0
+                        if draw > limit:
+                            errors.append(
+                                f"FAILED_OVERCURRENT_SUPPLY: Battery {comp.component_id} draw {draw:.2f}A "
+                                f"exceeds limit {limit:.2f}A"
+                            )
 
         # T007: Per-wire overcurrent check (INT-123)
         if section and section.wiring:
             from shared.wire_utils import get_awg_properties
 
             for wire in section.wiring:
-                # Resolve nodes as in circuit_builder.py
-                def resolve_node_name(comp_id, term):
-                    if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
-                        return "supply_v+"
-                    if term == "0" or (comp_id == "supply" and term == "0"):
-                        return "0"
-                    if term == "a":
-                        term = "+"
-                    if term == "b":
-                        term = "-"
-                    return f"{comp_id}_{term}"
-
                 n_from = resolve_node_name(
                     wire.from_terminal.component, wire.from_terminal.terminal
                 )
