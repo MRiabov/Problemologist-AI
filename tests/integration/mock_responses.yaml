@@ -112,7 +112,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running review schema task."
@@ -133,7 +140,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running refusal task."
@@ -154,7 +168,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Executing long task..."
@@ -184,7 +205,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 5, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing stacking solution."
@@ -205,7 +233,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 1, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing trivial solution."
@@ -226,7 +261,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running batch task."
@@ -247,7 +289,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running correlation task."
@@ -268,7 +317,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running Langfuse task."
@@ -289,7 +345,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running feedback task."
@@ -310,7 +373,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Testing Aluminum 6061."
@@ -332,7 +402,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Testing CNC/3D Print."
@@ -354,7 +431,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing RevoluteJoint."
@@ -375,7 +459,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing sinusoidal controller."
@@ -396,7 +487,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing cube."
@@ -417,7 +515,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing linkage_test."
@@ -434,7 +539,14 @@ scenarios:
       thought: "Quick hello for INT-042."
       finished: true
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Finishing immediately."
@@ -454,7 +566,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running skills sync task."
@@ -475,7 +594,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Reconstructing..."
@@ -496,7 +622,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Designing bracket."
@@ -517,7 +650,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Optimizing..."
@@ -538,7 +678,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running observability task."
@@ -559,7 +706,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running failure task."
@@ -580,7 +734,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running S3 task."
@@ -601,7 +762,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running S3 retry task."
@@ -623,7 +791,14 @@ scenarios:
             f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ncots_parts: [{part_id: "MOCK-MOTOR-ID", manufacturer: "MockCorp", unit_cost_usd: 25.0, quantity: 1, source: "parts.db"}]\\ntotals: {estimated_unit_cost_usd: 25, estimated_weight_g: 50, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Implementing plan."
@@ -644,7 +819,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running simulate which emits events."
@@ -695,7 +877,14 @@ scenarios:
         """
         with open('objectives.yaml', 'w') as f: f.write(objectives_content.strip())
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Running simulate."
@@ -732,7 +921,14 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
     electronics_planner:
-      thought: "No electronics."
+      thought: "No electronics needed."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electrical Strategy\nNone.')
+        with open('todo.md', 'a') as f: f.write('\n- [x] Check electronics')
+        # Ensure assembly_definition.yaml is preserved/valid
+        import yaml
+        with open('assembly_definition.yaml', 'r') as f: data = yaml.safe_load(f)
+        with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       finished: true
     coder:
       thought: "Default coder response."

@@ -11,6 +11,7 @@ from worker_heavy.utils.mesh_utils import (
 )
 from shared.observability.schemas import MeshingFailureEvent
 
+
 def test_repair_mesh_already_watertight():
     # Create a simple box which is watertight
     mesh = trimesh.creation.box(extents=[1, 1, 1])
@@ -20,12 +21,14 @@ def test_repair_mesh_already_watertight():
     assert repaired == mesh
     assert repaired.is_watertight
 
+
 def test_repair_mesh_fixes_inverted_normals():
     # Create a box and invert some normals
     mesh = trimesh.creation.box(extents=[1, 1, 1])
     mesh.faces = mesh.faces[:, [0, 2, 1]]  # Invert winding
     repaired = repair_mesh(mesh)
     assert repaired.is_watertight
+
 
 def test_repair_mesh_fails_after_max_attempts():
     # Create a non-watertight mesh that cannot be easily fixed
@@ -35,6 +38,7 @@ def test_repair_mesh_fails_after_max_attempts():
     assert not mesh.is_watertight
     with pytest.raises(MeshProcessingError, match="Mesh failed to become watertight"):
         repair_mesh(mesh, max_attempts=1)
+
 
 @patch("worker_heavy.utils.mesh_utils.emit_event")
 @patch("worker_heavy.utils.mesh_utils._tetrahedralize_gmsh")
@@ -47,7 +51,9 @@ def test_tetrahedralize_retry_flow(mock_gmsh, mock_emit, tmp_path):
     input_stl.write_text("solid test\nendsolid test")
 
     with patch("worker_heavy.utils.mesh_utils.repair_mesh_file") as mock_repair:
-        result = tetrahedralize(input_stl, output_msh, method="gmsh", part_label="test_part")
+        result = tetrahedralize(
+            input_stl, output_msh, method="gmsh", part_label="test_part"
+        )
 
         assert result == output_msh
         assert mock_gmsh.call_count == 2
@@ -61,22 +67,29 @@ def test_tetrahedralize_retry_flow(mock_gmsh, mock_emit, tmp_path):
         assert event.retry_count == 0
         assert event.repaired is False
 
+
 @patch("worker_heavy.utils.mesh_utils.emit_event")
 @patch("worker_heavy.utils.mesh_utils._tetrahedralize_gmsh")
 def test_tetrahedralize_hard_fail(mock_gmsh, mock_emit, tmp_path):
     # Setup: Fail both attempts
-    mock_gmsh.side_effect = [RuntimeError("First failure"), RuntimeError("Second failure")]
+    mock_gmsh.side_effect = [
+        RuntimeError("First failure"),
+        RuntimeError("Second failure"),
+    ]
 
     input_stl = tmp_path / "test.stl"
     input_stl.write_text("solid test\nendsolid test")
     output_msh = tmp_path / "out.msh"
 
     with patch("worker_heavy.utils.mesh_utils.repair_mesh_file"):
-        with pytest.raises(MeshProcessingError, match="Tetrahedralization failed after 1 retries"):
+        with pytest.raises(
+            MeshProcessingError, match="Tetrahedralization failed after 1 retries"
+        ):
             tetrahedralize(input_stl, output_msh, method="gmsh")
 
         assert mock_gmsh.call_count == 2
         assert mock_emit.call_count == 2
+
 
 @patch("shutil.which")
 @patch("subprocess.run")
@@ -86,8 +99,17 @@ def test_tetrahedralize_hard_fail(mock_gmsh, mock_emit, tmp_path):
 @patch("gmsh.model.mesh.addElements")
 @patch("gmsh.write")
 @patch("gmsh.finalize")
-def test_tetrahedralize_tetgen_logic(mock_finalize, mock_write, mock_add_elements, mock_add_nodes,
-                                     mock_model_add, mock_init, mock_run, mock_which, tmp_path):
+def test_tetrahedralize_tetgen_logic(
+    mock_finalize,
+    mock_write,
+    mock_add_elements,
+    mock_add_nodes,
+    mock_model_add,
+    mock_init,
+    mock_run,
+    mock_which,
+    tmp_path,
+):
     mock_which.return_value = "/usr/bin/tetgen"
     mock_run.return_value = MagicMock(returncode=0)
 
@@ -117,13 +139,17 @@ def test_tetrahedralize_tetgen_logic(mock_finalize, mock_write, mock_add_element
         tetrahedralize(input_stl, output_msh, method="tetgen")
         mock_tetgen.assert_called_once()
 
+
 def test_tetrahedralize_file_not_found():
     with pytest.raises(FileNotFoundError):
         tetrahedralize(Path("nonexistent.stl"), Path("out.msh"))
+
 
 def test_tetrahedralize_invalid_method(tmp_path):
     input_stl = tmp_path / "test.stl"
     input_stl.write_text("solid test\nendsolid test")
     # It will fail on first attempt, try repair, and fail on second attempt.
-    with pytest.raises(MeshProcessingError, match="Unknown tetrahedralization method: invalid"):
+    with pytest.raises(
+        MeshProcessingError, match="Unknown tetrahedralization method: invalid"
+    ):
         tetrahedralize(input_stl, Path("out.msh"), method="invalid")

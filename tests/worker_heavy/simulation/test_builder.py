@@ -9,8 +9,9 @@ from worker_heavy.simulation.builder import (
     MeshProcessor,
     SceneCompiler,
     SimulationBuilder,
-    CommonAssemblyTraverser
+    CommonAssemblyTraverser,
 )
+
 
 def test_mesh_processor_dual_export(tmp_path):
     """Test that mesh processor exports both OBJ and GLB format."""
@@ -28,6 +29,7 @@ def test_mesh_processor_dual_export(tmp_path):
         assert p.exists()
         assert p.stat().st_size > 0
 
+
 def test_scene_compiler(tmp_path):
     compiler = SceneCompiler()
     xml_path = tmp_path / "scene.xml"
@@ -41,6 +43,7 @@ def test_scene_compiler(tmp_path):
     assert "<mujoco" in content
     assert 'mesh="box"' in content
 
+
 def test_simulation_builder(tmp_path):
     # Create a small assembly
     box1 = Box(0.1, 0.1, 0.1)
@@ -48,7 +51,7 @@ def test_simulation_builder(tmp_path):
     box1.metadata = PartMetadata(
         material_id="aluminum_6061",
         fixed=False,
-        joint=JointMetadata(type="hinge", axis=(0, 0, 1), range=(-90, 90))
+        joint=JointMetadata(type="hinge", axis=(0, 0, 1), range=(-90, 90)),
     )
 
     # zone_goal
@@ -78,12 +81,12 @@ def test_simulation_builder(tmp_path):
     assert model.nsite == 1
     assert np.allclose(model.site_size[0], [0.1, 0.1, 0.1])
 
+
 def test_compound_metadata_resolution():
     box = Box(0.1, 0.1, 0.1)
     box.label = "compound_part"
     box.metadata = CompoundMetadata(
-        fixed=False,
-        joint=JointMetadata(type="slide", axis=(1, 0, 0))
+        fixed=False, joint=JointMetadata(type="slide", axis=(1, 0, 0))
     )
 
     parts_data = CommonAssemblyTraverser.traverse(box)
@@ -92,6 +95,7 @@ def test_compound_metadata_resolution():
     assert data.is_fixed is False
     assert data.joint_type == "slide"
     assert data.joint_axis == [1.0, 0.0, 0.0]
+
 
 def test_vhacd_decomposition(tmp_path):
     b1 = Box(1, 0.2, 0.2)
@@ -112,6 +116,7 @@ def test_vhacd_decomposition(tmp_path):
 
     model = mujoco.MjModel.from_xml_path(str(scene_path))
     assert model.nmesh >= 1
+
 
 def test_simulation_builder_missing_metadata_fails(tmp_path):
     box1 = Box(0.1, 0.1, 0.1)
