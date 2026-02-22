@@ -50,6 +50,20 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def read_skill(skill_name: str, file_path: str = "SKILL.md"):
+        """
+        Read a skill's content. Default file is SKILL.md.
+        Skills are found in the 'skills/' directory.
+        """
+        return await fs.read_file(f"skills/{skill_name}/{file_path}")
+
+    async def list_skill_files(skill_name: str):
+        """
+        List all files (references, examples) for a given skill.
+        Skills are found in the 'skills/' directory.
+        """
+        return await fs.list_files(f"skills/{skill_name}")
+
     return [
         list_files,
         read_file,
@@ -59,6 +73,8 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        read_skill,
+        list_skill_files,
     ]
 
 

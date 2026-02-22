@@ -295,34 +295,41 @@ async def get_episode_schematic(
                 }
             )
 
-            # Add some pins
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p1",
-                    "component_id": comp_id,
-                    "name": "1",
-                    "center": {"x": 10 + i * 40 - 10, "y": 10},
-                }
-            )
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p2",
-                    "component_id": comp_id,
-                    "name": "2",
-                    "center": {"x": 10 + i * 40 + 10, "y": 10},
-                }
-            )
+            # Identify terminals used for this component in the wiring
+            used_terminals = set()
+            for wire in assembly.electronics.wiring:
+                if wire.from_terminal.component == comp.component_id:
+                    used_terminals.add(wire.from_terminal.terminal)
+                if wire.to_terminal.component == comp.component_id:
+                    used_terminals.add(wire.to_terminal.terminal)
 
-        # 2. Add traces (simplified)
+            # Default to basic pins if no wiring found (unlikely for valid circuit)
+            if not used_terminals:
+                used_terminals = {"+", "-"}
+
+            # Add schematic pins dynamically
+            for j, term in enumerate(sorted(list(used_terminals))):
+                soup.append(
+                    {
+                        "type": "schematic_pin",
+                        "id": f"{comp_id}_{term}",
+                        "component_id": comp_id,
+                        "name": term,
+                        "center": {
+                            "x": 10 + i * 40 + (j * 20 - 10),
+                            "y": 10,
+                        },
+                    }
+                )
+
+        # 2. Add traces using the dynamic terminal IDs
         for wire in assembly.electronics.wiring:
             soup.append(
                 {
                     "type": "schematic_trace",
                     "id": f"trace_{wire.wire_id}",
-                    "source": f"comp_{wire.from_terminal.component}_p1",  # Simplified mapping
-                    "target": f"comp_{wire.to_terminal.component}_p2",
+                    "source": f"comp_{wire.from_terminal.component}_{wire.from_terminal.terminal}",
+                    "target": f"comp_{wire.to_terminal.component}_{wire.to_terminal.terminal}",
                 }
             )
 

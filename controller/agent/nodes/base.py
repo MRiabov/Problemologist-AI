@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+import yaml
 
 from controller.agent.config import settings
 from controller.agent.prompt_manager import PromptManager
@@ -101,10 +102,26 @@ class BaseNode:
     def _get_skills_context(self) -> str:
         # Note: Skills are currently local to the controller
         skills_dir = Path(".agent/skills")
-        skills = []
+        skills_info = []
         if skills_dir.exists():
-            skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
-        return "\n".join([f"- {s}" for s in skills])
+            for skill_path in skills_dir.iterdir():
+                if skill_path.is_dir():
+                    skill_file = skill_path / "SKILL.md"
+                    description = "No description available."
+                    if skill_file.exists():
+                        try:
+                            content = skill_file.read_text()
+                            if content.startswith("---"):
+                                parts = content.split("---", 2)
+                                if len(parts) >= 3:
+                                    frontmatter = yaml.safe_load(parts[1])
+                                    description = frontmatter.get(
+                                        "description", description
+                                    )
+                        except Exception:
+                            pass
+                    skills_info.append(f"- {skill_path.name}: {description}")
+        return "\n".join(skills_info)
 
     async def _get_steer_context(self, messages: list[Any]) -> str:
         if not messages:
