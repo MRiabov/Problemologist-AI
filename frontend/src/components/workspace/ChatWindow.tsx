@@ -1,18 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { 
-  Terminal, 
   Check, 
   AlertCircle,
   Zap,
   Play,
   Rocket
 } from "lucide-react";
-import { ThoughtBlock } from "./ThoughtBlock";
-import { ActionCard } from "./ActionCard";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { runSimulation, type BenchmarkObjectives } from "../../api/client";
 import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
@@ -23,95 +18,7 @@ import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
 import type { TopologyNode } from "../visualization/ModelBrowser";
 import { ChatInput } from "../Chat/ChatInput";
-
-// Internal helper for rendering highlighted content
-const HighlightedContent = ({ content, language = 'text' }: { content: string, language?: string }) => {
-        const { theme } = useTheme();
-        const { addToContext, setActiveArtifactId, selectedEpisode } = useEpisodes();
-        
-        if (!content) return null;
-        
-        // Custom renderer for mentions in markdown/text
-        const renderWithMentions = (text: string) => {
-            const regex = /(@([a-zA-Z0-9_\-.]+)(?::L?(\d+)(?:-L?(\d+))?)?)/g;
-            const parts = [];
-            let lastIndex = 0;
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                const [full, , name, start, end] = match;
-                parts.push(text.substring(lastIndex, match.index));
-                
-                parts.push(
-                    <button
-                        key={match.index}
-                        className="text-primary hover:underline font-mono font-bold px-1 rounded bg-primary/10"
-                        onClick={() => {
-                            const asset = selectedEpisode?.assets?.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
-                            if (asset) {
-                                setActiveArtifactId(asset.id.toString());
-                                if (start) {
-                                    addToContext({
-                                        id: `steer-${asset.id}-${start}-${end || start}`,
-                                        type: 'code',
-                                        label: full.substring(1),
-                                        metadata: { 
-                                            path: asset.s3_path, 
-                                            start: parseInt(start), 
-                                            end: end ? parseInt(end) : parseInt(start) 
-                                        }
-                                    });
-                                }
-                            } else {
-                                // Assume part mention
-                                addToContext({
-                                    id: `cad-${name}`,
-                                    type: 'cad',
-                                    label: name,
-                                    metadata: { part: name }
-                                });
-                            }
-                        }}
-                    >
-                        {full}
-                    </button>
-                );
-                lastIndex = regex.lastIndex;
-            }
-            parts.push(text.substring(lastIndex));
-            return parts;
-        };
-
-        // Basic detection for JSON strings
-        const lang = (content.trim().startsWith('{') || content.trim().startsWith('[')) ? 'json' : language;
-
-        if (lang === 'markdown' || lang === 'text') {
-            return (
-                <div className="text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap py-1">
-                    {renderWithMentions(content)}
-                </div>
-            );
-        }
-
-        return (
-                <SyntaxHighlighter
-                        language={lang}
-                        style={theme === 'dark' ? vscDarkPlus : vs}
-                        customStyle={{
-                                margin: 0,
-                                padding: '0.5rem',
-                                background: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-                                fontSize: '10px',
-                                borderRadius: '4px',
-                                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)'
-                        }}
-                        wrapLines={true}
-                        wrapLongLines={true}
-                >
-                        {content}
-                </SyntaxHighlighter>
-        );
-};
+import { TraceList } from "./TraceList";
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
@@ -139,8 +46,10 @@ export default function ChatWindow({
       selectedEpisode, 
       updateObjectives, 
       selectedContext,
-      addToContext
+      addToContext,
+      setActiveArtifactId
   } = useEpisodes();
+  const { theme } = useTheme();
 
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
@@ -193,6 +102,17 @@ export default function ChatWindow({
 
   const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'planned';
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
+
+  // Stable handlers
+  const handleShowFeedback = useCallback(() => setShowFeedbackModal(true), []);
+  const handleAssetClick = useCallback((id: string | null) => setActiveArtifactId(id), [setActiveArtifactId]);
+
+  // Stable assets list to prevent re-renders on every poll
+  const stableAssets = useMemo(() => {
+    return selectedEpisode?.assets || [];
+    // We use JSON.stringify to ensure deep equality check, as polling returns new object references
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEpisode ? JSON.stringify(selectedEpisode.assets) : '']);
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
@@ -248,40 +168,14 @@ export default function ChatWindow({
 
                 {/* Messages / Traces */}
                 <div className="space-y-4 max-w-3xl mx-auto w-full">
-                  {traces && traces.length > 0 ? (
-                      traces.map(trace => {
-                          const type = trace.trace_type as string;
-                          if (type === 'llm_thought' || type === 'thought') {
-                            const stableDuration = (trace.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 5) + 1;
-                            return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
-                          }
-                          if (type === 'tool_start') {
-                              return <ActionCard key={trace.id} trace={trace} />;
-                          }
-                          if (type === 'llm_end' && trace.content) {
-                            return (
-                                <div key={trace.id} className="relative group/msg">
-                                    <HighlightedContent content={trace.content} language="markdown" />
-                                    <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => setShowFeedbackModal(true)}
-                                            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                        >
-                                            <AlertCircle className="h-3 w-3" />
-                                            Feedback
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                          }
-                          return null;
-                      })
-                  ) : (
-                      <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-10 h-full">
-                         <Terminal className="h-8 w-8" />
-                         <span className="text-[10px] uppercase font-bold tracking-widest">Awaiting interaction...</span>
-                      </div>
-                  )}
+                  <TraceList
+                    traces={traces}
+                    assets={stableAssets}
+                    theme={theme}
+                    onAssetClick={handleAssetClick}
+                    addToContext={addToContext}
+                    onShowFeedback={handleShowFeedback}
+                  />
                 </div>
 
                 {/* Execution Plan Card (Inline) */}
