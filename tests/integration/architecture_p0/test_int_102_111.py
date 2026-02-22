@@ -106,7 +106,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -118,7 +118,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -265,7 +265,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers=base_headers,
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -353,7 +353,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers=base_headers,
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -425,7 +425,7 @@ cnc:
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "skip_validate": True},
             headers=base_headers,
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()

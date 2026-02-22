@@ -21,6 +21,7 @@ export AWS_SECRET_ACCESS_KEY=minioadmin
 export WORKER_URL="http://127.0.0.1:18001"
 export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
+export GENESIS_FORCE_CPU=1
 
 # Shared sessions directory for local integration tests
 export WORKER_SESSIONS_DIR=$(mktemp -d -t pb-sessions-XXXXXX)
@@ -69,7 +70,17 @@ fi
 
 # Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
-bash scripts/ensure_docker_vfs.sh
+source scripts/ensure_docker_vfs.sh
+
+# Start Xvfb for headless rendering if not already running
+if ! xset q >/dev/null 2>&1; then
+  if command -v Xvfb >/dev/null 2>&1; then
+    echo "Starting Xvfb..."
+    Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+    export DISPLAY=:99
+    sleep 2
+  fi
+fi
 
 # Ensure ngspice is installed for electronics validation
 bash scripts/ensure_ngspice.sh

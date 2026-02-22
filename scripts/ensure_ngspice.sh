@@ -10,9 +10,9 @@ if command -v ngspice >/dev/null 2>&1 && [ -f /usr/lib/x86_64-linux-gnu/libngspi
     exit 0
 fi
 
-echo "Installing ngspice and libngspice0-dev..."
+echo "Installing ngspice, libngspice0-dev, and headless rendering libraries..."
 if [ -f /etc/debian_version ]; then
-    sudo apt-get update && sudo apt-get install -y ngspice libngspice0-dev
+    sudo apt-get update && sudo apt-get install -y ngspice libngspice0 libngspice0-dev libosmesa6 libosmesa6-dev libgl1-mesa-dev
 elif [ -f /etc/redhat-release ]; then
     sudo dnf install -y ngspice libngspice-devel
 else

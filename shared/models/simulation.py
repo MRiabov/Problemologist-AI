@@ -7,18 +7,18 @@ from shared.simulation.schemas import SimulationFailureMode
 
 class StressSummary(BaseModel):
     part_label: str
-    max_von_mises_pa: float
-    mean_von_mises_pa: float
-    safety_factor: float  # ultimate_stress / max_von_mises
-    location_of_max: tuple[float, float, float]
-    utilization_pct: float  # max_stress / yield_stress * 100
+    max_von_mises_pa: float | None
+    mean_von_mises_pa: float | None
+    safety_factor: float | None  # ultimate_stress / max_von_mises
+    location_of_max: tuple[float, float, float] | None
+    utilization_pct: float | None  # max_stress / yield_stress * 100
 
 
 class FluidMetricResult(BaseModel):
     metric_type: str  # "fluid_containment" | "flow_rate"
     fluid_id: str
-    measured_value: float
-    target_value: float
+    measured_value: float | None
+    target_value: float | None
     passed: bool
 
 
@@ -26,7 +26,7 @@ class StressFieldData(BaseModel):
     """Serializable version of StressField."""
 
     nodes: list[list[float]]  # (N, 3)
-    stress: list[float]  # (N,) von Mises stress
+    stress: list[float | None]  # (N,) von Mises stress
 
 
 class SimulationMetrics(BaseModel):

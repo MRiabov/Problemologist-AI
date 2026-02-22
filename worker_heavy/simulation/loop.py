@@ -477,25 +477,21 @@ class SimulationLoop:
                 # 4. Check Success/Failure conditions
                 # WP2: Check Stress Objectives (INT-107) first to prioritize objective violations
                 if self.objectives and self.objectives.objectives:
+                    # Cache stress summaries for this interval to avoid redundant backend calls
+                    current_summaries = self.backend.get_stress_summaries()
                     for so in self.objectives.objectives.stress_objectives:
                         summary = next(
                             (
                                 s
-                                for s in self.stress_summaries
+                                for s in current_summaries
                                 if s.part_label == so.part_label
                             ),
                             None,
                         )
-                        if not summary:
-                            # Fallback: get summary directly if not cached
-                            summaries = self.backend.get_stress_summaries()
-                            summary = next(
-                                (s for s in summaries if s.part_label == so.part_label),
-                                None,
-                            )
 
-                        if summary and summary.max_von_mises_pa > (
-                            so.max_von_mises_mpa * 1e6
+                        if summary and (
+                            np.isnan(summary.max_von_mises_pa)
+                            or summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6)
                         ):
                             self.fail_reason = (
                                 SimulationFailureMode.STRESS_OBJECTIVE_EXCEEDED
@@ -516,9 +512,11 @@ class SimulationLoop:
                     if isinstance(res.failure_reason, SimulationFailureMode):
                         self.fail_reason = res.failure_reason
                     elif isinstance(res.failure_reason, str):
-                        if res.failure_reason.startswith("PART_BREAKAGE"):
+                        # T025: Robust parsing of colon-delimited failure strings (e.g. PART_BREAKAGE:name)
+                        reason_main = res.failure_reason.split(":")[0]
+                        if reason_main == "PART_BREAKAGE":
                             self.fail_reason = SimulationFailureMode.PART_BREAKAGE
-                        elif res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
+                        elif reason_main == "ELECTRONICS_FLUID_DAMAGE":
                             self.fail_reason = (
                                 SimulationFailureMode.ELECTRONICS_FLUID_DAMAGE
                             )
