@@ -20,6 +20,8 @@ from shared.models.schemas import (
     ElectronicsSection,
     PowerSupplyConfig,
 )
+from shared.enums import FailureReason
+from shared.models.simulation import SimulationFailure
 from shared.circuit_builder import resolve_node_name
 
 # NGSpice 42 compatibility monkeypatch
@@ -70,7 +72,7 @@ def validate_circuit(
     Detects short circuits, overcurrent, and floating nodes.
     """
     max_current = psu_config.max_current_a if psu_config else 10.0
-    errors = []
+    failures: list[SimulationFailure] = []
     warnings = []
 
     # Proactive open-circuit check (INT-124)
@@ -98,8 +100,11 @@ def validate_circuit(
             for term in required:
                 target_node = resolve_node_name(comp.component_id, term)
                 if target_node not in resolved_connected_nodes:
-                    errors.append(
-                        f"FAILED_OPEN_CIRCUIT: Component {comp.component_id} terminal {term} is not connected."
+                    failures.append(
+                        SimulationFailure(
+                            reason=FailureReason.OPEN_CIRCUIT,
+                            detail=f"Component {comp.component_id} terminal {term} is not connected.",
+                        )
                     )
 
     try:
@@ -119,11 +124,14 @@ def validate_circuit(
         ):
             for line in simulator._ngspice_shared._stdout:
                 if "singular matrix" in line.lower():
+                    f = SimulationFailure(
+                        reason=FailureReason.OPEN_CIRCUIT,
+                        detail=f"Floating nodes detected (singular matrix): {line.strip()}",
+                    )
                     return CircuitValidationResult(
                         valid=False,
-                        errors=[
-                            f"FAILED_OPEN_CIRCUIT: Floating nodes detected (singular matrix): {line.strip()}"
-                        ],
+                        errors=[str(f)],
+                        failures=[f],
                         total_draw_a=0.0,
                     )
 
@@ -160,9 +168,11 @@ def validate_circuit(
 
             # Detect extreme currents which indicate shorts (INT-120)
             if abs(current_val) > 100.0:
-                errors.append(
-                    f"FAILED_SHORT_CIRCUIT: Extreme current in branch {name}: "
-                    f"{current_val:.2f}A"
+                failures.append(
+                    SimulationFailure(
+                        reason=FailureReason.SHORT_CIRCUIT,
+                        detail=f"Extreme current in branch {name}: {current_val:.2f}A",
+                    )
                 )
 
             if name_lower.startswith("v"):
@@ -171,9 +181,11 @@ def validate_circuit(
         if "vsupply" in sources_draw:
             total_draw = sources_draw["vsupply"]
             if total_draw > max_current:
-                errors.append(
-                    f"FAILED_OVERCURRENT_SUPPLY: Total draw {total_draw:.2f}A "
-                    f"exceeds PSU rating {max_current:.2f}A"
+                failures.append(
+                    SimulationFailure(
+                        reason=FailureReason.OVERCURRENT,
+                        detail=f"Total draw {total_draw:.2f}A exceeds PSU rating {max_current:.2f}A",
+                    )
                 )
 
         if section:
@@ -185,9 +197,11 @@ def validate_circuit(
                         # Use stall_current_a as max_current for now
                         limit = comp.stall_current_a or 10.0
                         if draw > limit:
-                            errors.append(
-                                f"FAILED_OVERCURRENT_SUPPLY: Battery {comp.component_id} draw {draw:.2f}A "
-                                f"exceeds limit {limit:.2f}A"
+                            failures.append(
+                                SimulationFailure(
+                                    reason=FailureReason.OVERCURRENT,
+                                    detail=f"Battery {comp.component_id} draw {draw:.2f}A exceeds limit {limit:.2f}A",
+                                )
                             )
 
         # T007: Per-wire overcurrent check (INT-123)
@@ -221,9 +235,11 @@ def validate_circuit(
 
                 limit = get_awg_properties(wire.gauge_awg)["max_current_a"]
                 if current > limit:
-                    errors.append(
-                        f"FAILED_OVERCURRENT_WIRE: Wire {wire.wire_id} (AWG {wire.gauge_awg}) "
-                        f"carrying {current:.2f}A exceeds limit {limit:.2f}A"
+                    failures.append(
+                        SimulationFailure(
+                            reason=FailureReason.OVERCURRENT,
+                            detail=f"Wire {wire.wire_id} (AWG {wire.gauge_awg}) carrying {current:.2f}A exceeds limit {limit:.2f}A",
+                        )
                     )
 
         # Detect floating nodes: check if any node has near-zero conductance to everything else
@@ -231,33 +247,44 @@ def validate_circuit(
         # or non-finite values if SPICE managed to return something.
         for node, voltage in node_voltages.items():
             if not np.isfinite(voltage) or abs(voltage) > 1e6:
-                errors.append(
-                    f"FAILED_FLOATING_NODE: Node {node} has unstable voltage: {voltage}"
+                failures.append(
+                    SimulationFailure(
+                        reason=FailureReason.OPEN_CIRCUIT,
+                        detail=f"Node {node} has unstable voltage: {voltage}",
+                    )
                 )
 
         return CircuitValidationResult(
-            valid=len(errors) == 0,
+            valid=len(failures) == 0,
             node_voltages=node_voltages,
             branch_currents=branch_currents,
             total_draw_a=total_draw,
-            errors=errors,
+            errors=[str(f) for f in failures],
+            failures=failures,
             warnings=warnings,
         )
     except Exception as e:
         error_msg = str(e).strip()
         if "Singular matrix" in error_msg or "indefinite matrix" in error_msg:
+            f = SimulationFailure(
+                reason=FailureReason.OPEN_CIRCUIT,
+                detail="Floating nodes or unconnected circuit components detected.",
+            )
             return CircuitValidationResult(
                 valid=False,
-                errors=[
-                    "FAILED_OPEN_CIRCUIT: Floating nodes or unconnected "
-                    "circuit components detected."
-                ],
+                errors=[str(f)],
+                failures=[f],
                 total_draw_a=0.0,
             )
 
+        f = SimulationFailure(
+            reason=FailureReason.VALIDATION_FAILED,
+            detail=f"Circuit simulation failed: {error_msg}",
+        )
         return CircuitValidationResult(
             valid=False,
-            errors=[f"Circuit simulation failed: {error_msg}"],
+            errors=[str(f)],
+            failures=[f],
             total_draw_a=0.0,
         )
 
@@ -321,4 +348,5 @@ def calculate_power_budget(circuit: Circuit, psu_config: PowerSupplyConfig) -> d
         "margin_pct": round(margin_pct, 1),
         "is_safe": res.valid and total_draw <= capacity,
         "errors": res.errors,
+        "failures": res.failures,
     }
