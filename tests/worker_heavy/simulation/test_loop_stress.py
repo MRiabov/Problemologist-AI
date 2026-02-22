@@ -11,6 +11,12 @@ class TestSimulationLoopStress:
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
 
+        # Explicitly remove attributes that SimulationLoop checks via hasattr
+        if hasattr(mock_backend, "timestep"):
+            del mock_backend.timestep
+        if hasattr(mock_backend, "model"):
+            del mock_backend.model
+
         mock_backend.get_all_site_names.return_value = []
         mock_backend.get_all_actuator_names.return_value = []
         mock_backend.get_all_body_names.return_value = ["target_box"]
