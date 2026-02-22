@@ -9,6 +9,10 @@ class TestSimulationLoopStress:
     def test_stress_collection(self, mock_get_backend):
         # Setup mock backend
         mock_backend = MagicMock()
+        # Delete attributes that SimulationLoop checks via hasattr() to avoid
+        # MagicMock returning truthy values for them by default.
+        del mock_backend.timestep
+        del mock_backend.model
         mock_get_backend.return_value = mock_backend
 
         mock_backend.get_all_site_names.return_value = []
