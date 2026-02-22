@@ -162,11 +162,15 @@ def test_electronics_fluid_damage_logic(genesis_backend, tmp_path):
     type(genesis_backend.scene).is_built = PropertyMock(return_value=True)
 
     # Mock material properties to avoid comparison error with MagicMock
-    genesis_backend._get_mat_props = MagicMock(return_value=MagicMock(ultimate_stress_pa=310e6))
+    genesis_backend._get_mat_props = MagicMock(
+        return_value=MagicMock(ultimate_stress_pa=310e6)
+    )
 
     # Setup electronics entity
     mock_controller = MagicMock()
-    mock_controller.get_pos.return_value.cpu.return_value.numpy.return_value = np.array([0, 0, 0])
+    mock_controller.get_pos.return_value.cpu.return_value.numpy.return_value = np.array(
+        [0, 0, 0]
+    )
     genesis_backend.entities = {"controller": mock_controller}
     genesis_backend.entity_configs = {"controller": {"is_electronics": True}}
 

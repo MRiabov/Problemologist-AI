@@ -63,6 +63,7 @@ class TestMotorOverload:
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
         from worker_heavy.utils.controllers.position_based import hold_position
+        from shared.enums import FailureReason
 
         controllers = {"servo": hold_position(3.14)}  # Impossible with 0.1 N limit
 
@@ -70,9 +71,7 @@ class TestMotorOverload:
         metrics = overload_loop.step({}, duration=3.0, dynamic_controllers=controllers)
 
         assert not metrics.success
-        assert metrics.fail_reason is not None
-        # Architecture spec uses 'motor_overload'
-        assert "motor_overload" in metrics.fail_reason
+        assert metrics.failure.matches(FailureReason.MOTOR_OVERLOAD, "servo")
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""
@@ -83,9 +82,7 @@ class TestMotorOverload:
         metrics = no_limit_loop.step({}, duration=2.0, dynamic_controllers=controllers)
 
         # Should not fail due to overload
-        assert metrics.fail_reason is None or "motor_overload" not in str(
-            metrics.fail_reason
-        )
+        assert metrics.success is True
 
     def test_overload_resets_on_unclamp(self, overload_loop):
         """Test that clamp counter resets if motor becomes unclamped."""

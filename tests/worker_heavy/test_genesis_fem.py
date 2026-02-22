@@ -4,6 +4,7 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sims")]
 from unittest.mock import MagicMock, patch
 
+from shared.enums import FailureReason
 from shared.simulation.backends import SimulationScene
 from worker_heavy.simulation.genesis_backend import GenesisBackend
 
@@ -75,7 +76,7 @@ def test_genesis_step_breakage(mock_gs):
     res = backend.step(0.002)
 
     assert res.success is False
-    assert "PART_BREAKAGE:test_part" in res.failure_reason
+    assert res.failure.matches(FailureReason.PART_BREAKAGE, "test_part")
 
 
 def test_get_stress_summaries(mock_gs):
