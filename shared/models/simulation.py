@@ -16,6 +16,14 @@ class SimulationFailure(BaseModel):
             return f"{self.reason}:{self.detail}"
         return str(self.reason)
 
+    def matches(self, reason: FailureReason, detail: str | None = None) -> bool:
+        """Check if failure matches reason and optionally detail."""
+        if self.reason != reason:
+            return False
+        if detail is not None and self.detail != detail:
+            return False
+        return True
+
 
 class StressSummary(BaseModel):
     part_label: str

@@ -413,11 +413,14 @@ class ManufacturedPartEstimate(BaseModel):
 
     quantity: int
     part_volume_mm3: float
+    wall_thickness_mm: float | None = None
+    cooling_time_s_estimate: float | None = None
     stock_bbox_mm: dict[str, float]  # {x: float, y: float, z: float}
     stock_volume_mm3: float
     removed_volume_mm3: float
     estimated_unit_cost_usd: float
     pricing_notes: str | None = None
+    dfm_suggestions: list[str] = Field(default_factory=list)
 
 
 class CotsPartEstimate(BaseModel):
@@ -552,6 +555,7 @@ class AssemblyDefinition(BaseModel):
     electronics: ElectronicsSection | None = None
     final_assembly: list[SubassemblyEstimate | PartConfig] = []
     totals: CostTotals
+    dfm_suggestions: list[str] = Field(default_factory=list)
 
     @property
     def moving_parts(self) -> list[MovingPart]:

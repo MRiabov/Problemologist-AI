@@ -525,6 +525,10 @@ def simulate(
                 return SimulationResult(
                     success=False,
                     summary=error_msg,
+                    failure=SimulationFailure(
+                        reason=FailureReason.VALIDATION_FAILED,
+                        detail=error_msg,
+                    ),
                     confidence="high",
                 )
         except Exception as e:
@@ -649,6 +653,7 @@ def simulate(
         result = SimulationResult(
             success=metrics.success,
             summary=status_msg,
+            failure=metrics.failure,
             render_paths=render_paths,
             mjcf_content=mjcf_content,
             stress_summaries=metrics.stress_summaries,
@@ -680,7 +685,13 @@ def simulate(
         return result
     except Exception as e:
         logger.error("simulation_error", error=str(e))
-        return SimulationResult(success=False, summary=f"Simulation error: {e!s}")
+        return SimulationResult(
+            success=False,
+            summary=f"Simulation error: {e!s}",
+            failure=SimulationFailure(
+                reason=FailureReason.PHYSICS_INSTABILITY, detail=str(e)
+            ),
+        )
 
 
 def validate(

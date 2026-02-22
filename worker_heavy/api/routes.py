@@ -233,13 +233,22 @@ async def api_simulate(
                             s.model_dump() for s in result.stress_summaries
                         ],
                         "fluid_metrics": [m.model_dump() for m in result.fluid_metrics],
+                        "failure": result.failure.model_dump()
+                        if result.failure
+                        else None,
                     },
                     events=events,
                 )
 
     except Exception as e:
         logger.error("api_benchmark_simulate_failed", error=str(e))
-        return BenchmarkToolResponse(success=False, message=str(e))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(e),
+            artifacts={
+                "failure": {"reason": "PHYSICS_INSTABILITY", "detail": str(e)},
+            },
+        )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 
@@ -290,11 +299,25 @@ async def api_validate(
                     success=is_valid,
                     message=message or "Validation successful",
                     events=events,
+                    artifacts={
+                        "failure": {
+                            "reason": "VALIDATION_FAILED",
+                            "detail": message,
+                        }
+                        if not is_valid
+                        else None
+                    },
                 )
 
     except Exception as e:
         logger.error("api_benchmark_validate_failed", error=str(e))
-        return BenchmarkToolResponse(success=False, message=str(e))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(e),
+            artifacts={
+                "failure": {"reason": "VALIDATION_FAILED", "detail": str(e)},
+            },
+        )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 
@@ -317,11 +340,25 @@ async def api_validate_circuit(
         return BenchmarkToolResponse(
             success=res.valid,
             message="; ".join(res.errors) if not res.valid else "Circuit is valid",
-            artifacts={"circuit_validation_result": res.model_dump()},
+            artifacts={
+                "circuit_validation_result": res.model_dump(),
+                "failure": {
+                    "reason": "VALIDATION_FAILED",
+                    "detail": "; ".join(res.errors),
+                }
+                if not res.valid
+                else None,
+            },
         )
     except Exception as e:
         logger.error("api_validate_circuit_failed", error=str(e))
-        return BenchmarkToolResponse(success=False, message=str(e))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(e),
+            artifacts={
+                "failure": {"reason": "VALIDATION_FAILED", "detail": str(e)},
+            },
+        )
 
 
 @heavy_router.post("/benchmark/analyze", response_model=WorkbenchResult)
