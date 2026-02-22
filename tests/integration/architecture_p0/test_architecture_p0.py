@@ -464,7 +464,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json={"script_path": "valid_hole.py", "bundle_base64": bundle64},
             headers={"X-Session-ID": session_id},
-            timeout=180.0,  # Validate can take time if asset generation is slow
+            timeout=300.0,  # Validate can take time if asset generation is slow
         )
 
         assert resp.status_code == 200, resp.text

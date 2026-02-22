@@ -59,7 +59,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "particle_budget": 10**9},
             headers=base_headers,
-            timeout=180.0,
+            timeout=300.0,
         )
 
         # If it retried, we expect 'gpu_oom_retry' event

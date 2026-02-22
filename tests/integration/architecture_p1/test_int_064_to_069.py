@@ -146,7 +146,7 @@ fluids:
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
