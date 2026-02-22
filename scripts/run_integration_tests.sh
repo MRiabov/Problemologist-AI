@@ -9,6 +9,7 @@ echo "Integration Tests Started at: $(date)"
 
 export IS_INTEGRATION_TEST=true
 export LOG_LEVEL=${LOG_LEVEL:-INFO}
+export PYTHONUNBUFFERED=1
 
 # Networking for local services (infra is still in Docker but exposed on host)
 export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres"
@@ -152,12 +153,14 @@ pkill -f "python -m controller.temporal_worker" || true
 export WORKER_TYPE=light
 uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
+echo $WORKER_LIGHT_PID > logs/worker_light.pid
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
 uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
+echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
@@ -172,6 +175,12 @@ uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
+
+# Create convenience symlinks in the logs/ root for the current run
+ln -sf "integration_tests/controller.log" logs/controller.log
+ln -sf "integration_tests/worker_light.log" logs/worker_light.log
+ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
+ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
 
 cleanup() {
   # Record the exit status of the test command
@@ -190,8 +199,12 @@ cleanup() {
   pkill -9 -f "uv run uvicorn" || true
   
   # Remove PID files
-  rm -f logs/worker.pid logs/controller.pid logs/temporal_worker.pid
+  rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid
   
+  # Remove convenience symlinks if they are still valid (pointing to current run)
+  # Actually, we might want to keep them to let the user see what happened
+  # rm -f logs/controller.log logs/worker_light.log logs/worker_heavy.log logs/temporal_worker.log
+
   # Clean up shared sessions directory
   if [ -n "$WORKER_SESSIONS_DIR" ] && [ -d "$WORKER_SESSIONS_DIR" ]; then
     rm -rf "$WORKER_SESSIONS_DIR"
@@ -213,7 +226,7 @@ while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   if ! kill -0 $CONTROLLER_PID 2>/dev/null; then
     echo "Controller process (PID: $CONTROLLER_PID) died unexpectedly!"
     echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
-    tail -n 20 logs/controller.log
+    tail -n 20 "$LOG_DIR/controller.log"
     exit 1
   fi
   if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
@@ -244,14 +257,14 @@ if ! kill -0 $WORKER_HEAVY_PID 2>/dev/null; then echo "Worker Heavy died!"; exit
 if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
   echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"
-  tail -n 20 logs/temporal_worker.log
+  tail -n 20 "$LOG_DIR/temporal_worker.log"
   exit 1
 fi
 
 if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
   echo "Timeout waiting for services to be healthy."
   echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
-  tail -n 20 logs/controller.log
+  tail -n 20 "$LOG_DIR/controller.log"
   exit 1
 fi
 
