@@ -36,7 +36,7 @@ def test_int_135_wire_clearance_basic():
     assert check_wire_clearance(path_close, assembly, clearance_mm=2.0) is False
 
 
-def test_int_125_motor_power_gating():
+def test_int_125_motor_power_gating(monkeypatch):
     """INT-125: Simulation loop gates motors based on circuit state/switch toggling."""
     # 1. Define an electronics section where motor_a is powered, motor_b is NOT
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
@@ -75,6 +75,20 @@ def test_int_125_motor_power_gating():
         power_supply=psu_config, components=components, wiring=wiring
     )
 
+    # Use a shared state for the mock to track toggles
+    sw_state = {"sw1": True}
+
+    def mock_validate(*args, **kwargs):
+        v = 12.0 if sw_state["sw1"] else 0.0
+        return CircuitValidationResult(
+            valid=True,
+            errors=[],
+            node_voltages={"m1_+": v},
+            total_draw_a=1.0 if v > 0 else 0.0,
+        )
+
+    monkeypatch.setattr("shared.pyspice_utils.validate_circuit", mock_validate)
+
     # Mock backend to avoid real physics overhead
     loop = SimulationLoop(
         xml_path="tests/assets/empty_scene.xml", electronics=electronics
@@ -86,6 +100,7 @@ def test_int_125_motor_power_gating():
 
     # 2. Toggle switch OFF
     loop.switch_states["sw1"] = False
+    sw_state["sw1"] = False
     loop._electronics_dirty = True
     loop.step(control_inputs={}, duration=0.01)
 
@@ -93,6 +108,7 @@ def test_int_125_motor_power_gating():
 
     # 3. Toggle switch ON
     loop.switch_states["sw1"] = True
+    sw_state["sw1"] = True
     loop._electronics_dirty = True
     loop.step(control_inputs={}, duration=0.01)
     assert loop.is_powered_map.get("m1") == pytest.approx(1.0, rel=0.01)
@@ -124,6 +140,14 @@ def test_int_126_wire_tear_failure(monkeypatch):
         ],
     )
 
+    # Mock validation to pass (avoid real SPICE)
+    def mock_validate(*args, **kwargs):
+        return CircuitValidationResult(
+            valid=True, errors=[], node_voltages={}, total_draw_a=0.0
+        )
+
+    monkeypatch.setattr("shared.pyspice_utils.validate_circuit", mock_validate)
+
     loop = SimulationLoop(
         xml_path="tests/assets/empty_scene.xml", electronics=electronics
     )
@@ -139,7 +163,7 @@ def test_int_126_wire_tear_failure(monkeypatch):
     metrics = loop.step(control_inputs={}, duration=0.01)
 
     assert metrics.success is False
-    assert "wire_torn:wire_torn_test" in metrics.fail_reason
+    assert "WIRE_TORN:wire_torn_test" in str(metrics.fail_reason)
 
 
 def test_int_120_circuit_validation_pre_gate(monkeypatch):
@@ -152,7 +176,7 @@ def test_int_120_circuit_validation_pre_gate(monkeypatch):
     )
 
     # Mock validation to fail generically
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False,
             errors=["electronics_validation_failed: random_error"],
@@ -183,7 +207,7 @@ def test_int_121_short_circuit_detection(monkeypatch):
     )
 
     # Mock validation failure
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False, errors=["FAILED_SHORT_CIRCUIT"], node_voltages={}
         )
@@ -208,7 +232,7 @@ def test_int_122_overcurrent_supply_detection(monkeypatch):
         components=[],
     )
 
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False,
             errors=["FAILED_OVERCURRENT_SUPPLY"],
@@ -235,7 +259,7 @@ def test_int_124_open_circuit_detection(monkeypatch):
         components=[],
     )
 
-    def mock_validate(*args):
+    def mock_validate(*args, **kwargs):
         return CircuitValidationResult(
             valid=False, errors=["FAILED_OPEN_CIRCUIT:node_x"], node_voltages={}
         )
