@@ -3,6 +3,7 @@ import pytest
 from shared.cots.parts.motors import ServoMotor
 from worker_heavy.simulation.builder import SceneCompiler
 
+
 def test_add_actuator_cots_derivation_sg90():
     """Test that add_actuator derives params from SG90 COTS data."""
     compiler = SceneCompiler()
@@ -35,13 +36,12 @@ def test_add_actuator_cots_derivation_sg90():
     assert abs(fr_vals[0] - (-expected_torque)) < 1e-4
     assert abs(fr_vals[1] - expected_torque) < 1e-4
 
+
 def test_add_actuator_cots_id_direct():
     """Test that passing cots_id directly works."""
     compiler = SceneCompiler()
 
-    compiler.add_actuator(
-        name="custom_name", joint="joint1", cots_id="MG996R"
-    )
+    compiler.add_actuator(name="custom_name", joint="joint1", cots_id="MG996R")
 
     xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
     root = ET.fromstring(xml_str)
@@ -55,13 +55,12 @@ def test_add_actuator_cots_id_direct():
     fr_vals = [float(x) for x in forcerange.split()]
     assert abs(fr_vals[1] - expected_torque) < 1e-4
 
+
 def test_add_actuator_ds3218():
     """Test derivation for DS3218 motor."""
     compiler = SceneCompiler()
 
-    compiler.add_actuator(
-        name="motor_DS3218", joint="joint_ds"
-    )
+    compiler.add_actuator(name="motor_DS3218", joint="joint_ds")
 
     xml_str = ET.tostring(compiler.root, encoding="utf-8").decode()
     root = ET.fromstring(xml_str)
@@ -71,6 +70,7 @@ def test_add_actuator_ds3218():
     expected_torque = ServoMotor.motor_data["DS3218"]["torque_nm"]
     fr_vals = [float(x) for x in actuator.get("forcerange").split()]
     assert abs(fr_vals[1] - expected_torque) < 1e-4
+
 
 def test_add_actuator_manual_override():
     """Test that manual params override COTS derivation."""
@@ -91,6 +91,7 @@ def test_add_actuator_manual_override():
     assert float(actuator.get("kp")) == 50.0
     assert float(actuator.get("kv")) == 5.0
     assert actuator.get("forcerange") == "-1.0 1.0"
+
 
 def test_add_actuator_unknown_motor():
     """Test fallback for unknown motors."""
