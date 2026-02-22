@@ -197,4 +197,5 @@ def test_electronics_fluid_damage_logic(genesis_backend, tmp_path):
     res = genesis_backend.step(0.002)
 
     assert res.success is False
-    assert f"{FailureReason.ELECTRONICS_FLUID_DAMAGE}:controller" in res.failure_reason
+    assert res.failure.reason == FailureReason.ELECTRONICS_FLUID_DAMAGE
+    assert res.failure.detail == "controller"

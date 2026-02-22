@@ -161,6 +161,7 @@ class SimulationResultEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.SIMULATION_RESULT
     success: bool
     failure_reason: SimulationFailureMode = SimulationFailureMode.NONE
+    failure: Any | None = None  # Structured SimulationFailure
     time_elapsed_s: float
     compute_time_ms: float
     metadata: SimulationMetadata = Field(default_factory=SimulationMetadata)
