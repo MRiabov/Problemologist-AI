@@ -62,11 +62,13 @@ def test_plan_validation_events():
 @pytest.mark.integration
 @pytest.mark.xdist_group(name="physics_sims")
 def test_simulation():
+    from shared.simulation.schemas import SimulatorBackendType
+
     # Valid stable box
     with BuildPart() as p:
         Box(10, 10, 10)
 
-    res = simulate(p.part)
+    res = simulate(p.part, backend=SimulatorBackendType.MUJOCO)
     assert res.success, f"Simulation failed: {res.summary}"
 
 

@@ -19,18 +19,18 @@ class SimulationFailure(BaseModel):
 
 class StressSummary(BaseModel):
     part_label: str
-    max_von_mises_pa: float
-    mean_von_mises_pa: float
-    safety_factor: float  # ultimate_stress / max_von_mises
-    location_of_max: tuple[float, float, float]
-    utilization_pct: float  # max_stress / yield_stress * 100
+    max_von_mises_pa: float | None = None
+    mean_von_mises_pa: float | None = None
+    safety_factor: float | None = None  # ultimate_stress / max_von_mises
+    location_of_max: tuple[float, float, float] | None = None
+    utilization_pct: float | None = None  # max_stress / yield_stress * 100
 
 
 class FluidMetricResult(BaseModel):
     metric_type: str  # "fluid_containment" | "flow_rate"
     fluid_id: str
-    measured_value: float
-    target_value: float
+    measured_value: float | None = None
+    target_value: float | None = None
     passed: bool
 
 

@@ -83,7 +83,18 @@ class ObjectiveEvaluator:
             else:
                 logger.warning("DEBUG_stress_summary_missing", part=so.part_label)
 
-            if summary and summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6):
+            # Check for stress violation (including NaNs)
+            is_violation = False
+            if summary:
+                if summary.max_von_mises_pa is None or np.isnan(
+                    summary.max_von_mises_pa
+                ):
+                    logger.warning("stress_objective_nan_detected", part=so.part_label)
+                    is_violation = True
+                elif summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6):
+                    is_violation = True
+
+            if is_violation:
                 self.fail_reason = SimulationFailure(
                     reason=FailureReason.STRESS_OBJECTIVE_EXCEEDED,
                     detail=so.part_label,
@@ -240,7 +251,9 @@ class ObjectiveEvaluator:
 
             if mat_def and mat_def.ultimate_stress_pa:
                 is_broken = False
-                if np.isnan(summary.max_von_mises_pa):
+                if summary.max_von_mises_pa is None or np.isnan(
+                    summary.max_von_mises_pa
+                ):
                     logger.warning("part_breakage_nan_detected", part=label)
                     is_broken = True
                 elif summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
@@ -251,7 +264,8 @@ class ObjectiveEvaluator:
                         PartBreakageEvent(
                             part_label=label,
                             stress_mpa=summary.max_von_mises_pa / 1e6
-                            if not np.isnan(summary.max_von_mises_pa)
+                            if summary.max_von_mises_pa is not None
+                            and not np.isnan(summary.max_von_mises_pa)
                             else 0.0,
                             ultimate_mpa=mat_def.ultimate_stress_pa / 1e6,
                             location=summary.location_of_max or (0, 0, 0),

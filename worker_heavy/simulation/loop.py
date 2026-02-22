@@ -298,6 +298,7 @@ class SimulationLoop:
         # but better to use electronics_manager.is_powered_map directly.
         self.is_powered_map = self.electronics_manager.is_powered_map
         self.electronics_validation_error = self.electronics_manager.validation_error
+        self._electronics_dirty = False
 
     @property
     def switch_states(self) -> dict[str, bool]:
@@ -367,9 +368,8 @@ class SimulationLoop:
                     if isinstance(self.electronics_validation_error, SimulationFailure):
                         self.fail_reason = self.electronics_validation_error
                     else:
-                        self.fail_reason = SimulationFailure(
-                            reason=FailureReason.VALIDATION_FAILED,
-                            detail=str(self.electronics_validation_error),
+                        self.fail_reason = self._parse_failure_reason(
+                            str(self.electronics_validation_error)
                         )
                     break
 
@@ -457,6 +457,52 @@ class SimulationLoop:
                     return b
         return None
 
+    def _parse_failure_reason(self, error_str: str) -> SimulationFailure:
+        """Parse string-based failure reasons from backends or validation."""
+        reason_main = error_str
+        detail = None
+
+        if ":" in error_str:
+            reason_main, detail = error_str.split(":", 1)
+            reason_main = reason_main.strip()
+            detail = detail.strip()
+
+        # Map FAILED_* prefixes to FailureReason enum
+        mapping = {
+            "FAILED_SHORT_CIRCUIT": FailureReason.SHORT_CIRCUIT,
+            "FAILED_OVERCURRENT_SUPPLY": FailureReason.OVERCURRENT,
+            "FAILED_OVERCURRENT_WIRE": FailureReason.OVERCURRENT,
+            "FAILED_OPEN_CIRCUIT": FailureReason.OPEN_CIRCUIT,
+            "FAILED_FLOATING_NODE": FailureReason.OPEN_CIRCUIT,
+            "FAILED_WIRE_TORN": FailureReason.WIRE_TORN,
+            "FAILED_ASSET_GENERATION": FailureReason.ASSET_GENERATION_FAILED,
+            "PART_BREAKAGE": FailureReason.PART_BREAKAGE,
+            "ELECTRONICS_FLUID_DAMAGE": FailureReason.ELECTRONICS_FLUID_DAMAGE,
+        }
+
+        if reason_main in mapping:
+            # Check for stress objective upgrade for PART_BREAKAGE
+            if reason_main == "PART_BREAKAGE" and detail:
+                if self.objectives and self.objectives.objectives:
+                    for so in self.objectives.objectives.stress_objectives:
+                        if so.part_label.lower() == detail.lower():
+                            return SimulationFailure(
+                                reason=FailureReason.STRESS_OBJECTIVE_EXCEEDED,
+                                detail=detail,
+                            )
+            return SimulationFailure(reason=mapping[reason_main], detail=detail)
+
+        # Default to VALIDATION_FAILED if it looks like a validation error
+        if reason_main.startswith("FAILED_"):
+            return SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED, detail=error_str
+            )
+
+        # Fallback
+        return SimulationFailure(
+            reason=FailureReason.PHYSICS_INSTABILITY, detail=error_str
+        )
+
     def _perform_pre_simulation_validation(self) -> SimulationMetrics | None:
         """Check validation status before starting simulation."""
         if self.validation_report and not getattr(
@@ -480,9 +526,8 @@ class SimulationLoop:
             )
 
         if self.electronics_validation_error:
-            self.fail_reason = SimulationFailure(
-                reason=FailureReason.VALIDATION_FAILED,
-                detail=str(self.electronics_validation_error),
+            self.fail_reason = self._parse_failure_reason(
+                str(self.electronics_validation_error)
             )
             return SimulationMetrics(
                 total_time=0.0,
@@ -636,29 +681,7 @@ class SimulationLoop:
 
         # Legacy support for string reasons
         if isinstance(res.failure_reason, str):
-            if res.failure_reason.startswith("PART_BREAKAGE"):
-                part_name = (
-                    res.failure_reason.split(":")[1]
-                    if ":" in res.failure_reason
-                    else None
-                )
-                # Check for stress objective violation upgrade
-                if part_name and self.objectives and self.objectives.objectives:
-                    for so in self.objectives.objectives.stress_objectives:
-                        if so.part_label.lower() == part_name.lower():
-                            logger.info(
-                                "stress_objective_exceeded_via_breakage",
-                                part=part_name,
-                            )
-                            return SimulationFailure(
-                                reason=FailureReason.STRESS_OBJECTIVE_EXCEEDED,
-                                detail=part_name,
-                            )
-                return SimulationFailure(
-                    reason=FailureReason.PART_BREAKAGE, detail=part_name
-                )
-            if res.failure_reason.startswith("ELECTRONICS_FLUID_DAMAGE"):
-                return SimulationFailure(reason=FailureReason.ELECTRONICS_FLUID_DAMAGE)
+            return self._parse_failure_reason(res.failure_reason)
 
         # Default fallback: re-check breakage or assume instability
         if self.objectives and self.objectives.physics.fem_enabled:
@@ -674,8 +697,20 @@ class SimulationLoop:
 
     def _identify_target_body(self) -> str | None:
         """Identify the primary target body for objective tracking."""
-        target_body_name = "target_box"
         all_bodies = self.backend.get_all_body_names()
+
+        # 1. Check moved_object label from objectives
+        if (
+            self.objectives
+            and self.objectives.moved_object
+            and self.objectives.moved_object.label
+        ):
+            label = self.objectives.moved_object.label
+            if label in all_bodies:
+                return label
+
+        # 2. Fallback to hardcoded defaults
+        target_body_name = "target_box"
         if target_body_name in all_bodies:
             return target_body_name
 
