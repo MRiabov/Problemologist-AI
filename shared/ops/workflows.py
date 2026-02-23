@@ -3,17 +3,14 @@ from datetime import timedelta
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
-# Import backup logic
-# Use workflow.unsafe.imports_passed_through() for workflow-safe imports if needed,
-# but activities can import normally.
-from shared.ops.backup import backup_postgres, backup_s3_files
-
 
 @activity.defn
-def run_backup_activity(params: dict) -> dict:
+async def run_backup_activity(params: dict) -> dict:
     """
     Activity to perform the actual backup operations.
     """
+    from shared.ops.backup import backup_postgres, backup_s3_files
+
     db_url = params.get("db_url")
     s3_bucket = params.get("s3_bucket")
     source_bucket = params.get("source_bucket")

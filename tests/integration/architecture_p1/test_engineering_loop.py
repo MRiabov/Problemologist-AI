@@ -29,7 +29,9 @@ async def test_engineering_full_loop():
         # 1. Setup: Generate a Benchmark (or use a mocked ID if testing against mock)
         # For integration, we generate one.
         prompt = "Create a benchmark about stacking blocks."
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        resp = await client.post(
+            "/benchmark/generate", json={"prompt": prompt, "backend": "mujoco"}
+        )
         assert resp.status_code in [
             200,
             202,
@@ -40,11 +42,12 @@ async def test_engineering_full_loop():
         max_retries = 30
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if (
-                status_resp.status_code == 200
-                and status_resp.json()["status"] == "completed"
-            ):
-                break
+            if status_resp.status_code == 200:
+                status = status_resp.json()["status"]
+                if status == "planned":
+                    await client.post(f"/benchmark/{benchmark_session_id}/confirm")
+                elif status == "completed":
+                    break
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation failed or timed out during setup.")

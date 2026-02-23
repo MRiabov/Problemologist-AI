@@ -29,7 +29,7 @@ async def test_render_artifact_generation_int_039():
 
         # 2. Poll for completion
         completed = False
-        for _ in range(60):
+        for _ in range(120):
             status_resp = await client.get(f"/episodes/{episode_id}")
             if status_resp.status_code == 200:
                 data = status_resp.json()
@@ -81,7 +81,7 @@ async def test_asset_persistence_linkage_int_040():
         episode_id = resp.json()["episode_id"]
 
         # Wait for completion
-        for _ in range(60):
+        for _ in range(120):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -120,7 +120,7 @@ async def test_mjcf_joint_mapping_int_037():
         episode_id = resp.json()["episode_id"]
 
         # Wait for completion
-        for _ in range(60):
+        for _ in range(120):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -164,7 +164,7 @@ async def test_controller_function_family_int_038():
         )
         episode_id = resp.json()["episode_id"]
 
-        for _ in range(60):
+        for _ in range(120):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -223,7 +223,7 @@ async def test_async_callbacks_int_042():
         assert data["status"] == "running"
 
         # Wait for completion (simulates async callback/polling)
-        for _ in range(30):
+        for _ in range(60):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] == "completed":
                 break

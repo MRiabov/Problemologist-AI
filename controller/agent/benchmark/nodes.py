@@ -110,7 +110,7 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.Predict,
             BenchmarkPlannerSignature,
             state,
             inputs,

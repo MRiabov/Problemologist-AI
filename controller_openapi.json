@@ -1178,6 +1178,11 @@
               }
             ],
             "title": "Target Quantity"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "default": "genesis"
           }
         },
         "type": "object",
