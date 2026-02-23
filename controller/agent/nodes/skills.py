@@ -145,6 +145,8 @@ class SkillsNode(BaseNode):
         )
 
         if not prediction:
+            # WP12: Revert local changes on session failure
+            self.git.revert_changes()
             return state.model_copy(
                 update={
                     "journal": state.journal + f"\n[Skills] Failed: {journal_entry}"
