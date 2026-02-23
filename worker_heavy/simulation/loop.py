@@ -4,10 +4,9 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
-from shared.enums import FluidEvalAt, FluidObjectiveType, FailureReason
+from shared.enums import FailureReason
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import (
-    FluidMetricResult,
     SimulationFailure,
     SimulationMetrics,
 )
@@ -22,10 +21,10 @@ from shared.wire_utils import check_wire_clearance, get_awg_properties
 from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
-from worker_heavy.simulation.objectives import ObjectiveEvaluator
-from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.factory import get_physics_backend
+from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
+from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.workbenches.config import load_config
 
@@ -386,7 +385,7 @@ class SimulationLoop:
 
             # Check failures and update metrics
             # T018: Keep interval small for collisions/overload to avoid missing events
-            check_interval = 1
+            check_interval = 10
             if step_idx % check_interval == 0 or step_idx == steps - 1:
                 if self._check_simulation_failure(
                     res, current_time, dt * check_interval, target_body_name
@@ -561,9 +560,15 @@ class SimulationLoop:
         actuator_states = {
             n: self.backend.get_actuator_state(n) for n in self.actuator_names
         }
+
+        # Scale energy (power) by interval to maintain consistent total_energy
+        # metric magnitude when skipping steps.
+        dt = self._get_simulation_timestep()
+        scale_factor = dt_interval / dt if dt > 0 else 1.0
+
         energy = sum(
             abs(state.ctrl * state.velocity) for state in actuator_states.values()
-        )
+        ) * scale_factor
 
         target_vel = 0.0
         if target_body_name:
