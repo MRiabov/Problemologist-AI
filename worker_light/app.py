@@ -16,8 +16,8 @@ logger = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Sync skills (skipped in integration tests for speed/reliability)
-    if not settings.is_integration_test and settings.git_repo_url:
+    # Startup: Sync skills
+    if settings.git_repo_url:
         sync_skills(
             repo_url=settings.git_repo_url,
             pat=settings.git_pat,

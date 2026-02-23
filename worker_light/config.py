@@ -27,14 +27,23 @@ class WorkerSettings(BaseSettings):
             return Path(self.skills_dir_override)
 
         if self.is_integration_test:
+            # For integration tests, we want to use the local skills by default
+            # unless a GIT_REPO_URL is provided for testing sync.
+            if not self.git_repo_url:
+                local_skills = Path(".agent/skills").absolute()
+                if local_skills.exists():
+                    return local_skills
             return Path(tempfile.gettempdir()) / "problemologist_skills"
 
         if self.skills_dir_default:
             return Path(self.skills_dir_default)
 
-        # Fallback for local development
+        # Fallback for local development - Prefer .agent/skills as it's more complete
+        agent_skills = Path(".agent/skills").absolute()
         app_skills = Path("/app/skills")
         try:
+            if agent_skills.exists():
+                return agent_skills
             if app_skills.exists():
                 return app_skills
             return Path("./skills").absolute()
