@@ -67,6 +67,8 @@ class MockDSPyLM(dspy.LM):
         # Extract expected fields for ReAct compatibility
         expected_fields = []
 
+        logger.info("mock_dspy_full_text", text=full_text[:500] + "...")
+
         # Always try to detect fields from text if they exist
         match = re.search(
             r"Expected to find output fields in the LM response: \[([^\]]+)\]",
@@ -275,11 +277,16 @@ class MockDSPyLM(dspy.LM):
 
         # ReAct compatibility - handle intermediate tool calling phase
         if "next_tool_name" in expected_fields:
+            import shlex
+
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
-                resp["next_tool_args"] = {"command": code}
+                # Ensure the python code is executed as a shell command
+                resp["next_tool_args"] = {
+                    "command": f"python3 -c {shlex.quote(code)}"
+                }
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}
@@ -332,13 +339,18 @@ class MockDSPyLM(dspy.LM):
                     or k
                     in [
                         "reasoning",
+                        "thought",
                         "summary",
                         "plan",
                         "review",
                         "journal",
                         "search_summary",
+                        "next_thought",
+                        "next_tool_name",
+                        "next_tool_args"
                     ]
                 }
+                logger.info("mock_dspy_returning_json", json=filtered_resp)
                 return [json.dumps(filtered_resp)]
             return [json.dumps(resp)]
 
