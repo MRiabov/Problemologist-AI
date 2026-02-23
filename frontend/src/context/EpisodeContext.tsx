@@ -27,7 +27,7 @@ interface EpisodeContextType {
   startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
   continueAgent: (id: string, message: string, metadata?: Record<string, unknown>) => Promise<void>;
   steerAgent: (id: string, text: string, metadata?: Record<string, any>) => Promise<void>;
-  confirmBenchmark: (id: string) => Promise<void>;
+  confirmBenchmark: (id: string, comment?: string) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
@@ -64,6 +64,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
+    setRunning(false);
     try {
       const fullEp = await fetchEpisode(id);
       setSelectedEpisode(fullEp);
@@ -79,6 +80,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
     setTopologyNodes([]);
+    setRunning(false);
   }, []);
 
   const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
@@ -86,6 +88,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setIsCreationMode(true);
     setIsBenchmarkCreation(isBenchmark);
     setTopologyNodes([]);
+    setRunning(false);
   }, []);
 
   const updateObjectives = useCallback(async (objectives: BenchmarkObjectives) => {
@@ -161,10 +164,10 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const confirmBenchmark = useCallback(async (id: string) => {
+  const confirmBenchmark = useCallback(async (id: string, comment?: string) => {
     setRunning(true);
     try {
-        await import('../api/client').then(m => m.confirmBenchmark(id));
+        await import('../api/client').then(m => m.confirmBenchmark(id, comment));
         await refreshEpisodes();
     } catch (e) {
         console.error("Failed to confirm benchmark", e);
@@ -213,7 +216,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           ]);
           setEpisodes(episodesData);
           setSelectedEpisode(currentEp);
-          if (currentEp.status !== EpisodeStatus.RUNNING && currentEp.status !== EpisodeStatus.PLANNED) {
+          if (currentEp.status !== EpisodeStatus.RUNNING) {
             setRunning(false);
           }
         } catch (e) {

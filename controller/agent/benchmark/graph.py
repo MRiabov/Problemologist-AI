@@ -284,6 +284,7 @@ async def run_generation_session(
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
+            episode_type="benchmark",
         )
         episode = Episode(
             id=session_id,
