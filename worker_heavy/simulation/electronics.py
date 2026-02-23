@@ -80,36 +80,113 @@ class ElectronicsManager:
         if not self.electronics:
             return
 
-        # BFS for connectivity
-        # (Extracted from loop.py:227-307)
-        powered = set()
-        sources = [
-            c.component_id
-            for c in self.electronics.components
-            if c.type == ElectronicComponentType.POWER_SUPPLY
-        ]
+        # Build Adjacency Graph: Node = (component_id, terminal_name)
+        adj = {}
 
-        # Simplified BFS for power propagation
-        queue = list(sources)
-        visited = set(sources)
-        powered.update(sources)
+        def add_edge(u, v):
+            if u not in adj:
+                adj[u] = []
+            if v not in adj:
+                adj[v] = []
+            adj[u].append(v)
+            adj[v].append(u)
+
+        # 1. Add edges from Wiring
+        component_terminals = {}  # comp_id -> set(terminals)
+        for wire in self.electronics.wiring:
+            u = (wire.from_terminal.component, wire.from_terminal.terminal)
+            v = (wire.to_terminal.component, wire.to_terminal.terminal)
+            add_edge(u, v)
+
+            # Track terminals per component
+            if u[0] not in component_terminals:
+                component_terminals[u[0]] = set()
+            component_terminals[u[0]].add(u[1])
+            if v[0] not in component_terminals:
+                component_terminals[v[0]] = set()
+            component_terminals[v[0]].add(v[1])
+
+        # 2. Add internal component paths
+        for comp in self.electronics.components:
+            cid = comp.component_id
+            terms = list(component_terminals.get(cid, []))
+            if len(terms) < 2:
+                continue
+
+            # Check component type
+            is_conductive = True
+            if comp.type in [
+                ElectronicComponentType.SWITCH,
+                ElectronicComponentType.RELAY,
+            ]:
+                is_conductive = self.switch_states.get(cid, True)
+            elif comp.type == ElectronicComponentType.POWER_SUPPLY:
+                # Power supplies don't short + to - internally
+                is_conductive = False
+
+            if is_conductive:
+                # Connect all terminals to each other (clique)
+                for i in range(len(terms)):
+                    for j in range(i + 1, len(terms)):
+                        add_edge((cid, terms[i]), (cid, terms[j]))
+
+        # 3. BFS from Power Sources
+        queue = []
+        visited = set()
+
+        # Helper to check if terminal is positive/source
+        def is_source_terminal(t_name):
+            t_lower = t_name.lower()
+            return (
+                any(
+                    x in t_lower
+                    for x in [
+                        "+",
+                        "v",
+                        "pos",
+                        "high",
+                        "live",
+                        "hot",
+                        "12",
+                        "24",
+                        "5",
+                    ]
+                )
+                or t_name == "supply_v+"
+            )
+
+        # Check main power supply (implicit 'supply' component)
+        if "supply" in component_terminals:
+            for t in component_terminals["supply"]:
+                if is_source_terminal(t) or t == "v+":
+                    node = ("supply", t)
+                    if node not in visited:
+                        visited.add(node)
+                        queue.append(node)
+
+        # Find source nodes (V+ terminals of additional power supplies)
+        for comp in self.electronics.components:
+            if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                cid = comp.component_id
+                terms = component_terminals.get(cid, [])
+                for t in terms:
+                    if is_source_terminal(t):
+                        node = (cid, t)
+                        if node not in visited:
+                            visited.add(node)
+                            queue.append(node)
 
         while queue:
             u = queue.pop(0)
-            # Find neighbors in wiring
-            for wire in self.electronics.wiring:
-                v = None
-                if wire.from_terminal.component == u:
-                    v = wire.to_terminal.component
-                elif wire.to_terminal.component == u:
-                    v = wire.from_terminal.component
+            if u in adj:
+                for v in adj[u]:
+                    if v not in visited:
+                        visited.add(v)
+                        queue.append(v)
 
-                if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
-                    visited.add(v)
-                    powered.add(v)
-                    queue.append(v)
+        # 4. Update map
+        powered_components = set(cid for (cid, t) in visited)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            val = 1.0 if comp.component_id in powered_components else 0.0
+            self.is_powered_map[comp.component_id] = val

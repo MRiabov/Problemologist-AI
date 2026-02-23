@@ -90,10 +90,45 @@ def build_circuit_from_section(
             # Default to CLOSED (0.01 Ohm) if not specified in switch_states.
             is_closed = switch_states.get(comp.component_id, True)
             resistance = 0.01 if is_closed else 100 @ u_MOhm
+
+            # Identify connected terminals from wiring
+            connected_terminals = set()
+            for wire in section.wiring:
+                if wire.from_terminal.component == comp.component_id:
+                    connected_terminals.add(wire.from_terminal.terminal)
+                if wire.to_terminal.component == comp.component_id:
+                    connected_terminals.add(wire.to_terminal.terminal)
+
+            # Sort for deterministic node ordering
+            terminals = sorted(list(connected_terminals))
+
+            node1 = f"{comp.component_id}_in"
+            node2 = f"{comp.component_id}_out"
+
+            if len(terminals) == 2:
+                node1 = resolve_node_name(comp.component_id, terminals[0])
+                node2 = resolve_node_name(comp.component_id, terminals[1])
+            elif len(terminals) > 2:
+                logger.warning(
+                    "switch_has_more_than_two_terminals",
+                    comp_id=comp.component_id,
+                    terminals=terminals,
+                )
+                # Fallback: use first two
+                node1 = resolve_node_name(comp.component_id, terminals[0])
+                node2 = resolve_node_name(comp.component_id, terminals[1])
+            elif len(terminals) < 2:
+                logger.warning(
+                    "switch_has_fewer_than_two_terminals",
+                    comp_id=comp.component_id,
+                    terminals=terminals,
+                )
+                # Fallback to default in/out if disconnected (effectively floating)
+
             circuit.R(
                 f"sw_{comp.component_id}",
-                f"{comp.component_id}_in",
-                f"{comp.component_id}_out",
+                node1,
+                node2,
                 resistance @ u_Ohm,
             )
 
