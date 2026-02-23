@@ -40,6 +40,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   subtitle,
   headerIcon: HeaderIcon,
   storageKeys,
+  viewportBadgeText,
   viewportOverlays,
   viewportControls,
   resetTrigger,
@@ -136,6 +137,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
         <ResizablePanelGroup 
           orientation="horizontal" 
           className="h-full w-full"
+          data-testid="workspace-resizable-group"
           onLayoutChanged={(layout) => {
             localStorage.setItem(storageKeys.cols, JSON.stringify(layout));
           }}
@@ -175,6 +177,14 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
               >
                 <div className="h-full relative bg-gradient-to-b from-muted whitespace-nowrap overflow-hidden flex items-center justify-center group">
                   {viewportOverlays}
+
+                  {viewportBadgeText && (
+                    <div className="absolute top-4 left-4 z-10">
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-md border shadow-sm text-[10px] font-black uppercase tracking-widest py-1 px-3">
+                            {viewportBadgeText}
+                        </Badge>
+                    </div>
+                  )}
                   
                   {viewportControls && (
                     <div className="absolute bottom-4 left-4 z-10 flex gap-2">

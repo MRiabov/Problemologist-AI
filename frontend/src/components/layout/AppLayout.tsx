@@ -12,10 +12,11 @@ export default function AppLayout() {
   const { isMockMode } = useConnection();
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="h-screen w-full overflow-hidden bg-background text-foreground" data-testid="app-layout">
       <ResizablePanelGroup 
         orientation="horizontal" 
         className="h-full w-full"
+        data-testid="main-resizable-group"
         onLayoutChanged={(layout) => {
           localStorage.setItem('resizable-layout:app-sidebar', JSON.stringify(layout));
         }}

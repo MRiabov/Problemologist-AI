@@ -1,9 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { 
-  VscChevronDown,
-  VscChevronRight,
-  VscProject,
   VscCode
 } from "react-icons/vsc";
 import { 
@@ -44,7 +41,6 @@ export default function ArtifactView({
   isConnected = true
 }: ArtifactViewProps) {
   const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext, selectedContext } = useEpisodes();
-  const [isTreeOpen, setIsTreeOpen] = useState(true);
   const { theme } = useTheme();
 
   const getAssetUrl = (assetPath: string | undefined) => {
@@ -135,7 +131,7 @@ export default function ArtifactView({
                         </h3>
                     </div>
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                        <CircuitSchematic electronics={data.electronics} />
+                        <CircuitSchematic soup={data.electronics} />
                         <WireView 
                             assetUrl={getAssetUrl(assets.find((a: AssetResponse) => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
                             wireRoutes={data.electronics.wiring || []} 

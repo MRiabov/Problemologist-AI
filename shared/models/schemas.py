@@ -337,6 +337,7 @@ class EpisodeMetadata(BaseModel):
     fidelity_check: bool | None = None
     tolerance: float | None = None
     is_reused: bool | None = None
+    episode_type: Literal["benchmark", "engineer"] | None = None
     validation_logs: list[str] = Field(default_factory=list)
     prompt: str | None = None
     plan: dict[str, Any] | None = None

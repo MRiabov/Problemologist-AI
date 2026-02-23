@@ -25,7 +25,10 @@ describe('ActionCard', () => {
   it('renders search tool correctly', () => {
     render(
       <EpisodeProvider>
-        <ActionCard trace={mockTrace('codebase_search', JSON.stringify({ Query: 'test' }))} />
+        <ActionCard
+          trace={mockTrace('codebase_search', JSON.stringify({ Query: 'test' }))}
+          setActiveArtifactId={vi.fn()}
+        />
       </EpisodeProvider>
     );
     expect(screen.getByText('Searched')).toBeInTheDocument();
@@ -34,7 +37,10 @@ describe('ActionCard', () => {
   it('renders read tool and extracts fileName', () => {
     render(
       <EpisodeProvider>
-        <ActionCard trace={mockTrace('view_file', JSON.stringify({ AbsolutePath: '/src/main.py' }))} />
+        <ActionCard
+          trace={mockTrace('view_file', JSON.stringify({ AbsolutePath: '/src/main.py' }))}
+          setActiveArtifactId={vi.fn()}
+        />
       </EpisodeProvider>
     );
     expect(screen.getByText('Read')).toBeInTheDocument();
@@ -44,7 +50,10 @@ describe('ActionCard', () => {
   it('renders edit tool correctly', () => {
     render(
       <EpisodeProvider>
-        <ActionCard trace={mockTrace('write_to_file', JSON.stringify({ TargetFile: '/src/utils.py' }))} />
+        <ActionCard
+          trace={mockTrace('write_to_file', JSON.stringify({ TargetFile: '/src/utils.py' }))}
+          setActiveArtifactId={vi.fn()}
+        />
       </EpisodeProvider>
     );
     expect(screen.getByText('Edited')).toBeInTheDocument();
@@ -54,7 +63,10 @@ describe('ActionCard', () => {
   it('handles non-JSON content for path extraction', () => {
     render(
       <EpisodeProvider>
-        <ActionCard trace={mockTrace('view_file', 'AbsolutePath: /src/config.yaml')} />
+        <ActionCard
+          trace={mockTrace('view_file', 'AbsolutePath: /src/config.yaml')}
+          setActiveArtifactId={vi.fn()}
+        />
       </EpisodeProvider>
     );
     expect(screen.getByText('config.yaml')).toBeInTheDocument();

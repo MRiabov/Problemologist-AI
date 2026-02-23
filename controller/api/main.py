@@ -111,6 +111,7 @@ async def run_agent(request: AgentRunRequest):
 
     metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
     metadata.worker_session_id = request.session_id
+    metadata.episode_type = "engineer"
 
     async with session_factory() as db:
         episode = Episode(
