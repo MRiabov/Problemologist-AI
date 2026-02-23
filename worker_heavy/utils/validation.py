@@ -867,6 +867,10 @@ def validate(
     except Exception as e:
         logger.warning("validate_render_capture_failed", error=str(e))
 
+    from shared.workers.persistence import record_validation_result
+
+    record_validation_result(output_dir or Path(), True, None)
+
     return True, None
 
 

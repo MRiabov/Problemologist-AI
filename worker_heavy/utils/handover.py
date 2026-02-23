@@ -185,3 +185,26 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
 
     logger.info("handover_complete", manifest=str(manifest_path))
     return True
+
+
+def refuse_plan(reason: str, cwd: Path = Path()) -> bool:
+    """
+    Standardized refusal mechanism for the CAD Engineer.
+    Logic:
+    - Persist a refusal.json file to the workspace.
+    - The Reviewer node will detect this and decide whether to route back to Planner.
+    """
+    import time
+
+    refusal_data = {
+        "status": "plan_refused",
+        "reason": reason,
+        "timestamp": time.time(),
+        "session_id": os.getenv("SESSION_ID", "default"),
+    }
+    refusal_path = cwd / "refusal.json"
+    with refusal_path.open("w", encoding="utf-8") as f:
+        json.dump(refusal_data, f, indent=2)
+
+    logger.info("plan_refused", reason=reason, path=str(refusal_path))
+    return True

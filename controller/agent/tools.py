@@ -50,6 +50,33 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def validate_costing_and_price():
+        """
+        Validate pricing YAML, autopopulate fields, and output price.
+        Runs the manufacturing knowledge validation script.
+        """
+        script_path = "/skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        return await fs.run_command(f"python3 {script_path}")
+
+    async def submit_for_review():
+        """
+        Submits the whole assembly for a review to the Reviewer agent node.
+        Note: Requires script.py to have been successfully validated and simulated.
+        """
+        return await fs.run_command("python3 -c 'from utils import submit_for_review; from shared.workers.loader import load_component_from_script; submit_for_review(load_component_from_script(\"script.py\"))'")
+
+    async def refuse_plan(reason: str):
+        """
+        Refuse the current plan with a specific reason.
+        Use this when the planner's instructions are physically impossible or over-budget.
+        """
+        import shlex
+
+        safe_reason = shlex.quote(reason)
+        return await fs.run_command(
+            f"python3 -c 'from utils import refuse_plan; refuse_plan({safe_reason})'"
+        )
+
     return [
         list_files,
         read_file,
@@ -59,6 +86,9 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        validate_costing_and_price,
+        submit_for_review,
+        refuse_plan,
     ]
 
 

@@ -125,3 +125,13 @@ class GitManager:
 
             full_path.write_text(resolved_content)
             self.repo.git.add(file_path)
+
+    def revert_changes(self):
+        """Roll back the repository to the last clean commit."""
+        if not self.repo:
+            return
+        try:
+            self.repo.git.reset("--hard", "HEAD")
+            logger.info("Git repository reverted to HEAD.")
+        except GitCommandError as e:
+            logger.error(f"Failed to revert git changes: {e}")
