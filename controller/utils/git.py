@@ -108,7 +108,9 @@ class GitManager:
             logger.info(f"Resolving conflict in {file_path}...")
 
             with dspy.settings.context(lm=lm):
-                resolver = dspy.Predict(GitResolver)
+                resolver = dspy.ReAct(
+                    GitResolver, tools=[]
+                )  # FIXME should have all engineering tools. Else how would it edit?
                 prediction = resolver(conflict_content=content)
                 resolved_content = prediction.resolved_content
 

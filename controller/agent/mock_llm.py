@@ -51,31 +51,6 @@ class MockDSPyLM(dspy.LM):
         )
 
         full_text = self._get_full_text(prompt, messages)
-        is_json = "output fields" in full_text.lower() and "json" in full_text.lower()
-
-        # Extract expected fields for ReAct compatibility
-        expected_fields = []
-        if is_json:
-            # First, try to extract from the error message in the prompt (for retries)
-            match = re.search(
-                r"Expected to find output fields in the LM response: \[([^\]]+)\]",
-                full_text,
-            )
-            if match:
-                expected_fields = [f.strip() for f in match.group(1).split(",")]
-            else:
-                # For initial calls, detect from the instructions or signature schema
-                # We also check for 'next_thought' as it is part of ReAct
-                if "next_tool_name" in full_text or "next_thought" in full_text:
-                    expected_fields = ["next_thought", "next_tool_name", "next_tool_args"]
-
-                # Check for standard output fields
-                for field in ["reasoning", "thought", "summary", "review", "journal", "plan", "finished", "generated_code"]:
-                    if field in full_text:
-                        expected_fields.append(field)
-
-                # Remove duplicates and preserve order if possible
-                expected_fields = list(dict.fromkeys(expected_fields))
 
         # 1. Detect Scenario from session_id
         scenario_id = self._get_scenario_id()
@@ -84,17 +59,62 @@ class MockDSPyLM(dspy.LM):
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
         node_key = self.node_type or self._detect_node_key(full_text)
 
-        # Normalize benchmark_planner -> planner, etc. for scenario lookup
+        # Detect if JSON is requested or if we should provide it for structured nodes
+        is_json_requested = (
+            "output fields" in full_text.lower() and "json" in full_text.lower()
+        )
+
+        # Extract expected fields for ReAct compatibility
+        expected_fields = []
+
+        # Always try to detect fields from text if they exist
+        match = re.search(
+            r"Expected to find output fields in the LM response: \[([^\]]+)\]",
+            full_text,
+        )
+        if match:
+            expected_fields = [f.strip() for f in match.group(1).split(",")]
+        else:
+            # Detect from role/instructions
+            if "next_tool_name" in full_text or "next_thought" in full_text:
+                expected_fields.extend(
+                    ["next_thought", "next_tool_name", "next_tool_args"]
+                )
+
+            for field in [
+                "reasoning",
+                "thought",
+                "summary",
+                "review",
+                "journal",
+                "plan",
+                "finished",
+                "generated_code",
+            ]:
+                if field in full_text:
+                    expected_fields.append(field)
+
+        expected_fields = list(dict.fromkeys(expected_fields))
+
+        # Force JSON if we have expected fields
+        is_json = is_json_requested or len(expected_fields) > 0
+
+        # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
-        if "_" in node_key:
-            # benchmark_planner -> planner
-            # skill_learner -> skill_learner (kept if matches)
-            parts = node_key.split("_")
-            if parts[-1] in ["planner", "coder", "reviewer"]:
-                lookup_key = parts[-1]
+        if node_key == "benchmark_planner":
+            lookup_key = "planner"
+        elif node_key == "benchmark_coder":
+            lookup_key = "coder"
+        elif node_key == "benchmark_reviewer":
+            lookup_key = "reviewer"
 
         node_data = scenario.get(lookup_key, {})
-        logger.info("mock_dspy_lm_data_found", scenario=scenario_id, node=lookup_key, has_data=bool(node_data))
+        logger.info(
+            "mock_dspy_lm_data_found",
+            scenario=scenario_id,
+            node=lookup_key,
+            has_data=bool(node_data),
+        )
 
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(node_key, 0)
@@ -162,6 +182,8 @@ class MockDSPyLM(dspy.LM):
             return "reviewer"
         if "commercial off-the-shelf" in low_text or "cots search" in low_text:
             return "cots_search"
+        if "electrical strategy" in low_text or "electronics engineer" in low_text:
+            return "electronics_planner"
 
         # 2. Field-based detection (DSPy standard prompts)
         if "journal" in low_text and (
@@ -204,9 +226,8 @@ class MockDSPyLM(dspy.LM):
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
         # dspy.ReAct adds "Observation:" to the trajectory.
-        # We look for "observation_" or specific tool output markers to avoid instruction overlap.
         return (
-            "stdout:" in low_text or "stderr:" in low_text or "observation_" in low_text
+            "stdout:" in low_text or "stderr:" in low_text or "observation:" in low_text
         )
 
     def _handle_finish(
@@ -257,26 +278,25 @@ class MockDSPyLM(dspy.LM):
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
             if code and not finished:
-                # Wrap multi-line code safely for shell execution
-                import base64
-
-                b64_code = base64.b64encode(code.encode()).decode()
-                cmd = f"python3 -c \"import base64; exec(base64.b64decode('{b64_code}'))\""
-
                 resp["next_tool_name"] = "execute_command"
-                resp["next_tool_args"] = {"command": cmd}
+                resp["next_tool_args"] = {"command": code}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}
 
         # Add node-specific fields (for CodeAct or ReAct extraction phase)
-        if node_key == "planner":
+        # Signature fields should be present even in ReAct finish responses
+        if node_key == "planner" or node_key == "benchmark_planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
             # Support BenchmarkPlannerSignature
             if "plan" in node_data and isinstance(node_data["plan"], dict):
                 resp["plan"] = node_data["plan"]
-        elif node_key == "reviewer":
+        elif (
+            node_key == "reviewer"
+            or node_key == "plan_reviewer"
+            or node_key == "execution_reviewer"
+        ):
             resp["review"] = node_data.get(
                 "review",
                 {
@@ -285,7 +305,7 @@ class MockDSPyLM(dspy.LM):
                     "required_fixes": [],
                 },
             )
-        elif node_key == "coder":
+        elif node_key == "coder" or node_key == "benchmark_coder":
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
@@ -294,13 +314,32 @@ class MockDSPyLM(dspy.LM):
             resp["journal"] = node_data.get("journal", "Learning complete.")
         elif node_key == "cots_search":
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
+        elif node_key == "electronics_planner":
+            resp["reasoning"] = reasoning
+            resp["summary"] = node_data.get("summary", "Electronics plan added.")
 
         if is_json:
             # Only return fields that were actually requested to avoid Adapter errors
             if expected_fields:
-                filtered_resp = {k: v for k, v in resp.items() if k in expected_fields}
-                # If we filtered everything, fallback to original resp
-                return [json.dumps(filtered_resp or resp)]
+                # Add signature fields to expected_fields if they are present in resp
+                # but NOT already in expected_fields.
+                # ReAct often asks for [next_thought, next_tool_name, next_tool_args]
+                # but then fails if [summary] is missing in the result dict if it's the last turn.
+                filtered_resp = {
+                    k: v
+                    for k, v in resp.items()
+                    if k in expected_fields
+                    or k
+                    in [
+                        "reasoning",
+                        "summary",
+                        "plan",
+                        "review",
+                        "journal",
+                        "search_summary",
+                    ]
+                }
+                return [json.dumps(filtered_resp)]
             return [json.dumps(resp)]
 
         # Fallback for plain text (rare in our CodeAct setups)

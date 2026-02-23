@@ -339,6 +339,20 @@ async def run_generation_session(
     # 4. Final Asset Persistence
     await _persist_session_assets(final_state, session_id)
 
+    # 5. Final status update
+    if final_state.session.status == SessionStatus.ACCEPTED:
+        async with session_factory() as db:
+            episode = await db.get(Episode, session_id)
+            if episode:
+                episode.status = EpisodeStatus.COMPLETED
+                await db.commit()
+    elif final_state.session.status in [SessionStatus.FAILED, SessionStatus.REJECTED]:
+        async with session_factory() as db:
+            episode = await db.get(Episode, session_id)
+            if episode and episode.status != EpisodeStatus.FAILED:
+                episode.status = EpisodeStatus.FAILED
+                await db.commit()
+
     logger.info(
         "generation_session_complete",
         session_id=session_id,
@@ -447,7 +461,14 @@ async def _update_episode_persistence(
         if episode:
             from shared.models.schemas import EpisodeMetadata
 
-            episode.status = EpisodeStatus.RUNNING
+            # Map SessionStatus to EpisodeStatus for UI/Test polling
+            if new_status == SessionStatus.PLANNED:
+                episode.status = EpisodeStatus.PLANNED
+            elif new_status == SessionStatus.FAILED:
+                episode.status = EpisodeStatus.FAILED
+            else:
+                episode.status = EpisodeStatus.RUNNING
+
             metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
             metadata.detailed_status = new_status
             metadata.validation_logs = validation_logs

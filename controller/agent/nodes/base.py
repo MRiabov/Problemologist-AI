@@ -92,7 +92,21 @@ class BaseNode:
         for t in tools:
             # Now tools are already raw functions or wrapped in search_cots_catalog
             name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
-            tool_fns[name] = t
+
+            # WP11: ReAct (sync) needs sync functions. Wrap async tools.
+            if asyncio.iscoroutinefunction(t):
+
+                def sync_wrapper(*args, _t=t, **kwargs):
+                    new_loop = asyncio.new_event_loop()
+                    try:
+                        return new_loop.run_until_complete(_t(*args, **kwargs))
+                    finally:
+                        new_loop.close()
+
+                sync_wrapper.__name__ = name
+                tool_fns[name] = sync_wrapper
+            else:
+                tool_fns[name] = t
         return tool_fns
 
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
@@ -187,12 +201,15 @@ class BaseNode:
         tool_factory: Callable,
         validate_files: list[str],
         node_type: str,
-        max_retries: int = 3,
+        max_retries: int | None = None,
     ) -> tuple[Any, dict[str, Any], str]:
         """
         Reusable execution loop for DSPy nodes with retries and validation.
         Returns (prediction, artifacts, journal_entry).
         """
+        if max_retries is None:
+            max_retries = 1 if settings.is_integration_test else 3
+
         from controller.agent.dspy_utils import WorkerInterpreter
         from worker_heavy.utils.file_validation import validate_node_output
 
@@ -233,6 +250,8 @@ class BaseNode:
         if episode_id and str(episode_id).strip():
             db_callback = DatabaseCallbackHandler(episode_id=episode_id)
 
+        dspy_timeout = 300.0 if settings.is_integration_test else 300.0
+
         try:
             while retry_count < max_retries:
                 try:
@@ -251,7 +270,7 @@ class BaseNode:
                         try:
                             prediction = await asyncio.wait_for(
                                 asyncio.to_thread(program, **inputs),
-                                timeout=300.0,  # 5 minutes
+                                timeout=dspy_timeout,
                             )
                         except TimeoutError:
                             logger.error(
@@ -259,7 +278,7 @@ class BaseNode:
                                 session_id=self.ctx.session_id,
                             )
                             raise RuntimeError(
-                                f"DSPy program {node_type} timed out after 300s"
+                                f"DSPy program {node_type} timed out after {dspy_timeout}s"
                             )
 
                         logger.info(

@@ -2,6 +2,7 @@ import structlog
 
 from shared.enums import ElectronicComponentType
 from shared.models.schemas import ElectronicsSection
+from shared.models.simulation import SimulationFailure
 
 logger = structlog.get_logger(__name__)
 
@@ -13,7 +14,7 @@ class ElectronicsManager:
         self.electronics = electronics
         self.is_powered_map: dict[str, bool] = {}
         self.switch_states: dict[str, bool] = {}
-        self.validation_error: str | None = None
+        self.validation_error: SimulationFailure | str | None = None
 
         if self.electronics:
             for comp in self.electronics.components:
@@ -61,7 +62,11 @@ class ElectronicsManager:
                         min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
                     )
             else:
-                self.validation_error = ", ".join(validation.errors)
+                self.validation_error = (
+                    validation.failures[0]
+                    if validation.failures
+                    else ", ".join(validation.errors)
+                )
                 logger.warning("circuit_validation_failed", errors=validation.errors)
                 self._fallback_update()
 

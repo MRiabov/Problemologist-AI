@@ -47,14 +47,14 @@ TEST_NO_LIMIT_XML = """
 def overload_loop(tmp_path):
     xml_path = tmp_path / "test_overload.xml"
     xml_path.write_text(TEST_OVERLOAD_XML)
-    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
 
 
 @pytest.fixture
 def no_limit_loop(tmp_path):
     xml_path = tmp_path / "test_no_limit.xml"
     xml_path.write_text(TEST_NO_LIMIT_XML)
-    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
 
 
 class TestMotorOverload:
@@ -71,7 +71,8 @@ class TestMotorOverload:
         metrics = overload_loop.step({}, duration=3.0, dynamic_controllers=controllers)
 
         assert not metrics.success
-        assert metrics.failure.matches(FailureReason.MOTOR_OVERLOAD, "servo")
+        assert metrics.failure.reason == FailureReason.MOTOR_OVERLOAD
+        assert metrics.failure.detail == "servo"
 
     def test_normal_operation_no_overload(self, no_limit_loop):
         """Test that normal operation doesn't trigger overload."""

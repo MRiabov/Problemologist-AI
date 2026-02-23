@@ -110,7 +110,7 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             BenchmarkPlannerSignature,
             state,
             inputs,
@@ -127,7 +127,9 @@ class BenchmarkPlannerNode(BaseNode):
             return state
 
         state.plan = prediction.plan
-        state.journal += f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
+        state.journal += (
+            f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
+        )
         state.messages.append(
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
@@ -429,7 +431,7 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         inputs = {"journal": state.journal}
-        program = dspy.Predict(SummarizerSignature)
+        program = dspy.ReAct(SummarizerSignature, tools=[])
 
         with dspy.settings.context(lm=self.ctx.dspy_lm):
             prediction = await asyncio.to_thread(program, **inputs)

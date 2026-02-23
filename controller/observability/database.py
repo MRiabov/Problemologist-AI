@@ -7,6 +7,7 @@ from typing import Any
 import structlog
 from pydantic import BaseModel
 from opentelemetry import trace
+from langchain_core.callbacks import BaseCallbackHandler
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
@@ -29,7 +30,7 @@ class TraceBroadcast(BaseModel):
     langfuse_trace_id: str | None
 
 
-class DatabaseCallbackHandler:
+class DatabaseCallbackHandler(BaseCallbackHandler):
     """Standalone recorder that stores explicit traces in the database."""
 
     def __init__(

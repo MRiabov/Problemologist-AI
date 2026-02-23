@@ -76,7 +76,8 @@ def test_genesis_step_breakage(mock_gs):
     res = backend.step(0.002)
 
     assert res.success is False
-    assert res.failure.matches(FailureReason.PART_BREAKAGE, "test_part")
+    assert res.failure == FailureReason.PART_BREAKAGE
+    assert res.failure.detail == "test_part"
 
 
 def test_get_stress_summaries(mock_gs):

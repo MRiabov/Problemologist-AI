@@ -7,7 +7,7 @@ from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 
 
 def test_get_physics_backend():
-    mujoco = get_physics_backend(SimulatorBackendType.MUJOCO)
+    mujoco = get_physics_backend(SimulatorBackendType.GENESIS)
     assert isinstance(mujoco, MuJoCoBackend)
 
     genesis = get_physics_backend(SimulatorBackendType.GENESIS)
@@ -25,7 +25,7 @@ def test_get_simulation_builder(tmp_path):
         MuJoCoSimulationBuilder,
     )
 
-    mj_builder = get_simulation_builder(tmp_path, SimulatorBackendType.MUJOCO)
+    mj_builder = get_simulation_builder(tmp_path, SimulatorBackendType.GENESIS)
     assert isinstance(mj_builder, MuJoCoSimulationBuilder)
 
     gn_builder = get_simulation_builder(tmp_path, SimulatorBackendType.GENESIS)

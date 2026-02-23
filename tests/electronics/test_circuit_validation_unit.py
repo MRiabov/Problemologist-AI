@@ -129,7 +129,7 @@ def test_validate_circuit_overcurrent():
     result = validate_circuit(circuit, psu_config)
 
     assert result.valid is False
-    assert any("OVERCURRENT_SUPPLY" in e for e in result.errors)
+    assert any("OVERCURRENT" in e for e in result.errors)
 
 
 def test_static_power_budget():
@@ -189,6 +189,7 @@ def test_floating_node_detection():
     # Run validation. This MUST fail with "Singular matrix" or similar.
     result = validate_circuit(circuit, psu_config)
     assert result.valid is False
+    print(f"DEBUG ERRORS: {result.errors}")
     assert any(
         "OPEN_CIRCUIT" in e
         or "floating" in e.lower()

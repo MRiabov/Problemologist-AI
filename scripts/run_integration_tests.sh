@@ -328,8 +328,11 @@ if [ "$HAS_MARKER" = false ] && [ "$HAS_FILE" = false ]; then
     # No args, use default markers
     PYTEST_ARGS=("-m" "integration_p0 or integration_p1 or integration_p2")
   fi
-  # If more than 1 arg and no -m/file, we don't know what to do, 
-  # so we leave it to pytest (it might be -k, etc.)
+fi
+
+# ALWAYS restrict to tests/integration if no file is specified to speed up discovery
+if [ "$HAS_FILE" = false ]; then
+  PYTEST_ARGS+=("tests/integration")
 fi
 
 # We use uv run to execute pytest within the virtual environment. 

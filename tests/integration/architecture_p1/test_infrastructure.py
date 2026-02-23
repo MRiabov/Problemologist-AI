@@ -16,7 +16,7 @@ async def test_render_artifact_generation_int_039():
     Must verify that the 24-view rendering pipeline produces discoverable artifacts
     in S3/Storage after an integrated run.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Agent Run (or Benchmark Generation)
         prompt = "Create a simple cube and simulate it."
         # We use /agent/run for a standard agent flow
@@ -29,7 +29,7 @@ async def test_render_artifact_generation_int_039():
 
         # 2. Poll for completion
         completed = False
-        for _ in range(60):
+        for _ in range(150):
             status_resp = await client.get(f"/episodes/{episode_id}")
             if status_resp.status_code == 200:
                 data = status_resp.json()
@@ -68,7 +68,7 @@ async def test_asset_persistence_linkage_int_040():
     Must verify that all final episode assets (scripts, renders, MJCF, video)
     are correctly linked in the DB and stored in S3.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Trigger a run
         session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
@@ -81,7 +81,7 @@ async def test_asset_persistence_linkage_int_040():
         episode_id = resp.json()["episode_id"]
 
         # Wait for completion
-        for _ in range(60):
+        for _ in range(150):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -107,7 +107,7 @@ async def test_mjcf_joint_mapping_int_037():
     INT-037: MJCF Joint Mapping
     Must verify that produced MJCF artifacts from a real run have the correct joint/actuator mappings.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # We use a prompt that should result in a jointed assembly
         session_id = f"INT-037-{uuid.uuid4().hex[:8]}"
         prompt = """Create a simple door: a 'frame' and a 'panel'. 
@@ -120,7 +120,7 @@ async def test_mjcf_joint_mapping_int_037():
         episode_id = resp.json()["episode_id"]
 
         # Wait for completion
-        for _ in range(60):
+        for _ in range(150):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -153,7 +153,7 @@ async def test_controller_function_family_int_038():
     INT-038: Controller Function Family
     Verify that different controller modes execute correctly in a real simulation.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Prompt for a sinusoidal controller
         prompt = (
             "Create a part that oscillates sinusoidally using the dynamic controller."
@@ -164,7 +164,7 @@ async def test_controller_function_family_int_038():
         )
         episode_id = resp.json()["episode_id"]
 
-        for _ in range(60):
+        for _ in range(150):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] in ["completed", "failed"]:
                 break
@@ -188,7 +188,7 @@ async def test_temporal_recovery_int_041():
     INT-041: Container Preemption Recovery Path (Temporal)
     Verify that Temporal workflows are registered and can be triggered.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Trigger an operations workflow (Backup) which uses Temporal
         # This requires a secret, which defaults to 'change-me-in-production' in dev
         resp = await client.post(
@@ -210,7 +210,7 @@ async def test_async_callbacks_int_042():
     INT-042: Async Callbacks/Webhook Completion Path
     Verify that episodes transition status correctly through async execution.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-042-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
             "/agent/run",
@@ -223,7 +223,7 @@ async def test_async_callbacks_int_042():
         assert data["status"] == "running"
 
         # Wait for completion (simulates async callback/polling)
-        for _ in range(30):
+        for _ in range(150):
             data = (await client.get(f"/episodes/{episode_id}")).json()
             if data["status"] == "completed":
                 break

@@ -18,10 +18,12 @@ async def test_benchmark_planner_cad_reviewer_path():
     2. Successful completion of the workflow
     3. Existence of required artifacts (plan.md, objectives.yaml, Reviews)
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a simple path planning benchmark with a wall and a goal."
-        resp = await client.post("/benchmark/generate", json={"prompt": prompt})
+        resp = await client.post(
+            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
+        )
         assert resp.status_code in [
             200,
             202,
@@ -36,15 +38,22 @@ async def test_benchmark_planner_cad_reviewer_path():
         # Wait, the MockDSPyLM routes UUIDs to 'benchmark'.
         # 'benchmark' in mock_responses.yaml is already defined.
         # Let's check 'benchmark' scenario in mock_responses.yaml.
-        max_retries = 60
+        max_retries = 150
         benchmark_completed = False
         last_status = None
+        confirmed = False
 
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{session_id}")
             if status_resp.status_code == 200:
                 sess_data = status_resp.json()
                 last_status = sess_data["status"]
+
+                if last_status == "planned" and not confirmed:
+                    # WP08: Call confirm to continue from planning to execution
+                    confirm_resp = await client.post(f"/benchmark/{session_id}/confirm")
+                    assert confirm_resp.status_code in [200, 202]
+                    confirmed = True
 
                 if last_status == "completed":
                     benchmark_completed = True

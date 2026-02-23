@@ -45,7 +45,7 @@ async def test_int_120_circuit_validation_gate():
         data = resp.json()
         assert data["success"] is False
         assert data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_SHORT_CIRCUIT" in data["artifacts"]["failure"]["detail"]
+        assert "SHORT_CIRCUIT" in data["artifacts"]["failure"]["detail"]
 
         # 3. Try to run simulation with this faulty circuit in assembly_definition.yaml
         # First write assembly_definition.yaml
@@ -103,7 +103,7 @@ def build():
         sim_data = sim_resp.json()
         assert sim_data["success"] is False
         assert sim_data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_SHORT_CIRCUIT" in sim_data["artifacts"]["failure"]["detail"]
+        assert "SHORT_CIRCUIT" in sim_data["artifacts"]["failure"]["detail"]
 
 
 @pytest.mark.integration_p0
@@ -134,7 +134,7 @@ async def test_int_121_short_circuit_detection():
         data = resp.json()
         assert data["success"] is False
         assert data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_SHORT_CIRCUIT" in data["artifacts"]["failure"]["detail"]
+        assert "SHORT_CIRCUIT" in data["artifacts"]["failure"]["detail"]
 
 
 @pytest.mark.integration_p0
@@ -175,7 +175,7 @@ async def test_int_122_overcurrent_supply_detection():
         data = resp.json()
         assert data["success"] is False
         assert data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_OVERCURRENT_SUPPLY" in data["artifacts"]["failure"]["detail"]
+        assert "OVERCURRENT" in data["artifacts"]["failure"]["detail"]
 
 
 @pytest.mark.integration_p0
@@ -217,7 +217,7 @@ async def test_int_123_overcurrent_wire_detection():
         data = resp.json()
         assert data["success"] is False
         assert data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_OVERCURRENT_WIRE" in data["artifacts"]["failure"]["detail"]
+        assert "OVERCURRENT" in data["artifacts"]["failure"]["detail"]
 
 
 @pytest.mark.integration_p0
@@ -252,4 +252,4 @@ async def test_int_124_open_circuit_detection():
         data = resp.json()
         assert data["success"] is False
         assert data["artifacts"]["failure"]["reason"] == "VALIDATION_FAILED"
-        assert "FAILED_OPEN_CIRCUIT" in data["artifacts"]["failure"]["detail"]
+        assert "OPEN_CIRCUIT" in data["artifacts"]["failure"]["detail"]

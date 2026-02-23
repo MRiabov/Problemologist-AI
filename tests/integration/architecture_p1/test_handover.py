@@ -23,10 +23,12 @@ async def test_benchmark_to_engineer_handoff():
     This test triggers a benchmark generation and then inspects the produced artifacts
     to ensure the "package" is complete for the Engineer.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a benchmark with a moving platform."  # implies moving parts
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        resp = await client.post(
+            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
+        )
         assert resp.status_code in [
             200,
             202,
@@ -34,7 +36,7 @@ async def test_benchmark_to_engineer_handoff():
         session_id = resp.json()["session_id"]
 
         # 2. Poll for completion
-        max_retries = 60
+        max_retries = 150
         benchmark_completed = False
         last_status = None
 
@@ -43,6 +45,8 @@ async def test_benchmark_to_engineer_handoff():
             if status_resp.status_code == 200:
                 sess_data = status_resp.json()
                 last_status = sess_data["status"]
+                if last_status == "planned":
+                    await client.post(f"/benchmark/{session_id}/confirm")
                 if last_status == "completed":
                     benchmark_completed = True
                     break

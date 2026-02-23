@@ -7,7 +7,11 @@ import structlog
 import yaml
 from build123d import Compound
 
-from shared.enums import ElectronicComponentType, MotorControlMode
+from shared.enums import (
+    ElectronicComponentType,
+    FailureReason,
+    MotorControlMode,
+)
 from shared.models.schemas import (
     AssemblyDefinition,
     CotsPartEstimate,
@@ -18,6 +22,7 @@ from shared.models.schemas import (
     ObjectivesYaml,
 )
 from shared.models.simulation import (
+    SimulationFailure,
     SimulationResult,
 )
 from shared.simulation.backends import StressField

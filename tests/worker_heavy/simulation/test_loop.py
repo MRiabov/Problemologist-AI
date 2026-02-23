@@ -36,7 +36,7 @@ TEST_XML = """
 def sim_loop(tmp_path):
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
-    loop = SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
+    loop = SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
     return loop
 
 
@@ -123,7 +123,7 @@ def test_validation_hook_failure(tmp_path):
 
         metrics = loop.step({})
         assert metrics.success is False
-        assert metrics.failure.matches(FailureReason.VALIDATION_FAILED)
+        assert metrics.failure.reason == FailureReason.VALIDATION_FAILED
         assert "Part too large" in metrics.failure.detail
         # Check that it didn't step (total_time should be 0.0)
         assert metrics.total_time == 0.0

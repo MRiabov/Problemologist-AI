@@ -19,19 +19,25 @@ def mock_worker():
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.electronics_reviewer.ElectronicsReviewerNode._run_program")
+@patch(
+    "controller.agent.nodes.electronics_reviewer.ElectronicsReviewerNode._run_program"
+)
 async def test_electronics_reviewer_node_approve(mock_run, mock_worker):
     # Mock _run_program return value
     mock_run.return_value = (
         MagicMock(
-            review=ReviewResult(decision=ReviewDecision.APPROVED, reason="Circuit is correct.")
+            review=ReviewResult(
+                decision=ReviewDecision.APPROVED, reason="Circuit is correct."
+            )
         ),
         [],
         "\nElectronics Reviewer Journal",
     )
 
     state = AgentState(
-        task="Design a circuit", journal="Electronics details", session_id="test-session"
+        task="Design a circuit",
+        journal="Electronics details",
+        session_id="test-session",
     )
 
     result = await electronics_reviewer_node(state)
@@ -40,13 +46,16 @@ async def test_electronics_reviewer_node_approve(mock_run, mock_worker):
     assert "Circuit is correct" in result.feedback
     assert "Electronics Review Decision: approved" in result.journal
     assert any(
-        isinstance(m, AIMessage) and "Electronics Review decision: approved" in m.content
+        isinstance(m, AIMessage)
+        and "Electronics Review decision: approved" in m.content
         for m in result.messages
     )
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.nodes.electronics_reviewer.ElectronicsReviewerNode._run_program")
+@patch(
+    "controller.agent.nodes.electronics_reviewer.ElectronicsReviewerNode._run_program"
+)
 async def test_electronics_reviewer_node_reject(mock_run, mock_worker):
     mock_run.return_value = (
         MagicMock(
