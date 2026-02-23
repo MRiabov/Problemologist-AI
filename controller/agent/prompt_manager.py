@@ -25,6 +25,7 @@ class PromptManager:
             "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
             "plan_reviewer": data["engineer"]["critic"]["system"],
             "execution_reviewer": data["engineer"]["critic"]["system"],
+            "electronics_reviewer": data["engineer"]["critic"]["system"],
             # Benchmark Generator
             "benchmark_planner": data["benchmark_generator"]["planner"]["system"],
             "benchmark_coder": data["benchmark_generator"]["coder"]["system"],
