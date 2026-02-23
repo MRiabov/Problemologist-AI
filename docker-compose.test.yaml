@@ -42,6 +42,8 @@ services:
       until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do echo 'Waiting for Minio...'; sleep 1; done;
       /usr/bin/mc mb myminio/problemologist || true;
       /usr/bin/mc mb myminio/problemologist-backup || true;
+      /usr/bin/mc mb myminio/benchmarks-source || true;
+      /usr/bin/mc mb myminio/benchmarks-assets || true;
       exit 0;
       "
 

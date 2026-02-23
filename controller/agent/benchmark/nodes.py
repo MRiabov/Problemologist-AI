@@ -167,7 +167,7 @@ class BenchmarkCoderSignature(dspy.Signature):
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     """
     Generates build123d script and validates it.
-    Refactored to use DSPy CodeAct with remote worker execution.
+    Refactored to use DSPy ReAct with remote worker execution.
     """
     session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
@@ -202,14 +202,15 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     tools = get_benchmark_tools(ctx.fs, session_id)
     tool_functions = {}
     for t in tools:
-        func = getattr(t, "func", getattr(t, "_run", None))
+        name = getattr(t, "name", getattr(t, "__name__", str(t)))
+        func = getattr(t, "func", getattr(t, "_run", t))
         if func:
-            tool_functions[t.name] = func
+            tool_functions[name] = func
 
-    program = dspy.CodeAct(
+    # Refactored to use ReAct instead of CodeAct to avoid tool indentation issues with remote interpreter
+    program = dspy.ReAct(
         BenchmarkCoderSignature.with_instructions(ctx.pm.render("benchmark_coder")),
         tools=list(tool_functions.values()),
-        interpreter=interpreter,
     )
 
     # WP08: Set node_type on mock LM if available for explicit lookup
@@ -219,6 +220,24 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     # Invoke DSPy Program
     journal_entry = ""
     try:
+        # ReAct tools must be sync. BaseNode handles this via _get_tool_functions
+        # but here we are doing it manually for now to stay close to original logic.
+        sync_tools = {}
+        for name, fn in tool_functions.items():
+            if asyncio.iscoroutinefunction(fn):
+                def _sync_wrap(*args, _fn=fn, **kwargs):
+                    new_loop = asyncio.new_event_loop()
+                    try:
+                        return new_loop.run_until_complete(_fn(*args, **kwargs))
+                    finally:
+                        new_loop.close()
+                _sync_wrap.__name__ = name
+                sync_tools[name] = _sync_wrap
+            else:
+                sync_tools[name] = fn
+
+        program.tools = list(sync_tools.values())
+
         with dspy.settings.context(lm=ctx.dspy_lm):
             logger.info("coder_dspy_invoke_start", session_id=session_id)
             prediction = await asyncio.wait_for(
@@ -257,8 +276,15 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     if state.current_script:
         from worker_heavy.utils.file_validation import validate_node_output
 
+        # Read all required files for validation
+        files_to_validate = {SCRIPT_FILE: state.current_script}
+        for req_file in ["plan.md", "todo.md", "objectives.yaml"]:
+            if req_file != SCRIPT_FILE:
+                with contextlib.suppress(Exception):
+                    files_to_validate[req_file] = await ctx.worker_client.read_file(req_file)
+
         is_valid, errors = validate_node_output(
-            "coder", {SCRIPT_FILE: state.current_script}
+            "coder", files_to_validate
         )
         if not is_valid:
             logger.warning("benchmark_coder_validation_failed", errors=errors)
@@ -514,11 +540,12 @@ class BenchmarkReviewerNode(BaseNode):
         def get_reviewer_tools(fs, session_id):
             tools = get_benchmark_tools(fs, session_id)
             # Filter tools and add specialized one
-            final_tools = [
-                t
-                for t in tools
-                if t.name not in ("write_file", "edit_file", "submit_for_review")
-            ]
+            final_tools = []
+            for t in tools:
+                name = getattr(t, "name", getattr(t, "__name__", None))
+                if name not in ("write_file", "edit_file", "submit_for_review"):
+                    final_tools.append(t)
+
             final_tools.append(write_review_file)
             return final_tools
 
@@ -534,7 +561,7 @@ class BenchmarkReviewerNode(BaseNode):
 
         try:
             prediction, _, journal_entry = await self._run_program(
-                dspy.CodeAct,
+                dspy.ReAct,
                 BenchmarkReviewerSignature,
                 state,
                 inputs,
