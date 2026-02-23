@@ -30,7 +30,7 @@ async def run(_ctx=None):
 
         from shared.simulation.schemas import SimulatorBackendType
 
-        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.GENESIS)
+        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.MUJOCO)
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
