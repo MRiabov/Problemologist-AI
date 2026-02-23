@@ -319,6 +319,40 @@ class SimulationLoop:
         self.overloaded_motors: list[str] = []
         self.objective_evaluator.reset()
 
+    def _check_switch_toggles(
+        self,
+        control_inputs: dict[str, float],
+        current_time: float | None = None,
+        dynamic_controllers: dict[str, callable] | None = None,
+    ):
+        """T024: Check for switch/relay toggles in controls."""
+        if not self.electronics:
+            return
+
+        sw_states = self.electronics_manager.switch_states
+        dirty = False
+
+        # 1. Check static control_inputs
+        for name, val in control_inputs.items():
+            if name in sw_states:
+                new_state = val > 0.5
+                if sw_states[name] != new_state:
+                    sw_states[name] = new_state
+                    dirty = True
+
+        # 2. Check dynamic_controllers
+        if dynamic_controllers and current_time is not None:
+            for name, controller in dynamic_controllers.items():
+                if name in sw_states:
+                    val = controller(current_time)
+                    new_state = val > 0.5
+                    if sw_states[name] != new_state:
+                        sw_states[name] = new_state
+                        dirty = True
+
+        if dirty:
+            self._electronics_dirty = True
+
     def step(
         self,
         control_inputs: dict[str, float],
@@ -334,6 +368,9 @@ class SimulationLoop:
         """
         if reset_metrics:
             self.reset_metrics()
+
+        # 0. Check for initial switch toggles
+        self._check_switch_toggles(control_inputs, 0.0, dynamic_controllers)
 
         # 1. Pre-simulation validation
         validation_error_metrics = self._perform_pre_simulation_validation()
@@ -378,6 +415,7 @@ class SimulationLoop:
 
             # Apply dynamic controllers
             if dynamic_controllers:
+                self._check_switch_toggles({}, current_time, dynamic_controllers)
                 self._apply_gated_controls({}, current_time, dynamic_controllers)
 
             # Step backend
