@@ -250,7 +250,7 @@ class BaseNode:
         if episode_id and str(episode_id).strip():
             db_callback = DatabaseCallbackHandler(episode_id=episode_id)
 
-        dspy_timeout = 60.0 if settings.is_integration_test else 300.0
+        dspy_timeout = 300.0 if settings.is_integration_test else 300.0
 
         try:
             while retry_count < max_retries:

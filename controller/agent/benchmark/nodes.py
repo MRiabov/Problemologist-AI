@@ -431,7 +431,7 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         inputs = {"journal": state.journal}
-        program = dspy.ReAct(SummarizerSignature)
+        program = dspy.ReAct(SummarizerSignature, tools=[])
 
         with dspy.settings.context(lm=self.ctx.dspy_lm):
             prediction = await asyncio.to_thread(program, **inputs)

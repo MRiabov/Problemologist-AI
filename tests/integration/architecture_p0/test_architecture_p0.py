@@ -203,17 +203,17 @@ objectives:
       max: [4.5, 4.5, 4.5]
   build_zone:
     min: [0.5, 0.5, 0.5]
-    max: [100.5, 100.5, 100.5]
+    max: [20.5, 20.5, 20.5]
 simulation_bounds:
-    min: [-100.5, -100.5, -100.5]
-    max: [100.5, 100.5, 100.5]
+    min: [-20.5, -20.5, -20.5]
+    max: [20.5, 20.5, 20.5]
 moved_object:
     label: "target_box"
     shape: "sphere"
     start_position: [3.5, 3.5, 3.5]
     runtime_jitter: [0.0, 0.0, 0.0]
 constraints:
-    max_unit_cost: 100.5
+    max_unit_cost: 20.5
     max_weight_g: 10.5
 """
 
@@ -325,18 +325,18 @@ objectives:
     max: [10, 10, 10]
   forbid_zones: []
   build_zone:
-    min: [-100, -100, -100]
-    max: [100, 100, 100]
+    min: [-20, -20, -20]
+    max: [20, 20, 20]
 simulation_bounds:
-    min: [-100, -100, -100]
-    max: [100, 100, 100]
+    min: [-20, -20, -20]
+    max: [20, 20, 20]
 moved_object:
     label: "target_box"
     shape: "sphere"
     start_position: [0, 0, 0.5]
     runtime_jitter: [0.1, 0.1, 0]
 constraints:
-    max_unit_cost: 100
+    max_unit_cost: 20
     max_weight_g: 10
 """
         await client.post(
