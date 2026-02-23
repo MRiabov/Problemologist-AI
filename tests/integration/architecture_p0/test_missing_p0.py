@@ -65,12 +65,20 @@ async def test_int_005_trace_realtime_broadcast():
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
 
-        # Wait a bit for traces
-        await asyncio.sleep(5.0)
+        # Wait for traces to appear (polling loop to avoid flakiness)
+        max_attempts = 30
+        traces = []
+        for _ in range(max_attempts):
+            await asyncio.sleep(1.0)
+            resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            if resp.status_code == 200:
+                data = resp.json()
+                traces = data.get("traces", [])
+                if len(traces) > 0:
+                    break
+        else:
+            pytest.fail(f"No traces appeared for episode {episode_id} after {max_attempts} seconds")
 
-        resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = resp.json()
-        traces = data.get("traces", [])
         assert len(traces) > 0
 
 
@@ -81,18 +89,13 @@ async def test_int_011_planner_target_caps_validation():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
 
-        # Scenario: Planner sets target > benchmark cap
-        # We simulate this by writing an invalid assembly_definition.yaml
-        # and calling the validation utility (via heavy worker or direct if possible)
-        # But usually this is caught in the PlannerNode logic.
-
-        # Let's test the validation API directly
+        # Scenario: Planner sets target > benchmark cap (150 > 100)
         invalid_asm = """
 version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
   benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
+  planner_target_max_unit_cost_usd: 150.0
   planner_target_max_weight_g: 500.0
 totals:
   estimated_unit_cost_usd: 10.0
@@ -105,10 +108,27 @@ totals:
             headers={"X-Session-ID": session_id},
         )
 
-        # In current architecture, we don't have a direct /validate_yaml endpoint
-        # but we can check if the agent handles it.
-        # Actually, let's just verify the Pydantic model behavior if we can.
-        pass
+        # We use the worker's runtime to verify the model validation logic directly
+        code = """
+from worker_heavy.utils.file_validation import validate_assembly_definition_yaml
+with open("invalid_asm.yaml", "r") as f:
+    content = f.read()
+is_valid, errors = validate_assembly_definition_yaml(content)
+print(f"IS_VALID: {is_valid}")
+print(f"ERRORS: {errors}")
+if is_valid:
+    exit(1)
+if not any("must be less than or equal to benchmark max cost" in str(e) for e in errors):
+    exit(2)
+"""
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json={"code": code},
+            headers={"X-Session-ID": session_id},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["exit_code"] == 0, f"Validation check failed: {data['stdout']} {data['stderr']}"
 
 
 @pytest.mark.integration_p0
