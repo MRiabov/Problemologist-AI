@@ -57,7 +57,7 @@ async def test_sidecar_git_conflict_resolution(mock_repo, mock_dspy_lm):
         mock_repo.git.diff.return_value = "conflict.md"
 
         # Mock DSPy Predict call
-        with patch("dspy.Predict") as mock_predict:
+        with patch("dspy.ReAct") as mock_predict:
             mock_resolver = mock_predict.return_value
             mock_resolver.return_value = MagicMock(
                 resolved_content="Resolved content without markers"
@@ -110,7 +110,7 @@ async def test_sidecar_git_conflict_resolution_abort_on_failure(
         mock_repo.git.diff.return_value = "conflict.md"
 
         # Mock DSPy Predict to raise Exception
-        with patch("dspy.Predict") as mock_predict:
+        with patch("dspy.ReAct") as mock_predict:
             mock_resolver = mock_predict.return_value
             mock_resolver.side_effect = Exception("DSPy failed")
 
