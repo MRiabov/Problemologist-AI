@@ -18,5 +18,6 @@ class BenchmarkGeneratorState(BaseModel):
     review_feedback: str | None = None  # Comments from reviewer
     review_decision: ReviewDecision | None = None  # Structured decision from reviewer
     review_round: int = 0  # Current review iteration
+    journal: str = ""  # Reasoning journal
     plan: RandomizationStrategy | None = None  # The randomization strategy
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
