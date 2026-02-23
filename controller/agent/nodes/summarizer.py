@@ -40,7 +40,7 @@ class SummarizerNode(BaseNode):
         inputs = {"journal": state.journal}
 
         # Use a simple chain of thought or basic program for summarization
-        program = dspy.Predict(SummarizerSignature)
+        program = dspy.ReAct(SummarizerSignature)
 
         import asyncio
 

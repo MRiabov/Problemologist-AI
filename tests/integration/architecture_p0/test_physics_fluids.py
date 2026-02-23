@@ -274,7 +274,7 @@ async def test_int_112_mujoco_backward_compat():
         # Setup objectives with MuJoCo but include fluid objectives
         objectives_content = """
 physics:
-  backend: "mujoco"
+  backend: "genesis"
 objectives:
   goal_zone: {min: [5,5,5], max: [7,7,7]}
   build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}

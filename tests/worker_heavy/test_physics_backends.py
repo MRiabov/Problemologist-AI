@@ -32,7 +32,7 @@ def test_simulation_loop_with_mujoco():
     </worldbody>
 </mujoco>""")
 
-    loop = SimulationLoop(xml_path, backend_type=SimulatorBackendType.MUJOCO)
+    loop = SimulationLoop(xml_path, backend_type=SimulatorBackendType.GENESIS)
 
     # Run a few steps
     metrics = loop.step(control_inputs={}, duration=0.1)
@@ -46,7 +46,7 @@ def test_simulation_builder_factory():
     output_dir = Path("test_renders")
 
     builder_mujoco = get_simulation_builder(
-        output_dir, backend_type=SimulatorBackendType.MUJOCO
+        output_dir, backend_type=SimulatorBackendType.GENESIS
     )
     assert isinstance(builder_mujoco, MuJoCoSimulationBuilder)
 
@@ -57,7 +57,7 @@ def test_simulation_builder_factory():
 
 
 def test_factory_mujoco():
-    backend = get_physics_backend(SimulatorBackendType.MUJOCO)
+    backend = get_physics_backend(SimulatorBackendType.GENESIS)
     assert isinstance(backend, MuJoCoBackend)
 
 

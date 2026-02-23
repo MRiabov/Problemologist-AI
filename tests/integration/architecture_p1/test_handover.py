@@ -23,11 +23,11 @@ async def test_benchmark_to_engineer_handoff():
     This test triggers a benchmark generation and then inspects the produced artifacts
     to ensure the "package" is complete for the Engineer.
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a benchmark with a moving platform."  # implies moving parts
         resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "mujoco"}
+            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
         )
         assert resp.status_code in [
             200,

@@ -110,7 +110,7 @@ class BenchmarkPlannerNode(BaseNode):
         }
 
         prediction, _, journal_entry = await self._run_program(
-            dspy.Predict,
+            dspy.ReAct,
             BenchmarkPlannerSignature,
             state,
             inputs,
@@ -431,7 +431,7 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         inputs = {"journal": state.journal}
-        program = dspy.Predict(SummarizerSignature)
+        program = dspy.ReAct(SummarizerSignature)
 
         with dspy.settings.context(lm=self.ctx.dspy_lm):
             prediction = await asyncio.to_thread(program, **inputs)

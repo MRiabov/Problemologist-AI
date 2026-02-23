@@ -821,7 +821,7 @@ scenarios:
       generated_code: |
         from build123d import *
         from worker_heavy.utils.cad import simulate
-        simulate(Box(1,1,1), backend="mujoco")
+        simulate(Box(1,1,1), backend="genesis")
       
     reviewer:
       review:
@@ -878,7 +878,7 @@ scenarios:
       generated_code: |
         from build123d import *
         from worker_heavy.utils.cad import simulate
-        simulate(Box(10,10,10), backend="mujoco")
+        simulate(Box(10,10,10), backend="genesis")
       
     reviewer:
       review:
