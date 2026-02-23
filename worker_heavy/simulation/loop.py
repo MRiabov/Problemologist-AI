@@ -326,12 +326,14 @@ class SimulationLoop:
         dynamic_controllers: dict[str, callable] | None = None,
         render_callback=None,
         video_path: Path | None = None,
+        reset_metrics: bool = True,
     ) -> SimulationMetrics:
         """
         Runs the simulation for the specified duration.
         Returns metrics.
         """
-        self.reset_metrics()
+        if reset_metrics:
+            self.reset_metrics()
 
         # 1. Pre-simulation validation
         validation_error_metrics = self._perform_pre_simulation_validation()
@@ -678,11 +680,20 @@ class SimulationLoop:
 
     def _identify_target_body(self) -> str | None:
         """Identify the primary target body for objective tracking."""
-        target_body_name = "target_box"
         all_bodies = self.backend.get_all_body_names()
+
+        # Priority 1: Check objectives for moved_object label
+        if self.objectives and self.objectives.moved_object:
+            label = self.objectives.moved_object.label
+            if label in all_bodies:
+                return label
+
+        # Priority 2: Standard target_box name
+        target_body_name = "target_box"
         if target_body_name in all_bodies:
             return target_body_name
 
+        # Priority 3: Heuristic search
         for name in all_bodies:
             if "target" in name.lower() or "bucket" in name.lower():
                 return name
@@ -764,6 +775,7 @@ class SimulationLoop:
                         self.electronics.wiring.remove(wire)
                         self._electronics_dirty = True
                         self._update_electronics()
+                        self._electronics_dirty = False
                         break
                 except Exception:
                     pass

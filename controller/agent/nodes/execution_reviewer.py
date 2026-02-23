@@ -106,7 +106,7 @@ class ExecutionReviewerNode(BaseNode):
 
         # Emit ReviewDecisionEvent for observability
         await record_worker_events(
-            episode_id=state.session_id,
+            episode_id=state.episode_id,
             events=[
                 ReviewDecisionEvent(
                     decision=decision,

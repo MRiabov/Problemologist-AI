@@ -100,10 +100,12 @@ export async function updateBenchmarkObjectives(sessionId: string, objectives: B
     });
 }
 
-export async function confirmBenchmark(sessionId: string): Promise<any> {
+export async function confirmBenchmark(sessionId: string, comment?: string): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',
         url: `/benchmark/${sessionId}/confirm`,
+        body: { comment },
+        mediaType: 'application/json',
     });
 }
 
