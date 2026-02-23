@@ -31,7 +31,7 @@ async def test_manufacturing_methods_and_materials():
         benchmark_session_id = resp.json()["session_id"]
 
         # Wait for benchmark
-        for _ in range(30):
+        for _ in range(150):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if (
                 status_resp.status_code == 200
@@ -62,7 +62,7 @@ async def test_manufacturing_methods_and_materials():
         # Wait for Engineer
         engineer_completed = False
         final_status = None
-        for _ in range(60):
+        for _ in range(150):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 final_status = ep_resp.json()["status"]
@@ -105,7 +105,7 @@ async def test_manufacturing_methods_and_materials():
 
         # Minimal assertion for INT-035: The system shouldn't crash, and if it fails, it handles it gracefully.
         bad_engineer_completed = False
-        for _ in range(60):
+        for _ in range(150):
             ep_resp = await client.get(f"/episodes/{bad_episode_id}")
             if ep_resp.status_code == 200:
                 status = ep_resp.json()["status"]

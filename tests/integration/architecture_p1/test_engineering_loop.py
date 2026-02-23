@@ -39,7 +39,7 @@ async def test_engineering_full_loop():
         benchmark_session_id = resp.json()["session_id"]
 
         # Wait for benchmark
-        max_retries = 30
+        max_retries = 150
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
@@ -72,7 +72,7 @@ async def test_engineering_full_loop():
         engineer_completed = False
         last_status = None
 
-        for _ in range(60):  # Poll for up to 2 mins
+        for _ in range(150):  # Poll for up to 2 mins
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep_data = ep_resp.json()

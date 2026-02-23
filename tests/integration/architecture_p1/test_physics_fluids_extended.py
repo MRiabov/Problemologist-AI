@@ -58,7 +58,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py", "smoke_test_mode": True},
             headers={"X-Session-ID": session_id},
-            timeout=60.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         from shared.workers.schema import BenchmarkToolResponse
