@@ -21,7 +21,6 @@ from shared.simulation.schemas import SimulatorBackendType
 from .models import GenerationSession, SessionStatus
 from .nodes import (
     coder_node,
-    cots_search_node,
     planner_node,
     reviewer_node,
     skills_node,
@@ -42,7 +41,6 @@ def define_graph():
     workflow.add_node("planner", planner_node)
     workflow.add_node("coder", coder_node)
     workflow.add_node("reviewer", reviewer_node)
-    workflow.add_node("cots_search", cots_search_node)
     workflow.add_node("skills", skills_node)
     workflow.add_node("steer", steerability_node)
 
@@ -100,9 +98,6 @@ def define_graph():
 
     workflow.add_edge("skills", END)
     workflow.add_edge("steer", "planner")
-
-    # cots_search can be reached from planner or coder if we add those edges
-    workflow.add_edge("cots_search", "planner")
 
     return workflow.compile()
 

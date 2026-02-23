@@ -344,50 +344,6 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     return state
 
 
-class BenchmarkCOTSSearchSignature(dspy.Signature):
-    """
-    COTS Search node: Searches for components based on current needs for the benchmark.
-    You must use the provided tools to search for components.
-    When done, use SUBMIT to provide a summary of the components found.
-    """
-
-    prompt = dspy.InputField()
-    search_summary = dspy.OutputField(desc="A summary of the components found")
-
-
-@type_check
-class BenchmarkCOTSSearchNode(BaseNode):
-    """Refactored Benchmark COTS Search using BaseNode."""
-
-    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-        inputs = {"prompt": state.session.prompt}
-
-        prediction, _, _ = await self._run_program(
-            dspy.CodeAct,
-            BenchmarkCOTSSearchSignature,
-            state,
-            inputs,
-            get_benchmark_tools,
-            [],
-            "cots_search",
-        )
-
-        summary = getattr(prediction, "search_summary", "No summary provided.")
-        state.messages.append(AIMessage(content=f"COTS Search summary: {summary}"))
-        return state
-
-
-@type_check
-async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
-    from controller.config.settings import settings as global_settings
-
-    worker_light_url = global_settings.worker_light_url
-    ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
-    )
-    node = BenchmarkCOTSSearchNode(context=ctx)
-    return await node(state)
 
 
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
