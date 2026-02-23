@@ -30,6 +30,7 @@ async def test_run_generation_session_mocked():
     ):
         # Configure mock DB context manager
         mock_db_session = AsyncMock()
+        mock_db_session.add = MagicMock() # Sync
         mock_get_sessionmaker.return_value.return_value.__aenter__.return_value = (
             mock_db_session
         )

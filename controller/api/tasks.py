@@ -428,7 +428,8 @@ async def continue_agent_task(
                 db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
                 await db_callback._broadcast_trace(user_trace)
 
-                callbacks = [db_callback]
+                # Prepare callbacks list (only langfuse if present, since DB callback is now explicit)
+                callbacks = []
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
 

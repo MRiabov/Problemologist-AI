@@ -1,38 +1,49 @@
 from types import SimpleNamespace
-
 import pytest
-
 from controller.agent.dspy_utils import cad_simulation_metric
+from shared.models.schemas import ObjectivesYaml, Constraints, ObjectivesSection, BoundingBox, MovedObject, StaticRandomization
 
+def create_valid_objectives(max_cost=10.0, max_weight=5.0):
+    return ObjectivesYaml(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+            build_zone=BoundingBox(min=(0, 0, 0), max=(100, 100, 100)),
+        ),
+        simulation_bounds=BoundingBox(min=(-100, -100, -100), max=(100, 100, 100)),
+        moved_object=MovedObject(
+            label="test",
+            shape="sphere",
+            start_position=(0, 0, 0),
+            runtime_jitter=(0, 0, 0),
+            static_randomization=StaticRandomization()
+        ),
+        constraints=Constraints(max_unit_cost=max_cost, max_weight_g=max_weight)
+    )
 
 def test_metric_script_fails():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=create_valid_objectives(max_cost=10.0, max_weight=5.0),
     )
     prediction = SimpleNamespace(script_compiled=False)
 
     result = cad_simulation_metric(gold, prediction)
-    # Based on reward_config.yaml for cad_engineer, script_compiles weight is 0.05, min score is 0.02
     assert result.score == 0.02
-
 
 def test_metric_cad_fails():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=create_valid_objectives(max_cost=10.0, max_weight=5.0),
     )
     prediction = SimpleNamespace(script_compiled=True, cad_geometry_valid=False)
 
     result = cad_simulation_metric(gold, prediction)
-    # score = script_compiles.weight = 0.05
     assert result.score == 0.05
-
 
 def test_metric_full_success():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=create_valid_objectives(max_cost=10.0, max_weight=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,
@@ -45,14 +56,12 @@ def test_metric_full_success():
     )
 
     result = cad_simulation_metric(gold, prediction)
-    # Sum of weights: 0.05 + 0.08 + 0.07 + 0.05 + 0.10 + 0.05 + 0.60 = 1.0
     assert result.score == 1.0
-
 
 def test_metric_partial_sim():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=create_valid_objectives(max_cost=10.0, max_weight=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,
@@ -73,11 +82,10 @@ def test_metric_partial_sim():
     # Total: 0.40 + 0.12 = 0.52
     assert result.score == 0.52
 
-
 def test_metric_cost_overage():
     gold = SimpleNamespace(
         agent_name="cad_engineer",
-        objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
+        objectives=create_valid_objectives(max_cost=10.0, max_weight=5.0),
     )
     prediction = SimpleNamespace(
         script_compiled=True,

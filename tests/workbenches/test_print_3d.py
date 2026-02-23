@@ -16,7 +16,7 @@ def test_3dp_valid_part(config):
     assert result.is_manufacturable is True
     assert len(result.violations) == 0
     assert result.unit_cost > 0
-    assert "cost_breakdown" in result.metadata
+    assert result.metadata.cost_breakdown is not None
 
 
 def test_3dp_invalid_part_multi_body(config):

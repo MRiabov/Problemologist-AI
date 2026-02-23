@@ -34,6 +34,7 @@ async def test_run_generation_session_exception_handling():
 
     # Mock database session and update statement
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     mock_session_factory = MagicMock()
     mock_session_factory.return_value.__aenter__.return_value = mock_db
 

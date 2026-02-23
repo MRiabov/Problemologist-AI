@@ -121,8 +121,8 @@ async def test_execute_agent_task_without_langfuse_callback(
 
     await execute_agent_task(episode_id, "task", "session")
 
-    # Verify callbacks were passed
+    # Verify callbacks were passed (empty if langfuse is disabled)
     assert mock_agent.ainvoke.called
     args, kwargs = mock_agent.ainvoke.call_args
     callbacks = kwargs["config"]["callbacks"]
-    assert len(callbacks) >= 1
+    assert len(callbacks) == 0

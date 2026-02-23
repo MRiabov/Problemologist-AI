@@ -12,6 +12,7 @@ from controller.agent.nodes.electronics_engineer import ElectronicsEngineerNode
 from controller.agent.nodes.planner import PlannerNode
 from controller.agent.nodes.plan_reviewer import PlanReviewerNode
 from controller.agent.nodes.execution_reviewer import ExecutionReviewerNode
+from controller.agent.nodes.electronics_reviewer import ElectronicsReviewerNode
 from controller.agent.nodes.skills import SkillsNode
 from controller.agent.state import AgentState
 
@@ -22,9 +23,6 @@ async def test_all_agents_initialization():
     with (
         patch("controller.agent.nodes.base.WorkerClient"),
         patch("controller.agent.nodes.base.RemoteFilesystemMiddleware"),
-        patch(
-            "controller.agent.benchmark.nodes.get_prompt", return_value="mock prompt"
-        ),
     ):
         mock_ctx = SharedNodeContext.create(
             worker_light_url="http://worker", session_id="test"
@@ -50,7 +48,11 @@ async def test_all_agents_initialization():
         exec_reviewer = ExecutionReviewerNode(context=mock_ctx)
         assert exec_reviewer.ctx == mock_ctx
 
-        # 6. Skill Creator (SkillsNode)
+        # 6. Electronics Reviewer
+        elec_reviewer = ElectronicsReviewerNode(context=mock_ctx)
+        assert elec_reviewer.ctx == mock_ctx
+
+        # 7. Skill Creator (SkillsNode)
         skills = SkillsNode(context=mock_ctx)
         # Mocking config for __call__ check
         mock_state = MagicMock(spec=AgentState)
