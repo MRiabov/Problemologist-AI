@@ -211,6 +211,7 @@ async def _execute_graph_streaming(
                     validation_logs=final_state.session.validation_logs,
                     prompt=prompt,
                     plan=final_state.plan,
+                    journal=final_state.journal,
                 )
             except Exception as e:
                 logger.error("failed_to_update_episode_persistence", error=str(e))
@@ -283,6 +284,7 @@ async def run_generation_session(
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
+            episode_type="benchmark",
         )
         episode = Episode(
             id=session_id,
@@ -450,6 +452,7 @@ async def _update_episode_persistence(
     validation_logs: list[str],
     prompt: str,
     plan: Any = None,
+    journal: str | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -475,6 +478,8 @@ async def _update_episode_persistence(
             metadata.prompt = prompt
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
             episode.metadata_vars = metadata.model_dump()
+            if journal:
+                episode.journal = journal
             await db.commit()
 
 

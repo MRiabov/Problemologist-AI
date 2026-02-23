@@ -74,12 +74,35 @@ async def generate_benchmark(
     }
 
 
+class ConfirmRequest(BaseModel):
+    comment: str | None = None
+
+
 @router.post("/{session_id}/confirm")
-async def confirm_benchmark(session_id: uuid.UUID, background_tasks: BackgroundTasks):
+async def confirm_benchmark(
+    session_id: uuid.UUID,
+    request: ConfirmRequest,
+    background_tasks: BackgroundTasks,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
     """
     Confirm and continue benchmark generation after planning.
     """
     from controller.agent.benchmark.graph import continue_generation_session
+    from controller.persistence.models import Trace
+    from shared.enums import TraceType
+
+    # Record user comment if provided
+    if request.comment:
+        trace_record = Trace(
+            episode_id=session_id,
+            trace_type=TraceType.LOG,
+            content=f"User confirmation comment: {request.comment}",
+            name="user_confirmation",
+            metadata_vars={"comment": request.comment},
+        )
+        db.add(trace_record)
+        await db.commit()
 
     background_tasks.add_task(
         continue_generation_session,

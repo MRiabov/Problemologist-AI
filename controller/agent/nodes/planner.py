@@ -86,7 +86,7 @@ class PlannerNode(BaseNode):
         # Success
 
         await record_worker_events(
-            episode_id=state.session_id,
+            episode_id=state.episode_id,
             events=[
                 SubmissionValidationEvent(
                     artifacts_present=list(artifacts.keys()),
