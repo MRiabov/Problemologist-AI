@@ -97,7 +97,7 @@ describe('ChatWindow', () => {
         const confirmButton = screen.getByText(/Confirm & Start/i);
         fireEvent.click(confirmButton);
         
-        expect(mockConfirmBenchmark).toHaveBeenCalledWith('ep-1');
+        expect(mockConfirmBenchmark).toHaveBeenCalledWith('ep-1', '');
     });
 
     it('renders traces correctly', () => {

@@ -47,13 +47,15 @@ export default function ChatWindow({
       updateObjectives, 
       selectedContext,
       addToContext,
-      setActiveArtifactId
+      setActiveArtifactId,
+      feedbackState,
+      setFeedbackState
   } = useEpisodes();
   const { theme } = useTheme();
 
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [confirmComment, setConfirmComment] = useState("");
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
@@ -104,7 +106,9 @@ export default function ChatWindow({
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
   // Stable handlers
-  const handleShowFeedback = useCallback(() => setShowFeedbackModal(true), []);
+  const handleShowFeedback = useCallback((traceId: number, score: number) => {
+    setFeedbackState({ traceId, score });
+  }, [setFeedbackState]);
   const handleAssetClick = useCallback((id: string | null) => setActiveArtifactId(id), [setActiveArtifactId]);
 
   // Stable assets list to prevent re-renders on every poll
@@ -175,6 +179,7 @@ export default function ChatWindow({
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}
+                    isRunning={isRunning}
                   />
                 </div>
 
@@ -191,6 +196,15 @@ export default function ChatWindow({
                                     I have drafted the implementation strategy. Please review it in the explorer and confirm to proceed.
                                 </p>
                             </div>
+                            <div className="w-full space-y-2 mt-2">
+                                <textarea
+                                    placeholder="Optional comment for the agent..."
+                                    value={confirmComment}
+                                    onChange={(e) => setConfirmComment(e.target.value)}
+                                    className="w-full bg-background/50 border border-primary/20 rounded-lg p-2 text-xs focus:ring-1 focus:ring-primary/30 outline-none resize-none h-16"
+                                />
+                            </div>
+
                             <div className="flex gap-2 w-full mt-2">
                                 <Button 
                                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20"
@@ -198,11 +212,12 @@ export default function ChatWindow({
                                         if (!selectedEpisode) return;
                                         try {
                                             if (isPlanned) {
-                                                await confirmBenchmark(selectedEpisode.id);
+                                                await confirmBenchmark(selectedEpisode.id, confirmComment);
                                             } else {
                                                 const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
                                                 await runSimulation(sessionId);
                                             }
+                                            setConfirmComment("");
                                         } catch (e) {
                                             console.error("Failed to start implementation", e);
                                         }
@@ -249,10 +264,14 @@ export default function ChatWindow({
                     </div>
                 )}
                 {/* Session Feedback Modal */}
-                {showFeedbackModal && selectedEpisode && (
+                {feedbackState && selectedEpisode && feedbackState.traceId !== null && feedbackState.score !== null && (
                     <FeedbackSystem 
                         episodeId={selectedEpisode.id} 
-                        onClose={() => setShowFeedbackModal(false)}
+                        traceId={feedbackState.traceId}
+                        initialScore={feedbackState.score}
+                        onClose={() => {
+                            setFeedbackState(null);
+                        }}
                     />
                 )}
             </div>

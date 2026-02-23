@@ -211,6 +211,7 @@ async def _execute_graph_streaming(
                     validation_logs=final_state.session.validation_logs,
                     prompt=prompt,
                     plan=final_state.plan,
+                    journal=final_state.journal,
                 )
             except Exception as e:
                 logger.error("failed_to_update_episode_persistence", error=str(e))
@@ -233,15 +234,13 @@ async def _execute_graph_streaming(
 
         if trace_id:
             async with get_sessionmaker()() as db:
-                from controller.agent.config import settings
+                from controller.config.settings import settings as global_settings
 
-                worker_light_url = os.getenv(
-                    "WORKER_LIGHT_URL", "http://worker-light:8001"
-                )
+                worker_light_url = global_settings.worker_light_url
                 client = WorkerClient(
                     base_url=worker_light_url,
                     session_id=str(session_id),
-                    heavy_url=settings.worker_heavy_url,
+                    heavy_url=global_settings.worker_heavy_url,
                 )
                 await calculate_and_report_automated_score(
                     episode_id=session_id,
@@ -283,6 +282,7 @@ async def run_generation_session(
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
+            episode_type="benchmark",
         )
         episode = Episode(
             id=session_id,
@@ -395,17 +395,15 @@ async def _persist_session_assets(
             # Sync assets to the Asset table
             try:
                 from contextlib import suppress
-                from controller.agent.config import settings
+                from controller.config.settings import settings as global_settings
 
-                worker_light_url = os.getenv(
-                    "WORKER_LIGHT_URL", "http://worker-light:8001"
-                )
+                worker_light_url = global_settings.worker_light_url
                 async with httpx.AsyncClient() as http_client:
                     client = WorkerClient(
                         base_url=worker_light_url,
                         session_id=str(session_id),
                         http_client=http_client,
-                        heavy_url=settings.worker_heavy_url,
+                        heavy_url=global_settings.worker_heavy_url,
                     )
                     middleware = RemoteFilesystemMiddleware(client)
                     backend = RemoteFilesystemBackend(middleware)
@@ -450,6 +448,7 @@ async def _update_episode_persistence(
     validation_logs: list[str],
     prompt: str,
     plan: Any = None,
+    journal: str | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -475,6 +474,8 @@ async def _update_episode_persistence(
             metadata.prompt = prompt
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
             episode.metadata_vars = metadata.model_dump()
+            if journal:
+                episode.journal = journal
             await db.commit()
 
 

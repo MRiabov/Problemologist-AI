@@ -6,8 +6,7 @@ import {
   PlayCircle, 
   Thermometer, 
   ChevronLeft, 
-  ChevronRight,
-  Maximize2
+  ChevronRight
 } from "lucide-react";
 import ModelViewer from './ModelViewer';
 import { cn } from "../../lib/utils";

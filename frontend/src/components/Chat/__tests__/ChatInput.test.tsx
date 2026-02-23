@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChatInput } from '../ChatInput';
 import type { TopologyNode } from '../../visualization/ModelBrowser';
 import userEvent from '@testing-library/user-event';
+import { AssetType } from '../../../api/generated/models/AssetType';
 
 // Mock Lucide icons
 vi.mock('lucide-react', () => ({
@@ -29,10 +30,10 @@ describe('ChatInput', () => {
         selectedEpisode: { 
             id: 'ep-1', 
             assets: [
-                { id: 1, s3_path: 'main.py', asset_type: 'file' },
-                { id: 2, s3_path: 'utils.py', asset_type: 'file' }
+                { id: 1, s3_path: 'main.py', asset_type: AssetType.PYTHON, created_at: new Date().toISOString() },
+                { id: 2, s3_path: 'utils.py', asset_type: AssetType.PYTHON, created_at: new Date().toISOString() }
             ] 
-        } as unknown as { id: string; assets: { id: number; s3_path: string; asset_type: string }[] },
+        } as any,
         selectedContext: [],
         topologyNodes: [
             { id: 'part-1', name: 'Bracket', type: 'part', children: [] }

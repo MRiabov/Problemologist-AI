@@ -25,12 +25,24 @@ export default function Sidebar() {
 
   const handleEpisodeClick = useCallback(async (id: string) => {
     await selectEpisode(id);
+
+    const ep = episodes.find(e => e.id === id);
+    if (ep && ep.metadata_vars?.episode_type === 'benchmark') {
+      if (location.pathname !== '/benchmark' && location.pathname !== '/settings') {
+        navigate('/benchmark');
+      }
+    } else if (ep) {
+      if (location.pathname !== '/' && location.pathname !== '/settings') {
+        navigate('/');
+      }
+    }
+
     if (location.pathname === '/settings') {
       // If we are in settings, we should go back to the appropriate UI.
       // For now, we go back to the previous page or default to workspace.
       navigate(-1);
     }
-  }, [selectEpisode, location.pathname, navigate]);
+  }, [selectEpisode, episodes, location.pathname, navigate]);
 
   return (
     <div className="flex h-full w-full flex-col bg-card text-card-foreground">
