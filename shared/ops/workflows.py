@@ -3,6 +3,8 @@ from datetime import timedelta
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
+import asyncio
+
 
 @activity.defn
 async def run_backup_activity(params: dict) -> dict:
@@ -19,11 +21,13 @@ async def run_backup_activity(params: dict) -> dict:
     results = {}
 
     if db_url and s3_bucket:
-        pg_key = backup_postgres(db_url, s3_bucket)
+        pg_key = await asyncio.to_thread(backup_postgres, db_url, s3_bucket)
         results["postgres_backup_key"] = pg_key
 
     if source_bucket and backup_bucket:
-        file_count = backup_s3_files(source_bucket, backup_bucket)
+        file_count = await asyncio.to_thread(
+            backup_s3_files, source_bucket, backup_bucket
+        )
         results["s3_files_backed_up"] = file_count
 
     return results
