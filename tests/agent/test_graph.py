@@ -31,7 +31,6 @@ async def test_full_graph_flow(fresh_graph):
     mock_electronics = AsyncMock(return_value={"journal": "Electronics worked"})
     mock_reviewer = AsyncMock(return_value={"status": "approved", "feedback": "Good"})
     mock_skills = AsyncMock(return_value={"journal": "Learned"})
-    mock_cots = AsyncMock(return_value={})
 
     with (
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
@@ -50,7 +49,6 @@ async def test_full_graph_flow(fresh_graph):
             mock_reviewer,
         ),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
-        patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
     ):
         graph = fresh_graph()
 
@@ -93,7 +91,6 @@ async def test_graph_rejection_loop(fresh_graph):
     ]
 
     mock_skills = AsyncMock(return_value={})
-    mock_cots = AsyncMock(return_value={})
 
     with (
         patch("controller.agent.nodes.planner.planner_node", mock_planner),
@@ -112,7 +109,6 @@ async def test_graph_rejection_loop(fresh_graph):
             mock_reviewer,
         ),
         patch("controller.agent.nodes.skills.skills_node", mock_skills),
-        patch("controller.agent.nodes.cots_search.cots_search_node", mock_cots),
     ):
         graph = fresh_graph()
 
