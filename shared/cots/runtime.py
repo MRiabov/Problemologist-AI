@@ -43,16 +43,25 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
                     COTSItemORM.category == query.constraints["category"]
                 )
             if "min_size" in query.constraints:
-                # Assuming metadata contains bbox or params.size
-                # This is more complex to filter in SQL directly if it's in JSON
-                # For MVP, we might skip complex JSON filtering or do it in-memory
-                pass
-
-        # Limit results
-        stmt = stmt.limit(query.limit)
+                # We fetch more results and filter in-memory due to JSON metadata
+                stmt = stmt.limit(query.limit * 5)
+            else:
+                stmt = stmt.limit(query.limit)
+        else:
+            stmt = stmt.limit(query.limit)
 
         orm_items = stmt.all()
         for item in orm_items:
+            # Apply in-memory constraints (min_size)
+            if query.constraints and "min_size" in query.constraints:
+                min_size = float(query.constraints["min_size"])
+                volume = item.metadata_dict.get("volume", 0)
+                if volume < min_size:
+                    continue
+
+            if len(results) >= query.limit:
+                break
+
             results.append(
                 COTSItem(
                     part_id=item.part_id,

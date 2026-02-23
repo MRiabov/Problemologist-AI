@@ -105,7 +105,7 @@ def verify_with_jitter(
 
         # Apply position jitter via backend-agnostic method if possible
         # For now, we manually apply it to the target body if it exists
-        target_body_name = "target_box"
+        target_body_name = loop._identify_target_body() or "target_box"
 
         jitter = [
             rng.uniform(-jitter_range[0], jitter_range[0]),
