@@ -628,19 +628,18 @@ def simulate(
             "Goal achieved." if metrics.success else "Simulation stable."
         )
 
-        if not smoke_test_mode:
-            render_paths = prerender_24_views(
-                component,
-                output_dir=str(renders_dir),
-                backend_type=backend_type,
-                session_id=session_id,
-                scene_path=str(scene_path),
-                smoke_test_mode=smoke_test_mode,
-            )
-            if video_path and video_path.exists():
-                render_paths.append(str(video_path))
-        else:
-            render_paths = []
+        # Always run prerender (it handles smoke_test_mode internally by reducing views)
+        render_paths = prerender_24_views(
+            component,
+            output_dir=str(renders_dir),
+            backend_type=backend_type,
+            session_id=session_id,
+            scene_path=str(scene_path),
+            smoke_test_mode=smoke_test_mode,
+        )
+
+        if not smoke_test_mode and video_path and video_path.exists():
+            render_paths.append(str(video_path))
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
