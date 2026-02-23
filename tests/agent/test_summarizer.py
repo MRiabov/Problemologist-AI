@@ -32,7 +32,7 @@ async def test_summarizer_node_compresses_long_journal(mock_worker):
     long_journal = "X" * 6000
     state = AgentState(journal=long_journal, session_id="test-session")
 
-    with patch("dspy.Predict") as mock_predict:
+    with patch("dspy.ReAct") as mock_predict:
         instance = mock_predict.return_value
         instance.return_value = MagicMock(summarized_journal="Summarized content")
 
@@ -49,7 +49,7 @@ async def test_benchmark_summarizer_node_compresses_long_journal(mock_worker):
     session = GenerationSession(session_id=session_id, prompt="test")
     state = BenchmarkGeneratorState(session=session, journal=long_journal)
 
-    with patch("dspy.Predict") as mock_predict:
+    with patch("dspy.ReAct") as mock_predict:
         instance = mock_predict.return_value
         instance.return_value = MagicMock(summarized_journal="Benchmark summary")
 
