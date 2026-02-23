@@ -51,44 +51,6 @@ class MockDSPyLM(dspy.LM):
         )
 
         full_text = self._get_full_text(prompt, messages)
-        is_json = "output fields" in full_text.lower() and "json" in full_text.lower()
-
-        # Extract expected fields for ReAct compatibility
-        expected_fields = []
-        if is_json:
-            # First, try to extract from the error message in the prompt (for retries)
-            match = re.search(
-                r"Expected to find output fields in the LM response: \[([^\]]+)\]",
-                full_text,
-            )
-            if match:
-                expected_fields = [f.strip() for f in match.group(1).split(",")]
-            else:
-                # For initial calls, detect from the instructions or signature schema
-                # We also check for 'next_thought' as it is part of ReAct
-                if "next_tool_name" in full_text or "next_thought" in full_text:
-                    expected_fields = [
-                        "next_thought",
-                        "next_tool_name",
-                        "next_tool_args",
-                    ]
-
-                # Check for standard output fields
-                for field in [
-                    "reasoning",
-                    "thought",
-                    "summary",
-                    "review",
-                    "journal",
-                    "plan",
-                    "finished",
-                    "generated_code",
-                ]:
-                    if field in full_text:
-                        expected_fields.append(field)
-
-                # Remove duplicates and preserve order if possible
-                expected_fields = list(dict.fromkeys(expected_fields))
 
         # 1. Detect Scenario from session_id
         scenario_id = self._get_scenario_id()
@@ -96,6 +58,46 @@ class MockDSPyLM(dspy.LM):
 
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
         node_key = self.node_type or self._detect_node_key(full_text)
+
+        # Detect if JSON is requested or if we should provide it for structured nodes
+        is_json_requested = (
+            "output fields" in full_text.lower() and "json" in full_text.lower()
+        )
+
+        # Extract expected fields for ReAct compatibility
+        expected_fields = []
+
+        # Always try to detect fields from text if they exist
+        match = re.search(
+            r"Expected to find output fields in the LM response: \[([^\]]+)\]",
+            full_text,
+        )
+        if match:
+            expected_fields = [f.strip() for f in match.group(1).split(",")]
+        else:
+            # Detect from role/instructions
+            if "next_tool_name" in full_text or "next_thought" in full_text:
+                expected_fields.extend(
+                    ["next_thought", "next_tool_name", "next_tool_args"]
+                )
+
+            for field in [
+                "reasoning",
+                "thought",
+                "summary",
+                "review",
+                "journal",
+                "plan",
+                "finished",
+                "generated_code",
+            ]:
+                if field in full_text:
+                    expected_fields.append(field)
+
+        expected_fields = list(dict.fromkeys(expected_fields))
+
+        # Force JSON if we have expected fields
+        is_json = is_json_requested or len(expected_fields) > 0
 
         # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
@@ -224,9 +226,8 @@ class MockDSPyLM(dspy.LM):
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
         # dspy.ReAct adds "Observation:" to the trajectory.
-        # We look for "observation_" or specific tool output markers to avoid instruction overlap.
         return (
-            "stdout:" in low_text or "stderr:" in low_text or "observation_" in low_text
+            "stdout:" in low_text or "stderr:" in low_text or "observation:" in low_text
         )
 
     def _handle_finish(
@@ -277,14 +278,8 @@ class MockDSPyLM(dspy.LM):
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
             if code and not finished:
-                # Wrap multi-line code safely for shell execution
-                import base64
-
-                b64_code = base64.b64encode(code.encode()).decode()
-                cmd = f"python3 -c \"import base64; exec(base64.b64decode('{b64_code}'))\""
-
                 resp["next_tool_name"] = "execute_command"
-                resp["next_tool_args"] = {"command": cmd}
+                resp["next_tool_args"] = {"command": code}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}

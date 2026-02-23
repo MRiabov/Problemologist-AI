@@ -26,7 +26,9 @@ async def test_benchmark_to_engineer_handoff():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a benchmark with a moving platform."  # implies moving parts
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        resp = await client.post(
+            "/benchmark/generate", json={"prompt": prompt, "backend": "mujoco"}
+        )
         assert resp.status_code in [
             200,
             202,
@@ -43,6 +45,8 @@ async def test_benchmark_to_engineer_handoff():
             if status_resp.status_code == 200:
                 sess_data = status_resp.json()
                 last_status = sess_data["status"]
+                if last_status == "planned":
+                    await client.post(f"/benchmark/{session_id}/confirm")
                 if last_status == "completed":
                     benchmark_completed = True
                     break

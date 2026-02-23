@@ -134,7 +134,7 @@ async def execute_agent_task(
                 await db_callback._broadcast_trace(initial_trace)
 
                 # Prepare callbacks list (only langfuse if present, since DB callback is now explicit)
-                callbacks = []
+                callbacks = [db_callback]
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
 

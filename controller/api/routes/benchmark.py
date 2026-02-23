@@ -24,6 +24,7 @@ class BenchmarkGenerateRequest(BaseModel):
     max_cost: float | None = None
     max_weight: float | None = None
     target_quantity: int | None = None
+    backend: str = "genesis"
 
     @field_validator("prompt")
     @classmethod
@@ -50,12 +51,20 @@ async def generate_benchmark(
     if request.target_quantity is not None:
         custom_objectives["target_quantity"] = request.target_quantity
 
+    from shared.simulation.schemas import SimulatorBackendType
+
+    try:
+        backend_enum = SimulatorBackendType(request.backend)
+    except ValueError:
+        backend_enum = SimulatorBackendType.GENESIS
+
     # Run the generation in the background
     background_tasks.add_task(
         run_generation_session,
         request.prompt,
         session_id=session_id,
         custom_objectives=custom_objectives,
+        backend=backend_enum,
     )
 
     return {

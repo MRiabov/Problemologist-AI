@@ -16,6 +16,9 @@ DB_PATH = "parts.db"
 engine = create_engine(
     f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False}, echo=False
 )
+from shared.cots.database.models import Base
+
+Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

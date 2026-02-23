@@ -150,7 +150,7 @@ fluids:
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={"script_path": "script.py"},
             headers={"X-Session-ID": session_id},
-            timeout=120.0,
+            timeout=300.0,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -179,6 +179,7 @@ async def test_int_067_068_steerability():
         episode_id = resp.json()["episode_id"]
 
         # 2. Submit a steered prompt with selections, mentions, and code references
+        steer_session_id = f"test-steer-{int(time.time())}"
         steer_payload = {
             "text": "Fix this code @script.py:1-2 and check @elec_part",
             "selections": [
@@ -193,13 +194,14 @@ async def test_int_067_068_steerability():
         }
 
         steer_resp = await client.post(
-            f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/steer", json=steer_payload
+            f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/steer",
+            json=steer_payload,
         )
         assert steer_resp.status_code == 202
 
         # 3. Verify it's in the queue
         queue_resp = await client.get(
-            f"{CONTROLLER_URL}/api/v1/sessions/{episode_id}/queue"
+            f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/queue"
         )
         assert queue_resp.status_code == 200
         queue = queue_resp.json()

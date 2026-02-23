@@ -7,5 +7,6 @@ export type BenchmarkGenerateRequest = {
     max_cost?: (number | null);
     max_weight?: (number | null);
     target_quantity?: (number | null);
+    backend?: string;
 };
 
