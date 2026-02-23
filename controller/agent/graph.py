@@ -58,7 +58,8 @@ builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
 builder.add_edge(START, "planner")
-builder.add_edge("planner", "electronics_planner")
+builder.add_edge("planner", "cots_search")
+builder.add_edge("cots_search", "electronics_planner")
 builder.add_edge("electronics_planner", "plan_reviewer")
 
 builder.add_conditional_edges(
@@ -99,7 +100,6 @@ builder.add_conditional_edges(
 builder.add_edge("steer", "planner")
 
 builder.add_edge("skills", END)
-builder.add_edge("cots_search", "planner")
 
 # T026: Implement Checkpointing
 memory = MemorySaver()

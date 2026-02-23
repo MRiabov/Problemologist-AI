@@ -28,6 +28,7 @@ class ElectronicsPlannerSignature(dspy.Signature):
     skills = dspy.InputField()
     mechanical_plan = dspy.InputField()
     feedback = dspy.InputField()
+    journal = dspy.InputField()
     summary = dspy.OutputField(desc="A summary of the electrical plan created")
 
 
@@ -57,6 +58,7 @@ class ElectronicsPlannerNode(BaseNode):
                 if state.status == AgentStatus.PLAN_REJECTED
                 else "New electronics planning. No rejection feedback."
             ),
+            "journal": state.journal,
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
