@@ -19,6 +19,7 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
 )
 from controller.workflows.simulation import SimulationWorkflow
+from shared.ops.workflows import BackupWorkflow, run_backup_activity
 
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "temporal:7233")
 
@@ -37,6 +38,7 @@ async def main():
             HeavySimulationWorkflow,
             HeavyValidationWorkflow,
             HeavyPreviewWorkflow,
+            BackupWorkflow,
         ],
         activities=[
             compile_mjcf_activity,
@@ -45,6 +47,7 @@ async def main():
             upload_to_s3_activity,
             update_trace_activity,
             execute_script_activity,
+            run_backup_activity,
         ],
     )
     print("Temporal Worker started on queue: simulation-task-queue")

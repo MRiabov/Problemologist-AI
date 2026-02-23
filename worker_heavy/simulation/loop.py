@@ -360,6 +360,7 @@ class SimulationLoop:
             # Update electronics if state changed
             if self.electronics and self._electronics_dirty:
                 self._update_electronics()
+                self._electronics_dirty = False
                 self._apply_gated_controls(control_inputs)
                 if self.electronics_validation_error:
                     # In this case self.fail_reason might be set by _update_electronics
