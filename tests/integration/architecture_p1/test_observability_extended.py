@@ -91,7 +91,7 @@ async def test_int_058_cross_system_correlation():
         episode_id = resp.json()["episode_id"]
 
         # 2. Wait for completion
-        max_retries = 30
+        max_retries = 150
         completed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")

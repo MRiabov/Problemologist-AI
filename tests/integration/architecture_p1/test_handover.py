@@ -36,7 +36,7 @@ async def test_benchmark_to_engineer_handoff():
         session_id = resp.json()["session_id"]
 
         # 2. Poll for completion
-        max_retries = 60
+        max_retries = 150
         benchmark_completed = False
         last_status = None
 

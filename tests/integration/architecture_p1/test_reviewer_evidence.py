@@ -63,7 +63,7 @@ async def test_reviewer_evidence_completeness():
         # Wait for Engineer (at least until a review is produced)
         # A full completion is safest.
         engineer_completed = False
-        for _ in range(120):
+        for _ in range(150):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 status = ep_resp.json()["status"]

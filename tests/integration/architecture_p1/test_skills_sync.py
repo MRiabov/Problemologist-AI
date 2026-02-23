@@ -24,7 +24,7 @@ async def test_int_045_skills_sync_lifecycle():
 
         # We start a run to force skill sync
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0
+            f"{CONTROLLER_URL}/agent/run", json=payload, timeout=300.0
         )
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]

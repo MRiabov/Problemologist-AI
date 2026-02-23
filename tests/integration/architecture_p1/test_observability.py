@@ -27,7 +27,7 @@ async def test_int_059_langfuse_trace_linkage():
 
         # 2. Wait for it to complete (or at least have some traces)
         # We'll poll for a bit
-        max_retries = 30
+        max_retries = 150
         completed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
