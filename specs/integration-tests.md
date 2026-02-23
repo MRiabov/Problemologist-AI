@@ -196,6 +196,28 @@ Priorities:
 | INT-155 | Wire routing survival under jitter | Wire routing survives runtime jitter (no tears across 5 seeds) in 70% of successful solutions. |
 | INT-156 | Circuit-gates-motor correctness | Circuit state correctly gates motor behaviour in 95% of simulations — motors don't spin without power. |
 
+### Frontend category: UI integration and delivery contract
+
+These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
+
+| ID | Priority | Test | Required assertions |
+|---|---|---|---|
+| INT-157 | P0 | Session history + workflow entry | Sidebar lists sessions from live API; selecting a session opens the correct benchmark/solution workflow with matching episode context. |
+| INT-158 | P0 | Benchmark vs solution workflow parity | In both workflows, prompt submission, streamed assistant output, and artifact refresh behave consistently through real backend events. |
+| INT-159 | P0 | Plan approval + comment contract | After planner output, approve/disapprove controls appear; action posts decision to API; optional user comment is persisted and visible in run history. |
+| INT-160 | P1 | Reasoning traces default-hidden + expandable | Reasoning traces are hidden by default, expand on user action, and render trace content from live run records (not static placeholders). |
+| INT-161 | P1 | Tool-call activity rendering | Successful tool calls render typed activity rows (`Edited`, `Viewed file`, `Viewed directory`) with real file targets/diff counts; failed tool call renders failure notice. |
+| INT-162 | P0 | Interrupt UX to backend propagation | During active generation, `Send` is replaced by `Stop`; stop action calls interrupt API and run transitions to interrupted/cancelled state with no further streamed tokens. |
+| INT-163 | P0 | Steerability context cards + multi-select | Ctrl multi-select adds multiple context cards (CAD/code/etc.), cards are removable, and outgoing prompt payload contains structured selected elements only. |
+| INT-164 | P0 | Code viewer + line-target mention contract | File tree, syntax highlighting, and line numbers render from live files; selecting lines adds `@path:start-end` mention payload and invalid ranges return explicit validation errors. |
+| INT-165 | P0 | CAD topology selection modes | Part/primitive/subassembly selection modes work; topology overlay is on by default and toggleable; selected topology entities are carried to prompt context. |
+| INT-166 | P1 | Simulation viewer time navigation | Time controls (play/pause/seek/rewind) load corresponding simulation frames from real assets for both rigid-body and deformable playback paths. |
+| INT-167 | P0 | Worker-only CAD asset fetch contract | GLB/OBJ fetches for viewer use worker `GET` endpoints; non-`GET` methods are rejected; UI does not depend on mocked local geometry fixtures. |
+| INT-168 | P1 | Circuit viewer integration | Circuit data renders through frontend circuit viewer from real backend outputs; selecting a circuit component can add it to steering context. |
+| INT-169 | P2 | Theme toggle persistence | Light/dark mode toggle updates UI theme and persists across reload/session restore without breaking core workflow readability. |
+| INT-170 | P0 | Post-run feedback UX + API persistence | Thumbs up/down appears only after model output completion; modal supports topic selection + text; submission is persisted via feedback API. |
+| INT-171 | P1 | 3-column layout + resize persistence | Session/chat/viewer columns load in default 3:3:6 layout, are user-resizable, and retain user-adjusted split on reload. |
+
 ## Per-test Unit->Integration Implementation Map (mandatory)
 
 This section exists to force implementation as true integration tests, not unit tests.
@@ -309,6 +331,21 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-154 | Execute Elec Engineer on motor-mechanism benchmark via APIs; assert ≥80% valid circuit first attempt. | Mocking circuit validation result. |
 | INT-155 | Execute wire-routed assemblies across 5 seeds via API; assert ≥70% survive without `FAILED_WIRE_TORN`. | Single-seed unit test only. |
 | INT-156 | Run electromechanical simulations via API; assert ≥95% correctly gate motor on/off based on circuit state. | Asserting `is_powered` return values only. |
+| INT-157 | Open frontend against live stack; load sessions via real API and navigate into both benchmark/solution pages with correct episode IDs. | Component test with mocked session list JSON only. |
+| INT-158 | Execute benchmark and solution prompt flows end-to-end in browser with live streaming/events. | UI-only snapshot tests with fake websocket payloads. |
+| INT-159 | Trigger approve/disapprove controls in live run; assert decision/comment persisted via API and reflected in follow-up state. | Unit-test of plan approval button state only. |
+| INT-160 | Verify reasoning panel hidden by default and populated only after expand from live trace payload. | Rendering static reasoning markdown fixture. |
+| INT-161 | Run real tool calls and assert activity feed entries (`Edited`/`Viewed`) originate from backend event stream. | Hardcoded activity card fixtures in component tests. |
+| INT-162 | Start real run, click stop in UI, and assert interrupt endpoint + terminal interrupted state + stream halt. | Mocking interrupt action creator without backend. |
+| INT-163 | Use multi-select in live CAD/code UI; assert selected context objects are posted in steering payload and removable before send. | Testing local React state reducer only. |
+| INT-164 | Select lines in live code viewer and submit mention; assert backend receives resolved range and rejects invalid spans with surfaced error. | Parsing mention syntax in a unit helper test. |
+| INT-165 | Use live CAD assets to select part/face/edge/subassembly; assert mode-specific payloads are transmitted in prompt context. | Mocking three.js selection handlers only. |
+| INT-166 | Scrub simulation timeline in browser against real simulation assets; assert frame/time sync and seek boundaries. | Video-player unit tests with local MP4 only. |
+| INT-167 | Inspect live network calls during CAD load; assert worker `GET` asset endpoints are used and disallowed methods fail. | Asserting URL builder function output only. |
+| INT-168 | Render circuit view from live episode outputs and assert selectable components propagate into context payload. | Static circuit SVG snapshot tests only. |
+| INT-169 | Toggle theme in live app, reload browser, assert persisted preference in real runtime behavior. | Unit test of theme store/localStorage adapter only. |
+| INT-170 | Submit post-run feedback in live UI and assert API persistence + retrieval in episode trace metadata. | Modal component unit test with mocked submit handler. |
+| INT-171 | Resize live 3-column layout, reload, and assert persisted split ratios and working panes. | CSS layout unit snapshot without runtime persistence. |
 
 ## Coverage map: current vs required
 
@@ -321,6 +358,7 @@ This section exists to force implementation as true integration tests, not unit 
   - INT-120 through INT-128 (WP3: circuit validation, electrical failure modes, motor power gating, wire tear, backward compat, electronics schema).
   - INT-131 through INT-141 (WP2/WP3 P1: full fluid and electromechanical workflows, agent handovers, stress rendering, wire routing, power budget, COTS electrical, smoke-test mode, data storage policy, circuit transient).
   - INT-151 through INT-156 (WP2/WP3 P2: breakage prevention evals, safety factor range, fluid benchmark evals, circuit success rate, wire survival, motor gating correctness).
+  - INT-157 through INT-171 (Frontend category: chat/workflow parity, plan approval UX, reasoning/tool-call visibility, interrupt propagation, steerability context, CAD/simulation/circuit viewers, worker asset fetch contract, feedback flow, layout/theme persistence).
 
 ## Recommended suite organization
 
@@ -328,12 +366,16 @@ This section exists to force implementation as true integration tests, not unit 
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-101..INT-112, INT-120..INT-128.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
+- `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170.
+- `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171.
+- `tests/integration/frontend/p2/`: INT-169.
 
 Marker recommendation:
 
 - `@pytest.mark.integration_p0`
 - `@pytest.mark.integration_p1`
 - `@pytest.mark.integration_p2`
+- `@pytest.mark.integration_frontend`
 
 CI gates recommendation:
 
