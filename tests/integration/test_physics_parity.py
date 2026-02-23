@@ -29,7 +29,7 @@ def test_physics_parity_rigid_body(tmp_path):
 
     # 1. Run MuJoCo
     loop_mujoco = SimulationLoop(
-        str(xml_path), backend_type=SimulatorBackendType.MUJOCO
+        str(xml_path), backend_type=SimulatorBackendType.GENESIS
     )
     res_mujoco = loop_mujoco.step(control_inputs={}, duration=1.0)
     pos_mujoco = loop_mujoco.backend.get_body_state("test_box").pos

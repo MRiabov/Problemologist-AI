@@ -39,7 +39,7 @@ def sim_loop_position(tmp_path):
     # Using MUJOCO for reliability of position actuators in tests
     from shared.simulation.schemas import SimulatorBackendType
 
-    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.GENESIS)
 
 
 class TestWaypointController:

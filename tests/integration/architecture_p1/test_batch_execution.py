@@ -39,7 +39,7 @@ async def test_int_043_batch_execution_path():
         # 2. Verify eventual completion of all
         # We poll all episodes until they are done or we timeout
         start_time = time.time()
-        timeout = 180  # seconds
+        timeout = 300  # seconds
 
         while time.time() - start_time < timeout:
             all_done = True

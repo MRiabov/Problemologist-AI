@@ -30,7 +30,7 @@ async def test_engineering_full_loop():
         # For integration, we generate one.
         prompt = "Create a benchmark about stacking blocks."
         resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "mujoco"}
+            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
         )
         assert resp.status_code in [
             200,

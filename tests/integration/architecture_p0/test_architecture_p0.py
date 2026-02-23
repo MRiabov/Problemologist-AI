@@ -146,7 +146,7 @@ def build():
                 f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json={
                     "script_path": "box.py",
-                    "backend": "mujoco",
+                    "backend": "genesis",
                     "bundle_base64": bundle1,
                     "smoke_test_mode": True,
                 },
@@ -157,7 +157,7 @@ def build():
                 f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json={
                     "script_path": "box.py",
-                    "backend": "mujoco",
+                    "backend": "genesis",
                     "bundle_base64": bundle2,
                     "smoke_test_mode": True,
                 },
@@ -285,7 +285,7 @@ run()
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={
                 "script_path": "fail.py",
-                "backend": "mujoco",
+                "backend": "genesis",
                 "bundle_base64": bundle64,
                 "smoke_test_mode": True,
             },

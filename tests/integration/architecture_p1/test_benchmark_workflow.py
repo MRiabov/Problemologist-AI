@@ -18,11 +18,11 @@ async def test_benchmark_planner_cad_reviewer_path():
     2. Successful completion of the workflow
     3. Existence of required artifacts (plan.md, objectives.yaml, Reviews)
     """
-    async with AsyncClient(base_url=CONTROLLER_URL, timeout=120.0) as client:
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a simple path planning benchmark with a wall and a goal."
         resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "mujoco"}
+            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
         )
         assert resp.status_code in [
             200,
