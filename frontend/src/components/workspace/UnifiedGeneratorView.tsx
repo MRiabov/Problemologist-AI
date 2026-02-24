@@ -79,7 +79,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
 
   const circuitData = useMemo(() => {
-    const assemblyAsset = selectedEpisode?.assets?.find(a => a.s3_path.endsWith('assembly_definition.yaml'));
+    const assemblyAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.s3_path.endsWith('assembly_definition.yaml'));
     if (!assemblyAsset?.content) return null;
     try {
       const data = yaml.load(assemblyAsset.content) as any;
@@ -164,7 +164,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
             className="overflow-hidden"
           >
             <ChatWindow 
-              traces={selectedEpisode?.traces}
+              traces={selectedEpisode?.traces || []}
               task={selectedEpisode?.task}
               isRunning={running}
               isConnected={isConnected}
@@ -209,7 +209,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     modelUrls={modelUrls}
                     videoUrl={videoAsset ? getAssetUrl(videoAsset) : null}
                     heatmapUrls={selectedEpisode?.assets
-                      ?.filter(a => (a.s3_path && a.s3_path.includes('stress_')))
+                      ?.filter((a: AssetResponse) => (a.s3_path && a.s3_path.includes('stress_')))
                       .map(getAssetUrl)
                       .filter(Boolean) as string[]
                     }
@@ -263,7 +263,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                 <div className="h-full flex-1 overflow-hidden">
                   <ArtifactView 
                     plan={selectedEpisode?.plan || ""}
-                    assets={selectedEpisode?.assets}
+                    assets={selectedEpisode?.assets || []}
                     isConnected={isConnected}
                   />
                 </div>

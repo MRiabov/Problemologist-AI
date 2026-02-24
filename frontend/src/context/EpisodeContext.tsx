@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, continueEpisode, type Episode, type BenchmarkObjectives, steerAgent as apiSteerAgent } from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
+import { OpenAPI } from '../api/generated/core/OpenAPI';
 import type { TopologyNode } from "../components/visualization/ModelBrowser";
 
 export interface ContextItem {
@@ -214,9 +215,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!selectedEpisode) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/episodes/${selectedEpisode.id}/ws`;
+    let wsUrl: string;
+    const base = OpenAPI.BASE || '';
+    
+    if (base.startsWith('http')) {
+        // Absolute URL (standard in integration tests / production)
+        wsUrl = base.replace(/^http/, 'ws') + `/episodes/${selectedEpisode.id}/ws`;
+    } else {
+        // Relative URL or empty (standard in dev proxy mode)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const prefix = base || '/api';
+        wsUrl = `${protocol}//${host}${prefix}/episodes/${selectedEpisode.id}/ws`;
+    }
     
     let ws: WebSocket;
     let reconnectTimeout: number;
@@ -224,11 +235,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     const connect = () => {
       ws = new WebSocket(wsUrl);
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const message = JSON.parse(event.data);
           if (message.type === 'new_trace') {
-            setSelectedEpisode(prev => {
+            setSelectedEpisode((prev: Episode | null) => {
               if (!prev || prev.id !== selectedEpisode.id) return prev;
               
               // Map payload to TraceResponse structure
@@ -242,24 +253,30 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                 created_at: message.created_at
               };
 
+              const currentTraces = prev.traces || [];
+
               // Avoid duplicates
-              if (prev.traces.some(t => t.id === newTrace.id)) return prev;
+              if (currentTraces.some((t: any) => t.id === newTrace.id)) return prev;
               
               return {
                 ...prev,
-                traces: [...prev.traces, newTrace]
+                traces: [...currentTraces, newTrace]
               };
             });
           } else if (message.type === 'status_update') {
-            setSelectedEpisode(prev => {
+            setSelectedEpisode((prev: Episode | null) => {
               if (!prev || prev.id !== selectedEpisode.id) return prev;
-              return { ...prev, status: message.status };
+              return { 
+                ...prev, 
+                status: message.status,
+                metadata_vars: message.metadata_vars || prev.metadata_vars
+              };
             });
             if (message.status !== EpisodeStatus.RUNNING) {
               setRunning(false);
             }
           } else if (message.type === 'file_update') {
-            setSelectedEpisode(prev => {
+            setSelectedEpisode((prev: Episode | null) => {
                 if (!prev || prev.id !== selectedEpisode.id) return prev;
                 
                 // Real-time plan updates
@@ -267,13 +284,26 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                     return { ...prev, plan: message.data.content };
                 }
 
-                // Update content of existing assets
-                const updatedAssets = prev.assets.map(a => {
+                // Update content of existing assets or add new ones
+                const currentAssets = prev.assets || [];
+                let assetFound = false;
+                const updatedAssets = currentAssets.map((a: any) => {
                     if (a.s3_path === message.data.path || ('/' + a.s3_path) === message.data.path) {
+                        assetFound = true;
                         return { ...a, content: message.data.content };
                     }
                     return a;
                 });
+
+                if (!assetFound && message.data.id) {
+                    updatedAssets.push({
+                        id: message.data.id,
+                        s3_path: message.data.path,
+                        content: message.data.content,
+                        asset_type: message.data.asset_type,
+                        created_at: message.data.created_at || new Date().toISOString()
+                    });
+                }
                 
                 return { ...prev, assets: updatedAssets };
             });
@@ -318,7 +348,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           setEpisodes(episodesData);
           
           // Only update if something changed (avoid re-rendering everything if WS handled it)
-          setSelectedEpisode(prev => {
+          setSelectedEpisode((prev: Episode | null) => {
              if (!prev) return currentEp;
              if (JSON.stringify(prev) === JSON.stringify(currentEp)) return prev;
              return currentEp;

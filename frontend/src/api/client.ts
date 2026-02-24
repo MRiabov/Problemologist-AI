@@ -2,7 +2,7 @@ import { EpisodesService } from './generated/services/EpisodesService';
 import { SkillsService } from './generated/services/SkillsService';
 import { DefaultService } from './generated/services/DefaultService';
 import { SimulationService } from './generated/services/SimulationService';
-import type { EpisodeResponse } from './generated/models/EpisodeResponse';
+import type { controller__api__routes__episodes__EpisodeResponse as EpisodeResponse } from './generated/models/controller__api__routes__episodes__EpisodeResponse';
 import type { Skill } from './generated/models/Skill';
 
 export type { EpisodeResponse as Episode };
