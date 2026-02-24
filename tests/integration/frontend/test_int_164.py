@@ -1,10 +1,11 @@
 import pytest
 from playwright.sync_api import Page, expect
 
+
 @pytest.mark.integration_frontend
 def test_code_viewer_line_selection_and_mentions(page: Page):
     # 1. Navigate to the local development server
-    page.goto("http://localhost:5173", timeout=60000)
+    page.goto("http://localhost:15173", timeout=60000)
 
     # 2. Navigate to the Benchmark page
     benchmark_link = page.get_by_role("link", name="Benchmark")
@@ -50,7 +51,7 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     line_number.click()
 
     # 10. Verify Context Card appears in chat input area
-    context_card = page.locator(".bg-blue-500\\/10") # Context card styling
+    context_card = page.locator(".bg-blue-500\\/10")  # Context card styling
     expect(context_card).to_be_visible()
     expect(context_card).to_contain_text("script.py")
 

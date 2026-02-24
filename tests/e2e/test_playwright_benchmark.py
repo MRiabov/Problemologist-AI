@@ -2,13 +2,16 @@ import pytest
 from playwright.sync_api import Page, expect
 
 
-@pytest.mark.integration_playwright
+@pytest.mark.integration_frontend
 def test_benchmark_creation_flow(page: Page):
     # 1. Navigate to the local development server
-    page.goto("http://localhost:5173", timeout=60000)
+    page.goto("http://localhost:15173", timeout=60000)
 
-    # 2. Navigate to the Benchmark page
-    benchmark_link = page.get_by_role("link", name="Benchmark")
+    # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)
+    benchmark_link = page.get_by_text(r"/^Benchmark$/i", exact=False).first
+    if not benchmark_link.is_visible():
+        benchmark_link = page.get_by_role("link", name=r"/Benchmark/i")
+
     expect(benchmark_link).to_be_visible(timeout=30000)
     benchmark_link.click()
 

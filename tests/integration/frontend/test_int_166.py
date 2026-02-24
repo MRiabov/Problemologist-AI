@@ -1,10 +1,11 @@
 import pytest
 from playwright.sync_api import Page, expect
 
+
 @pytest.mark.integration_frontend
 def test_simulation_navigation_timeline(page: Page):
     # 1. Navigate to the local development server
-    page.goto("http://localhost:5173", timeout=60000)
+    page.goto("http://localhost:15173", timeout=60000)
 
     # 2. Navigate to the Benchmark page
     benchmark_link = page.get_by_role("link", name="Benchmark")
@@ -58,7 +59,9 @@ def test_simulation_navigation_timeline(page: Page):
     expect(time_display).to_be_visible()
 
     # Test Reset (RotateCcw icon)
-    reset_button = page.locator("button:has(svg.lucide-rotate-ccw)").first # There might be two, one for camera one for timeline
+    reset_button = page.locator(
+        "button:has(svg.lucide-rotate-ccw)"
+    ).first  # There might be two, one for camera one for timeline
     # The one in the footer is usually grouped with rewind/fastforward
     footer_controls = page.locator(".bg-card\\/80")
     footer_reset = footer_controls.locator("button:has(svg.lucide-rotate-ccw)")

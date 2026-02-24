@@ -46,7 +46,7 @@ async def test_int_043_batch_execution_path():
             for episode_id in episode_ids:
                 status_resp = await client.get(
                     f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=5.0
-                )
+                )  # should be instant because LLMs are mocked.
                 if status_resp.status_code != 200:
                     all_done = False
                     break

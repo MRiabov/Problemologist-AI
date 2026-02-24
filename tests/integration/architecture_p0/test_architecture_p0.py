@@ -389,10 +389,14 @@ def build():
         data = resp.json()
 
         assert data["success"], f"Verification reported failure: {data.get('message')}"
-        assert "verification_result" in data["artifacts"], "Missing verification_result artifact"
+        assert "verification_result" in data["artifacts"], (
+            "Missing verification_result artifact"
+        )
         ver_result = data["artifacts"]["verification_result"]
         assert ver_result["num_runs"] == 3
-        assert ver_result["success_rate"] == 1.0, f"Expected 100% success, got {ver_result['success_rate']}"
+        assert ver_result["success_rate"] == 1.0, (
+            f"Expected 100% success, got {ver_result['success_rate']}"
+        )
 
 
 @pytest.mark.integration_p0

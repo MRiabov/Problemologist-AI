@@ -7,7 +7,8 @@ import re
 
 # Constants
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
+
 
 @pytest.mark.integration_frontend
 def test_int_157_session_history(page: Page):
@@ -23,8 +24,7 @@ def test_int_157_session_history(page: Page):
     with httpx.Client() as client:
         # Create benchmark session
         resp_b = client.post(
-            f"{CONTROLLER_URL}/benchmark/generate",
-            json={"prompt": benchmark_name}
+            f"{CONTROLLER_URL}/benchmark/generate", json={"prompt": benchmark_name}
         )
         assert resp_b.status_code == 200
         benchmark_id = resp_b.json()["session_id"]
@@ -32,28 +32,53 @@ def test_int_157_session_history(page: Page):
         # Create engineer session
         resp_e = client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": engineer_name, "session_id": str(uuid.uuid4())}
+            json={"task": engineer_name, "session_id": str(uuid.uuid4())},
         )
         assert resp_e.status_code == 202
         engineer_id = resp_e.json()["episode_id"]
 
-    # 2. Navigate to frontend
-    page.goto(FRONTEND_URL)
+    # 2. Poll until both episodes are available via the API
+    max_retries = 30
+    episodes_found = False
+    with httpx.Client(timeout=10.0) as client:
+        for i in range(max_retries):
+            resp = client.get(f"{CONTROLLER_URL}/episodes/")
+            if resp.status_code == 200:
+                ep_ids = [ep["id"] for ep in resp.json()]
+                if benchmark_id in ep_ids and engineer_id in ep_ids:
+                    episodes_found = True
+                    break
+            import time
 
-    # 3. Verify both sessions appear in sidebar
+            time.sleep(1)
+
+    assert episodes_found, (
+        f"Episodes {benchmark_id} and {engineer_id} did not appear in API"
+    )
+
+    # 3. Navigate to frontend
+    page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
+
+    # 4. Verify both sessions appear in sidebar
     expect(page.get_by_text(benchmark_name)).to_be_visible(timeout=30000)
     expect(page.get_by_text(engineer_name)).to_be_visible(timeout=30000)
 
-    # 4. Click benchmark session and verify navigation to /benchmark
+    # 5. Click benchmark session and verify navigation to /benchmark
     page.get_by_text(benchmark_name).click()
     expect(page).to_have_url(re.compile(r".*/benchmark"), timeout=15000)
     # The title "Benchmark Pipeline" is in a h2
-    expect(page.locator("h2", has_text="Benchmark Pipeline")).to_be_visible(timeout=15000)
+    expect(page.locator("h2", has_text="Benchmark Pipeline")).to_be_visible(
+        timeout=15000
+    )
 
-    # 5. Click engineer session and verify navigation to /
+    # 6. Click engineer session and verify navigation to /
     page.get_by_text(engineer_name).click()
     expect(page).to_have_url(FRONTEND_URL + "/", timeout=15000)
-    expect(page.locator("h2", has_text="Engineer Workspace")).to_be_visible(timeout=15000)
+    expect(page.locator("h2", has_text="Engineer Workspace")).to_be_visible(
+        timeout=15000
+    )
+
 
 @pytest.mark.integration_frontend
 def test_int_158_workflow_parity(page: Page):
@@ -63,9 +88,10 @@ def test_int_158_workflow_parity(page: Page):
     """
     # Test for Engineer Workflow
     page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
 
     # Click CREATE NEW to ensure fresh state
-    page.get_by_role("button", name="CREATE NEW").click()
+    page.get_by_test_id("create-new-button").click()
 
     prompt_e = f"Build a 5mm cube {uuid.uuid4()}"
     chat_input = page.locator("#chat-input")
@@ -74,7 +100,9 @@ def test_int_158_workflow_parity(page: Page):
     page.get_by_label("Send Message").click()
 
     # Verify thinking indicator
-    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(timeout=30000)
+    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
+        timeout=30000
+    )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
 
     # Wait for completion (Send Message button returns)
@@ -85,15 +113,18 @@ def test_int_158_workflow_parity(page: Page):
     expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # Click CREATE NEW
-    page.get_by_role("button", name="CREATE NEW").click()
+    page.get_by_test_id("create-new-button").click()
 
     prompt_b = f"Move a sphere {uuid.uuid4()}"
     page.locator("#chat-input").fill(prompt_b)
     page.get_by_label("Send Message").click()
 
-    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(timeout=30000)
+    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
+        timeout=30000
+    )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
+
 
 @pytest.mark.integration_frontend
 def test_int_159_plan_approval_comment(page: Page):
@@ -104,9 +135,10 @@ def test_int_159_plan_approval_comment(page: Page):
     """
     # 1. Start a benchmark generation
     page.goto(f"{FRONTEND_URL}/benchmark")
+    page.wait_for_load_state("networkidle")
 
     # Click CREATE NEW
-    page.get_by_role("button", name="CREATE NEW").click()
+    page.get_by_test_id("create-new-button").click()
 
     page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
     page.get_by_label("Send Message").click()
@@ -124,7 +156,9 @@ def test_int_159_plan_approval_comment(page: Page):
     page.get_by_role("button", name="Confirm & Start").click()
 
     # Wait for the agent to transition to RUNNING state in the UI
-    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(timeout=30000)
+    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
+        timeout=30000
+    )
 
     # 5. Verify the comment is persisted as a trace via API
     with httpx.Client() as client:
@@ -133,11 +167,15 @@ def test_int_159_plan_approval_comment(page: Page):
         found_ep = None
         for ep in episodes:
             full_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep['id']}").json()
-            for trace in full_ep.get('traces', []):
-                if trace.get('trace_type') == 'log' and test_comment in (trace.get('content') or ''):
+            for trace in full_ep.get("traces", []):
+                if trace.get("trace_type") == "log" and test_comment in (
+                    trace.get("content") or ""
+                ):
                     found_ep = full_ep
                     break
             if found_ep:
                 break
 
-        assert found_ep is not None, f"Comment '{test_comment}' not found in any episode traces"
+        assert found_ep is not None, (
+            f"Comment '{test_comment}' not found in any episode traces"
+        )
