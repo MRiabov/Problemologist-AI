@@ -75,41 +75,126 @@ class ElectronicsManager:
             logger.warning("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
 
+    def _resolve_terminal_node(self, comp_id: str, term: str) -> str:
+        """Resolve component ID and terminal to a standard graph node name."""
+        if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
+            return "supply_v+"
+        if term == "0" or (comp_id == "supply" and term == "0"):
+            return "0"
+
+        # Normalize motor terminals
+        if term == "a":
+            term = "+"
+        if term == "b":
+            term = "-"
+
+        return f"{comp_id}_{term}"
+
     def _fallback_update(self):
-        """Connectivity-based fallback for is_powered_map if SPICE fails."""
+        """
+        Connectivity-based fallback for is_powered_map if SPICE fails.
+        Uses a graph traversal to check if components are connected to both VCC and GND.
+        """
         if not self.electronics:
             return
 
-        # BFS for connectivity
-        # (Extracted from loop.py:227-307)
-        powered = set()
-        sources = [
-            c.component_id
-            for c in self.electronics.components
-            if c.type == ElectronicComponentType.POWER_SUPPLY
-        ]
+        adj: dict[str, list[str]] = {}  # Adjacency list: node -> list[node]
 
-        # Simplified BFS for power propagation
-        queue = list(sources)
-        visited = set(sources)
-        powered.update(sources)
+        def add_edge(u, v):
+            if u not in adj:
+                adj[u] = []
+            if v not in adj:
+                adj[v] = []
+            adj[u].append(v)
+            adj[v].append(u)
+
+        # 1. Add Wiring Edges
+        for wire in self.electronics.wiring:
+            u = self._resolve_terminal_node(
+                wire.from_terminal.component, wire.from_terminal.terminal
+            )
+            v = self._resolve_terminal_node(
+                wire.to_terminal.component, wire.to_terminal.terminal
+            )
+            add_edge(u, v)
+
+        # 2. Add Internal Component Edges
+        for comp in self.electronics.components:
+            cid = comp.component_id
+            ctype = comp.type
+
+            if ctype in [ElectronicComponentType.SWITCH, ElectronicComponentType.RELAY]:
+                # Connect 'in' to 'out' only if closed
+                if self.switch_states.get(cid, False):
+                    u = self._resolve_terminal_node(cid, "in")
+                    v = self._resolve_terminal_node(cid, "out")
+                    add_edge(u, v)
+
+            elif ctype == ElectronicComponentType.MOTOR:
+                # Motors conduct current, so connect '+' to '-'
+                u = self._resolve_terminal_node(cid, "+")
+                v = self._resolve_terminal_node(cid, "-")
+                add_edge(u, v)
+
+        # 3. Identify Source and Ground Roots
+        vcc_roots = set()
+        gnd_roots = set()
+
+        # Main Supply
+        if self.electronics.power_supply:
+            vcc_roots.add("supply_v+")
+            gnd_roots.add("0")
+
+        # Batteries (Secondary Supplies)
+        for comp in self.electronics.components:
+            if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                vcc_roots.add(self._resolve_terminal_node(comp.component_id, "+"))
+                gnd_roots.add(self._resolve_terminal_node(comp.component_id, "-"))
+
+        # 4. BFS from VCC
+        reachable_vcc = set()
+        queue = list(vcc_roots)
+        reachable_vcc.update(vcc_roots)
 
         while queue:
             u = queue.pop(0)
-            # Find neighbors in wiring
-            for wire in self.electronics.wiring:
-                v = None
-                if wire.from_terminal.component == u:
-                    v = wire.to_terminal.component
-                elif wire.to_terminal.component == u:
-                    v = wire.from_terminal.component
+            if u in adj:
+                for v in adj[u]:
+                    if v not in reachable_vcc:
+                        reachable_vcc.add(v)
+                        queue.append(v)
 
-                if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
-                    visited.add(v)
-                    powered.add(v)
-                    queue.append(v)
+        # 5. BFS from GND
+        reachable_gnd = set()
+        queue = list(gnd_roots)
+        reachable_gnd.update(gnd_roots)
 
+        while queue:
+            u = queue.pop(0)
+            if u in adj:
+                for v in adj[u]:
+                    if v not in reachable_gnd:
+                        reachable_gnd.add(v)
+                        queue.append(v)
+
+        # 6. Determine Power State
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            cid = comp.component_id
+
+            # Identify terminals to check based on component type
+            pos_term = self._resolve_terminal_node(cid, "+")
+            neg_term = self._resolve_terminal_node(cid, "-")
+
+            if comp.type in [
+                ElectronicComponentType.SWITCH,
+                ElectronicComponentType.RELAY,
+            ]:
+                pos_term = self._resolve_terminal_node(cid, "in")
+                neg_term = self._resolve_terminal_node(cid, "out")
+
+            # Check connectivity (polarity agnostic)
+            powered = (pos_term in reachable_vcc and neg_term in reachable_gnd) or (
+                pos_term in reachable_gnd and neg_term in reachable_vcc
+            )
+
+            self.is_powered_map[cid] = 1.0 if powered else 0.0
