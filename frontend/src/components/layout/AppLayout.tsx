@@ -1,6 +1,8 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useConnection } from "../../context/ConnectionContext";
+import { useEpisodes } from "../../context/EpisodeContext";
+import { FeedbackSystem } from "../workspace/FeedbackSystem";
 import { AlertTriangle } from "lucide-react";
 import { 
   ResizableHandle, 
@@ -10,12 +12,14 @@ import {
 
 export default function AppLayout() {
   const { isMockMode } = useConnection();
+  const { feedbackState, setFeedbackState, selectedEpisode } = useEpisodes();
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="h-screen w-full overflow-hidden bg-background text-foreground" data-testid="app-layout">
       <ResizablePanelGroup 
         orientation="horizontal" 
         className="h-full w-full"
+        data-testid="main-resizable-group"
         onLayoutChanged={(layout) => {
           localStorage.setItem('resizable-layout:app-sidebar', JSON.stringify(layout));
         }}
@@ -49,6 +53,16 @@ export default function AppLayout() {
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Global Feedback Modal */}
+      {feedbackState && selectedEpisode && (
+          <FeedbackSystem 
+              episodeId={selectedEpisode.id} 
+              traceId={feedbackState.traceId}
+              initialScore={feedbackState.score}
+              onClose={() => setFeedbackState(null)}
+          />
+      )}
     </div>
   );
 }

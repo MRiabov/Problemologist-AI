@@ -1,22 +1,48 @@
 import { useState } from "react";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ThumbsUp, ThumbsDown, AlertTriangle } from "lucide-react";
 import { Button } from "../ui/button";
+import { submitTraceFeedback } from "../../api/client";
+import { cn } from "../../lib/utils";
 
 interface FeedbackSystemProps {
     episodeId: string;
+    traceId: number;
+    initialScore: number;
     onClose?: () => void;
 }
 
-export function FeedbackSystem({ episodeId, onClose }: FeedbackSystemProps) {
-    const [comment, setComment] = useState("");
-    const [submitted, setSubmitted] = useState(false);
+const FEEDBACK_TOPICS = [
+    "Misinterpretation",
+    "Doesn't follow instructions",
+    "Technical Error",
+    "Poor Design",
+    "Other"
+];
 
-    const handleSubmit = () => {
-        console.log("Submitting feedback for", episodeId, { comment });
-        setSubmitted(true);
-        setTimeout(() => {
-            if (onClose) onClose();
-        }, 2000);
+export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: FeedbackSystemProps) {
+    const [comment, setComment] = useState("");
+    const [score, setScore] = useState(initialScore);
+    const [topic, setTopic] = useState<string | null>(null);
+    const [submitted, setSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            const combinedComment = topic ? `[${topic}] ${comment}` : comment;
+            await submitTraceFeedback(episodeId, traceId, score, combinedComment);
+            setSubmitted(true);
+            setTimeout(() => {
+                if (onClose) onClose();
+            }, 2000);
+        } catch (e) {
+            console.error("Failed to submit feedback", e);
+            setError("Failed to submit feedback. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (submitted) {
@@ -36,38 +62,91 @@ export function FeedbackSystem({ episodeId, onClose }: FeedbackSystemProps) {
                 onClick={onClose}
             />
             <div className="bg-background border border-border shadow-2xl rounded-2xl p-6 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200">
-                <h2 className="text-lg font-semibold text-foreground mb-4">Feedback</h2>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Agent Feedback</h2>
+                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+                        <button
+                            onClick={() => setScore(1)}
+                            className={cn(
+                                "p-2 rounded-lg transition-all",
+                                score === 1 ? "bg-background text-green-500 shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <ThumbsUp className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={() => setScore(0)}
+                            className={cn(
+                                "p-2 rounded-lg transition-all",
+                                score === 0 ? "bg-background text-red-500 shadow-sm" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <ThumbsDown className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
                 
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-[13px] text-muted-foreground">
-                            Please provide details: (optional)
+                <div className="space-y-6">
+                    <div className="space-y-3">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                            What went wrong?
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {FEEDBACK_TOPICS.map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => setTopic(t)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all",
+                                        topic === t
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                    )}
+                                >
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                            Additional Details (Optional)
                         </label>
                         <textarea 
-                            placeholder="What was satisfying about this response?"
+                            placeholder={score === 1 ? "What was satisfying about this response?" : "How can the agent improve?"}
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
-                            className="w-full bg-background border border-border rounded-xl p-4 text-[14px] min-h-[120px] focus:ring-1 focus:ring-primary/20 focus:border-primary/30 transition-all outline-none resize-none"
+                            className="w-full bg-muted/30 border border-border rounded-xl p-4 text-[13px] min-h-[100px] focus:ring-2 focus:ring-primary/10 focus:border-primary/30 transition-all outline-none resize-none"
                         />
                     </div>
 
-                    <p className="text-[12px] text-muted-foreground/60 leading-relaxed">
-                        Submitting this report will send the entire current conversation to the evaluation system for future improvements to our models. <span className="underline cursor-pointer hover:text-muted-foreground transition-colors">Learn More</span>
+                    {error && (
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-500 text-[11px] font-bold">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            {error}
+                        </div>
+                    )}
+
+                    <p className="text-[10px] text-muted-foreground/60 leading-relaxed italic">
+                        Submitting this report will send the conversation segment to our evaluation system to help improve agent reasoning.
                     </p>
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex justify-end gap-3 pt-2">
                         <Button 
                             variant="outline"
                             onClick={onClose}
-                            className="h-9 px-5 rounded-xl border-border hover:bg-muted font-medium text-[13px]"
+                            disabled={isSubmitting}
+                            className="h-9 px-6 rounded-xl border-border hover:bg-muted font-bold text-[11px] uppercase tracking-widest"
                         >
                             Cancel
                         </Button>
                         <Button 
                             onClick={handleSubmit}
-                            className="h-9 px-5 rounded-xl bg-foreground text-background hover:opacity-90 font-medium text-[13px] transition-all"
+                            disabled={isSubmitting}
+                            className="h-9 px-6 rounded-xl bg-foreground text-background hover:opacity-90 font-bold text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-foreground/10"
                         >
-                            Submit
+                            {isSubmitting ? "Submitting..." : "Send Feedback"}
                         </Button>
                     </div>
                 </div>

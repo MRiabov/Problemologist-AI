@@ -124,6 +124,14 @@ SIMULATION_QUEUE_DEPTH = 0
 def _init_genesis_worker():
     """Pre-warm Genesis in the worker process."""
     try:
+        import os
+
+        # Force headless mode for pyglet (used by genesis/pyrender)
+        os.environ["PYGLET_HEADLESS"] = "1"
+        # Force EGL platform for headless rendering
+        if "PYOPENGL_PLATFORM" not in os.environ:
+            os.environ["PYOPENGL_PLATFORM"] = "egl"
+
         import genesis as gs
         import torch
         import time

@@ -483,8 +483,13 @@ scenarios:
         with open('assembly_definition.yaml', 'w') as f: yaml.dump(data, f)
       
     coder:
-      thought: "Implementing cube."
-      generated_code: "with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')"
+      thought: "Implementing cube and running simulation to generate renders."
+      generated_code: |
+        with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(1,1,1)')
+        from build123d import *
+        from worker_heavy.utils.cad import simulate, preview_design
+        preview_design(Box(1,1,1))
+        simulate(Box(1,1,1), backend="genesis")
       
     reviewer:
       review:

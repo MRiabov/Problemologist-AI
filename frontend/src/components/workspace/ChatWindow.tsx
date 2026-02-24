@@ -13,7 +13,6 @@ import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
 import { Button } from "../ui/button";
 import { ContextCards } from "./ContextCards";
-import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
 import type { TopologyNode } from "../visualization/ModelBrowser";
@@ -47,13 +46,13 @@ export default function ChatWindow({
       updateObjectives, 
       selectedContext,
       addToContext,
-      setActiveArtifactId
+      setActiveArtifactId,
+      setFeedbackState
   } = useEpisodes();
   const { theme } = useTheme();
 
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [confirmComment, setConfirmComment] = useState("");
 
   const location = window.location;
@@ -105,7 +104,9 @@ export default function ChatWindow({
   const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
 
   // Stable handlers
-  const handleShowFeedback = useCallback(() => setShowFeedbackModal(true), []);
+  const handleShowFeedback = useCallback((traceId: number, score: number) => {
+    setFeedbackState({ traceId, score });
+  }, [setFeedbackState]);
   const handleAssetClick = useCallback((id: string | null) => setActiveArtifactId(id), [setActiveArtifactId]);
 
   // Stable assets list to prevent re-renders on every poll
@@ -176,6 +177,7 @@ export default function ChatWindow({
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}
+                    isRunning={isRunning}
                   />
                 </div>
 
@@ -258,13 +260,6 @@ export default function ChatWindow({
                                 : "The agent encountered an unrecoverable error during execution."}
                         </div>
                     </div>
-                )}
-                {/* Session Feedback Modal */}
-                {showFeedbackModal && selectedEpisode && (
-                    <FeedbackSystem 
-                        episodeId={selectedEpisode.id} 
-                        onClose={() => setShowFeedbackModal(false)}
-                    />
                 )}
             </div>
         </ScrollArea>

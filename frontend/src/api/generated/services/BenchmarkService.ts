@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { BenchmarkGenerateRequest } from '../models/BenchmarkGenerateRequest';
+import type { ConfirmRequest } from '../models/ConfirmRequest';
 import type { EpisodeResponse } from '../models/EpisodeResponse';
 import type { UpdateObjectivesRequest } from '../models/UpdateObjectivesRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -33,11 +34,13 @@ export class BenchmarkService {
      * Confirm Benchmark
      * Confirm and continue benchmark generation after planning.
      * @param sessionId
+     * @param requestBody
      * @returns any Successful Response
      * @throws ApiError
      */
     public static confirmBenchmarkBenchmarkSessionIdConfirmPost(
         sessionId: string,
+        requestBody: ConfirmRequest,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -45,6 +48,8 @@ export class BenchmarkService {
             path: {
                 'session_id': sessionId,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

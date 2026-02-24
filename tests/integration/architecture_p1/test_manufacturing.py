@@ -75,17 +75,19 @@ async def test_manufacturing_methods_and_materials():
             pytest.fail(f"Engineer timed out. Last status: {final_status}")
 
         # 3. Verify Workbench Execution (INT-036)
-        artifacts_resp = await client.get(f"/artifacts/{episode_id}")
-        assert artifacts_resp.status_code == 200
-        artifacts = artifacts_resp.json()
+        # Use /episodes/{id} to get assets list
+        ep_resp = await client.get(f"/episodes/{episode_id}")
+        assert ep_resp.status_code == 200
+        ep_data = ep_resp.json()
+        assets = ep_data.get("assets", [])
 
         # Check for assembly_definition.yaml which implies workbench ran
         cost_yaml_artifact = next(
-            (a for a in artifacts if "assembly_definition.yaml" in a["path"]),
+            (a for a in assets if "assembly_definition.yaml" in a["s3_path"]),
             None,
         )
         assert cost_yaml_artifact is not None, (
-            f"Workbench output (cost estimation) missing. Artifacts: {[a['path'] for a in artifacts]}"
+            f"Workbench output (cost estimation) missing. Assets: {[a['s3_path'] for a in assets]}"
         )
 
         # 4. Verify Material Enforcement (INT-035) - "Nice to have" negative test

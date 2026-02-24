@@ -32,7 +32,7 @@ describe('EngineerWorkspace', () => {
     expect(screen.getAllByText(/Engineer Workspace/i).length).toBeGreaterThan(0);
 
     // Right column components (ArtifactView)
-    expect(screen.getByText(/Explorer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Resources/i)).toBeInTheDocument();
   });
 
   it('runs new agent task', async () => {
@@ -47,8 +47,16 @@ describe('EngineerWorkspace', () => {
     fireEvent.click(sendButton);
 
     await waitFor(() => {
-      // Expect two arguments: task and session_id (and 3rd is undefined)
-      expect(apiClient.runAgent).toHaveBeenCalledWith('New Test Task', expect.any(String), undefined);
+      expect(apiClient.runAgent).toHaveBeenCalledWith(
+        'New Test Task',
+        expect.any(String),
+        expect.objectContaining({
+          mentions: [],
+          code_references: [],
+          selections: [],
+          context_items: []
+        })
+      );
     });
   });
 });

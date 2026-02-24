@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Terminal, AlertCircle } from "lucide-react";
+import { Terminal, AlertCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { ThoughtBlock } from "./ThoughtBlock";
 import { ActionCard } from "./ActionCard";
 import { HighlightedContent } from "./HighlightedContent";
@@ -13,7 +13,8 @@ interface TraceListProps {
   theme: string;
   onAssetClick: (id: string | null) => void;
   addToContext: (item: ContextItem) => void;
-  onShowFeedback: () => void;
+  onShowFeedback: (traceId: number, score: number) => void;
+  isRunning?: boolean;
 }
 
 export const TraceList = memo(({
@@ -22,7 +23,8 @@ export const TraceList = memo(({
   theme,
   onAssetClick,
   addToContext,
-  onShowFeedback
+  onShowFeedback,
+  isRunning
 }: TraceListProps) => {
 
   if (!traces || traces.length === 0) {
@@ -39,7 +41,7 @@ export const TraceList = memo(({
       {traces.map(trace => {
           const type = trace.trace_type as string;
           if (type === 'llm_thought' || type === 'thought') {
-            const stableDuration = (trace.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 5) + 1;
+            const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
             return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
           }
           if (type === 'tool_start') {
@@ -53,6 +55,8 @@ export const TraceList = memo(({
               );
           }
           if (type === 'llm_end' && trace.content) {
+            const isLastLlmEnd = traces && traces.filter(t => t.trace_type === 'llm_end').pop()?.id === trace.id;
+
             return (
                 <div key={trace.id} className="relative group/msg">
                     <HighlightedContent
@@ -64,13 +68,32 @@ export const TraceList = memo(({
                       setActiveArtifactId={onAssetClick}
                     />
                     <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                        <button
-                            onClick={onShowFeedback}
-                            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
-                        >
-                            <AlertCircle className="h-3 w-3" />
-                            Feedback
-                        </button>
+                        {isLastLlmEnd && !isRunning ? (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => onShowFeedback(trace.id, 1)}
+                                    className="p-1 hover:bg-muted rounded-md text-muted-foreground hover:text-green-500 transition-colors"
+                                    title="Thumbs Up"
+                                >
+                                    <ThumbsUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => onShowFeedback(trace.id, 0)}
+                                    className="p-1 hover:bg-muted rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                                    title="Thumbs Down"
+                                >
+                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => onShowFeedback(trace.id, 1)}
+                                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                            >
+                                <AlertCircle className="h-3 w-3" />
+                                Feedback
+                            </button>
+                        )}
                     </div>
                 </div>
             );

@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers, Plus } from "lucide-react";
+import { LayoutDashboard, Rocket, Settings, History, CheckCircle2, XCircle, Clock, Search, Layers, Plus, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { ScrollArea } from "../ui/scroll-area";
@@ -13,7 +13,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const { episodes, selectedEpisode, selectEpisode, createNewBenchmark, loading } = useEpisodes();
+  const { episodes, selectedEpisode, selectEpisode, createNewBenchmark, loading, setFeedbackState } = useEpisodes();
   const location = useLocation();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
@@ -146,6 +146,32 @@ export default function Sidebar() {
                                     <span>{new Date(ep.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     <span>•</span>
                                     <span className="font-mono">{ep.id.substring(0,4)}</span>
+                                </div>
+                                
+                                {/* Hover Feedback Actions */}
+                                <div className="absolute right-2 bottom-2 hidden group-hover:flex items-center gap-1.5 animate-in fade-in slide-in-from-right-1">
+                                    <button
+                                        data-testid="sidebar-thumbs-up"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const lastTraceId = ep.traces && ep.traces.length > 0 ? ep.traces[ep.traces.length - 1].id : 0;
+                                            setFeedbackState({ traceId: lastTraceId, score: 1 });
+                                        }}
+                                        className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-green-500 transition-colors"
+                                    >
+                                        <ThumbsUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                        data-testid="sidebar-thumbs-down"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const lastTraceId = ep.traces && ep.traces.length > 0 ? ep.traces[ep.traces.length - 1].id : 0;
+                                            setFeedbackState({ traceId: lastTraceId, score: 0 });
+                                        }}
+                                        className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-red-500 transition-colors"
+                                    >
+                                        <ThumbsDown className="h-3 w-3" />
+                                    </button>
                                 </div>
                             </button>
                         ))
