@@ -335,12 +335,26 @@ if [ "$HAS_FILE" = false ]; then
   PYTEST_ARGS+=("tests/integration")
 fi
 
+# Ensure test_output exists for junit.xml and JSON history
+mkdir -p test_output
+
 # We use uv run to execute pytest within the virtual environment. 
 # We pass -n0 to ensure integration tests run sequentially (stateful infra).
 # We override addopts to clear the default 'not integration' markers from pyproject.toml
-if uv run pytest -v -o "addopts=-n0" --maxfail=3 -s $REVERSE_FLAG "${PYTEST_ARGS[@]}"; then
+# We capture exit code to ensure we can persist results even on failure
+set +e
+uv run pytest -v -o "addopts=-n0" --maxfail=3 -s $REVERSE_FLAG "${PYTEST_ARGS[@]}" --junitxml=test_output/junit.xml
+PYTEST_EXIT_CODE=$?
+set -e
+
+# Run persistence script to update JSON history (non-gitignored test_output folder)
+uv run python scripts/persist_test_results.py
+
+if [ $PYTEST_EXIT_CODE -eq 0 ]; then
   echo "Integration tests PASSED!"
 else
   echo "Integration tests FAILED!"
-  # The trap will handle the exit status
 fi
+
+# Exit with pytest status to correctly trigger cleanup trap and return status to caller
+exit $PYTEST_EXIT_CODE

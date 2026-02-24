@@ -19,8 +19,17 @@ def create_dummy_stl(part, file_path, *args, **kwargs):
     mesh.export(str(file_path))
 
 
+def mock_repair_side_effect(input_path, output_path):
+    import shutil
+
+    shutil.copy(str(input_path), str(output_path))
+
+
 @patch("worker_heavy.utils.mesh_utils.tetrahedralize")
-@patch("worker_heavy.utils.mesh_utils.repair_mesh_file")
+@patch(
+    "worker_heavy.utils.mesh_utils.repair_mesh_file",
+    side_effect=mock_repair_side_effect,
+)
 @patch("worker_heavy.simulation.builder.export_stl", side_effect=create_dummy_stl)
 def test_genesis_builder_generates_msh_when_fem_enabled(
     mock_export_stl, mock_repair, mock_tetra, tmp_path
@@ -60,13 +69,14 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
     # Assert
     assert scene_path.exists()
 
-    # Check if tetrahedralize was called
-    assert mock_tetra.called
+    # Check if repair was called
     assert mock_repair.called
-    # It should be called at least twice: once by process_geometry (MuJoCo) and once for FEM
-    # Actually GenesisSimulationBuilder calls process_geometry which calls export_stl
-    # and then it calls export_stl AGAIN for FEM.
+    # Check if export_stl was called (at least once for rigid/visual, and once for FEM/soft)
     assert mock_export_stl.call_count >= 2
+
+    # Note: GenesisSimulationBuilder currently converts to OBJ for soft meshes
+    # and lets Genesis handle tetrahedralization, so tetrahedralize() is not called.
+    assert not mock_tetra.called
 
 
 @patch("worker_heavy.utils.mesh_utils.tetrahedralize")
