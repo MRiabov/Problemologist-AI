@@ -23,6 +23,11 @@ def get_engine():
         return _engine_cache[loop]
 
     database_url = settings.postgres_url
+    from shared.logging import get_logger
+
+    logger = get_logger(__name__)
+    logger.info("creating_sqlalchemy_engine", url=database_url)
+
     engine = create_async_engine(
         database_url,
         echo=False,

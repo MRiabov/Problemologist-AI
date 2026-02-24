@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 # Path configuration
@@ -23,8 +24,15 @@ def log(message):
 
 def run_cmd(cmd, cwd=PROJ_ROOT, capture=True):
     try:
+        stdout_dest = subprocess.PIPE if capture else None
+        stderr_dest = subprocess.STDOUT if capture else None
         result = subprocess.run(
-            cmd, cwd=cwd, capture_output=capture, text=True, shell=isinstance(cmd, str)
+            cmd,
+            cwd=cwd,
+            stdout=stdout_dest,
+            stderr=stderr_dest,
+            text=True,
+            shell=isinstance(cmd, str),
         )
         return result
     except Exception as e:
@@ -37,8 +45,51 @@ def get_current_branch():
     return res.stdout.strip() if res else "main"
 
 
+def parse_failures_xml(xml_path="test_output/junit.xml"):
+    """Parses JUnit XML to extract failures with details."""
+    failures = []
+    if not os.path.exists(xml_path):
+        return []
+
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        for testcase in root.findall(".//testcase"):
+            failure = testcase.find("failure")
+            error = testcase.find("error")  # specific error vs assertion failure
+            issue = failure if failure is not None else error
+
+            if issue is not None:
+                file_path = testcase.get("file")
+                name = testcase.get("name")
+                classname = testcase.get("classname")
+
+                # Pytest junitxml usually has file path. If not, construct from classname.
+                test_id = (
+                    f"{file_path}::{name}" if file_path else f"{classname}::{name}"
+                )
+
+                message = issue.get("message", "No message")
+                # Limit detailed trace to avoid token limits, but give enough context
+                details = issue.text or ""
+                details = details.strip()
+                if len(details) > 1000:
+                    details = details[:1000] + "\n...[truncated]..."
+
+                failures.append(
+                    {
+                        "id": test_id,
+                        "details": f"Error: {message}\nTraceback:\n{details}",
+                    }
+                )
+    except Exception as e:
+        log(f"Error parsing XML: {e}")
+
+    return failures
+
+
 def parse_failures(output):
-    """Extracts failed test names from pytest output."""
+    """Fallback: Extracts failed test names from pytest output (no details)."""
     failures = []
     if not output:
         return []
@@ -48,20 +99,38 @@ def parse_failures(output):
         log(
             "CRITICAL: Pytest failed due to empty marker argument. Forcing default markers."
         )
-        return ["FORCE_RUN_ALL"]
+        return [{"id": "FORCE_RUN_ALL", "details": "Marker error"}]
 
     # Look for lines like: FAILED tests/integration/test_worker_concurrency.py::test_worker_concurrency - ...
     pattern = re.compile(r"FAILED\s+(tests/integration/[^ ]+)")
     for line in output.splitlines():
         match = pattern.search(line)
         if match:
-            failures.append(match.group(1))
-    return list(set(failures))
+            failures.append(
+                {
+                    "id": match.group(1),
+                    "details": "Detail extraction failed (parsed from stdout)",
+                }
+            )
+
+    # Dedup by ID
+    unique = {}
+    for f in failures:
+        unique[f["id"]] = f
+    return list(unique.values())
 
 
 def start_jules_session(branch_name, failures):
+    # failures is now a list of dicts: {"id": "...", "details": "..."}
     # Ensure failure list is not too long to avoid API 400 errors
-    failure_text = "\n".join(failures[:5])
+
+    # Format details for prompt
+    failure_descriptions = []
+    for f in failures[:5]:  # Truncate to 5
+        failure_descriptions.append(f"Test: {f['id']}\n{f['details']}")
+
+    failure_text = "\n---\n".join(failure_descriptions)
+
     prompt = f"""The following integration tests are failing on branch {branch_name}. 
 Please fix the underlying code. Refer to @specs/integration-tests.md and @specs/desired_architecture.md.
 
@@ -73,6 +142,7 @@ FAILURES:
     )
     # Wrap prompt in single quotes for shell safety if it contains double quotes
     safe_prompt = prompt.replace('"', '\\"')
+    # Using subprocess to run jules command
     cmd = f'jules new "{safe_prompt}"'
     subprocess.Popen(cmd, shell=True, cwd=PROJ_ROOT, start_new_session=True)
 
@@ -81,7 +151,13 @@ def trigger_gemini_fix(branch_name, failures, reason=""):
     log(
         f"URGENT: Triggering Gemini CLI fix for {len(failures)} failures. Reason: {reason}"
     )
-    failure_text = "\n".join(failures)
+
+    # Format details for prompt
+    failure_descriptions = []
+    for f in failures:
+        failure_descriptions.append(f"Test: {f['id']}\n{f['details']}")
+    failure_text = "\n---\n".join(failure_descriptions)
+
     prompt = f"""URGENT FIX REQUIRED on branch {branch_name}. 
 The following integration tests are failing and Jules was unable to resolve them or they are blocking progress.
 {reason}
@@ -165,9 +241,25 @@ def main():
         if test_res and test_res.returncode != 0:
             log(f"Test run finished with exit code {test_res.returncode}")
 
-        failures = parse_failures(test_res.stdout) if test_res else []
+        # Check for critical stdout errors first
+        if test_res and "pytest: error: argument -m" in test_res.stdout:
+            log(
+                "CRITICAL: Pytest failed due to empty marker argument. Forcing default markers."
+            )
+            failures = [{"id": "FORCE_RUN_ALL", "details": "Marker error"}]
+        else:
+            # Try to parse XML first for rich details
+            failures = parse_failures_xml("test_output/junit.xml")
+            if not failures and test_res:
+                # Fallback to stdout scraping if XML is empty but return code non-zero?
+                # Actually, parse_failures_stdout logic handles scraping if XML failed.
+                # But we want to prefer XML.
+                # If parse_failures_xml returns empty, check if we scraped any IDs from stdout.
+                stdout_failures = parse_failures(test_res.stdout)
+                if stdout_failures:
+                    failures = stdout_failures
 
-        if "FORCE_RUN_ALL" in failures:
+        if failures and failures[0]["id"] == "FORCE_RUN_ALL":
             log("Rerunning tests without markers...")
             test_res = run_cmd(
                 [
@@ -177,7 +269,10 @@ def main():
                     "tests/integration",
                 ]
             )
-            failures = parse_failures(test_res.stdout) if test_res else []
+            # Re-parse
+            failures = parse_failures_xml("test_output/junit.xml")
+            if not failures and test_res:
+                failures = parse_failures(test_res.stdout)
 
         log(f"Iteration complete. {len(failures)} failures detected.")
 

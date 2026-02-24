@@ -225,12 +225,14 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         sync_tools = {}
         for name, fn in tool_functions.items():
             if asyncio.iscoroutinefunction(fn):
+
                 def _sync_wrap(*args, _fn=fn, **kwargs):
                     new_loop = asyncio.new_event_loop()
                     try:
                         return new_loop.run_until_complete(_fn(*args, **kwargs))
                     finally:
                         new_loop.close()
+
                 _sync_wrap.__name__ = name
                 sync_tools[name] = _sync_wrap
             else:
@@ -281,11 +283,11 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         for req_file in ["plan.md", "todo.md", "objectives.yaml"]:
             if req_file != SCRIPT_FILE:
                 with contextlib.suppress(Exception):
-                    files_to_validate[req_file] = await ctx.worker_client.read_file(req_file)
+                    files_to_validate[req_file] = await ctx.worker_client.read_file(
+                        req_file
+                    )
 
-        is_valid, errors = validate_node_output(
-            "coder", files_to_validate
-        )
+        is_valid, errors = validate_node_output("coder", files_to_validate)
         if not is_valid:
             logger.warning("benchmark_coder_validation_failed", errors=errors)
             state.session.validation_logs.append(f"Output validation failed: {errors}")

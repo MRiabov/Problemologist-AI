@@ -1,6 +1,7 @@
 import subprocess
 import sys
 
+
 def run_command(command):
     print(f"Running: {' '.join(command)}")
     result = subprocess.run(command, capture_output=True, text=True)
@@ -10,12 +11,15 @@ def run_command(command):
         print(result.stdout)
     return result
 
+
 def main():
     # 0. Check for dirty working tree
     print("Checking for dirty working tree...")
     res = run_command(["git", "status", "--porcelain"])
     if res.stdout.strip():
-        print("Working tree is dirty. Please commit or stash your changes before updating.")
+        print(
+            "Working tree is dirty. Please commit or stash your changes before updating."
+        )
         sys.exit(1)
 
     # 1. Fetch latest from origin
@@ -43,7 +47,9 @@ def main():
 
             # 4. Check if dependencies changed
             # Compare HEAD with ORIG_HEAD (the state before rebase)
-            diff_res = run_command(["git", "diff", "ORIG_HEAD", "HEAD", "--", "uv.lock", "pyproject.toml"])
+            diff_res = run_command(
+                ["git", "diff", "ORIG_HEAD", "HEAD", "--", "uv.lock", "pyproject.toml"]
+            )
             if diff_res.stdout.strip():
                 print("Dependencies might have changed. Updating...")
                 # Try to update dependencies
@@ -54,6 +60,7 @@ def main():
             print("Rebase failed! Please resolve conflicts manually.")
             print("You can use 'git rebase --abort' to return to your previous state.")
             sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

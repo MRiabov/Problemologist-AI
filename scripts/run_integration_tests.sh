@@ -71,6 +71,59 @@ if [ -f .env ]; then
   done < .env
 fi
 
+# Parse arguments
+REVERSE_FLAG=""
+PYTEST_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --reverse)
+      REVERSE_FLAG="--reverse"
+      shift
+      ;;
+    --no-smoke)
+      echo "High-fidelity simulation ENABLED (smoke test mode DISABLED)"
+      export SMOKE_TEST_MODE=false
+      shift
+      ;;
+    *)
+      PYTEST_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# If no marker/file specified, add default markers
+HAS_MARKER=false
+HAS_FILE=false
+for arg in "${PYTEST_ARGS[@]}"; do
+  if [[ "$arg" == "-m" ]]; then HAS_MARKER=true; fi
+  if [[ "$arg" == tests/* ]] || [[ "$arg" == */tests/* ]]; then HAS_FILE=true; fi
+done
+
+if [ "$HAS_MARKER" = false ] && [ "$HAS_FILE" = false ]; then
+  if [ ${#PYTEST_ARGS[@]} -eq 1 ]; then
+    # Treat single positional arg as the marker
+    MARKER="${PYTEST_ARGS[0]}"
+    PYTEST_ARGS=("-m" "$MARKER")
+  elif [ ${#PYTEST_ARGS[@]} -eq 0 ]; then
+    # No args, use default markers
+    PYTEST_ARGS=("-m" "integration_p0 or integration_p1 or integration_p2 or integration_frontend")
+  fi
+fi
+
+# Determine if Playwright tests should be run
+RUN_PLAYWRIGHT=false
+for arg in "${PYTEST_ARGS[@]}"; do
+  if [[ "$arg" == *"integration_frontend"* ]]; then RUN_PLAYWRIGHT=true; fi
+  if [[ "$arg" == "tests/e2e"* ]] || [[ "$arg" == */tests/e2e* ]]; then RUN_PLAYWRIGHT=true; fi
+done
+
+# ALWAYS restrict to tests/integration and tests/e2e if no file is specified to speed up discovery
+if [ "$HAS_FILE" = false ]; then
+  PYTEST_ARGS+=("tests/integration" "tests/e2e")
+fi
+
 # Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
 bash scripts/ensure_docker_vfs.sh
@@ -157,6 +210,9 @@ pkill -f "uvicorn.*18000" || true
 pkill -f "uvicorn.*18001" || true
 pkill -f "uvicorn.*18002" || true
 pkill -f "python -m controller.temporal_worker" || true
+pkill -f "npm run dev" || true
+pkill -f "vite" || true
+pkill -f "npx serve" || true
 pkill Xvfb || true
 
 # Start Xvfb for headless rendering
@@ -200,20 +256,39 @@ TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
+# Start Frontend if Playwright tests are requested
+FRONTEND_PID=""
+if [ "$RUN_PLAYWRIGHT" = true ]; then
+  echo "Building and Starting Frontend (Production Mode for Stability)..."
+  # Generate fresh OpenAPI specs to ensure the build is up-to-date with current models
+  PYTHONPATH=. uv run python scripts/generate_openapi.py
+  echo "VITE_API_URL=http://localhost:18000" > frontend/.env.production
+  (cd frontend && rm -rf dist && npm run build)
+  
+  # Start serving on port 15173
+  (cd frontend && npx serve -s dist -p 15173 > "../$LOG_DIR/frontend.log" 2>&1) &
+  FRONTEND_PID=$!
+  echo $FRONTEND_PID > logs/frontend.pid
+  echo "Frontend server started (PID: $FRONTEND_PID) on http://localhost:15173"
+fi
+
 # Create convenience symlinks in the logs/ root for the current run
 ln -sf "integration_tests/controller.log" logs/controller.log
 ln -sf "integration_tests/worker_light.log" logs/worker_light.log
 ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
+if [ "$RUN_PLAYWRIGHT" = true ]; then
+  ln -sf "integration_tests/frontend.log" logs/frontend.log
+fi
 
 cleanup() {
   # Record the exit status of the test command
   EXIT_STATUS=$?
   echo ""
-  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID, Xvfb: $XVFB_PID)..."
+  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID, Xvfb: $XVFB_PID, Frontend: $FRONTEND_PID)..."
   
   # Kill the captured PIDs
-  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID 2>/dev/null || true
+  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID $FRONTEND_PID 2>/dev/null || true
   
   # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
   # We use -9 here as some processes (especially when uv run is involved) can hang
@@ -221,9 +296,11 @@ cleanup() {
   pkill -9 -f "uvicorn.*18001" || true
   pkill -9 -f "python -m controller.temporal_worker" || true
   pkill -9 -f "uv run uvicorn" || true
+  pkill -9 -f "vite" || true
+  pkill -9 -f "npx serve" || true
   
   # Remove PID files
-  rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid
+  rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid logs/frontend.pid
   
   # Remove convenience symlinks if they are still valid (pointing to current run)
   # Actually, we might want to keep them to let the user see what happened
@@ -285,6 +362,24 @@ if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   exit 1
 fi
 
+# Wait for Frontend to be healthy if started
+if [ "$RUN_PLAYWRIGHT" = true ]; then
+  HEALTH_COUNT=0
+  while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+    if curl -s http://127.0.0.1:15173 > /dev/null; then
+      echo "Frontend is healthy on :15173!"
+      break
+    fi
+    echo "Waiting for frontend... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+    sleep 2
+    HEALTH_COUNT=$((HEALTH_COUNT + 1))
+  done
+  if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
+    echo "Frontend failed to start in time."
+    exit 1
+  fi
+fi
+
 if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
   echo "Timeout waiting for services to be healthy."
   echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
@@ -292,51 +387,7 @@ if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
   exit 1
 fi
 
-# Parse arguments
-REVERSE_FLAG=""
-PYTEST_ARGS=()
-
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --reverse)
-      REVERSE_FLAG="--reverse"
-      shift
-      ;;
-    --no-smoke)
-      echo "High-fidelity simulation ENABLED (smoke test mode DISABLED)"
-      export SMOKE_TEST_MODE=false
-      shift
-      ;;
-    *)
-      PYTEST_ARGS+=("$1")
-      shift
-      ;;
-  esac
-done
-
-# If no marker/file specified, add default markers
-HAS_MARKER=false
-HAS_FILE=false
-for arg in "${PYTEST_ARGS[@]}"; do
-  if [[ "$arg" == "-m" ]]; then HAS_MARKER=true; fi
-  if [[ "$arg" == tests/* ]] || [[ "$arg" == */tests/* ]]; then HAS_FILE=true; fi
-done
-
-if [ "$HAS_MARKER" = false ] && [ "$HAS_FILE" = false ]; then
-  if [ ${#PYTEST_ARGS[@]} -eq 1 ]; then
-    # Treat single positional arg as the marker
-    MARKER="${PYTEST_ARGS[0]}"
-    PYTEST_ARGS=("-m" "$MARKER")
-  elif [ ${#PYTEST_ARGS[@]} -eq 0 ]; then
-    # No args, use default markers
-    PYTEST_ARGS=("-m" "integration_p0 or integration_p1 or integration_p2")
-  fi
-fi
-
-# ALWAYS restrict to tests/integration if no file is specified to speed up discovery
-if [ "$HAS_FILE" = false ]; then
-  PYTEST_ARGS+=("tests/integration")
-fi
+# Ensure test_output exists for junit.xml and JSON history
 
 # Ensure test_output exists for junit.xml and JSON history
 mkdir -p test_output
@@ -358,6 +409,8 @@ if [ $PYTEST_EXIT_CODE -eq 0 ]; then
 else
   echo "Integration tests FAILED!"
 fi
+
+echo "Integration Tests Finished at: $(date)"
 
 # Exit with pytest status to correctly trigger cleanup trap and return status to caller
 exit $PYTEST_EXIT_CODE
