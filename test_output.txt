@@ -1,0 +1,96 @@
+Integration Tests Started at: Tue Feb 24 11:32:47 UTC 2026
+Shared sessions directory: /tmp/pb-sessions-u6de8U
+Docker is already using vfs storage driver.
+ngspice and libngspice already installed.
+Spinning up infrastructure (Postgres, Temporal, Minio)...
+Waiting for infra to be ready...
+Infrastructure is up. Giving Temporal a few seconds to settle...
+Running migrations...
+Starting Application Servers (Controller, Worker, Temporal Worker)...
+Starting Xvfb for headless rendering...
+Xvfb started (PID: 61040) on :99
+Worker Light started (PID: 61044)
+Worker Heavy started (PID: 61045)
+Controller started (PID: 61046)
+Temporal Worker started (PID: 61047)
+Waiting for servers to be healthy...
+Waiting for controller... (0/60)
+Waiting for controller... (1/60)
+Waiting for controller... (2/60)
+Waiting for controller... (3/60)
+Controller is healthy!
+Workers are healthy!
+============================= test session starts ==============================
+platform linux -- Python 3.12.12, pytest-9.0.2, pluggy-1.6.0 -- /app/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /app
+configfile: pyproject.toml
+plugins: base-url-2.1.0, cov-7.0.0, asyncio-1.3.0, hypothesis-6.151.9, playwright-0.7.2, typeguard-4.5.1, reverse-1.9.0, langsmith-0.7.6, xdist-3.8.0, anyio-4.12.1, schemathesis-4.10.2
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_integration_docker.py::test_services_health PASSED
+tests/test_integration_docker.py::test_controller_to_worker_agent_run FAILED
+
+=================================== FAILURES ===================================
+_____________________ test_controller_to_worker_agent_run ______________________
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_controller_to_worker_agent_run():
+        """Verify controller can trigger an agent run which talks to the worker."""
+        async with httpx.AsyncClient() as client:
+            session_id = f"test-agent-{int(time.time())}"
+            payload = {
+                "task": "Write a file named 'hello_integration.txt' with content 'integration test'",
+                "session_id": session_id,
+            }
+
+            # Trigger agent run
+            resp = await client.post(
+                f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0
+            )
+            assert resp.status_code in [200, 202]
+            data = resp.json()
+            assert data["status"] == "accepted"
+            episode_id = data["episode_id"]
+
+            # Wait for completion (poll episode status)
+            # In a real integration test, we wait for the background task to finish
+            max_retries = 60
+            completed = False
+            for _ in range(max_retries):
+                # Increase timeout for polling as the server might be under load
+                status_resp = await client.get(
+                    f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=20.0
+                )
+                if status_resp.status_code == 200:
+                    if status_resp.json()["status"] == "completed":
+                        completed = True
+                        break
+                    if status_resp.json()["status"] == "failed":
+                        pytest.fail("Agent run failed in background")
+                await asyncio.sleep(2)
+
+            if not completed:
+                pytest.fail("Agent run timed out")
+
+            # Verify the file was actually written to the worker's filesystem
+            fs_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/read",
+                json={"path": "hello_integration.txt"},
+                headers={"X-Session-ID": session_id},
+            )
+>           assert fs_resp.status_code == 200
+E           assert 404 == 200
+E            +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/test_integration_docker.py:81: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_integration_docker.py::test_controller_to_worker_agent_run
+==================== 1 failed, 1 passed in 91.69s (0:01:31) ====================
+Integration tests FAILED!
+
+Cleaning up processes (Controller: 61046, Worker Light: 61044, Worker Heavy: 61045, Temporal: 61047, Xvfb: 61040)...
+Bringing down infrastructure containers...

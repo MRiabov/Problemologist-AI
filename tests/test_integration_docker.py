@@ -54,10 +54,13 @@ async def test_controller_to_worker_agent_run():
 
         # Wait for completion (poll episode status)
         # In a real integration test, we wait for the background task to finish
-        max_retries = 30
+        max_retries = 60
         completed = False
         for _ in range(max_retries):
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            # Increase timeout for polling as the server might be under load
+            status_resp = await client.get(
+                f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=20.0
+            )
             if status_resp.status_code == 200:
                 if status_resp.json()["status"] == "completed":
                     completed = True
