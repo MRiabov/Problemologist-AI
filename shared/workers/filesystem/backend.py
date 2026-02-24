@@ -229,11 +229,22 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
 
     def ls_info(self, path: str) -> list[ProtocolFileInfo]:
         local_path = self._resolve(path)
+        logger.debug(
+            "ls_info_start",
+            path=path,
+            local_path=str(local_path),
+            exists=local_path.exists(),
+            is_dir=local_path.is_dir(),
+        )
         if not local_path.exists():
             return []
         results = []
         if local_path.is_dir():
-            for entry in local_path.iterdir():
+            entries = list(local_path.iterdir())
+            logger.debug(
+                "ls_info_entries", count=len(entries), names=[e.name for e in entries]
+            )
+            for entry in entries:
                 is_dir = entry.is_dir()
                 virt = self._virtual(entry)
                 if is_dir and not virt.endswith("/"):

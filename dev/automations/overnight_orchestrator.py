@@ -9,8 +9,9 @@ from datetime import datetime
 
 # Path configuration
 PROJ_ROOT = "/home/maksym/Work/proj/Problemologist/Problemologist-AI"
-TRACKER_FILE = os.path.join(PROJ_ROOT, "overnight_tracker.json")
-LOG_FILE = os.path.join(PROJ_ROOT, "overnight_log.md")
+AUTOMATIONS_DIR = os.path.join(PROJ_ROOT, "dev/automations")
+TRACKER_FILE = os.path.join(AUTOMATIONS_DIR, "overnight_tracker.json")
+LOG_FILE = os.path.join(AUTOMATIONS_DIR, "overnight_log.md")
 MAX_JULES_CONCURRENT = 3
 
 

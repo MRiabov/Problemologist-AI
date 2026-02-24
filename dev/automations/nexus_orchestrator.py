@@ -3,13 +3,15 @@ import subprocess
 import os
 import time
 import re
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
 # Path configuration
 PROJ_ROOT = "/home/maksym/Work/proj/Problemologist/Problemologist-AI"
-STATE_FILE = os.path.join(PROJ_ROOT, "nexus_state.json")
-LOG_FILE = os.path.join(PROJ_ROOT, "nexus_log.md")
-PULSE_FILE = os.path.join(PROJ_ROOT, "nexus_pulse.md")
+AUTOMATIONS_DIR = os.path.join(PROJ_ROOT, "dev/automations")
+STATE_FILE = os.path.join(AUTOMATIONS_DIR, "nexus_state.json")
+LOG_FILE = os.path.join(AUTOMATIONS_DIR, "nexus_log.md")
+PULSE_FILE = os.path.join(AUTOMATIONS_DIR, "nexus_pulse.md")
 MAX_JULES_CONCURRENT = 3
 
 
@@ -91,16 +93,79 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 
+def parse_failures_xml(xml_path="test_output/junit.xml"):
+    """Parses JUnit XML to extract failures with details."""
+    failures = []
+    if not os.path.exists(os.path.join(PROJ_ROOT, xml_path)):
+        return []
+
+    try:
+        tree = ET.parse(os.path.join(PROJ_ROOT, xml_path))
+        root = tree.getroot()
+        for testcase in root.findall(".//testcase"):
+            failure = testcase.find("failure")
+            error = testcase.find("error")  # specific error vs assertion failure
+            issue = failure if failure is not None else error
+
+            if issue is not None:
+                file_path = testcase.get("file")
+                name = testcase.get("name")
+                classname = testcase.get("classname")
+
+                # Pytest junitxml usually has file path. If not, construct from classname.
+                test_id = (
+                    f"{file_path}::{name}" if file_path else f"{classname}::{name}"
+                )
+
+                message = issue.get("message", "No message")
+                # Limit detailed trace to avoid token limits, but give enough context
+                details = issue.text or ""
+                details = details.strip()
+                if len(details) > 1000:
+                    details = details[:1000] + "\n...[truncated]..."
+
+                failures.append(
+                    {
+                        "id": test_id,
+                        "details": f"Error: {message}\nTraceback:\n{details}",
+                    }
+                )
+    except Exception as e:
+        log(f"Error parsing XML: {e}")
+
+    return failures
+
+
 def parse_failures(output):
+    """Fallback: Extracts failed test names from pytest output (no details)."""
     failures = []
     if not output:
         return []
+
+    # Check for the error "pytest: error: argument -m: expected one argument"
+    if "pytest: error: argument -m: expected one argument" in output:
+        log(
+            "CRITICAL: Pytest failed due to empty marker argument. Forcing default markers."
+        )
+        return [{"id": "FORCE_RUN_ALL", "details": "Marker error"}]
+
+    # Look for lines like: FAILED tests/integration/test_worker_concurrency.py::test_worker_concurrency - ...
     pattern = re.compile(r"FAILED\s+(tests/integration/[^ ]+)")
     for line in output.splitlines():
         match = pattern.search(line)
         if match:
-            failures.append(match.group(1))
-    return list(set(failures))
+            failures.append(
+                {
+                    "id": match.group(1),
+                    "details": "Detail extraction failed (parsed from stdout)",
+                }
+            )
+
+    # Dedup by ID
+    unique = {}
+    for f in failures:
+        unique[f["id"]] = f
+    return list(unique.values())
 
 
 def main():
@@ -123,7 +188,13 @@ def main():
                 "tests/integration",
             ]
         )
-        failures = parse_failures(test_res.stdout) if test_res else []
+        # Try XML first, fallback to regex
+        failures = parse_failures_xml("test_output/junit.xml")
+        if not failures and test_res:
+            stdout_failures = parse_failures(test_res.stdout)
+            if stdout_failures:
+                failures = stdout_failures
+
         log(f"Iteration complete. {len(failures)} failures detected.")
 
         if not failures:
@@ -137,7 +208,13 @@ def main():
             0, min(len(failures), batch_size * MAX_JULES_CONCURRENT), batch_size
         ):
             batch = failures[i : i + batch_size]
-            failure_text = "\n".join(batch)
+
+            # Format details for prompt
+            failure_descriptions = []
+            for f in batch:
+                failure_descriptions.append(f"Test: {f['id']}\n{f['details']}")
+            failure_text = "\n---\n".join(failure_descriptions)
+
             prompt = f"Fix integration test failures:\n{failure_text}\nRef: @specs/integration-tests.md and @specs/desired_architecture.md."
 
             log(f"Initiating Jules session for {len(batch)} failures...")
@@ -153,7 +230,9 @@ def main():
                     save_state(state)
                     log(f"Session {sid} created successfully.")
                 else:
-                    log("Session created but ID not found in output.")
+                    log(
+                        f"Session created but ID not found in output. Stdout: {res.stdout.strip()}"
+                    )
             else:
                 log(
                     f"Failed to create Jules session: {res.stderr if res else 'No result'}"

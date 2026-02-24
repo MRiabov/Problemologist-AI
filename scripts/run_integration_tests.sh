@@ -15,13 +15,17 @@ export PYTHONUNBUFFERED=1
 export POSTGRES_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres"
 export TEMPORAL_URL="127.0.0.1:17233"
 export S3_ENDPOINT="http://127.0.0.1:19000"
+export S3_ENDPOINT_URL="http://127.0.0.1:19000"
 export S3_ACCESS_KEY=minioadmin
 export S3_SECRET_KEY=minioadmin
 export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
+export AWS_DEFAULT_REGION="us-east-1"
 export WORKER_URL="http://127.0.0.1:18001"
 export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
+export BENCHMARK_SOURCE_BUCKET="benchmarks-source"
+export BENCHMARK_ASSETS_BUCKET="benchmarks-assets"
 
 # Enforce CPU mode for Genesis to avoid GPU flakiness in integration tests
 export GENESIS_FORCE_CPU=1
@@ -117,6 +121,7 @@ RUN_PLAYWRIGHT=false
 for arg in "${PYTEST_ARGS[@]}"; do
   if [[ "$arg" == *"integration_frontend"* ]]; then RUN_PLAYWRIGHT=true; fi
   if [[ "$arg" == "tests/e2e"* ]] || [[ "$arg" == */tests/e2e* ]]; then RUN_PLAYWRIGHT=true; fi
+  if [[ "$arg" == "tests/integration/frontend"* ]] || [[ "$arg" == */tests/integration/frontend* ]]; then RUN_PLAYWRIGHT=true; fi
 done
 
 # ALWAYS restrict to tests/integration and tests/e2e if no file is specified to speed up discovery
@@ -262,6 +267,7 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   echo "Building and Starting Frontend (Production Mode for Stability)..."
   # Generate fresh OpenAPI specs to ensure the build is up-to-date with current models
   PYTHONPATH=. uv run python scripts/generate_openapi.py
+  (cd frontend && npm run gen:api)
   echo "VITE_API_URL=http://localhost:18000" > frontend/.env.production
   (cd frontend && rm -rf dist && npm run build)
   
