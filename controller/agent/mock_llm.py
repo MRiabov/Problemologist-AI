@@ -101,7 +101,7 @@ class MockDSPyLM(dspy.LM):
         # Force JSON if we have expected fields
         is_json = is_json_requested or len(expected_fields) > 0
 
-        # Normalize benchmark_planner -> planner, but keep electronics_planner as is
+        # Normalize node keys for scenario lookup
         lookup_key = node_key
         if node_key == "benchmark_planner":
             lookup_key = "planner"
@@ -109,6 +109,13 @@ class MockDSPyLM(dspy.LM):
             lookup_key = "coder"
         elif node_key == "benchmark_reviewer":
             lookup_key = "reviewer"
+        elif node_key in ["plan_reviewer", "execution_reviewer", "electronics_reviewer"]:
+            # Fallback to general 'reviewer' if specific one not in scenario
+            if "reviewer" in scenario and node_key not in scenario:
+                lookup_key = "reviewer"
+        elif node_key == "electronics_engineer":
+            if "coder" in scenario and node_key not in scenario:
+                lookup_key = "coder"
 
         node_data = scenario.get(lookup_key, {})
         logger.info(
@@ -283,10 +290,8 @@ class MockDSPyLM(dspy.LM):
             code = node_data.get("generated_code")
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
-                # Ensure the python code is executed as a shell command
-                resp["next_tool_args"] = {
-                    "command": f"python3 -c {shlex.quote(code)}"
-                }
+                # The execute_command tool actually expects Python code
+                resp["next_tool_args"] = {"command": code}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}

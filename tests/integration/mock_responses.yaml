@@ -891,6 +891,32 @@ scenarios:
         reason: "The design satisfies all requirements."
         required_fixes: []
 
+  # test-agent for tests/test_integration_docker.py
+  test-agent:
+    planner:
+      thought: "Planning to write the file."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## Plan\nWrite the file.')
+        with open('todo.md', 'w') as f: f.write('- [ ] Write file')
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 0, estimated_weight_g: 0, estimate_confidence: high}')
+        with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+        print('Planner files written.')
+    electronics_planner:
+      thought: "No electronics."
+      generated_code: |
+        with open('plan.md', 'a') as f: f.write('\n## Electronics\nNone.')
+        print('Electronics plan appended.')
+    coder:
+      thought: "Writing the requested file."
+      generated_code: |
+        with open('hello_integration.txt', 'w') as f: f.write('integration test')
+        print('Integration file written.')
+    reviewer:
+      review:
+        decision: "approved"
+        reason: "File written successfully."
+        required_fixes: []
+
   # Default fallback
   default:
     planner:
