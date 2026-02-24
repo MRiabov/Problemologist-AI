@@ -39,8 +39,8 @@ fi
 echo "Docker seems to be failing with $CURRENT_DRIVER (likely a Docker-in-Docker environment). Attempting to switch to vfs..."
 
 if ! command -v sudo >/dev/null 2>&1; then
-    echo "Error: sudo is required to change Docker configuration but not found."
-    exit 1
+    echo "Warning: sudo is required to change Docker configuration but not found. Skipping VFS switch."
+    exit 0
 fi
 
 # Create or update daemon.json

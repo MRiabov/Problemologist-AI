@@ -27,6 +27,51 @@ export ASSET_S3_BUCKET="problemologist"
 export WORKER_SESSIONS_DIR=$(mktemp -d -t pb-sessions-XXXXXX)
 echo "Shared sessions directory: $WORKER_SESSIONS_DIR"
 
+cleanup() {
+  # Record the exit status of the test command
+  EXIT_STATUS=$?
+  echo ""
+  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID, Xvfb: $XVFB_PID)..."
+
+  # Kill the captured PIDs
+  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID 2>/dev/null || true
+
+  # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
+  # We use -9 here as some processes (especially when uv run is involved) can hang
+  pkill -9 -f "uvicorn.*18000" || true
+  pkill -9 -f "uvicorn.*18001" || true
+  pkill -9 -f "python -m controller.temporal_worker" || true
+  pkill -9 -f "uv run uvicorn" || true
+
+  # Remove PID files
+  rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid
+
+  # Remove convenience symlinks if they are still valid (pointing to current run)
+  # Actually, we might want to keep them to let the user see what happened
+  # rm -f logs/controller.log logs/worker_light.log logs/worker_heavy.log logs/temporal_worker.log
+
+  # Clean up shared sessions directory
+  if [ -n "$WORKER_SESSIONS_DIR" ] && [ -d "$WORKER_SESSIONS_DIR" ]; then
+    rm -rf "$WORKER_SESSIONS_DIR"
+  fi
+
+  if [ "$INFRA_ALREADY_UP" = "true" ] || [ "$SKIP_INFRA" = "true" ]; then
+    echo "Skipping infrastructure teardown (INFRA_ALREADY_UP=$INFRA_ALREADY_UP, SKIP_INFRA=$SKIP_INFRA)."
+  else
+    echo "Bringing down infrastructure containers..."
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+      docker compose -f docker-compose.test.yaml down -v || true
+    elif command -v docker-compose >/dev/null 2>&1; then
+      docker-compose -f docker-compose.test.yaml down -v || true
+    fi
+  fi
+
+  exit $EXIT_STATUS
+}
+
+# Trap signals for cleanup
+trap cleanup SIGINT SIGTERM EXIT
+
 # Ensure we are in project root
 cd "$(dirname "$0")/.."
 
@@ -70,7 +115,11 @@ fi
 
 # Ensure Docker is working correctly (fix for sandboxed environments / Docker-in-Docker).
 # DO NOT REMOVE: This is required for agent execution environments where overlay2 fails.
-bash scripts/ensure_docker_vfs.sh
+if command -v docker >/dev/null 2>&1; then
+  bash scripts/ensure_docker_vfs.sh
+else
+  echo "WARNING: Docker not found. Skipping Docker configuration checks."
+fi
 
 # Ensure ngspice is installed for electronics validation
 bash scripts/ensure_ngspice.sh
@@ -81,8 +130,41 @@ if [ ! -s parts.db ]; then
   PYTHONPATH=. uv run python -m shared.cots.indexer
 fi
 
-echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
-docker compose -f docker-compose.test.yaml up -d
+# Function to check if a port is open
+is_port_open() {
+  python3 -c "import socket; socket.create_connection(('$1', $2), timeout=1)" > /dev/null 2>&1
+}
+
+# Check if infra is already running
+export INFRA_ALREADY_UP=false
+if is_port_open "127.0.0.1" 15432 && is_port_open "127.0.0.1" 19000 && is_port_open "127.0.0.1" 17233; then
+  echo "Infrastructure services seem to be already running."
+  export INFRA_ALREADY_UP=true
+fi
+
+if [ "$SKIP_INFRA" = "true" ] || [ "$INFRA_ALREADY_UP" = "true" ]; then
+  echo "Skipping infrastructure startup."
+else
+  echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    if ! docker compose -f docker-compose.test.yaml up -d; then
+      echo "ERROR: 'docker compose' failed. This is often caused by incompatible storage drivers in Docker-in-Docker environments."
+      echo "See scripts/ensure_docker_vfs.sh for a potential fix (requires sudo)."
+      echo "If you cannot use Docker, consider running services manually and setting SKIP_INFRA=true."
+      exit 1
+    fi
+  elif command -v docker-compose >/dev/null 2>&1; then
+    if ! docker-compose -f docker-compose.test.yaml up -d; then
+      echo "ERROR: 'docker-compose' failed."
+      echo "If you cannot use Docker, consider running services manually and setting SKIP_INFRA=true."
+      exit 1
+    fi
+  else
+    echo "ERROR: Neither 'docker compose' nor 'docker-compose' found."
+    echo "If you are in a restricted environment, try running infra manually and set SKIP_INFRA=true."
+    exit 1
+  fi
+fi
 
 echo "Waiting for infra to be ready..."
 MAX_INFRA_RETRIES=60
@@ -202,43 +284,6 @@ ln -sf "integration_tests/controller.log" logs/controller.log
 ln -sf "integration_tests/worker_light.log" logs/worker_light.log
 ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
-
-cleanup() {
-  # Record the exit status of the test command
-  EXIT_STATUS=$?
-  echo ""
-  echo "Cleaning up processes (Controller: $CONTROLLER_PID, Worker Light: $WORKER_LIGHT_PID, Worker Heavy: $WORKER_HEAVY_PID, Temporal: $TEMP_WORKER_PID, Xvfb: $XVFB_PID)..."
-  
-  # Kill the captured PIDs
-  kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID 2>/dev/null || true
-  
-  # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
-  # We use -9 here as some processes (especially when uv run is involved) can hang
-  pkill -9 -f "uvicorn.*18000" || true
-  pkill -9 -f "uvicorn.*18001" || true
-  pkill -9 -f "python -m controller.temporal_worker" || true
-  pkill -9 -f "uv run uvicorn" || true
-  
-  # Remove PID files
-  rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid
-  
-  # Remove convenience symlinks if they are still valid (pointing to current run)
-  # Actually, we might want to keep them to let the user see what happened
-  # rm -f logs/controller.log logs/worker_light.log logs/worker_heavy.log logs/temporal_worker.log
-
-  # Clean up shared sessions directory
-  if [ -n "$WORKER_SESSIONS_DIR" ] && [ -d "$WORKER_SESSIONS_DIR" ]; then
-    rm -rf "$WORKER_SESSIONS_DIR"
-  fi
-
-  echo "Bringing down infrastructure containers..."
-  docker compose -f docker-compose.test.yaml down -v
-  
-  exit $EXIT_STATUS
-}
-
-# Trap signals for cleanup
-trap cleanup SIGINT SIGTERM EXIT
 
 echo "Waiting for servers to be healthy..."
 MAX_HEALTH_RETRIES=60
