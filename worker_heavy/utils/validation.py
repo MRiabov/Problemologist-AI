@@ -8,7 +8,6 @@ import yaml
 from build123d import Compound
 
 from shared.enums import (
-    ElectronicComponentType,
     FailureReason,
     MotorControlMode,
 )
@@ -29,6 +28,7 @@ from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.electronics import calculate_electronics_cost_and_weight
 
 from .dfm import validate_and_price
 from .rendering import prerender_24_views
@@ -294,98 +294,11 @@ def calculate_assembly_totals(
 
     # 2. Electronics and COTS parts
     if electronics:
-        for comp in electronics.components:
-            if comp.type == ElectronicComponentType.POWER_SUPPLY and comp.cots_part_id:
-                from shared.cots.parts.electronics import PowerSupply
-
-                try:
-                    psu = PowerSupply(size=comp.cots_part_id)
-                    total_cost += getattr(psu, "price", 0.0)
-                    total_weight += getattr(psu, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_psu",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
-                from shared.cots.parts.electronics import ElectronicRelay
-
-                try:
-                    relay = ElectronicRelay(size=comp.cots_part_id)
-                    total_cost += getattr(relay, "price", 0.0)
-                    total_weight += getattr(relay, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_relay",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
-                from shared.cots.parts.electronics import Switch
-
-                try:
-                    sw = Switch(size=comp.cots_part_id)
-                    total_cost += getattr(sw, "price", 0.0)
-                    total_weight += getattr(sw, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_switch",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
-                from shared.cots.parts.electronics import Connector
-
-                try:
-                    conn = Connector(size=comp.cots_part_id)
-                    total_cost += getattr(conn, "price", 0.0)
-                    total_weight += getattr(conn, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_connector",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
-                from shared.cots.parts.motors import ServoMotor
-
-                try:
-                    motor = ServoMotor(size=comp.cots_part_id)
-                    total_cost += getattr(motor, "price", 0.0)
-                    total_weight += getattr(motor, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_motor",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-
-        for wire in electronics.wiring:
-            from shared.wire_utils import get_awg_properties
-
-            length_m = wire.length_mm / 1000.0
-            props = get_awg_properties(wire.gauge_awg)
-            # Estimate weight based on copper density and diameter
-            # Area (mm2) = pi * (d/2)^2
-            import math
-
-            area_mm2 = math.pi * (props["diameter_mm"] / 2.0) ** 2
-            # Weight (g/m) = Area (mm2) * Density (8.96 g/cm3)
-            # 1 mm2 * 1 m = 1000 mm3 = 1 cm3
-            weight_g_m = area_mm2 * 8.96
-
-            # Use cost from config if available, otherwise fallback to reasonable default
-            cost_per_m = 0.5  # default
-            if config.wires:
-                awg_key = f"awg{wire.gauge_awg}"
-                if hasattr(config.wires, awg_key):
-                    cost_per_m = getattr(config.wires, awg_key).cost_per_m
-                elif isinstance(config.wires, dict) and awg_key in config.wires:
-                    cost_per_m = config.wires[awg_key].get("cost_per_m", 0.5)
-
-            total_cost += length_m * cost_per_m
-            total_weight += length_m * weight_g_m
+        elec_cost, elec_weight = calculate_electronics_cost_and_weight(
+            electronics, config
+        )
+        total_cost += elec_cost
+        total_weight += elec_weight
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
