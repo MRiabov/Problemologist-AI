@@ -56,6 +56,9 @@ class GenesisBackend(PhysicsBackend):
         self.particle_budget = None
         self.smoke_test_mode = False
         self._is_built = False
+        self._step_counter = 0
+        self._contact_cache = None
+        self._contact_cache_step = -1
         self._ensure_initialized()
 
     def _ensure_initialized(self):
@@ -169,6 +172,9 @@ class GenesisBackend(PhysicsBackend):
             self.applied_controls = {}
             self.electronics_names = []
             self._is_built = False
+            self._step_counter = 0
+            self._contact_cache = None
+            self._contact_cache_step = -1
 
             if "gs_scene" in scene.assets:
                 self.scene = scene.assets["gs_scene"]
@@ -564,7 +570,7 @@ class GenesisBackend(PhysicsBackend):
             # Genesis step size is controlled by gs.Scene(sim_options=...)
             # Ideally dt matches what was configured in gs.Scene
             # Reduce debug logging overhead: only log every 100 steps
-            self._step_counter = getattr(self, "_step_counter", 0) + 1
+            self._step_counter += 1
             if self._step_counter % 100 == 0:
                 logger.debug(
                     "genesis_scene_stepping",
@@ -967,6 +973,13 @@ class GenesisBackend(PhysicsBackend):
         if not self.scene:
             return []
 
+        # Check cache (optimization for multiple calls within same step)
+        if (
+            self._contact_cache is not None
+            and self._contact_cache_step == self._step_counter
+        ):
+            return self._contact_cache
+
         # Genesis provides contacts via solver/sim
         # In version 0.3.x, contacts are typically accessed via simulator.get_contacts()
         try:
@@ -987,6 +1000,9 @@ class GenesisBackend(PhysicsBackend):
                         else tuple(c.pos.tolist()),
                     )
                 )
+
+            self._contact_cache = results
+            self._contact_cache_step = self._step_counter
             return results
         except Exception as e:
             import traceback
@@ -1250,3 +1266,5 @@ class GenesisBackend(PhysicsBackend):
         self.cables = {}
         self.cameras = {}
         self._is_built = False
+        self._contact_cache = None
+        self._contact_cache_step = -1
