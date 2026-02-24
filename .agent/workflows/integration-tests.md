@@ -82,7 +82,7 @@ This document is the **central LLM reference** for debugging and implementing in
 8. Runs `alembic upgrade head` (migrations)
 9. Starts Xvfb (headless rendering, `DISPLAY=:99`)
 10. Starts Worker Light (:18001), Worker Heavy (:18002), Controller (:18000), Temporal Worker
-11. **If Playwright:** builds frontend (`npm run build`), serves on :15173
+11. **If Playwright:** builds frontend (`npm run build:fast`), serves on :15173
 12. Waits for all services to be healthy
 13. Runs `pytest -v -o "addopts=-n0" --maxfail=3 -s ...`
 14. Persists results via `scripts/persist_test_results.py`
@@ -243,7 +243,7 @@ Default `pyproject.toml` excludes all integration markers from normal `pytest` r
 | Port clash (address already in use) | Stale processes from previous run | `pkill -f "uvicorn.*18000"` etc., or the script does this automatically |
 | `422 Unprocessable Entity` | Schema mismatch — request body doesn't match current API | Run `alembic upgrade head`; check if models changed |
 | Simulation timeout | Genesis/MuJoCo taking too long | Check `GENESIS_FORCE_CPU=1` is set; use `smoke_test_mode: True` |
-| Frontend test flaky / timeout | Build stale or serve not ready | Re-run; check `logs/frontend.log`; ensure `npm run build` succeeds |
+| Frontend test flaky / timeout | Build stale or serve not ready | Re-run; check `logs/frontend.log`; ensure `npm run build:fast` succeeds |
 | `ModuleNotFoundError` | Missing dependency or wrong venv | `source .venv/bin/activate` before running, or use `uv run` |
 | `alembic` migration error | DB schema doesn't match models | `uv run alembic upgrade head` or check for conflicting migrations |
 
@@ -270,7 +270,7 @@ Default `pyproject.toml` excludes all integration markers from normal `pytest` r
 ### Architecture
 
 - **Tech stack:** Vite + React. TypeScript types auto-generated from controller OpenAPI schema.
-- **Stability:** Frontend is built (`npm run build`) and served statically on `:15173` via `npx serve -s dist`. This avoids HMR reload flakiness during tests.
+- **Stability:** Frontend is built (`npm run build:fast`) and served statically on `:15173` via `npx serve -s dist`. This avoids HMR reload flakiness during tests.
 - **Before Playwright runs**, the runner generates fresh OpenAPI specs (`scripts/generate_openapi.py`) and rebuilds the frontend.
 - Tests use the `@pytest.mark.integration_frontend` marker and **synchronous** Playwright API (`from playwright.sync_api import Page`).
 

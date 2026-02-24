@@ -24,4 +24,4 @@ In addition, don't stage throwaway scripts. If (most commonly in backend) a scri
 
 NOTE: please skip the planning mode and commit directly. It's an easy task.
 
-NOTE 2: we have pre-commit hooks. I suggest running pre-commit before committing, you'll have everything formatted and autofixed; otherwise checks will fail and you'll have to do it manually.
+NOTE 2: we have pre-commit hooks. I suggest running `pre-commit run --all-files` before this command; you'll have everything formatted and autofixed; otherwise checks will fail and you'll have to do it manually.
