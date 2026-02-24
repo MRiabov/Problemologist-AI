@@ -82,3 +82,14 @@ class SimulationResult(BaseModel):
     total_cost: float = 0.0
     total_weight_g: float = 0.0
     confidence: str = "high"
+
+
+class MultiRunResult(BaseModel):
+    """Result of multi-run verification."""
+
+    num_runs: int
+    success_count: int
+    success_rate: float
+    is_consistent: bool  # True if all runs agree on success/fail
+    individual_results: list[SimulationMetrics]
+    fail_reasons: list[str]  # Unique failure reasons across runs
