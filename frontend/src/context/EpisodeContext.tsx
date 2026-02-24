@@ -20,8 +20,10 @@ interface EpisodeContextType {
   activeArtifactId: string | null;
   selectedContext: ContextItem[];
   topologyNodes: TopologyNode[];
+  feedbackState: { traceId: number; score: number } | null;
   setActiveArtifactId: (id: string | null) => void;
   setTopologyNodes: (nodes: TopologyNode[]) => void;
+  setFeedbackState: (state: { traceId: number; score: number } | null) => void;
   refreshEpisodes: () => Promise<void>;
   selectEpisode: (id: string) => Promise<void>;
   startAgent: (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => Promise<void>;
@@ -49,6 +51,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [isBenchmarkCreation, setIsBenchmarkCreation] = useState(false);
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
+  const [feedbackState, setFeedbackState] = useState<{ traceId: number; score: number } | null>(null);
 
   const refreshEpisodes = useCallback(async () => {
     try {
@@ -252,7 +255,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       removeFromContext,
       clearContext,
       topologyNodes,
-      setTopologyNodes
+      setTopologyNodes,
+      feedbackState,
+      setFeedbackState
     }}>
       {children}
     </EpisodeContext.Provider>

@@ -1,3 +1,4 @@
+import os
 import threading
 from pathlib import Path
 from typing import Any, Optional
@@ -5,9 +6,18 @@ from typing import Any, Optional
 import numpy as np
 import structlog
 
+# Force headless mode for pyglet (used by genesis/pyrender)
+os.environ["PYGLET_HEADLESS"] = "1"
+# Force EGL platform for headless rendering if not already set
+if "PYOPENGL_PLATFORM" not in os.environ:
+    os.environ["PYOPENGL_PLATFORM"] = "egl"
+
 try:
     import genesis as gs
 except ImportError:
+    gs = None
+except Exception:
+    # Catch other import-time errors like display issues if environment vars didn't help
     gs = None
 
 from shared.enums import FailureReason
