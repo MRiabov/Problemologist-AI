@@ -959,8 +959,47 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        """Update the position of a site (zone) or entity."""
+        # 1. Check if it's a zone in entity_configs
+        if site_name in self.entity_configs:
+            ent_cfg = self.entity_configs[site_name]
+            if ent_cfg.get("is_zone"):
+                new_pos = np.array(pos)
+                if "min" in ent_cfg and "max" in ent_cfg:
+                    old_min = np.array(ent_cfg["min"])
+                    old_max = np.array(ent_cfg["max"])
+                    old_center = (old_min + old_max) / 2.0
+                    half_size = (old_max - old_min) / 2.0
+
+                    # Update min/max based on new center
+                    ent_cfg["min"] = (new_pos - half_size).tolist()
+                    ent_cfg["max"] = (new_pos + half_size).tolist()
+                elif "pos" in ent_cfg:
+                    ent_cfg["pos"] = new_pos.tolist()
+                return
+
+        # 2. Check if it's a physical entity
+        if site_name in self.entities:
+            entity = self.entities[site_name]
+            # Try to set position if supported (e.g. rigid body)
+            try:
+                # Genesis usually requires setting both pos and quat, or pose
+                # For now, we only update pos if possible
+                if hasattr(entity, "set_pos"):
+                    entity.set_pos(pos)
+                    return
+                elif hasattr(entity, "set_pose"):
+                    # Need current quat to preserve rotation
+                    current_quat = entity.get_quat()
+                    entity.set_pose(pos=pos, quat=current_quat)
+                    return
+            except Exception as e:
+                logger.warning(
+                    "genesis_set_site_pos_failed", site=site_name, error=str(e)
+                )
+
+        raise ValueError(f"Site {site_name} not found or not modifiable")
 
     def get_contact_forces(self) -> list[ContactForce]:
         # logger.debug("genesis_get_contact_forces_start")
@@ -999,8 +1038,42 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
-        return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
+    def get_site_state(self, site_name: str) -> SiteState:
+        # 1. Check entity_configs for zone
+        if site_name in self.entity_configs:
+            ent_cfg = self.entity_configs[site_name]
+            if ent_cfg.get("is_zone"):
+                pos = np.zeros(3)
+                size = np.zeros(3)
+
+                if "min" in ent_cfg and "max" in ent_cfg:
+                    z_min = np.array(ent_cfg["min"])
+                    z_max = np.array(ent_cfg["max"])
+                    pos = (z_min + z_max) / 2.0
+                    size = (z_max - z_min) / 2.0  # Half-extents
+                elif "pos" in ent_cfg:
+                    pos = np.array(ent_cfg["pos"])
+                    if "size" in ent_cfg:
+                        size = np.array(ent_cfg["size"])
+
+                return SiteState(
+                    pos=tuple(pos.tolist()),
+                    quat=(1.0, 0.0, 0.0, 0.0),
+                    size=tuple(size.tolist()),
+                )
+
+        # 2. Check physical entities
+        if site_name in self.entities:
+            try:
+                state = self.get_body_state(site_name)
+                # Size is hard to determine for arbitrary entities without geometry data
+                return SiteState(
+                    pos=state.pos, quat=state.quat, size=(0.0, 0.0, 0.0)
+                )
+            except Exception:
+                pass
+
+        raise ValueError(f"Site {site_name} not found")
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:
         ctrl_val = self.applied_controls.get(actuator_name, 0.0)
