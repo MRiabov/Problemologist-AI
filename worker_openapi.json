@@ -1061,6 +1061,59 @@
         }
       }
     },
+    "/benchmark/verify": {
+      "post": {
+        "tags": [
+          "worker-heavy"
+        ],
+        "summary": "Api Verify",
+        "description": "Run multi-seed verification with runtime jitter.",
+        "operationId": "api_verify_benchmark_verify_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/benchmark/simulate": {
       "post": {
         "tags": [
@@ -2432,6 +2485,64 @@
         "title": "ElectronicsValidationRequest",
         "description": "Request to validate an electronic circuit."
       },
+      "FailureReason": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "TIMEOUT",
+          "OUT_OF_BOUNDS",
+          "FORBID_ZONE_HIT",
+          "PART_BREAKAGE",
+          "MOTOR_OVERLOAD",
+          "STABILITY_ISSUE",
+          "PHYSICS_INSTABILITY",
+          "SHORT_CIRCUIT",
+          "OVERCURRENT",
+          "WIRE_TORN",
+          "OPEN_CIRCUIT",
+          "ASSET_GENERATION_FAILED",
+          "FLUID_OBJECTIVE_FAILED",
+          "STRESS_OBJECTIVE_EXCEEDED",
+          "ELECTRONICS_FLUID_DAMAGE",
+          "VALIDATION_FAILED",
+          "MANUFACTURABILITY_FAILED"
+        ],
+        "title": "FailureReason",
+        "description": "Unified failure modes for physics and electronics simulation."
+      },
+      "FluidMetricResult": {
+        "properties": {
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "fluid_id": {
+            "type": "string",
+            "title": "Fluid Id"
+          },
+          "measured_value": {
+            "type": "number",
+            "title": "Measured Value"
+          },
+          "target_value": {
+            "type": "number",
+            "title": "Target Value"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_type",
+          "fluid_id",
+          "measured_value",
+          "target_value",
+          "passed"
+        ],
+        "title": "FluidMetricResult"
+      },
       "ManufacturingMethod": {
         "type": "string",
         "enum": [
@@ -2441,6 +2552,51 @@
         ],
         "title": "ManufacturingMethod",
         "description": "Supported manufacturing methods."
+      },
+      "MultiRunResult": {
+        "properties": {
+          "num_runs": {
+            "type": "integer",
+            "title": "Num Runs"
+          },
+          "success_count": {
+            "type": "integer",
+            "title": "Success Count"
+          },
+          "success_rate": {
+            "type": "number",
+            "title": "Success Rate"
+          },
+          "is_consistent": {
+            "type": "boolean",
+            "title": "Is Consistent"
+          },
+          "individual_results": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationMetrics"
+            },
+            "type": "array",
+            "title": "Individual Results"
+          },
+          "fail_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fail Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "num_runs",
+          "success_count",
+          "success_rate",
+          "is_consistent",
+          "individual_results",
+          "fail_reasons"
+        ],
+        "title": "MultiRunResult",
+        "description": "Result of multi-run verification."
       },
       "PowerSupplyConfig": {
         "properties": {
@@ -2663,12 +2819,142 @@
               }
             ],
             "title": "Failure"
+          },
+          "verification_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MultiRunResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": true,
         "type": "object",
         "title": "SimulationArtifacts",
         "description": "Structured artifacts from a simulation run."
+      },
+      "SimulationFailure": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/FailureReason"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "SimulationFailure",
+        "description": "Structured failure information for simulation."
+      },
+      "SimulationMetrics": {
+        "properties": {
+          "total_time": {
+            "type": "number",
+            "title": "Total Time",
+            "default": 0.0
+          },
+          "total_energy": {
+            "type": "number",
+            "title": "Total Energy",
+            "default": 0.0
+          },
+          "max_velocity": {
+            "type": "number",
+            "title": "Max Velocity",
+            "default": 0.0
+          },
+          "max_stress": {
+            "type": "number",
+            "title": "Max Stress",
+            "default": 0.0
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          },
+          "fail_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stress_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/StressSummary"
+            },
+            "type": "array",
+            "title": "Stress Summaries"
+          },
+          "stress_fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/StressFieldData"
+            },
+            "type": "object",
+            "title": "Stress Fields"
+          },
+          "fluid_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/FluidMetricResult"
+            },
+            "type": "array",
+            "title": "Fluid Metrics"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
+          }
+        },
+        "type": "object",
+        "title": "SimulationMetrics"
       },
       "SimulatorBackendType": {
         "type": "string",
@@ -2677,6 +2963,194 @@
           "genesis"
         ],
         "title": "SimulatorBackendType"
+      },
+      "StressFieldData": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "stress": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Stress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "stress"
+        ],
+        "title": "StressFieldData",
+        "description": "Serializable version of StressField."
+      },
+      "StressSummary": {
+        "properties": {
+          "part_label": {
+            "type": "string",
+            "title": "Part Label"
+          },
+          "max_von_mises_pa": {
+            "type": "number",
+            "title": "Max Von Mises Pa"
+          },
+          "mean_von_mises_pa": {
+            "type": "number",
+            "title": "Mean Von Mises Pa"
+          },
+          "safety_factor": {
+            "type": "number",
+            "title": "Safety Factor"
+          },
+          "location_of_max": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Location Of Max"
+          },
+          "utilization_pct": {
+            "type": "number",
+            "title": "Utilization Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "part_label",
+          "max_von_mises_pa",
+          "mean_von_mises_pa",
+          "safety_factor",
+          "location_of_max",
+          "utilization_pct"
+        ],
+        "title": "StressSummary"
+      },
+      "VerificationRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "genesis"
+          },
+          "smoke_test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate."
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          },
+          "jitter_range": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Jitter Range",
+            "description": "(x, y, z) position jitter range in meters.",
+            "default": [
+              0.002,
+              0.002,
+              0.001
+            ]
+          },
+          "num_runs": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Num Runs",
+            "description": "Number of runs.",
+            "default": 5
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0.1,
+            "title": "Duration",
+            "description": "Duration per run.",
+            "default": 10.0
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "description": "Random seed.",
+            "default": 42
+          }
+        },
+        "type": "object",
+        "title": "VerificationRequest",
+        "description": "Request to run multi-seed verification with jitter."
       },
       "WireConfig": {
         "properties": {

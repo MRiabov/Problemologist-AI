@@ -8,7 +8,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_fluid_containment_logic(tmp_path):
     """
     Verify that fluid particles are correctly counted against zones in SimulationLoop.
@@ -43,7 +43,14 @@ def test_fluid_containment_logic(tmp_path):
     with patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get_backend:
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
-        mock_backend.step.return_value = MagicMock(time=0.1, success=True)
+        # Numeric values to avoid max(mock, float) errors
+        mock_backend.step.return_value = MagicMock(
+            time=0.1, success=True, energy=0.0, velocity=0.0, stress=0.0
+        )
+        mock_backend.get_max_stress.return_value = 0.0
+        mock_backend.get_all_actuator_names.return_value = []
+        mock_backend.get_all_body_names.return_value = []
+        mock_backend.get_all_site_names.return_value = []
 
         # Mock particles: 100 particles, 95 inside the zone
         particles = np.zeros((100, 3))

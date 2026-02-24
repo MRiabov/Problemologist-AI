@@ -7,16 +7,17 @@ from worker_heavy.simulation.loop import SimulationMetrics
 from worker_heavy.utils.validation import simulate
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_gpu_oom_retry_logic(tmp_path):
     """
-    Verify that a GPU OOM during Genesis simulation triggers a retry with lower fidelity.
+    Verify that a GPU OOM during Genesis simulation triggers a retry
+    with lower fidelity.
     """
     component = Box(1, 1, 1)
 
     with (
         patch("worker_heavy.utils.validation.get_simulation_builder") as mock_builder,
-        patch("worker_heavy.utils.validation.SimulationLoop") as mock_loop_cls,
+        patch("worker_heavy.simulation.loop.SimulationLoop") as mock_loop_cls,
         patch("worker_heavy.utils.validation.prerender_24_views") as mock_render,
         patch("worker_heavy.utils.validation.calculate_assembly_totals") as mock_totals,
     ):
