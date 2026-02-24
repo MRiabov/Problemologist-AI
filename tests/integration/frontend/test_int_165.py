@@ -2,10 +2,11 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+
 @pytest.mark.integration_frontend
 def test_cad_topology_selection_and_browser(page: Page):
     # 1. Navigate to the local development server
-    page.goto("http://localhost:5173", timeout=60000)
+    page.goto("http://localhost:15173", timeout=60000)
 
     # 2. Navigate to the Benchmark page
     benchmark_link = page.get_by_role("link", name="Benchmark")
@@ -42,7 +43,7 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(topology_toggle).to_be_visible(timeout=30000)
 
     # Check if Model Browser is visible (it should be by default)
-    model_browser = page.locator(".w-72.shrink-0.z-20") # ModelBrowser class
+    model_browser = page.locator(".w-72.shrink-0.z-20")  # ModelBrowser class
     expect(model_browser).to_be_visible(timeout=30000)
 
     # Toggle it off
