@@ -50,11 +50,8 @@ class ElectronicsManager:
                         self.is_powered_map[comp.component_id] = 1.0
                         continue
 
-                    # Determine primary input node for the component
+                    # Determine primary input node for the component (normalized to +)
                     node_name = f"{comp.component_id}_+"
-                    if comp.type in ["switch", "relay"]:
-                        node_name = f"{comp.component_id}_in"
-
                     voltage = validation.node_voltages.get(node_name, 0.0)
                     # Normalize power scale (0.0 to 1.0) based on supply voltage
                     supply_v = self.electronics.power_supply.voltage_dc
@@ -76,40 +73,76 @@ class ElectronicsManager:
             self._fallback_update()
 
     def _fallback_update(self):
-        """Connectivity-based fallback for is_powered_map if SPICE fails."""
+        """
+        Connectivity-based fallback for is_powered_map if SPICE fails.
+        Implements a terminal-aware BFS that respects switch states.
+        """
         if not self.electronics:
             return
 
-        # BFS for connectivity
-        # (Extracted from loop.py:227-307)
-        powered = set()
-        sources = [
-            c.component_id
-            for c in self.electronics.components
-            if c.type == ElectronicComponentType.POWER_SUPPLY
-        ]
+        from shared.circuit_builder import resolve_node_name
 
-        # Simplified BFS for power propagation
-        queue = list(sources)
-        visited = set(sources)
-        powered.update(sources)
+        # 1. Build adjacency list of standardized nodes
+        adj: dict[str, list[str]] = {}
+
+        def add_edge(u, v):
+            adj.setdefault(u, []).append(v)
+            adj.setdefault(v, []).append(u)
+
+        # External wiring
+        for wire in self.electronics.wiring:
+            u_node = resolve_node_name(
+                wire.from_terminal.component, wire.from_terminal.terminal
+            )
+            v_node = resolve_node_name(
+                wire.to_terminal.component, wire.to_terminal.terminal
+            )
+            add_edge(u_node, v_node)
+
+        # Internal component bridges
+        for comp in self.electronics.components:
+            if comp.type == ElectronicComponentType.MOTOR:
+                # Motors act as conductive bridges between their terminals
+                u = resolve_node_name(comp.component_id, "+")
+                v = resolve_node_name(comp.component_id, "-")
+                add_edge(u, v)
+            elif comp.type in (
+                ElectronicComponentType.SWITCH,
+                ElectronicComponentType.RELAY,
+            ):
+                # Switches bridge terminals only when closed
+                if self.switch_states.get(comp.component_id, True):
+                    u = resolve_node_name(comp.component_id, "+")
+                    v = resolve_node_name(comp.component_id, "-")
+                    add_edge(u, v)
+
+        # 2. BFS from all power sources
+        # Standard PSU
+        queue = ["supply_v+"]
+        # Secondary sources (batteries)
+        for comp in self.electronics.components:
+            if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                queue.append(resolve_node_name(comp.component_id, "+"))
+
+        visited = set(queue)
+        powered_nodes = set()
 
         while queue:
-            u = queue.pop(0)
-            # Find neighbors in wiring
-            for wire in self.electronics.wiring:
-                v = None
-                if wire.from_terminal.component == u:
-                    v = wire.to_terminal.component
-                elif wire.to_terminal.component == u:
-                    v = wire.from_terminal.component
+            curr = queue.pop(0)
+            powered_nodes.add(curr)
+            for neighbor in adj.get(curr, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
 
-                if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
-                    visited.add(v)
-                    powered.add(v)
-                    queue.append(v)
-
+        # 3. Update is_powered_map
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                self.is_powered_map[comp.component_id] = 1.0
+                continue
+
+            # Component is powered if its primary input (+) is connected to a source
+            pos_node = resolve_node_name(comp.component_id, "+")
+            self.is_powered_map[comp.component_id] = (
+                1.0 if pos_node in powered_nodes else 0.0
+            )

@@ -959,8 +959,19 @@ class GenesisBackend(PhysicsBackend):
     def get_camera_matrix(self, _camera_name: str) -> np.ndarray:
         return np.eye(4)
 
-    def set_site_pos(self, _site_name: str, _pos: np.ndarray) -> None:
-        pass
+    def set_site_pos(self, site_name: str, pos: np.ndarray) -> None:
+        """Update the position of a site (zone) in the configuration."""
+        if site_name in self.entity_configs:
+            cfg = self.entity_configs[site_name]
+            old_pos = np.array(cfg.get("pos", [0, 0, 0]))
+            if "min" in cfg and "max" in cfg:
+                diff = pos - old_pos
+                cfg["min"] = (np.array(cfg["min"]) + diff).tolist()
+                cfg["max"] = (np.array(cfg["max"]) + diff).tolist()
+            cfg["pos"] = pos.tolist()
+            logger.debug("genesis_set_site_pos", site=site_name, pos=pos.tolist())
+        else:
+            logger.warning("genesis_set_site_pos_failed_not_found", site=site_name)
 
     def get_contact_forces(self) -> list[ContactForce]:
         # logger.debug("genesis_get_contact_forces_start")
@@ -999,7 +1010,28 @@ class GenesisBackend(PhysicsBackend):
             # Fallback if API changed or no contacts
             return []
 
-    def get_site_state(self, _site_name: str) -> SiteState:
+    def get_site_state(self, site_name: str) -> SiteState:
+        """Retrieve the state (position, orientation, size) of a site (zone)."""
+        ent_cfg = self.entity_configs.get(site_name)
+        if ent_cfg and ent_cfg.get("is_zone"):
+            pos = ent_cfg.get("pos", [0, 0, 0])
+            size = ent_cfg.get("size", [0, 0, 0])
+            # Genesis zones are currently axis-aligned boxes
+            return SiteState(
+                pos=tuple(pos),
+                quat=(1.0, 0.0, 0.0, 0.0),
+                size=tuple(size),
+            )
+
+        # Fallback for entities that might be treated as sites
+        if site_name in self.entities:
+            state = self.get_body_state(site_name)
+            return SiteState(
+                pos=state.pos,
+                quat=state.quat,
+                size=(0.01, 0.01, 0.01),  # Default small size
+            )
+
         return SiteState(pos=(0, 0, 0), quat=(1, 0, 0, 0), size=(0, 0, 0))
 
     def get_actuator_state(self, actuator_name: str) -> ActuatorState:

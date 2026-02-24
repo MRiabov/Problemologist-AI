@@ -97,11 +97,19 @@ class BaseNode:
             if asyncio.iscoroutinefunction(t):
 
                 def sync_wrapper(*args, _t=t, **kwargs):
-                    new_loop = asyncio.new_event_loop()
                     try:
-                        return new_loop.run_until_complete(_t(*args, **kwargs))
-                    finally:
-                        new_loop.close()
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+
+                    if loop.is_running():
+                        import nest_asyncio
+
+                        nest_asyncio.apply(loop)
+                        return loop.run_until_complete(_t(*args, **kwargs))
+                    else:
+                        return loop.run_until_complete(_t(*args, **kwargs))
 
                 sync_wrapper.__name__ = name
                 tool_fns[name] = sync_wrapper

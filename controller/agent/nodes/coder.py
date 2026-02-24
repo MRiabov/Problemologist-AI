@@ -113,6 +113,9 @@ class CoderNode(BaseNode):
         # Mark TODO as done
         new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
 
+        # T008: Persist updated TODO to worker filesystem
+        await self.ctx.fs.write_file("todo.md", new_todo)
+
         return state.model_copy(
             update={
                 "todo": new_todo,
