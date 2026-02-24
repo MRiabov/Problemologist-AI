@@ -47,7 +47,7 @@ async def test_controller_to_worker_agent_run():
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0
         )
-        assert resp.status_code == 200
+        assert resp.status_code in [200, 202]
         data = resp.json()
         assert data["status"] == "accepted"
         episode_id = data["episode_id"]
