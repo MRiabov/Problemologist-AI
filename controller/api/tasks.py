@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 import uuid
 
@@ -240,6 +241,20 @@ async def execute_agent_task(
                     )
 
                 await db.commit()
+
+                # Broadcast status update
+                from controller.api.manager import manager
+
+                await manager.broadcast(
+                    episode_id,
+                    {
+                        "type": "status_update",
+                        "status": EpisodeStatus.COMPLETED,
+                        "metadata_vars": episode.metadata_vars,
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+                    },
+                )
+
                 # Broadcast final message
                 await db_callback._broadcast_trace(final_llm_trace)
                 logger.info("agent_task_logic_completed", episode_id=episode_id)
@@ -335,13 +350,13 @@ async def execute_agent_task(
                                 except Exception:
                                     pass
 
-                            asset = Asset(
-                                episode_id=episode_id,
-                                asset_type=asset_type,
-                                s3_path=path,
-                                content=content,
+                            from controller.observability.middleware_helper import (
+                                broadcast_file_update,
                             )
-                            db.add(asset)
+
+                            await broadcast_file_update(
+                                str(episode_id), path, content or ""
+                            )
 
                             # Upload to S3 if client available
                             if s3_client:
@@ -413,6 +428,21 @@ async def execute_agent_task(
                 if episode:
                     episode.status = EpisodeStatus.FAILED
                     await db.commit()
+
+                    # Broadcast status update
+                    from controller.api.manager import manager
+
+                    await manager.broadcast(
+                        episode_id,
+                        {
+                            "type": "status_update",
+                            "status": EpisodeStatus.FAILED,
+                            "metadata_vars": episode.metadata_vars,
+                            "timestamp": datetime.datetime.now(
+                                datetime.UTC
+                            ).isoformat(),
+                        },
+                    )
 
     finally:
         # Always remove task from tracker
@@ -540,6 +570,20 @@ async def continue_agent_task(
                     episode.status = EpisodeStatus.COMPLETED
 
                 await db.commit()
+
+                # Broadcast status update
+                from controller.api.manager import manager
+
+                await manager.broadcast(
+                    episode_id,
+                    {
+                        "type": "status_update",
+                        "status": EpisodeStatus.COMPLETED,
+                        "metadata_vars": episode.metadata_vars,
+                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+                    },
+                )
+
                 await db_callback._broadcast_trace(final_trace)
 
                 # Report automated score to Langfuse
@@ -571,5 +615,20 @@ async def continue_agent_task(
                 if episode:
                     episode.status = EpisodeStatus.FAILED
                     await db.commit()
+
+                    # Broadcast status update
+                    from controller.api.manager import manager
+
+                    await manager.broadcast(
+                        episode_id,
+                        {
+                            "type": "status_update",
+                            "status": EpisodeStatus.FAILED,
+                            "metadata_vars": episode.metadata_vars,
+                            "timestamp": datetime.datetime.now(
+                                datetime.UTC
+                            ).isoformat(),
+                        },
+                    )
     finally:
         pass

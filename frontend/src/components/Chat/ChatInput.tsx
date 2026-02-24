@@ -28,7 +28,7 @@ interface ChatInputProps {
   onSendMessage: (prompt: string, metadata: Record<string, unknown>) => Promise<void>;
   isRunning: boolean;
   onInterrupt: () => void;
-  selectedEpisode: { id: string; assets?: Asset[] } | null;
+  selectedEpisode: { id: string; assets?: Asset[] | null } | null;
   selectedContext: ContextItem[];
   topologyNodes: TopologyNode[];
   addToContext: (item: ContextItem) => void;
