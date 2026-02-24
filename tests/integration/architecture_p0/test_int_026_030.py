@@ -189,37 +189,37 @@ async def test_int_028_strict_api_schema_contract():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_029_api_key_enforcement():
+async def test_int_029_api_key_enforcement(controller_client):
     """INT-029: Verify API key enforcement on protected endpoints."""
     # Assuming /ops/backup is our protected endpoint for now
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        # No key
-        resp = await client.post(f"{CONTROLLER_URL}/ops/backup")
-        assert resp.status_code == 403
+    # Use controller_client fixture which handles in-process fallback
+    client = controller_client
 
-        # Invalid auth
-        resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup",
-            headers={"X-Backup-Secret": "invalid-auth-val"},
-        )
-        assert resp.status_code == 403
+    # No key
+    resp = await client.post("/ops/backup")
+    assert resp.status_code == 403
 
-        # Valid auth (using default from ops.py if not in env)
-        # Note: In real integration, we'd use the env var.
-        valid_auth = os.getenv("BACKUP_SECRET", "change-me-in-production")
-        resp = await client.post(
-            f"{CONTROLLER_URL}/ops/backup", headers={"X-Backup-Secret": valid_auth}
+    # Invalid auth
+    resp = await client.post(
+        "/ops/backup",
+        headers={"X-Backup-Secret": "invalid-auth-val"},
+    )
+    assert resp.status_code == 403
+
+    # Valid auth (using default from ops.py if not in env)
+    # Note: In real integration, we'd use the env var.
+    valid_auth = os.getenv("BACKUP_SECRET", "change-me-in-production")
+    resp = await client.post("/ops/backup", headers={"X-Backup-Secret": valid_auth})
+    # 202 because it triggers a temporal workflow which might fail if temporal is down,
+    # but the AUTH should pass.
+    assert resp.status_code in [202, 500]
+    if resp.status_code == 500:
+        # If we get 500, check if it's config missing or Temporal issue
+        assert (
+            "Backup configuration missing" in resp.text
+            or "Temporal" in resp.text
+            or "connection" in resp.text.lower()
         )
-        # 202 because it triggers a temporal workflow which might fail if temporal is down,
-        # but the AUTH should pass.
-        assert resp.status_code in [202, 500]
-        if resp.status_code == 500:
-            # If we get 500, check if it's config missing or Temporal issue
-            assert (
-                "Backup configuration missing" in resp.text
-                or "Temporal" in resp.text
-                or "connection" in resp.text.lower()
-            )
 
 
 @pytest.mark.integration_p0

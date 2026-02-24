@@ -82,26 +82,26 @@ async def test_int_002_controller_worker_execution_boundary():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_003_session_filesystem_isolation():
+async def test_int_003_session_filesystem_isolation(worker_light_client):
     """INT-003: Verify sessions have isolated filesystems."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        session_a = f"test-iso-a-{int(time.time())}"
-        session_b = f"test-iso-b-{int(time.time())}"
+    client = worker_light_client
+    session_a = f"test-iso-a-{int(time.time())}"
+    session_b = f"test-iso-b-{int(time.time())}"
 
-        # Write to A
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "test_iso.txt", "content": "dummy_payload"},
-            headers={"X-Session-ID": session_a},
-        )
+    # Write to A
+    await client.post(
+        "/fs/write",
+        json={"path": "test_iso.txt", "content": "dummy_payload"},
+        headers={"X-Session-ID": session_a},
+    )
 
-        # Try read from B
-        resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/read",
-            json={"path": "test_iso.txt"},
-            headers={"X-Session-ID": session_b},
-        )
-        assert resp.status_code == 404
+    # Try read from B
+    resp = await client.post(
+        "/fs/read",
+        json={"path": "test_iso.txt"},
+        headers={"X-Session-ID": session_b},
+    )
+    assert resp.status_code == 404
 
 
 @pytest.mark.integration_p0
@@ -385,43 +385,41 @@ constraints:
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_022_motor_overload_behavior():
+async def test_int_022_motor_overload_behavior(worker_light_client):
     """INT-022: Verify motor overload detection."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-int-022-{int(time.time())}"
+    client = worker_light_client
+    session_id = f"test-int-022-{int(time.time())}"
 
-        script_path = Path(
-            "tests/integration/architecture_p0/scripts/verify_overload.py"
-        )
-        with script_path.open() as f:
-            script_content = f.read()
+    script_path = Path("tests/integration/architecture_p0/scripts/verify_overload.py")
+    with script_path.open() as f:
+        script_content = f.read()
 
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "verify_overload.py", "content": script_content},
-            headers={"X-Session-ID": session_id},
-        )
+    await client.post(
+        "/fs/write",
+        json={"path": "verify_overload.py", "content": script_content},
+        headers={"X-Session-ID": session_id},
+    )
 
-        resp = await client.post(
-            f"{WORKER_LIGHT_URL}/runtime/execute",
-            json={
-                "code": (
-                    "import sys; sys.path.append('.'); import verify_overload; "
-                    "import asyncio; asyncio.run(verify_overload.run())"
-                ),
-                "timeout": 90,
-            },
-            headers={"X-Session-ID": session_id},
-            timeout=120.0,
-        )
-        assert resp.status_code == 200
-        data = resp.json()
+    resp = await client.post(
+        "/runtime/execute",
+        json={
+            "code": (
+                "import sys; sys.path.append('.'); import verify_overload; "
+                "import asyncio; asyncio.run(verify_overload.run())"
+            ),
+            "timeout": 90,
+        },
+        headers={"X-Session-ID": session_id},
+        timeout=120.0,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
 
-        assert data["exit_code"] == 0, (
-            f"Exit code {data['exit_code']} != 0\n"
-            f"STDOUT:\n{data['stdout']}\n"
-            f"STDERR:\n{data['stderr']}"
-        )
+    assert data["exit_code"] == 0, (
+        f"Exit code {data['exit_code']} != 0\n"
+        f"STDOUT:\n{data['stdout']}\n"
+        f"STDERR:\n{data['stderr']}"
+    )
 
 
 @pytest.mark.integration_p0
