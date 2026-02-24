@@ -152,7 +152,7 @@ class RemoteFilesystemMiddleware:
             # content for the Asset table
             try:
                 content = await self.client.read_file(p_str)
-                await sync_file_asset(self.client.session_id, p_str, content)
+                await broadcast_file_update(self.client.session_id, p_str, content)
             except Exception:
                 # Don't fail the edit if sync fails
                 pass
@@ -181,7 +181,15 @@ class RemoteFilesystemMiddleware:
             )
         # Fallback to direct client call if Temporal is not available
         result = await self.client.execute_python(code, timeout=timeout)
-        return result.model_dump()
+        res_dict = result.model_dump()
+        logger.info(
+            "run_command_result",
+            episode_id=self.client.session_id,
+            exit_code=res_dict.get("exit_code"),
+            stdout=res_dict.get("stdout"),
+            stderr=res_dict.get("stderr"),
+        )
+        return res_dict
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:

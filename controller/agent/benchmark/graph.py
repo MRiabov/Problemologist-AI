@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, UTC
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -346,12 +347,38 @@ async def run_generation_session(
             if episode:
                 episode.status = EpisodeStatus.COMPLETED
                 await db.commit()
+
+                # Broadcast status update
+                from controller.api.manager import manager
+
+                await manager.broadcast(
+                    session_id,
+                    {
+                        "type": "status_update",
+                        "status": EpisodeStatus.COMPLETED,
+                        "metadata_vars": episode.metadata_vars,
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    },
+                )
     elif final_state.session.status in [SessionStatus.FAILED, SessionStatus.REJECTED]:
         async with session_factory() as db:
             episode = await db.get(Episode, session_id)
             if episode and episode.status != EpisodeStatus.FAILED:
                 episode.status = EpisodeStatus.FAILED
                 await db.commit()
+
+                # Broadcast status update
+                from controller.api.manager import manager
+
+                await manager.broadcast(
+                    session_id,
+                    {
+                        "type": "status_update",
+                        "status": EpisodeStatus.FAILED,
+                        "metadata_vars": episode.metadata_vars,
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    },
+                )
 
     logger.info(
         "generation_session_complete",
@@ -409,16 +436,25 @@ async def _persist_session_assets(
                     backend = RemoteFilesystemBackend(middleware)
 
                     files = await backend.als_info("/")
+                    logger.info(
+                        "assets_found_for_sync",
+                        session_id=session_id,
+                        count=len(files),
+                        files=[f["path"] for f in files],
+                    )
+                    from controller.observability.middleware_helper import (
+                        broadcast_file_update,
+                    )
+
                     for file_info in files:
                         if not file_info["is_dir"]:
                             path = file_info["path"]
-                            asset_type = AssetType.OTHER
-                            if path.endswith(".py"):
-                                asset_type = AssetType.PYTHON
-                            elif path.endswith(".xml") or path.endswith(".mjcf"):
-                                asset_type = AssetType.MJCF
 
-                            content = None
+                            # Skip obviously huge or irrelevant files
+                            if path.endswith((".log", ".lock", ".tmp", ".pyc")):
+                                continue
+
+                            content = ""
                             with suppress(Exception):
                                 raw_content = await backend.aread(path)
                                 if isinstance(raw_content, bytes):
@@ -428,13 +464,7 @@ async def _persist_session_assets(
                                 else:
                                     content = str(raw_content)
 
-                            asset = Asset(
-                                episode_id=session_id,
-                                asset_type=asset_type,
-                                s3_path=path,
-                                content=content,
-                            )
-                            db.add(asset)
+                            await broadcast_file_update(str(session_id), path, content)
                     await db.commit()
             except Exception as e:
                 logger.error("failed_to_sync_assets_to_db", error=str(e))
@@ -465,6 +495,8 @@ async def _update_episode_persistence(
                 episode.status = EpisodeStatus.PLANNED
             elif new_status == SessionStatus.FAILED:
                 episode.status = EpisodeStatus.FAILED
+            elif new_status == SessionStatus.ACCEPTED:
+                episode.status = EpisodeStatus.COMPLETED
             else:
                 episode.status = EpisodeStatus.RUNNING
 
@@ -476,7 +508,23 @@ async def _update_episode_persistence(
             episode.metadata_vars = metadata.model_dump()
             if journal:
                 episode.journal = journal
+
+            # Use episode.status which was just updated above
+            status_to_broadcast = episode.status
             await db.commit()
+
+            # Broadcast status update
+            from controller.api.manager import manager
+
+            await manager.broadcast(
+                session_id,
+                {
+                    "type": "status_update",
+                    "status": status_to_broadcast,
+                    "metadata_vars": episode.metadata_vars,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            )
 
 
 async def continue_generation_session(

@@ -227,6 +227,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
             if asyncio.iscoroutinefunction(fn):
 
                 def _sync_wrap(*args, _fn=fn, **kwargs):
+                    print(f"DEBUG: sync_wrap_calling_tool name={_fn.__name__}")
                     new_loop = asyncio.new_event_loop()
                     try:
                         return new_loop.run_until_complete(_fn(*args, **kwargs))

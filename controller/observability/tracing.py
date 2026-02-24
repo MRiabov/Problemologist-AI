@@ -68,7 +68,7 @@ async def sync_asset(
     path: str | Path,
     content: str | None = None,
     asset_type: AssetType | None = None,
-) -> None:
+) -> Asset | None:
     """
     Syncs or creates an Asset record for a file change.
 
@@ -82,7 +82,7 @@ async def sync_asset(
         try:
             episode_uuid = uuid.UUID(episode_id)
         except ValueError:
-            return
+            return None
     else:
         episode_uuid = episode_id
 
@@ -117,10 +117,12 @@ async def sync_asset(
         else:
             asset = Asset(
                 episode_id=episode_uuid,
-                s3_path=path,
+                s3_path=str(path),
                 content=content,
                 asset_type=asset_type,
             )
             db.add(asset)
 
         await db.commit()
+        await db.refresh(asset)
+        return asset

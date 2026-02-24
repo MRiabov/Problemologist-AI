@@ -1,7 +1,9 @@
 """
 Utilities for generating schematics from electronic assembly definitions.
 """
+
 from shared.models.schemas import AssemblyDefinition, ElectronicComponentType
+
 
 def get_schematic_pin_index(term: str) -> str:
     """
@@ -25,6 +27,7 @@ def get_schematic_pin_index(term: str) -> str:
     # Default to "1" if unknown (better than failing, but risky)
     return "1"
 
+
 def generate_schematic_soup(assembly: AssemblyDefinition) -> list[dict]:
     """
     Generate a tscircuit Soup JSON representation of the electronics assembly.
@@ -43,7 +46,7 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[dict]:
         elif comp.type == ElectronicComponentType.SWITCH:
             symbol_name = "spst_switch"
         elif comp.type == ElectronicComponentType.RELAY:
-            symbol_name = "spst_switch" # Simplified
+            symbol_name = "spst_switch"  # Simplified
         elif comp.type == ElectronicComponentType.POWER_SUPPLY:
             symbol_name = "battery"
         elif comp.type == ElectronicComponentType.CONNECTOR:

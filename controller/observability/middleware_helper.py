@@ -20,20 +20,35 @@ async def broadcast_file_update(episode_id_str: str, path: str, content: str):
     """Broadcast file update to frontend and sync to Asset table."""
     try:
         episode_id = uuid.UUID(episode_id_str)
-        await EpisodeBroadcaster.get_instance().broadcast(
-            episode_id,
-            {
-                "type": "file_update",
-                "data": {"path": path, "content": content},
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+        # Sync to Asset table first to get DB record
+        asset = await sync_asset(episode_id, path, content)
+
+        payload = {
+            "type": "file_update",
+            "data": {
+                "path": path,
+                "content": content,
             },
-        )
-        # Sync to Asset table for Explorer visibility
-        await sync_asset(episode_id, path, content)
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
+        }
+
+        if asset:
+            payload["data"].update(
+                {
+                    "id": asset.id,
+                    "asset_type": asset.asset_type,
+                    "created_at": asset.created_at.isoformat()
+                    if asset.created_at
+                    else None,
+                }
+            )
+
+        await EpisodeBroadcaster.get_instance().broadcast(episode_id, payload)
     except ValueError:
         # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
         pass
-    except Exception:
+    except Exception as e:
+        logger.error("broadcast_file_update_failed", error=str(e), path=path)
         # Don't fail the write operation if broadcast fails
         pass
 
