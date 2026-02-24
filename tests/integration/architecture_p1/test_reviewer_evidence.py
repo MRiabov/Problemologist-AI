@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+import yaml
 
 import pytest
 from httpx import AsyncClient
@@ -75,27 +76,46 @@ async def test_reviewer_evidence_completeness():
         if not engineer_completed:
             pytest.fail("Engineer timed out.")
 
-        # 2. Fetch Review Artifact
-        artifacts_resp = await client.get(f"/artifacts/{episode_id}")
-        assert artifacts_resp.status_code == 200, (
-            f"Failed to fetch artifacts: {artifacts_resp.text}"
-        )
-        artifacts = artifacts_resp.json()
+        # 2. Fetch Review Artifact via Assets
+        # Use /episodes/{id} to get assets list
+        ep_resp = await client.get(f"/episodes/{episode_id}")
+        assert ep_resp.status_code == 200
+        ep_data = ep_resp.json()
+        assets = ep_data.get("assets", [])
 
-        review_artifacts = [a for a in artifacts if "reviews/" in a["path"]]
-        assert len(review_artifacts) > 0, (
-            f"No reviews found in artifacts: {[a['path'] for a in artifacts]}"
+        review_assets = [a for a in assets if "reviews/" in a["s3_path"]]
+        assert len(review_assets) > 0, (
+            f"No reviews found in assets: {[a['s3_path'] for a in assets]}"
         )
 
         # 3. Inspect Content for Evidence
         passed_evidence_check = False
-        for review in review_artifacts:
-            # Check metadata first
-            if "metadata" in review:
-                meta = review["metadata"]
-                if "evidence" in meta or "images_viewed" in meta:
-                    passed_evidence_check = True
-                    break
+        for review_asset in review_assets:
+            # We assume content is available if asset_type is readable
+            content = review_asset.get("content", "")
+            if not content:
+                # If content is empty, fetch via proxy
+                path = review_asset["s3_path"]
+                # Proxy url: /episodes/{id}/assets/{path}
+                proxy_resp = await client.get(f"/episodes/{episode_id}/assets/{path}")
+                if proxy_resp.status_code == 200:
+                    content = proxy_resp.text
+
+            # Check metadata/frontmatter
+            # Reviewer usually puts YAML frontmatter
+            if content.startswith("---"):
+                try:
+                    parts = content.split("---")
+                    if len(parts) >= 3:
+                        frontmatter = yaml.safe_load(parts[1])
+                        # Check for evidence fields
+                        if "evidence" in frontmatter or "images_viewed" in frontmatter:
+                            passed_evidence_check = True
+                            break
+                        # Also check comments for evidence if not in frontmatter
+                        # (Legacy check)
+                except Exception:
+                    pass
 
         # For P1 integration, if we can't verify content, we accept existence for now but ideally would fail if API supports it.
         # Original logic had a warning print. We'll just rely on the assertion if we want to enforce it.
