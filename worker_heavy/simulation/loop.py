@@ -16,7 +16,7 @@ from shared.observability.schemas import (
     ElectricalFailureEvent,
     SimulationBackendSelectedEvent,
 )
-from shared.simulation.backends import SimulationScene
+from shared.simulation.backends import ActuatorState, SimulationScene
 from shared.simulation.schemas import SimulatorBackendType
 from shared.wire_utils import check_wire_clearance, get_awg_properties
 from shared.workers.workbench_models import ManufacturingMethod
@@ -356,6 +356,8 @@ class SimulationLoop:
         logger.info("SimulationLoop_step_start", target_body_name=target_body_name)
 
         # 6. Main simulation loop
+        accumulated_dt = 0.0
+        check_interval = 10  # Approx 50Hz check rate for 2ms dt
         for step_idx in range(steps):
             self.current_step_idx = step_idx
 
@@ -383,15 +385,16 @@ class SimulationLoop:
             # Step backend
             res = self.backend.step(dt)
             current_time = res.time
+            accumulated_dt += dt
 
             # Check failures and update metrics
-            # T018: Keep interval small for collisions/overload to avoid missing events
-            check_interval = 1
-            if step_idx % check_interval == 0 or step_idx == steps - 1:
+            # Performance: executing checks every 10 simulation steps (approx. 50Hz)
+            if (step_idx + 1) % check_interval == 0 or step_idx == steps - 1:
                 if self._check_simulation_failure(
-                    res, current_time, dt * check_interval, target_body_name
+                    res, current_time, accumulated_dt, target_body_name
                 ):
                     break
+                accumulated_dt = 0.0
 
             # Check wire failure
             if self._handle_wire_failure():
@@ -420,24 +423,24 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self, dt: float) -> str | None:
-        # Check all position/torque actuators for saturation
+    def _check_motor_overload(
+        self, dt: float, actuator_states: dict[str, ActuatorState]
+    ) -> str | None:
+        """Check all position/torque actuators for saturation using pre-fetched states."""
         if not self._monitor_names:
             return None
 
         forces = [
-            abs(self.backend.get_actuator_state(n).force) for n in self._monitor_names
+            abs(actuator_states[n].force)
+            for n in self._monitor_names
+            if n in actuator_states
         ]
 
-        # SuccessEvaluator.check_motor_overload returns bool but we want the name of the motor
-        # Wait, the evaluator's check_motor_overload returns bool.
-        # Let's see how it's implemented on main.
-        # It returns bool. If true, it means SOME motor is overloaded.
         if self.success_evaluator.check_motor_overload(
             self._monitor_names, forces, self._monitor_limits, dt
         ):
             # Find which one
-            for i, name in enumerate(self._monitor_names):
+            for name in self._monitor_names:
                 if (
                     self.success_evaluator.motor_overload_timer.get(name, 0)
                     >= self.success_evaluator.motor_overload_threshold
@@ -557,12 +560,13 @@ class SimulationLoop:
         self, res, current_time: float, dt_interval: float, target_body_name: str | None
     ) -> bool:
         """Aggregate failure checks from backends and evaluators."""
-        # 1. Update Metrics
+        # 1. Update Metrics (Pre-fetch ActuatorStates once per check interval)
         actuator_states = {
             n: self.backend.get_actuator_state(n) for n in self.actuator_names
         }
-        energy = sum(
-            abs(state.ctrl * state.velocity) for state in actuator_states.values()
+        energy = (
+            sum(abs(state.ctrl * state.velocity) for state in actuator_states.values())
+            * dt_interval
         )
 
         target_vel = 0.0
@@ -590,6 +594,7 @@ class SimulationLoop:
             return True
 
         # 4. SuccessEvaluator checks
+        # Performance: ONLY check failure for bodies if needed or at end
         for bname in self.body_names:
             bstate = self.backend.get_body_state(bname)
             eval_fail_reason = self.success_evaluator.check_failure(
@@ -625,7 +630,7 @@ class SimulationLoop:
             return True
 
         # 7. Motor overload
-        overloaded_motor = self._check_motor_overload(dt_interval)
+        overloaded_motor = self._check_motor_overload(dt_interval, actuator_states)
         if overloaded_motor:
             self.fail_reason = SimulationFailure(
                 reason=FailureReason.MOTOR_OVERLOAD, detail=overloaded_motor

@@ -30,7 +30,11 @@ async def run(_ctx=None):
 
         from shared.simulation.schemas import SimulatorBackendType
 
-        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.GENESIS)
+        # Prefer MuJoCo for core architecture verification scripts to ensure speed/reliability
+        # Fallback to Genesis only if MuJoCo is unavailable (unlikely in this environment)
+        backend = SimulatorBackendType.MUJOCO
+
+        loop = SimulationLoop(str(tmp_path), backend_type=backend)
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
