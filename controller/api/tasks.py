@@ -228,42 +228,14 @@ async def execute_agent_task(
                 )
                 db.add(final_llm_trace)
 
-                # Update episode status immediately
-                await db.refresh(episode)
-                if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
-                    episode.plan = (
-                        f"Agent completed task: {task}\n\n"
-                        f"Result: {final_output[:500]}..."
-                    )
-
-                await db.commit()
-                # Broadcast final message
-                await db_callback._broadcast_trace(final_llm_trace)
-                logger.info("agent_task_logic_completed", episode_id=episode_id)
-
-                # Report automated score to Langfuse
-                if langfuse_callback:
-                    from controller.observability.langfuse import (
-                        calculate_and_report_automated_score,
-                    )
-
-                    await calculate_and_report_automated_score(
-                        episode_id=episode_id,
-                        trace_id=trace_id,
-                        agent_name=agent_name,
-                        db=db,
-                        worker_client=client,
-                    )
-
-                # Sync assets from worker (now in background after status update)
+                # Sync assets from worker FIRST before marking as completed
                 logger.info("starting_asset_sync", episode_id=episode_id)
                 try:
-
                     async def sync_dir(dir_path: str):
                         try:
                             # Use new session for sync to avoid sharing with main loop
                             files = await client.list_files(dir_path)
+                            logger.info("sync_dir_listed", dir=dir_path, files=[f.path for f in files])
                         except Exception as e:
                             logger.warning(
                                 "failed_to_list_dir_during_sync",
@@ -278,7 +250,10 @@ async def execute_agent_task(
                                 # Recursively sync directories
                                 if not any(
                                     path.lower().endswith(s)
-                                    for s in ["__pycache__", ".git", ".venv", "renders"]
+                                    for s in ["__pycache__", ".git", ".venv", "renders", "worker_heavy", "worker_light", "controller", "shared"]
+                                ) and not any(
+                                    path.startswith(prefix)
+                                    for prefix in ["/utils", "/skills", "/reviews", "/config"]
                                 ):
                                     await sync_dir(path)
                                 continue
@@ -311,22 +286,61 @@ async def execute_agent_task(
                                 try:
                                     raw_content = await client.read_file(path)
                                     content = raw_content
-                                except Exception:
+                                except Exception as e:
+                                    logger.warning("sync_read_failed", path=path, error=str(e))
                                     pass
 
-                            asset = Asset(
-                                episode_id=episode_id,
-                                asset_type=asset_type,
-                                s3_path=path,
-                                content=content,
-                            )
-                            db.add(asset)
+                            # Strip leading slash to standardize paths in DB
+                            std_path = path.lstrip("/")
+                            logger.info("syncing_asset", path=std_path, type=asset_type)
+                            # Use nested transaction (savepoint) for each asset to prevent session invalidation on failure
+                            async with db.begin_nested():
+                                try:
+                                    asset = Asset(
+                                        episode_id=episode_id,
+                                        asset_type=asset_type,
+                                        s3_path=std_path,
+                                        content=content,
+                                    )
+                                    db.add(asset)
+                                    await db.flush()
+                                except Exception as e:
+                                    logger.warning("asset_add_failed", path=std_path, error=str(e))
+                                    # Nested transaction will automatically rollback to savepoint on error
 
                     await sync_dir("/")
                     await db.commit()
                     logger.info("asset_sync_completed", episode_id=episode_id)
                 except Exception as e:
                     logger.error("failed_to_sync_assets", error=str(e))
+
+                # Update episode status
+                await db.refresh(episode)
+                if episode.status != EpisodeStatus.CANCELLED:
+                    episode.status = EpisodeStatus.COMPLETED
+                    episode.plan = (
+                        f"Agent completed task: {task}\n\n"
+                        f"Result: {final_output[:500]}..."
+                    )
+
+                await db.commit()
+                # Broadcast final message
+                await db_callback._broadcast_trace(final_llm_trace)
+                logger.info("agent_task_logic_completed", episode_id=episode_id)
+
+                # Report automated score to Langfuse
+                if langfuse_callback:
+                    from controller.observability.langfuse import (
+                        calculate_and_report_automated_score,
+                    )
+
+                    await calculate_and_report_automated_score(
+                        episode_id=episode_id,
+                        trace_id=trace_id,
+                        agent_name=agent_name,
+                        db=db,
+                        worker_client=client,
+                    )
 
             except asyncio.CancelledError:
                 logger.info("agent_run_cancelled", episode_id=episode_id)

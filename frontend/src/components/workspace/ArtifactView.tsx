@@ -113,6 +113,8 @@ export default function ArtifactView({
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
 
+  const [activeTab, setActiveTab] = useState<'overview' | 'schematic' | 'raw'>('overview');
+
   const renderContent = () => {
     if (!activeAsset) {
         return (
@@ -172,26 +174,54 @@ export default function ArtifactView({
                     .sort((a: any, b: any) => a.timestamp - b.timestamp);
 
                 return (
-                    <div className="p-6 space-y-8 bg-background min-h-full">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <CircuitSchematic />
-                            <WireView 
-                                assetUrl={getAssetUrl(assets.find(a => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
-                                wireRoutes={data.electronics.wiring || []} 
-                            />
+                    <div className="flex flex-col h-full bg-background">
+                        <div className="flex items-center gap-4 px-6 py-2 border-b bg-muted/30">
+                            <button
+                                onClick={() => setActiveTab('overview')}
+                                className={cn("text-[10px] font-bold uppercase tracking-widest pb-1 border-b-2 transition-all", activeTab === 'overview' ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground")}
+                            >Overview</button>
+                            <button
+                                onClick={() => setActiveTab('schematic')}
+                                className={cn("text-[10px] font-bold uppercase tracking-widest pb-1 border-b-2 transition-all", activeTab === 'schematic' ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground")}
+                            >Schematic</button>
+                            <button
+                                onClick={() => setActiveTab('raw')}
+                                className={cn("text-[10px] font-bold uppercase tracking-widest pb-1 border-b-2 transition-all", activeTab === 'raw' ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground")}
+                            >Raw YAML</button>
                         </div>
-                        {timelineEvents.length > 0 && (
-                            <CircuitTimeline events={timelineEvents} />
-                        )}
-                        <div className="border-t border-border pt-6">
-                            <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Assembly Definition</h3>
-                            <SyntaxHighlighter
-                                language="yaml"
-                                style={theme === 'dark' ? vscDarkPlus : vs}
-                                customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
-                            >
-                                {activeAsset.content}
-                            </SyntaxHighlighter>
+                        <div className="flex-1 overflow-auto no-scrollbar">
+                            {activeTab === 'overview' && (
+                                <div className="p-6 space-y-8">
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                        <SimulationResults
+                                            stressSummaries={[]}
+                                        />
+                                        <WireView
+                                            assetUrl={getAssetUrl(assets.find(a => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)}
+                                            wireRoutes={data.electronics.wiring || []}
+                                        />
+                                    </div>
+                                    {timelineEvents.length > 0 && (
+                                        <CircuitTimeline events={timelineEvents} />
+                                    )}
+                                </div>
+                            )}
+                            {activeTab === 'schematic' && (
+                                <div className="p-6 h-full min-h-[500px]">
+                                    <CircuitSchematic />
+                                </div>
+                            )}
+                            {activeTab === 'raw' && (
+                                <div className="p-6">
+                                    <SyntaxHighlighter
+                                        language="yaml"
+                                        style={theme === 'dark' ? vscDarkPlus : vs}
+                                        customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
+                                    >
+                                        {activeAsset.content}
+                                    </SyntaxHighlighter>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );

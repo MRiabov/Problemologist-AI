@@ -53,6 +53,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     setTopologyNodes
   } = useEpisodes();
   const { isConnected } = useConnection();
+  const [showNoAssetsOverlay, setShowNoAssetsOverlay] = React.useState(false);
 
   const getSavedLayout = (key: string, defaultVal: string) => {
     const saved = localStorage.getItem(key);
@@ -69,12 +70,31 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   const getAssetUrl = (asset: AssetResponse) => {
     if (!asset || !selectedEpisode) return null;
     if (asset.s3_path.startsWith('http')) return asset.s3_path;
+
+    // INT-167: Route CAD assets through the worker proxy
+    const isCAD = asset.asset_type === 'stl' || asset.asset_type === 'step' || asset.asset_type === 'glb';
+    const workerSessionId = selectedEpisode.metadata_vars?.worker_session_id || selectedEpisode.id;
+
+    if (isCAD) {
+        return `/api/worker/assets/${asset.s3_path}?sessionId=${workerSessionId}`;
+    }
+
     return `/api/episodes/${selectedEpisode.id}/assets/${asset.s3_path}`;
   };
 
   const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === 'video');
   const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
   const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
+
+  React.useEffect(() => {
+    let timer: any;
+    if (modelUrls.length === 0 && !videoAsset && selectedEpisode && !running) {
+        timer = setTimeout(() => setShowNoAssetsOverlay(true), 5000);
+    } else {
+        setShowNoAssetsOverlay(false);
+    }
+    return () => clearTimeout(timer);
+  }, [modelUrls.length, videoAsset, selectedEpisode, running]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -205,9 +225,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     }}
                   />
 
-                  {modelUrls.length === 0 && !videoAsset && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-                        <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                  {showNoAssetsOverlay && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+                        <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3 pointer-events-auto max-w-[280px]">
                             <h3 className="text-sm font-bold text-slate-200">No Assets Loaded</h3>
                             <Button 
                                 size="sm" 

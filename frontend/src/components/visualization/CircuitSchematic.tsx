@@ -11,7 +11,7 @@ interface Props {
 }
 
 const CircuitSchematic: React.FC<Props> = ({ className }) => {
-  const { selectedEpisode } = useEpisodes();
+  const { selectedEpisode, addToContext } = useEpisodes();
   const [soup, setSoup] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,6 +61,14 @@ const CircuitSchematic: React.FC<Props> = ({ className }) => {
                 <SchematicViewer 
                     soup={soup} 
                     style={{ width: '100%', height: '100%' }}
+                    onComponentClick={(componentId: string) => {
+                        addToContext({
+                            id: `circuit-${componentId}`,
+                            type: 'circuit',
+                            label: componentId,
+                            metadata: { componentId }
+                        });
+                    }}
                 />
             </React.Suspense>
         ) : (

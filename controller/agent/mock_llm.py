@@ -9,6 +9,9 @@ import yaml
 
 logger = structlog.get_logger(__name__)
 
+# Global cache to persist scenario detection across nodes in the same session
+_SESSION_SCENARIO_CACHE: dict[str, str] = {}
+
 
 class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
@@ -52,8 +55,8 @@ class MockDSPyLM(dspy.LM):
 
         full_text = self._get_full_text(prompt, messages)
 
-        # 1. Detect Scenario from session_id
-        scenario_id = self._get_scenario_id()
+        # 1. Detect Scenario from session_id or prompt
+        scenario_id = self._get_scenario_id(full_text)
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
@@ -105,8 +108,10 @@ class MockDSPyLM(dspy.LM):
             lookup_key = "planner"
         elif node_key == "benchmark_coder":
             lookup_key = "coder"
-        elif node_key == "benchmark_reviewer":
+        elif node_key in ["benchmark_reviewer", "plan_reviewer", "execution_reviewer", "electronics_reviewer"]:
             lookup_key = "reviewer"
+        elif node_key == "skill_learner":
+            lookup_key = "skill_learner"
 
         node_data = scenario.get(lookup_key, {})
         logger.info(
@@ -138,32 +143,56 @@ class MockDSPyLM(dspy.LM):
                 text += str(msg.get("content", ""))
         return text
 
-    def _get_scenario_id(self) -> str:
-        """Extract scenario ID from session_id, handling UUIDs and test prefixes."""
+    def _get_scenario_id(self, full_text: str = "") -> str:
+        """Extract scenario ID from session_id or prompt text."""
+        # Priority 1: Check prompt text for explicit INT-xxx marker
+        match = re.search(r"(INT-\d{3})", full_text)
+        if match:
+            scenario_id = match.group(1)
+            _SESSION_SCENARIO_CACHE[self.session_id] = scenario_id
+            return scenario_id
+
+        # Priority 2: Check global cache
+        if self.session_id in _SESSION_SCENARIO_CACHE:
+            return _SESSION_SCENARIO_CACHE[self.session_id]
+
+        # Priority 3: Extract from session_id
         # Check for UUID (roughly xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
         uuid_regex = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        if re.match(uuid_regex, self.session_id.lower()):
-            return "benchmark"
 
-        parts = self.session_id.split("-")
-        if len(parts) > 1:
-            # If the last part looks like a random hash or short hex (e.g. 'abcd', '1234')
-            # and there are at least 2 other parts (e.g. 'INT-002-abcd'), strip it.
-            last = parts[-1].lower()
-            is_noise = (
-                len(last) <= 8 and all(c in "0123456789abcdef" for c in last)
-            ) or last.isdigit()
-            if is_noise and len(parts) > 2:
-                scenario = "-".join(parts[:-1])
-                # Normalize INT-002-xyz -> INT-002
-                if scenario.startswith("INT-"):
-                    return scenario.split("-")[0] + "-" + scenario.split("-")[1]
-                return scenario
+        scenario_id = None
+        if re.match(uuid_regex, self.session_id.lower()) or self.session_id.startswith("sess-"):
+            scenario_id = "default"
+        else:
+            parts = self.session_id.split("-")
+            if len(parts) > 1:
+                last = parts[-1].lower()
+                is_noise = (
+                    len(last) <= 8 and all(c in "0123456789abcdef" for c in last)
+                ) or last.isdigit()
+                if is_noise and len(parts) > 2:
+                    scenario = "-".join(parts[:-1])
+                    if scenario.startswith("INT-"):
+                        scenario_id = scenario.split("-")[0] + "-" + scenario.split("-")[1]
+                    else:
+                        scenario_id = scenario
+                else:
+                    scenario_id = self.session_id
+            else:
+                scenario_id = self.session_id
 
-            # Special case: INT-002 should stay INT-002
-            return self.session_id
+        # If we are in benchmark/default mode, check the prompt for INT-xxx
+        if scenario_id in ["benchmark", "default", "default-session", "default"]:
+            match = re.search(r"(INT-\d{3})", full_text)
+            if match:
+                scenario_id = match.group(1)
 
-        return self.session_id
+        res = scenario_id or "default"
+        # Only cache if it's a specific INT scenario
+        if res.startswith("INT-"):
+            _SESSION_SCENARIO_CACHE[self.session_id] = res
+
+        return res
 
     def _detect_node_key(self, text: str) -> str:
         """Robustly detect node type by looking for role keywords and output fields."""
@@ -240,13 +269,25 @@ class MockDSPyLM(dspy.LM):
     def _handle_action(
         self, node_key: str, node_data: dict, is_json: bool, expected_fields: list[str]
     ):
-        # Force finish for reviewer to avoid loops in mock
-        force_finish = node_key in ["reviewer"]
+        count = self._call_counts.get(node_key, 0)
+        has_code = bool(node_data.get("generated_code"))
+
+        # In ReAct, the first call should provide the tool call if code is present.
+        # The second call (after observation) should finish.
+        if has_code:
+            if count <= 1:
+                should_finish = False
+            else:
+                should_finish = True
+        else:
+            # Force finish for reviewer or if explicitly set
+            should_finish = node_data.get("finished", node_key in ["reviewer", "execution_reviewer", "plan_reviewer", "skill_learner", "cots_search"])
+
         return self._generate_response(
             node_key,
             node_data,
             is_json,
-            finished=node_data.get("finished", force_finish),
+            finished=should_finish,
             expected_fields=expected_fields,
         )
 
@@ -337,6 +378,7 @@ class MockDSPyLM(dspy.LM):
                         "review",
                         "journal",
                         "search_summary",
+                        "generated_code",
                     ]
                 }
                 return [json.dumps(filtered_resp)]

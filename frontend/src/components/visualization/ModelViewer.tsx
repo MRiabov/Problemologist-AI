@@ -276,6 +276,7 @@ export default function ModelViewer({
   onTopologyChange,
   onRebuildModel
 }: ModelViewerProps & { onRebuildModel?: () => void }) {
+  const { running } = useEpisodes()
   const controlsRef = useRef<any>(null)
   const { addToContext } = useEpisodes();
   const [hiddenParts, setHiddenParts] = useState<string[]>([])
@@ -284,6 +285,7 @@ export default function ModelViewer({
   const [showTopology, setShowTopology] = useState(true) // Default to open for Model Browser
   const [isElectronicsView, setIsElectronicsView] = useState(false)
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('PART')
+  const [showNoModelOverlay, setShowNoModelOverlay] = useState(false)
 
   const urls = useMemo(() => {
     const all = [...assetUrls];
@@ -292,6 +294,16 @@ export default function ModelViewer({
     }
     return all;
   }, [assetUrl, assetUrls]);
+
+  useEffect(() => {
+    let timer: any;
+    if (urls.length === 0 && !running) {
+        timer = setTimeout(() => setShowNoModelOverlay(true), 5000);
+    } else {
+        setShowNoModelOverlay(false);
+    }
+    return () => clearTimeout(timer);
+  }, [urls.length, running]);
 
   useEffect(() => {
     if (resetTrigger > 0 && controlsRef.current) {
@@ -369,10 +381,10 @@ export default function ModelViewer({
             )}
             
             {/* Rebuild Prompt Overlay */}
-            {urls.length === 0 && onRebuildModel && (
+            {showNoModelOverlay && onRebuildModel && (
                 <Html center>
-                    <div className="w-64 text-center pointer-events-auto">
-                         <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                    <div className="w-64 text-center pointer-events-none z-40">
+                        <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3 pointer-events-auto">
                             <h3 className="text-sm font-bold text-slate-200">No Model Loaded</h3>
                             <Button 
                                 size="sm" 
@@ -431,7 +443,7 @@ export default function ModelViewer({
         </Canvas>
 
         {/* Viewport Buttons */}
-        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+        <div className="absolute top-4 left-4 z-50 flex flex-col gap-2">
             <Button 
                 variant="secondary" 
                 size="icon" 
@@ -444,9 +456,10 @@ export default function ModelViewer({
             <Button 
                 variant="secondary" 
                 size="icon" 
-                className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20", isElectronicsView && "bg-yellow-500 text-yellow-950")}
+                className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20 z-50", isElectronicsView && "bg-yellow-500 text-yellow-950")}
                 onClick={() => setIsElectronicsView(!isElectronicsView)}
                 title="Toggle Electronics View"
+                aria-label="Toggle Electronics View"
             >
                 <Zap className="h-4 w-4" />
             </Button>
