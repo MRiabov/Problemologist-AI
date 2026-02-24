@@ -277,7 +277,9 @@ async def get_episode_schematic(
         return generate_schematic_soup(assembly)
     except Exception as e:
         logger.error("failed_to_get_schematic", episode_id=episode_id, error=str(e))
-        return []
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate schematic: {e!s}"
+        ) from e
 
 
 class TraceResponse(BaseModel):

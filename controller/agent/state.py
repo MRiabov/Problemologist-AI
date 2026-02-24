@@ -16,6 +16,7 @@ class AgentStatus(StrEnum):
     APPROVED = "approved"
     PLAN_REJECTED = "plan_rejected"
     CODE_REJECTED = "code_rejected"
+    COTS_SEARCH = "cots_search"
 
 
 class AgentState(BaseModel):
@@ -35,3 +36,4 @@ class AgentState(BaseModel):
     best_cost: float | None = None
     best_weight_g: float | None = None
     turn_count: StrictInt = 0
+    previous_node: StrictStr = ""

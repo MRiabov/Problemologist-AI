@@ -115,4 +115,5 @@ async def electronics_planner_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url, session_id=session_id
     )
     node = ElectronicsPlannerNode(context=ctx)
-    return await node(state)
+    res = await node(state)
+    return res.model_copy(update={"previous_node": "electronics_planner"})
