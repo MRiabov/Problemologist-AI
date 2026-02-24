@@ -100,6 +100,7 @@ markers = [
     "unit: marks tests as unit tests", # FIXME: remove
     "benchmark: marks tests related to the benchmark generator",
     "debug_fuzz: manual debugging for schemathesis tests",
+    "dev_automations: marks tests for internal automation scripts (orchestrators)",
 ]
 
 [tool.uv.sources]
