@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useEpisodes } from '../../context/EpisodeContext';
 import { useConnection } from '../../context/ConnectionContext';
+import * as yaml from 'js-yaml';
 import { 
   SignalLow,
   AlertCircle,
@@ -76,6 +77,18 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === 'video');
   const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
   const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
+
+  const circuitData = useMemo(() => {
+    const assemblyAsset = selectedEpisode?.assets?.find(a => a.s3_path.endsWith('assembly_definition.yaml'));
+    if (!assemblyAsset?.content) return null;
+    try {
+      const data = yaml.load(assemblyAsset.content) as any;
+      return data?.electronics ? data : null;
+    } catch (e) { 
+      console.error("Failed to parse assembly definition for electronics", e);
+      return null; 
+    }
+  }, [selectedEpisode]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -200,6 +213,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                       .map(getAssetUrl)
                       .filter(Boolean) as string[]
                     }
+                    circuitData={circuitData}
                     isConnected={isConnected}
                     resetTrigger={resetTrigger}
                     topologyNodes={topologyNodes}

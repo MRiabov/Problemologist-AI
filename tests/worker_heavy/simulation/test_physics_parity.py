@@ -5,7 +5,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_physics_parity_rigid_body(tmp_path):
     """
     Compare final positions of a falling box in MuJoCo and Genesis.
@@ -31,14 +31,14 @@ def test_physics_parity_rigid_body(tmp_path):
     loop_mujoco = SimulationLoop(
         str(xml_path), backend_type=SimulatorBackendType.GENESIS
     )
-    res_mujoco = loop_mujoco.step(control_inputs={}, duration=1.0)
+    loop_mujoco.step(control_inputs={}, duration=1.0)
     pos_mujoco = loop_mujoco.backend.get_body_state("test_box").pos
 
     # 2. Run Genesis
     loop_genesis = SimulationLoop(
         str(xml_path), backend_type=SimulatorBackendType.GENESIS
     )
-    res_genesis = loop_genesis.step(control_inputs={}, duration=1.0)
+    loop_genesis.step(control_inputs={}, duration=1.0)
     pos_genesis = loop_genesis.backend.get_body_state("test_box").pos
 
     # 3. Compare

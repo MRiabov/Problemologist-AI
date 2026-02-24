@@ -6,9 +6,12 @@ import {
   PlayCircle, 
   Thermometer, 
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  Zap
 } from "lucide-react";
 import ModelViewer from './ModelViewer';
+import CircuitSchematic from './CircuitSchematic';
+import WireView from './WireView';
 import { cn } from "../../lib/utils";
 import type { TopologyNode } from './ModelBrowser';
 
@@ -16,6 +19,7 @@ interface DesignViewerProps {
   modelUrls?: string[];
   videoUrl?: string | null;
   heatmapUrls?: string[];
+  circuitData?: any;
   isConnected?: boolean;
   resetTrigger?: number;
   topologyNodes?: TopologyNode[];
@@ -23,12 +27,13 @@ interface DesignViewerProps {
   onRebuildModel?: () => Promise<void>;
 }
 
-type ViewMode = '3d' | 'video' | 'heatmaps';
+type ViewMode = '3d' | 'video' | 'heatmaps' | 'electronics';
 
 export const DesignViewer: React.FC<DesignViewerProps> = ({
   modelUrls = [],
   videoUrl,
   heatmapUrls = [],
+  circuitData,
   isConnected = true,
   resetTrigger = 0,
   topologyNodes = [],
@@ -82,6 +87,20 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           >
             <Thermometer className="h-3 w-3 mr-1.5" />
             Stress Heatmap
+          </Button>
+        )}
+        {circuitData && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all",
+              viewMode === 'electronics' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setViewMode('electronics')}
+          >
+            <Zap className="h-3 w-3 mr-1.5" />
+            Electronics
           </Button>
         )}
       </div>
@@ -161,12 +180,25 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
             </div>
           </div>
         )}
+
+        {viewMode === 'electronics' && circuitData && (
+          <div className="w-full h-full flex flex-col gap-6 p-16 overflow-y-auto no-scrollbar bg-slate-900/50">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[500px]">
+                <CircuitSchematic soup={circuitData.electronics} className="h-full" />
+                <WireView 
+                    assetUrl={modelUrls[0]} 
+                    wireRoutes={circuitData.electronics.wiring || []} 
+                    className="h-full"
+                />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer info badge */}
       <div className="absolute bottom-4 right-4 z-10 pointer-events-none">
          <Badge variant="outline" className="bg-background/20 backdrop-blur-md text-[9px] uppercase font-black tracking-widest px-3 py-1 border-white/10 text-white/50">
-            {viewMode === '3d' ? '3D Interactive' : viewMode === 'video' ? 'Time-Step Simulation' : 'Static Analysis'}
+            {viewMode === '3d' ? '3D Interactive' : viewMode === 'video' ? 'Time-Step Simulation' : viewMode === 'heatmaps' ? 'Static Analysis' : 'Electronics Design'}
          </Badge>
       </div>
     </div>
