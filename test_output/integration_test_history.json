@@ -1,167 +1,97 @@
 {
   "runs": [
     {
-      "timestamp": "2026-02-24T15:25:32.285038",
-      "status": "passed",
-      "total": 3,
-      "passed": 3,
-      "failed": 0,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 34.271,
-      "tests": [
-        {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 4.903,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 17.94,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 11.375,
-          "status": "passed",
-          "message": null
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-24T15:23:57.850724",
-      "status": "passed",
-      "total": 3,
-      "passed": 3,
-      "failed": 0,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 32.745,
-      "tests": [
-        {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 12.07,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 14.062,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 6.557,
-          "status": "passed",
-          "message": null
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-24T15:21:31.398665",
+      "timestamp": "2026-02-24T20:47:42.713595",
       "status": "failed",
-      "total": 3,
+      "total": 1,
       "passed": 0,
-      "failed": 3,
+      "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 99.13,
+      "duration": 18.01,
       "tests": [
         {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 36.668,
+          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+          "classname": "tests.integration.frontend.test_int_164",
+          "time": 17.869,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_157_session_history(page: Page):\n        \"\"\"\n        INT-157: Sidebar lists sessions from live API; selecting a session opens\n        the correct benchmark/solution workflow with matching episode context.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        unique_id = str(uuid.uuid4())[:8]\n        benchmark_name = f\"Benchmark-{unique_id}\"\n        engineer_name = f\"Engineer-{unique_id}\"\n    \n        # 1. Create a benchmark session and an engineer session via API\n        with httpx.Client() as client:\n            # Create benchmark session\n            resp_b = client.post(\n                f\"{CONTROLLER_URL}/benchmark/generate\", json={\"prompt\": benchmark_name}\n            )\n            assert resp_b.status_code == 200\n            benchmark_id = resp_b.json()[\"session_id\"]\n    \n            # Create engineer session\n            resp_e = client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json={\"task\": engineer_name, \"session_id\": str(uuid.uuid4())},\n            )\n            assert resp_e.status_code == 202\n            engineer_id = resp_e.json()[\"episode_id\"]\n    \n        # 2. Poll until both episodes are available via the API\n        max_retries = 30\n        episodes_found = False\n        with httpx.Client(timeout=10.0) as client:\n            for i in range(max_retries):\n                resp = client.get(f\"{CONTROLLER_URL}/episodes/\")\n                print(f\"POLL {i}: status={resp.status_code}, count={len(resp.json()) if resp.status_code==200 else 'N/A'}\")\n                if resp.status_code == 200:\n                    ep_data = resp.json()\n                    ep_ids = [ep[\"id\"] for ep in ep_data]\n                    print(f\"  IDs: {ep_ids[:3]}...\")\n                    if benchmark_id in ep_ids and engineer_id in ep_ids:\n                        episodes_found = True\n                        break\n                import time\n                time.sleep(1)\n    \n        assert episodes_found, f\"Episodes {benchmark_id} and {engineer_id} did not appear in API\"\n    \n        # 3. Navigate to frontend\n        import sys\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\", file=sys.stderr))\n        page.on(\"request\", lambda request: print(f\"BROWSER REQUEST: {request.method} {request.url}\", file=sys.stderr))\n        page.on(\"response\", lambda response: print(f\"BROWSER RESPONSE: {response.status} {response.url}\", file=sys.stderr))\n    \n        page.goto(FRONTEND_URL)\n        page.wait_for_load_state(\"networkidle\")\n        import time\n        time.sleep(2)\n    \n        # 4. Verify both sessions appear in sidebar\n>       expect(page.get_by_text(benchmark_name)).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"Benchmark-a05a263a\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:72: AssertionError"
-        },
-        {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.995,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_158_workflow_parity(page: Page):\n        \"\"\"\n        INT-158: In both workflows, prompt submission, streamed assistant output,\n        and artifact refresh behave consistently through real backend events.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # Test for Engineer Workflow\n        page.goto(FRONTEND_URL)\n    \n        # Click CREATE NEW to ensure fresh state\n        page.screenshot(path=\"screenshot-workspace.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:103: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x7976788f5e20>\ncb = <function Channel.send.<locals>.<lambda> at 0x7976780bd620>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.996,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n    \n        # Click CREATE NEW\n        page.screenshot(path=f\"screenshot-click-{uuid.uuid4()}.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:152: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x7976788f5e20>\ncb = <function Channel.send.<locals>.<lambda> at 0x79767836ba60>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n>       expect(script_file).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_text(\"script.py\")\n\ntests/integration/frontend/test_int_164.py:42: AssertionError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-24T15:19:10.706258",
+      "timestamp": "2026-02-24T20:45:26.934895",
       "status": "failed",
-      "total": 3,
+      "total": 1,
       "passed": 0,
-      "failed": 3,
+      "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 98.967,
+      "duration": 15.383,
       "tests": [
         {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 36.635,
+          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+          "classname": "tests.integration.frontend.test_int_164",
+          "time": 15.223,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_157_session_history(page: Page):\n        \"\"\"\n        INT-157: Sidebar lists sessions from live API; selecting a session opens\n        the correct benchmark/solution workflow with matching episode context.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        unique_id = str(uuid.uuid4())[:8]\n        benchmark_name = f\"Benchmark-{unique_id}\"\n        engineer_name = f\"Engineer-{unique_id}\"\n    \n        # 1. Create a benchmark session and an engineer session via API\n        with httpx.Client() as client:\n            # Create benchmark session\n            resp_b = client.post(\n                f\"{CONTROLLER_URL}/benchmark/generate\", json={\"prompt\": benchmark_name}\n            )\n            assert resp_b.status_code == 200\n            benchmark_id = resp_b.json()[\"session_id\"]\n    \n            # Create engineer session\n            resp_e = client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json={\"task\": engineer_name, \"session_id\": str(uuid.uuid4())},\n            )\n            assert resp_e.status_code == 202\n            engineer_id = resp_e.json()[\"episode_id\"]\n    \n        # 2. Poll until both episodes are available via the API\n        max_retries = 30\n        episodes_found = False\n        with httpx.Client(timeout=10.0) as client:\n            for i in range(max_retries):\n                resp = client.get(f\"{CONTROLLER_URL}/episodes/\")\n                print(f\"POLL {i}: status={resp.status_code}, count={len(resp.json()) if resp.status_code==200 else 'N/A'}\")\n                if resp.status_code == 200:\n                    ep_data = resp.json()\n                    ep_ids = [ep[\"id\"] for ep in ep_data]\n                    print(f\"  IDs: {ep_ids[:3]}...\")\n                    if benchmark_id in ep_ids and engineer_id in ep_ids:\n                        episodes_found = True\n                        break\n                import time\n                time.sleep(1)\n    \n        assert episodes_found, f\"Episodes {benchmark_id} and {engineer_id} did not appear in API\"\n    \n        # 3. Navigate to frontend\n        import sys\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\", file=sys.stderr))\n        page.on(\"request\", lambda request: print(f\"BROWSER REQUEST: {request.method} {request.url}\", file=sys.stderr))\n        page.on(\"response\", lambda response: print(f\"BROWSER RESPONSE: {response.status} {response.url}\", file=sys.stderr))\n    \n        page.goto(FRONTEND_URL)\n        page.wait_for_load_state(\"networkidle\")\n        import time\n        time.sleep(2)\n    \n        # 4. Verify both sessions appear in sidebar\n>       expect(page.get_by_text(benchmark_name)).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"Benchmark-11051629\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:72: AssertionError"
-        },
-        {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.919,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_158_workflow_parity(page: Page):\n        \"\"\"\n        INT-158: In both workflows, prompt submission, streamed assistant output,\n        and artifact refresh behave consistently through real backend events.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # Test for Engineer Workflow\n        page.goto(FRONTEND_URL)\n    \n        # Click CREATE NEW to ensure fresh state\n        page.screenshot(path=\"screenshot-workspace.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:103: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x7cc9be8f62a0>\ncb = <function Channel.send.<locals>.<lambda> at 0x7cc9be26b6a0>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.953,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n    \n        # Click CREATE NEW\n        page.screenshot(path=f\"screenshot-click-{uuid.uuid4()}.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:152: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x7cc9be8f62a0>\ncb = <function Channel.send.<locals>.<lambda> at 0x7cc9be373c40>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n>       expect(script_file).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_text(\"script.py\")\n\ntests/integration/frontend/test_int_164.py:42: AssertionError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-24T15:16:50.630361",
+      "timestamp": "2026-02-24T20:43:59.881234",
       "status": "failed",
-      "total": 3,
+      "total": 1,
       "passed": 0,
-      "failed": 3,
+      "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 99.429,
+      "duration": 17.187,
       "tests": [
         {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 37.046,
+          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+          "classname": "tests.integration.frontend.test_int_164",
+          "time": 17.04,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_157_session_history(page: Page):\n        \"\"\"\n        INT-157: Sidebar lists sessions from live API; selecting a session opens\n        the correct benchmark/solution workflow with matching episode context.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        unique_id = str(uuid.uuid4())[:8]\n        benchmark_name = f\"Benchmark-{unique_id}\"\n        engineer_name = f\"Engineer-{unique_id}\"\n    \n        # 1. Create a benchmark session and an engineer session via API\n        with httpx.Client() as client:\n            # Create benchmark session\n            resp_b = client.post(\n                f\"{CONTROLLER_URL}/benchmark/generate\", json={\"prompt\": benchmark_name}\n            )\n            assert resp_b.status_code == 200\n            benchmark_id = resp_b.json()[\"session_id\"]\n    \n            # Create engineer session\n            resp_e = client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json={\"task\": engineer_name, \"session_id\": str(uuid.uuid4())},\n            )\n            assert resp_e.status_code == 202\n            engineer_id = resp_e.json()[\"episode_id\"]\n    \n        # 2. Poll until both episodes are available via the API\n        max_retries = 30\n        episodes_found = False\n        with httpx.Client(timeout=10.0) as client:\n            for i in range(max_retries):\n                resp = client.get(f\"{CONTROLLER_URL}/episodes/\")\n                print(f\"POLL {i}: status={resp.status_code}, count={len(resp.json()) if resp.status_code==200 else 'N/A'}\")\n                if resp.status_code == 200:\n                    ep_data = resp.json()\n                    ep_ids = [ep[\"id\"] for ep in ep_data]\n                    print(f\"  IDs: {ep_ids[:3]}...\")\n                    if benchmark_id in ep_ids and engineer_id in ep_ids:\n                        episodes_found = True\n                        break\n                import time\n                time.sleep(1)\n    \n        assert episodes_found, f\"Episodes {benchmark_id} and {engineer_id} did not appear in API\"\n    \n        # 3. Navigate to frontend\n        import sys\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\", file=sys.stderr))\n        page.on(\"request\", lambda request: print(f\"BROWSER REQUEST: {request.method} {request.url}\", file=sys.stderr))\n        page.on(\"response\", lambda response: print(f\"BROWSER RESPONSE: {response.status} {response.url}\", file=sys.stderr))\n    \n        page.goto(FRONTEND_URL)\n        page.wait_for_load_state(\"networkidle\")\n        import time\n        time.sleep(2)\n    \n        # 4. Verify both sessions appear in sidebar\n>       expect(page.get_by_text(benchmark_name)).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"Benchmark-8bd6432a\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:72: AssertionError"
-        },
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n>       expect(script_file).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_text(\"script.py\")\n\ntests/integration/frontend/test_int_164.py:42: AssertionError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-24T20:42:36.002939",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 16.692,
+      "tests": [
         {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.95,
+          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+          "classname": "tests.integration.frontend.test_int_164",
+          "time": 16.546,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_158_workflow_parity(page: Page):\n        \"\"\"\n        INT-158: In both workflows, prompt submission, streamed assistant output,\n        and artifact refresh behave consistently through real backend events.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # Test for Engineer Workflow\n        page.goto(FRONTEND_URL)\n    \n        # Click CREATE NEW to ensure fresh state\n        page.screenshot(path=\"screenshot-workspace.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:103: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x73fa7b318410>\ncb = <function Channel.send.<locals>.<lambda> at 0x73fa7ac6fb00>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
-        },
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n>       expect(script_file).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_text(\"script.py\")\n\ntests/integration/frontend/test_int_164.py:42: AssertionError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-24T20:39:49.143300",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 12.799,
+      "tests": [
         {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 30.973,
+          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+          "classname": "tests.integration.frontend.test_int_164",
+          "time": 12.649,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        page.on(\"console\", lambda msg: print(f\"BROWSER CONSOLE: {msg.text}\"))\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n    \n        # Click CREATE NEW\n        page.screenshot(path=f\"screenshot-click-{uuid.uuid4()}.png\")\n>       page.get_by_test_id(\"create-new-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:152: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x73fa7b318410>\ncb = <function Channel.send.<locals>.<lambda> at 0x73fa7ad7f1a0>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"create-new-button\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n>       expect(script_file).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_text(\"script.py\")\n\ntests/integration/frontend/test_int_164.py:42: AssertionError"
         }
       ]
     }
