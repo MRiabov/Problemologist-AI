@@ -5,7 +5,7 @@
 import type { AssetResponse } from './AssetResponse';
 import type { EpisodeStatus } from './EpisodeStatus';
 import type { TraceResponse } from './TraceResponse';
-export type EpisodeResponse = {
+export type controller__api__schemas__EpisodeResponse = {
     id: string;
     task: string;
     status: EpisodeStatus;
