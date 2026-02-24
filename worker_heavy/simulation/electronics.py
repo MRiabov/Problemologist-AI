@@ -80,36 +80,80 @@ class ElectronicsManager:
         if not self.electronics:
             return
 
-        # BFS for connectivity
-        # (Extracted from loop.py:227-307)
-        powered = set()
-        sources = [
-            c.component_id
-            for c in self.electronics.components
-            if c.type == ElectronicComponentType.POWER_SUPPLY
-        ]
+        # Initialize is_powered_map to False (0.0) for all components
+        self.is_powered_map = {c.component_id: 0.0 for c in self.electronics.components}
 
-        # Simplified BFS for power propagation
-        queue = list(sources)
-        visited = set(sources)
-        powered.update(sources)
+        # 1. Build Component Maps and Wire Adjacency
+        comp_type_map = {c.component_id: c.type for c in self.electronics.components}
+        comp_terminals: dict[str, set[str]] = {}
 
-        while queue:
-            u = queue.pop(0)
-            # Find neighbors in wiring
-            for wire in self.electronics.wiring:
-                v = None
-                if wire.from_terminal.component == u:
-                    v = wire.to_terminal.component
-                elif wire.to_terminal.component == u:
-                    v = wire.from_terminal.component
+        # Map: (comp_id, terminal) -> list of (comp_id, terminal)
+        wire_adj: dict[tuple[str, str], list[tuple[str, str]]] = {}
 
-                if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
-                    visited.add(v)
-                    powered.add(v)
-                    queue.append(v)
+        for wire in self.electronics.wiring:
+            u_comp = wire.from_terminal.component
+            u_term = wire.from_terminal.terminal
+            v_comp = wire.to_terminal.component
+            v_term = wire.to_terminal.terminal
+
+            u_node = (u_comp, u_term)
+            v_node = (v_comp, v_term)
+
+            wire_adj.setdefault(u_node, []).append(v_node)
+            wire_adj.setdefault(v_node, []).append(u_node)
+
+            comp_terminals.setdefault(u_comp, set()).add(u_term)
+            comp_terminals.setdefault(v_comp, set()).add(v_term)
+
+        # 2. Identify Sources and Initialize Queue
+        # Sources: Power Supplies. Treat all their connected terminals as powered.
+        queue: list[tuple[str, str]] = []
+        powered_terminals: set[tuple[str, str]] = set()
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                self.is_powered_map[comp.component_id] = 1.0
+                if comp.component_id in comp_terminals:
+                    for term in comp_terminals[comp.component_id]:
+                        node = (comp.component_id, term)
+                        if node not in powered_terminals:
+                            powered_terminals.add(node)
+                            queue.append(node)
+
+        # 3. BFS Propagation
+        while queue:
+            u_comp, u_term = queue.pop(0)
+            u_node = (u_comp, u_term)
+
+            # Mark component as powered if any terminal receives power
+            self.is_powered_map[u_comp] = 1.0
+
+            # A. Propagate OUT via Wires (External)
+            if u_node in wire_adj:
+                for v_node in wire_adj[u_node]:
+                    if v_node not in powered_terminals:
+                        powered_terminals.add(v_node)
+                        queue.append(v_node)
+                        # Mark neighbor component as powered immediately upon arrival
+                        self.is_powered_map[v_node[0]] = 1.0
+
+            # B. Propagate IN (Internal Component Logic)
+            # Determine if we should bridge to other terminals on the same component
+            should_bridge = True
+            ctype = comp_type_map.get(u_comp)
+
+            if ctype in [ElectronicComponentType.SWITCH, ElectronicComponentType.RELAY]:
+                # Only bridge if switch is CLOSED
+                if not self.switch_states.get(u_comp, False):
+                    should_bridge = False
+
+            if should_bridge and u_comp in comp_terminals:
+                for other_term in comp_terminals[u_comp]:
+                    if other_term == u_term:
+                        continue
+
+                    target_node = (u_comp, other_term)
+                    if target_node not in powered_terminals:
+                        powered_terminals.add(target_node)
+                        # Add to queue to propagate OUT from this new terminal
+                        queue.append(target_node)
