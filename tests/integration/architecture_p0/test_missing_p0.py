@@ -65,12 +65,20 @@ async def test_int_005_trace_realtime_broadcast():
         assert resp.status_code == 202
         episode_id = resp.json()["episode_id"]
 
-        # Wait a bit for traces
-        await asyncio.sleep(5.0)
+        # Wait for traces via polling loop (INT-005 mitigation)
+        traces = []
+        max_attempts = 15
+        for _ in range(max_attempts):
+            await asyncio.sleep(2.0)
+            resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            if resp.status_code == 200:
+                data = resp.json()
+                traces = data.get("traces", [])
+                if len(traces) > 0:
+                    break
+        else:
+            pytest.fail(f"No traces found for episode {episode_id} after polling")
 
-        resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = resp.json()
-        traces = data.get("traces", [])
         assert len(traces) > 0
 
 
@@ -105,10 +113,27 @@ totals:
             headers={"X-Session-ID": session_id},
         )
 
-        # In current architecture, we don't have a direct /validate_yaml endpoint
-        # but we can check if the agent handles it.
-        # Actually, let's just verify the Pydantic model behavior if we can.
-        pass
+        # Use /runtime/execute on worker to verify Pydantic model behavior
+        validation_script = """
+import yaml
+from shared.models.schemas import AssemblyDefinition
+with open('invalid_asm.yaml', 'r') as f:
+    data = yaml.safe_load(f)
+try:
+    AssemblyDefinition(**data)
+    print("VALIDATION_SUCCESS")
+except Exception as e:
+    print(f"VALIDATION_ERROR: {e}")
+"""
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json={"code": validation_script},
+            headers={"X-Session-ID": session_id},
+        )
+        assert resp.status_code == 200
+        stdout = resp.json()["stdout"]
+        assert "VALIDATION_ERROR" in stdout
+        assert "Planner target cost (150.0) must be less than or equal to benchmark max cost (100.0)" in stdout
 
 
 @pytest.mark.integration_p0

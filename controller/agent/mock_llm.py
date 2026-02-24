@@ -172,9 +172,9 @@ class MockDSPyLM(dspy.LM):
         low_text = text.lower()
 
         # 1. Specific Role Headers (Highest Priority)
-        if "sidecar learner" in low_text:
+        if "sidecar learner" in low_text or "save_suggested_skill" in low_text:
             return "skill_learner"
-        if "expert designer of spatial" in low_text:
+        if "expert designer of spatial" in low_text or "search_cots_catalog" in low_text:
             return "planner"
         if "lead mechanical engineer (planner)" in low_text:
             return "planner"
@@ -277,15 +277,14 @@ class MockDSPyLM(dspy.LM):
 
         # ReAct compatibility - handle intermediate tool calling phase
         if "next_tool_name" in expected_fields:
-            import shlex
-
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
-                # Ensure the python code is executed as a shell command
+                # The execute_command tool actually runs Python code directly
+                # via the worker's /runtime/execute endpoint.
                 resp["next_tool_args"] = {
-                    "command": f"python3 -c {shlex.quote(code)}"
+                    "command": code
                 }
             else:
                 resp["next_tool_name"] = "finish"
