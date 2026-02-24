@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import structlog
@@ -305,6 +306,11 @@ class SimulationLoop:
         return self.electronics_manager.switch_states
 
     @property
+    def timestep(self) -> float:
+        """Expose the effective simulation timestep."""
+        return self._get_simulation_timestep()
+
+    @property
     def stress_summaries(self):
         return self.objective_evaluator.stress_summaries
 
@@ -359,6 +365,11 @@ class SimulationLoop:
         for step_idx in range(steps):
             self.current_step_idx = step_idx
 
+            # T015: Dynamically update switch states from control inputs (WP3)
+            self._check_switch_toggles(
+                control_inputs, current_time, dynamic_controllers
+            )
+
             # Update electronics if state changed
             if self.electronics and self._electronics_dirty:
                 self._update_electronics()
@@ -385,7 +396,7 @@ class SimulationLoop:
             current_time = res.time
 
             # Check failures and update metrics
-            # T018: Keep interval small for collisions/overload to avoid missing events
+            # T018: Run failure checks every step for maximum detection resolution
             check_interval = 1
             if step_idx % check_interval == 0 or step_idx == steps - 1:
                 if self._check_simulation_failure(
@@ -420,24 +431,31 @@ class SimulationLoop:
                 }
         return fields
 
-    def _check_motor_overload(self, dt: float) -> str | None:
+    def _check_motor_overload(
+        self, dt: float, actuator_states: dict[str, Any] | None = None
+    ) -> str | None:
         # Check all position/torque actuators for saturation
         if not self._monitor_names:
             return None
 
-        forces = [
-            abs(self.backend.get_actuator_state(n).force) for n in self._monitor_names
-        ]
+        if actuator_states:
+            forces = [
+                abs(actuator_states[n].force)
+                for n in self._monitor_names
+                if n in actuator_states
+            ]
+        else:
+            forces = [
+                abs(self.backend.get_actuator_state(n).force)
+                for n in self._monitor_names
+            ]
 
         # SuccessEvaluator.check_motor_overload returns bool but we want the name of the motor
-        # Wait, the evaluator's check_motor_overload returns bool.
-        # Let's see how it's implemented on main.
-        # It returns bool. If true, it means SOME motor is overloaded.
         if self.success_evaluator.check_motor_overload(
             self._monitor_names, forces, self._monitor_limits, dt
         ):
             # Find which one
-            for i, name in enumerate(self._monitor_names):
+            for name in self._monitor_names:
                 if (
                     self.success_evaluator.motor_overload_timer.get(name, 0)
                     >= self.success_evaluator.motor_overload_threshold
@@ -558,6 +576,7 @@ class SimulationLoop:
     ) -> bool:
         """Aggregate failure checks from backends and evaluators."""
         # 1. Update Metrics
+        # WP2: Performance - fetch actuator state once and pass to internal checks
         actuator_states = {
             n: self.backend.get_actuator_state(n) for n in self.actuator_names
         }
@@ -625,7 +644,7 @@ class SimulationLoop:
             return True
 
         # 7. Motor overload
-        overloaded_motor = self._check_motor_overload(dt_interval)
+        overloaded_motor = self._check_motor_overload(dt_interval, actuator_states)
         if overloaded_motor:
             self.fail_reason = SimulationFailure(
                 reason=FailureReason.MOTOR_OVERLOAD, detail=overloaded_motor
@@ -780,3 +799,41 @@ class SimulationLoop:
                 except Exception:
                     pass
         return wire_broken
+
+    def _check_switch_toggles(
+        self,
+        control_inputs: dict[str, float],
+        current_time: float = 0.0,
+        dynamic_controllers: dict[str, callable] | None = None,
+    ):
+        """Update switch states if toggled via control inputs or dynamic controllers."""
+        if not self.electronics or not hasattr(self.electronics_manager, "switch_states"):
+            return
+
+        states = self.electronics_manager.switch_states
+
+        # 1. Check direct control inputs
+        for comp_id, val in control_inputs.items():
+            if comp_id in states:
+                new_state = val > 0.5
+                if states[comp_id] != new_state:
+                    logger.info(
+                        "switch_toggled", component_id=comp_id, new_state=new_state
+                    )
+                    states[comp_id] = new_state
+                    self._electronics_dirty = True
+
+        # 2. Check dynamic controllers
+        if dynamic_controllers:
+            for comp_id, controller in dynamic_controllers.items():
+                if comp_id in states:
+                    val = controller(current_time)
+                    new_state = val > 0.5
+                    if states[comp_id] != new_state:
+                        logger.info(
+                            "switch_toggled_dynamic",
+                            component_id=comp_id,
+                            new_state=new_state,
+                        )
+                        states[comp_id] = new_state
+                        self._electronics_dirty = True

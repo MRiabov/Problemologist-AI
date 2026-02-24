@@ -33,7 +33,11 @@ from worker_heavy.workbenches.config import load_config
 from .dfm import validate_and_price
 from .rendering import prerender_24_views
 from shared.observability.events import emit_event
-from shared.observability.schemas import WireRoutingEvent
+from shared.observability.schemas import (
+    SimulationMetadata,
+    SimulationResultEvent,
+    WireRoutingEvent,
+)
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 
 logger = structlog.get_logger(__name__)
@@ -686,6 +690,27 @@ def simulate(
             save_simulation_result(result, working_dir / "simulation_result.json")
         except Exception as e:
             logger.error("failed_to_save_simulation_result", error=str(e))
+
+        # Emit observability event for simulation result (WP2)
+        try:
+            from shared.enums import FailureReason
+
+            emit_event(
+                SimulationResultEvent(
+                    success=result.success,
+                    failure_reason=result.failure.reason
+                    if result.failure
+                    else FailureReason.NONE,
+                    failure=result.failure,
+                    time_elapsed_s=metrics.total_time,
+                    compute_time_ms=0.0,  # TODO: capture compute time
+                    metadata=SimulationMetadata(
+                        num_steps=int(sim_duration / loop.timestep)
+                    ),
+                )
+            )
+        except Exception as e:
+            logger.warning("failed_to_emit_simulation_result_event", error=str(e))
 
         return result
     except Exception as e:
