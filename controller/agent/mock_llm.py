@@ -277,16 +277,12 @@ class MockDSPyLM(dspy.LM):
 
         # ReAct compatibility - handle intermediate tool calling phase
         if "next_tool_name" in expected_fields:
-            import shlex
-
             resp["next_thought"] = thought
             code = node_data.get("generated_code")
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
-                # Ensure the python code is executed as a shell command
-                resp["next_tool_args"] = {
-                    "command": f"python3 -c {shlex.quote(code)}"
-                }
+                # The execute_command tool expects raw Python code
+                resp["next_tool_args"] = {"command": code}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}
