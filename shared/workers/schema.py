@@ -142,6 +142,18 @@ class AnalyzeRequest(BenchmarkToolRequest):
     )
 
 
+class VerificationRequest(BenchmarkToolRequest):
+    """Request to run multi-seed verification with jitter."""
+
+    jitter_range: tuple[float, float, float] = Field(
+        default=(0.002, 0.002, 0.001),
+        description="(x, y, z) position jitter range in meters.",
+    )
+    num_runs: int = Field(default=5, ge=1, description="Number of runs.")
+    duration: float = Field(default=10.0, ge=0.1, description="Duration per run.")
+    seed: int = Field(default=42, description="Random seed.")
+
+
 class ElectronicsValidationRequest(BaseModel):
     """Request to validate an electronic circuit."""
 
@@ -158,6 +170,7 @@ class SimulationArtifacts(BaseModel):
     circuit_validation_result: dict[StrictStr, Any] | None = None
     scene_path: StrictStr | None = None
     failure: dict[StrictStr, Any] | None = None
+    verification_result: dict[StrictStr, Any] | None = None
 
     model_config = {"extra": "allow"}
 

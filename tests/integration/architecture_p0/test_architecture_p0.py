@@ -349,38 +349,50 @@ constraints:
             headers={"X-Session-ID": session_id},
         )
 
-        script_path = Path("tests/integration/architecture_p0/scripts/verify_jitter.py")
-        with script_path.open() as f:
-            script_content = f.read()
-
+        # Write a simple build script
+        script_content = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    # Create a box that should stay in the goal zone
+    # Needs to be small enough not to hit bounds or floor immediately if jittered
+    b = Box(0.1, 0.1, 0.1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    b.label = "target_box"
+    b.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return b
+"""
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "verify_jitter.py", "content": script_content},
+            json={"path": "script.py", "content": script_content},
             headers={"X-Session-ID": session_id},
         )
 
+        bundle64 = await get_bundle(client, session_id)
+
+        # Call the new verify endpoint on worker_heavy (architecture compliant)
         resp = await client.post(
-            f"{WORKER_LIGHT_URL}/runtime/execute",
+            f"{WORKER_HEAVY_URL}/benchmark/verify",
             json={
-                "code": (
-                    "import sys; sys.path.append('.'); import verify_jitter; "
-                    "import asyncio; result = asyncio.run(verify_jitter.run()); "
-                    "assert result['success_rate'] == 1.0, f'Low success rate: {result}'"
-                ),
-                "timeout": 120,
+                "script_path": "script.py",
+                "bundle_base64": bundle64,
+                "jitter_range": [0.002, 0.002, 0.001],
+                "num_runs": 3,
+                "duration": 1.0,
+                "seed": 42,
+                "backend": "mujoco",
             },
             headers={"X-Session-ID": session_id},
-            timeout=180.0,
+            timeout=300.0,
         )
 
-        assert resp.status_code == 200, f"Execution failed: {resp.text}"
+        assert resp.status_code == 200, f"Verification request failed: {resp.text}"
         data = resp.json()
 
-        assert data["exit_code"] == 0, (
-            f"Verification script failed with exit code {data['exit_code']}\n"
-            f"STDOUT:\n{data['stdout']}\n"
-            f"STDERR:\n{data['stderr']}"
-        )
+        assert data["success"], f"Verification reported failure: {data.get('message')}"
+        assert "verification_result" in data["artifacts"], "Missing verification_result artifact"
+        ver_result = data["artifacts"]["verification_result"]
+        assert ver_result["num_runs"] == 3
+        assert ver_result["success_rate"] == 1.0, f"Expected 100% success, got {ver_result['success_rate']}"
 
 
 @pytest.mark.integration_p0

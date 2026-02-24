@@ -28,6 +28,7 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
 from shared.workers.loader import load_component_from_script
@@ -40,6 +41,7 @@ from worker_heavy.utils import (
     validate_circuit as utils_validate_circuit,
 )
 from worker_heavy.utils.preview import preview_design
+from worker_heavy.simulation.verification import verify_with_jitter
 
 logger = structlog.get_logger(__name__)
 heavy_router = APIRouter()
@@ -105,7 +107,6 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
             logger.info(
                 "bundle_extracted_via_system_tar", path=str(tmp_root), session_id=None
             )
-            yield tmp_root
         except Exception as e:
             import traceback
 
@@ -114,6 +115,8 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
             raise HTTPException(
                 status_code=400, detail=f"Failed to extract bundle: {e}"
             ) from e
+
+        yield tmp_root
 
 
 # Global lock to ensure only one simulation/render runs at a time cross-session
@@ -178,6 +181,88 @@ async def run_simulation_task(
         x_session_id,
         particle_budget,
     )
+
+
+@heavy_router.post("/benchmark/verify", response_model=BenchmarkToolResponse)
+async def api_verify(
+    request: VerificationRequest,
+    x_session_id: str = Header(...),
+    fs_router=Depends(get_router),
+):
+    """Run multi-seed verification with runtime jitter."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    try:
+        from shared.simulation.schemas import SimulatorBackendType
+        from worker_heavy.simulation.factory import get_simulation_builder
+
+        backend_type = request.backend
+        if isinstance(backend_type, str):
+            backend_type = SimulatorBackendType(backend_type)
+
+        async with HEAVY_OPERATION_LOCK:
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                # 1. Load and build the scene
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
+                )
+
+                builder = get_simulation_builder(root, backend_type=backend_type)
+                scene_path = await asyncio.to_thread(
+                    builder.build_from_assembly,
+                    component,
+                    smoke_test_mode=request.smoke_test_mode,
+                )
+
+                # 2. Run verification
+                result = await asyncio.to_thread(
+                    verify_with_jitter,
+                    xml_path=str(scene_path),
+                    control_inputs={},  # Static inputs for now
+                    jitter_range=request.jitter_range,
+                    num_runs=request.num_runs,
+                    duration=request.duration,
+                    seed=request.seed,
+                    backend_type=backend_type.value,
+                    session_id=x_session_id,
+                )
+
+                events = _collect_events(fs_router, root=root)
+
+                # If consistent failure, we can return failure artifacts
+                failure = None
+                if not result.success_rate > 0 and result.fail_reasons:
+                    failure = {"reason": "VERIFICATION_FAILED", "detail": "; ".join(result.fail_reasons)}
+
+                return BenchmarkToolResponse(
+                    success=result.success_rate > 0.9,  # Strict success criteria? Or report rate?
+                    message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_runs})",
+                    confidence="high" if result.num_runs >= 5 else "medium",
+                    artifacts={
+                        "verification_result": result.model_dump(),
+                        "scene_path": str(scene_path.relative_to(root)),
+                        "failure": failure,
+                    },
+                    events=events,
+                )
+
+    except Exception as e:
+        logger.error("api_benchmark_verify_failed", error=str(e))
+        return BenchmarkToolResponse(
+            success=False,
+            message=str(e),
+            artifacts={
+                "failure": {"reason": "VERIFICATION_ERROR", "detail": str(e)},
+            },
+        )
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
