@@ -369,8 +369,8 @@ class EpisodeResponse(BaseModel):
     journal: str | None = None
     plan: str | None = None
     validation_logs: list[str] | None = None
-    traces: list[TraceResponse] = []
-    assets: list[AssetResponse] = []
+    traces: list[TraceResponse] | None = None
+    assets: list[AssetResponse] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -388,9 +388,28 @@ async def list_episodes(
             .order_by(Episode.created_at.desc())
             .limit(limit)
             .offset(offset)
-            .options(selectinload(Episode.traces), selectinload(Episode.assets))
         )
-        return result.scalars().all()
+        episodes = result.scalars().all()
+        # Explicitly convert to EpisodeResponse to avoid lazy-loading traces/assets during serialization
+        return [
+            EpisodeResponse(
+                id=ep.id,
+                task=ep.task,
+                status=ep.status,
+                created_at=ep.created_at,
+                updated_at=ep.updated_at,
+                skill_git_hash=ep.skill_git_hash,
+                template_versions=ep.template_versions,
+                metadata_vars=ep.metadata_vars,
+                todo_list=ep.todo_list,
+                journal=ep.journal,
+                plan=ep.plan,
+                validation_logs=ep.validation_logs,
+                traces=None,
+                assets=None,
+            )
+            for ep in episodes
+        ]
     except Exception as e:
         logger.error("list_episodes_failed", error=str(e))
         raise HTTPException(

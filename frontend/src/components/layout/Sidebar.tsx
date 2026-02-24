@@ -83,12 +83,13 @@ export default function Sidebar() {
             <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        {(location.pathname === '/' || location.pathname === '/settings') ? 'Engineer History' : 'Benchmark Runs'}
+                        {(location.pathname === '/' || location.pathname.startsWith('/settings')) ? 'Engineer History' : 'Benchmark Runs'}
                     </h3>
-                    {(location.pathname === '/benchmark' || location.pathname === '/') ? (
+                    {(location.pathname === '/benchmark' || location.pathname === '/' || location.pathname.startsWith('/benchmark')) ? (
                         <Button 
                             size="sm" 
                             className="h-6 px-2 text-[9px] font-bold gap-1"
+                            data-testid="create-new-button"
                             onClick={() => createNewBenchmark(location.pathname === '/benchmark')}
                         >
                             <Plus className="h-3 w-3" />

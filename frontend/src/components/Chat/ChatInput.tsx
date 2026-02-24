@@ -78,6 +78,15 @@ export function ChatInput({
       selectedContext.forEach(item => {
         if (item.type === 'cad') {
           mentions.push(item.label);
+          // Map to structured GeometricSelection if coordinates are present
+          if (item.metadata?.center) {
+            selections.push({
+              level: item.metadata.level || 'PART',
+              target_id: item.label,
+              center: item.metadata.center,
+              normal: item.metadata.normal
+            });
+          }
         } else if (item.type === 'code') {
           code_references.push({
             file_path: item.metadata?.path,

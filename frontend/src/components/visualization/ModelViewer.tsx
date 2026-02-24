@@ -183,7 +183,23 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
               const target = findTarget(e.object);
               setSelected(target.id);
               if (onSelect) {
-                onSelect(target.id, target.type, { uuid: target.object.uuid });
+                // Capture intersection data for precise steering
+                const center: [number, number, number] = [e.point.x, e.point.y, e.point.z];
+                let normal: [number, number, number] | undefined = undefined;
+                
+                if (e.face) {
+                  const worldNormal = e.face.normal.clone();
+                  worldNormal.applyQuaternion(e.object.quaternion);
+                  normal = [worldNormal.x, worldNormal.y, worldNormal.z];
+                }
+
+                onSelect(target.id, target.type, { 
+                  uuid: target.object.uuid,
+                  center,
+                  normal,
+                  // If it's a vertex/edge, we might have more specific data in the future
+                  // but for now center + normal is a huge improvement
+                });
               }
             }
           }}

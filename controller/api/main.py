@@ -13,6 +13,7 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger, log_marker_middleware
+from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 configure_logging("controller")
@@ -49,6 +50,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Problemologist Controller", lifespan=lifespan)
 app.add_middleware(log_marker_middleware())
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

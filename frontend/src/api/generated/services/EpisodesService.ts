@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { EpisodeResponse } from '../models/EpisodeResponse';
+import type { controller__api__routes__episodes__EpisodeResponse } from '../models/controller__api__routes__episodes__EpisodeResponse';
 import type { FeedbackRequest } from '../models/FeedbackRequest';
 import type { MessageRequest } from '../models/MessageRequest';
 import type { ReviewRequest } from '../models/ReviewRequest';
@@ -138,13 +138,13 @@ export class EpisodesService {
      * List all agent episodes.
      * @param limit
      * @param offset
-     * @returns EpisodeResponse Successful Response
+     * @returns controller__api__routes__episodes__EpisodeResponse Successful Response
      * @throws ApiError
      */
     public static listEpisodesEpisodesGet(
         limit: number = 100,
         offset?: number,
-    ): CancelablePromise<Array<EpisodeResponse>> {
+    ): CancelablePromise<Array<controller__api__routes__episodes__EpisodeResponse>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/episodes/',
@@ -161,12 +161,12 @@ export class EpisodesService {
      * Get Episode
      * Get a specific episode.
      * @param episodeId
-     * @returns EpisodeResponse Successful Response
+     * @returns controller__api__routes__episodes__EpisodeResponse Successful Response
      * @throws ApiError
      */
     public static getEpisodeEpisodesEpisodeIdGet(
         episodeId: string,
-    ): CancelablePromise<EpisodeResponse> {
+    ): CancelablePromise<controller__api__routes__episodes__EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/episodes/{episode_id}',

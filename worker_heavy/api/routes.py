@@ -246,10 +246,14 @@ async def api_verify(
                 # If consistent failure, we can return failure artifacts
                 failure = None
                 if not result.success_rate > 0 and result.fail_reasons:
-                    failure = {"reason": "VERIFICATION_FAILED", "detail": "; ".join(result.fail_reasons)}
+                    failure = {
+                        "reason": "VERIFICATION_FAILED",
+                        "detail": "; ".join(result.fail_reasons),
+                    }
 
                 return BenchmarkToolResponse(
-                    success=result.success_rate > 0.9,  # Strict success criteria? Or report rate?
+                    success=result.success_rate
+                    > 0.9,  # Strict success criteria? Or report rate?
                     message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_runs})",
                     confidence="high" if result.num_runs >= 5 else "medium",
                     artifacts={

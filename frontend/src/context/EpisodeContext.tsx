@@ -205,9 +205,107 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshEpisodes();
+    // Regular polling for episode list updates (e.g. new sessions created elsewhere)
+    const listInterval = setInterval(refreshEpisodes, 10000);
+    return () => clearInterval(listInterval);
   }, [refreshEpisodes]);
 
-  // Polling for active episodes
+  // WebSocket subscription for real-time updates
+  useEffect(() => {
+    if (!selectedEpisode) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/episodes/${selectedEpisode.id}/ws`;
+    
+    let ws: WebSocket;
+    let reconnectTimeout: number;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'new_trace') {
+            setSelectedEpisode(prev => {
+              if (!prev || prev.id !== selectedEpisode.id) return prev;
+              
+              // Map payload to TraceResponse structure
+              const newTrace = {
+                id: message.id,
+                langfuse_trace_id: message.langfuse_trace_id,
+                trace_type: message.trace_type,
+                name: message.name,
+                content: message.content,
+                metadata_vars: message.metadata,
+                created_at: message.created_at
+              };
+
+              // Avoid duplicates
+              if (prev.traces.some(t => t.id === newTrace.id)) return prev;
+              
+              return {
+                ...prev,
+                traces: [...prev.traces, newTrace]
+              };
+            });
+          } else if (message.type === 'status_update') {
+            setSelectedEpisode(prev => {
+              if (!prev || prev.id !== selectedEpisode.id) return prev;
+              return { ...prev, status: message.status };
+            });
+            if (message.status !== EpisodeStatus.RUNNING) {
+              setRunning(false);
+            }
+          } else if (message.type === 'file_update') {
+            setSelectedEpisode(prev => {
+                if (!prev || prev.id !== selectedEpisode.id) return prev;
+                
+                // Real-time plan updates
+                if (message.data.path === 'plan.md' || message.data.path === '/plan.md') {
+                    return { ...prev, plan: message.data.content };
+                }
+
+                // Update content of existing assets
+                const updatedAssets = prev.assets.map(a => {
+                    if (a.s3_path === message.data.path || ('/' + a.s3_path) === message.data.path) {
+                        return { ...a, content: message.data.content };
+                    }
+                    return a;
+                });
+                
+                return { ...prev, assets: updatedAssets };
+            });
+          }
+        } catch (e) {
+          console.error("WS message parse failed", e);
+        }
+      };
+
+      ws.onclose = () => {
+        // Simple exponential backoff for reconnection
+        reconnectTimeout = window.setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error", err);
+        ws.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (ws) {
+        ws.onclose = null; // Prevent reconnect on intentional close
+        ws.close();
+      }
+      clearTimeout(reconnectTimeout);
+    };
+  }, [selectedEpisode?.id]);
+
+  // Fallback polling for active episode details (slower than before)
   useEffect(() => {
     let interval: number | undefined;
     if (selectedEpisode && (selectedEpisode.status === 'running' || running)) {
@@ -218,17 +316,24 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
             fetchEpisode(selectedEpisode.id)
           ]);
           setEpisodes(episodesData);
-          setSelectedEpisode(currentEp);
+          
+          // Only update if something changed (avoid re-rendering everything if WS handled it)
+          setSelectedEpisode(prev => {
+             if (!prev) return currentEp;
+             if (JSON.stringify(prev) === JSON.stringify(currentEp)) return prev;
+             return currentEp;
+          });
+
           if (currentEp.status !== EpisodeStatus.RUNNING) {
             setRunning(false);
           }
         } catch (e) {
           console.error("Polling failed", e);
         }
-      }, 3000);
+      }, 10000);
     }
     return () => clearInterval(interval);
-  }, [selectedEpisode, running]);
+  }, [selectedEpisode?.id, running]);
 
   return (
     <EpisodeContext.Provider value={{
