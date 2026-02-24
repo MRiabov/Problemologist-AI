@@ -58,9 +58,12 @@ class ElectronicsManager:
                     voltage = validation.node_voltages.get(node_name, 0.0)
                     # Normalize power scale (0.0 to 1.0) based on supply voltage
                     supply_v = self.electronics.power_supply.voltage_dc
-                    self.is_powered_map[comp.component_id] = (
+                    power_scale = (
                         min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
                     )
+                    self.is_powered_map[comp.component_id] = power_scale
+                    if comp.assembly_part_ref:
+                        self.is_powered_map[comp.assembly_part_ref] = power_scale
             else:
                 self.validation_error = (
                     validation.failures[0]
@@ -112,4 +115,7 @@ class ElectronicsManager:
                     queue.append(v)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            is_comp_powered = comp.component_id in powered
+            self.is_powered_map[comp.component_id] = is_comp_powered
+            if comp.assembly_part_ref:
+                self.is_powered_map[comp.assembly_part_ref] = is_comp_powered
