@@ -25,6 +25,10 @@ async def should_continue(state: AgentState) -> str:
     if await check_steering(state) == "steer":
         return "steer"
 
+    # WP11: Route to COTS search if requested
+    if state.status == AgentStatus.COTS_SEARCH:
+        return "cots_search"
+
     # Check for summarization need if journal is long
     if len(state.journal) > 5000:
         return "summarizer"
@@ -78,6 +82,7 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
 
@@ -109,14 +114,49 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
+
+
+def route_back(state: AgentState) -> str:
+    """Route back to the previous node after a transitional node."""
+    if state.previous_node:
+        return state.previous_node
+    return "planner"
+
 
 builder.add_edge("steer", "planner")
 
 builder.add_edge("skills", END)
-builder.add_edge("summarizer", "planner")
-builder.add_edge("cots_search", "planner")
+
+builder.add_conditional_edges(
+    "summarizer",
+    route_back,
+    {
+        "planner": "planner",
+        "coder": "coder",
+        "electronics_planner": "electronics_planner",
+        "electronics_engineer": "electronics_engineer",
+        "electronics_reviewer": "electronics_reviewer",
+        "execution_reviewer": "execution_reviewer",
+        "plan_reviewer": "plan_reviewer",
+    },
+)
+
+builder.add_conditional_edges(
+    "cots_search",
+    route_back,
+    {
+        "planner": "planner",
+        "coder": "coder",
+        "electronics_planner": "electronics_planner",
+        "electronics_engineer": "electronics_engineer",
+        "electronics_reviewer": "electronics_reviewer",
+        "execution_reviewer": "execution_reviewer",
+        "plan_reviewer": "plan_reviewer",
+    },
+)
 
 # T026: Implement Checkpointing
 memory = MemorySaver()

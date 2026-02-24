@@ -55,9 +55,16 @@ class SharedNodeContext:
             if settings.openai_api_key:
                 api_key = settings.openai_api_key
 
+            # WP11: Support other providers and custom API base
+            model_name = (
+                settings.llm_model
+                if "/" in settings.llm_model
+                else f"openai/{settings.llm_model}"
+            )
             dspy_lm = dspy.LM(
-                f"openai/{settings.llm_model}",
+                model_name,
                 api_key=api_key,
+                api_base=settings.openai_api_base,
                 cache=False,
                 timeout=600,
             )
@@ -117,8 +124,20 @@ class BaseNode:
         skills_dir = Path(".agent/skills")
         skills = []
         if skills_dir.exists():
-            skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
-        return "\n".join([f"- {s}" for s in skills])
+            # T035: Provide full skill descriptions from SKILL.md
+            for d in sorted(skills_dir.iterdir()):
+                if d.is_dir():
+                    skill_file = d / "SKILL.md"
+                    if skill_file.exists():
+                        try:
+                            content = skill_file.read_text()
+                            skills.append(f"### Skill: {d.name}\n{content}")
+                        except Exception as e:
+                            logger.warning(f"failed_to_read_skill_file", skill=d.name, error=str(e))
+                            skills.append(f"- {d.name}")
+                    else:
+                        skills.append(f"- {d.name}")
+        return "\n\n".join(skills)
 
     async def _get_steer_context(self, messages: list[Any]) -> str:
         if not messages:

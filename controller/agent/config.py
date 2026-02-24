@@ -7,8 +7,8 @@ class AgentSettings(BaseSettings):
     """Configuration for the Engineer Agent."""
 
     llm_model: str = global_settings.llm_model
-    openai_api_key: str | None = None
-    openai_api_base: str | None = None  # For OpenRouter or custom endpoints
+    openai_api_key: str | None = global_settings.openai_api_key
+    openai_api_base: str | None = global_settings.openai_api_base  # For OpenRouter or custom endpoints
     anthropic_api_key: str | None = None
 
     # URL for the Spec 001 Worker API
