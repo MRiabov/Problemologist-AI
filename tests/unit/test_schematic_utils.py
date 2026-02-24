@@ -12,6 +12,7 @@ from shared.models.schemas import (
 )
 from shared.schematic_utils import generate_schematic_soup, get_schematic_pin_index
 
+
 def test_get_schematic_pin_index():
     # Test standard positive terminals
     assert get_schematic_pin_index("+") == "1"
@@ -36,6 +37,7 @@ def test_get_schematic_pin_index():
     # Test default fallback
     assert get_schematic_pin_index("unknown") == "1"
 
+
 def test_generate_schematic_soup_empty():
     assembly = AssemblyDefinition(
         constraints=AssemblyConstraints(
@@ -47,18 +49,23 @@ def test_generate_schematic_soup_empty():
         totals=CostTotals(
             estimated_unit_cost_usd=10,
             estimated_weight_g=100,
-            estimate_confidence="high"
+            estimate_confidence="high",
         ),
-        electronics=None
+        electronics=None,
     )
     assert generate_schematic_soup(assembly) == []
+
 
 def test_generate_schematic_soup_components_and_wiring():
     electronics = ElectronicsSection(
         power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),
         components=[
-            ElectronicComponent(component_id="motor1", type=ElectronicComponentType.MOTOR),
-            ElectronicComponent(component_id="switch1", type=ElectronicComponentType.SWITCH),
+            ElectronicComponent(
+                component_id="motor1", type=ElectronicComponentType.MOTOR
+            ),
+            ElectronicComponent(
+                component_id="switch1", type=ElectronicComponentType.SWITCH
+            ),
         ],
         wiring=[
             # Wire from motor1(-) to switch1(in)
@@ -82,16 +89,30 @@ def test_generate_schematic_soup_components_and_wiring():
         totals=CostTotals(
             estimated_unit_cost_usd=10,
             estimated_weight_g=100,
-            estimate_confidence="high"
+            estimate_confidence="high",
         ),
-        electronics=electronics
+        electronics=electronics,
     )
 
     soup = generate_schematic_soup(assembly)
 
     # 1. Verify components exist
-    motor = next((c for c in soup if c["type"] == "schematic_component" and c["name"] == "motor1"), None)
-    switch = next((c for c in soup if c["type"] == "schematic_component" and c["name"] == "switch1"), None)
+    motor = next(
+        (
+            c
+            for c in soup
+            if c["type"] == "schematic_component" and c["name"] == "motor1"
+        ),
+        None,
+    )
+    switch = next(
+        (
+            c
+            for c in soup
+            if c["type"] == "schematic_component" and c["name"] == "switch1"
+        ),
+        None,
+    )
 
     assert motor is not None
     assert motor["symbol_name"] == "resistor"
@@ -110,7 +131,10 @@ def test_generate_schematic_soup_components_and_wiring():
     # switch1(in) should map to pin 1
     # So trace should go from comp_motor1_p2 to comp_switch1_p1
 
-    trace = next((c for c in soup if c["type"] == "schematic_trace" and c["id"] == "trace_w1"), None)
+    trace = next(
+        (c for c in soup if c["type"] == "schematic_trace" and c["id"] == "trace_w1"),
+        None,
+    )
     assert trace is not None
 
     assert trace["source"] == "comp_motor1_p2"
