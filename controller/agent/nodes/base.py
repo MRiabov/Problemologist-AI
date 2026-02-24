@@ -156,9 +156,13 @@ class BaseNode:
             lines.append("Geometric Selections:")
             for sel in steer_data["selections"]:
                 center_str = ", ".join([f"{v:.2f}" for v in sel["center"]])
+                normal_str = ""
+                if sel.get("normal"):
+                    normal_val = ", ".join([f"{v:.2f}" for v in sel["normal"]])
+                    normal_str = f", Normal: ({normal_val})"
                 lines.append(
                     f"  - Level: {sel['level']}, ID: {sel['target_id']}, "
-                    f"Center: ({center_str})"
+                    f"Center: ({center_str}){normal_str}"
                 )
 
         if code_refs:

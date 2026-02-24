@@ -56,8 +56,15 @@ def check_process(name):
 
 def run_cmd(cmd, cwd=PROJ_ROOT, capture=True):
     try:
+        stdout_dest = subprocess.PIPE if capture else None
+        stderr_dest = subprocess.STDOUT if capture else None
         result = subprocess.run(
-            cmd, cwd=cwd, capture_output=capture, text=True, shell=isinstance(cmd, str)
+            cmd,
+            cwd=cwd,
+            stdout=stdout_dest,
+            stderr=stderr_dest,
+            text=True,
+            shell=isinstance(cmd, str),
         )
         return result
     except Exception as e:

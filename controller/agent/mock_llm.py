@@ -284,9 +284,7 @@ class MockDSPyLM(dspy.LM):
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
                 # Ensure the python code is executed as a shell command
-                resp["next_tool_args"] = {
-                    "command": f"python3 -c {shlex.quote(code)}"
-                }
+                resp["next_tool_args"] = {"command": f"python3 -c {shlex.quote(code)}"}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}
@@ -347,7 +345,7 @@ class MockDSPyLM(dspy.LM):
                         "search_summary",
                         "next_thought",
                         "next_tool_name",
-                        "next_tool_args"
+                        "next_tool_args",
                     ]
                 }
                 logger.info("mock_dspy_returning_json", json=filtered_resp)
