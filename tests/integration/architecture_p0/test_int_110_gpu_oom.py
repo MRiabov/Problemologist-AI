@@ -5,8 +5,8 @@ import httpx
 import pytest
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 
 @pytest.fixture
@@ -49,7 +49,31 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
 
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json={"path": "objectives.yaml", "content": objectives_content, "overwrite": True},
+            headers=base_headers,
+        )
+
+        # Write a minimal script.py
+        script_content = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.enums import ManufacturingMethod
+def build():
+    part = Box(1, 1, 1)
+    part.metadata = PartMetadata(manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum_6061")
+    part.label = "obj"
+    return part
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "script.py", "content": script_content},
+            headers=base_headers,
+        )
+
+        # Write trigger file for Mock OOM
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": ".mock_oom", "content": "trigger"},
             headers=base_headers,
         )
 
@@ -65,8 +89,8 @@ constraints: {max_unit_cost: 100, max_weight_g: 10}
         # If it retried, we expect 'gpu_oom_retry' event
         # and result annotated 'confidence: approximate'
         data = resp.json()
-        if any(e["event_type"] == "gpu_oom_retry" for e in data.get("events", [])):
-            assert data["confidence"] == "approximate"
-        else:
-            # If no GPU, it might just fail or run on CPU
-            pass
+        assert resp.status_code == 200, f"Simulation failed: {data.get('message')}"
+
+        # In our mock environment, it SHOULD have retried
+        assert any(e.get("event_type") == "gpu_oom_retry" for e in data.get("events", [])), "OOM retry not triggered"
+        assert data.get("confidence") == "approximate"
