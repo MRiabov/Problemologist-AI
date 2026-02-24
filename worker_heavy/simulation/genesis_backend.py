@@ -181,10 +181,18 @@ class GenesisBackend(PhysicsBackend):
 
             # Initial multiplier based on requested budget (default 100k -> multiplier 1.0)
             requested_budget = getattr(scene.config, "particle_budget", 100000)
+            if self.particle_budget:
+                requested_budget = self.particle_budget
             self.current_particle_multiplier = requested_budget / 100000.0
 
             for attempt in range(max_retries):
                 try:
+                    # INT-110: Mock OOM for testing via trigger file
+                    if config_dir and (config_dir / ".mock_oom").exists():
+                        (config_dir / ".mock_oom").unlink()
+                        logger.warning("genesis_mock_oom_triggered")
+                        raise Exception("CUDA error: out of memory. Mocked OOM for INT-110.")
+
                     self._load_scene_internal(scene, render_only=render_only)
                     # If we get here, it succeeded
                     if not render_only:
@@ -200,9 +208,9 @@ class GenesisBackend(PhysicsBackend):
                         from shared.observability.events import emit_event
                         from shared.observability.schemas import GpuOomRetryEvent
 
-                        original_count = int(10000 * self.current_particle_multiplier)
+                        original_count = int(100000 * self.current_particle_multiplier)
                         self.current_particle_multiplier *= particle_reduction_factor
-                        reduced_count = int(10000 * self.current_particle_multiplier)
+                        reduced_count = int(100000 * self.current_particle_multiplier)
 
                         emit_event(
                             GpuOomRetryEvent(
@@ -473,11 +481,8 @@ class GenesisBackend(PhysicsBackend):
                         color_f = tuple([c / 255.0 for c in color] + [0.8])
 
                         # Support Box and Sphere spawning volumes
-                        # T017: Apply particle multiplier or manual budget override
-                        if self.particle_budget:
-                            n_particles = self.particle_budget
-                        else:
-                            n_particles = int(10000 * self.current_particle_multiplier)
+                        # T017: Apply particle multiplier
+                        n_particles = int(100000 * self.current_particle_multiplier)
 
                         # MPM Material based on FluidDefinition
                         material = gs.materials.MPM.Liquid(

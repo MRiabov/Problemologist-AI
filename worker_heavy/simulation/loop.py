@@ -729,6 +729,17 @@ class SimulationLoop:
         else:
             is_success = True
 
+        confidence = "high"
+        if self.smoke_test_mode:
+            confidence = "approximate"
+        # T017: If particle reduction occurred, it's an approximation
+        if hasattr(self.backend, "current_particle_multiplier"):
+            multiplier = self.backend.current_particle_multiplier
+            if isinstance(multiplier, (int, float)):
+                # We need to be careful about floating point comparison
+                if multiplier < (self.particle_budget / 100000.0) - 1e-5:
+                    confidence = "approximate"
+
         return SimulationMetrics(
             total_time=current_time,
             total_energy=metrics.total_energy,
@@ -742,7 +753,7 @@ class SimulationLoop:
             stress_fields=self._get_stress_fields(),
             fluid_metrics=self.fluid_metrics,
             events=metrics.events,
-            confidence="approximate" if self.smoke_test_mode else "high",
+            confidence=confidence,
         )
 
     def _handle_wire_failure(self) -> bool:
