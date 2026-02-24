@@ -1,6 +1,8 @@
 import asyncio
+import os
 import uuid
 
+import boto3
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field, StrictStr, field_validator
 
@@ -259,6 +261,23 @@ async def execute_agent_task(
                 # Sync assets from worker (now in background after status update)
                 logger.info("starting_asset_sync", episode_id=episode_id)
                 try:
+                    # Initialize S3 client for this task
+                    s3_endpoint = os.getenv("S3_ENDPOINT")
+                    s3_access_key = os.getenv("S3_ACCESS_KEY")
+                    s3_secret_key = os.getenv("S3_SECRET_KEY")
+                    asset_bucket = os.getenv("ASSET_S3_BUCKET", "problemologist")
+
+                    s3_client = None
+                    if s3_endpoint and s3_access_key and s3_secret_key:
+                        try:
+                            s3_client = boto3.client(
+                                "s3",
+                                endpoint_url=s3_endpoint,
+                                aws_access_key_id=s3_access_key,
+                                aws_secret_access_key=s3_secret_key,
+                            )
+                        except Exception as e:
+                            logger.error("failed_to_init_s3_client", error=str(e))
 
                     async def sync_dir(dir_path: str):
                         try:
@@ -278,7 +297,7 @@ async def execute_agent_task(
                                 # Recursively sync directories
                                 if not any(
                                     path.lower().endswith(s)
-                                    for s in ["__pycache__", ".git", ".venv", "renders"]
+                                    for s in ["__pycache__", ".git", ".venv"]
                                 ):
                                     await sync_dir(path)
                                 continue
@@ -303,6 +322,8 @@ async def execute_agent_task(
 
                             # Read content for text assets
                             content = None
+                            blob_content = None
+
                             if asset_type in [
                                 AssetType.PYTHON,
                                 AssetType.MJCF,
@@ -321,6 +342,42 @@ async def execute_agent_task(
                                 content=content,
                             )
                             db.add(asset)
+
+                            # Upload to S3 if client available
+                            if s3_client:
+                                try:
+                                    if content is not None:
+                                        # Upload text content
+                                        await asyncio.to_thread(
+                                            s3_client.put_object,
+                                            Bucket=asset_bucket,
+                                            Key=path,
+                                            Body=content.encode("utf-8"),
+                                        )
+                                    else:
+                                        # Binary file, read as blob
+                                        try:
+                                            blob_content = (
+                                                await client.read_file_binary(path)
+                                            )
+                                            await asyncio.to_thread(
+                                                s3_client.put_object,
+                                                Bucket=asset_bucket,
+                                                Key=path,
+                                                Body=blob_content,
+                                            )
+                                        except Exception as e:
+                                            logger.warning(
+                                                "failed_to_read_blob_for_upload",
+                                                path=path,
+                                                error=str(e),
+                                            )
+                                except Exception as e:
+                                    logger.error(
+                                        "failed_to_upload_asset_to_s3",
+                                        path=path,
+                                        error=str(e),
+                                    )
 
                     await sync_dir("/")
                     await db.commit()

@@ -1,4 +1,5 @@
 import gzip
+import os
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -8,6 +9,20 @@ import boto3
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+
+def get_s3_config():
+    config = {}
+    endpoint = os.getenv("S3_ENDPOINT")
+    access_key = os.getenv("S3_ACCESS_KEY")
+    secret_key = os.getenv("S3_SECRET_KEY")
+
+    if endpoint:
+        config["endpoint_url"] = endpoint
+    if access_key and secret_key:
+        config["aws_access_key_id"] = access_key
+        config["aws_secret_access_key"] = secret_key
+    return config
 
 
 def backup_postgres(
@@ -37,7 +52,7 @@ def backup_postgres(
             shutil.copyfileobj(f_in, f_out)
 
         # Upload to S3
-        s3 = boto3.client("s3")
+        s3 = boto3.client("s3", **get_s3_config())
         s3_key = f"{s3_key_prefix}/{gz_path.name}"
         s3.upload_file(str(gz_path), s3_bucket, s3_key)
 
@@ -62,7 +77,7 @@ def backup_s3_files(
     """
     try:
         logger.info("Starting S3 sync", source=source_bucket, dest=backup_bucket)
-        s3 = boto3.resource("s3")
+        s3 = boto3.resource("s3", **get_s3_config())
         source = s3.Bucket(source_bucket)
         dest = s3.Bucket(backup_bucket)
 

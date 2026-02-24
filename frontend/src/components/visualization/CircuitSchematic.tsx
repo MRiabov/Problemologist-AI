@@ -8,14 +8,20 @@ const SchematicViewer = React.lazy(() => import('@tscircuit/schematic-viewer').t
 
 interface Props {
   className?: string;
+  soup?: any[];
 }
 
-const CircuitSchematic: React.FC<Props> = ({ className }) => {
+const CircuitSchematic: React.FC<Props> = ({ className, soup: initialSoup }) => {
   const { selectedEpisode } = useEpisodes();
-  const [soup, setSoup] = useState<any[]>([]);
+  const [soup, setSoup] = useState<any[]>(initialSoup || []);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (initialSoup) {
+        setSoup(initialSoup);
+        setLoading(false);
+        return;
+    }
     if (!selectedEpisode) return;
 
     const fetchSchematic = async () => {
