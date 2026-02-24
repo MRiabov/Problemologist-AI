@@ -43,7 +43,7 @@ Commonly, these models and enums would be in `shared/` folder.
 
 ## Audit snapshot
 
-- Integration runner last updated: Feb 17, 2026 (`scripts/run_integration_tests.sh`).
+- Integration runner last updated: Feb 24, 2026 (`scripts/run_integration_tests.sh`).
 - `desired_architecture.md` changes since that commit: **25 commits**.
 - Net architecture diff since runner update: **+628 / -55 lines**.
 - Major post-runner additions include:
@@ -199,6 +199,7 @@ Priorities:
 ### Frontend category: UI integration and delivery contract
 
 These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
+To ensure stability and prevent Hot Module Replacement (HMR) reloads from interfering with tests, the frontend must be built and served as a static distribution on port **15173** (using `npx serve -s dist -p 15173`). All frontend service integration tests must standardize on this port.
 
 | ID | Priority | Test | Required assertions |
 |---|---|---|---|
@@ -212,7 +213,7 @@ These are end-to-end frontend integration tests (browser + real APIs + real arti
 | INT-164 | P0 | Code viewer + line-target mention contract | File tree, syntax highlighting, and line numbers render from live files; selecting lines adds `@path:start-end` mention payload and invalid ranges return explicit validation errors. |
 | INT-165 | P0 | CAD topology selection modes | Part/primitive/subassembly selection modes work; topology overlay is on by default and toggleable; selected topology entities are carried to prompt context. |
 | INT-166 | P1 | Simulation viewer time navigation | Time controls (play/pause/seek/rewind) load corresponding simulation frames from real assets for both rigid-body and deformable playback paths. |
-| INT-167 | P0 | Worker-only CAD asset fetch contract | GLB/OBJ fetches for viewer use worker `GET` endpoints; non-`GET` methods are rejected; UI does not depend on mocked local geometry fixtures. |
+| INT-167 | P0 | Controller-proxied CAD asset fetch contract | GLB/OBJ fetches for viewer use controller proxy endpoints (e.g. `/api/episodes/{id}/assets/{path}`); non-GET methods are rejected; UI does not depend on mocked local geometry fixtures. |
 | INT-168 | P1 | Circuit viewer integration | Circuit data renders through frontend circuit viewer from real backend outputs; selecting a circuit component can add it to steering context. |
 | INT-169 | P2 | Theme toggle persistence | Light/dark mode toggle updates UI theme and persists across reload/session restore without breaking core workflow readability. |
 | INT-170 | P0 | Post-run feedback UX + API persistence | Thumbs up/down appears only after model output completion; modal supports topic selection + text; submission is persisted via feedback API. |
@@ -341,7 +342,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-164 | Select lines in live code viewer and submit mention; assert backend receives resolved range and rejects invalid spans with surfaced error. | Parsing mention syntax in a unit helper test. |
 | INT-165 | Use live CAD assets to select part/face/edge/subassembly; assert mode-specific payloads are transmitted in prompt context. | Mocking three.js selection handlers only. |
 | INT-166 | Scrub simulation timeline in browser against real simulation assets; assert frame/time sync and seek boundaries. | Video-player unit tests with local MP4 only. |
-| INT-167 | Inspect live network calls during CAD load; assert worker `GET` asset endpoints are used and disallowed methods fail. | Asserting URL builder function output only. |
+| INT-167 | Inspect live network calls during CAD load; assert controller `GET /episodes/{id}/assets/{path}` endpoints are used; verify worker is reached via proxy and disallowed methods fail. | Asserting URL builder function output only. |
 | INT-168 | Render circuit view from live episode outputs and assert selectable components propagate into context payload. | Static circuit SVG snapshot tests only. |
 | INT-169 | Toggle theme in live app, reload browser, assert persisted preference in real runtime behavior. | Unit test of theme store/localStorage adapter only. |
 | INT-170 | Submit post-run feedback in live UI and assert API persistence + retrieval in episode trace metadata. | Modal component unit test with mocked submit handler. |

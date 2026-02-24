@@ -87,7 +87,7 @@ Ideally, this the CAD viewer renders build123d directly as WASM in the browser, 
 
 We will use standard GLB files exported from the backend. To support topology selection (faces, edges), the backend will break down the model into individual meshes for each face/edge within the GLB file, named accordingly (e.g., `face_1`, `edge_2`).
 
-> [!Note] Exception - the frontend will query the worker, not the controller to get the GLB files. (we specified elsewhere that it will communicate only to controller first). Only GET HTTP methods, however.
+Assets (GLB, OBJ, images, etc.) are served by the controller, which acts as a proxy to the worker filesystem or pulls from S3 storage. The frontend maintains a "controller-first" communication model for all requests.
 
 Viewing topology, the model, is done as in the standard CAD viewers. Viewing the simulation modifies the screen (to possibly a non-CAD viewer? to show simulation details)
 
