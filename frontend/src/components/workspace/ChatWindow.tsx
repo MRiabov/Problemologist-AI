@@ -13,7 +13,6 @@ import { ObjectivesForm } from "./ObjectivesForm";
 import ConnectionError from "../shared/ConnectionError";
 import { Button } from "../ui/button";
 import { ContextCards } from "./ContextCards";
-import { FeedbackSystem } from "./FeedbackSystem";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
 import type { TopologyNode } from "../visualization/ModelBrowser";
@@ -48,7 +47,6 @@ export default function ChatWindow({
       selectedContext,
       addToContext,
       setActiveArtifactId,
-      feedbackState,
       setFeedbackState
   } = useEpisodes();
   const { theme } = useTheme();
@@ -262,17 +260,6 @@ export default function ChatWindow({
                                 : "The agent encountered an unrecoverable error during execution."}
                         </div>
                     </div>
-                )}
-                {/* Session Feedback Modal */}
-                {feedbackState && selectedEpisode && feedbackState.traceId !== null && feedbackState.score !== null && (
-                    <FeedbackSystem 
-                        episodeId={selectedEpisode.id} 
-                        traceId={feedbackState.traceId}
-                        initialScore={feedbackState.score}
-                        onClose={() => {
-                            setFeedbackState(null);
-                        }}
-                    />
                 )}
             </div>
         </ScrollArea>

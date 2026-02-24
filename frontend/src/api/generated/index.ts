@@ -12,6 +12,7 @@ export type { AssetResponse } from './models/AssetResponse';
 export { AssetType } from './models/AssetType';
 export type { BenchmarkGenerateRequest } from './models/BenchmarkGenerateRequest';
 export type { CodeReference } from './models/CodeReference';
+export type { ConfirmRequest } from './models/ConfirmRequest';
 export type { EpisodeResponse } from './models/EpisodeResponse';
 export { EpisodeStatus } from './models/EpisodeStatus';
 export type { FeedbackRequest } from './models/FeedbackRequest';

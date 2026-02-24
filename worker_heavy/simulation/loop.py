@@ -318,6 +318,9 @@ class SimulationLoop:
         self.fail_reason = None
         self.overloaded_motors: list[str] = []
         self.objective_evaluator.reset()
+        # WP2: Re-initialize flow rate capture after reset to ensure first-step crossings are caught
+        if hasattr(self, "backend") and self.backend:
+            self.objective_evaluator.initialize_flow_rate(self.backend)
 
     def step(
         self,
@@ -702,6 +705,10 @@ class SimulationLoop:
     def _build_simulation_metrics(self, current_time: float) -> SimulationMetrics:
         """Construct the final SimulationMetrics object."""
         metrics = self.metric_collector.get_metrics()
+
+        # WP2: Sync fail_reason from objective_evaluator if it was set during evaluate_final
+        if not self.fail_reason and self.objective_evaluator.fail_reason:
+            self.fail_reason = self.objective_evaluator.fail_reason
 
         # Final success determination
         has_other_objectives = bool(
