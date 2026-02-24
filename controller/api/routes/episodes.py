@@ -272,61 +272,9 @@ async def get_episode_schematic(
         data = yaml.safe_load(content)
         assembly = AssemblyDefinition(**data)
 
-        if not assembly.electronics:
-            return []
+        from shared.schematic_utils import generate_schematic_soup
 
-        # Map to tscircuit Soup JSON format
-        soup = []
-
-        # 1. Add components
-        for i, comp in enumerate(assembly.electronics.components):
-            # schematic_component
-            comp_id = f"comp_{comp.component_id}"
-            soup.append(
-                {
-                    "type": "schematic_component",
-                    "id": comp_id,
-                    "name": comp.component_id,
-                    "center": {"x": 10 + i * 40, "y": 10},
-                    "rotation": 0,
-                    "symbol_name": "resistor"
-                    if comp.type == "motor"
-                    else "generic_component",
-                }
-            )
-
-            # Add some pins
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p1",
-                    "component_id": comp_id,
-                    "name": "1",
-                    "center": {"x": 10 + i * 40 - 10, "y": 10},
-                }
-            )
-            soup.append(
-                {
-                    "type": "schematic_pin",
-                    "id": f"{comp_id}_p2",
-                    "component_id": comp_id,
-                    "name": "2",
-                    "center": {"x": 10 + i * 40 + 10, "y": 10},
-                }
-            )
-
-        # 2. Add traces (simplified)
-        for wire in assembly.electronics.wiring:
-            soup.append(
-                {
-                    "type": "schematic_trace",
-                    "id": f"trace_{wire.wire_id}",
-                    "source": f"comp_{wire.from_terminal.component}_p1",  # Simplified mapping
-                    "target": f"comp_{wire.to_terminal.component}_p2",
-                }
-            )
-
-        return soup
+        return generate_schematic_soup(assembly)
     except Exception as e:
         logger.error("failed_to_get_schematic", episode_id=episode_id, error=str(e))
         return []
