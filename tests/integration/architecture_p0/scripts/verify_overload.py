@@ -30,7 +30,8 @@ async def run(_ctx=None):
 
         from shared.simulation.schemas import SimulatorBackendType
 
-        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.GENESIS)
+        # WP2: Performance - use MUJOCO backend for verification scripts to avoid Genesis kernel overhead
+        loop = SimulationLoop(str(tmp_path), backend_type=SimulatorBackendType.MUJOCO)
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
