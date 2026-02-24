@@ -12,16 +12,24 @@ logger = logging.getLogger(__name__)
 def resolve_node_name(comp_id: str, term: str) -> str:
     """
     Resolves a component ID and terminal to a standard circuit node name.
-    Standardizes terminal names (1/2, a/b, in/out) to +/-.
+    Standardizes terminal names (1/2, a/b, in/out, +/-) to standardized nodes.
     """
     term_lower = str(term).lower()
 
-    if term_lower == "supply_v+" or (comp_id == "supply" and term_lower == "v+"):
+    # Special handling for the main power supply
+    if comp_id == "supply":
+        if term_lower in ("v+", "+", "plus", "in", "1", "a", "l"):
+            return "supply_v+"
+        if term_lower in ("0", "gnd", "-", "minus", "out", "2", "b", "r"):
+            return "0"
+
+    # Global names
+    if term_lower == "supply_v+":
         return "supply_v+"
-    if term_lower in ("0", "gnd") or (comp_id == "supply" and term_lower in ("0", "gnd")):
+    if term_lower in ("0", "gnd"):
         return "0"
 
-    # Normalization for component terminals
+    # Normalization for other component terminals
     if term_lower in ("a", "1", "l", "in", "plus", "+"):
         term = "+"
     elif term_lower in ("b", "2", "r", "out", "minus", "-"):
