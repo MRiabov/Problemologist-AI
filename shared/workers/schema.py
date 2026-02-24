@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
 from shared.models.schemas import ElectronicsSection
+from shared.models.simulation import MultiRunResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingMethod
 
@@ -170,7 +171,7 @@ class SimulationArtifacts(BaseModel):
     circuit_validation_result: dict[StrictStr, Any] | None = None
     scene_path: StrictStr | None = None
     failure: dict[StrictStr, Any] | None = None
-    verification_result: dict[StrictStr, Any] | None = None
+    verification_result: MultiRunResult | None = None
 
     model_config = {"extra": "allow"}
 

@@ -11,25 +11,14 @@ from typing import Any
 # import mujoco  # Moved to lazy imports
 import numpy as np
 import structlog
-from pydantic import BaseModel
 
-from worker_heavy.simulation.loop import SimulationLoop, SimulationMetrics
+from shared.models.simulation import MultiRunResult, SimulationMetrics
+from worker_heavy.simulation.loop import SimulationLoop
 
 logger = structlog.get_logger(__name__)
 
 # Default number of verification runs
 DEFAULT_NUM_RUNS = 5
-
-
-class MultiRunResult(BaseModel):
-    """Result of multi-run verification."""
-
-    num_runs: int
-    success_count: int
-    success_rate: float
-    is_consistent: bool  # True if all runs agree on success/fail
-    individual_results: list[SimulationMetrics]
-    fail_reasons: list[str]  # Unique failure reasons across runs
 
 
 def apply_position_jitter(
