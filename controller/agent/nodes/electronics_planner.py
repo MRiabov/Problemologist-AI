@@ -93,13 +93,20 @@ class ElectronicsPlannerNode(BaseNode):
         )
 
         summary = getattr(prediction, "summary", "No summary provided.")
+        new_plan = artifacts.get("plan.md", state.plan)
+        new_todo = artifacts.get("todo.md", state.todo)
+        new_journal = (
+            state.journal + f"\n[Electronics Planner] {summary}" + journal_entry
+        )
+
+        # T008: Persist updated Plan, TODO and Journal to worker filesystem
+        await self.ctx.fs.write_file("journal.md", new_journal)
+
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", state.plan),
-                "todo": artifacts.get("todo.md", state.todo),
-                "journal": state.journal
-                + f"\n[Electronics Planner] {summary}"
-                + journal_entry,
+                "plan": new_plan,
+                "todo": new_todo,
+                "journal": new_journal,
                 "messages": state.messages
                 + [AIMessage(content=f"Electronics Plan summary: {summary}")],
                 "turn_count": state.turn_count + 1,

@@ -93,7 +93,7 @@ def validate_circuit(
             if comp.type == "motor":
                 required = ["+", "-"]
             elif comp.type in ["switch", "relay"]:
-                required = ["in", "out"]
+                required = ["+", "-"]
             elif comp.type == "power_supply":
                 required = ["+", "-"]
 

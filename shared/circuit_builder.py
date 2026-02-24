@@ -12,16 +12,27 @@ logger = logging.getLogger(__name__)
 def resolve_node_name(comp_id: str, term: str) -> str:
     """
     Resolves a component ID and terminal to a standard circuit node name.
+    Standardizes terminal names (1/2, a/b, in/out, +/-) to standardized nodes.
     """
-    if term == "supply_v+" or (comp_id == "supply" and term == "v+"):
+    term_lower = str(term).lower()
+
+    # Special handling for the main power supply
+    if comp_id == "supply":
+        if term_lower in ("v+", "+", "plus", "in", "1", "a", "l"):
+            return "supply_v+"
+        if term_lower in ("0", "gnd", "-", "minus", "out", "2", "b", "r"):
+            return "0"
+
+    # Global names
+    if term_lower == "supply_v+":
         return "supply_v+"
-    if term == "0" or (comp_id == "supply" and term == "0"):
+    if term_lower in ("0", "gnd"):
         return "0"
 
-    # Normalization for motor terminals
-    if term == "a":
+    # Normalization for other component terminals
+    if term_lower in ("a", "1", "l", "in", "plus", "+"):
         term = "+"
-    if term == "b":
+    elif term_lower in ("b", "2", "r", "out", "minus", "-"):
         term = "-"
 
     return f"{comp_id}_{term}"
@@ -90,10 +101,11 @@ def build_circuit_from_section(
             # Default to CLOSED (0.01 Ohm) if not specified in switch_states.
             is_closed = switch_states.get(comp.component_id, True)
             resistance = 0.01 if is_closed else 100 @ u_MOhm
+            # Normalize to + and - terminals for consistent wiring
             circuit.R(
                 f"sw_{comp.component_id}",
-                f"{comp.component_id}_in",
-                f"{comp.component_id}_out",
+                f"{comp.component_id}_+",
+                f"{comp.component_id}_-",
                 resistance @ u_Ohm,
             )
 

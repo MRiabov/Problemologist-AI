@@ -98,12 +98,20 @@ class PlannerNode(BaseNode):
         )
 
         summary = getattr(prediction, "summary", "No summary provided.")
+        new_plan = artifacts.get("plan.md", "")
+        new_todo = artifacts.get("todo.md", "")
+        new_journal = state.journal + f"\n[Planner] {summary}" + journal_entry
+
+        # T008: Persist updated Plan, TODO and Journal to worker filesystem
+        # (Though Plan and TODO should already be there if written by the agent tool)
+        await self.ctx.fs.write_file("journal.md", new_journal)
+
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", ""),
-                "todo": artifacts.get("todo.md", ""),
+                "plan": new_plan,
+                "todo": new_todo,
                 "status": AgentStatus.EXECUTING,
-                "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
+                "journal": new_journal,
                 "messages": state.messages
                 + [AIMessage(content=f"Plan summary: {summary}")],
                 "turn_count": state.turn_count + 1,
