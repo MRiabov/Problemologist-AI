@@ -6,30 +6,19 @@ Implements runtime randomization verification per architecture spec:
 - Use MuJoCo's support for parallel simulations
 """
 
-import logging
 from typing import Any
 
 # import mujoco  # Moved to lazy imports
 import numpy as np
-from pydantic import BaseModel
+import structlog
 
-from worker_heavy.simulation.loop import SimulationLoop, SimulationMetrics
+from shared.models.simulation import MultiRunResult, SimulationMetrics
+from worker_heavy.simulation.loop import SimulationLoop
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Default number of verification runs
 DEFAULT_NUM_RUNS = 5
-
-
-class MultiRunResult(BaseModel):
-    """Result of multi-run verification."""
-
-    num_runs: int
-    success_count: int
-    success_rate: float
-    is_consistent: bool  # True if all runs agree on success/fail
-    individual_results: list[SimulationMetrics]
-    fail_reasons: list[str]  # Unique failure reasons across runs
 
 
 def apply_position_jitter(
@@ -129,28 +118,6 @@ def verify_with_jitter(
             success=metrics.success,
             fail_reason=metrics.fail_reason,
         )
-
-    # Aggregate results
-    success_count = sum(1 for r in results if r.success)
-    success_rate = success_count / num_runs if num_runs > 0 else 0.0
-
-    # Check consistency: all runs should agree
-    outcomes = [r.success for r in results]
-    is_consistent = len(set(outcomes)) == 1
-
-    # Collect unique failure reasons
-    fail_reasons = list(
-        set(r.fail_reason for r in results if r.fail_reason is not None)
-    )
-
-    return MultiRunResult(
-        num_runs=num_runs,
-        success_count=success_count,
-        success_rate=success_rate,
-        is_consistent=is_consistent,
-        individual_results=results,
-        fail_reasons=fail_reasons,
-    )
 
     # Aggregate results
     success_count = sum(1 for r in results if r.success)
