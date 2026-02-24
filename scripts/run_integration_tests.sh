@@ -23,6 +23,9 @@ export WORKER_URL="http://127.0.0.1:18001"
 export WORKER_HEAVY_URL="http://127.0.0.1:18002"
 export ASSET_S3_BUCKET="problemologist"
 
+# Enforce CPU mode for Genesis to avoid GPU flakiness in integration tests
+export GENESIS_FORCE_CPU=1
+
 # Shared sessions directory for local integration tests
 export WORKER_SESSIONS_DIR=$(mktemp -d -t pb-sessions-XXXXXX)
 echo "Shared sessions directory: $WORKER_SESSIONS_DIR"
