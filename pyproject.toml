@@ -81,7 +81,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 # keep it paralel. no point in disabling globally.
 # set to -n0 in integration tests though!
-addopts = "-n2 -m 'not (integration or integration_p0 or integration_p1 or integration_p2)'"
+addopts = "-n2 -m 'not (integration or integration_p0 or integration_p1 or integration_p2 or integration_frontend)'"
 filterwarnings = [
     "ignore::DeprecationWarning:ezdxf.queryparser",
     "ignore::DeprecationWarning:build123d.objects_curve",
@@ -96,7 +96,7 @@ markers = [
     "integration_p0: PR gate integration tests",
     "integration_p1: Nightly integration tests",
     "integration_p2: Weekly/manual integration tests",
-    "integration_playwright: end-to-end frontend tests",
+    "integration_frontend: end-to-end frontend tests",
     "unit: marks tests as unit tests", # FIXME: remove
     "benchmark: marks tests related to the benchmark generator",
     "debug_fuzz: manual debugging for schemathesis tests",

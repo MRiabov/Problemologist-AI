@@ -16,6 +16,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
   },
   server: {
+    port: 15173,
     proxy: {
       '/api/benchmark/build': {
         target: 'http://localhost:18001',
@@ -25,6 +26,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:18000',
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
