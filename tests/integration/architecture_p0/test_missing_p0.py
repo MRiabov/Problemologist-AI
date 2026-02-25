@@ -9,7 +9,7 @@ from controller.api.schemas import (
     AgentRunResponse,
     EpisodeListItem,
     EpisodeResponse,
-    TestEpisodeCreateResponse,
+    EpisodeCreateResponse,
 )
 from controller.api.tasks import AgentRunRequest
 from shared.enums import EpisodeStatus
@@ -20,9 +20,9 @@ from shared.workers.schema import (
 )
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 @pytest.mark.integration_p0
@@ -51,7 +51,7 @@ async def test_int_004_episode_artifact_persistence():
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
-        episode_create = TestEpisodeCreateResponse.model_validate(resp.json())
+        episode_create = EpisodeCreateResponse.model_validate(resp.json())
         episode_id = str(episode_create.episode_id)
 
         # Let's check episodes list

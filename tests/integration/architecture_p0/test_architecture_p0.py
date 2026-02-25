@@ -30,9 +30,9 @@ from shared.workers.schema import (
 from tests.integration.contracts import HealthResponse
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:

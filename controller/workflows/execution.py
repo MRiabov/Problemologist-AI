@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from temporalio import workflow
 
+from shared.type_checking import type_check
 from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 
 
