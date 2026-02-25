@@ -312,3 +312,103 @@ async def test_int_124_open_circuit_detection():
         assert val_resp.success is False
         assert val_resp.artifacts.failure.reason == "VALIDATION_FAILED"
         assert "OPEN_CIRCUIT" in val_resp.artifacts.failure.detail
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_125_valid_circuit_totals():
+    """INT-125: Verify valid circuit returns cost and weight artifacts."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_worker_services(client)
+        session_id = get_session_id("125")
+
+        # 1. Define a valid circuit (Motor on 12V PSU)
+        valid_section = ElectronicsSection(
+            power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),
+            components=[
+                ElectronicComponent(
+                    component_id="m1",
+                    type=ElectronicComponentType.MOTOR,
+                    stall_current_a=2.0,
+                )
+            ],
+            wiring=[
+                WireConfig(
+                    wire_id="w1",
+                    from_terminal=WireTerminal(component="supply", terminal="v+"),
+                    to_terminal=WireTerminal(component="m1", terminal="+"),
+                    gauge_awg=18,
+                    length_mm=100.0,
+                ),
+                WireConfig(
+                    wire_id="w2",
+                    from_terminal=WireTerminal(component="m1", terminal="-"),
+                    to_terminal=WireTerminal(component="supply", terminal="0"),
+                    gauge_awg=18,
+                    length_mm=100.0,
+                ),
+            ],
+        )
+
+        # 2. Setup assembly definition
+        assembly_def = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=100,
+                benchmark_max_weight_g=1000,
+                planner_target_max_unit_cost_usd=80,
+                planner_target_max_weight_g=800,
+            ),
+            electronics=valid_section,
+            totals=CostTotals(
+                estimated_unit_cost_usd=50,
+                estimated_weight_g=500,
+                estimate_confidence="high",
+            ),
+        )
+
+        # Write assembly_definition.yaml
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content=yaml.dump(assembly_def.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        # Write script.py
+        script = """
+from build123d import *
+def build():
+    p = Box(1, 1, 1)
+    from shared.models.schemas import PartMetadata
+    p.metadata = PartMetadata(material_id='aluminum_6061')
+    return p
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script, overwrite=True
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        # 3. Simulate
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=sim_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert data.success is True
+
+        # 4. Verify totals in artifacts
+        assert data.artifacts.total_cost is not None
+        assert data.artifacts.total_cost > 0
+        assert data.artifacts.total_weight_g is not None
+        assert data.artifacts.total_weight_g > 0

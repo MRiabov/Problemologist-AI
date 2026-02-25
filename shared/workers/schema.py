@@ -237,6 +237,8 @@ class SimulationArtifacts(BaseModel):
     scene_path: StrictStr | None = None
     failure: SimulationFailure | None = None
     verification_result: MultiRunResult | None = None
+    total_cost: float | None = None
+    total_weight_g: float | None = None
 
     model_config = {"extra": "allow"}
 
