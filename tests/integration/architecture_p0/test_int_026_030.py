@@ -21,7 +21,7 @@ from shared.workers.schema import (
 )
 from shared.enums import EpisodeStatus
 from controller.api.tasks import AgentRunRequest
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from controller.api.schemas import AgentRunResponse, EpisodeResponse, OpenAPISchema, StandardResponse
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -162,13 +162,15 @@ async def test_int_028_strict_api_schema_contract():
         # 1. Controller OpenAPI
         resp = await client.get(f"{CONTROLLER_URL}/openapi.json")
         assert resp.status_code == 200
-        schema = resp.json()
-        assert "openapi" in schema
+        schema_data = resp.json()
+        OpenAPISchema.model_validate(schema_data)
+        assert "openapi" in schema_data
 
         # 2. Worker OpenAPI
         resp = await client.get(f"{WORKER_LIGHT_URL}/openapi.json")
         assert resp.status_code == 200
         worker_schema = resp.json()
+        OpenAPISchema.model_validate(worker_schema)
 
         # 3. Validate a live response against the schema
         health_resp = await client.get(f"{WORKER_LIGHT_URL}/health")
@@ -248,6 +250,7 @@ async def test_int_030_interrupt_propagation():
             f"{CONTROLLER_URL}/episodes/{episode_id}/interrupt"
         )
         assert interrupt_resp.status_code in [200, 202]
+        StandardResponse.model_validate(interrupt_resp.json())
 
         status = None
         for i in range(20):
