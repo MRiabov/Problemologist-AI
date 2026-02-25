@@ -112,6 +112,7 @@ class ExecuteResponse(BaseModel):
     exit_code: StrictInt
     timed_out: StrictBool = False
     events: list[dict[str, Any]] = Field(default_factory=list)
+    # fixme: don't events have a model?
 
 
 class ScriptExecutionRequest(BaseModel):
