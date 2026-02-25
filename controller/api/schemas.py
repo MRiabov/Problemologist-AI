@@ -90,6 +90,7 @@ class ArtifactEntry(BaseModel):
 class EpisodeCreateResponse(BaseModel):
     """Response from the /test/episodes endpoint (used in integration tests)."""
 
+    __test__ = False
     episode_id: uuid.UUID
 
 

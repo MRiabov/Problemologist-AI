@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchEpisodes, fetchSkills, fetchEpisode, runAgent, runSimulation } from '../client';
+import { EpisodeStatus } from '../generated/models/EpisodeStatus';
 
 describe('API Client', () => {
   beforeEach(() => {
@@ -7,7 +8,7 @@ describe('API Client', () => {
   });
 
   it('fetchEpisodes calls the correct endpoint', async () => {
-    const mockEpisodes = [{ id: '1', task: 'test', status: 'running', created_at: 'now' }];
+    const mockEpisodes = [{ id: '1', task: 'test', status: EpisodeStatus.RUNNING, created_at: 'now' }];
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -35,7 +36,7 @@ describe('API Client', () => {
   });
 
   it('fetchEpisode calls the correct endpoint', async () => {
-    const mockEpisode = { id: '1', task: 'test', status: 'completed' };
+    const mockEpisode = { id: '1', task: 'test', status: EpisodeStatus.COMPLETED };
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       status: 200,
