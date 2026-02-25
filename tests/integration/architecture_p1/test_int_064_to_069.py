@@ -8,14 +8,24 @@ import pytest
 from shared.enums import ReviewDecision, FailureReason as SimulationFailureMode
 
 from controller.api.schemas import (
+    AgentRunRequest,
+    CotsMetadataResponse,
+    CotsSearchItem,
+    EpisodeCreateResponse,
+    SchematicItem,
     SteeringQueueEntry,
-    TestEpisodeCreateResponse,
 )
-from shared.workers.schema import BenchmarkToolResponse
+from shared.models.steerability import (
+    GeometricSelection,
+    SelectionLevel,
+    SteerablePrompt,
+)
+from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import BenchmarkToolRequest, BenchmarkToolResponse, WriteFileRequest
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 
 @pytest.mark.integration_p1
@@ -26,12 +36,10 @@ async def test_int_064_cots_metadata():
         # 1. Fetch metadata
         resp = await client.get(f"{CONTROLLER_URL}/cots/metadata")
         assert resp.status_code == 200
-        # Validate COTS metadata structure via key-presence check (no dedicated model yet)
-        data = resp.json()
-        assert isinstance(data, dict), "COTS metadata must be a JSON object"
-        assert "catalog_version" in data
-        assert "bd_warehouse_commit" in data
-        assert "generated_at" in data
+        # Validate COTS metadata structure
+        data = CotsMetadataResponse.model_validate(resp.json())
+        assert data.catalog_version is not None
+        assert data.bd_warehouse_commit is not None
 
         # 2. Trigger search and check events (indirectly via search output or assuming search_parts logs it)
         # We'll just verify the endpoint exists and returns data as a proxy for persistence.
@@ -40,7 +48,8 @@ async def test_int_064_cots_metadata():
             f"{CONTROLLER_URL}/cots/search", params={"q": "M3"}
         )
         assert search_resp.status_code == 200
-        assert len(search_resp.json()) > 0
+        results = [CotsSearchItem.model_validate(item) for item in search_resp.json()]
+        assert len(results) > 0
 
 
 @pytest.mark.integration_p1
@@ -69,11 +78,11 @@ async def test_int_066_fluid_electronics_coupling():
         session_id = f"test-int-066-{int(time.time())}"
 
         # Create a scene with fluid and a part marked as electronics
-        objectives_content = """
+        objectives_content = f"""
 physics:
-  backend: "genesis"
+  backend: "{SimulatorBackendType.GENESIS}"
 objectives:
-  goal_zone: {min: [0.5,0.5,0.5], max: [0.6,0.6,0.6]}
+  goal_zone: {{min: [0.5,0.5,0.5], max: [0.6,0.6,0.6]}}
   build_zone: {min: [-1,-1,-1], max: [1,1,1]}
 simulation_bounds: {min: [-1,-1,-1], max: [1,1,1]}
 moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
@@ -82,7 +91,7 @@ constraints: {max_unit_cost: 100, max_weight_g: 1000}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "objectives.yaml", "content": objectives_content},
+            json=WriteFileRequest(path="objectives.yaml", content=objectives_content).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -100,7 +109,7 @@ def build():
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "script.py", "content": script_content},
+            json=WriteFileRequest(path="script.py", content=script_content).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -126,7 +135,7 @@ totals:
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "assembly_definition.yaml", "content": assembly_content},
+            json=WriteFileRequest(path="assembly_definition.yaml", content=assembly_content).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -145,18 +154,19 @@ fluids:
         )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "objectives.yaml",
-                "content": objectives_with_fluid,
-                "overwrite": True,
-            },
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=objectives_with_fluid,
+                overwrite=True,
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
         # Run simulation
+        request = BenchmarkToolRequest(script_path="script.py", backend=SimulatorBackendType.GENESIS)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json=request.model_dump(),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -180,31 +190,32 @@ async def test_int_067_068_steerability():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create a dummy episode
         task = "Test steerability"
+        request = AgentRunRequest(task=task, session_id="test-steer-123")
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": task, "session_id": "test-steer-123"},
+            json=request.model_dump(),
         )
         assert resp.status_code == 201
-        episode_id = TestEpisodeCreateResponse.model_validate(resp.json()).episode_id
+        episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Submit a steered prompt with selections, mentions, and code references
         steer_session_id = f"test-steer-{int(time.time())}"
-        steer_payload = {
-            "text": "Fix this code @script.py:1-2 and check @elec_part",
-            "selections": [
-                {
-                    "level": "FACE",
-                    "target_id": "face_1",
-                    "center": [1, 2, 3],
-                    "normal": [0, 0, 1],
-                }
+        steer_request = SteerablePrompt(
+            text="Fix this code @script.py:1-2 and check @elec_part",
+            selections=[
+                GeometricSelection(
+                    level=SelectionLevel.FACE,
+                    target_id="face_1",
+                    center=(1.0, 2.0, 3.0),
+                    normal=(0.0, 0.0, 1.0),
+                )
             ],
-            "mentions": ["elec_part"],
-        }
+            mentions=["elec_part"],
+        )
 
         steer_resp = await client.post(
             f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/steer",
-            json=steer_payload,
+            json=steer_request.model_dump(),
         )
         assert steer_resp.status_code == 202
 
@@ -215,7 +226,7 @@ async def test_int_067_068_steerability():
         assert queue_resp.status_code == 200
         queue = [SteeringQueueEntry.model_validate(e) for e in queue_resp.json()]
         assert len(queue) > 0
-        assert queue[0].text == steer_payload["text"]
+        assert queue[0].text == steer_request.text
 
 
 @pytest.mark.integration_p1
@@ -225,12 +236,13 @@ async def test_int_069_frontend_contract():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create an episode
         task = "Test frontend contract"
+        request = AgentRunRequest(task=task, session_id="test-fe-contract")
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": task, "session_id": "test-fe-contract"},
+            json=request.model_dump(),
         )
         assert resp.status_code == 201
-        episode_id = TestEpisodeCreateResponse.model_validate(resp.json()).episode_id
+        episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Write assembly_definition.yaml to worker for schematic
         assembly_content = """
@@ -253,7 +265,7 @@ totals:
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "assembly_definition.yaml", "content": assembly_content},
+            json=WriteFileRequest(path="assembly_definition.yaml", content=assembly_content).model_dump(),
             headers={"X-Session-ID": "test-fe-contract"},
         )
 
@@ -262,17 +274,17 @@ totals:
             f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic"
         )
         assert schematic_resp.status_code == 200
-        # Schematic is a list of typed items, but no model yet — validate structure only
-        soup = schematic_resp.json()
+        # Schematic is a list of typed items
+        soup = [SchematicItem.model_validate(item) for item in schematic_resp.json()]
         assert isinstance(soup, list)
         assert len(soup) > 0
-        assert any(item.get("type") == "schematic_component" for item in soup)
+        assert any(item.type == "schematic_component" for item in soup)
 
         # 4. Test asset proxying
         # First write a dummy image
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "renders/test.png", "content": "dummy-binary-content"},
+            json=WriteFileRequest(path="renders/test.png", content="dummy-binary-content").model_dump(),
             headers={"X-Session-ID": "test-fe-contract"},
         )
 

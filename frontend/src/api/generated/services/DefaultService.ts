@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { AgentRunRequest } from '../models/AgentRunRequest';
 import type { AgentRunResponse } from '../models/AgentRunResponse';
+import type { EpisodeCreateResponse } from '../models/EpisodeCreateResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -24,12 +25,12 @@ export class DefaultService {
      * Create Test Episode
      * Create a dummy episode for testing purposes (no agent run).
      * @param requestBody
-     * @returns any Successful Response
+     * @returns EpisodeCreateResponse Successful Response
      * @throws ApiError
      */
     public static createTestEpisodeTestEpisodesPost(
         requestBody: AgentRunRequest,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<EpisodeCreateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/test/episodes',

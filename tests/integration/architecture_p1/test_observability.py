@@ -5,10 +5,15 @@ import uuid
 import httpx
 import pytest
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from controller.api.schemas import (
+    AgentRunRequest,
+    AgentRunResponse,
+    EpisodeResponse,
+    FeedbackRequest,
+)
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 @pytest.mark.integration_p1
@@ -19,9 +24,13 @@ async def test_int_059_langfuse_trace_linkage():
         # 1. Run an episode
         # We use a simple task that might trigger some traces
         task = "Write a hello world python script"
+        request = AgentRunRequest(
+            task=task,
+            session_id=f"INT-059-{uuid.uuid4().hex[:8]}",
+        )
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": f"INT-059-{uuid.uuid4().hex[:8]}"},
+            json=request.model_dump(),
         )
         assert resp.status_code == 202
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -41,7 +50,7 @@ async def test_int_059_langfuse_trace_linkage():
         # Even if it didn't complete, it should have traces
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(status_resp.json())
-        traces = ep_data.traces
+        traces = ep_data.traces or []
         assert len(traces) > 0
 
         # 3. Verify langfuse_trace_id consistency
@@ -75,9 +84,13 @@ async def test_int_060_langfuse_feedback_contract():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create an episode and get a trace with langfuse_id
         task = "Test feedback"
+        request = AgentRunRequest(
+            task=task,
+            session_id=f"INT-060-{uuid.uuid4().hex[:8]}",
+        )
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": f"INT-060-{uuid.uuid4().hex[:8]}"},
+            json=request.model_dump(),
         )
         run_data = AgentRunResponse.model_validate(resp.json())
         episode_id = run_data.episode_id
@@ -86,17 +99,17 @@ async def test_int_060_langfuse_feedback_contract():
         await asyncio.sleep(2)
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(status_resp.json())
-        traces = ep_data.traces
+        traces = ep_data.traces or []
         assert len(traces) > 0
 
         trace = traces[0]
         trace_id = trace.id
 
         # 2. Test feedback with langfuse_trace_id
-        feedback_data = {"score": 1, "comment": "Great trace!"}
+        feedback_request = FeedbackRequest(score=1, comment="Great trace!")
         feedback_resp = await client.post(
             f"{CONTROLLER_URL}/episodes/{episode_id}/traces/{trace_id}/feedback",
-            json=feedback_data,
+            json=feedback_request.model_dump(),
         )
 
         # If Langfuse is not configured in the test environment, it should return 503
@@ -107,7 +120,7 @@ async def test_int_060_langfuse_feedback_contract():
             # Verify local persistence
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             updated_episode = EpisodeResponse.model_validate(status_resp.json())
-            updated_trace = next(t for t in updated_episode.traces if t.id == trace_id)
+            updated_trace = next(t for t in (updated_episode.traces or []) if t.id == trace_id)
             assert updated_trace.feedback_score == 1
             assert updated_trace.feedback_comment == "Great trace!"
 
@@ -116,9 +129,10 @@ async def test_int_060_langfuse_feedback_contract():
         # However, we can test with a non-existent trace_id or episode_id
 
         # Test 404 for non-existent trace
+        bad_feedback_request = FeedbackRequest(score=0)
         bad_feedback_resp = await client.post(
             f"{CONTROLLER_URL}/episodes/{episode_id}/traces/999999/feedback",
-            json={"score": 0},
+            json=bad_feedback_request.model_dump(),
         )
         assert bad_feedback_resp.status_code == 404
 
@@ -126,6 +140,6 @@ async def test_int_060_langfuse_feedback_contract():
         bad_episode_id = str(uuid.uuid4())
         bad_feedback_resp = await client.post(
             f"{CONTROLLER_URL}/episodes/{bad_episode_id}/traces/{trace_id}/feedback",
-            json={"score": 0},
+            json=bad_feedback_request.model_dump(),
         )
         assert bad_feedback_resp.status_code == 404

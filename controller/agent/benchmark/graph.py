@@ -17,7 +17,7 @@ from controller.persistence.db import get_sessionmaker
 from opentelemetry import trace
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus, ReviewDecision
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (

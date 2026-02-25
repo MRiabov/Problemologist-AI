@@ -4,9 +4,15 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from controller.api.schemas import AgentRunResponse, EpisodeListItem
+from controller.api.schemas import (
+    AgentRunRequest,
+    AgentRunResponse,
+    EpisodeListItem,
+)
+from shared.enums import EpisodeStatus
+from shared.models.schemas import EpisodeMetadata
 
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p2
@@ -19,17 +25,18 @@ async def test_plan_to_cad_fidelity_regression_int_046():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Trigger a reconstruction episode
         session_id = f"INT-046-{uuid.uuid4().hex[:8]}"
+        request = AgentRunRequest(
+            task="Reconstruct from architecture plan",
+            session_id=session_id,
+            metadata_vars={
+                "fidelity_check": True,
+                "reference_volume_mm3": 1250.0,
+                "tolerance": 0.2,  # 80% fidelity required
+            },
+        )
         resp = await client.post(
             "/agent/run",
-            json={
-                "task": "Reconstruct from architecture plan",
-                "session_id": session_id,
-                "metadata_vars": {
-                    "fidelity_check": True,
-                    "reference_volume_mm3": 1250.0,
-                    "tolerance": 0.2,  # 80% fidelity required
-                },
-            },
+            json=request.model_dump(),
         )
         assert resp.status_code == 202
         episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
@@ -38,12 +45,13 @@ async def test_plan_to_cad_fidelity_regression_int_046():
         status_resp = await client.get(f"/episodes/{episode_id}")
         assert status_resp.status_code == 200
         ep_data = EpisodeListItem.model_validate(status_resp.json())
-        assert ep_data.metadata_vars["fidelity_check"] is True
-        assert ep_data.metadata_vars["tolerance"] == 0.2
+        metadata = EpisodeMetadata.model_validate(ep_data.metadata_vars or {})
+        assert metadata.fidelity_check is True
+        assert metadata.tolerance == 0.2
 
         # 3. Robust assertion: If completed, verify volume fidelity trace
         # (In a real run, the worker emits metrics. Here we check schema support)
-        if ep_data.status.value == "completed":
+        if ep_data.status == EpisodeStatus.COMPLETED:
             pass
 
 
@@ -59,13 +67,14 @@ async def test_cross_seed_transfer_uplift_int_047():
         # 1. Run first variant (Seed A)
         variant_a = "variant_alpha"
         session_a = f"INT-047-A-{uuid.uuid4().hex[:8]}"
+        request_a = AgentRunRequest(
+            task="Design a 10mm bracket",
+            session_id=session_a,
+            metadata_vars={"variant_id": variant_a, "seed": 42},
+        )
         resp_a = await client.post(
             "/agent/run",
-            json={
-                "task": "Design a 10mm bracket",
-                "session_id": session_a,
-                "metadata_vars": {"variant_id": variant_a, "seed": 42},
-            },
+            json=request_a.model_dump(),
         )
         assert resp_a.status_code == 202
         ep_a_id = AgentRunResponse.model_validate(resp_a.json()).episode_id
@@ -73,17 +82,18 @@ async def test_cross_seed_transfer_uplift_int_047():
         # Wait for ep_a (mocked logic or fast exit)
         # 2. Run related variant (Seed B)
         session_b = f"INT-047-B-{uuid.uuid4().hex[:8]}"
+        request_b = AgentRunRequest(
+            task="Design a 10mm bracket",
+            session_id=session_b,
+            metadata_vars={
+                "variant_id": variant_a,
+                "seed": 43,
+                "prior_episode_id": str(ep_a_id),
+            },
+        )
         resp_b = await client.post(
             "/agent/run",
-            json={
-                "task": "Design a 10mm bracket",
-                "session_id": session_b,
-                "metadata_vars": {
-                    "variant_id": variant_a,
-                    "seed": 43,
-                    "prior_episode_id": ep_a_id,
-                },
-            },
+            json=request_b.model_dump(),
         )
         assert resp_b.status_code == 202
         ep_b_id = AgentRunResponse.model_validate(resp_b.json()).episode_id
@@ -92,7 +102,8 @@ async def test_cross_seed_transfer_uplift_int_047():
         status_resp = await client.get(f"/episodes/{ep_b_id}")
         assert status_resp.status_code == 200
         ep_data = EpisodeListItem.model_validate(status_resp.json())
-        assert ep_data.metadata_vars["prior_episode_id"] == str(ep_a_id)
+        metadata = EpisodeMetadata.model_validate(ep_data.metadata_vars or {})
+        assert metadata.prior_episode_id == str(ep_a_id)
         # Note: In a real long run, we'd verify trace context, but for P2 integration baseline,
         # API-level propagation is the contract.
 
@@ -109,13 +120,14 @@ async def test_reviewer_optimality_regression_int_048():
         # 1. Start an episode
         session_id = f"INT-048-{uuid.uuid4().hex[:8]}"
         # We simulate a "regression check" trigger via metadata injection in API
+        request = AgentRunRequest(
+            task="Optimize cost for Part X",
+            session_id=session_id,
+            metadata_vars={"is_optimality_check": True},
+        )
         resp = await client.post(
             "/agent/run",
-            json={
-                "task": "Optimize cost for Part X",
-                "session_id": session_id,
-                "metadata_vars": {"is_optimality_check": True},
-            },
+            json=request.model_dump(),
         )
         assert resp.status_code == 202
         episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
@@ -123,7 +135,8 @@ async def test_reviewer_optimality_regression_int_048():
         res = await client.get(f"/episodes/{episode_id}")
         assert res.status_code == 200
         ep_data = EpisodeListItem.model_validate(res.json())
-        assert ep_data.metadata_vars["is_optimality_check"] is True
+        metadata = EpisodeMetadata.model_validate(ep_data.metadata_vars or {})
+        assert metadata.is_optimality_check is True
 
 
 @pytest.mark.integration_p2
@@ -157,7 +170,7 @@ async def test_dataset_readiness_completeness_int_050():
         # Find a completed episode or wait for one
         resp = await client.get("/episodes/")
         episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
-        completed = [e for e in episodes if e.status.value == "completed"]
+        completed = [e for e in episodes if e.status == EpisodeStatus.COMPLETED]
 
         if completed:
             # Most mock episodes won't have a journal.
