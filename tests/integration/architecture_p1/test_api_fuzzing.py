@@ -4,9 +4,9 @@ import pytest
 import schemathesis
 
 # Target the running service URL for integration testing
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 # Create a schema instance from the live OpenAPI spec
 try:

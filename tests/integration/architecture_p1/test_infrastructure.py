@@ -9,7 +9,7 @@ from shared.enums import EpisodeStatus
 from tests.integration.contracts import BackupWorkflowResponse
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p1
