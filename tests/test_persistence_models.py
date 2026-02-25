@@ -1,7 +1,7 @@
 import pytest
 
 from controller.persistence.models import Asset, Episode, Trace
-from shared.enums import TraceType
+from shared.enums import AssetType, EpisodeStatus, TraceType
 from shared.logging import configure_logging, get_logger
 
 
@@ -13,18 +13,22 @@ def test_logging_configuration():
 
 
 def test_models_instantiation():
-    episode = Episode(task="test task", status="running", skill_git_hash="abc")
+    episode = Episode(
+        task="test task", status=EpisodeStatus.RUNNING, skill_git_hash="abc"
+    )
     assert episode.task == "test task"
-    assert episode.status == "running"
+    assert episode.status == EpisodeStatus.RUNNING
 
     trace = Trace(
         episode=episode, langfuse_trace_id="trace_123", trace_type=TraceType.LOG
     )
     assert trace.episode == episode
 
-    asset = Asset(episode=episode, asset_type="video", s3_path="s3://bucket/path")
+    asset = Asset(
+        episode=episode, asset_type=AssetType.VIDEO, s3_path="s3://bucket/path"
+    )
     assert asset.episode == episode
-    assert asset.asset_type == "video"
+    assert asset.asset_type == AssetType.VIDEO
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,13 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import (
+    AgentRunResponse,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -36,17 +43,19 @@ async def test_engineering_full_loop():
             200,
             202,
         ], f"Failed to generate benchmark: {resp.text}"
-        benchmark_session_id = resp.json()["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        benchmark_session_id = benchmark_resp.session_id
 
         # Wait for benchmark
         max_retries = 150
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
-                status = status_resp.json()["status"]
-                if status == "planned":
+                sess_data = EpisodeResponse.model_validate(status_resp.json())
+                status = sess_data.status
+                if status == EpisodeStatus.PLANNED:
                     await client.post(f"/benchmark/{benchmark_session_id}/confirm")
-                elif status == "completed":
+                elif status == EpisodeStatus.COMPLETED:
                     break
             await asyncio.sleep(2)
         else:
@@ -58,7 +67,9 @@ async def test_engineering_full_loop():
         run_payload = {
             "task": task,
             "session_id": engineer_session_id,
-            "benchmark_session_id": benchmark_session_id,  # If API supports linking directly
+            "benchmark_session_id": str(
+                benchmark_session_id
+            ),  # If API supports linking directly
         }
 
         run_resp = await client.post("/agent/run", json=run_payload)
@@ -66,7 +77,8 @@ async def test_engineering_full_loop():
             200,
             202,
         ], f"Failed to trigger agent: {run_resp.text}"
-        episode_id = run_resp.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(run_resp.json())
+        episode_id = agent_run_resp.episode_id
 
         # 3. Poll for Engineering Completion
         engineer_completed = False
@@ -75,9 +87,13 @@ async def test_engineering_full_loop():
         for _ in range(150):  # Poll for up to 2 mins
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
-                ep_data = ep_resp.json()
-                last_status = ep_data["status"]
-                if last_status in ["completed", "failed", "max_turns_reached"]:
+                ep_data = EpisodeResponse.model_validate(ep_resp.json())
+                last_status = ep_data.status
+                if last_status in [
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    "max_turns_reached",
+                ]:
                     engineer_completed = True
                     break
             await asyncio.sleep(2)

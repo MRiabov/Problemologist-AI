@@ -16,7 +16,7 @@ def test_3dp_valid_part(config):
     assert result.is_manufacturable is True
     assert len(result.violations) == 0
     assert result.unit_cost > 0
-    assert "cost_breakdown" in result.metadata
+    assert result.metadata.cost_breakdown is not None
 
 
 def test_3dp_invalid_part_multi_body(config):
@@ -60,7 +60,9 @@ def test_3dp_cost_calculation(config):
 
 def test_3dp_reuse_discount(config):
     part = Box(10, 10, 10)
-    context = {}
+    from shared.workers.workbench_models import WorkbenchContext
+
+    context = WorkbenchContext()
 
     cost1 = calculate_3dp_cost(part, config, quantity=1, context=context)
     cost2 = calculate_3dp_cost(part, config, quantity=1, context=context)

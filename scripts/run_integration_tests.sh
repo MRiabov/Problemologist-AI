@@ -234,19 +234,14 @@ else
   echo "Xvfb started (PID: $XVFB_PID) on $DISPLAY"
 fi
 
-# Start Worker Light (port 18001)
-export WORKER_TYPE=light
+# Start Unified Worker (port 18001) - handles both light and heavy tasks
+export WORKER_TYPE=unified
+export WORKER_HEAVY_URL="http://127.0.0.1:18001"
 uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
+WORKER_HEAVY_PID=$WORKER_LIGHT_PID # Same process
 echo $WORKER_LIGHT_PID > logs/worker_light.pid
-echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
-
-# Start Worker Heavy (port 18002)
-export WORKER_TYPE=heavy
-uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
-WORKER_HEAVY_PID=$!
-echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
-echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
+echo "Unified Worker started (PID: $WORKER_LIGHT_PID)"
 
 # Start Controller (port 18000)
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
@@ -348,19 +343,18 @@ done
 # Wait for Workers to be healthy
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if curl -s http://127.0.0.1:18001/health | grep -q "healthy" && curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
-    echo "Workers are healthy!"
+  if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
+    echo "Unified Worker is healthy!"
     break
   fi
-  echo "Waiting for workers... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  echo "Waiting for worker... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
 
 # Final check that all processes are still alive
 if ! kill -0 $CONTROLLER_PID 2>/dev/null; then echo "Controller died!"; exit 1; fi
-if ! kill -0 $WORKER_LIGHT_PID 2>/dev/null; then echo "Worker Light died!"; exit 1; fi
-if ! kill -0 $WORKER_HEAVY_PID 2>/dev/null; then echo "Worker Heavy died!"; exit 1; fi
+if ! kill -0 $WORKER_LIGHT_PID 2>/dev/null; then echo "Unified Worker died!"; exit 1; fi
 if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
   echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"

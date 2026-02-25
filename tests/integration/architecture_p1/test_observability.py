@@ -5,6 +5,7 @@ import uuid
 import httpx
 import pytest
 
+from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
@@ -23,25 +24,24 @@ async def test_int_059_langfuse_trace_linkage():
             json={"task": task, "session_id": f"INT-059-{uuid.uuid4().hex[:8]}"},
         )
         assert resp.status_code == 202
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # 2. Wait for it to complete (or at least have some traces)
         # We'll poll for a bit
         max_retries = 150
-        completed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             assert status_resp.status_code == 200
-            data = status_resp.json()
-            if data["status"] in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
-                completed = True
+            ep_data = EpisodeResponse.model_validate(status_resp.json())
+            if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
             await asyncio.sleep(2)
 
         # Even if it didn't complete, it should have traces
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = status_resp.json()
-        traces = data.get("traces", [])
+        ep_data = EpisodeResponse.model_validate(status_resp.json())
+        traces = ep_data.traces
         assert len(traces) > 0
 
         # 3. Verify langfuse_trace_id consistency
@@ -50,9 +50,7 @@ async def test_int_059_langfuse_trace_linkage():
 
         # In this integration environment, we check if at least one trace has it
         # and if multiple traces have it, they must be the same.
-        langfuse_ids = [
-            t["langfuse_trace_id"] for t in traces if t.get("langfuse_trace_id")
-        ]
+        langfuse_ids = [t.langfuse_trace_id for t in traces if t.langfuse_trace_id]
 
         assert len(langfuse_ids) > 0, (
             "At least the initial trace must have a langfuse_trace_id"
@@ -81,18 +79,18 @@ async def test_int_060_langfuse_feedback_contract():
             f"{CONTROLLER_URL}/agent/run",
             json={"task": task, "session_id": f"INT-060-{uuid.uuid4().hex[:8]}"},
         )
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # Wait for at least one trace
         await asyncio.sleep(2)
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = status_resp.json()
-        traces = data.get("traces", [])
+        ep_data = EpisodeResponse.model_validate(status_resp.json())
+        traces = ep_data.traces
         assert len(traces) > 0
 
         trace = traces[0]
-        trace_id = trace["id"]
-        langfuse_trace_id = trace.get("langfuse_trace_id")
+        trace_id = trace.id
 
         # 2. Test feedback with langfuse_trace_id
         feedback_data = {"score": 1, "comment": "Great trace!"}
@@ -108,14 +106,13 @@ async def test_int_060_langfuse_feedback_contract():
         if feedback_resp.status_code == 202:
             # Verify local persistence
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            updated_trace = next(
-                t for t in status_resp.json()["traces"] if t["id"] == trace_id
-            )
-            assert updated_trace["feedback_score"] == 1
-            assert updated_trace["feedback_comment"] == "Great trace!"
+            updated_episode = EpisodeResponse.model_validate(status_resp.json())
+            updated_trace = next(t for t in updated_episode.traces if t.id == trace_id)
+            assert updated_trace.feedback_score == 1
+            assert updated_trace.feedback_comment == "Great trace!"
 
         # 3. Test with missing langfuse_trace_id (if we can find/create one)
-        # We'd need to manually insert a trace without LF ID into DB, but we can't easily.
+        # We'd need DB setup to insert a trace without LF ID.
         # However, we can test with a non-existent trace_id or episode_id
 
         # Test 404 for non-existent trace

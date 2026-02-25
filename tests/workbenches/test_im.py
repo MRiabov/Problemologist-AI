@@ -85,8 +85,9 @@ def test_im_cost_calculation():
 
     # Test with context for reuse
     from worker_heavy.workbenches.injection_molding import _calculate_im_cost
+    from shared.workers.workbench_models import WorkbenchContext
 
-    context = {}
+    context = WorkbenchContext()
     cost1 = _calculate_im_cost(box, config, quantity=1, context=context)
     cost2 = _calculate_im_cost(box, config, quantity=1, context=context)
 

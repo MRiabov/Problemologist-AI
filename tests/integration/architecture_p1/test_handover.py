@@ -3,6 +3,9 @@ import asyncio
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import BenchmarkGenerateResponse, EpisodeResponse
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -33,7 +36,8 @@ async def test_benchmark_to_engineer_handoff():
             200,
             202,
         ], f"Failed to trigger benchmark: {resp.text}"
-        session_id = resp.json()["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        session_id = benchmark_resp.session_id
 
         # 2. Poll for completion
         max_retries = 150
@@ -43,14 +47,14 @@ async def test_benchmark_to_engineer_handoff():
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{session_id}")
             if status_resp.status_code == 200:
-                sess_data = status_resp.json()
-                last_status = sess_data["status"]
-                if last_status == "planned":
+                sess_data = EpisodeResponse.model_validate(status_resp.json())
+                last_status = sess_data.status
+                if last_status == EpisodeStatus.PLANNED:
                     await client.post(f"/benchmark/{session_id}/confirm")
-                if last_status == "completed":
+                if last_status == EpisodeStatus.COMPLETED:
                     benchmark_completed = True
                     break
-                if last_status in ["rejected", "failed"]:
+                if last_status in ["REJECTED", EpisodeStatus.FAILED]:
                     pytest.fail(f"Benchmark generation failed: {last_status}")
             await asyncio.sleep(2)
 

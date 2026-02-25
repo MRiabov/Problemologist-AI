@@ -5,6 +5,13 @@ import yaml
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import (
+    AgentRunResponse,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -32,16 +39,16 @@ async def test_reviewer_evidence_completeness():
             200,
             202,
         ], f"Benchmark generation failed: {resp.text}"
-        benchmark_session_id = resp.json()["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        benchmark_session_id = benchmark_resp.session_id
 
         # Wait for benchmark
         for _ in range(150):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if (
-                status_resp.status_code == 200
-                and status_resp.json()["status"] == "completed"
-            ):
-                break
+            if status_resp.status_code == 200:
+                sess_data = EpisodeResponse.model_validate(status_resp.json())
+                if sess_data.status == EpisodeStatus.COMPLETED:
+                    break
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation timed out.")
@@ -51,7 +58,7 @@ async def test_reviewer_evidence_completeness():
         run_payload = {
             "task": task,
             "session_id": engineer_session_id,
-            "benchmark_session_id": benchmark_session_id,
+            "benchmark_session_id": str(benchmark_session_id),
         }
 
         run_resp = await client.post("/agent/run", json=run_payload)
@@ -59,7 +66,8 @@ async def test_reviewer_evidence_completeness():
             200,
             202,
         ], f"Agent trigger failed: {run_resp.text}"
-        episode_id = run_resp.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(run_resp.json())
+        episode_id = agent_run_resp.episode_id
 
         # Wait for Engineer (at least until a review is produced)
         # A full completion is safest.
@@ -67,8 +75,12 @@ async def test_reviewer_evidence_completeness():
         for _ in range(150):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
-                status = ep_resp.json()["status"]
-                if status in ["completed", "failed", "max_turns_reached"]:
+                ep_data = EpisodeResponse.model_validate(ep_resp.json())
+                if ep_data.status in [
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    "max_turns_reached",
+                ]:
                     engineer_completed = True
                     break
             await asyncio.sleep(2)
@@ -80,22 +92,22 @@ async def test_reviewer_evidence_completeness():
         # Use /episodes/{id} to get assets list
         ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200
-        ep_data = ep_resp.json()
-        assets = ep_data.get("assets", [])
+        ep_data = EpisodeResponse.model_validate(ep_resp.json())
+        assets = ep_data.assets or []
 
-        review_assets = [a for a in assets if "reviews/" in a["s3_path"]]
+        review_assets = [a for a in assets if "reviews/" in a.s3_path]
         assert len(review_assets) > 0, (
-            f"No reviews found in assets: {[a['s3_path'] for a in assets]}"
+            f"No reviews found in assets: {[a.s3_path for a in assets]}"
         )
 
         # 3. Inspect Content for Evidence
         passed_evidence_check = False
         for review_asset in review_assets:
             # We assume content is available if asset_type is readable
-            content = review_asset.get("content", "")
+            content = review_asset.content or ""
             if not content:
                 # If content is empty, fetch via proxy
-                path = review_asset["s3_path"]
+                path = review_asset.s3_path
                 # Proxy url: /episodes/{id}/assets/{path}
                 proxy_resp = await client.get(f"/episodes/{episode_id}/assets/{path}")
                 if proxy_resp.status_code == 200:

@@ -3,6 +3,10 @@ import time
 
 import httpx
 import pytest
+from pydantic import TypeAdapter
+
+from shared.backend.protocol import FileInfo
+from shared.workers.schema import BenchmarkToolResponse
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -61,10 +65,7 @@ def build():
             timeout=300.0,
         )
         assert resp.status_code == 200
-        from shared.workers.schema import BenchmarkToolResponse
-
         data = BenchmarkToolResponse.model_validate(resp.json())
-
         # Verify result labelled approximate
         assert data.confidence == "approximate", (
             f"Expected confidence 'approximate', got '{data.confidence}'"
@@ -129,9 +130,14 @@ def build():
         assert artifacts is not None, (
             f"Artifacts missing in response. Message: {data.message}"
         )
-        assert "render_paths" in artifacts, (
-            f"render_paths missing in artifacts. Keys: {list(artifacts.keys())}"
-        )
+        if hasattr(artifacts, "render_paths"):
+            assert artifacts.render_paths is not None, (
+                "render_paths is missing or None in artifacts"
+            )
+        else:
+            assert "render_paths" in artifacts, (
+                f"render_paths missing in artifacts. Keys: {list(artifacts.keys())}"
+            )
 
         # Verify raw particle data absent from workspace
         ls_resp = await client.post(
@@ -139,7 +145,8 @@ def build():
             json={"path": "/"},
             headers={"X-Session-ID": session_id},
         )
-        files = [f["name"] for f in ls_resp.json()]
-        assert not any("particles" in f.lower() for f in files), (
+        files = TypeAdapter(list[FileInfo]).validate_python(ls_resp.json())
+        file_paths = [f.path for f in files]
+        assert not any("particles" in f.lower() for f in file_paths), (
             "Raw particle data found in workspace"
         )
