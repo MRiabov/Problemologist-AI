@@ -26,6 +26,6 @@ trigger: always_on
 2. `pathlib.Path` over string paths.
 3. Enums or classes over substring matching.
 
-### API calls and schema exchange (including tests
+### API calls and schema exchange (including tests)
 
-During API calls, including tests, always convert the JSON/YAML/XML to a type first, and only then user it or assert against it. The goal is to
+During API calls, including tests, always convert the JSON/YAML/XML to a type first, and only then user it or assert against it. This will make tests signficantly more maintainable and explainable.

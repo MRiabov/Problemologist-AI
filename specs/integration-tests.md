@@ -37,6 +37,7 @@ Additionally:
 7. Any unavoidable mock must be isolated to external third-party instability only, and must not mock project modules.
 8. A test that imports app internals (`controller.*`, `worker.*`) to invoke business logic directly is **not** integration coverage.
 9. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
+10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
