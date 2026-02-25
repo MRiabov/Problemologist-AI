@@ -250,6 +250,47 @@ def to_mjcf(
     return scene_path.read_text()
 
 
+def _get_cots_weight_g(part_id: str) -> float:
+    """Helper to retrieve weight for a known COTS part ID."""
+    from shared.cots.parts.electronics import (
+        Connector,
+        ElectronicRelay,
+        PowerSupply,
+        Switch,
+        Wire,
+    )
+    from shared.cots.parts.motors import ServoMotor
+
+    # Check PowerSupply
+    if part_id in PowerSupply.psu_data:
+        return PowerSupply.psu_data[part_id].get("weight_g", 0.0)
+
+    # Check ElectronicRelay
+    if part_id in ElectronicRelay.relay_data:
+        return ElectronicRelay.relay_data[part_id].get("weight_g", 0.0)
+
+    # Check Switch
+    if part_id in Switch.switch_data:
+        return Switch.switch_data[part_id].get("weight_g", 0.0)
+
+    # Check Connector
+    if part_id in Connector.connector_data:
+        return Connector.connector_data[part_id].get("weight_g", 0.0)
+
+    # Check Wire
+    if part_id in Wire.wire_data:
+        # Note: Wire weight is per meter usually, but here we might treat it as unit if it's a pre-cut wire?
+        # The data says "weight_g_per_m"
+        data = Wire.wire_data[part_id]
+        return data.get("weight_g_per_m", 0.0)  # Assuming 1m unit for now
+
+    # Check ServoMotor
+    if part_id in ServoMotor.motor_data:
+        return ServoMotor.motor_data[part_id].get("weight_g", 0.0)
+
+    return 0.0
+
+
 def calculate_assembly_totals(
     component: Compound,
     electronics: ElectronicsSection | None = None,
@@ -400,7 +441,8 @@ def calculate_assembly_totals(
                 # Heuristic: try to look up weight if not provided
                 # In current schema CotsPartEstimate doesn't have weight_g
                 # But the indexer extracts it.
-                pass
+                weight = _get_cots_weight_g(p.part_id)
+                total_weight += weight * p.quantity
 
     return total_cost, total_weight
 
