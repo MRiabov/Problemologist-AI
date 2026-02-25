@@ -4,12 +4,20 @@ import uuid
 import httpx
 import pytest
 
-from shared.workers.schema import BenchmarkToolResponse, FsFileEntry
+from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    FsFileEntry,
+    ListFilesRequest,
+    SimulationArtifacts,
+    WriteFileRequest,
+)
+from shared.simulation.schemas import SimulatorBackendType
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 @pytest.mark.integration_p1
@@ -19,23 +27,23 @@ async def test_int_138_smoke_test_mode():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-138-{uuid.uuid4().hex[:8]}"
 
-        objectives_content = """
+        objectives_content = f"""
 physics:
-  backend: "genesis"
+  backend: "{SimulatorBackendType.GENESIS}"
 objectives:
-  goal_zone: {min: [10,10,10], max: [12,12,12]}
-  build_zone: {min: [-100,-100,-100], max: [100,100,100]}
-simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
-moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
+  goal_zone: {{min: [10,10,10], max: [12,12,12]}}
+  build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
+simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
+moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+constraints: {{max_unit_cost: 100, max_weight_g: 10}}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "objectives.yaml",
-                "content": objectives_content,
-                "overwrite": True,
-            },
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=objectives_content,
+                overwrite=True,
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -48,17 +56,22 @@ def build():
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "script.py",
-                "content": script_content,
-            },
+            json=WriteFileRequest(
+                path="script.py",
+                content=script_content,
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
         # Trigger simulation with smoke_test_mode=True
+        request = BenchmarkToolRequest(
+            script_path="script.py",
+            smoke_test_mode=True,
+            backend=SimulatorBackendType.GENESIS,
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "smoke_test_mode": True},
+            json=request.model_dump(),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -77,23 +90,23 @@ async def test_int_139_fluid_storage_policy():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-139-{uuid.uuid4().hex[:8]}"
 
-        objectives_content = """
+        objectives_content = f"""
 physics:
-  backend: "genesis"
+  backend: "{SimulatorBackendType.GENESIS}"
 objectives:
-  goal_zone: {min: [10,10,10], max: [12,12,12]}
-  build_zone: {min: [-100,-100,-100], max: [100,100,100]}
-simulation_bounds: {min: [-100,-100,-100], max: [100,100,100]}
-moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
+  goal_zone: {{min: [10,10,10], max: [12,12,12]}}
+  build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
+simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
+moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+constraints: {{max_unit_cost: 100, max_weight_g: 10}}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "objectives.yaml",
-                "content": objectives_content,
-                "overwrite": True,
-            },
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=objectives_content,
+                overwrite=True,
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -106,16 +119,20 @@ def build():
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "script.py",
-                "content": script_content,
-            },
+            json=WriteFileRequest(
+                path="script.py",
+                content=script_content,
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
+        request = BenchmarkToolRequest(
+            script_path="script.py",
+            backend=SimulatorBackendType.GENESIS,
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json=request.model_dump(),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
@@ -128,19 +145,18 @@ def build():
         assert artifacts is not None, (
             f"Artifacts missing in response. Message: {data.message}"
         )
-        if hasattr(artifacts, "render_paths"):
-            assert artifacts.render_paths is not None, (
-                "render_paths is missing or None in artifacts"
-            )
-        else:
-            assert "render_paths" in artifacts, (
-                f"render_paths missing in artifacts. Keys: {list(artifacts.keys())}"
-            )
+
+        if isinstance(artifacts, dict):
+            artifacts = SimulationArtifacts.model_validate(artifacts)
+
+        assert artifacts.render_paths is not None, (
+            "render_paths is missing or None in artifacts"
+        )
 
         # Verify raw particle data absent from workspace
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls",
-            json={"path": "/"},
+            json=ListFilesRequest(path="/").model_dump(),
             headers={"X-Session-ID": session_id},
         )
         assert ls_resp.status_code == 200

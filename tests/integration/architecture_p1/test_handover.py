@@ -5,13 +5,16 @@ from httpx import AsyncClient
 
 from controller.api.schemas import (
     ArtifactEntry,
+    BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
+from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p1
@@ -32,10 +35,11 @@ async def test_benchmark_to_engineer_handoff():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
-        prompt = "Create a benchmark with a moving platform."  # implies moving parts
-        resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
+        request = BenchmarkGenerateRequest(
+            prompt="Create a benchmark with a moving platform.",  # implies moving parts
+            backend=SimulatorBackendType.GENESIS,
         )
+        resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -54,7 +58,10 @@ async def test_benchmark_to_engineer_handoff():
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 last_status = sess_data.status
                 if last_status == EpisodeStatus.PLANNED:
-                    await client.post(f"/benchmark/{session_id}/confirm")
+                    await client.post(
+                        f"/benchmark/{session_id}/confirm",
+                        json=ConfirmRequest(comment="Handoff confirm").model_dump()
+                    )
                 if last_status == EpisodeStatus.COMPLETED:
                     benchmark_completed = True
                     break
@@ -86,15 +93,3 @@ async def test_benchmark_to_engineer_handoff():
             if "renders/" in p and (".png" in p or ".jpg" in p)
         ]
         assert len(render_files) > 0, f"No renders found. Artifacts: {artifact_paths}"
-        # INT-032 mentions 24-view renders, so we might check count if strict,
-        # but >0 is a good start for integration "smoke" of the feature.
-
-        # Check for geometry metadata (likely in plan.md or a separate json/yaml)
-        # The spec says "environment geometry metadata", often embedded in plan or objectives.
-        # Let's assume it's in objectives.yaml or plan.md.
-
-        # Check for moving parts DOFs (in objectives.yaml usually)
-        # Check for runtime jitter (in objectives.yaml usually)
-
-        # If possible, fetch objectives.yaml content to verify structure
-        # (This depends on artifact retrieval API. If checking existence is P1, content check is P2/Deep Verification)
