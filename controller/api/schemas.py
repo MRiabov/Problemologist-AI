@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
 from shared.enums import (
     AssetType,
@@ -12,6 +12,7 @@ from shared.enums import (
     TraceType,
 )
 from shared.models.schemas import SchematicItem
+from shared.simulation.schemas import SimulatorBackendType
 
 
 class StandardResponse(BaseModel):
@@ -86,7 +87,7 @@ class ArtifactEntry(BaseModel):
     content: str | None = None
 
 
-class TestEpisodeCreateResponse(BaseModel):
+class EpisodeCreateResponse(BaseModel):
     """Response from the /test/episodes endpoint (used in integration tests)."""
 
     episode_id: uuid.UUID
@@ -147,11 +148,93 @@ class CotsMetadataResponse(BaseModel):
     generated_at: str | None = None
 
 
-
-
 class OpenAPISchema(BaseModel):
     """Minimal OpenAPI schema for integration testing contracts."""
 
     paths: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="allow")
+
+
+# --- Consolidated Request Models ---
+
+
+class AgentRunRequest(BaseModel):
+    task: StrictStr = Field(..., description="The task for the agent to perform.")
+    session_id: StrictStr = Field(..., description="Session ID for the worker.")
+    metadata_vars: dict | None = Field(
+        None, description="Additional metadata for the episode."
+    )
+    skill_git_hash: str | None = Field(
+        None, description="Git hash of the skills used for this run."
+    )
+    agent_name: str = Field(
+        "engineer_coder", description="The name of the agent to run."
+    )
+
+    @field_validator("task", "session_id", "agent_name")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
+
+
+class BenchmarkGenerateRequest(BaseModel):
+    prompt: str
+    max_cost: float | None = None
+    max_weight: float | None = None
+    target_quantity: int | None = None
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+
+    @field_validator("prompt")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
+
+
+class ConfirmRequest(BaseModel):
+    comment: str | None = None
+
+
+class UpdateObjectivesRequest(BaseModel):
+    max_cost: float | None = None
+    max_weight: float | None = None
+    target_quantity: int | None = None
+
+
+class RunSimulationRequest(BaseModel):
+    session_id: str
+    compound_json: str = "{}"
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+
+
+class FeedbackRequest(BaseModel):
+    score: int  # 1 for up, 0 for down
+    comment: str | None = None
+
+    @field_validator("comment")
+    @classmethod
+    def strip_null_bytes(cls, v: str | None) -> str | None:
+        if v is not None:
+            return v.replace("\u0000", "")
+        return v
+
+
+class ReviewRequest(BaseModel):
+    review_content: str
+
+    @field_validator("review_content")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")
+
+
+class MessageRequest(BaseModel):
+    message: StrictStr
+    metadata_vars: dict | None = Field(
+        None, description="Additional metadata for the message."
+    )
+
+    @field_validator("message")
+    @classmethod
+    def strip_null_bytes(cls, v: str) -> str:
+        return v.replace("\u0000", "")

@@ -77,11 +77,11 @@ app.include_router(simulation.router)
 app.include_router(steerability.router, prefix="/api/v1")
 
 
-from controller.api.tasks import AgentRunRequest, execute_agent_task
-from controller.api.schemas import AgentRunResponse
+from controller.api.tasks import execute_agent_task
+from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeCreateResponse
 
 
-@app.post("/test/episodes", status_code=201)
+@app.post("/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
 async def create_test_episode(request: AgentRunRequest):
     """Create a dummy episode for testing purposes (no agent run)."""
     if not settings.is_integration_test:
@@ -99,7 +99,7 @@ async def create_test_episode(request: AgentRunRequest):
         db.add(episode)
         await db.commit()
         await db.refresh(episode)
-        return {"episode_id": episode.id}
+        return EpisodeCreateResponse(episode_id=episode.id)
 
 
 @app.get("/health")

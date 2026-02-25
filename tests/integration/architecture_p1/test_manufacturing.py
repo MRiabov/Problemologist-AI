@@ -5,14 +5,16 @@ import pytest
 from httpx import AsyncClient
 
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
+    BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p1
@@ -29,8 +31,8 @@ async def test_manufacturing_methods_and_materials():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Setup Benchmark
-        prompt = "Create a benchmark for a CNC machined part."
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        request = BenchmarkGenerateRequest(prompt="Create a benchmark for a CNC machined part.")
+        resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -53,13 +55,13 @@ async def test_manufacturing_methods_and_materials():
         engineer_session_id = f"INT-036-{uuid.uuid4().hex[:8]}"
         # We explicitly ask for Aluminum 6061 (valid) to test success path first
         task = f"Solve benchmark: {benchmark_session_id}. Use CNC milling with Aluminum 6061."
-        run_payload = {
-            "task": task,
-            "session_id": engineer_session_id,
-            "benchmark_session_id": benchmark_session_id,
-        }
+        run_request = AgentRunRequest(
+            task=task,
+            session_id=engineer_session_id,
+            metadata_vars={"benchmark_id": benchmark_session_id},
+        )
 
-        run_resp = await client.post("/agent/run", json=run_payload)
+        run_resp = await client.post("/agent/run", json=run_request.model_dump())
         assert run_resp.status_code in [
             200,
             202,
@@ -73,8 +75,8 @@ async def test_manufacturing_methods_and_materials():
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep = EpisodeResponse.model_validate(ep_resp.json())
-                final_status = ep.status.value
-                if final_status in ["completed", "failed", "max_turns_reached"]:
+                final_status = ep.status
+                if final_status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                     engineer_completed = True
                     break
             await asyncio.sleep(2)
@@ -87,7 +89,7 @@ async def test_manufacturing_methods_and_materials():
         ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
-        assets = ep_data.assets
+        assets = ep_data.assets or []
 
         # Check for assembly_definition.yaml which implies workbench ran
         cost_yaml_artifact = next(
@@ -102,14 +104,12 @@ async def test_manufacturing_methods_and_materials():
         bad_material_session_id = f"INT-035-{uuid.uuid4().hex[:8]}"
         bad_task = f"Solve benchmark: {benchmark_session_id}. Use Unobtanium material."
 
-        bad_run_resp = await client.post(
-            "/agent/run",
-            json={
-                "task": bad_task,
-                "session_id": bad_material_session_id,
-                "benchmark_session_id": benchmark_session_id,
-            },
+        bad_run_request = AgentRunRequest(
+            task=bad_task,
+            session_id=bad_material_session_id,
+            metadata_vars={"benchmark_id": benchmark_session_id},
         )
+        bad_run_resp = await client.post("/agent/run", json=bad_run_request.model_dump())
         assert bad_run_resp.status_code in [200, 202]
         bad_episode_id = AgentRunResponse.model_validate(bad_run_resp.json()).episode_id
 
@@ -119,10 +119,7 @@ async def test_manufacturing_methods_and_materials():
             ep_resp = await client.get(f"/episodes/{bad_episode_id}")
             if ep_resp.status_code == 200:
                 ep = EpisodeResponse.model_validate(ep_resp.json())
-                if ep.status.value in ["completed", "failed"]:
+                if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                     bad_engineer_completed = True
                     break
             await asyncio.sleep(2)
-
-        # We don't strictly assert completion here as per original logic,
-        # but we could assert it didn't crash (status_code 500 etc)

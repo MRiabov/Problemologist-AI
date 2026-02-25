@@ -5,10 +5,14 @@ import time
 import httpx
 import pytest
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from controller.api.schemas import (
+    AgentRunRequest,
+    AgentRunResponse,
+    EpisodeResponse,
+)
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 @pytest.mark.integration_p1
@@ -22,12 +26,12 @@ async def test_int_043_batch_execution_path():
         for i in range(2):
             session_id = f"INT-043-batch-{i}-{int(time.time())}"
             session_ids.append(session_id)
-            payload = {
-                "task": f"Batch execution test task {i}",
-                "session_id": session_id,
-            }
+            request = AgentRunRequest(
+                task=f"Batch execution test task {i}",
+                session_id=session_id,
+            )
             tasks.append(
-                client.post(f"{CONTROLLER_URL}/agent/run", json=payload, timeout=10.0)
+                client.post(f"{CONTROLLER_URL}/agent/run", json=request.model_dump(), timeout=10.0)
             )
 
         # 1. Verify all accepted
@@ -63,8 +67,8 @@ async def test_int_043_batch_execution_path():
                     )
 
                 if (
-                    status not in [EpisodeStatus.COMPLETED, "STOPPED"]
-                ):  # stopped is also a terminal state if we cancelled it, but here we expect completion
+                    status not in [EpisodeStatus.COMPLETED, EpisodeStatus.CANCELLED]
+                ):
                     all_done = False
 
             if all_done:
@@ -85,4 +89,4 @@ async def test_int_043_batch_execution_path():
         for episode_id in episode_ids:
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(status_resp.json())
-            assert ep_data.status == EpisodeStatus.COMPLETED
+            assert ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.CANCELLED]

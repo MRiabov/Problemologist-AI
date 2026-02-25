@@ -712,7 +712,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BackupTriggerResponse"
+                }
               }
             }
           },
@@ -975,7 +977,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeCreateResponse"
+                }
               }
             }
           },
@@ -1182,6 +1186,29 @@
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."
+      },
+      "BackupTriggerResponse": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "status",
+          "detail"
+        ],
+        "title": "BackupTriggerResponse"
       },
       "BenchmarkConfirmResponse": {
         "properties": {
@@ -1414,6 +1441,21 @@
         ],
         "title": "CotsSearchItem",
         "description": "A single COTS part returned from search."
+      },
+      "EpisodeCreateResponse": {
+        "properties": {
+          "episode_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episode Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "episode_id"
+        ],
+        "title": "EpisodeCreateResponse",
+        "description": "Response from the /test/episodes endpoint (used in integration tests)."
       },
       "EpisodeStatus": {
         "type": "string",

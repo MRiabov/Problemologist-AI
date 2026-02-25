@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
+from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_validator
 
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
@@ -409,6 +409,8 @@ class InspectTopologyResponse(BaseModel):
     success: StrictBool
     properties: dict[StrictStr, Any] | None = None
     message: StrictStr | None = None
+
+
 class PlanRefusal(BaseModel):
     """Information about a refused plan."""
 

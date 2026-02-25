@@ -11,6 +11,7 @@ export type { AgentRunRequest } from './models/AgentRunRequest';
 export type { AgentRunResponse } from './models/AgentRunResponse';
 export type { AssetResponse } from './models/AssetResponse';
 export { AssetType } from './models/AssetType';
+export type { BackupTriggerResponse } from './models/BackupTriggerResponse';
 export type { BenchmarkConfirmResponse } from './models/BenchmarkConfirmResponse';
 export type { BenchmarkGenerateRequest } from './models/BenchmarkGenerateRequest';
 export type { BenchmarkGenerateResponse } from './models/BenchmarkGenerateResponse';
@@ -21,6 +22,7 @@ export type { controller__api__routes__episodes__EpisodeResponse } from './model
 export type { controller__api__schemas__EpisodeResponse } from './models/controller__api__schemas__EpisodeResponse';
 export type { CotsMetadataResponse } from './models/CotsMetadataResponse';
 export type { CotsSearchItem } from './models/CotsSearchItem';
+export type { EpisodeCreateResponse } from './models/EpisodeCreateResponse';
 export { EpisodeStatus } from './models/EpisodeStatus';
 export type { FeedbackRequest } from './models/FeedbackRequest';
 export type { GeometricSelection } from './models/GeometricSelection';
