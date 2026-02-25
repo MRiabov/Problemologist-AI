@@ -381,12 +381,36 @@ def calculate_assembly_totals(
             import contextlib
 
             with contextlib.suppress(Exception):
-                # Heuristic: try to look up weight if not provided
-                # In current schema CotsPartEstimate doesn't have weight_g
-                # But the indexer extracts it.
-                pass
+                weight = _get_cots_weight_g(p.part_id)
+                total_weight += weight * p.quantity
 
     return total_cost, total_weight
+
+
+def _get_cots_weight_g(part_id: str) -> float:
+    """
+    Retrieve weight for a COTS part by ID from shared catalog definitions.
+    """
+    from shared.cots.parts.electronics import (
+        Connector,
+        ElectronicRelay,
+        PowerSupply,
+        Switch,
+    )
+    from shared.cots.parts.motors import ServoMotor
+
+    if part_id in PowerSupply.psu_data:
+        return PowerSupply.psu_data[part_id].get("weight_g", 0.0)
+    if part_id in ElectronicRelay.relay_data:
+        return ElectronicRelay.relay_data[part_id].get("weight_g", 0.0)
+    if part_id in Switch.switch_data:
+        return Switch.switch_data[part_id].get("weight_g", 0.0)
+    if part_id in Connector.connector_data:
+        return Connector.connector_data[part_id].get("weight_g", 0.0)
+    if part_id in ServoMotor.motor_data:
+        return ServoMotor.motor_data[part_id].get("weight_g", 0.0)
+
+    return 0.0
 
 
 def simulate_subprocess(
