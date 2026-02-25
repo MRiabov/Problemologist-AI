@@ -3,6 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export enum SimulatorBackendType {
-    MUJOCO = 'mujoco',
-    GENESIS = 'genesis',
+    MUJOCO = 'MUJOCO',
+    GENESIS = 'GENESIS',
 }

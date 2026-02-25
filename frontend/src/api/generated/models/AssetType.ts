@@ -6,12 +6,12 @@
  * Type of asset stored in S3.
  */
 export enum AssetType {
-    VIDEO = 'video',
-    MJCF = 'mjcf',
-    IMAGE = 'image',
-    STEP = 'step',
-    STL = 'stl',
-    GLB = 'glb',
-    PYTHON = 'python',
-    OTHER = 'other',
+    VIDEO = 'VIDEO',
+    MJCF = 'MJCF',
+    IMAGE = 'IMAGE',
+    STEP = 'STEP',
+    STL = 'STL',
+    GLB = 'GLB',
+    PYTHON = 'PYTHON',
+    OTHER = 'OTHER',
 }

@@ -6,9 +6,9 @@
  * Status of an agent episode.
  */
 export enum EpisodeStatus {
-    RUNNING = 'running',
-    PLANNED = 'planned',
-    COMPLETED = 'completed',
-    FAILED = 'failed',
-    CANCELLED = 'cancelled',
+    RUNNING = 'RUNNING',
+    PLANNED = 'PLANNED',
+    COMPLETED = 'COMPLETED',
+    FAILED = 'FAILED',
+    CANCELLED = 'CANCELLED',
 }

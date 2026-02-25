@@ -2,7 +2,8 @@
 
 ## Overview
 
-This review focuses on the LangChain/DSPy integration boundary. The codebase uses a hybrid architecture where LangChain provides orchestration (LangGraph) and observability callbacks, while DSPy provides the reasoning engine (`CodeAct`). This creates unnecessary coupling, wrapper complexity, and suboptimal trace quality. A native Langfuse-DSPy integration via OpenTelemetry (`openinference-instrumentation-dspy`) would eliminate most of these issues.
+This review focuses on the LangChain/DSPy integration boundary. The codebase uses a hybrid architecture where LangChain provides orchestration (LangGraph) and observability callbacks, while DSPy provides the reasoning engine (`ReAct`).
+ This creates unnecessary coupling, wrapper complexity, and suboptimal trace quality. A native Langfuse-DSPy integration via OpenTelemetry (`openinference-instrumentation-dspy`) would eliminate most of these issues.
 
 Reference: <https://langfuse.com/integrations/frameworks/dspy.md>
 
@@ -38,7 +39,7 @@ def _get_tool_functions(self, tool_factory: Callable) -> dict[str, Callable]:
     return tool_fns
 ```
 
-**Impact**: High. This is pure indirection — wrapping functions in LangChain tool objects only to extract the underlying function again. DSPy `CodeAct` accepts plain Python functions with docstrings natively. The `@tool` decorator adds no value here; DSPy never sees the LangChain tool metadata.
+**Impact**: High. This is pure indirection — wrapping functions in LangChain tool objects only to extract the underlying function again. DSPy `ReAct` accepts plain Python functions with docstrings natively. The `@tool` decorator adds no value here; DSPy never sees the LangChain tool metadata.
 **Recommendation**: Remove the `@tool` decorator. Define tools as plain `async def` functions with docstrings. DSPy reads function signatures and docstrings directly. Remove `_get_tool_functions()` entirely — just pass the list of functions.
 
 > **User Review**:
@@ -70,7 +71,7 @@ from openinference.instrumentation.dspy import DSPyInstrumentor
 DSPyInstrumentor().instrument()
 ```
 
-This uses OpenTelemetry under the hood and captures DSPy's internal reasoning steps (CodeAct iterations, tool calls, retries) automatically — something the LangChain callback bridge cannot do because it only sees the outermost LLM call.
+This uses OpenTelemetry under the hood and captures DSPy's internal reasoning steps (ReAct iterations, tool calls, retries) automatically — something the LangChain callback bridge cannot do because it only sees the outermost LLM call.
 **Recommendation**: Replace `SafeCallbackHandler` and `get_langfuse_callback()` with the native `DSPyInstrumentor`. Keep `get_langfuse_client()` and `report_score()` as they use the Langfuse SDK directly.
 
 > **User Review**:

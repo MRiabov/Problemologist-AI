@@ -80,7 +80,7 @@ The agent can specify different PSU ratings. If total motor draw exceeds `max_cu
 
 ### Circuit Definition (Netlist)
 
-The agent defines circuits as Python code using PySpice's netlist API. This fits the CodeAct pattern — the agent writes a script, not a tool call.
+The agent defines circuits as Python code using PySpice's netlist API. This fits the ReAct pattern — the agent writes a script, not a tool call.
 
 ```python
 from pyspice_utils import create_circuit, validate_circuit

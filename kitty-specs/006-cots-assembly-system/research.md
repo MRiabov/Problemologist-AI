@@ -21,7 +21,7 @@ The Engineering Agent requires access to Off-The-Shelf (COTS) parts (motors, fas
 - Standardized `bd_warehouse` parts are indexed into a high-performance JSON/SQLite file.
 - The subagent uses this index to return a set of matching part IDs and metadata.
 
-### 3. Integration via CodeAct
+### 3. Integration via ReAct
 
 **Decision**: Python-native instantiation.
 **Rationale**:

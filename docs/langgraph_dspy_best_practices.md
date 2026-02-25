@@ -5,7 +5,7 @@ Based on the provided references (the Raja Patnaik blog post and the `LangGraphD
 ## 1. Orchestration vs. Execution (The "Why")
 
 - **LangGraph** excels at state machine orchestration: routing, looping, fan-out/fan-in parallel execution, and maintaining a global `GraphState` (or `MessagesState`).
-- **DSPy** excels at localized prompt execution and optimization: taking inputs, running them through structured `Signatures` or compiled modules (like `CodeAct` or a `TrainedQueryOptimizer`), and returning structured outputs.
+- **DSPy** excels at localized prompt execution and optimization: taking inputs, running them through structured `Signatures` or compiled modules (like `ReAct` or a `TrainedQueryOptimizer`), and returning structured outputs.
 
 **Best Practice:** Use LangGraph *strictly* to define the flow of execution and route between nodes. Inside those nodes, use pure Python functions that invoke DSPy modules or context managers (e.g., `with dspy.context(lm=...)`) to perform the actual cognitive work.
 

@@ -6,11 +6,11 @@
  * Type of observability trace.
  */
 export enum TraceType {
-    TOOL_START = 'tool_start',
-    TOOL_END = 'tool_end',
-    LLM_START = 'llm_start',
-    LLM_END = 'llm_end',
-    LOG = 'log',
-    ERROR = 'error',
-    EVENT = 'event',
+    TOOL_START = 'TOOL_START',
+    TOOL_END = 'TOOL_END',
+    LLM_START = 'LLM_START',
+    LLM_END = 'LLM_END',
+    LOG = 'LOG',
+    ERROR = 'ERROR',
+    EVENT = 'EVENT',
 }

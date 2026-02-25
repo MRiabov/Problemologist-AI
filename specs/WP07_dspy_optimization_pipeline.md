@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Current State**: DSPy "Scaffolding" is implemented. Signatures, `CodeAct` programs, and a `WorkerInterpreter` exist.
+- **Current State**: DSPy "Scaffolding" is implemented. Signatures, `ReAct` programs, and a `WorkerInterpreter` exist.
 - **Missing State**: No automated optimization (compilation), no unified reward metrics for LLM training, and no automated feedback loop from production traces to prompt improvement.
 
 ## Objective
@@ -125,7 +125,7 @@ We need a dedicated workflow (or CLI tool) to run the DSPy `Teleprompter`.
 
 ### 3.1 Optimizer Selection
 
-- **Initial**: `BootstrapFewShotWithRandomSearch`. It is robust for `CodeAct` programs and generates few-shot examples where the agent successfully solved a hard task.
+- **Initial**: `BootstrapFewShotWithRandomSearch`. It is robust for `ReAct` programs and generates few-shot examples where the agent successfully solved a hard task.
 - **Advanced**: `MIPRO` (Multi-objective Instruction Proposal). This will optimize the actual "Instruction" text in our `Signatures` using a separate LLM.
 <!-- why not GEPA? isn't it the best? it's basically for RL. Use GEPA. -->
 
