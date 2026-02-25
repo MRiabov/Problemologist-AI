@@ -34,7 +34,9 @@ class BenchmarkStorage:
         script: str,
         mjcf: str,
         images: list[bytes],
-        metadata: dict[str, Any],
+        metadata: dict[
+            str, Any
+        ],  # FIXME: let's make it strict-typed. We have PartMetadata as an example
         db: AsyncSession,
         random_variants: list[uuid.UUID] | None = None,
     ) -> BenchmarkAsset:

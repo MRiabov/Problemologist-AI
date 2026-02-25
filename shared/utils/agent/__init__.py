@@ -1,27 +1,33 @@
 import os
 import httpx
-import json
+import os
+import httpx
 import logging
-from pathlib import Path
 from typing import Any, Optional
-
-from build123d import Compound, Part
+from build123d import Compound
+from pydantic import BaseModel
+from shared.workers.schema import BenchmarkToolResponse
 
 logger = logging.getLogger(__name__)
 
 # --- Proxy Logic ---
 
 
-def _call_heavy_worker(endpoint: str, payload: dict) -> dict:
+def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
     heavy_url = os.getenv("WORKER_HEAVY_URL", "http://worker-heavy:8002")
     session_id = os.getenv("SESSION_ID", "default")
 
     url = f"{heavy_url.rstrip('/')}/{endpoint.lstrip('/')}"
     headers = {"X-Session-ID": session_id}
 
+    if isinstance(payload, BaseModel):
+        json_payload = payload.model_dump()
+    else:
+        json_payload = payload
+
     try:
         with httpx.Client(timeout=300.0) as client:
-            resp = client.post(url, json=payload, headers=headers)
+            resp = client.post(url, json=json_payload, headers=headers)
             resp.raise_for_status()
             return resp.json()
     except Exception as e:
@@ -32,7 +38,7 @@ def _call_heavy_worker(endpoint: str, payload: dict) -> dict:
 # --- Agent Utils ---
 
 
-def simulate(compound: Compound, **kwargs) -> Any:
+def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
     """Proxy for heavy simulation."""
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.validation import simulate as real_simulate
@@ -40,21 +46,14 @@ def simulate(compound: Compound, **kwargs) -> Any:
         return real_simulate(compound, **kwargs)
 
     # In light worker, we call heavy worker
-    # We assume script.py is what we want to simulate
     payload = {"script_path": "script.py", **kwargs}
     res = _call_heavy_worker("/benchmark/simulate", payload)
-
-    # Wrap result in a SimpleNamespace or similar to match expected API
-    from types import SimpleNamespace
-
-    return SimpleNamespace(
-        success=res.get("success", False),
-        summary=res.get("message", ""),
-        artifacts=res.get("artifacts", {}),
-    )
+    return BenchmarkToolResponse.model_validate(res)
 
 
-def validate_and_price(part: Any, method: Any = None, config: Any = None) -> Any:
+def validate_and_price(
+    part: Any, method: Any = None, config: Any = None
+) -> BenchmarkToolResponse:
     """Proxy for DFM analysis."""
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.dfm import validate_and_price as real_val
@@ -74,15 +73,7 @@ def validate_and_price(part: Any, method: Any = None, config: Any = None) -> Any
         "quantity": 1,  # Default
     }
     res = _call_heavy_worker("/benchmark/analyze", payload)
-
-    from types import SimpleNamespace
-
-    return SimpleNamespace(
-        is_manufacturable=res.get("is_manufacturable", False),
-        unit_cost=res.get("unit_cost", 0.0),
-        violations=res.get("violations", []),
-        weight_g=res.get("weight_g", 0.0),
-    )
+    return BenchmarkToolResponse.model_validate(res)
 
 
 def submit_for_review(compound: Compound) -> bool:

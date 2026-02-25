@@ -22,6 +22,7 @@ from shared.workers.schema import (
     ExecuteRequest,
     ExecuteResponse,
     ExistsResponse,
+    FsFileEntry,
     GitCommitRequest,
     GitCommitResponse,
     GitMergeRequest,
@@ -100,7 +101,7 @@ def _collect_events(fs_router) -> list[dict[str, Any]]:
     return collect_and_cleanup_events(fs_router.local_backend.root)
 
 
-@light_router.post("/fs/ls", response_model=list[FileInfo])
+@light_router.post("/fs/ls", response_model=list[FsFileEntry])
 async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     """List contents of a directory."""
     try:
