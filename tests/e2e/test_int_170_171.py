@@ -28,7 +28,7 @@ def test_int_171_layout_persistence(page: Page):
     )
 
     # Resize Sidebar
-    handle = page.locator("[data-panel-resize-handle]").first
+    handle = page.locator('[data-testid="sidebar-resizer"]')
     handle_box = handle.bounding_box()
     assert handle_box is not None
 

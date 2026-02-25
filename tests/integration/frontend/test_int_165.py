@@ -38,6 +38,13 @@ def test_cad_topology_selection_and_browser(page: Page):
     # Note: We expect the 3D viewer to load after this.
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
 
+    # Ensure Viewport overlays are gone before proceeding
+    expect(page.get_by_text("No Assets Loaded")).not_to_be_visible(timeout=30000)
+    expect(page.get_by_text("No Model Loaded")).not_to_be_visible(timeout=30000)
+    expect(page.get_by_role("button", name="Rebuild Assets")).not_to_be_visible(
+        timeout=30000
+    )
+
     # 8. Test Topology Browser Toggle
     topology_toggle = page.get_by_title("Toggle Model Browser")
     expect(topology_toggle).to_be_visible(timeout=30000)
