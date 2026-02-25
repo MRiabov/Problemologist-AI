@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import httpx
@@ -23,8 +24,8 @@ from shared.workers.schema import (
 )
 
 # Constants
-WORKER_HEAVY_URL = "http://localhost:18002"
-WORKER_LIGHT_URL = "http://localhost:18001"
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001"))
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001"))
 
 
 def get_session_id(tag: str) -> str:
