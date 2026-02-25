@@ -164,4 +164,4 @@ Refusing this plan.
     status_resp = await client.get(f"/episodes/{episode_id}")
     assert status_resp.status_code == 200
     ep_data = EpisodeResponse.model_validate(status_resp.json())
-    assert ep_data.status.value == "failed"
+    assert ep_data.status.value == "FAILED"

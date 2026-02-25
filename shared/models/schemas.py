@@ -387,6 +387,13 @@ class ReviewResult(BaseModel):
     reason: str
     required_fixes: list[str] = Field(default_factory=list)
 
+    @field_validator("decision", mode="before")
+    @classmethod
+    def normalize_decision(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.upper()
+        return v
+
 
 class ReviewFrontmatter(BaseModel):
     """
@@ -401,6 +408,13 @@ class ReviewFrontmatter(BaseModel):
 
     decision: ReviewDecision
     comments: list[str] = []
+
+    @field_validator("decision", mode="before")
+    @classmethod
+    def normalize_decision(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
     @field_validator("comments", mode="before")
     @classmethod

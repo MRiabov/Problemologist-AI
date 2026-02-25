@@ -7,5 +7,6 @@ export type BenchmarkGenerateResponse = {
     status: ResponseStatus;
     message: string;
     session_id: string;
+    episode_id: string;
 };
 

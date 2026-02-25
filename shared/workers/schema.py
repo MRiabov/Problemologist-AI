@@ -223,7 +223,7 @@ class VerificationRequest(BenchmarkToolRequest):
 class ElectronicsValidationRequest(BaseModel):
     """Request to validate an electronic circuit."""
 
-    section: "ElectronicsSection"
+    section: ElectronicsSection
 
 
 class SimulationArtifacts(BaseModel):
@@ -241,14 +241,22 @@ class SimulationArtifacts(BaseModel):
     model_config = {"extra": "allow"}
 
 
+class EventRecord(BaseModel):
+    """A single emitted observability event."""
+
+    event_type: str
+
+    model_config = {"extra": "allow"}
+
+
 class BenchmarkToolResponse(BaseModel):
     """Response from a benchmark tool."""
 
     success: bool
     message: str
     confidence: str = "high"
-    artifacts: SimulationArtifacts | dict[str, Any] | None = None
-    events: list[dict[str, Any]] = Field(default_factory=list)
+    artifacts: SimulationArtifacts | None = None
+    events: list[EventRecord] = Field(default_factory=list)
 
 
 class GitCommitRequest(BaseModel):

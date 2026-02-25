@@ -1,4 +1,5 @@
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any, Literal
@@ -38,6 +39,38 @@ from .dfm import validate_and_price
 from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
+
+
+def _finite_float(value: float, default: float = 0.0) -> float:
+    """Coerce NaN/Inf to a finite fallback for JSON-safe API responses."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return default
+    return f if math.isfinite(f) else default
+
+
+def _sanitize_stress_summaries(
+    summaries: list[StressSummary],
+) -> list[StressSummary]:
+    """Ensure stress summary payloads are JSON-compliant."""
+    safe: list[StressSummary] = []
+    for summary in summaries:
+        safe.append(
+            StressSummary(
+                part_label=summary.part_label,
+                max_von_mises_pa=_finite_float(summary.max_von_mises_pa),
+                mean_von_mises_pa=_finite_float(summary.mean_von_mises_pa),
+                safety_factor=_finite_float(summary.safety_factor),
+                location_of_max=(
+                    _finite_float(summary.location_of_max[0]),
+                    _finite_float(summary.location_of_max[1]),
+                    _finite_float(summary.location_of_max[2]),
+                ),
+                utilization_pct=_finite_float(summary.utilization_pct),
+            )
+        )
+    return safe
 
 
 def load_simulation_result(path: Path) -> SimulationResult | None:
@@ -645,7 +678,7 @@ def simulate(
             failure=metrics.failure,
             render_paths=render_paths,
             mjcf_content=mjcf_content,
-            stress_summaries=metrics.stress_summaries,
+            stress_summaries=_sanitize_stress_summaries(metrics.stress_summaries),
             stress_fields=metrics.stress_fields,
             fluid_metrics=getattr(metrics, "fluid_metrics", []),
             total_cost=cost,

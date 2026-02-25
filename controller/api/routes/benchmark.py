@@ -69,6 +69,7 @@ async def generate_benchmark(
         status=ResponseStatus.ACCEPTED,
         message="Benchmark generation started",
         session_id=session_id,
+        episode_id=session_id,
     )
 
 

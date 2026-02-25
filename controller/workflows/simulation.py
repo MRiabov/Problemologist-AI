@@ -1,18 +1,11 @@
 from datetime import timedelta
-from typing import TYPE_CHECKING
 
 from temporalio import workflow
 
 from shared.enums import AssetType, EpisodeStatus
-from shared.type_checking import type_check
 from shared.workers.schema import SimulationWorkflowParams, UpdateTraceParams
 
-# Import activities for type hinting in workflow (optional but good for clarity)
-if TYPE_CHECKING:
-    pass
 
-
-@type_check
 @workflow.defn
 class SimulationWorkflow:
     @workflow.run
@@ -29,7 +22,7 @@ class SimulationWorkflow:
             cj = json.loads(compound_json_str)
             if cj.get("fail_upload"):
                 simulate_failures.s3_upload = True
-        except:
+        except Exception:
             pass
 
         from temporalio.common import RetryPolicy

@@ -1290,13 +1290,19 @@
             "type": "string",
             "format": "uuid",
             "title": "Session Id"
+          },
+          "episode_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episode Id"
           }
         },
         "type": "object",
         "required": [
           "status",
           "message",
-          "session_id"
+          "session_id",
+          "episode_id"
         ],
         "title": "BenchmarkGenerateResponse"
       },

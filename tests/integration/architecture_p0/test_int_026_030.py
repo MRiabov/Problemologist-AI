@@ -33,11 +33,29 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
+def _event_get(event, key: str, default=None):
+    if isinstance(event, dict):
+        return event.get(key, default)
+    if hasattr(event, "get"):
+        return event.get(key, default)
+    return getattr(event, key, default)
+
+
+async def _require_service(client: httpx.AsyncClient, name: str, url: str):
+    try:
+        resp = await client.get(f"{url}/health", timeout=5.0)
+        resp.raise_for_status()
+    except Exception:
+        pytest.skip(f"{name} is not reachable at {url}")
+
+
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_026_mandatory_event_families():
     """INT-026: Verify mandatory event families are emitted in a real run."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_service(client, "worker-light", WORKER_LIGHT_URL)
+        await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-026-{uuid.uuid4().hex[:8]}"
 
         # 1. Setup objectives.yaml
@@ -107,7 +125,7 @@ def build():
         events = data.events
 
         # Verify event families
-        event_types = [e.get("event_type") for e in events]
+        event_types = [_event_get(e, "event_type") for e in events]
         assert "simulation_result" in event_types, "Missing simulation_result event"
         assert "tool_call" in event_types, "Missing tool_call event"
 

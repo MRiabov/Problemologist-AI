@@ -74,6 +74,10 @@ def validate_circuit(
     failures: list[SimulationFailure] = []
     warnings = []
 
+    def _component_type(component: Any) -> str:
+        """Normalize enum/string component type to uppercase token."""
+        return str(component.type).upper()
+
     # Proactive open-circuit check (INT-124)
     if section:
         resolved_connected_nodes = set()
@@ -89,11 +93,12 @@ def validate_circuit(
 
         for comp in section.components:
             required = []
-            if comp.type == "motor":
+            comp_type = _component_type(comp)
+            if comp_type == "MOTOR":
                 required = ["+", "-"]
-            elif comp.type in ["switch", "relay"]:
+            elif comp_type in {"SWITCH", "RELAY"}:
                 required = ["in", "out"]
-            elif comp.type == "power_supply":
+            elif comp_type == "POWER_SUPPLY":
                 required = ["+", "-"]
 
             for term in required:
@@ -189,7 +194,7 @@ def validate_circuit(
 
         if section:
             for comp in section.components:
-                if comp.type == "power_supply":
+                if _component_type(comp) == "POWER_SUPPLY":
                     v_name = f"v{comp.component_id}".lower()
                     if v_name in sources_draw:
                         draw = sources_draw[v_name]
@@ -308,10 +313,11 @@ def calculate_static_power_budget(section: ElectronicsSection) -> dict:
     psu = section.power_supply
 
     for comp in section.components:
-        if comp.type == "motor":
+        comp_type = str(comp.type).upper()
+        if comp_type == "MOTOR":
             # Use stall current as worst-case for budget
             total_rated_current += comp.stall_current_a or 0.0
-        elif comp.type == "relay" or comp.type == "switch":
+        elif comp_type in {"RELAY", "SWITCH"}:
             # Switches/relays consume negligible power for budget purposes
             # (unless we model the relay coil, which we don't yet in high-level budget)
             pass
