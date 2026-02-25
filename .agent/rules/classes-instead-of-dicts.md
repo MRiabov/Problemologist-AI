@@ -20,6 +20,12 @@ trigger: always_on
 
 ## Additional strict typing guidelines
 
-1. Enums over strings where possible,
+### Enums over strings
+
+1. Enums (Uppercase) over strings where possible, including frontend and db.
 2. `pathlib.Path` over string paths.
-3.
+3. Enums or classes over substring matching.
+
+### API calls and schema exchange (including tests
+
+During API calls, including tests, always convert the JSON/YAML/XML to a type first, and only then user it or assert against it. The goal is to

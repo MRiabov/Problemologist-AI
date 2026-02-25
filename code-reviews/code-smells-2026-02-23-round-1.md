@@ -27,9 +27,9 @@ Several critical "code smells" and blockers were identified in the `controller` 
 ## Technical Debt & Recommendations
 
 1. **Benchmark Validation Overhead:** The `validate_node_output` call in `coder_node` currently requires multiple `read_file` calls to the worker. This should be optimized by batching or moving validation to a more appropriate lifecycle stage.
-2. **Mock LM Complexity:** The `MockDSPyLM` is becoming increasingly complex to support various DSPy modules (`CodeAct`, `ReAct`). A more structured approach for providing mock responses based on prompt fingerprints or explicit state would be more maintainable.
+2. **Mock LM Complexity:** The `MockDSPyLM` is becoming increasingly complex to support various DSPy modules (`ReAct`). A more structured approach for providing mock responses based on prompt fingerprints or explicit state would be more maintainable.
 3. **Frontend Polling:** Found a bug in `EpisodeContext.tsx` where the UI would stop polling if the status was `planned`. Fixed it to continue polling until `accepted` or `failed`.
-4. **Tool Indentation:** `CodeAct` often fails in remote execution due to indentation issues when generating Python code. Switched benchmark nodes to `ReAct` to improve reliability.
+4. **Tool Indentation:** `ReAct` is used to improve reliability and avoid indentation issues common in other patterns.
 
 ## Conclusion
 The backend benchmark generation flow has been significantly unblocked, but remains fragile in the integrated environment. Frontend tests for 164-166 are implemented but may require increased timeouts or further stability improvements in the mock execution environment.

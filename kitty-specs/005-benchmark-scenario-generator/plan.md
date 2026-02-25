@@ -45,7 +45,7 @@ src/
 |-----------|------------|-------------------------------------|
 | `deepagents` Framework | Required for advanced filesystem/TODO/Subagent abstractions. | Manual implementation of middlewares is error-prone and non-standard. |
 | Temporal Integration | Ensures durable execution of long-running simulations. | Standard HTTP retries don't handle container preemption or 10-minute tasks well. |
-| Python Tool Imports | Agents perform better calling scripts through code than via JSON tool calls (CodeAct). | Traditional tool calls often confuse agents regarding context and object persistence. |
+| Python Tool Imports | Agents perform better calling scripts through code than via JSON tool calls (ReAct). | Traditional tool calls often confuse agents regarding context and object persistence. |
 | Async Skill Learner | Continuous improvement of build123d proficiency without polluting main agent context. | Main agents are often too "in the moment" to perform high-level architectural reflection. |
 
 ## Implementation Phases
