@@ -2040,12 +2040,12 @@
       "ResponseStatus": {
         "type": "string",
         "enum": [
-          "ok",
-          "healthy",
-          "accepted",
-          "completed",
-          "success",
-          "error"
+          "OK",
+          "HEALTHY",
+          "ACCEPTED",
+          "COMPLETED",
+          "SUCCESS",
+          "ERROR"
         ],
         "title": "ResponseStatus",
         "description": "Standard API response status values."
@@ -2163,7 +2163,7 @@
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
-            "default": "genesis"
+            "default": "GENESIS"
           },
           "smoke_test_mode": {
             "anyOf": [
@@ -2243,7 +2243,7 @@
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
-            "default": "genesis"
+            "default": "GENESIS"
           },
           "smoke_test_mode": {
             "anyOf": [
@@ -2434,11 +2434,11 @@
       "ElectronicComponentType": {
         "type": "string",
         "enum": [
-          "motor",
-          "power_supply",
-          "relay",
-          "switch",
-          "connector"
+          "MOTOR",
+          "POWER_SUPPLY",
+          "RELAY",
+          "SWITCH",
+          "CONNECTOR"
         ],
         "title": "ElectronicComponentType",
         "description": "Types of electronic components supported in the netlist."
@@ -2546,9 +2546,9 @@
       "ManufacturingMethod": {
         "type": "string",
         "enum": [
-          "cnc",
-          "3dp",
-          "im"
+          "CNC",
+          "3DP",
+          "IM"
         ],
         "title": "ManufacturingMethod",
         "description": "Supported manufacturing methods."
@@ -2771,16 +2771,14 @@
           },
           "stress_summaries": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/StressSummary"
             },
             "type": "array",
             "title": "Stress Summaries"
           },
           "fluid_metrics": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/FluidMetricResult"
             },
             "type": "array",
             "title": "Fluid Metrics"
@@ -2811,14 +2809,12 @@
           "failure": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/SimulationFailure"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Failure"
+            ]
           },
           "verification_result": {
             "anyOf": [
@@ -2959,8 +2955,8 @@
       "SimulatorBackendType": {
         "type": "string",
         "enum": [
-          "mujoco",
-          "genesis"
+          "MUJOCO",
+          "GENESIS"
         ],
         "title": "SimulatorBackendType"
       },
@@ -3078,7 +3074,7 @@
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
             "description": "Physics backend to use.",
-            "default": "genesis"
+            "default": "GENESIS"
           },
           "smoke_test_mode": {
             "anyOf": [

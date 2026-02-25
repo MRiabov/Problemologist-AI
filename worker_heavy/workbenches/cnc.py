@@ -13,6 +13,7 @@ from worker_heavy.workbenches.base import Workbench
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    WorkbenchContext,
     WorkbenchResult,
 )
 
@@ -99,7 +100,7 @@ def calculate_cnc_cost(
     part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
-    context: dict[str, Any] | None = None,
+    context: WorkbenchContext | None = None,
 ) -> CostBreakdown:
     """
     Calculates CNC cost: Setup + (Material + Run) * Quantity.
@@ -139,7 +140,7 @@ def calculate_cnc_cost(
                 cost_per_kg=6.0,
                 machine_hourly_rate=80.0,
             )
-    mrr = cnc_cfg.constraints.get("mrr_mm3_per_min", 1000.0)
+    mrr = cnc_cfg.constraints.mrr_mm3_per_min
 
     logger.info("calculating_cnc_cost", material=material_name, quantity=quantity)
 
@@ -161,8 +162,8 @@ def calculate_cnc_cost(
     roughing_time_min = (removed_volume_cm3 * 1000.0) / mrr
 
     params = cnc_cfg.parameters
-    finishing_feed_rate = params.get("finishing_feed_rate_mm_min", 500.0)
-    finishing_stepover = params.get("finishing_stepover_mm", 0.5)
+    finishing_feed_rate = params.finishing_feed_rate_mm_min
+    finishing_stepover = params.finishing_stepover_mm
 
     surface_area_mm2 = part.area
     finishing_time_min = surface_area_mm2 / (finishing_feed_rate * finishing_stepover)
@@ -172,16 +173,18 @@ def calculate_cnc_cost(
     run_cost_per_part = (machining_time_min / 60.0) * hourly_rate
 
     # 3. Setup Cost
-    setup_cost = cnc_cfg.costs.get("setup_fee", hourly_rate)
+    setup_cost = cnc_cfg.costs.setup_fee
 
     # Apply reuse discount if part hash is in context
     is_reused = False
     if context is not None:
         part_hash = compute_part_hash(part)
-        if part_hash in context:
+        if part_hash in context.part_counts:
             setup_cost *= 0.5
             is_reused = True
-        context[part_hash] = context.get(part_hash, 0) + quantity
+        context.part_counts[part_hash] = (
+            context.part_counts.get(part_hash, 0) + quantity
+        )
 
     total_cost = setup_cost + (material_cost_per_part + run_cost_per_part) * quantity
 
@@ -229,9 +232,7 @@ def analyze_cnc(
         violations.append(msg)
 
     # 2. Internal Corner Check
-    min_radius = (
-        config.cnc.constraints.get("min_tool_radius_mm", 1.0) if config.cnc else 1.0
-    )
+    min_radius = config.cnc.constraints.min_tool_radius_mm if config.cnc else 1.0
     corner_violations = check_internal_corner_radii(part, min_radius)
     violations.extend(corner_violations)
 
@@ -298,6 +299,6 @@ class CNCWorkbench(Workbench):
         self,
         part: Part,
         quantity: int = 1,
-        context: dict[str, Any] | None = None,
+        context: WorkbenchContext | None = None,
     ) -> CostBreakdown:
         return calculate_cnc_cost(part, self.config, quantity, context)

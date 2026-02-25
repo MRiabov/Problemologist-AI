@@ -15,6 +15,7 @@ from worker_heavy.workbenches.base import Workbench
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    WorkbenchContext,
     WorkbenchResult,
 )
 
@@ -123,7 +124,7 @@ def _calculate_im_cost(
     part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
-    context: dict[str, Any] | None = None,
+    context: WorkbenchContext | None = None,
 ) -> CostBreakdown:
     """
     Calculates IM cost: Tooling (fixed) + (Material + Cycle) * Quantity.
@@ -167,18 +168,21 @@ def _calculate_im_cost(
 
     # 1. Tooling (Fixed) Cost
     surface_area_cm2 = part.area / 100.0
-    tooling_cost = costs_cfg.get(
-        "base_mold_cost", 5000.0
-    ) + surface_area_cm2 * costs_cfg.get("mold_cost_per_surface_area_cm2", 0.5)
+    tooling_cost = (
+        costs_cfg.base_mold_cost
+        + surface_area_cm2 * costs_cfg.mold_cost_per_surface_area_cm2
+    )
 
     # Apply reuse discount
     is_reused = False
     if context is not None:
         part_hash = compute_part_hash(part)
-        if part_hash in context:
+        if part_hash in context.part_counts:
             tooling_cost *= 0.1
             is_reused = True
-        context[part_hash] = context.get(part_hash, 0) + quantity
+        context.part_counts[part_hash] = (
+            context.part_counts.get(part_hash, 0) + quantity
+        )
 
     # 2. Material Cost per Unit
     volume_cm3 = part.volume / 1000.0
@@ -189,7 +193,7 @@ def _calculate_im_cost(
 
     # 3. Cycle Cost per Unit
     # Injection time
-    injection_rate = costs_cfg.get("injection_rate_cm3_s", 10.0)
+    injection_rate = costs_cfg.injection_rate_cm3_s
     injection_time_s = volume_cm3 / injection_rate
 
     # Cooling time proxy (based on thickness)
@@ -238,13 +242,12 @@ def analyze_im(
     logger.info("starting_im_analysis")
 
     im_cfg = config.injection_molding
-    constraints = im_cfg.constraints if im_cfg else {}
 
     mesh = part_to_trimesh(part)
     violations = []
 
     # 1. Draft Angle Check
-    min_draft = constraints.get("min_draft_angle_deg", 2.0)
+    min_draft = im_cfg.constraints.min_draft_angle_deg if im_cfg else 2.0
     violations.extend(_check_draft_angles(mesh, (0.0, 0.0, 1.0), min_draft))
 
     # 2. Undercut Check (Moldability)
@@ -259,8 +262,8 @@ def analyze_im(
         violations.append(msg)
 
     # 3. Wall Thickness Check
-    min_wall = constraints.get("min_wall_thickness_mm", 1.0)
-    max_wall = constraints.get("max_wall_thickness_mm", 4.0)
+    min_wall = im_cfg.constraints.min_wall_thickness_mm if im_cfg else 1.0
+    max_wall = im_cfg.constraints.max_wall_thickness_mm if im_cfg else 4.0
     violations.extend(_check_wall_thickness(mesh, min_wall, max_wall))
 
     # 4. Cost Calculation
@@ -321,6 +324,6 @@ class InjectionMoldingWorkbench(Workbench):
         self,
         part: Part,
         quantity: int = 1,
-        context: dict[str, Any] | None = None,
+        context: WorkbenchContext | None = None,
     ) -> CostBreakdown:
         return _calculate_im_cost(part, self.config, quantity, context)

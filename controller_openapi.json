@@ -1138,14 +1138,19 @@
       "AssetType": {
         "type": "string",
         "enum": [
-          "video",
-          "mjcf",
-          "image",
-          "step",
-          "stl",
-          "glb",
-          "python",
-          "other"
+          "VIDEO",
+          "MJCF",
+          "IMAGE",
+          "STEP",
+          "STL",
+          "GLB",
+          "PYTHON",
+          "OTHER",
+          "CIRCUIT_DATA",
+          "TIMELINE",
+          "MARKDOWN",
+          "LOG",
+          "ERROR"
         ],
         "title": "AssetType",
         "description": "Type of asset stored in S3."
@@ -1244,11 +1249,11 @@
       "EpisodeStatus": {
         "type": "string",
         "enum": [
-          "running",
-          "planned",
-          "completed",
-          "failed",
-          "cancelled"
+          "RUNNING",
+          "PLANNED",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
         ],
         "title": "EpisodeStatus",
         "description": "Status of an agent episode."
@@ -1425,7 +1430,7 @@
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
-            "default": "genesis"
+            "default": "GENESIS"
           }
         },
         "type": "object",
@@ -1448,8 +1453,8 @@
       "SimulatorBackendType": {
         "type": "string",
         "enum": [
-          "mujoco",
-          "genesis"
+          "MUJOCO",
+          "GENESIS"
         ],
         "title": "SimulatorBackendType"
       },
@@ -1635,13 +1640,13 @@
       "TraceType": {
         "type": "string",
         "enum": [
-          "tool_start",
-          "tool_end",
-          "llm_start",
-          "llm_end",
-          "log",
-          "error",
-          "event"
+          "TOOL_START",
+          "TOOL_END",
+          "LLM_START",
+          "LLM_END",
+          "LOG",
+          "ERROR",
+          "EVENT"
         ],
         "title": "TraceType",
         "description": "Type of observability trace."

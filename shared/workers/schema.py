@@ -4,7 +4,12 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
 from shared.enums import ResponseStatus
 from shared.models.schemas import ElectronicsSection
-from shared.models.simulation import MultiRunResult
+from shared.models.simulation import (
+    FluidMetricResult,
+    MultiRunResult,
+    SimulationFailure,
+    StressSummary,
+)
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingMethod
 
@@ -166,11 +171,11 @@ class SimulationArtifacts(BaseModel):
 
     render_paths: list[StrictStr] = Field(default_factory=list)
     mjcf_content: StrictStr | None = None
-    stress_summaries: list[dict[StrictStr, Any]] = Field(default_factory=list)
-    fluid_metrics: list[dict[StrictStr, Any]] = Field(default_factory=list)
+    stress_summaries: list[StressSummary] = Field(default_factory=list)
+    fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     circuit_validation_result: dict[StrictStr, Any] | None = None
     scene_path: StrictStr | None = None
-    failure: dict[StrictStr, Any] | None = None
+    failure: SimulationFailure | None = None
     verification_result: MultiRunResult | None = None
 
     model_config = {"extra": "allow"}
@@ -263,6 +268,49 @@ class PreviewDesignResponse(BaseModel):
     message: StrictStr
     image_path: StrictStr | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class HeavySimulationParams(BaseModel):
+    """Parameters for worker_run_simulation activity."""
+
+    bundle_bytes: bytes
+    script_path: str
+    backend: SimulatorBackendType
+    smoke_test_mode: bool | None = None
+    session_id: str
+
+
+class HeavyValidationParams(BaseModel):
+    """Parameters for worker_validate_design activity."""
+
+    bundle_bytes: bytes
+    script_path: str
+    session_id: str
+    smoke_test_mode: bool | None = None
+
+
+class HeavyPreviewParams(BaseModel):
+    """Parameters for worker_preview_design activity."""
+
+    bundle_bytes: bytes
+    script_path: str
+    pitch: float = -45.0
+    yaw: float = 45.0
+
+
+class HeavyValidationResponse(BaseModel):
+    """Response from worker_validate_design activity."""
+
+    success: bool
+    message: str | None = None
+
+
+class HeavyPreviewResponse(BaseModel):
+    """Response from worker_preview_design activity."""
+
+    success: bool
+    image_bytes: bytes | None = None
+    filename: str | None = None
 
 
 class LintRequest(BaseModel):

@@ -4,11 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr
 
-
-class AssetType(StrEnum):
-    VIDEO = "VIDEO"
-    IMAGE = "IMAGE"
-    LOG = "LOG"
+from shared.enums import AssetType
 
 
 class TraceEvent(BaseModel):

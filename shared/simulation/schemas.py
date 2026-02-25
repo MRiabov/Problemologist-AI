@@ -7,8 +7,8 @@ from shared.enums import FailureReason as SimulationFailureMode
 
 
 class SimulatorBackendType(StrEnum):
-    MUJOCO = "mujoco"  # Rigid-body only, fast, no FEM/fluids
-    GENESIS = "genesis"  # FEM + MPM fluids, requires more compute
+    MUJOCO = "MUJOCO"  # Rigid-body only, fast, no FEM/fluids
+    GENESIS = "GENESIS"  # FEM + MPM fluids, requires more compute
 
 
 class SimulationRequest(BaseModel):

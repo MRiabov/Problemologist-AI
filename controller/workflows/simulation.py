@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from temporalio import workflow
 
+from shared.enums import AssetType, EpisodeStatus
 from shared.type_checking import type_check
 
 # Import activities for type hinting in workflow (optional but good for clarity)
@@ -68,8 +69,8 @@ class SimulationWorkflow:
                 {
                     "episode_id": episode_id,
                     "s3_path": s3_path,
-                    "asset_type": "VIDEO",
-                    "status": "completed",
+                    "asset_type": AssetType.VIDEO,
+                    "status": EpisodeStatus.COMPLETED,
                 },
                 start_to_close_timeout=timedelta(seconds=30),
             )
@@ -83,8 +84,8 @@ class SimulationWorkflow:
                 {
                     "episode_id": episode_id,
                     "s3_path": "",
-                    "asset_type": "ERROR",
-                    "status": "failed",
+                    "asset_type": AssetType.ERROR,
+                    "status": EpisodeStatus.FAILED,
                     "error": str(e),
                 },
                 start_to_close_timeout=timedelta(seconds=30),

@@ -97,16 +97,20 @@ class BaseNode:
             if asyncio.iscoroutinefunction(t):
                 import functools
 
-                @functools.wraps(t)
-                def sync_wrapper(*args, **kwargs):
-                    new_loop = asyncio.new_event_loop()
-                    try:
-                        return new_loop.run_until_complete(t(*args, **kwargs))
-                    finally:
-                        new_loop.close()
+                def make_sync(func):
+                    @functools.wraps(func)
+                    def sync_wrapper(*args, **kwargs):
+                        new_loop = asyncio.new_event_loop()
+                        try:
+                            return new_loop.run_until_complete(func(*args, **kwargs))
+                        finally:
+                            new_loop.close()
 
-                sync_wrapper.__name__ = name
-                tool_fns[name] = sync_wrapper
+                    return sync_wrapper
+
+                wrapped = make_sync(t)
+                wrapped.__name__ = name
+                tool_fns[name] = wrapped
             else:
                 tool_fns[name] = t
         return tool_fns
@@ -230,13 +234,7 @@ class BaseNode:
         if instructions:
             signature_cls = signature_cls.with_instructions(instructions)
 
-        if program_cls == dspy.ReAct:
-            program = program_cls(signature_cls, tools=list(tool_fns.values()))
-        else:
-            # Fallback for CodeAct or other modules
-            program = program_cls(
-                signature_cls, tools=list(tool_fns.values()), interpreter=interpreter
-            )
+        program = program_cls(signature_cls, tools=list(tool_fns.values()))
 
         # WP07: Try to load compiled prompt if available
         self.ctx.pm.load_compiled_program(node_type, program)

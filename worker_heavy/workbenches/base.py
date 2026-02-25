@@ -8,6 +8,7 @@ from shared.type_checking import type_check
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    WorkbenchContext,
     WorkbenchResult,
 )
 
@@ -57,7 +58,7 @@ class Workbench(ABC):
         self,
         part: Part,
         quantity: int = 1,
-        context: dict[str, Any] | None = None,
+        context: WorkbenchContext | None = None,
     ) -> CostBreakdown:
         """
         Calculates the cost of producing the part according to this workbench's cost model.
@@ -65,8 +66,7 @@ class Workbench(ABC):
         Args:
             part: The build123d Part to cost.
             quantity: The number of parts to produce.
-            context: Optional dictionary for tracking reused parts across an assembly.
-                     Keyed by part hash, value could be number of times seen.
+            context: Optional context for tracking reused parts across an assembly.
 
         Returns:
             The calculated cost as a CostBreakdown model.

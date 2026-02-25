@@ -10,59 +10,64 @@ from enum import StrEnum
 class EpisodeStatus(StrEnum):
     """Status of an agent episode."""
 
-    RUNNING = "running"
-    PLANNED = "planned"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    RUNNING = "RUNNING"
+    PLANNED = "PLANNED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class SessionStatus(StrEnum):
     """Status of a benchmark generation session."""
 
-    PLANNING = "planning"
-    PLANNED = "planned"
-    EXECUTING = "executing"
-    VALIDATING = "validating"
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    FAILED = "failed"
+    PLANNING = "PLANNING"
+    PLANNED = "PLANNED"
+    EXECUTING = "EXECUTING"
+    VALIDATING = "VALIDATING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
 
 
 class AssetType(StrEnum):
     """Type of asset stored in S3."""
 
-    VIDEO = "video"
-    MJCF = "mjcf"
-    IMAGE = "image"
-    STEP = "step"
-    STL = "stl"
-    GLB = "glb"
-    PYTHON = "python"
-    OTHER = "other"
+    VIDEO = "VIDEO"
+    MJCF = "MJCF"
+    IMAGE = "IMAGE"
+    STEP = "STEP"
+    STL = "STL"
+    GLB = "GLB"
+    PYTHON = "PYTHON"
+    OTHER = "OTHER"
+    CIRCUIT_DATA = "CIRCUIT_DATA"
+    TIMELINE = "TIMELINE"
+    MARKDOWN = "MARKDOWN"
+    LOG = "LOG"
+    ERROR = "ERROR"
 
 
 class ResponseStatus(StrEnum):
     """Standard API response status values."""
 
-    OK = "ok"
-    HEALTHY = "healthy"
-    ACCEPTED = "accepted"
-    COMPLETED = "completed"
-    SUCCESS = "success"
-    ERROR = "error"
+    OK = "OK"
+    HEALTHY = "HEALTHY"
+    ACCEPTED = "ACCEPTED"
+    COMPLETED = "COMPLETED"
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
 
 
 class TraceType(StrEnum):
     """Type of observability trace."""
 
-    TOOL_START = "tool_start"
-    TOOL_END = "tool_end"
-    LLM_START = "llm_start"
-    LLM_END = "llm_end"
-    LOG = "log"
-    ERROR = "error"
-    EVENT = "event"
+    TOOL_START = "TOOL_START"
+    TOOL_END = "TOOL_END"
+    LLM_START = "LLM_START"
+    LLM_END = "LLM_END"
+    LOG = "LOG"
+    ERROR = "ERROR"
+    EVENT = "EVENT"
 
 
 class FailureReason(StrEnum):
@@ -101,64 +106,64 @@ SimulationFailureMode = FailureReason
 class ElectronicComponentType(StrEnum):
     """Types of electronic components supported in the netlist."""
 
-    MOTOR = "motor"
-    POWER_SUPPLY = "power_supply"
-    RELAY = "relay"
-    SWITCH = "switch"
-    CONNECTOR = "connector"
+    MOTOR = "MOTOR"
+    POWER_SUPPLY = "POWER_SUPPLY"
+    RELAY = "RELAY"
+    SWITCH = "SWITCH"
+    CONNECTOR = "CONNECTOR"
 
 
 class ManufacturingMethod(StrEnum):
     """Supported manufacturing methods."""
 
-    CNC = "cnc"
-    THREE_DP = "3dp"
-    INJECTION_MOLDING = "im"
+    CNC = "CNC"
+    THREE_DP = "3DP"
+    INJECTION_MOLDING = "IM"
 
 
 class MotorControlMode(StrEnum):
     """Control modes for actuators."""
 
-    CONSTANT = "constant"
-    SINUSOIDAL = "sinusoidal"
-    ON_OFF = "on_off"
+    CONSTANT = "CONSTANT"
+    SINUSOIDAL = "SINUSOIDAL"
+    ON_OFF = "ON_OFF"
 
 
 class FluidShapeType(StrEnum):
     """Supported shapes for fluid volumes."""
 
-    CYLINDER = "cylinder"
-    BOX = "box"
-    SPHERE = "sphere"
+    CYLINDER = "CYLINDER"
+    BOX = "BOX"
+    SPHERE = "SPHERE"
 
 
 class FluidObjectiveType(StrEnum):
     """Types of fluid-related objectives."""
 
-    FLUID_CONTAINMENT = "fluid_containment"
-    FLOW_RATE = "flow_rate"
+    FLUID_CONTAINMENT = "FLUID_CONTAINMENT"
+    FLOW_RATE = "FLOW_RATE"
 
 
 class FluidEvalAt(StrEnum):
     """When to evaluate fluid objectives."""
 
-    END = "end"
-    CONTINUOUS = "continuous"
+    END = "END"
+    CONTINUOUS = "CONTINUOUS"
 
 
 class MovingPartType(StrEnum):
     """Types of moving parts in the assembly."""
 
-    MOTOR = "motor"
-    PASSIVE = "passive"
+    MOTOR = "MOTOR"
+    PASSIVE = "PASSIVE"
 
 
 class ReviewDecision(StrEnum):
     """Decision values for reviewer nodes."""
 
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    REJECT_PLAN = "reject_plan"
-    REJECT_CODE = "reject_code"
-    CONFIRM_PLAN_REFUSAL = "confirm_plan_refusal"
-    REJECT_PLAN_REFUSAL = "reject_plan_refusal"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REJECT_PLAN = "REJECT_PLAN"
+    REJECT_CODE = "REJECT_CODE"
+    CONFIRM_PLAN_REFUSAL = "CONFIRM_PLAN_REFUSAL"
+    REJECT_PLAN_REFUSAL = "REJECT_PLAN_REFUSAL"

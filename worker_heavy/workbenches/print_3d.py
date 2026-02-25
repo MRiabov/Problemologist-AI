@@ -9,6 +9,7 @@ from worker_heavy.workbenches.base import Workbench
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    WorkbenchContext,
     WorkbenchResult,
 )
 
@@ -20,7 +21,7 @@ def calculate_3dp_cost(
     part: Part | Compound | Solid,
     config: ManufacturingConfig,
     quantity: int = 1,
-    context: dict[str, Any] | None = None,
+    context: WorkbenchContext | None = None,
 ) -> CostBreakdown:
     """
     Calculates 3D Printing cost: Setup + (Material + Run) * Quantity.
@@ -73,23 +74,25 @@ def calculate_3dp_cost(
     # 2. Run Cost (Machine Time)
     # Estimate printing time based on volume and deposition rate
     # Default deposition rate: 15 cm3/hr if not specified
-    deposition_rate_cm3_hr = three_dp_cfg.parameters.get("deposition_rate_cm3_hr", 15.0)
+    deposition_rate_cm3_hr = three_dp_cfg.parameters.deposition_rate_cm3_hr
     printing_time_hr = volume_cm3 / deposition_rate_cm3_hr
 
     machine_hourly_rate = material_cfg.machine_hourly_rate
     run_cost_per_part = printing_time_hr * machine_hourly_rate
 
     # 3. Setup Cost
-    setup_cost = three_dp_cfg.costs.get("setup_fee", 10.0)
+    setup_cost = three_dp_cfg.costs.setup_fee
 
     # Apply reuse discount if part hash is in context
     is_reused = False
     if context is not None:
         part_hash = compute_part_hash(part)
-        if part_hash in context:
+        if part_hash in context.part_counts:
             setup_cost *= 0.5  # 50% discount on setup for repeated parts
             is_reused = True
-        context[part_hash] = context.get(part_hash, 0) + quantity
+        context.part_counts[part_hash] = (
+            context.part_counts.get(part_hash, 0) + quantity
+        )
 
     unit_cost = material_cost_per_part + run_cost_per_part
     total_cost = setup_cost + (unit_cost * quantity)
@@ -209,6 +212,6 @@ class Print3DWorkbench(Workbench):
         self,
         part: Part,
         quantity: int = 1,
-        context: dict[str, Any] | None = None,
+        context: WorkbenchContext | None = None,
     ) -> CostBreakdown:
         return calculate_3dp_cost(part, self.config, quantity, context)
