@@ -5,10 +5,11 @@ import httpx
 import pytest
 
 from shared.workers.schema import (
-    WriteFileRequest,
-    ExecuteResponse,
-    ListFilesRequest,
     ExecuteRequest,
+    ExecuteResponse,
+    FsFileEntry,
+    ListFilesRequest,
+    WriteFileRequest,
 )
 
 # Constants
@@ -82,9 +83,10 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
             json=ls_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        files = [f["name"] for f in ls_resp.json()]
-        assert "test.node" in files or "test.msh" in files, (
-            f"Missing mesh files. Found: {files}"
+        fs_entries = [FsFileEntry.model_validate(e) for e in ls_resp.json()]
+        file_names = [e.name for e in fs_entries]
+        assert "test.node" in file_names or "test.msh" in file_names, (
+            f"Missing mesh files. Found: {file_names}"
         )
 
         # 4. Fail path: Non-manifold geometry

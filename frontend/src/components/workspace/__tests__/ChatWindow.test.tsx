@@ -80,7 +80,7 @@ describe('ChatWindow', () => {
         const plannedEpisode = { 
             id: 'ep-1', 
             status: 'running', 
-            metadata_vars: { detailed_status: 'planned' } 
+            metadata_vars: { detailed_status: 'PLANNED' } 
         };
         (useEpisodes as any).mockReturnValue({
             ...defaultEpisodeContext,

@@ -7,7 +7,9 @@ import httpx
 import pytest
 from temporalio.client import Client
 
+from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus
+from tests.integration.contracts import BackupWorkflowResponse
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")
@@ -36,7 +38,8 @@ async def test_int_057_backup_logging_flow():
             resp = await client.post(f"{CONTROLLER_URL}/ops/backup")
 
         assert resp.status_code == 202, f"Backup trigger failed: {resp.text}"
-        workflow_id = resp.json()["workflow_id"]
+        backup_resp = BackupWorkflowResponse.model_validate(resp.json())
+        workflow_id = backup_resp.workflow_id
 
         # 2. Connect to Temporal to wait for completion
         temporal = await Client.connect(TEMPORAL_URL)
@@ -88,15 +91,15 @@ async def test_int_058_cross_system_correlation():
             json={"task": task, "session_id": f"INT-058-{uuid.uuid4().hex[:8]}"},
         )
         assert resp.status_code == 202
-        episode_id = resp.json()["episode_id"]
+        episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
 
         # 2. Wait for completion
         max_retries = 150
         completed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            data = status_resp.json()
-            if data["status"] in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
+            ep = EpisodeResponse.model_validate(status_resp.json())
+            if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 completed = True
                 break
             await asyncio.sleep(2)
@@ -116,14 +119,17 @@ async def test_int_058_cross_system_correlation():
 
         # 4. Check traces for correlation
         # All traces for this episode should have the same episode_id in DB
-        traces = data.get("traces", [])
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")).json()
+        )
+        traces = ep_data.traces
         assert len(traces) > 0
         for trace in traces:
             # This is trivial since we fetched by episode_id, but good to verify the linkage
             pass
 
         # 5. Correlate with S3
-        assets = data.get("assets", [])
+        assets = ep_data.assets
         assert len(assets) > 0, "No assets found for correlation"
 
         s3 = boto3.client(
@@ -136,7 +142,7 @@ async def test_int_058_cross_system_correlation():
 
         for asset in assets:
             # Verify the asset actually exists in S3 and its path is consistent
-            s3_path = asset["s3_path"]
+            s3_path = asset.s3_path
             try:
                 s3.head_object(Bucket=ASSET_BUCKET, Key=s3_path)
             except Exception as e:
@@ -144,10 +150,7 @@ async def test_int_058_cross_system_correlation():
                     f"Asset {s3_path} not found in S3 bucket {ASSET_BUCKET}: {e}"
                 )
 
-            # Cross-correlation: The asset metadata in DB should point to the episode_id
-            # This is verified by the fact that it's in the episode's asset list.
-
         # 6. Verify Event emission (INT-025 is missing but we check events here)
         # Event traces should be present in the DB
-        event_traces = [t for t in traces if t["trace_type"] == "event"]
+        event_traces = [t for t in traces if t.trace_type.value == "event"]
         assert len(event_traces) > 0, "No events recorded for the episode"

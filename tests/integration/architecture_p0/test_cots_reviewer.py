@@ -4,6 +4,9 @@ import uuid
 import httpx
 import pytest
 
+from controller.api.schemas import AgentRunResponse, EpisodeResponse, ReviewResponse
+from shared.workers.schema import FsFileEntry
+
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
@@ -39,12 +42,13 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
             pytest.skip("COTS search endpoint not implemented on controller")
 
         assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
+        search_results = resp.json()
+        assert isinstance(search_results, list)
 
-        if len(data) > 0:
-            part = data[0]
-            # INT-013: Required fields
+        if len(search_results) > 0:
+            part = search_results[0]
+            # INT-013: Required fields — validate as dict since COTS part schema
+            # may vary; existence check is the contract here.
             required_fields = ["part_id", "manufacturer", "price", "source"]
             for field in required_fields:
                 assert field in part, f"Missing {field} in COTS result"
@@ -55,14 +59,14 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
-        files = [f["name"] for f in ls_resp.json()]
+        fs_entries = [FsFileEntry.model_validate(e) for e in ls_resp.json()]
         # Allow only journals or nothing
-        for f in files:
+        for entry in fs_entries:
             assert (
-                f.startswith("journal")
-                or f == "objectives.yaml"
-                or f == "plan.md"
-                or f == "."
+                entry.name.startswith("journal")
+                or entry.name == "objectives.yaml"
+                or entry.name == "plan.md"
+                or entry.name == "."
             )
 
 
@@ -82,7 +86,7 @@ async def test_int_016_reviewer_decision_schema_gate(
         json={"task": "Test Review Schema", "session_id": session_id},
     )
     assert run_resp.status_code == 202
-    episode_id = run_resp.json()["episode_id"]
+    episode_id = AgentRunResponse.model_validate(run_resp.json()).episode_id
 
     # Scenario: Post a review with invalid 'decision' value
     malformed_review = """---
@@ -125,7 +129,7 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers, controller_cl
         json={"task": "Test Refusal Loop", "session_id": session_id},
     )
     assert run_resp.status_code == 202
-    episode_id = run_resp.json()["episode_id"]
+    episode_id = AgentRunResponse.model_validate(run_resp.json()).episode_id
 
     # 2. Inject a 'rejected' decision via review endpoint
     # We need a valid review payload
@@ -142,13 +146,13 @@ Refusing this plan.
         json={"review_content": review_content},
     )
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "success"
-    assert data["decision"] == "rejected"
+    review_resp = ReviewResponse.model_validate(resp.json())
+    assert review_resp.status == "success"
+    assert review_resp.decision == "rejected"
 
     # 3. Verify the agent/episode status is FAILED
     # (Architecture might eventually require a loop/retry, but current impl fails it)
     status_resp = await client.get(f"/episodes/{episode_id}")
     assert status_resp.status_code == 200
-    episode_data = status_resp.json()
-    assert episode_data["status"] == "failed"
+    ep_data = EpisodeResponse.model_validate(status_resp.json())
+    assert ep_data.status.value == "failed"

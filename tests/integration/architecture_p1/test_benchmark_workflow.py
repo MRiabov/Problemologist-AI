@@ -3,7 +3,11 @@ import asyncio
 import pytest
 from httpx import AsyncClient
 
-from controller.api.schemas import BenchmarkGenerateResponse, EpisodeResponse
+from controller.api.schemas import (
+    ArtifactEntry,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller if different
@@ -76,10 +80,12 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert artifacts_resp.status_code == 200, (
             f"Failed to fetch artifacts: {artifacts_resp.text}"
         )
-        artifacts_list = artifacts_resp.json()
+        artifacts_list = [
+            ArtifactEntry.model_validate(a) for a in artifacts_resp.json()
+        ]
 
         # Check for key files
-        artifact_paths = [a["path"] for a in artifacts_list]
+        artifact_paths = [a.path for a in artifacts_list]
 
         assert any(p.endswith("plan.md") for p in artifact_paths), (
             f"plan.md missing. Artifacts: {artifact_paths}"

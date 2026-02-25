@@ -1,12 +1,10 @@
 import os
-import time
+import uuid
 
 import httpx
 import pytest
-from pydantic import TypeAdapter
 
-from shared.backend.protocol import FileInfo
-from shared.workers.schema import BenchmarkToolResponse
+from shared.workers.schema import BenchmarkToolResponse, FsFileEntry
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -19,7 +17,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 async def test_int_138_smoke_test_mode():
     """INT-138: Verify smoke-test mode for Genesis."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-int-138-{int(time.time())}"
+        session_id = f"INT-138-{uuid.uuid4().hex[:8]}"
 
         objectives_content = """
 physics:
@@ -77,7 +75,7 @@ def build():
 async def test_int_139_fluid_storage_policy():
     """INT-139: Verify fluid data storage policy."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-int-139-{int(time.time())}"
+        session_id = f"INT-139-{uuid.uuid4().hex[:8]}"
 
         objectives_content = """
 physics:
@@ -145,8 +143,8 @@ def build():
             json={"path": "/"},
             headers={"X-Session-ID": session_id},
         )
-        files = TypeAdapter(list[FileInfo]).validate_python(ls_resp.json())
-        file_paths = [f.path for f in files]
-        assert not any("particles" in f.lower() for f in file_paths), (
+        assert ls_resp.status_code == 200
+        files = [FsFileEntry.model_validate(f) for f in ls_resp.json()]
+        assert not any("particles" in f.name.lower() for f in files), (
             "Raw particle data found in workspace"
         )
