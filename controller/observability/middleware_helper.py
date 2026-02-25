@@ -1,6 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
+
+import structlog
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.observability.tracing import record_worker_events, sync_asset
@@ -9,6 +11,8 @@ from shared.observability.schemas import (
     SimulationInstabilityEvent,
     SimulationResultEvent,
 )
+
+logger = structlog.get_logger(__name__)
 
 
 async def record_events(episode_id: str, events: list[Any]):
@@ -29,7 +33,7 @@ async def broadcast_file_update(episode_id_str: str, path: str, content: str):
                 "path": path,
                 "content": content,
             },
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         if asset:

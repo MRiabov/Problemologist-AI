@@ -435,36 +435,67 @@ async def _persist_session_assets(
                     middleware = RemoteFilesystemMiddleware(client)
                     backend = RemoteFilesystemBackend(middleware)
 
-                    files = await backend.als_info("/")
-                    logger.info(
-                        "assets_found_for_sync",
-                        session_id=session_id,
-                        count=len(files),
-                        files=[f["path"] for f in files],
-                    )
                     from controller.observability.middleware_helper import (
                         broadcast_file_update,
                     )
 
-                    for file_info in files:
-                        if not file_info["is_dir"]:
+                    async def sync_dir(dir_path: str):
+                        # Avoid infinite recursion and stay in workspace
+                        if dir_path.startswith(
+                            ("/utils", "/reviews", "/config", "/skills", "/.git")
+                        ):
+                            return
+
+                        files = await backend.als_info(dir_path)
+                        logger.info(
+                            "syncing_benchmark_assets",
+                            session_id=session_id,
+                            path=dir_path,
+                            count=len(files),
+                        )
+
+                        for file_info in files:
                             path = file_info["path"]
+                            if file_info["is_dir"]:
+                                # Recurse into subdirectories like assets/ and renders/
+                                if not path.endswith("/"):
+                                    path += "/"
+                                await sync_dir(path)
+                            else:
+                                # Skip obviously irrelevant files
+                                if path.endswith((".log", ".lock", ".tmp", ".pyc")):
+                                    continue
 
-                            # Skip obviously huge or irrelevant files
-                            if path.endswith((".log", ".lock", ".tmp", ".pyc")):
-                                continue
-
-                            content = ""
-                            with suppress(Exception):
-                                raw_content = await backend.aread(path)
-                                if isinstance(raw_content, bytes):
-                                    content = raw_content.decode(
-                                        "utf-8", errors="replace"
+                                # Determine if we should read content
+                                is_text = path.endswith(
+                                    (
+                                        ".py",
+                                        ".yaml",
+                                        ".yml",
+                                        ".md",
+                                        ".json",
+                                        ".txt",
+                                        ".mjcf",
+                                        ".xml",
                                     )
-                                else:
-                                    content = str(raw_content)
+                                )
 
-                            await broadcast_file_update(str(session_id), path, content)
+                                content = ""
+                                if is_text:
+                                    with suppress(Exception):
+                                        raw_content = await backend.aread(path)
+                                        if isinstance(raw_content, bytes):
+                                            content = raw_content.decode(
+                                                "utf-8", errors="replace"
+                                            )
+                                        else:
+                                            content = str(raw_content)
+
+                                await broadcast_file_update(
+                                    str(session_id), path, content
+                                )
+
+                    await sync_dir("/")
                     await db.commit()
             except Exception as e:
                 logger.error("failed_to_sync_assets_to_db", error=str(e))

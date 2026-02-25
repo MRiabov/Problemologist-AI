@@ -95,11 +95,13 @@ class BaseNode:
 
             # WP11: ReAct (sync) needs sync functions. Wrap async tools.
             if asyncio.iscoroutinefunction(t):
+                import functools
 
-                def sync_wrapper(*args, _t=t, **kwargs):
+                @functools.wraps(t)
+                def sync_wrapper(*args, **kwargs):
                     new_loop = asyncio.new_event_loop()
                     try:
-                        return new_loop.run_until_complete(_t(*args, **kwargs))
+                        return new_loop.run_until_complete(t(*args, **kwargs))
                     finally:
                         new_loop.close()
 

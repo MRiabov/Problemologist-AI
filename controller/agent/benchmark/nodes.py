@@ -164,156 +164,81 @@ class BenchmarkCoderSignature(dspy.Signature):
     journal = dspy.OutputField(desc="A summary of what was done")
 
 
-async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    """
-    Generates build123d script and validates it.
-    Refactored to use DSPy ReAct with remote worker execution.
-    """
-    session_id = str(state.session.session_id)
-    from controller.config.settings import settings as global_settings
+@type_check
+class BenchmarkCoderNode(BaseNode):
+    """Refactored Benchmark Coder using BaseNode."""
 
-    worker_light_url = global_settings.worker_light_url
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        session_id = str(state.session.session_id)
+        logger.info("coder_node_start", session_id=session_id)
 
-    ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
-    )
-    logger.info("coder_node_start", session_id=session_id)
+        # Context construction
+        validation_logs = "\n".join(state.session.validation_logs)
+        if state.simulation_result and not state.simulation_result.valid:
+            validation_logs += "\n" + "\n".join(state.simulation_result.logs)
 
-    # Context construction
-    validation_logs = "\n".join(state.session.validation_logs)
-    if state.simulation_result and not state.simulation_result.valid:
-        validation_logs += "\n" + "\n".join(state.simulation_result.logs)
-
-    objectives_yaml = "# No objectives.yaml found."
-    try:
-        if await ctx.worker_client.exists(OBJECTIVES_FILE):
-            resp = await ctx.worker_client.read_file(OBJECTIVES_FILE)
-            objectives_yaml = resp
-    except Exception:
-        pass
-
-    # Setup DSPy Program
-    from controller.agent.dspy_utils import WorkerInterpreter
-
-    interpreter = WorkerInterpreter(
-        worker_client=ctx.worker_client, session_id=session_id
-    )
-
-    tools = get_benchmark_tools(ctx.fs, session_id)
-    tool_functions = {}
-    for t in tools:
-        name = getattr(t, "name", getattr(t, "__name__", str(t)))
-        func = getattr(t, "func", getattr(t, "_run", t))
-        if func:
-            tool_functions[name] = func
-
-    # Refactored to use ReAct instead of CodeAct to avoid tool indentation issues with remote interpreter
-    program = dspy.ReAct(
-        BenchmarkCoderSignature.with_instructions(ctx.pm.render("benchmark_coder")),
-        tools=list(tool_functions.values()),
-    )
-
-    # WP08: Set node_type on mock LM if available for explicit lookup
-    if hasattr(ctx.dspy_lm, "node_type"):
-        ctx.dspy_lm.node_type = "benchmark_coder"
-
-    # Invoke DSPy Program
-    journal_entry = ""
-    try:
-        # ReAct tools must be sync. BaseNode handles this via _get_tool_functions
-        # but here we are doing it manually for now to stay close to original logic.
-        sync_tools = {}
-        for name, fn in tool_functions.items():
-            if asyncio.iscoroutinefunction(fn):
-
-                def _sync_wrap(*args, _fn=fn, **kwargs):
-                    print(f"DEBUG: sync_wrap_calling_tool name={_fn.__name__}")
-                    new_loop = asyncio.new_event_loop()
-                    try:
-                        return new_loop.run_until_complete(_fn(*args, **kwargs))
-                    finally:
-                        new_loop.close()
-
-                _sync_wrap.__name__ = name
-                sync_tools[name] = _sync_wrap
-            else:
-                sync_tools[name] = fn
-
-        program.tools = list(sync_tools.values())
-
-        with dspy.settings.context(lm=ctx.dspy_lm):
-            logger.info("coder_dspy_invoke_start", session_id=session_id)
-            prediction = await asyncio.wait_for(
-                asyncio.to_thread(
-                    program,
-                    prompt=state.session.prompt,
-                    plan=state.plan.model_dump_json() if state.plan else "None",
-                    objectives_yaml=objectives_yaml,
-                    review_feedback=(
-                        state.review_feedback
-                        if state.session.status == SessionStatus.REJECTED
-                        else "No feedback provided."
-                    ),
-                    validation_logs=validation_logs,
-                ),
-                timeout=300.0,
-            )
-            logger.info("coder_dspy_invoke_complete", session_id=session_id)
-
-            new_journal = getattr(prediction, "journal", "No journal provided.")
-            state.journal += f"\n[Coder] {new_journal}"
-            state.messages.append(AIMessage(content=f"Work summary: {new_journal}"))
-    except Exception as e:
-        logger.error("coder_dspy_failed", error=str(e))
-        state.journal += f"\n[Coder] Failed: {e}"
-    finally:
-        interpreter.shutdown()
-
-    # Retrieve script
-    import contextlib
-
-    with contextlib.suppress(Exception):
-        state.current_script = await ctx.worker_client.read_file(SCRIPT_FILE)
-
-    # Validation Logic (Same as before)
-    if state.current_script:
-        from worker_heavy.utils.file_validation import validate_node_output
-
-        # Read all required files for validation
-        files_to_validate = {SCRIPT_FILE: state.current_script}
-        for req_file in ["plan.md", "todo.md", "objectives.yaml"]:
-            if req_file != SCRIPT_FILE:
-                with contextlib.suppress(Exception):
-                    files_to_validate[req_file] = await ctx.worker_client.read_file(
-                        req_file
-                    )
-
-        is_valid, errors = validate_node_output("coder", files_to_validate)
-        if not is_valid:
-            logger.warning("benchmark_coder_validation_failed", errors=errors)
-            state.session.validation_logs.append(f"Output validation failed: {errors}")
-
-    # Run Verification (Geometric + Physics)
-    script = state.current_script
-    if script:
-        logger.info("running_integrated_validation", session_id=session_id)
-        try:
-            val_res = await ctx.worker_client.validate(script_path=SCRIPT_FILE)
-            if not val_res.success:
-                from shared.simulation.schemas import ValidationResult
-
-                state.simulation_result = ValidationResult(
-                    valid=False,
-                    cost=0,
-                    logs=[f"Geometric validation failed: {val_res.message}"],
-                    render_paths=[],
-                    render_data=[],
+        objectives_yaml = "# No objectives.yaml found."
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
+                objectives_yaml = await self.ctx.worker_client.read_file(
+                    OBJECTIVES_FILE
                 )
-            else:
-                # physics simulation
-                backend = SimulatorBackendType.GENESIS
-                try:
-                    if objectives_yaml and not objectives_yaml.startswith("#"):
+
+        inputs = {
+            "prompt": state.session.prompt,
+            "plan": state.plan.model_dump_json() if state.plan else "None",
+            "objectives_yaml": objectives_yaml,
+            "review_feedback": (
+                state.review_feedback
+                if state.session.status == SessionStatus.REJECTED
+                else "No feedback provided."
+            ),
+            "validation_logs": validation_logs,
+        }
+
+        # Node uses ReAct for tool usage
+        prediction, _, journal_entry = await self._run_program(
+            dspy.ReAct,
+            BenchmarkCoderSignature,
+            state,
+            inputs,
+            get_benchmark_tools,
+            [SCRIPT_FILE, "plan.md", "todo.md", "objectives.yaml"],
+            "benchmark_coder",
+        )
+
+        if not prediction:
+            state.journal += f"\n[Coder] Failed: {journal_entry}"
+            return state
+
+        new_journal = getattr(prediction, "journal", "No journal provided.")
+        state.journal += f"\n[Coder] {new_journal}"
+        state.messages.append(AIMessage(content=f"Work summary: {new_journal}"))
+
+        # Retrieve script for further validation/simulation
+        with suppress(Exception):
+            state.current_script = await self.ctx.worker_client.read_file(SCRIPT_FILE)
+
+        # Run Verification (Geometric + Physics)
+        script = state.current_script
+        if script:
+            logger.info("running_integrated_validation", session_id=session_id)
+            try:
+                val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
+                if not val_res.success:
+                    from shared.simulation.schemas import ValidationResult
+
+                    state.simulation_result = ValidationResult(
+                        valid=False,
+                        cost=0,
+                        logs=[f"Geometric validation failed: {val_res.message}"],
+                        render_paths=[],
+                        render_data=[],
+                    )
+                else:
+                    # physics simulation
+                    backend = SimulatorBackendType.GENESIS
+                    try:
                         obj_data = yaml.safe_load(objectives_yaml)
                         if (
                             obj_data
@@ -323,62 +248,77 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
                             backend = SimulatorBackendType(
                                 obj_data["physics"]["backend"]
                             )
-                except Exception:
-                    logger.warning("failed_to_parse_backend_from_objectives")
+                    except Exception:
+                        pass
 
-                sim_res = await ctx.worker_client.simulate(
-                    script_path=SCRIPT_FILE, backend=backend
-                )
-                if not sim_res.success:
-                    from shared.simulation.schemas import ValidationResult
-
-                    state.simulation_result = ValidationResult(
-                        valid=False,
-                        cost=0,
-                        logs=[f"Physics simulation failed: {sim_res.message}"],
-                        render_paths=[],
-                        render_data=[],
+                    sim_res = await self.ctx.worker_client.simulate(
+                        script_path=SCRIPT_FILE, backend=backend
                     )
-                else:
-                    # Download Renders
-                    render_paths = (
-                        sim_res.artifacts.get("render_paths", [])
-                        if sim_res.artifacts
-                        else []
-                    )
+                    if not sim_res.success:
+                        from shared.simulation.schemas import ValidationResult
 
-                    async def _download(url_path):
-                        url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
-                        try:
-                            # We still need httpx for direct asset download
-                            async with httpx.AsyncClient() as http_client:
-                                r = await http_client.get(
-                                    url, headers={"X-Session-ID": session_id}
-                                )
-                                return r.content if r.status_code == 200 else None
-                        except Exception:
-                            return None
+                        state.simulation_result = ValidationResult(
+                            valid=False,
+                            cost=0,
+                            logs=[f"Physics simulation failed: {sim_res.message}"],
+                            render_paths=[],
+                            render_data=[],
+                        )
+                    else:
+                        # Download Renders
+                        render_paths = (
+                            sim_res.artifacts.get("render_paths", [])
+                            if sim_res.artifacts
+                            else []
+                        )
 
-                    tasks = [_download(p) for p in render_paths]
-                    results = await asyncio.gather(*tasks)
-                    render_data = [r for r in results if r is not None]
+                        async def _download(url_path):
+                            from controller.config.settings import (
+                                settings as global_settings,
+                            )
 
-                    from shared.simulation.schemas import ValidationResult
+                            worker_light_url = global_settings.worker_light_url
+                            url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
+                            try:
+                                async with httpx.AsyncClient() as http_client:
+                                    r = await http_client.get(
+                                        url, headers={"X-Session-ID": session_id}
+                                    )
+                                    return r.content if r.status_code == 200 else None
+                            except Exception:
+                                return None
 
-                    state.simulation_result = ValidationResult(
-                        valid=True,
-                        cost=0,
-                        logs=["Validation passed."],
-                        render_paths=render_paths,
-                        render_data=render_data,
-                    )
-        except Exception as e:
-            logger.error("integrated_validation_error", error=str(e))
-            # Set a failure status and sleep to prevent infinite tight loop
-            state.session.status = SessionStatus.FAILED
-            await asyncio.sleep(2)
+                        tasks = [_download(p) for p in render_paths]
+                        results = await asyncio.gather(*tasks)
+                        render_data = [r for r in results if r is not None]
 
-    return state
+                        from shared.simulation.schemas import ValidationResult
+
+                        state.simulation_result = ValidationResult(
+                            valid=True,
+                            cost=0,
+                            logs=["Validation passed."],
+                            render_paths=render_paths,
+                            render_data=render_data,
+                        )
+            except Exception as e:
+                logger.error("integrated_validation_error", error=str(e))
+                state.session.status = SessionStatus.FAILED
+
+        return state
+
+
+@type_check
+async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
+    node = BenchmarkCoderNode(context=ctx)
+    return await node(state)
 
 
 class BenchmarkCOTSSearchSignature(dspy.Signature):
