@@ -54,6 +54,9 @@ class ElectronicsManager:
                     node_name = f"{comp.component_id}_+"
                     if comp.type in ["switch", "relay"]:
                         node_name = f"{comp.component_id}_in"
+                    elif comp.type == ElectronicComponentType.LOGIC_BOARD:
+                        # Use vin or + (which maps to +)
+                        node_name = f"{comp.component_id}_+"
 
                     voltage = validation.node_voltages.get(node_name, 0.0)
                     # Normalize power scale (0.0 to 1.0) based on supply voltage

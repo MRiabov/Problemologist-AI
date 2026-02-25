@@ -377,6 +377,19 @@ def calculate_assembly_totals(
                         cots_id=comp.cots_part_id,
                         error=str(e),
                     )
+            elif comp.type == ElectronicComponentType.LOGIC_BOARD and comp.cots_part_id:
+                from shared.cots.parts.controllers import LogicBoard
+
+                try:
+                    board = LogicBoard(size=comp.cots_part_id)
+                    total_cost += getattr(board, "price", 0.0)
+                    total_weight += getattr(board, "weight_g", 0.0)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_price_logic_board",
+                        cots_id=comp.cots_part_id,
+                        error=str(e),
+                    )
 
         for wire in electronics.wiring:
             from shared.wire_utils import get_awg_properties

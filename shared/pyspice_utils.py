@@ -104,6 +104,8 @@ def validate_circuit(
                 required = ["in", "out"]
             elif comp.type == ElectronicComponentType.POWER_SUPPLY:
                 required = ["+", "-"]
+            elif comp.type == ElectronicComponentType.LOGIC_BOARD:
+                required = ["+", "-"]
 
             for term in required:
                 target_node = resolve_node_name(comp.component_id, term)
