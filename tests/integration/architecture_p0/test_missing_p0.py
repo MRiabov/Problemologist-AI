@@ -41,13 +41,14 @@ async def test_int_004_episode_artifact_persistence():
         )
 
         # Create dummy episode
+        req = AgentRunRequest(
+            task="Test artifacts",
+            session_id=session_id,
+            metadata_vars={"worker_session_id": session_id},
+        )
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={
-                "task": "Test artifacts",
-                "session_id": session_id,
-                "metadata_vars": {"worker_session_id": session_id},
-            },
+            json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
         episode_create = TestEpisodeCreateResponse.model_validate(resp.json())
