@@ -51,6 +51,7 @@ class MockDSPyLM(dspy.LM):
         )
 
         full_text = self._get_full_text(prompt, messages)
+        logger.info("mock_dspy_full_text", text=full_text)
 
         # 1. Detect Scenario from session_id
         scenario_id = self._get_scenario_id()
@@ -62,12 +63,10 @@ class MockDSPyLM(dspy.LM):
         # Detect if JSON is requested or if we should provide it for structured nodes
         is_json_requested = (
             "output fields" in full_text.lower() and "json" in full_text.lower()
-        )
+        ) or "Respond with a JSON object" in full_text
 
         # Extract expected fields for ReAct compatibility
         expected_fields = []
-
-        logger.info("mock_dspy_full_text", text=full_text[:500] + "...")
 
         # Always try to detect fields from text if they exist
         match = re.search(
@@ -100,16 +99,21 @@ class MockDSPyLM(dspy.LM):
 
         # ONLY force JSON if explicitly requested or if we have no expected fields but is_json_requested
         # Standard ReAct with TypedPredictor uses field-based formatting [[ ## field ## ]]
-        is_json = is_json_requested
+        is_fields_format = "[[ ##" in full_text
+        is_json = is_json_requested and not is_fields_format
 
         # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
+        sig_lookup = node_key
         if node_key == "benchmark_planner":
             lookup_key = "planner"
+            sig_lookup = "planner"
         elif node_key == "benchmark_coder":
             lookup_key = "coder"
+            sig_lookup = "coder"
         elif node_key == "benchmark_reviewer":
             lookup_key = "reviewer"
+            sig_lookup = "reviewer"
 
         node_data = scenario.get(lookup_key, {})
         logger.info(
@@ -125,12 +129,13 @@ class MockDSPyLM(dspy.LM):
 
         if count > 5:
             logger.warning("mock_dspy_lm_loop_detected", node=node_key, count=count)
-            return self._handle_finish(lookup_key, node_data, is_json, expected_fields)
+            return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
-        if self._is_finishing(full_text):
-            return self._handle_finish(lookup_key, node_data, is_json, expected_fields)
+        # Only finish if we see an observation and we've already done something
+        if self._is_finishing(full_text) and count > 1:
+            return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
-        return self._handle_action(lookup_key, node_data, is_json, expected_fields)
+        return self._handle_action(sig_lookup, node_data, is_json, expected_fields)
 
     def _get_full_text(
         self, prompt: str | None, messages: list[dict[str, Any]] | None
@@ -277,7 +282,7 @@ class MockDSPyLM(dspy.LM):
         reasoning = node_data.get("reasoning", "Verified all requirements.")
         expected_fields = expected_fields or []
 
-        # Base schema for DSPy JSONAdapter/CodeAct
+        # Base schema for DSPy JSONAdapter
         resp = {
             "thought": thought,
             "reasoning": reasoning,
@@ -291,13 +296,14 @@ class MockDSPyLM(dspy.LM):
             code = node_data.get("generated_code")
             if code and not finished:
                 resp["next_tool_name"] = "execute_command"
-                # Just pass the code directly as it's intended for the Python interpreter
+                # The execute_command tool implementation actually expects Python code
+                # (calls worker_client.execute_python)
                 resp["next_tool_args"] = {"command": code}
             else:
                 resp["next_tool_name"] = "finish"
                 resp["next_tool_args"] = {}
 
-        # Add node-specific fields (for CodeAct or ReAct extraction phase)
+        # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
         if node_key == "planner" or node_key == "benchmark_planner":
             resp["plan"] = node_data.get("plan", "No plan provided.")
@@ -362,8 +368,29 @@ class MockDSPyLM(dspy.LM):
 
         # Fallback for field-based format (common in non-JSON dspy.ReAct)
         if expected_fields:
+            # Ensure signature-defined output fields are also included
+            # ReAct sometimes expects them even in intermediate turns
+            sig_lookup = node_key
+            if sig_lookup == "benchmark_planner":
+                sig_lookup = "planner"
+            if sig_lookup == "benchmark_coder":
+                sig_lookup = "coder"
+            if sig_lookup == "benchmark_reviewer":
+                sig_lookup = "reviewer"
+
+            sig_fields = {
+                "planner": ["reasoning", "plan", "summary"],
+                "coder": ["journal"],
+                "reviewer": ["review"],
+                "skill_learner": ["summary", "journal"],
+                "cots_search": ["search_summary"],
+                "electronics_planner": ["reasoning", "summary"],
+            }.get(sig_lookup, [])
+
+            all_fields = list(dict.fromkeys(expected_fields + sig_fields))
+
             lines = []
-            for field in expected_fields:
+            for field in all_fields:
                 val = resp.get(field)
                 if val is None:
                     # Provide default values for missing expected fields to satisfy parser
@@ -371,22 +398,26 @@ class MockDSPyLM(dspy.LM):
                         val = "finish"
                     elif field == "next_tool_args":
                         val = {}
+                    elif field == "plan" and sig_lookup == "planner":
+                        val = node_data.get("plan", {})
+                    elif field == "review" and sig_lookup == "reviewer":
+                        val = node_data.get("review", {})
                     else:
                         val = "None"
 
                 if isinstance(val, bool):
-                    val = str(val)
+                    val = str(val).lower()
                 elif isinstance(val, dict):
                     val = json.dumps(val)
 
-                lines.append(f"[[ ## {field} ## ]]")
-                lines.append(str(val))
-            lines.append("[[ ## completed ## ]]")
+                # TypedPredictor expects [[ ## field ## ]] followed by value on NEXT line
+                lines.append(f"[[ ## {field} ## ]]\n{str(val)}")
+
             result = "\n\n".join(lines)
             logger.info("mock_dspy_returning_fields", text=result[:200] + "...")
             return [result]
 
-        # Fallback for plain text (rare in our CodeAct setups)
+        # Fallback for plain text (rare in our ReAct setups)
         if node_key == "reviewer":
             return ["Review Result: approved\nReasoning: Approved."]
         return [

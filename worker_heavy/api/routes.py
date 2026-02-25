@@ -17,6 +17,16 @@ from fastapi import (
     HTTPException,
 )
 
+from shared.enums import (
+    ElectronicComponentType,
+    FailureReason,
+    ManufacturingMethod,
+    MotorControlMode,
+)
+from shared.models.simulation import (
+    SimulationFailure,
+    SimulationResult,
+)
 from shared.workers.persistence import (
     collect_and_cleanup_events,
     record_validation_result,
@@ -28,6 +38,7 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    SimulationArtifacts,
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
@@ -244,23 +255,25 @@ async def api_verify(
                 events = _collect_events(fs_router, root=root)
 
                 # If consistent failure, we can return failure artifacts
-                failure = None
+                fail_obj = None
                 if not result.success_rate > 0 and result.fail_reasons:
-                    failure = {
-                        "reason": "VERIFICATION_FAILED",
-                        "detail": "; ".join(result.fail_reasons),
-                    }
+                    fail_obj = SimulationFailure(
+                        reason=FailureReason.VALIDATION_FAILED,
+                        detail="; ".join(result.fail_reasons),
+                    )
+
+                artifacts = SimulationArtifacts(
+                    verification_result=result,
+                    scene_path=str(scene_path.relative_to(root)),
+                    failure=fail_obj,
+                )
 
                 return BenchmarkToolResponse(
                     success=result.success_rate
                     > 0.9,  # Strict success criteria? Or report rate?
                     message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_runs})",
                     confidence="high" if result.num_runs >= 5 else "medium",
-                    artifacts={
-                        "verification_result": result.model_dump(),
-                        "scene_path": str(scene_path.relative_to(root)),
-                        "failure": failure,
-                    },
+                    artifacts=artifacts,
                     events=events,
                 )
 
@@ -319,21 +332,18 @@ async def api_simulate(
                     )
 
                 events = _collect_events(fs_router, root=root)
+                artifacts = SimulationArtifacts(
+                    render_paths=result.render_paths,
+                    mjcf_content=result.mjcf_content,
+                    stress_summaries=result.stress_summaries,
+                    fluid_metrics=result.fluid_metrics,
+                    failure=result.failure,
+                )
                 return BenchmarkToolResponse(
                     success=result.success,
                     message=summary,
                     confidence=result.confidence,
-                    artifacts={
-                        "render_paths": result.render_paths,
-                        "mjcf_content": result.mjcf_content,
-                        "stress_summaries": [
-                            s.model_dump() for s in result.stress_summaries
-                        ],
-                        "fluid_metrics": [m.model_dump() for m in result.fluid_metrics],
-                        "failure": result.failure.model_dump()
-                        if result.failure
-                        else None,
-                    },
+                    artifacts=artifacts,
                     events=events,
                 )
 

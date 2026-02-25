@@ -38,6 +38,15 @@ class ListFilesRequest(BaseModel):
     path: StrictStr = Field(default="/")
 
 
+class FsFileEntry(BaseModel):
+    """A single entry returned by the /fs/ls endpoint."""
+
+    name: StrictStr
+    path: StrictStr
+    is_dir: bool
+    size: int | None = None
+
+
 class ReadFileRequest(BaseModel):
     """Request to read a file."""
 
@@ -103,6 +112,14 @@ class ExecuteResponse(BaseModel):
     exit_code: StrictInt
     timed_out: StrictBool = False
     events: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ScriptExecutionRequest(BaseModel):
+    """Internal request for script execution with session context."""
+
+    code: StrictStr
+    session_id: StrictStr
+    timeout: StrictInt = 30
 
 
 class BenchmarkToolRequest(BaseModel):

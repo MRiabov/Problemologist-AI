@@ -8,8 +8,16 @@ from typing import Any
 import structlog
 from temporalio import activity
 
+from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.loader import load_component_from_script
+from shared.workers.schema import (
+    HeavyPreviewParams,
+    HeavyPreviewResponse,
+    HeavySimulationParams,
+    HeavyValidationParams,
+    HeavyValidationResponse,
+)
 from worker_heavy.utils.validation import simulate_subprocess, validate
 from worker_heavy.utils.preview import preview_design
 
@@ -39,13 +47,13 @@ def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
 
 
 @activity.defn(name="worker_run_simulation")
-async def run_simulation_activity(params: dict[str, Any]) -> dict[str, Any]:
+async def run_simulation_activity(params: HeavySimulationParams) -> SimulationResult:
     """Execute physics simulation from a session bundle."""
-    bundle_bytes = params["bundle_bytes"]
-    script_path = params["script_path"]
-    backend = params["backend"]
-    smoke_test_mode = params.get("smoke_test_mode")  # Default to None
-    session_id = params["session_id"]
+    bundle_bytes = params.bundle_bytes
+    script_path = params.script_path
+    backend = params.backend
+    smoke_test_mode = params.smoke_test_mode
+    session_id = params.session_id
 
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -63,16 +71,18 @@ async def run_simulation_activity(params: dict[str, Any]) -> dict[str, Any]:
             backend=backend_type,
             session_id=session_id,
         )
-        return result.model_dump()
+        return result
 
 
 @activity.defn(name="worker_validate_design")
-async def validate_design_activity(params: dict[str, Any]) -> dict[str, Any]:
+async def validate_design_activity(
+    params: HeavyValidationParams,
+) -> HeavyValidationResponse:
     """Execute geometric validation from a session bundle."""
-    bundle_bytes = params["bundle_bytes"]
-    script_path = params["script_path"]
-    session_id = params["session_id"]
-    smoke_test_mode = params.get("smoke_test_mode")  # Default to None
+    bundle_bytes = params.bundle_bytes
+    script_path = params.script_path
+    session_id = params.session_id
+    smoke_test_mode = params.smoke_test_mode
 
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -91,16 +101,16 @@ async def validate_design_activity(params: dict[str, Any]) -> dict[str, Any]:
             smoke_test_mode=smoke_test_mode,
         )
 
-        return {"success": is_valid, "message": message}
+        return HeavyValidationResponse(success=is_valid, message=message)
 
 
 @activity.defn(name="worker_preview_design")
-async def preview_design_activity(params: dict[str, Any]) -> dict[str, Any]:
+async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewResponse:
     """Render design preview from a session bundle."""
-    bundle_bytes = params["bundle_bytes"]
-    script_path = params["script_path"]
-    pitch = params.get("pitch", -45.0)
-    yaw = params.get("yaw", 45.0)
+    bundle_bytes = params.bundle_bytes
+    script_path = params.script_path
+    pitch = params.pitch
+    yaw = params.yaw
 
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
@@ -127,8 +137,8 @@ async def preview_design_activity(params: dict[str, Any]) -> dict[str, Any]:
         # Spec says "Stateless Simulation Payloads".
         # Usually we want the heavy worker to upload results to S3.
 
-        return {
-            "success": True,
-            "image_bytes": image_path.read_bytes() if image_path.exists() else None,
-            "filename": image_path.name if image_path.exists() else None,
-        }
+        return HeavyPreviewResponse(
+            success=True,
+            image_bytes=image_path.read_bytes() if image_path.exists() else None,
+            filename=image_path.name if image_path.exists() else None,
+        )

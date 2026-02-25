@@ -115,7 +115,7 @@ class BenchmarkPlannerNode(BaseNode):
             state,
             inputs,
             get_benchmark_tools,
-            [],
+            ["plan.md", "todo.md", "objectives.yaml"],
             "benchmark_planner",
         )
 
@@ -197,7 +197,7 @@ class BenchmarkCoderNode(BaseNode):
         }
 
         # Node uses ReAct for tool usage
-        prediction, _, journal_entry = await self._run_program(
+        prediction, artifacts, journal_entry = await self._run_program(
             dspy.ReAct,
             BenchmarkCoderSignature,
             state,
@@ -207,17 +207,26 @@ class BenchmarkCoderNode(BaseNode):
             "benchmark_coder",
         )
 
-        if not prediction:
+        if not prediction and not artifacts:
             state.journal += f"\n[Coder] Failed: {journal_entry}"
             return state
 
-        new_journal = getattr(prediction, "journal", "No journal provided.")
+        new_journal = (
+            getattr(prediction, "journal", "No journal provided.")
+            if prediction
+            else "Validation failed, but some artifacts were created."
+        )
         state.journal += f"\n[Coder] {new_journal}"
         state.messages.append(AIMessage(content=f"Work summary: {new_journal}"))
 
         # Retrieve script for further validation/simulation
-        with suppress(Exception):
-            state.current_script = await self.ctx.worker_client.read_file(SCRIPT_FILE)
+        if SCRIPT_FILE in artifacts:
+            state.current_script = artifacts[SCRIPT_FILE]
+        else:
+            with suppress(Exception):
+                state.current_script = await self.ctx.worker_client.read_file(
+                    SCRIPT_FILE
+                )
 
         # Run Verification (Geometric + Physics)
         script = state.current_script
@@ -254,6 +263,11 @@ class BenchmarkCoderNode(BaseNode):
                     sim_res = await self.ctx.worker_client.simulate(
                         script_path=SCRIPT_FILE, backend=backend
                     )
+
+                    # Update MJCF content from simulation results
+                    if sim_res.artifacts and "mjcf_content" in sim_res.artifacts:
+                        state.mjcf_content = sim_res.artifacts["mjcf_content"]
+
                     if not sim_res.success:
                         from shared.simulation.schemas import ValidationResult
 
@@ -340,7 +354,7 @@ class BenchmarkCOTSSearchNode(BaseNode):
         inputs = {"prompt": state.session.prompt}
 
         prediction, _, _ = await self._run_program(
-            dspy.CodeAct,
+            dspy.ReAct,
             BenchmarkCOTSSearchSignature,
             state,
             inputs,
