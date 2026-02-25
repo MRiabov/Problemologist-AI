@@ -7,8 +7,8 @@ from temporalio.client import Client
 
 from controller.api.schemas import (
     AgentRunResponse,
+    EpisodeCreateResponse,
     EpisodeResponse,
-    TestEpisodeCreateResponse,
 )
 from controller.api.tasks import AgentRunRequest
 from shared.enums import AssetType, EpisodeStatus
@@ -104,7 +104,7 @@ async def test_int_054_temporal_failure_path():
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
-        data = TestEpisodeCreateResponse.model_validate(resp.json())
+        data = EpisodeCreateResponse.model_validate(resp.json())
         episode_id = data.episode_id
 
         # 2. Trigger workflow with MJCF failure injection
@@ -151,7 +151,7 @@ async def test_int_056_s3_upload_failure_retry():
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
-        data = TestEpisodeCreateResponse.model_validate(resp.json())
+        data = EpisodeCreateResponse.model_validate(resp.json())
         episode_id = data.episode_id
 
         temporal = await Client.connect(TEMPORAL_URL)
