@@ -83,6 +83,21 @@ def get_stress_report(
             worst_summary = summary
 
     if worst_summary:
+        # T034: Add automated advice based on safety factor
+        if worst_summary.safety_factor < 1.2:
+            worst_summary.advice = (
+                f"CRITICAL: Safety factor ({worst_summary.safety_factor:.2f}) is too low. "
+                "Increase wall thickness or switch to a stronger material."
+            )
+        elif worst_summary.safety_factor < 2.0:
+            worst_summary.advice = (
+                f"WARNING: Safety factor ({worst_summary.safety_factor:.2f}) is marginal. "
+                "Consider adding fillets or reinforcing high-stress areas."
+            )
+        else:
+            worst_summary.advice = (
+                f"PASS: Safety factor ({worst_summary.safety_factor:.2f}) is healthy."
+            )
         return worst_summary
 
     logger.warning("stress_report_part_not_found", part_label=part_label)
@@ -158,9 +173,13 @@ def define_fluid(
         density_kg_m3=density,
         surface_tension_n_m=surface_tension,
     )
+    # T034: Ensure uppercase for enum values
+    shape_type_upper = shape_type.upper()
+
     vol = FluidVolume(
-        type=shape_type, center=center, size=size, radius=radius, height=height
+        type=shape_type_upper, center=center, size=size, radius=radius, height=height
     )
+
     fluid = FluidDefinition(
         fluid_id=name, properties=props, initial_volume=vol, color=color
     )
@@ -200,7 +219,7 @@ def set_soft_mesh(
             objs.physics.fem_enabled = enabled
             if enabled:
                 # FEM currently requires Genesis backend
-                objs.physics.backend = SimulatorBackendType.GENESIS.value
+                objs.physics.backend = SimulatorBackendType.GENESIS.value.upper()
             obj_path.write_text(
                 yaml.dump(objs.model_dump(mode="json")), encoding="utf-8"
             )

@@ -93,13 +93,13 @@ def test_generate_schematic_soup_components_and_wiring():
         electronics=electronics,
     )
 
-    soup = generate_schematic_soup(assembly)
+    soup_raw = [item.model_dump() for item in generate_schematic_soup(assembly)]
 
     # 1. Verify components exist
     motor = next(
         (
             c
-            for c in soup
+            for c in soup_raw
             if c["type"] == "schematic_component" and c["name"] == "motor1"
         ),
         None,
@@ -107,7 +107,7 @@ def test_generate_schematic_soup_components_and_wiring():
     switch = next(
         (
             c
-            for c in soup
+            for c in soup_raw
             if c["type"] == "schematic_component" and c["name"] == "switch1"
         ),
         None,
@@ -120,10 +120,10 @@ def test_generate_schematic_soup_components_and_wiring():
     assert switch["symbol_name"] == "spst_switch"
 
     # 2. Verify pins exist
-    assert any(c["id"] == "comp_motor1_p1" for c in soup)
-    assert any(c["id"] == "comp_motor1_p2" for c in soup)
-    assert any(c["id"] == "comp_switch1_p1" for c in soup)
-    assert any(c["id"] == "comp_switch1_p2" for c in soup)
+    assert any(c["id"] == "comp_motor1_p1" for c in soup_raw)
+    assert any(c["id"] == "comp_motor1_p2" for c in soup_raw)
+    assert any(c["id"] == "comp_switch1_p1" for c in soup_raw)
+    assert any(c["id"] == "comp_switch1_p2" for c in soup_raw)
 
     # 3. Verify trace logic (The Critical Fix)
     # motor1(-) should map to pin 2
@@ -131,7 +131,11 @@ def test_generate_schematic_soup_components_and_wiring():
     # So trace should go from comp_motor1_p2 to comp_switch1_p1
 
     trace = next(
-        (c for c in soup if c["type"] == "schematic_trace" and c["id"] == "trace_w1"),
+        (
+            c
+            for c in soup_raw
+            if c["type"] == "schematic_trace" and c["id"] == "trace_w1"
+        ),
         None,
     )
     assert trace is not None

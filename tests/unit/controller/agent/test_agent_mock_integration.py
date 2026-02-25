@@ -119,6 +119,7 @@ async def test_benchmark_coder_with_mock_llm(temp_session_dir):
             patch("controller.agent.nodes.base.WorkerClient", return_value=mock_client),
             patch("controller.agent.mock_llm.MockDSPyLM", return_value=mock_lm),
             patch("controller.observability.tracing.get_sessionmaker") as mock_sm,
+            patch("controller.agent.tools.record_worker_events", new=mock_async),
         ):
             # Totally block DB connection attempts
             mock_sm.side_effect = RuntimeError("DB connection blocked in unit test")

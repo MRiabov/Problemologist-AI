@@ -50,6 +50,61 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def get_docs_for(query: str):
+        """
+        Search for technical documentation and skills.
+        Returns concise, actionable snippets.
+        """
+        from controller.agent.nodes.documentation import DocumentationNode, SharedNodeContext
+        from controller.agent.config import settings
+        from controller.agent.state import AgentState
+
+        ctx = SharedNodeContext.create(
+            worker_light_url=settings.spec_001_api_url, session_id=session_id
+        )
+        node = DocumentationNode(ctx)
+        # Create a dummy state for the subagent call
+        state = AgentState(session_id=session_id)
+        return await node(state, query)
+
+    async def validate_and_price(path: str = "script.py"):
+        """
+        Validate manufacturability and calculate costs for the assembly in a script.
+        Returns a detailed report with unit costs and any DFM violations.
+        """
+        return await fs.validate(path)
+
+    async def simulate(path: str = "script.py", backend: str = "GENESIS"):
+        """
+        Run a physics simulation to verify stability and objective completion.
+        Returns simulation metrics and result summary.
+        """
+        from shared.simulation.schemas import SimulatorBackendType
+
+        try:
+            b_enum = SimulatorBackendType(backend.upper())
+        except ValueError:
+            b_enum = SimulatorBackendType.GENESIS
+
+        return await fs.simulate(path, backend=b_enum)
+
+    async def submit_for_review(path: str = "script.py"):
+        """
+        Submit the completed design for final inspection and approval.
+        Requires prior validation and simulation to pass.
+        """
+        return await fs.submit(path)
+
+    async def validate_costing_and_price():
+        """
+        Validate 'assembly_definition.yaml' and compute assembly totals.
+        Autopopulates unit cost and weight fields.
+        Must be called by the Planner before handoff.
+        """
+        return await fs.run_command(
+            "python3 /skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        )
+
     return [
         list_files,
         read_file,
@@ -59,6 +114,11 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        get_docs_for,
+        validate_and_price,
+        simulate,
+        submit_for_review,
+        validate_costing_and_price,
     ]
 
 
