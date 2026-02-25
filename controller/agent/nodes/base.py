@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+import yaml
 
 from controller.agent.config import settings
 from controller.agent.prompt_manager import PromptManager
@@ -14,7 +15,7 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
-from shared.models.schemas import CodeReference
+from shared.models.schemas import CodeReference, ReviewFrontmatter
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -118,6 +119,42 @@ class BaseNode:
 
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
         return self.ctx.get_database_recorder(session_id)
+
+    async def _write_review_artifact(
+        self, review: Any, filename: str, round_num: int | None = None
+    ):
+        """Helper to write a structured review markdown file with YAML frontmatter."""
+        # Map ReviewResult fields to ReviewFrontmatter
+        frontmatter_data = {
+            "decision": review.decision,
+            "comments": [review.reason] + getattr(review, "required_fixes", []),
+            "images_viewed": getattr(review, "images_viewed", []),
+            "files_checked": getattr(review, "files_checked", []),
+        }
+
+        # Validate via Pydantic model
+        frontmatter = ReviewFrontmatter.model_validate(frontmatter_data)
+
+        yaml_str = yaml.dump(frontmatter.model_dump(), sort_keys=False)
+        content = f"---\n{yaml_str}---\n\n# Review Reason\n{review.reason}\n"
+        fixes = getattr(review, "required_fixes", [])
+        if fixes:
+            content += "\n## Required Fixes\n"
+            for fix in fixes:
+                content += f"- {fix}\n"
+
+        path = (
+            f"reviews/round-{round_num}/{filename}"
+            if round_num is not None
+            else f"reviews/{filename}"
+        )
+
+        try:
+            # Ensure directory exists (worker handles it implicitly in write_file)
+            await self.ctx.worker_client.write_file(path, content)
+            logger.info("review_artifact_written", path=path)
+        except Exception as e:
+            logger.error("failed_to_write_review_artifact", path=path, error=str(e))
 
     def _get_skills_context(self) -> str:
         # Note: Skills are currently local to the controller

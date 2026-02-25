@@ -124,7 +124,7 @@ class FailureReason(StrEnum):
 SimulationFailureMode = FailureReason
 
 
-class ElectronicComponentType(StrEnum):
+class ElectronicComponentType(UppercaseStrEnum):
     """Types of electronic components supported in the netlist."""
 
     MOTOR = "MOTOR"
@@ -134,7 +134,7 @@ class ElectronicComponentType(StrEnum):
     CONNECTOR = "CONNECTOR"
 
 
-class ManufacturingMethod(StrEnum):
+class ManufacturingMethod(UppercaseStrEnum):
     """Supported manufacturing methods."""
 
     CNC = "CNC"
@@ -142,7 +142,7 @@ class ManufacturingMethod(StrEnum):
     INJECTION_MOLDING = "IM"
 
 
-class MotorControlMode(StrEnum):
+class MotorControlMode(UppercaseStrEnum):
     """Control modes for actuators."""
 
     CONSTANT = "CONSTANT"
@@ -150,7 +150,7 @@ class MotorControlMode(StrEnum):
     ON_OFF = "ON_OFF"
 
 
-class FluidShapeType(StrEnum):
+class FluidShapeType(UppercaseStrEnum):
     """Supported shapes for fluid volumes."""
 
     CYLINDER = "CYLINDER"
@@ -158,21 +158,21 @@ class FluidShapeType(StrEnum):
     SPHERE = "SPHERE"
 
 
-class FluidObjectiveType(StrEnum):
+class FluidObjectiveType(UppercaseStrEnum):
     """Types of fluid-related objectives."""
 
     FLUID_CONTAINMENT = "FLUID_CONTAINMENT"
     FLOW_RATE = "FLOW_RATE"
 
 
-class FluidEvalAt(StrEnum):
+class FluidEvalAt(UppercaseStrEnum):
     """When to evaluate fluid objectives."""
 
     END = "END"
     CONTINUOUS = "CONTINUOUS"
 
 
-class MovingPartType(StrEnum):
+class MovingPartType(UppercaseStrEnum):
     """Types of moving parts in the assembly."""
 
     MOTOR = "MOTOR"

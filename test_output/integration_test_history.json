@@ -1,0 +1,42 @@
+{
+  "runs": [
+    {
+      "timestamp": "2026-02-25T22:12:43.081848",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 39.693,
+      "tests": [
+        {
+          "name": "test_reviewer_evidence_completeness",
+          "classname": "tests.integration.architecture_p1.test_reviewer_evidence",
+          "time": 39.461,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-25T22:10:03.559234",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 8.066,
+      "tests": [
+        {
+          "name": "test_reviewer_evidence_completeness",
+          "classname": "tests.integration.architecture_p1.test_reviewer_evidence",
+          "time": 7.51,
+          "status": "failed",
+          "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n         ^^^^^^^^^^^^^^^^^^^^^^^\n/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p1\n    @pytest.mark.asyncio\n    async def test_reviewer_evidence_completeness():\n        \"\"\"\n        INT-034: Reviewer evidence completeness\n    \n        Verifies that Review decisions include expected evidence fields:\n        - images_viewed\n        - files_checked\n    \n        This test runs an engineering task (or uses an existing one) and inspects the review artifact.\n        \"\"\"\n        async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:\n            # 1. Setup: Use or Generate Benchmark + Run Engineer (Similar to INT-033)\n            # To make this test independent, we repeat the setup.\n            # Ideally, we'd have a fixture yielding a completed episode ID.\n    \n            request = BenchmarkGenerateRequest(\n                prompt=\"Create a trivial benchmark.\",\n                backend=SimulatorBackendType.GENESIS,\n            )\n            resp = await client.post(\"/benchmark/generate\", json=request.model_dump())\n            assert resp.status_code in [\n                200,\n                202,\n            ], f\"Benchmark generation failed: {resp.text}\"\n            benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())\n            benchmark_session_id = benchmark_resp.session_id\n    \n            # Wait for benchmark\n            for _ in range(150):\n>               status_resp = await client.get(f\"/benchmark/{benchmark_session_id}\")\n                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/integration/architecture_p1/test_reviewer_evidence.py:54: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1768: in get\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n         ^^^^^^^^^^^^^^^^^^^^^^^^^\n/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+        }
+      ]
+    }
+  ]
+}
