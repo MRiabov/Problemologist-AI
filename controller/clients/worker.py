@@ -344,7 +344,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/validate",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=300.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
