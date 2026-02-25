@@ -16,13 +16,18 @@ const CircuitSchematic: React.FC<Props> = ({ className, soup: initialSoup }) => 
   const [soup, setSoup] = useState<any[]>(initialSoup || []);
   const [loading, setLoading] = useState(true);
 
+  // Update local state when prop changes
   useEffect(() => {
     if (initialSoup) {
         setSoup(initialSoup);
         setLoading(false);
-        return;
     }
-    if (!selectedEpisode) return;
+  }, [initialSoup]);
+
+  // Fetch schematic when episode changes or periodically if running
+  useEffect(() => {
+    if (initialSoup) return;
+    if (!selectedEpisode?.id) return;
 
     const fetchSchematic = async () => {
       try {
@@ -39,7 +44,15 @@ const CircuitSchematic: React.FC<Props> = ({ className, soup: initialSoup }) => 
     };
 
     fetchSchematic();
-  }, [selectedEpisode]);
+
+    // Poll if running to keep schematic updated without spamming requests on every trace
+    let interval: ReturnType<typeof setInterval>;
+    if (selectedEpisode.status === 'RUNNING') {
+        interval = setInterval(fetchSchematic, 5000);
+    }
+
+    return () => clearInterval(interval);
+  }, [selectedEpisode?.id, selectedEpisode?.status, initialSoup]);
 
   return (
     <div className={cn("bg-slate-950 rounded-xl p-4 border border-slate-800 shadow-2xl relative overflow-hidden group min-h-[400px] flex flex-col", className)}>
