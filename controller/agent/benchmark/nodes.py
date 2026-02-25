@@ -228,98 +228,137 @@ class BenchmarkCoderNode(BaseNode):
                     SCRIPT_FILE
                 )
 
-        # Run Verification (Geometric + Physics)
+        return state
+
+
+@type_check
+class BenchmarkValidatorNode(BaseNode):
+    """
+    Validator node: Runs geometric validation and physics simulation on the generated script.
+    """
+
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        session_id = str(state.session.session_id)
+        logger.info("validator_node_start", session_id=session_id)
+
         script = state.current_script
-        if script:
-            logger.info("running_integrated_validation", session_id=session_id)
-            try:
-                val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
-                if not val_res.success:
+        if not script:
+            logger.warning("no_script_to_validate", session_id=session_id)
+            return state
+
+        # Determine backend from objectives
+        objectives_yaml = ""
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
+                objectives_yaml = await self.ctx.worker_client.read_file(
+                    OBJECTIVES_FILE
+                )
+
+        try:
+            val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
+            if not val_res.success:
+                from shared.simulation.schemas import ValidationResult
+
+                state.simulation_result = ValidationResult(
+                    valid=False,
+                    cost=0,
+                    logs=[f"Geometric validation failed: {val_res.message}"],
+                    render_paths=[],
+                    render_data=[],
+                )
+            else:
+                # physics simulation
+                backend = SimulatorBackendType.GENESIS
+                try:
+                    obj_data = yaml.safe_load(objectives_yaml)
+                    if (
+                        obj_data
+                        and "physics" in obj_data
+                        and "backend" in obj_data["physics"]
+                    ):
+                        backend = SimulatorBackendType(
+                            obj_data["physics"]["backend"]
+                        )
+                except Exception:
+                    pass
+
+                # Override backend if specified in session (e.g. from RunSimulationRequest)
+                if hasattr(state.session, "backend") and state.session.backend:
+                    backend = state.session.backend
+
+                sim_res = await self.ctx.worker_client.simulate(
+                    script_path=SCRIPT_FILE, backend=backend
+                )
+
+                # Update MJCF content from simulation results
+                if sim_res.artifacts and "mjcf_content" in sim_res.artifacts:
+                    state.mjcf_content = sim_res.artifacts["mjcf_content"]
+
+                if not sim_res.success:
                     from shared.simulation.schemas import ValidationResult
 
                     state.simulation_result = ValidationResult(
                         valid=False,
                         cost=0,
-                        logs=[f"Geometric validation failed: {val_res.message}"],
+                        logs=[f"Physics simulation failed: {sim_res.message}"],
                         render_paths=[],
                         render_data=[],
                     )
                 else:
-                    # physics simulation
-                    backend = SimulatorBackendType.GENESIS
-                    try:
-                        obj_data = yaml.safe_load(objectives_yaml)
-                        if (
-                            obj_data
-                            and "physics" in obj_data
-                            and "backend" in obj_data["physics"]
-                        ):
-                            backend = SimulatorBackendType(
-                                obj_data["physics"]["backend"]
-                            )
-                    except Exception:
-                        pass
-
-                    sim_res = await self.ctx.worker_client.simulate(
-                        script_path=SCRIPT_FILE, backend=backend
+                    # Download Renders
+                    render_paths = (
+                        sim_res.artifacts.get("render_paths", [])
+                        if sim_res.artifacts
+                        else []
                     )
 
-                    # Update MJCF content from simulation results
-                    if sim_res.artifacts and "mjcf_content" in sim_res.artifacts:
-                        state.mjcf_content = sim_res.artifacts["mjcf_content"]
-
-                    if not sim_res.success:
-                        from shared.simulation.schemas import ValidationResult
-
-                        state.simulation_result = ValidationResult(
-                            valid=False,
-                            cost=0,
-                            logs=[f"Physics simulation failed: {sim_res.message}"],
-                            render_paths=[],
-                            render_data=[],
-                        )
-                    else:
-                        # Download Renders
-                        render_paths = (
-                            sim_res.artifacts.get("render_paths", [])
-                            if sim_res.artifacts
-                            else []
+                    async def _download(url_path):
+                        from controller.config.settings import (
+                            settings as global_settings,
                         )
 
-                        async def _download(url_path):
-                            from controller.config.settings import (
-                                settings as global_settings,
-                            )
+                        worker_light_url = global_settings.worker_light_url
+                        url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
+                        try:
+                            async with httpx.AsyncClient() as http_client:
+                                r = await http_client.get(
+                                    url, headers={"X-Session-ID": session_id}
+                                )
+                                return r.content if r.status_code == 200 else None
+                        except Exception:
+                            return None
 
-                            worker_light_url = global_settings.worker_light_url
-                            url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
-                            try:
-                                async with httpx.AsyncClient() as http_client:
-                                    r = await http_client.get(
-                                        url, headers={"X-Session-ID": session_id}
-                                    )
-                                    return r.content if r.status_code == 200 else None
-                            except Exception:
-                                return None
+                    tasks = [_download(p) for p in render_paths]
+                    results = await asyncio.gather(*tasks)
+                    render_data = [r for r in results if r is not None]
 
-                        tasks = [_download(p) for p in render_paths]
-                        results = await asyncio.gather(*tasks)
-                        render_data = [r for r in results if r is not None]
+                    from shared.simulation.schemas import ValidationResult
 
-                        from shared.simulation.schemas import ValidationResult
-
-                        state.simulation_result = ValidationResult(
-                            valid=True,
-                            cost=0,
-                            logs=["Validation passed."],
-                            render_paths=render_paths,
-                            render_data=render_data,
-                        )
-            except Exception as e:
-                logger.error("integrated_validation_error", error=str(e))
-                state.session.status = SessionStatus.FAILED
+                    state.simulation_result = ValidationResult(
+                        valid=True,
+                        cost=0,
+                        logs=["Validation passed."],
+                        render_paths=render_paths,
+                        render_data=render_data,
+                    )
+        except Exception as e:
+            logger.error("integrated_validation_error", error=str(e))
+            state.session.status = SessionStatus.FAILED
 
         return state
+
+
+@type_check
+async def validator_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url, session_id=session_id
+    )
+    node = BenchmarkValidatorNode(context=ctx)
+    return await node(state)
 
 
 @type_check

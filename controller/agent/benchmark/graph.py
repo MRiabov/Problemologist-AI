@@ -27,6 +27,7 @@ from .nodes import (
     reviewer_node,
     skills_node,
     summarizer_node,
+    validator_node,
 )
 from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
@@ -43,6 +44,7 @@ def define_graph():
     # Add nodes
     workflow.add_node("planner", planner_node)
     workflow.add_node("coder", coder_node)
+    workflow.add_node("validator", validator_node)
     workflow.add_node("reviewer", reviewer_node)
     workflow.add_node("cots_search", cots_search_node)
     workflow.add_node("skills", skills_node)
@@ -50,17 +52,22 @@ def define_graph():
     workflow.add_node("steer", steerability_node)
 
     # Define transitions
-    def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
+    def route_start(
+        state: BenchmarkGeneratorState,
+    ) -> Literal["validator", "planner", "coder"]:
+        if state.current_script:
+            return "validator"
         if state.session.status == SessionStatus.EXECUTING:
             return "coder"
         return "planner"
 
     workflow.add_conditional_edges(START, route_start)
     workflow.add_edge("planner", "coder")
+    workflow.add_edge("coder", "validator")
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
     workflow.add_conditional_edges(
-        "coder",
+        "validator",
         check_steering,
         {"steer": "steer", "next": "reviewer"},
     )
@@ -261,6 +268,7 @@ async def run_generation_session(
     session_id: uuid.UUID | None = None,
     custom_objectives: dict | None = None,
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    initial_script: str | None = None,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
@@ -272,6 +280,22 @@ async def run_generation_session(
         prompt=prompt,
         backend=backend,
     )
+
+    if initial_script:
+        try:
+            from controller.config.settings import settings
+
+            async with httpx.AsyncClient() as http_client:
+                client = WorkerClient(
+                    base_url=settings.worker_light_url,
+                    session_id=str(session_id),
+                    http_client=http_client,
+                    heavy_url=settings.worker_heavy_url,
+                )
+                await client.write_file("script.py", initial_script)
+                logger.info("initial_script_written", session_id=session_id)
+        except Exception as e:
+            logger.error("failed_to_write_initial_script", error=str(e))
 
     # 1. Create DB entry (Episode)
     from shared.models.schemas import EpisodeMetadata
@@ -305,7 +329,7 @@ async def run_generation_session(
 
     initial_state = BenchmarkGeneratorState(
         session=session,
-        current_script="",
+        current_script=initial_script or "",
         simulation_result=None,
         review_feedback=None,
         review_round=0,

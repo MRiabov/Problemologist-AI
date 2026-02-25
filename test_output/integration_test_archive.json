@@ -3879,5 +3879,138 @@
         "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column\n        line_number = page.get_by_text(\"1\", exact=True).first\n        expect(line_number).to_be_visible()\n    \n        # Simulate line selection (clicking line number)\n        line_number.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-25T07:39:25.955760",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 134.439,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 134.311,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n>       expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_label(\"Send Message\")\n\ntests/integration/frontend/test_int_164.py:36: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:44:14.942377",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 47.63,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 47.498,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:47:06.052296",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 54.79,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 54.569,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T08:07:01.218115",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 126.515,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 126.334,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T08:12:01.841080",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 126.378,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 126.106,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T12:47:47.033371",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 1.475,
+    "tests": [
+      {
+        "name": "test_simulation_endpoint_run",
+        "classname": "tests.integration.test_simulation_endpoint",
+        "time": 0.98,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n         ^^^^^^^^^^^^^^^^^^^^^^^\n/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_simulation_endpoint_run():\n        async with httpx.AsyncClient(timeout=30.0) as client:\n            # 1. Trigger Simulation\n            print(f\"Triggering simulation on {CONTROLLER_URL}...\")\n>           resp = await client.post(\n                f\"{CONTROLLER_URL}/simulation/run\",\n                json={\n                    \"session_id\": \"test-sim-run\",\n                    \"script_content\": SCRIPT_CONTENT,\n                    \"backend\": \"genesis\"\n                }\n            )\n\ntests/integration/test_simulation_endpoint.py:24: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n         ^^^^^^^^^^^^^^^^^^^^^^^^^\n/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T12:49:53.858687",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 0.618,
+    "tests": [
+      {
+        "name": "test_simulation_endpoint_run",
+        "classname": "tests.integration.test_simulation_endpoint",
+        "time": 0.441,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_simulation_endpoint_run():\n        async with httpx.AsyncClient(timeout=30.0) as client:\n            # 1. Trigger Simulation\n            print(f\"Triggering simulation on {CONTROLLER_URL}...\")\n            resp = await client.post(\n                f\"{CONTROLLER_URL}/simulation/run\",\n                json={\n                    \"session_id\": \"test-sim-run\",\n                    \"script_content\": SCRIPT_CONTENT,\n                    \"backend\": \"genesis\"\n                }\n            )\n>           assert resp.status_code == 202, f\"Failed: {resp.text}\"\nE           AssertionError: Failed: {\"detail\":[{\"type\":\"enum\",\"loc\":[\"body\",\"backend\"],\"msg\":\"Input should be 'MUJOCO' or 'GENESIS'\",\"input\":\"genesis\",\"ctx\":{\"expected\":\"'MUJOCO' or 'GENESIS'\"}}]}\nE           assert 422 == 202\nE            +  where 422 = <Response [422 Unprocessable Entity]>.status_code\n\ntests/integration/test_simulation_endpoint.py:32: AssertionError"
+      }
+    ]
   }
 ]
