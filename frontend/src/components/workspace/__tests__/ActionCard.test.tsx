@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ActionCard } from '../ActionCard';
 import { EpisodeProvider } from '../../../context/EpisodeContext';
 import { TraceType } from '../../../api/generated/models/TraceType';
+import type { TraceResponse } from '../../../api/generated/models/TraceResponse';
 
 // Mock getFileIconInfo to avoid complexity
 vi.mock('../../../lib/fileIcons', () => ({
@@ -13,7 +14,7 @@ vi.mock('../../../lib/fileIcons', () => ({
 }));
 
 describe('ActionCard', () => {
-  const mockTrace = (name: string, content: string = '{}'): any => ({
+  const mockTrace = (name: string, content: string = '{}'): TraceResponse => ({
     id: 1,
     trace_type: TraceType.TOOL_START,
     name,

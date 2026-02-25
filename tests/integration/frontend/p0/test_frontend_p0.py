@@ -5,11 +5,15 @@ import httpx
 import os
 import re
 
+from pydantic import TypeAdapter
 from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateResponse,
     EpisodeResponse,
+    EpisodeListItem,
 )
+from controller.api.tasks import AgentRunRequest
+from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from shared.enums import EpisodeStatus, TraceType
 
 # Constants
@@ -30,17 +34,19 @@ def test_int_157_session_history(page: Page):
     # 1. Create a benchmark session and an engineer session via API
     with httpx.Client() as client:
         # Create benchmark session
+        req_b = BenchmarkGenerateRequest(prompt=benchmark_name)
         resp_b = client.post(
-            f"{CONTROLLER_URL}/benchmark/generate", json={"prompt": benchmark_name}
+            f"{CONTROLLER_URL}/benchmark/generate", json=req_b.model_dump(mode="json")
         )
         assert resp_b.status_code == 200
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp_b.json())
         benchmark_id = str(benchmark_resp.session_id)
 
         # Create engineer session
+        req_e = AgentRunRequest(task=engineer_name, session_id=str(uuid.uuid4()))
         resp_e = client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": engineer_name, "session_id": str(uuid.uuid4())},
+            json=req_e.model_dump(mode="json"),
         )
         assert resp_e.status_code == 202
         agent_run_resp = AgentRunResponse.model_validate(resp_e.json())
@@ -53,7 +59,7 @@ def test_int_157_session_history(page: Page):
         for i in range(max_retries):
             resp = client.get(f"{CONTROLLER_URL}/episodes/")
             if resp.status_code == 200:
-                episodes = [EpisodeResponse.model_validate(ep) for ep in resp.json()]
+                episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
                 ep_ids = [str(ep.id) for ep in episodes]
                 if benchmark_id in ep_ids and engineer_id in ep_ids:
                     episodes_found = True
@@ -172,13 +178,16 @@ def test_int_159_plan_approval_comment(page: Page):
 
     # 5. Verify the comment is persisted as a trace via API
     with httpx.Client() as client:
-        episodes_json = client.get(f"{CONTROLLER_URL}/episodes/").json()
-        episodes = [EpisodeResponse.model_validate(ep) for ep in episodes_json]
+        resp = client.get(f"{CONTROLLER_URL}/episodes/")
+        assert resp.status_code == 200
+        episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
+
         # Find the episode we just created/confirmed
         found_ep = None
         for ep in episodes:
-            full_ep_json = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}").json()
-            full_ep = EpisodeResponse.model_validate(full_ep_json)
+            resp_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}")
+            assert resp_ep.status_code == 200
+            full_ep = EpisodeResponse.model_validate(resp_ep.json())
             for trace in full_ep.traces:
                 if trace.trace_type == TraceType.LOG and test_comment in (
                     trace.content or ""

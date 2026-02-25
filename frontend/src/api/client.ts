@@ -4,6 +4,10 @@ import { DefaultService } from './generated/services/DefaultService';
 import { SimulationService } from './generated/services/SimulationService';
 import type { controller__api__routes__episodes__EpisodeResponse as EpisodeResponse } from './generated/models/controller__api__routes__episodes__EpisodeResponse';
 import type { Skill } from './generated/models/Skill';
+import type { AgentRunResponse } from './generated/models/AgentRunResponse';
+import type { BenchmarkGenerateResponse } from './generated/models/BenchmarkGenerateResponse';
+import type { BenchmarkConfirmResponse } from './generated/models/BenchmarkConfirmResponse';
+import type { BenchmarkObjectivesResponse } from './generated/models/BenchmarkObjectivesResponse';
 
 export type { EpisodeResponse as Episode };
 export type { Skill };
@@ -20,7 +24,7 @@ export async function fetchEpisode(id: string): Promise<EpisodeResponse> {
     return EpisodesService.getEpisodeEpisodesEpisodeIdGet(id);
 }
 
-export async function runAgent(task: string, sessionId: string, metadata?: Record<string, unknown>): Promise<any> {
+export async function runAgent(task: string, sessionId: string, metadata?: Record<string, any>): Promise<AgentRunResponse> {
     return DefaultService.runAgentAgentRunPost({
         task,
         session_id: sessionId,
@@ -28,7 +32,7 @@ export async function runAgent(task: string, sessionId: string, metadata?: Recor
     });
 }
 
-export async function interruptEpisode(id: string): Promise<any> {
+export async function interruptEpisode(id: string): Promise<BenchmarkConfirmResponse> {
     return EpisodesService.interruptEpisodeEpisodesEpisodeIdInterruptPost(id);
 }
 
@@ -40,7 +44,7 @@ export async function submitTraceFeedback(episodeId: string, traceId: number, sc
     );
 }
 
-export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<any> {
+export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<BenchmarkConfirmResponse> {
     return SimulationService.runSimulationSimulationRunPost({
         session_id: sessionId,
         compound_json: compoundJson
@@ -73,7 +77,7 @@ export interface BenchmarkObjectives {
     target_quantity?: number;
 }
 
-export async function generateBenchmark(prompt: string, objectives?: BenchmarkObjectives): Promise<any> {
+export async function generateBenchmark(prompt: string, objectives?: BenchmarkObjectives): Promise<BenchmarkGenerateResponse> {
     return __request(OpenAPI, {
         method: 'POST',
         url: '/benchmark/generate',
@@ -87,7 +91,7 @@ export async function generateBenchmark(prompt: string, objectives?: BenchmarkOb
     });
 }
 
-export async function updateBenchmarkObjectives(sessionId: string, objectives: BenchmarkObjectives): Promise<any> {
+export async function updateBenchmarkObjectives(sessionId: string, objectives: BenchmarkObjectives): Promise<BenchmarkObjectivesResponse> {
      return __request(OpenAPI, {
         method: 'POST',
         url: `/benchmark/${sessionId}/objectives`, // Updated URL path to match backend
@@ -100,7 +104,7 @@ export async function updateBenchmarkObjectives(sessionId: string, objectives: B
     });
 }
 
-export async function confirmBenchmark(sessionId: string, comment?: string): Promise<any> {
+export async function confirmBenchmark(sessionId: string, comment?: string): Promise<BenchmarkConfirmResponse> {
     return __request(OpenAPI, {
         method: 'POST',
         url: `/benchmark/${sessionId}/confirm`,
@@ -109,7 +113,7 @@ export async function confirmBenchmark(sessionId: string, comment?: string): Pro
     });
 }
 
-export async function continueEpisode(id: string, message: string, metadata?: Record<string, unknown>): Promise<any> {
+export async function continueEpisode(id: string, message: string, metadata?: Record<string, any>): Promise<BenchmarkConfirmResponse> {
     return __request(OpenAPI, {
         method: 'POST',
         url: `/episodes/${id}/messages`,
