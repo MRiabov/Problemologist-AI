@@ -13,6 +13,7 @@ import numpy as np
 import structlog
 
 from shared.models.simulation import MultiRunResult, SimulationMetrics
+from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 logger = structlog.get_logger(__name__)
@@ -60,7 +61,7 @@ def verify_with_jitter(
     duration: float = 10.0,
     seed: int = 42,
     dynamic_controllers: dict[str, Any] | None = None,
-    backend_type: str = "mujoco",
+    backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
     session_id: str | None = None,
 ) -> MultiRunResult:
     """Run simulation multiple times with perturbed initial positions.
@@ -79,8 +80,6 @@ def verify_with_jitter(
     Returns:
         MultiRunResult with aggregated statistics.
     """
-    from shared.simulation.schemas import SimulatorBackendType
-
     results: list[SimulationMetrics] = []
     rng = np.random.default_rng(seed)
 
@@ -88,7 +87,7 @@ def verify_with_jitter(
         # Create fresh simulation state for each run
         loop = SimulationLoop(
             xml_path,
-            backend_type=SimulatorBackendType(backend_type),
+            backend_type=backend_type,
             session_id=session_id,
         )
 

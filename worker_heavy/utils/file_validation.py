@@ -247,11 +247,17 @@ def validate_node_output(
     # 1. Required files check
     required_files = {
         "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
+        "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
         "coder": [
             "plan.md",
             "todo.md",
             "objectives.yaml",
         ],  # Coder should maintain these
+        "benchmark_coder": [
+            "plan.md",
+            "todo.md",
+            "objectives.yaml",
+        ],
         "electronics_engineer": [
             "plan.md",
             "todo.md",
@@ -276,7 +282,7 @@ def validate_node_output(
     for filename, content in files_content_map.items():
         if filename == "plan.md":
             plan_type = "engineering"  # Default to engineering for most nodes
-            if node_type == "planner" and "# Learning Objective" in content:
+            if "benchmark" in node_type or "# Learning Objective" in content:
                 plan_type = "benchmark"
 
             is_valid, plan_errors = validate_plan_md_structure(content, plan_type)

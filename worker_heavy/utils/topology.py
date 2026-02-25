@@ -26,14 +26,17 @@ def analyze_component(
         # Heuristic: try to get manufacturing method from component metadata
         # Default to CNC if not specified
         metadata = getattr(component, "metadata", None)
-        method_str = getattr(metadata, "manufacturing_method", "cnc")
-        try:
-            method = ManufacturingMethod(method_str.lower())
-        except ValueError:
-            logger.warning(
-                "invalid_manufacturing_method_in_metadata", method=method_str
-            )
-            method = ManufacturingMethod.CNC
+        method_raw = getattr(metadata, "manufacturing_method", ManufacturingMethod.CNC)
+        if isinstance(method_raw, ManufacturingMethod):
+            method = method_raw
+        else:
+            try:
+                method = ManufacturingMethod(str(method_raw).upper())
+            except ValueError:
+                logger.warning(
+                    "invalid_manufacturing_method_in_metadata", method=method_raw
+                )
+                method = ManufacturingMethod.CNC
 
     return validate_and_price(
         component,

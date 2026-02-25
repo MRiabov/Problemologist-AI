@@ -24,6 +24,7 @@ from shared.models.schemas import (
 from shared.models.simulation import (
     SimulationFailure,
     SimulationResult,
+    StressSummary,
 )
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
@@ -54,7 +55,9 @@ def save_simulation_result(result: SimulationResult, path: Path):
     path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 
 
-def get_stress_report(part_label: str, output_dir: Path | None = None) -> dict | None:
+def get_stress_report(
+    part_label: str, output_dir: Path | None = None
+) -> StressSummary | None:
     """Returns the worst-case stress summary for a simulated FEM part."""
     # Try to load from disk
     candidates = [Path("simulation_result.json")]
@@ -80,26 +83,7 @@ def get_stress_report(part_label: str, output_dir: Path | None = None) -> dict |
             worst_summary = summary
 
     if worst_summary:
-        res_dict = worst_summary.model_dump()
-        sf = res_dict.get("safety_factor", 10.0)
-        if sf < 1.2:
-            res_dict["advice"] = (
-                "Safety factor critical (below 1.2). Part will likely fail. "
-                "Reinforce geometry at the location of maximum stress."
-            )
-        elif sf < 1.5:
-            res_dict["advice"] = (
-                "Safety factor low (below 1.5). "
-                "Consider adding material to reach target range (1.5 - 5.0)."
-            )
-        elif sf > 5.0:
-            res_dict["advice"] = (
-                "Safety factor high (over 5.0). Part might be over-engineered. "
-                "Consider removing material to reduce cost and weight."
-            )
-        else:
-            res_dict["advice"] = "Safety factor is within acceptable range (1.5 - 5.0)."
-        return res_dict
+        return worst_summary
 
     logger.warning("stress_report_part_not_found", part_label=part_label)
     return None
@@ -167,7 +151,7 @@ def define_fluid(
     surface_tension: float = 0.07,
     color: tuple[int, int, int] = (0, 0, 200),
     output_dir: Path | None = None,
-) -> dict:
+) -> FluidDefinition:
     """Defines a fluid type for use in the simulation."""
     props = FluidProperties(
         viscosity_cp=viscosity,
@@ -199,7 +183,7 @@ def define_fluid(
     else:
         logger.warning("define_fluid_objectives_not_found", path=str(obj_path))
 
-    return fluid.model_dump()
+    return fluid
 
 
 def set_soft_mesh(
@@ -216,7 +200,7 @@ def set_soft_mesh(
             objs.physics.fem_enabled = enabled
             if enabled:
                 # FEM currently requires Genesis backend
-                objs.physics.backend = "genesis"
+                objs.physics.backend = SimulatorBackendType.GENESIS.value
             obj_path.write_text(
                 yaml.dump(objs.model_dump(mode="json")), encoding="utf-8"
             )
@@ -406,8 +390,8 @@ def calculate_assembly_totals(
 
 
 def simulate_subprocess(
-    script_path: str,
-    session_root: str,
+    script_path: Path | str,
+    session_root: Path | str,
     script_content: str | None = None,
     output_dir: Path | None = None,
     smoke_test_mode: bool | None = None,
@@ -427,8 +411,8 @@ def simulate_subprocess(
         smoke_test_mode = settings.smoke_test_mode
 
     component = load_component_from_script(
-        script_path=script_path,
-        session_root=session_root,
+        script_path=Path(script_path),
+        session_root=Path(session_root),
         script_content=script_content,
     )
     return simulate(

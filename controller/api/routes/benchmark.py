@@ -10,11 +10,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
-from controller.api.schemas import EpisodeResponse
+from controller.api.schemas import (
+    BenchmarkConfirmResponse,
+    BenchmarkGenerateResponse,
+    BenchmarkObjectivesResponse,
+    EpisodeResponse,
+)
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
 from shared.enums import ResponseStatus
+from shared.simulation.schemas import SimulatorBackendType
+from shared.models.schemas import CustomObjectives
 
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
 
@@ -24,7 +31,7 @@ class BenchmarkGenerateRequest(BaseModel):
     max_cost: float | None = None
     max_weight: float | None = None
     target_quantity: int | None = None
-    backend: str = "genesis"
+    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
 
     @field_validator("prompt")
     @classmethod
@@ -32,7 +39,7 @@ class BenchmarkGenerateRequest(BaseModel):
         return v.replace("\u0000", "")
 
 
-@router.post("/generate")
+@router.post("/generate", response_model=BenchmarkGenerateResponse)
 async def generate_benchmark(
     request: BenchmarkGenerateRequest, background_tasks: BackgroundTasks
 ):
@@ -43,20 +50,11 @@ async def generate_benchmark(
     # but we wrap it in a background task to return immediately.
     session_id = uuid.uuid4()
 
-    custom_objectives = {}
-    if request.max_cost is not None:
-        custom_objectives["max_unit_cost"] = request.max_cost
-    if request.max_weight is not None:
-        custom_objectives["max_weight"] = request.max_weight
-    if request.target_quantity is not None:
-        custom_objectives["target_quantity"] = request.target_quantity
-
-    from shared.simulation.schemas import SimulatorBackendType
-
-    try:
-        backend_enum = SimulatorBackendType(request.backend)
-    except ValueError:
-        backend_enum = SimulatorBackendType.GENESIS
+    custom_objectives = CustomObjectives(
+        max_unit_cost=request.max_cost,
+        max_weight=request.max_weight,
+        target_quantity=request.target_quantity,
+    )
 
     # Run the generation in the background
     background_tasks.add_task(
@@ -64,7 +62,7 @@ async def generate_benchmark(
         request.prompt,
         session_id=session_id,
         custom_objectives=custom_objectives,
-        backend=backend_enum,
+        backend=request.backend,
     )
 
     return {
@@ -78,7 +76,7 @@ class ConfirmRequest(BaseModel):
     comment: str | None = None
 
 
-@router.post("/{session_id}/confirm")
+@router.post("/{session_id}/confirm", response_model=BenchmarkConfirmResponse)
 async def confirm_benchmark(
     session_id: uuid.UUID,
     request: ConfirmRequest,
@@ -148,7 +146,7 @@ class UpdateObjectivesRequest(BaseModel):
     target_quantity: int | None = None
 
 
-@router.post("/{session_id}/objectives")
+@router.post("/{session_id}/objectives", response_model=BenchmarkObjectivesResponse)
 async def update_objectives(
     session_id: uuid.UUID,
     request: UpdateObjectivesRequest,

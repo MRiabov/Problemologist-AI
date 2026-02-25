@@ -4,7 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from shared.logging import configure_logging, log_marker_middleware
+import os
+import asyncio
 from worker_light.api.routes import light_router
+from worker_heavy.api.routes import heavy_router
 from worker_light.utils.git import sync_skills
 from worker_light.config import settings
 
@@ -23,9 +26,20 @@ async def lifespan(app: FastAPI):
             pat=settings.git_pat,
             skills_dir=settings.skills_dir,
         )
+
+    # WP11: Support Temporal worker in unified mode
+    if os.getenv("WORKER_TYPE") == "unified":
+        try:
+            from worker_heavy.app import start_temporal_worker
+
+            app.state.temporal_task = asyncio.create_task(start_temporal_worker())
+        except ImportError:
+            pass
+
     yield
     # Shutdown
-    pass
+    if hasattr(app.state, "temporal_task"):
+        app.state.temporal_task.cancel()
 
 
 app = FastAPI(
@@ -46,6 +60,10 @@ app.add_middleware(
 )
 
 app.include_router(light_router, tags=["worker-light"])
+
+# Support unified mode for integration tests
+if os.getenv("WORKER_TYPE") == "unified":
+    app.include_router(heavy_router, tags=["worker-heavy"])
 
 
 @app.get("/health")

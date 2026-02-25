@@ -78,6 +78,7 @@ app.include_router(steerability.router, prefix="/api/v1")
 
 
 from controller.api.tasks import AgentRunRequest, execute_agent_task
+from controller.api.schemas import AgentRunResponse
 
 
 @app.post("/test/episodes", status_code=201)
@@ -110,7 +111,7 @@ async def health_check():
     }
 
 
-@app.post("/agent/run", status_code=202)
+@app.post("/agent/run", status_code=202, response_model=AgentRunResponse)
 async def run_agent(request: AgentRunRequest):
     # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()
@@ -149,4 +150,8 @@ async def run_agent(request: AgentRunRequest):
     )
     task_tracker.register_task(episode_id, task)
 
-    return {"status": ResponseStatus.ACCEPTED, "episode_id": episode_id}
+    return AgentRunResponse(
+        status=ResponseStatus.ACCEPTED,
+        message="Agent execution started",
+        episode_id=episode_id,
+    )

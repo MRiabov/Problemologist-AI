@@ -92,10 +92,10 @@ def define_graph():
             return "coder"
 
         # Fallback for legacy behavior
-        feedback = (state.review_feedback or "").lower()
-        if "approved" in feedback:
+        feedback = (state.review_feedback or "").upper()
+        if "APPROVED" in feedback:
             return "skills"
-        if feedback.startswith("steering:"):
+        if feedback.startswith("STEERING:"):
             return "planner"
         return "coder"
 
@@ -191,7 +191,7 @@ async def _execute_graph_streaming(
                     new_status = SessionStatus.REJECTED
                 else:
                     feedback = final_state.review_feedback or ""
-                    if "approved" in feedback.lower():
+                    if "APPROVED" in feedback.upper():
                         new_status = SessionStatus.ACCEPTED
                     else:
                         new_status = SessionStatus.REJECTED

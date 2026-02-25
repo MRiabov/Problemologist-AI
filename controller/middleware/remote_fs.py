@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -29,8 +30,20 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
+from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import EditOp
+from shared.workers.filesystem.backend import FileInfo
+from shared.workers.schema import (
+    BenchmarkToolResponse,
+    EditOp,
+    ExecuteResponse,
+    GrepMatch,
+    HeavyValidationResponse,
+    InspectTopologyResponse,
+    ScriptExecutionRequest,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteFilesystemMiddleware:
@@ -49,7 +62,7 @@ class RemoteFilesystemMiddleware:
         p = Path(path).as_posix().lstrip("/")
         return any(p.startswith(ro_path) for ro_path in self.read_only_paths)
 
-    async def list_files(self, path: str | Path = "/") -> list[dict[str, Any]]:
+    async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
         await record_events(
             episode_id=self.client.session_id,
@@ -59,11 +72,10 @@ class RemoteFilesystemMiddleware:
 
     async def inspect_topology(
         self, target_id: str, script_path: str | Path = "script.py"
-    ) -> dict[str, Any]:
+    ) -> InspectTopologyResponse:
         """Inspect topological features via the Worker client."""
         # We could add a specific event type for this if needed
-        result = await self.client.inspect_topology(target_id, str(script_path))
-        return result.model_dump()
+        return await self.client.inspect_topology(target_id, str(script_path))
 
     async def exists(self, path: str | Path) -> bool:
         """Check if a file exists via the Worker client."""
@@ -158,7 +170,7 @@ class RemoteFilesystemMiddleware:
                 pass
         return success
 
-    async def run_command(self, code: str, timeout: int = 30) -> dict[str, Any]:
+    async def run_command(self, code: str, timeout: int = 30) -> ExecuteResponse:
         """
         Execute a command (Python code) via the Worker client,
         wrapped in Temporal for durability.
@@ -171,47 +183,37 @@ class RemoteFilesystemMiddleware:
             # Wrap in Temporal workflow for durability
             return await self.temporal_client.execute_workflow(
                 ScriptExecutionWorkflow.run,
-                {
-                    "code": code,
-                    "session_id": self.client.session_id,
-                    "timeout": timeout,
-                },
+                ScriptExecutionRequest(
+                    code=code,
+                    session_id=self.client.session_id,
+                    timeout=timeout,
+                ),
                 id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
                 task_queue="simulation-task-queue",
             )
         # Fallback to direct client call if Temporal is not available
-        result = await self.client.execute_python(code, timeout=timeout)
-        res_dict = result.model_dump()
-        logger.info(
-            "run_command_result",
-            episode_id=self.client.session_id,
-            exit_code=res_dict.get("exit_code"),
-            stdout=res_dict.get("stdout"),
-            stderr=res_dict.get("stderr"),
-        )
-        return res_dict
+        return await self.client.execute_python(code, timeout=timeout)
 
     # Adding alias for consistency with deepagents naming if needed
-    async def execute(self, code: str, timeout: int = 30) -> dict[str, Any]:
+    async def execute(self, code: str, timeout: int = 30) -> ExecuteResponse:
         return await self.run_command(code, timeout=timeout)
 
     async def grep(
         self, pattern: str, path: str | Path | None = None, glob: str | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> list[GrepMatch]:
         """Search for a pattern in files via the Worker client."""
         p_str = str(path) if path else None
         await record_events(
             episode_id=self.client.session_id,
             events=[GrepToolEvent(pattern=pattern, path=p_str, glob=glob)],
         )
-        results = await self.client.grep(pattern, path=p_str, glob=glob)
-        return [match.model_dump() for match in results]
+        return await self.client.grep(pattern, path=p_str, glob=glob)
 
     async def simulate(
         self,
         script_path: str | Path,
         backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
-    ) -> dict[str, Any]:
+    ) -> BenchmarkToolResponse | SimulationResult:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
         # Record request
@@ -240,13 +242,7 @@ class RemoteFilesystemMiddleware:
             await record_simulation_result(self.client.session_id, res)
             return res
 
-        result = await self.client.simulate(p_str, backend=backend)
-        res_dict = result.model_dump()
-
-        # Record result and detect instability via helper
-        await record_simulation_result(self.client.session_id, res_dict)
-
-        return res_dict
+        return await self.client.simulate(p_str, backend=backend)
 
     async def preview(
         self,
@@ -273,7 +269,9 @@ class RemoteFilesystemMiddleware:
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
 
-    async def validate(self, script_path: str | Path) -> dict[str, Any]:
+    async def validate(
+        self, script_path: str | Path
+    ) -> BenchmarkToolResponse | HeavyValidationResponse:
         """Trigger geometric validation via worker client (with bundling)."""
         p_str = str(script_path)
 
@@ -293,17 +291,16 @@ class RemoteFilesystemMiddleware:
             result = await self.client.validate(p_str)
             res_dict = result.model_dump()
 
-        # Record as ManufacturabilityCheckEvent
         await record_events(
             episode_id=self.client.session_id,
             events=[
                 ManufacturabilityCheckEvent(
                     part_id=p_str,  # Using script_path as part identifier
                     method="auto_geometric",
-                    result=res_dict.get("success", False),
-                    price=res_dict.get("price"),
-                    weight_g=res_dict.get("weight_g"),
-                    metadata=res_dict,
+                    result=res_dict.success,
+                    price=getattr(res_dict, "price", None),
+                    weight_g=getattr(res_dict, "weight_g", None),
+                    metadata=res_dict.model_dump(),
                 )
             ],
         )

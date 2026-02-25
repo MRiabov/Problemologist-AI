@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING
 
 from temporalio import workflow
 
+from controller.activities.execution import execute_script_activity
 from shared.type_checking import type_check
+from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 
 if TYPE_CHECKING:
     pass
@@ -13,10 +15,10 @@ if TYPE_CHECKING:
 @workflow.defn
 class ScriptExecutionWorkflow:
     @workflow.run
-    async def run(self, data: dict) -> dict:
+    async def run(self, request: ScriptExecutionRequest) -> ExecuteResponse:
         """Workflow to ensure durable execution of scripts on the worker."""
         return await workflow.execute_activity(
-            "execute_script_activity",
-            data,
+            execute_script_activity,
+            request,
             start_to_close_timeout=timedelta(minutes=10),
         )
