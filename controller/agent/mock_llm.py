@@ -98,8 +98,9 @@ class MockDSPyLM(dspy.LM):
 
         expected_fields = list(dict.fromkeys(expected_fields))
 
-        # Force JSON if we have expected fields
-        is_json = is_json_requested or len(expected_fields) > 0
+        # ONLY force JSON if explicitly requested or if we have no expected fields but is_json_requested
+        # Standard ReAct with TypedPredictor uses field-based formatting [[ ## field ## ]]
+        is_json = is_json_requested
 
         # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
@@ -229,7 +230,10 @@ class MockDSPyLM(dspy.LM):
         low_text = text.lower()
         # dspy.ReAct adds "Observation:" to the trajectory.
         return (
-            "stdout:" in low_text or "stderr:" in low_text or "observation:" in low_text
+            "stdout:" in low_text
+            or "stderr:" in low_text
+            or "observation:" in low_text
+            or "past interactions:" in low_text
         )
 
     def _handle_finish(
@@ -244,11 +248,17 @@ class MockDSPyLM(dspy.LM):
     ):
         # Force finish for reviewer to avoid loops in mock
         force_finish = node_key in ["reviewer"]
+
+        # If we have already returned an action for this node key in this session,
+        # we should finish.
+        count = self._call_counts.get(node_key, 0)
+        should_finish = node_data.get("finished", force_finish) or count > 1
+
         return self._generate_response(
             node_key,
             node_data,
             is_json,
-            finished=node_data.get("finished", force_finish),
+            finished=should_finish,
             expected_fields=expected_fields,
         )
 
@@ -349,6 +359,32 @@ class MockDSPyLM(dspy.LM):
                 logger.info("mock_dspy_returning_json", json=filtered_resp)
                 return [json.dumps(filtered_resp)]
             return [json.dumps(resp)]
+
+        # Fallback for field-based format (common in non-JSON dspy.ReAct)
+        if expected_fields:
+            lines = []
+            for field in expected_fields:
+                val = resp.get(field)
+                if val is None:
+                    # Provide default values for missing expected fields to satisfy parser
+                    if field == "next_tool_name":
+                        val = "finish"
+                    elif field == "next_tool_args":
+                        val = {}
+                    else:
+                        val = "None"
+
+                if isinstance(val, bool):
+                    val = str(val)
+                elif isinstance(val, dict):
+                    val = json.dumps(val)
+
+                lines.append(f"[[ ## {field} ## ]]")
+                lines.append(str(val))
+            lines.append("[[ ## completed ## ]]")
+            result = "\n\n".join(lines)
+            logger.info("mock_dspy_returning_fields", text=result[:200] + "...")
+            return [result]
 
         # Fallback for plain text (rare in our CodeAct setups)
         if node_key == "reviewer":
