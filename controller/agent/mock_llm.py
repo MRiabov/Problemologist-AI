@@ -331,6 +331,10 @@ class MockDSPyLM(dspy.LM):
         elif node_key == "skill_learner":
             resp["summary"] = node_data.get("summary", "Skills identified.")
             resp["journal"] = node_data.get("journal", "Learning complete.")
+        elif node_key == "summarizer":
+            resp["summarized_journal"] = node_data.get(
+                "summarized_journal", "Summarized journal."
+            )
         elif node_key == "cots_search":
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
         elif node_key == "electronics_planner":

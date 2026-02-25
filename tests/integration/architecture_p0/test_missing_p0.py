@@ -97,20 +97,41 @@ version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
   benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
+  planner_target_max_unit_cost_usd: 150.0  # INVALID: > 100.0
   planner_target_max_weight_g: 500.0
 totals:
   estimated_unit_cost_usd: 10.0
   estimated_weight_g: 100.0
   estimate_confidence: high
 """
-        write_req = WriteFileRequest(path="invalid_asm.yaml", content=invalid_asm)
+        write_req = WriteFileRequest(
+            path="assembly_definition.yaml", content=invalid_asm
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=write_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
-        pass
+
+        # Create dummy episode
+        resp = await client.post(
+            f"{CONTROLLER_URL}/test/episodes",
+            json={
+                "task": "Test caps validation",
+                "session_id": session_id,
+                "metadata_vars": {"worker_session_id": session_id},
+            },
+        )
+        assert resp.status_code == 201
+        episode_create = TestEpisodeCreateResponse.model_validate(resp.json())
+        episode_id = str(episode_create.episode_id)
+
+        # Call schematic endpoint which triggers validation of assembly_definition.yaml
+        resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic"
+        )
+        assert resp.status_code == 500
+        assert "Planner target cost (150.0) must be less than or equal" in resp.text
 
 
 @pytest.mark.integration_p0
