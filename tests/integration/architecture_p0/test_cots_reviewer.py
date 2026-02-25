@@ -12,6 +12,7 @@ from controller.api.schemas import (
     EpisodeResponse,
     ReviewResponse,
 )
+from controller.api.tasks import AgentRunRequest
 from shared.workers.schema import FsFileEntry
 
 # Constants
@@ -88,9 +89,10 @@ async def test_int_016_reviewer_decision_schema_gate(
 
     # Create a real episode first
     session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
+    req = AgentRunRequest(task="Test Review Schema", session_id=session_id)
     run_resp = await client.post(
         "/agent/run",
-        json={"task": "Test Review Schema", "session_id": session_id},
+        json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
     episode_id = AgentRunResponse.model_validate(run_resp.json()).episode_id
@@ -131,9 +133,10 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers, controller_cl
 
     # 1. Start agent run
     session_id = f"INT-017-{uuid.uuid4().hex[:8]}"
+    req = AgentRunRequest(task="Test Refusal Loop", session_id=session_id)
     run_resp = await client.post(
         "/agent/run",
-        json={"task": "Test Refusal Loop", "session_id": session_id},
+        json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
     episode_id = AgentRunResponse.model_validate(run_resp.json()).episode_id

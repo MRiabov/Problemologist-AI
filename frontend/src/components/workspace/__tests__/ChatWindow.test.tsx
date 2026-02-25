@@ -4,6 +4,8 @@ import ChatWindow from '../ChatWindow';
 import { useEpisodes } from '../../../context/EpisodeContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { MemoryRouter } from 'react-router-dom';
+import { EpisodeStatus } from '../../../api/generated/models/EpisodeStatus';
+import { TraceType } from '../../../api/generated/models/TraceType';
 
 // Mock specific hooks to control state
 vi.mock('../../../context/EpisodeContext', async () => {
@@ -57,7 +59,7 @@ describe('ChatWindow', () => {
     });
 
     it('renders interruption button when running', () => {
-        const runningEpisode = { id: 'ep-1', status: 'running' };
+        const runningEpisode = { id: 'ep-1', status: EpisodeStatus.RUNNING };
         (useEpisodes as any).mockReturnValue({
             ...defaultEpisodeContext,
             isRunning: true,
@@ -79,7 +81,7 @@ describe('ChatWindow', () => {
     it('renders execution plan and confirm button when planned', async () => {
         const plannedEpisode = { 
             id: 'ep-1', 
-            status: 'running', 
+            status: EpisodeStatus.RUNNING,
             metadata_vars: { detailed_status: 'PLANNED' } 
         };
         (useEpisodes as any).mockReturnValue({
@@ -103,7 +105,7 @@ describe('ChatWindow', () => {
     it('renders traces correctly', () => {
         const traces = [
             { id: '1', trace_type: 'thought', content: 'I am thinking' },
-            { id: '2', trace_type: 'tool_start', name: 'view_file', content: '{"path": "test.py"}' },
+            { id: '2', trace_type: TraceType.TOOL_START, name: 'view_file', content: '{"path": "test.py"}' },
         ];
 
         render(
@@ -120,7 +122,7 @@ describe('ChatWindow', () => {
     it('renders failure message when episode failed', () => {
         const failedEpisode = { 
             id: 'ep-1', 
-            status: 'failed', 
+            status: EpisodeStatus.FAILED,
             validation_logs: ["Error: failed to build"] 
         };
         (useEpisodes as any).mockReturnValue({

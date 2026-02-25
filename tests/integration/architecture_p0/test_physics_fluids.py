@@ -25,6 +25,7 @@ from shared.workers.schema import (
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.enums import FluidShapeType, FluidEvalAt
+from shared.observability.schemas import SimulationBackendSelectedEvent
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -102,11 +103,10 @@ def build():
         events = data.events
 
         # Verify event emission
-        assert any(e.event_type == "simulation_backend_selected" for e in events), (
-            "Missing simulation_backend_selected event"
-        )
+        event_dict = next((e for e in events if e.get("event_type") == "simulation_backend_selected"), None)
+        assert event_dict is not None, "Missing simulation_backend_selected event"
 
-        event = next(e for e in events if e.event_type == "simulation_backend_selected")
+        event = SimulationBackendSelectedEvent.model_validate(event_dict)
         assert event.backend == "genesis"
         assert event.fem_enabled is True
         assert event.compute_target == "cpu"

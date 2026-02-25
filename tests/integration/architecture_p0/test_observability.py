@@ -6,7 +6,8 @@ import httpx
 import pytest
 from temporalio.client import Client
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from controller.api.schemas import AgentRunResponse, EpisodeResponse, TestEpisodeCreateResponse
+from controller.api.tasks import AgentRunRequest
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
@@ -20,9 +21,10 @@ async def test_int_053_temporal_workflow_lifecycle():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create a dummy episode to link to
         task = "Test Temporal Workflow Lifecycle"
+        req = AgentRunRequest(task=task, session_id="INT-053-obs")
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": task, "session_id": "INT-053-obs"},
+            json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 202
         agent_run_resp = AgentRunResponse.model_validate(resp.json())
@@ -59,9 +61,10 @@ async def test_int_055_s3_artifact_upload_logging():
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode
         # Manual insert or use agent/run
+        req = AgentRunRequest(task="Test S3 Upload", session_id="INT-055-s3")
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
-            json={"task": "Test S3 Upload", "session_id": "INT-055-s3"},
+            json=req.model_dump(mode="json"),
         )
         agent_run_resp = AgentRunResponse.model_validate(resp.json())
         episode_id = agent_run_resp.episode_id
@@ -92,13 +95,14 @@ async def test_int_054_temporal_failure_path():
     """INT-054: Verify Temporal outage/failure logging path (via failure injection)."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode via API
+        req = AgentRunRequest(task="Test Failure Injection", session_id="INT-054-fail")
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": "Test Failure Injection", "session_id": "INT-054-fail"},
+            json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
-        data = resp.json()
-        episode_id = data["episode_id"]
+        data = TestEpisodeCreateResponse.model_validate(resp.json())
+        episode_id = data.episode_id
 
         # 2. Trigger workflow with MJCF failure injection
         temporal = await Client.connect(TEMPORAL_URL)
@@ -138,12 +142,14 @@ async def test_int_056_s3_upload_failure_retry():
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Create episode via test endpoint (no agent task interference)
+        req = AgentRunRequest(task="Test S3 Retry", session_id="INT-056-retry")
         resp = await client.post(
             f"{CONTROLLER_URL}/test/episodes",
-            json={"task": "Test S3 Retry", "session_id": "INT-056-retry"},
+            json=req.model_dump(mode="json"),
         )
-        data = resp.json()
-        episode_id = data["episode_id"]
+        assert resp.status_code == 201
+        data = TestEpisodeCreateResponse.model_validate(resp.json())
+        episode_id = data.episode_id
 
         temporal = await Client.connect(TEMPORAL_URL)
         handle = await temporal.start_workflow(
