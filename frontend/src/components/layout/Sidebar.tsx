@@ -6,6 +6,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useState, useCallback } from "react";
+import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 
 const navigation = [
   { name: "Workspace", href: "/", icon: LayoutDashboard },
@@ -134,9 +135,9 @@ export default function Sidebar() {
                                     )}>
                                       {ep.task || ep.id.substring(0,8)}
                                     </span>
-                                    {ep.status === 'running' ? (
+                                    {ep.status === EpisodeStatus.RUNNING ? (
                                         <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse mt-1" />
-                                    ) : ep.status === 'completed' ? (
+                                    ) : ep.status === EpisodeStatus.COMPLETED ? (
                                         <CheckCircle2 className="h-3 w-3 text-green-500" />
                                     ) : (
                                         <XCircle className="h-3 w-3 text-destructive" />

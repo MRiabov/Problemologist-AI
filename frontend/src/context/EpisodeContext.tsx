@@ -280,7 +280,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                 if (!prev || prev.id !== selectedEpisode.id) return prev;
                 
                 // Real-time plan updates
-                if (message.data.path === 'plan.md' || message.data.path === '/plan.md') {
+                const path = message.data.path || '';
+                if (path.toLowerCase().endsWith('plan.md')) {
                     return { ...prev, plan: message.data.content };
                 }
 
@@ -338,7 +339,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   // Fallback polling for active episode details (slower than before)
   useEffect(() => {
     let interval: number | undefined;
-    if (selectedEpisode && (selectedEpisode.status === 'running' || running)) {
+    if (selectedEpisode && (selectedEpisode.status === EpisodeStatus.RUNNING || running)) {
       interval = window.setInterval(async () => {
         try {
           const [episodesData, currentEp] = await Promise.all([

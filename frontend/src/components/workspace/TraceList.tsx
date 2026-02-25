@@ -6,6 +6,7 @@ import { HighlightedContent } from "./HighlightedContent";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import type { ContextItem } from "../../context/EpisodeContext";
+import { TraceType } from "../../api/generated/models/TraceType";
 
 interface TraceListProps {
   traces: TraceResponse[] | undefined;
@@ -44,7 +45,7 @@ export const TraceList = memo(({
             const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
             return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
           }
-          if (type === 'tool_start') {
+          if (trace.trace_type === TraceType.TOOL_START) {
               return (
                 <ActionCard
                   key={trace.id}
@@ -54,8 +55,8 @@ export const TraceList = memo(({
                 />
               );
           }
-          if (type === 'llm_end' && trace.content) {
-            const isLastLlmEnd = traces && traces.filter(t => t.trace_type === 'llm_end').pop()?.id === trace.id;
+          if (trace.trace_type === TraceType.LLM_END && trace.content) {
+            const isLastLlmEnd = traces && traces.filter(t => t.trace_type === TraceType.LLM_END).pop()?.id === trace.id;
 
             return (
                 <div key={trace.id} className="relative group/msg">
