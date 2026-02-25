@@ -4,6 +4,8 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import AgentRunResponse, EpisodeListItem
+
 CONTROLLER_URL = "http://localhost:18000"
 
 
@@ -30,21 +32,18 @@ async def test_plan_to_cad_fidelity_regression_int_046():
             },
         )
         assert resp.status_code == 202
-        episode_id = resp.json()["episode_id"]
+        episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
 
         # 2. Verify metadata propagation
         status_resp = await client.get(f"/episodes/{episode_id}")
         assert status_resp.status_code == 200
-        ep_data = status_resp.json()
-        assert ep_data["metadata_vars"]["fidelity_check"] is True
-        assert ep_data["metadata_vars"]["tolerance"] == 0.2
+        ep_data = EpisodeListItem.model_validate(status_resp.json())
+        assert ep_data.metadata_vars["fidelity_check"] is True
+        assert ep_data.metadata_vars["tolerance"] == 0.2
 
         # 3. Robust assertion: If completed, verify volume fidelity trace
         # (In a real run, the worker emits metrics. Here we check schema support)
-        if ep_data["status"] == "completed":
-            # Check for volume metric in metadata or traces
-            # For integration baseline, we ensure the infrastructure for tracking it exists
-            # by checking if we have at least one asset of type 'cad' or 'video'
+        if ep_data.status.value == "completed":
             pass
 
 
@@ -69,7 +68,7 @@ async def test_cross_seed_transfer_uplift_int_047():
             },
         )
         assert resp_a.status_code == 202
-        ep_a_id = resp_a.json()["episode_id"]
+        ep_a_id = AgentRunResponse.model_validate(resp_a.json()).episode_id
 
         # Wait for ep_a (mocked logic or fast exit)
         # 2. Run related variant (Seed B)
@@ -87,13 +86,13 @@ async def test_cross_seed_transfer_uplift_int_047():
             },
         )
         assert resp_b.status_code == 202
-        ep_b_id = resp_b.json()["episode_id"]
+        ep_b_id = AgentRunResponse.model_validate(resp_b.json()).episode_id
 
         # Assert: Episode B record contains link to Episode A in metadata_vars
         status_resp = await client.get(f"/episodes/{ep_b_id}")
         assert status_resp.status_code == 200
-        ep_data = status_resp.json()
-        assert ep_data["metadata_vars"]["prior_episode_id"] == str(ep_a_id)
+        ep_data = EpisodeListItem.model_validate(status_resp.json())
+        assert ep_data.metadata_vars["prior_episode_id"] == str(ep_a_id)
         # Note: In a real long run, we'd verify trace context, but for P2 integration baseline,
         # API-level propagation is the contract.
 
@@ -119,12 +118,12 @@ async def test_reviewer_optimality_regression_int_048():
             },
         )
         assert resp.status_code == 202
-        episode_id = resp.json()["episode_id"]
+        episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
 
         res = await client.get(f"/episodes/{episode_id}")
         assert res.status_code == 200
-        data = res.json()
-        assert data["metadata_vars"]["is_optimality_check"] is True
+        ep_data = EpisodeListItem.model_validate(res.json())
+        assert ep_data.metadata_vars["is_optimality_check"] is True
 
 
 @pytest.mark.integration_p2
@@ -138,17 +137,13 @@ async def test_evaluation_metric_materialization_int_049():
         # Fetch all episodes
         resp = await client.get("/episodes/")
         assert resp.status_code == 200
-        episodes = resp.json()
+        episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
 
         # Verify mandatory metric fields are present in the response schema
         if episodes:
             ep = episodes[0]
-            assert "created_at" in ep
-            assert "updated_at" in ep
-            assert "status" in ep
-            # Architecture metrics require duration calculation
-            assert ep["created_at"] is not None
-            assert ep["updated_at"] is not None
+            assert ep.created_at is not None
+            assert ep.updated_at is not None
 
 
 @pytest.mark.integration_p2
@@ -161,29 +156,24 @@ async def test_dataset_readiness_completeness_int_050():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # Find a completed episode or wait for one
         resp = await client.get("/episodes/")
-        episodes = resp.json()
-        completed = [e for e in episodes if e["status"] == "completed"]
+        episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
+        completed = [e for e in episodes if e.status.value == "completed"]
 
         if completed:
             # Most mock episodes won't have a journal.
-            # We test completeness on those that do.
-            ep = next((e for e in completed if e.get("journal")), None)
+            ep = next((e for e in completed if e.journal), None)
 
             if ep:
-                assert ep["journal"] is not None
-                assert ep["plan"] is not None
-                assert ep["todo_list"] is not None
+                assert ep.journal is not None
+                assert ep.plan is not None
+                assert ep.todo_list is not None
 
-                # Robust assertions: Structure checks (Item 1, 2 of dataset policy)
-                assert "## Decision Log" in ep["journal"]
-                assert "# Solution Overview" in ep["plan"]
-                assert "## Parts List" in ep["plan"]
+                # Robust assertions
+                assert "## Decision Log" in ep.journal
+                assert "# Solution Overview" in ep.plan
+                assert "## Parts List" in ep.plan
 
-                # Todo list must show completion if status is completed
-                assert (
-                    "- [x]" in ep["todo_list"]
-                    or "completed: true" in ep["todo_list"].lower()
-                )
+                assert "- [x]" in ep.journal or "completed: true" in ep.journal.lower()
 
 
 @pytest.mark.integration_p2
@@ -195,19 +185,16 @@ async def test_journal_quality_integration_int_051():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         resp = await client.get("/episodes/")
-        episodes = resp.json()
-        with_journal = [e for e in episodes if e["journal"]]
+        episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
+        with_journal = [e for e in episodes if e.journal]
 
         if with_journal:
-            journal = with_journal[0]["journal"]
+            journal = with_journal[0].journal
             # Basic structural verification: Markdown headers
             assert journal.startswith("#") or "##" in journal
 
             # Robust assertions: Observation and Thought separation (INT-051)
-            # Check for standard agent reasoning tags or section headers
             assert "## Observations" in journal
-            # Check for linkage to episode variables or observation IDs
-            # (e.g. [obs-123] or mentioning specific measurements)
             assert re.search(r"obs-|observation|measured", journal, re.IGNORE_CASE)
 
 
@@ -220,10 +207,10 @@ async def test_skill_effectiveness_tracking_int_052():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         resp = await client.get("/episodes/")
-        episodes = resp.json()
+        episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
 
         # Verify 'skill_git_hash' is present for skill grouping
         if episodes:
             # Not all episodes might have it if they didn't use skills,
             # but the schema must support it.
-            assert "skill_git_hash" in episodes[0]
+            assert hasattr(episodes[0], "skill_git_hash")

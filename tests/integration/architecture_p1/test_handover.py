@@ -3,7 +3,11 @@ import asyncio
 import pytest
 from httpx import AsyncClient
 
-from controller.api.schemas import BenchmarkGenerateResponse, EpisodeResponse
+from controller.api.schemas import (
+    ArtifactEntry,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller if different
@@ -66,8 +70,8 @@ async def test_benchmark_to_engineer_handoff():
         assert artifacts_resp.status_code == 200, (
             f"Failed to fetch artifacts: {artifacts_resp.text}"
         )
-        artifacts = artifacts_resp.json()
-        artifact_paths = [a["path"] for a in artifacts]
+        artifacts = [ArtifactEntry.model_validate(a) for a in artifacts_resp.json()]
+        artifact_paths = [a.path for a in artifacts]
 
         # Check existence of required files
         assert any("objectives.yaml" in p for p in artifact_paths), (
