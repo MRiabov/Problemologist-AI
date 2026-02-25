@@ -259,7 +259,7 @@ async def _execute_graph_streaming(
 async def run_generation_session(
     prompt: str,
     session_id: uuid.UUID | None = None,
-    custom_objectives: dict | None = None,
+    custom_objectives: CustomObjectives | None = None,
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
 ) -> BenchmarkGeneratorState:
     """
@@ -400,10 +400,8 @@ async def _persist_session_assets(
         async with session_factory() as db:
             storage = BenchmarkStorage()
 
-            sim_result = final_state.simulation_result or {}
-            if hasattr(sim_result, "model_dump"):
-                sim_result = sim_result.model_dump()
-            render_data = sim_result.get("render_data", []) or []
+            sim_result = final_state.simulation_result
+            render_data = sim_result.render_data if sim_result else []
 
             mjcf_content = (
                 final_state.mjcf_content or "<!-- MJCF content missing in state -->"

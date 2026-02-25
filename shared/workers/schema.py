@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr
 
-from shared.enums import ResponseStatus
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
 from shared.models.simulation import (
     FluidMetricResult,
@@ -30,6 +30,48 @@ class StatusResponse(BaseModel):
     """Generic status response."""
 
     status: ResponseStatus
+
+
+class HealthResponse(BaseModel):
+    """Health payload returned by controller/worker `/health` endpoints."""
+
+    status: ResponseStatus
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.upper()
+        return value
+
+
+class FailureSimulationConfig(BaseModel):
+    """Configuration for simulating failures in activities."""
+
+    mjcf_compilation: bool = False
+    run_simulation: bool = False
+    render_video: bool = False
+    s3_upload: bool = False
+
+
+class SimulationWorkflowParams(BaseModel):
+    """Parameters for the simulation workflow."""
+
+    compound_json: str
+    episode_id: str
+    simulate_failures: FailureSimulationConfig = Field(
+        default_factory=FailureSimulationConfig
+    )
+
+
+class UpdateTraceParams(BaseModel):
+    """Parameters for update_trace_activity."""
+
+    episode_id: str
+    s3_path: str
+    asset_type: AssetType = AssetType.VIDEO
+    status: EpisodeStatus = EpisodeStatus.COMPLETED
+    error: str | None = None
 
 
 class ListFilesRequest(BaseModel):
@@ -107,10 +149,10 @@ class ExecuteRequest(BaseModel):
 class ExecuteResponse(BaseModel):
     """Response from executing Python code."""
 
-    stdout: StrictStr
-    stderr: StrictStr
-    exit_code: StrictInt
-    timed_out: StrictBool = False
+    stdout: str
+    stderr: str
+    exit_code: int
+    timed_out: bool = False
     events: list[dict[str, Any]] = Field(default_factory=list)
     # fixme: don't events have a model?
 
@@ -202,10 +244,10 @@ class SimulationArtifacts(BaseModel):
 class BenchmarkToolResponse(BaseModel):
     """Response from a benchmark tool."""
 
-    success: StrictBool
-    message: StrictStr
-    confidence: StrictStr = "high"
-    artifacts: SimulationArtifacts | dict[StrictStr, Any] | None = None
+    success: bool
+    message: str
+    confidence: str = "high"
+    artifacts: SimulationArtifacts | dict[str, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
 
 

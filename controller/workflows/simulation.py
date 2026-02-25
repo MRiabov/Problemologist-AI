@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from temporalio import workflow
 
 from shared.enums import AssetType, EpisodeStatus
+from shared.workers.schema import SimulationWorkflowParams, UpdateTraceParams
 from shared.type_checking import type_check
 
 # Import activities for type hinting in workflow (optional but good for clarity)
@@ -15,19 +16,19 @@ if TYPE_CHECKING:
 @workflow.defn
 class SimulationWorkflow:
     @workflow.run
-    async def run(self, params: dict) -> str:
+    async def run(self, params: SimulationWorkflowParams) -> str:
         import json
 
-        compound_json_str = params["compound_json"]
-        episode_id = params["episode_id"]
+        compound_json_str = params.compound_json
+        episode_id = params.episode_id
         # Extract failure flags for integration testing
-        simulate_failures = params.get("simulate_failures", {})
+        simulate_failures = params.simulate_failures
 
         # Also check inside compound_json if it's a JSON string
         try:
             cj = json.loads(compound_json_str)
             if cj.get("fail_upload"):
-                simulate_failures["s3_upload"] = True
+                simulate_failures.s3_upload = True
         except:
             pass
 
@@ -66,12 +67,12 @@ class SimulationWorkflow:
 
             await workflow.execute_activity(
                 "update_trace_activity",
-                {
-                    "episode_id": episode_id,
-                    "s3_path": s3_path,
-                    "asset_type": AssetType.VIDEO,
-                    "status": EpisodeStatus.COMPLETED,
-                },
+                UpdateTraceParams(
+                    episode_id=episode_id,
+                    s3_path=s3_path,
+                    asset_type=AssetType.VIDEO,
+                    status=EpisodeStatus.COMPLETED,
+                ),
                 start_to_close_timeout=timedelta(seconds=30),
             )
 
@@ -81,13 +82,13 @@ class SimulationWorkflow:
             # On any failure, ensure we mark the episode as FAILED
             await workflow.execute_activity(
                 "update_trace_activity",
-                {
-                    "episode_id": episode_id,
-                    "s3_path": "",
-                    "asset_type": AssetType.ERROR,
-                    "status": EpisodeStatus.FAILED,
-                    "error": str(e),
-                },
+                UpdateTraceParams(
+                    episode_id=episode_id,
+                    s3_path="",
+                    asset_type=AssetType.ERROR,
+                    status=EpisodeStatus.FAILED,
+                    error=str(e),
+                ),
                 start_to_close_timeout=timedelta(seconds=30),
             )
             # Re-raise so Temporal knows it failed

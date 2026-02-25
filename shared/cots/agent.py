@@ -2,7 +2,7 @@ import os
 
 import dspy
 
-from .models import SearchQuery
+from .models import SearchConstraints, SearchQuery
 from .runtime import search_parts
 
 # Default DB path relative to project root or configurable
@@ -27,13 +27,11 @@ def search_cots_catalog(
         category: Filter by category ('fastener', 'motor', 'gear', 'bearing', 'electronic').
         limit: Max number of results.
     """
-    constraints = {}
-    if max_weight_g is not None:
-        constraints["max_weight_g"] = max_weight_g
-    if max_cost is not None:
-        constraints["max_cost"] = max_cost
-    if category is not None:
-        constraints["category"] = category
+    constraints = SearchConstraints(
+        max_weight_g=max_weight_g,
+        max_cost=max_cost,
+        category=category,
+    )
 
     sq = SearchQuery(query=query, constraints=constraints, limit=limit)
     parts = search_parts(sq, DEFAULT_DB_PATH)

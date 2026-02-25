@@ -4,7 +4,14 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus, TraceType
+from shared.enums import (
+    AssetType,
+    EpisodeStatus,
+    ResponseStatus,
+    ReviewDecision,
+    TraceType,
+)
+from shared.models.schemas import SchematicItem
 
 
 class StandardResponse(BaseModel):
@@ -105,8 +112,8 @@ class EpisodeListItem(BaseModel):
 class ReviewResponse(BaseModel):
     """Response from posting a review decision to /episodes/{id}/review."""
 
-    status: str
-    decision: str
+    status: ResponseStatus
+    decision: ReviewDecision
 
 
 class SteeringQueueEntry(BaseModel):
@@ -140,12 +147,6 @@ class CotsMetadataResponse(BaseModel):
     generated_at: str | None = None
 
 
-class SchematicItem(BaseModel):
-    """An item in the electronics schematic representation."""
-
-    type: str
-
-    model_config = ConfigDict(extra="allow")
 
 
 class OpenAPISchema(BaseModel):

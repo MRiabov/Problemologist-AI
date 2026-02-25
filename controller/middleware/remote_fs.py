@@ -38,8 +38,13 @@ from shared.workers.schema import (
     EditOp,
     ExecuteResponse,
     GrepMatch,
+    HeavyPreviewParams,
+    HeavyPreviewResponse,
+    HeavySimulationParams,
+    HeavyValidationParams,
     HeavyValidationResponse,
     InspectTopologyResponse,
+    PreviewDesignResponse,
     ScriptExecutionRequest,
 )
 
@@ -229,13 +234,13 @@ class RemoteFilesystemMiddleware:
             # Execute via Temporal
             res = await self.temporal_client.execute_workflow(
                 HeavySimulationWorkflow.run,
-                {
-                    "bundle_bytes": bundle,
-                    "script_path": p_str,
-                    "backend": backend.value,
-                    "smoke_test_mode": False,
-                    "session_id": self.client.session_id,
-                },
+                HeavySimulationParams(
+                    bundle_bytes=bundle,
+                    script_path=p_str,
+                    backend=backend,
+                    smoke_test_mode=False,
+                    session_id=self.client.session_id,
+                ),
                 id=f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
                 task_queue="simulation-task-queue",
             )
@@ -249,22 +254,29 @@ class RemoteFilesystemMiddleware:
         script_path: str | Path,
         pitch: float = -45.0,
         yaw: float = 45.0,
-    ) -> dict[str, Any]:
+    ) -> PreviewDesignResponse:
         """Trigger design preview via worker client (with bundling)."""
         p_str = str(script_path)
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            return await self.temporal_client.execute_workflow(
+            res: HeavyPreviewResponse = await self.temporal_client.execute_workflow(
                 HeavyPreviewWorkflow.run,
-                {
-                    "bundle_bytes": bundle,
-                    "script_path": p_str,
-                    "pitch": pitch,
-                    "yaw": yaw,
-                },
+                HeavyPreviewParams(
+                    bundle_bytes=bundle,
+                    script_path=p_str,
+                    pitch=pitch,
+                    yaw=yaw,
+                ),
                 id=f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
                 task_queue="simulation-task-queue",
+            )
+            return PreviewDesignResponse(
+                success=res.success,
+                message="Preview generated via Temporal"
+                if res.success
+                else "Preview failed",
+                image_path=res.filename,
             )
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
@@ -277,19 +289,18 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            res_dict = await self.temporal_client.execute_workflow(
+            res = await self.temporal_client.execute_workflow(
                 HeavyValidationWorkflow.run,
-                {
-                    "bundle_bytes": bundle,
-                    "script_path": p_str,
-                    "session_id": self.client.session_id,
-                },
+                HeavyValidationParams(
+                    bundle_bytes=bundle,
+                    script_path=p_str,
+                    session_id=self.client.session_id,
+                ),
                 id=f"val-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
                 task_queue="simulation-task-queue",
             )
         else:
-            result = await self.client.validate(p_str)
-            res_dict = result.model_dump()
+            res = await self.client.validate(p_str)
 
         await record_events(
             episode_id=self.client.session_id,
@@ -297,21 +308,20 @@ class RemoteFilesystemMiddleware:
                 ManufacturabilityCheckEvent(
                     part_id=p_str,  # Using script_path as part identifier
                     method="auto_geometric",
-                    result=res_dict.success,
-                    price=getattr(res_dict, "price", None),
-                    weight_g=getattr(res_dict, "weight_g", None),
-                    metadata=res_dict.model_dump(),
+                    result=res.success,
+                    price=getattr(res, "price", None),
+                    weight_g=getattr(res, "weight_g", None),
+                    metadata=res.model_dump(),
                 )
             ],
         )
 
-        return res_dict
+        return res
 
-    async def submit(self, script_path: str | Path) -> dict[str, Any]:
+    async def submit(self, script_path: str | Path) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""
         p_str = str(script_path)
-        result = await self.client.submit(p_str)
-        res_dict = result.model_dump()
+        res = await self.client.submit(p_str)
 
         # Record as PlanSubmissionEngineerEvent
         await record_events(
@@ -323,4 +333,4 @@ class RemoteFilesystemMiddleware:
             ],
         )
 
-        return res_dict
+        return res

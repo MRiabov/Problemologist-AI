@@ -49,6 +49,38 @@ CoercedTuple3D = Annotated[
 CoercedTuple2D = Annotated[tuple[float, float], BeforeValidator(_coerce_to_tuple)]
 
 
+class CodeReference(BaseModel):
+    """Reference to a specific line range in a file."""
+
+    file_path: str
+    start_line: int
+    end_line: int
+
+
+class BackupParams(BaseModel):
+    """Parameters for backup workflow."""
+
+    db_url: str | None = None
+    s3_bucket: str | None = None
+    source_bucket: str | None = None
+    backup_bucket: str | None = None
+
+
+class BackupResult(BaseModel):
+    """Result of a backup operation."""
+
+    postgres_backup_key: str | None = None
+    s3_files_backed_up: int | None = None
+
+
+class SchematicItem(BaseModel):
+    """An item in the electronics schematic representation."""
+
+    type: str
+
+    model_config = ConfigDict(extra="allow")
+
+
 class BoundingBox(BaseModel):
     """Axis-aligned bounding box with min/max coordinates."""
 

@@ -53,17 +53,17 @@ def search_cots(
     for item in results:
         # Map ORM object to response schema expected by tests/clients
         response.append(
-            {
-                "part_id": item.part_id,
-                "name": item.name,
-                "category": item.category,
+            CotsSearchItem(
+                part_id=item.part_id,
+                name=item.name,
+                category=item.category,
                 # Placeholder values as per schema requirements in tests
-                "manufacturer": item.metadata_dict.get("manufacturer", "Generic"),
-                "price": item.unit_cost,
-                "source": "internal",
-                "weight_g": item.weight_g,
-                "metadata": item.metadata_dict,
-            }
+                manufacturer=item.metadata_dict.get("manufacturer", "Generic"),
+                price=item.unit_cost,
+                source="internal",
+                weight_g=item.weight_g,
+                metadata_vars=item.metadata_dict,
+            )
         )
 
     return response
@@ -78,16 +78,16 @@ def get_catalog_metadata(db: Session = Depends(get_db)):
     result = db.scalar(stmt)
 
     if not result:
-        return {
-            "catalog_version": "unknown",
-            "bd_warehouse_commit": "unknown",
-            "generated_at": None,
-        }
+        return CotsMetadataResponse(
+            catalog_version="unknown",
+            bd_warehouse_commit="unknown",
+            generated_at=None,
+        )
 
-    return {
-        "catalog_version": result.catalog_version,
-        "bd_warehouse_commit": result.bd_warehouse_commit,
-        "generated_at": result.generated_at.isoformat()
+    return CotsMetadataResponse(
+        catalog_version=result.catalog_version,
+        bd_warehouse_commit=result.bd_warehouse_commit,
+        generated_at=result.generated_at.isoformat()
         if result.generated_at
         else None,
-    }
+    )

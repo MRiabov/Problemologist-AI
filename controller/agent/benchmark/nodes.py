@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
 from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
+from shared.workers.schema import SimulationArtifacts
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -265,8 +266,14 @@ class BenchmarkCoderNode(BaseNode):
                     )
 
                     # Update MJCF content from simulation results
-                    if sim_res.artifacts and "mjcf_content" in sim_res.artifacts:
-                        state.mjcf_content = sim_res.artifacts["mjcf_content"]
+                    if sim_res.artifacts:
+                        if isinstance(sim_res.artifacts, SimulationArtifacts):
+                            if sim_res.artifacts.mjcf_content:
+                                state.mjcf_content = sim_res.artifacts.mjcf_content
+                        elif isinstance(sim_res.artifacts, dict):
+                            state.mjcf_content = sim_res.artifacts.get(
+                                "mjcf_content", ""
+                            )
 
                     if not sim_res.success:
                         from shared.simulation.schemas import ValidationResult
@@ -280,11 +287,12 @@ class BenchmarkCoderNode(BaseNode):
                         )
                     else:
                         # Download Renders
-                        render_paths = (
-                            sim_res.artifacts.get("render_paths", [])
-                            if sim_res.artifacts
-                            else []
-                        )
+                        render_paths = []
+                        if sim_res.artifacts:
+                            if isinstance(sim_res.artifacts, SimulationArtifacts):
+                                render_paths = sim_res.artifacts.render_paths
+                            elif isinstance(sim_res.artifacts, dict):
+                                render_paths = sim_res.artifacts.get("render_paths", [])
 
                         async def _download(url_path):
                             from controller.config.settings import (
