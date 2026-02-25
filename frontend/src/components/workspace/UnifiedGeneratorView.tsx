@@ -256,7 +256,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle withHandle className="w-full" />
+              <ResizableHandle withHandle className="w-full" data-testid="artifact-resizer" />
 
               {/* Bottom: Artifacts */}
               <ResizablePanel defaultSize="50%" minSize="20%">

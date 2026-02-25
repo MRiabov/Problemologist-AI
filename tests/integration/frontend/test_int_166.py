@@ -36,6 +36,13 @@ def test_simulation_navigation_timeline(page: Page):
     # 7. Wait for assets to be generated (Send Message button returns)
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
 
+    # Ensure Viewport overlays are gone before proceeding
+    expect(page.get_by_text("No Assets Loaded")).not_to_be_visible(timeout=30000)
+    expect(page.get_by_text("No Model Loaded")).not_to_be_visible(timeout=30000)
+    expect(page.get_by_role("button", name="Rebuild Assets")).not_to_be_visible(
+        timeout=30000
+    )
+
     # 8. Test Simulation Controls
     # Play button
     play_button = page.locator("button:has(svg.lucide-play)")

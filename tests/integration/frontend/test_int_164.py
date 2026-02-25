@@ -36,10 +36,14 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     # 7. Wait for assets to be generated (Send Message button returns)
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
 
+    # Ensure Viewport overlays are gone before proceeding
+    expect(page.get_by_text("No Assets Loaded")).not_to_be_visible(timeout=30000)
+    expect(page.get_by_text("No Model Loaded")).not_to_be_visible(timeout=30000)
+
     # 8. Open a file in the code viewer
     # Clicking script.py in the file tree
     script_file = page.get_by_text("script.py")
-    expect(script_file).to_be_visible()
+    expect(script_file).to_be_visible(timeout=30000)
     script_file.click()
 
     # 9. Select lines in the code viewer
