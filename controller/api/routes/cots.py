@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from controller.api.schemas import CotsSearchItem, CotsMetadataResponse
 from shared.cots.database.models import CatalogMetadataORM, COTSItemORM
 
 # Initialize router
@@ -30,12 +31,12 @@ def get_db():
         db.close()
 
 
-@router.get("/search")
+@router.get("/search", response_model=list[CotsSearchItem])
 def search_cots(
     q: str = Query(..., min_length=1, description="Search query"),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-) -> list[dict[str, Any]]:
+):
     """
     Search for COTS parts by name or category.
     """
@@ -70,8 +71,8 @@ def search_cots(
     return response
 
 
-@router.get("/metadata")
-def get_catalog_metadata(db: Session = Depends(get_db)) -> dict[str, Any]:
+@router.get("/metadata", response_model=CotsMetadataResponse)
+def get_catalog_metadata(db: Session = Depends(get_db)):
     """
     Get the catalog metadata (version, commit, etc.).
     """

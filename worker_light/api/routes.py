@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +39,6 @@ from shared.workers.schema import (
     StatusResponse,
     WriteFileRequest,
 )
-from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.router import (
     WritePermissionError,
     create_filesystem_router,
