@@ -30,6 +30,7 @@ export function ContextCards() {
         {selectedContext.map((item) => (
           <div 
             key={item.id}
+            data-testid="context-card"
             className="group flex items-center gap-2 px-2 py-1 bg-background border border-border/50 rounded-md shadow-sm hover:border-primary/50 transition-colors"
           >
             <div className="text-primary/70">

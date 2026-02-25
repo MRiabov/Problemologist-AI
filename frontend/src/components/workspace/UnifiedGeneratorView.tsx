@@ -19,6 +19,8 @@ import {
 } from "../ui/resizable";
 import { DesignViewer } from '../visualization/DesignViewer';
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
+import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { AssetType } from "../../api/generated/models/AssetType";
 
 interface UnifiedGeneratorViewProps {
   title: string;
@@ -74,8 +76,8 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     return `/api/episodes/${selectedEpisode.id}/assets/${asset.s3_path}`;
   };
 
-  const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === 'video');
-  const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === 'stl' || a.asset_type === 'step' || a.asset_type === 'glb') || [];
+  const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === AssetType.VIDEO);
+  const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === AssetType.STL || a.asset_type === AssetType.STEP || a.asset_type === AssetType.GLB) || [];
   const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
 
   const circuitData = useMemo(() => {
@@ -123,7 +125,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
       </header>
 
       {/* Error Alert */}
-      {(error || selectedEpisode?.status === 'failed') && (
+      {(error || selectedEpisode?.status === EpisodeStatus.FAILED) && (
         <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
           <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
           <div className="flex-1">

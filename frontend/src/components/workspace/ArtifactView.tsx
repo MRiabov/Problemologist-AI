@@ -28,6 +28,8 @@ import CircuitTimeline from "../visualization/CircuitTimeline";
 import WireView from "../visualization/WireView";
 import { SimulationResults } from "../visualization/SimulationResults";
 import { Badge } from "../ui/badge";
+import { AssetType } from "../../api/generated/models/AssetType";
+import { TraceType } from "../../api/generated/models/TraceType";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -59,7 +61,7 @@ export default function ArtifactView({
     
     // Add Plan as a special file
     if (plan) {
-        const iconInfo = getFileIconInfo('plan.md', 'plan');
+        const iconInfo = getFileIconInfo('plan.md', AssetType.MARKDOWN);
         tree.push({ 
           name: 'plan.md', 
           type: 'file', 
@@ -104,7 +106,7 @@ export default function ArtifactView({
   }, [plan, assets, activeArtifactId, setActiveArtifactId]);
 
   const activeAsset = useMemo(() => {
-    if (activeArtifactId === 'plan') return { name: 'plan.md', content: plan, asset_type: 'markdown' };
+    if (activeArtifactId === 'plan') return { name: 'plan.md', content: plan, asset_type: AssetType.MARKDOWN };
     const asset = assets.find(a => a.id.toString() === activeArtifactId);
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
@@ -119,7 +121,7 @@ export default function ArtifactView({
         );
     }
 
-    if (activeAsset.asset_type === 'circuit_data') {
+    if (activeAsset.asset_type === AssetType.CIRCUIT_DATA) {
         try {
             const data = typeof activeAsset.content === 'string' ? JSON.parse(activeAsset.content) : activeAsset.content;
             return (
@@ -133,7 +135,7 @@ export default function ArtifactView({
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <CircuitSchematic soup={data.electronics} />
                         <WireView 
-                            assetUrl={getAssetUrl(assets.find((a: AssetResponse) => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
+                            assetUrl={getAssetUrl(assets.find((a: AssetResponse) => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path)} 
                             wireRoutes={data.electronics.wiring || []} 
                         />
                     </div>
@@ -144,7 +146,7 @@ export default function ArtifactView({
         }
     }
 
-    if (activeAsset.asset_type === 'timeline') {
+    if (activeAsset.asset_type === AssetType.TIMELINE) {
         try {
             const data = typeof activeAsset.content === 'string' ? JSON.parse(activeAsset.content) : activeAsset.content;
             return <CircuitTimeline events={data.events} />;
@@ -160,7 +162,7 @@ export default function ArtifactView({
             if (data && data.electronics) {
                 // Extract timeline events from traces
                 const timelineEvents = (selectedEpisode?.traces || [])
-                    .filter((t: TraceResponse) => t.trace_type === 'event' && t.name === 'circuit_simulation')
+                    .filter((t: TraceResponse) => t.trace_type === TraceType.EVENT && t.name === 'circuit_simulation')
                     .map((t: TraceResponse) => ({
                         timestamp: new Date(t.created_at).getTime() / 1000,
                         motor_states: (t as any).metadata?.motor_states || {}
@@ -172,7 +174,7 @@ export default function ArtifactView({
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                             <CircuitSchematic />
                             <WireView 
-                                assetUrl={getAssetUrl(assets.find(a => a.asset_type === 'glb' || a.asset_type === 'stl')?.s3_path)} 
+                                assetUrl={getAssetUrl(assets.find(a => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path)} 
                                 wireRoutes={data.electronics.wiring || []} 
                             />
                         </div>
@@ -224,7 +226,7 @@ export default function ArtifactView({
         }
     }
 
-    const language = detectLanguage(activeAsset.name, activeAsset.asset_type === 'mjcf' ? 'json' : (activeAsset.asset_type || 'text'));
+    const language = detectLanguage(activeAsset.name, activeAsset.asset_type === AssetType.MJCF ? 'json' : (activeAsset.asset_type || 'text'));
 
     return (
         <div className="relative h-full overflow-hidden flex flex-col">
@@ -272,6 +274,7 @@ export default function ArtifactView({
                                 backgroundColor: isHighlighted ? (theme === 'dark' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(56, 189, 248, 0.1)') : 'transparent',
                                 borderLeft: isHighlighted ? '2px solid #38bdf8' : '2px solid transparent'
                             },
+                            "data-testid": `code-line-${lineNumber}`,
                             onClick: () => {
                                 if (activeAsset) {
                                     addToContext({
@@ -324,7 +327,7 @@ export default function ArtifactView({
                         >
                             <File className={cn("h-4 w-4 shrink-0", activeArtifactId === item.id ? "text-primary" : "text-muted-foreground")} />
                             <span className="truncate">{item.name}</span>
-                            {item.asset_type === 'circuit_data' && <VscCode className="ml-auto h-3 w-3 opacity-50" />}
+                            {item.asset_type === AssetType.CIRCUIT_DATA && <VscCode className="ml-auto h-3 w-3 opacity-50" />}
                         </button>
                     ))}
                 </div>

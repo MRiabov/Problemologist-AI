@@ -18,6 +18,7 @@ import { useTheme } from "../../context/ThemeContext";
 import type { TopologyNode } from "../visualization/ModelBrowser";
 import { ChatInput } from "../Chat/ChatInput";
 import { TraceList } from "./TraceList";
+import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
@@ -100,8 +101,8 @@ export default function ChatWindow({
     }
   }, [traces]);
 
-  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'planned';
-  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== 'completed';
+  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'PLANNED';
+  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== EpisodeStatus.COMPLETED;
 
   // Stable handlers
   const handleShowFeedback = useCallback((traceId: number, score: number) => {
@@ -248,7 +249,7 @@ export default function ChatWindow({
                 )}
 
                 {/* Failure Message */}
-                {selectedEpisode?.status === 'failed' && (
+                {selectedEpisode?.status === EpisodeStatus.FAILED && (
                     <div className="mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm">
                         <div className="flex items-center gap-2 mb-2 text-red-500">
                             <AlertCircle className="h-4 w-4" />

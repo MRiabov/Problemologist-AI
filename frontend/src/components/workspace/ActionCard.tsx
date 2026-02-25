@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils";
 import { getFileIconInfo } from "../../lib/fileIcons";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
+import { TraceType } from "../../api/generated/models/TraceType";
 
 interface ActionCardProps {
   trace: TraceResponse;
@@ -16,7 +17,7 @@ interface ActionCardProps {
 export const ActionCard = memo(({ trace, resultCount, className, assets, setActiveArtifactId }: ActionCardProps) => {
   const toolName = (trace.name || "").toLowerCase();
   
-  if (trace.trace_type !== 'tool_start') return null;
+  if (trace.trace_type !== TraceType.TOOL_START) return null;
 
   let args: Record<string, any> = {};
   try {
