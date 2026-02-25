@@ -1,12 +1,12 @@
 import os
 import httpx
-import os
-import httpx
 import logging
 from typing import Any, Optional
+from pathlib import Path
+
 from build123d import Compound
 from pydantic import BaseModel
-from shared.workers.schema import BenchmarkToolResponse
+from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +20,7 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
     url = f"{heavy_url.rstrip('/')}/{endpoint.lstrip('/')}"
     headers = {"X-Session-ID": session_id}
 
-    if isinstance(payload, BaseModel):
-        json_payload = payload.model_dump()
-    else:
-        json_payload = payload
+    json_payload = payload.model_dump() if isinstance(payload, BaseModel) else payload
 
     try:
         with httpx.Client(timeout=300.0) as client:
@@ -95,16 +92,13 @@ def refuse_plan(reason: str) -> bool:
 
         return real_refuse(reason)
 
-    import json
-
-    refusal_data = {
-        "status": "plan_refused",
-        "reason": reason,
-        "timestamp": os.getenv("TIMESTAMP"),
-        "session_id": os.getenv("SESSION_ID", "default"),
-    }
-    with open("refusal.json", "w") as f:
-        json.dump(refusal_data, f)
+    refusal_data = PlanRefusal(
+        reason=reason,
+        timestamp=os.getenv("TIMESTAMP"),
+        session_id=os.getenv("SESSION_ID", "default"),
+    )
+    with Path("refusal.json").open("w") as f:
+        f.write(refusal_data.model_dump_json(indent=2))
     return True
 
 

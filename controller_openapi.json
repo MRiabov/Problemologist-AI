@@ -492,7 +492,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkGenerateResponse"
+                }
               }
             }
           },
@@ -544,7 +546,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkConfirmResponse"
+                }
               }
             }
           },
@@ -639,7 +643,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkObjectivesResponse"
+                }
               }
             }
           },
@@ -765,8 +771,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/CotsSearchItem"
                   },
                   "title": "Response Search Cots Cots Search Get"
                 }
@@ -800,9 +805,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Catalog Metadata Cots Metadata Get"
+                  "$ref": "#/components/schemas/CotsMetadataResponse"
                 }
               }
             }
@@ -1025,7 +1028,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunResponse"
+                }
               }
             }
           },
@@ -1096,6 +1101,29 @@
         ],
         "title": "AgentRunRequest"
       },
+      "AgentRunResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "episode_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episode Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "episode_id"
+        ],
+        "title": "AgentRunResponse"
+      },
       "AssetResponse": {
         "properties": {
           "id": {
@@ -1155,6 +1183,23 @@
         "title": "AssetType",
         "description": "Type of asset stored in S3."
       },
+      "BenchmarkConfirmResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "BenchmarkConfirmResponse"
+      },
       "BenchmarkGenerateRequest": {
         "properties": {
           "prompt": {
@@ -1195,9 +1240,8 @@
             "title": "Target Quantity"
           },
           "backend": {
-            "type": "string",
-            "title": "Backend",
-            "default": "genesis"
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "default": "GENESIS"
           }
         },
         "type": "object",
@@ -1205,6 +1249,52 @@
           "prompt"
         ],
         "title": "BenchmarkGenerateRequest"
+      },
+      "BenchmarkGenerateResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "session_id"
+        ],
+        "title": "BenchmarkGenerateResponse"
+      },
+      "BenchmarkObjectivesResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "objectives": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Objectives"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "objectives"
+        ],
+        "title": "BenchmarkObjectivesResponse"
       },
       "CodeReference": {
         "properties": {
@@ -1245,6 +1335,85 @@
         },
         "type": "object",
         "title": "ConfirmRequest"
+      },
+      "CotsMetadataResponse": {
+        "properties": {
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "bd_warehouse_commit": {
+            "type": "string",
+            "title": "Bd Warehouse Commit"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalog_version",
+          "bd_warehouse_commit"
+        ],
+        "title": "CotsMetadataResponse",
+        "description": "Metadata for the current COTS catalog."
+      },
+      "CotsSearchItem": {
+        "properties": {
+          "part_id": {
+            "type": "string",
+            "title": "Part Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "manufacturer": {
+            "type": "string",
+            "title": "Manufacturer"
+          },
+          "price": {
+            "type": "number",
+            "title": "Price"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "weight_g": {
+            "type": "number",
+            "title": "Weight G"
+          },
+          "metadata_vars": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata Vars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "part_id",
+          "name",
+          "category",
+          "manufacturer",
+          "price",
+          "source",
+          "weight_g"
+        ],
+        "title": "CotsSearchItem",
+        "description": "A single COTS part returned from search."
       },
       "EpisodeStatus": {
         "type": "string",
@@ -1403,6 +1572,19 @@
           "message"
         ],
         "title": "MessageRequest"
+      },
+      "ResponseStatus": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "HEALTHY",
+          "ACCEPTED",
+          "COMPLETED",
+          "SUCCESS",
+          "ERROR"
+        ],
+        "title": "ResponseStatus",
+        "description": "Standard API response status values."
       },
       "ReviewRequest": {
         "properties": {

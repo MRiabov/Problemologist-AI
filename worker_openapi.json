@@ -96,7 +96,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/FileInfo"
+                    "$ref": "#/components/schemas/FsFileEntry"
                   },
                   "title": "Response List Files Fs Ls Post"
                 }
@@ -1639,15 +1639,15 @@
         "title": "ExistsResponse",
         "description": "Response for file existence check."
       },
-      "FileInfo": {
+      "FsFileEntry": {
         "properties": {
-          "path": {
-            "type": "string",
-            "title": "Path"
-          },
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
           },
           "is_dir": {
             "type": "boolean",
@@ -1667,12 +1667,12 @@
         },
         "type": "object",
         "required": [
-          "path",
           "name",
+          "path",
           "is_dir"
         ],
-        "title": "FileInfo",
-        "description": "Information about a file or directory."
+        "title": "FsFileEntry",
+        "description": "A single entry returned by the /fs/ls endpoint."
       },
       "GitCommitRequest": {
         "properties": {

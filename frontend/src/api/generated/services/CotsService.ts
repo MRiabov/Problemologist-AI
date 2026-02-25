@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CotsMetadataResponse } from '../models/CotsMetadataResponse';
+import type { CotsSearchItem } from '../models/CotsSearchItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -11,13 +13,13 @@ export class CotsService {
      * Search for COTS parts by name or category.
      * @param q Search query
      * @param limit
-     * @returns any Successful Response
+     * @returns CotsSearchItem Successful Response
      * @throws ApiError
      */
     public static searchCotsCotsSearchGet(
         q: string,
         limit: number = 20,
-    ): CancelablePromise<Array<Record<string, any>>> {
+    ): CancelablePromise<Array<CotsSearchItem>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/cots/search',
@@ -33,10 +35,10 @@ export class CotsService {
     /**
      * Get Catalog Metadata
      * Get the catalog metadata (version, commit, etc.).
-     * @returns any Successful Response
+     * @returns CotsMetadataResponse Successful Response
      * @throws ApiError
      */
-    public static getCatalogMetadataCotsMetadataGet(): CancelablePromise<Record<string, any>> {
+    public static getCatalogMetadataCotsMetadataGet(): CancelablePromise<CotsMetadataResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/cots/metadata',
