@@ -367,3 +367,10 @@ class InspectTopologyResponse(BaseModel):
     success: StrictBool
     properties: dict[StrictStr, Any] | None = None
     message: StrictStr | None = None
+class PlanRefusal(BaseModel):
+    """Information about a refused plan."""
+
+    status: str = "plan_refused"
+    reason: str
+    timestamp: str | None = None
+    session_id: str = "default"

@@ -1,5 +1,5 @@
-import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
@@ -114,3 +114,42 @@ class SteeringQueueEntry(BaseModel):
     text: str
     selections: list[dict] = []
     mentions: list[str] = []
+
+
+class CotsSearchItem(BaseModel):
+    """A single COTS part returned from search."""
+
+    part_id: str
+    name: str
+    category: str
+    manufacturer: str
+    price: float
+    source: str
+    weight_g: float
+    metadata: dict[str, Any] = Field(alias="metadata_vars", default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CotsMetadataResponse(BaseModel):
+    """Metadata for the current COTS catalog."""
+
+    catalog_version: str
+    bd_warehouse_commit: str
+    generated_at: str | None = None
+
+
+class SchematicItem(BaseModel):
+    """An item in the electronics schematic representation."""
+
+    type: str
+
+    model_config = ConfigDict(extra="allow")
+
+
+class OpenAPISchema(BaseModel):
+    """Minimal OpenAPI schema for integration testing contracts."""
+
+    paths: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="allow")
