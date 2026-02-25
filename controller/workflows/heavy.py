@@ -3,7 +3,6 @@ from datetime import timedelta
 from temporalio import workflow
 
 from shared.models.simulation import SimulationResult
-from shared.type_checking import type_check
 from shared.workers.schema import (
     HeavyPreviewParams,
     HeavyPreviewResponse,
@@ -13,7 +12,6 @@ from shared.workers.schema import (
 )
 
 
-@type_check
 @workflow.defn
 class HeavySimulationWorkflow:
     @workflow.run
@@ -28,7 +26,6 @@ class HeavySimulationWorkflow:
         )
 
 
-@type_check
 @workflow.defn
 class HeavyValidationWorkflow:
     @workflow.run
@@ -42,7 +39,6 @@ class HeavyValidationWorkflow:
         )
 
 
-@type_check
 @workflow.defn
 class HeavyPreviewWorkflow:
     @workflow.run

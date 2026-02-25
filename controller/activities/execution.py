@@ -2,13 +2,11 @@ from temporalio import activity
 
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
-from shared.type_checking import type_check
 from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 
 WORKER_LIGHT_URL = settings.worker_light_url
 
 
-@type_check
 @activity.defn
 async def execute_script_activity(request: ScriptExecutionRequest) -> ExecuteResponse:
     """Activity that calls the worker to execute a script."""

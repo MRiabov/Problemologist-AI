@@ -276,7 +276,10 @@ async def api_verify(
             success=False,
             message=str(e),
             artifacts={
-                "failure": {"reason": "VERIFICATION_ERROR", "detail": str(e)},
+                "failure": {
+                    "reason": FailureReason.VALIDATION_FAILED,
+                    "detail": str(e),
+                },
             },
         )
     finally:

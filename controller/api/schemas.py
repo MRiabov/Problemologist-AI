@@ -11,6 +11,7 @@ from shared.enums import (
     ReviewDecision,
     TraceType,
 )
+from shared.models.schemas import SchematicItem
 from shared.models.steerability import CodeReference, GeometricSelection
 from shared.simulation.schemas import SimulatorBackendType
 
@@ -22,6 +23,7 @@ class StandardResponse(BaseModel):
 
 class BenchmarkGenerateResponse(StandardResponse):
     session_id: uuid.UUID
+    episode_id: uuid.UUID
 
 
 class BenchmarkConfirmResponse(StandardResponse):
@@ -38,12 +40,17 @@ class TraceResponse(BaseModel):
     trace_type: TraceType
     name: str | None
     content: str | None
-    metadata: dict | None = Field(None, alias="metadata_vars")
+    metadata_vars: dict | None = None
     feedback_score: int | None = None
     feedback_comment: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @property
+    def metadata(self) -> dict | None:
+        """Backward-compatible alias for clients using `metadata`."""
+        return self.metadata_vars
 
 
 class AssetResponse(BaseModel):
@@ -68,7 +75,7 @@ class EpisodeResponse(BaseModel):
     updated_at: datetime
     skill_git_hash: str | None = None
     template_versions: dict | None = None
-    metadata: dict | None = Field(None, alias="metadata_vars")
+    metadata_vars: dict | None = None
     todo_list: dict | None = None
     journal: str | None = None
     plan: str | None = None
@@ -77,6 +84,11 @@ class EpisodeResponse(BaseModel):
     assets: list[AssetResponse] = []
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @property
+    def metadata(self) -> dict | None:
+        """Backward-compatible alias for clients using `metadata`."""
+        return self.metadata_vars
 
 
 class ArtifactEntry(BaseModel):
@@ -92,6 +104,12 @@ class EpisodeCreateResponse(BaseModel):
 
     __test__ = False
     episode_id: uuid.UUID
+
+
+class TestEpisodeCreateResponse(EpisodeCreateResponse):
+    """Backward-compatible alias for episode create response."""
+
+    __test__ = False
 
 
 class EpisodeListItem(BaseModel):

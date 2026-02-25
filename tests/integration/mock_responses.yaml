@@ -20,7 +20,7 @@ scenarios:
         with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -83,7 +83,7 @@ scenarios:
     reviewer:
       thought: "Reviewing benchmark files."
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design is valid and objectives are well-defined."
         required_fixes: []
     cots_search:
@@ -115,7 +115,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -142,7 +142,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -169,7 +169,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -205,7 +205,7 @@ scenarios:
         with open('objectives.yaml', 'w') as f: f.write('objectives: {goal_zone: {min: [1,1,1], max: [2,2,2]}, build_zone: {min: [-5,-5,0], max: [5,5,5]}}\nsimulation_bounds: {min: [-10,-10,0], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -232,7 +232,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -259,7 +259,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -286,7 +286,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -313,7 +313,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -340,7 +340,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -367,7 +367,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -395,7 +395,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -423,7 +423,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -450,7 +450,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -477,7 +477,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -509,7 +509,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -536,7 +536,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -558,7 +558,7 @@ scenarios:
       finished: true
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -585,7 +585,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -612,7 +612,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -639,7 +639,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -666,7 +666,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -693,7 +693,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -720,7 +720,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -747,7 +747,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -774,7 +774,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -816,7 +816,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -846,7 +846,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -903,7 +903,7 @@ scenarios:
       
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
 
@@ -942,6 +942,6 @@ scenarios:
       generated_code: "with open('solution.py', 'w') as f: f.write('# Default')"
     reviewer:
       review:
-        decision: "approved"
+        decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []

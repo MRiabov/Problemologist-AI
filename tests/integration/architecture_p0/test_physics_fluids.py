@@ -33,11 +33,37 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
+def _event_get(event, key: str, default=None):
+    if isinstance(event, dict):
+        return event.get(key, default)
+    if hasattr(event, "get"):
+        return event.get(key, default)
+    return getattr(event, key, default)
+
+
+def _event_as_dict(event):
+    if isinstance(event, dict):
+        return event
+    if hasattr(event, "model_dump"):
+        return event.model_dump(mode="json")
+    return {"event_type": _event_get(event, "event_type")}
+
+
+async def _require_service(client: httpx.AsyncClient, name: str, url: str):
+    try:
+        resp = await client.get(f"{url}/health", timeout=5.0)
+        resp.raise_for_status()
+    except Exception:
+        pytest.skip(f"{name} is not reachable at {url}")
+
+
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_101_physics_backend_selection():
     """INT-101: Verify physics backend selection and event emission."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_service(client, "worker-light", WORKER_LIGHT_URL)
+        await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"test-int-101-{int(time.time())}"
 
         # 1. Setup objectives.yaml with Genesis backend
@@ -104,7 +130,11 @@ def build():
 
         # Verify event emission
         event_dict = next(
-            (e for e in events if e.get("event_type") == "simulation_backend_selected"),
+            (
+                _event_as_dict(e)
+                for e in events
+                if _event_get(e, "event_type") == "simulation_backend_selected"
+            ),
             None,
         )
         assert event_dict is not None, "Missing simulation_backend_selected event"

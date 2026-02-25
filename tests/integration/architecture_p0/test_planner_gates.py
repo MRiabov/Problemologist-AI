@@ -422,21 +422,21 @@ async def test_int_011_planner_caps_enforcement(
 ):
     """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Create invalid cost estimation (target > benchmark cap)
-        invalid_cost = AssemblyDefinition(
-            version="1.0",
-            constraints=AssemblyConstraints(
-                benchmark_max_unit_cost_usd=50.0,
-                benchmark_max_weight_g=1000.0,
-                planner_target_max_unit_cost_usd=60.0,  # OVER LIMIT
-                planner_target_max_weight_g=500.0,
-            ),
-            totals=CostTotals(
-                estimated_unit_cost_usd=40.0,
-                estimated_weight_g=200.0,
-                estimate_confidence="medium",
-            ),
-        )
+        # Keep invalid payload as raw data so schema validation happens in the endpoint path.
+        invalid_cost = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 60.0,  # OVER LIMIT
+                "planner_target_max_weight_g": 500.0,
+            },
+            "totals": {
+                "estimated_unit_cost_usd": 40.0,
+                "estimated_weight_g": 200.0,
+                "estimate_confidence": "medium",
+            },
+        }
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -583,21 +583,21 @@ async def test_int_010_planner_pricing_script_integration(
 ):
     """INT-010: Verify validate_costing_and_price block when over caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Create cost estimation where totals > planner caps (which are valid vs benchmark)
-        invalid_cost = AssemblyDefinition(
-            version="1.0",
-            constraints=AssemblyConstraints(
-                benchmark_max_unit_cost_usd=50.0,
-                benchmark_max_weight_g=1000.0,
-                planner_target_max_unit_cost_usd=45.0,
-                planner_target_max_weight_g=900.0,
-            ),
-            totals=CostTotals(
-                estimated_unit_cost_usd=55.0,  # OVER PLANNER CAP
-                estimated_weight_g=500.0,
-                estimate_confidence="high",
-            ),
-        )
+        # Keep invalid payload as raw data so schema validation happens in the endpoint path.
+        invalid_cost = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 45.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "totals": {
+                "estimated_unit_cost_usd": 55.0,  # OVER PLANNER CAP
+                "estimated_weight_g": 500.0,
+                "estimate_confidence": "high",
+            },
+        }
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,

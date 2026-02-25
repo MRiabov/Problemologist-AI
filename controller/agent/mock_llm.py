@@ -319,7 +319,7 @@ class MockDSPyLM(dspy.LM):
             resp["review"] = node_data.get(
                 "review",
                 {
-                    "decision": "approved",
+                    "decision": "APPROVED",
                     "reason": "Verified.",
                     "required_fixes": [],
                 },

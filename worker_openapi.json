@@ -2295,19 +2295,13 @@
                 "$ref": "#/components/schemas/SimulationArtifacts"
               },
               {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
                 "type": "null"
               }
-            ],
-            "title": "Artifacts"
+            ]
           },
           "events": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/EventRecord"
             },
             "type": "array",
             "title": "Events"
@@ -2484,6 +2478,21 @@
         ],
         "title": "ElectronicsValidationRequest",
         "description": "Request to validate an electronic circuit."
+      },
+      "EventRecord": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "event_type"
+        ],
+        "title": "EventRecord",
+        "description": "A single emitted observability event."
       },
       "FailureReason": {
         "type": "string",

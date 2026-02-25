@@ -7,6 +7,26 @@ as mandated by the constitution's Type Safety & Schemas rules.
 from enum import StrEnum
 
 
+class UppercaseStrEnum(StrEnum):
+    """Uppercase enum values with backward-compatible case-insensitive matching."""
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            normalized = value.upper()
+            for member in cls:
+                if member.value == normalized:
+                    return member
+        return None
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.value.lower() == other.lower()
+        return super().__eq__(other)
+
+    __hash__ = str.__hash__
+
+
 class EpisodeStatus(StrEnum):
     """Status of an agent episode."""
 
@@ -47,7 +67,7 @@ class AssetType(StrEnum):
     ERROR = "ERROR"
 
 
-class ResponseStatus(StrEnum):
+class ResponseStatus(UppercaseStrEnum):
     """Standard API response status values."""
 
     OK = "OK"
@@ -158,7 +178,7 @@ class MovingPartType(StrEnum):
     PASSIVE = "PASSIVE"
 
 
-class ReviewDecision(StrEnum):
+class ReviewDecision(UppercaseStrEnum):
     """Decision values for reviewer nodes."""
 
     APPROVED = "APPROVED"
