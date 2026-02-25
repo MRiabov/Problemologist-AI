@@ -82,7 +82,7 @@ def submit_for_review(compound: Compound) -> bool:
 
     payload = {"script_path": "script.py"}
     res = _call_heavy_worker("/benchmark/submit", payload)
-    return res.get("success", False)
+    return BenchmarkToolResponse.model_validate(res).success
 
 
 def refuse_plan(reason: str) -> bool:

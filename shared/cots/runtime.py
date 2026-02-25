@@ -30,19 +30,17 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
 
         # Apply constraints from the query
         if query.constraints:
-            if "max_weight_g" in query.constraints:
+            if query.constraints.max_weight_g is not None:
                 stmt = stmt.filter(
-                    COTSItemORM.weight_g <= float(query.constraints["max_weight_g"])
+                    COTSItemORM.weight_g <= float(query.constraints.max_weight_g)
                 )
-            if "max_cost" in query.constraints:
+            if query.constraints.max_cost is not None:
                 stmt = stmt.filter(
-                    COTSItemORM.unit_cost <= float(query.constraints["max_cost"])
+                    COTSItemORM.unit_cost <= float(query.constraints.max_cost)
                 )
-            if "category" in query.constraints:
-                stmt = stmt.filter(
-                    COTSItemORM.category == query.constraints["category"]
-                )
-            if "min_size" in query.constraints:
+            if query.constraints.category is not None:
+                stmt = stmt.filter(COTSItemORM.category == query.constraints.category)
+            if query.constraints.min_size is not None:
                 # We fetch more results and filter in-memory due to JSON metadata
                 stmt = stmt.limit(query.limit * 5)
             else:
@@ -53,8 +51,8 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
         orm_items = stmt.all()
         for item in orm_items:
             # Apply in-memory constraints (min_size)
-            if query.constraints and "min_size" in query.constraints:
-                min_size = float(query.constraints["min_size"])
+            if query.constraints and query.constraints.min_size is not None:
+                min_size = float(query.constraints.min_size)
                 volume = item.metadata_dict.get("volume", 0)
                 if volume < min_size:
                     continue

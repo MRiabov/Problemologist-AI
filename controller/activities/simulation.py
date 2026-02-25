@@ -11,6 +11,7 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
 from shared.enums import AssetType, EpisodeStatus
 from shared.observability.storage import S3Client, S3Config
+from shared.workers.schema import FailureSimulationConfig, UpdateTraceParams
 from shared.type_checking import type_check
 
 # Configuration for activities
@@ -22,10 +23,11 @@ logger = structlog.get_logger(__name__)
 @type_check
 @activity.defn
 async def compile_mjcf_activity(
-    compound_json: str, simulate_failures: dict = {}
+    compound_json: str,
+    simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
 ) -> str:
     """Mock activity to compile MJCF."""
-    if simulate_failures.get("mjcf_compilation"):
+    if simulate_failures.mjcf_compilation:
         raise RuntimeError("Simulated MJCF compilation failure")
     # In a real scenario, this would call the worker to generate MJCF
     return "mjcf_data"
@@ -33,9 +35,12 @@ async def compile_mjcf_activity(
 
 @type_check
 @activity.defn
-async def run_simulation_activity(mjcf_data: str, simulate_failures: dict = {}) -> str:
+async def run_simulation_activity(
+    mjcf_data: str,
+    simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
+) -> str:
     """Mock activity to run simulation on worker."""
-    if simulate_failures.get("run_simulation"):
+    if simulate_failures.run_simulation:
         raise RuntimeError("Simulated simulation failure")
     client = WorkerClient(
         base_url=WORKER_LIGHT_URL, session_id="simulation", heavy_url=WORKER_HEAVY_URL
@@ -48,9 +53,12 @@ async def run_simulation_activity(mjcf_data: str, simulate_failures: dict = {}) 
 
 @type_check
 @activity.defn
-async def render_video_activity(sim_results: str, simulate_failures: dict = {}) -> str:
+async def render_video_activity(
+    sim_results: str,
+    simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
+) -> str:
     """Mock activity to render simulation video."""
-    if simulate_failures.get("render_video"):
+    if simulate_failures.render_video:
         raise RuntimeError("Simulated render video failure")
     import tempfile
 
@@ -62,12 +70,15 @@ async def render_video_activity(sim_results: str, simulate_failures: dict = {}) 
 
 @type_check
 @activity.defn
-async def upload_to_s3_activity(video_path: str, simulate_failures: dict = {}) -> str:
+async def upload_to_s3_activity(
+    video_path: str,
+    simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
+) -> str:
     """Upload video to S3 using S3Client."""
     import os
     from pathlib import Path
 
-    if simulate_failures.get("s3_upload"):
+    if simulate_failures.s3_upload:
         raise RuntimeError("Simulated S3 upload failure")
 
     if os.getenv("SIMULATE_S3_FAILURE") == "true":
@@ -104,13 +115,13 @@ async def upload_to_s3_activity(video_path: str, simulate_failures: dict = {}) -
 
 @type_check
 @activity.defn
-async def update_trace_activity(params: dict) -> bool:
+async def update_trace_activity(params: UpdateTraceParams) -> bool:
     """Update postgres episode status and add asset record."""
-    episode_id = params["episode_id"]
-    s3_path = params["s3_path"]
-    asset_type = params.get("asset_type", AssetType.VIDEO)
-    target_status = params.get("status", EpisodeStatus.COMPLETED)
-    error_msg = params.get("error")
+    episode_id = params.episode_id
+    s3_path = params.s3_path
+    asset_type = params.asset_type
+    target_status = params.status
+    error_msg = params.error
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:

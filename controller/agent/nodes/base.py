@@ -14,6 +14,7 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
+from shared.models.schemas import CodeReference
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -145,18 +146,22 @@ class BaseNode:
         parsed_refs = []
         for match in matches:
             parsed_refs.append(
-                {
-                    "file_path": match.group(1),
-                    "start_line": int(match.group(2)),
-                    "end_line": int(match.group(3)),
-                }
+                CodeReference(
+                    file_path=match.group(1),
+                    start_line=int(match.group(2)),
+                    end_line=int(match.group(3)),
+                )
             )
 
         if not steer_data and not parsed_refs:
             return ""
 
         steer_data = steer_data or {}
-        code_refs = steer_data.get("code_references", []) + parsed_refs
+        raw_code_refs = steer_data.get("code_references", [])
+        code_refs = [
+            CodeReference.model_validate(r) if isinstance(r, dict) else r
+            for r in raw_code_refs
+        ] + parsed_refs
 
         if steer_data.get("selections"):
             lines.append("Geometric Selections:")
@@ -174,9 +179,9 @@ class BaseNode:
         if code_refs:
             lines.append("Code References:")
             for ref in code_refs:
-                file_path = ref["file_path"]
-                start = ref["start_line"]
-                end = ref["end_line"]
+                file_path = ref.file_path
+                start = ref.start_line
+                end = ref.end_line
                 try:
                     # Resolve snippet from worker
                     file_content = await self.ctx.fs.read_file(file_path)

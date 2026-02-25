@@ -2,7 +2,11 @@
 Utilities for generating schematics from electronic assembly definitions.
 """
 
-from shared.models.schemas import AssemblyDefinition, ElectronicComponentType
+from shared.models.schemas import (
+    AssemblyDefinition,
+    ElectronicComponentType,
+    SchematicItem,
+)
 
 
 def get_schematic_pin_index(term: str) -> str:
@@ -28,7 +32,7 @@ def get_schematic_pin_index(term: str) -> str:
     return "1"
 
 
-def generate_schematic_soup(assembly: AssemblyDefinition) -> list[dict]:
+def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]:
     """
     Generate a tscircuit Soup JSON representation of the electronics assembly.
     """
@@ -55,35 +59,35 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[dict]:
         comp_id = f"comp_{comp.component_id}"
 
         soup.append(
-            {
-                "type": "schematic_component",
-                "id": comp_id,
-                "name": comp.component_id,
-                "center": {"x": 10 + i * 40, "y": 10},
-                "rotation": 0,
-                "symbol_name": symbol_name,
-            }
+            SchematicItem(
+                type="schematic_component",
+                id=comp_id,
+                name=comp.component_id,
+                center={"x": 10 + i * 40, "y": 10},
+                rotation=0,
+                symbol_name=symbol_name,
+            )
         )
 
         # Add standard pins (1 and 2)
         # TODO: support more pins for connectors/relays if needed
         soup.append(
-            {
-                "type": "schematic_pin",
-                "id": f"{comp_id}_p1",
-                "component_id": comp_id,
-                "name": "1",
-                "center": {"x": 10 + i * 40 - 10, "y": 10},
-            }
+            SchematicItem(
+                type="schematic_pin",
+                id=f"{comp_id}_p1",
+                component_id=comp_id,
+                name="1",
+                center={"x": 10 + i * 40 - 10, "y": 10},
+            )
         )
         soup.append(
-            {
-                "type": "schematic_pin",
-                "id": f"{comp_id}_p2",
-                "component_id": comp_id,
-                "name": "2",
-                "center": {"x": 10 + i * 40 + 10, "y": 10},
-            }
+            SchematicItem(
+                type="schematic_pin",
+                id=f"{comp_id}_p2",
+                component_id=comp_id,
+                name="2",
+                center={"x": 10 + i * 40 + 10, "y": 10},
+            )
         )
 
     # 2. Add traces
@@ -97,12 +101,12 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[dict]:
         dst_pin_id = f"comp_{wire.to_terminal.component}_p{dst_pin_idx}"
 
         soup.append(
-            {
-                "type": "schematic_trace",
-                "id": f"trace_{wire.wire_id}",
-                "source": src_pin_id,
-                "target": dst_pin_id,
-            }
+            SchematicItem(
+                type="schematic_trace",
+                id=f"trace_{wire.wire_id}",
+                source=src_pin_id,
+                target=dst_pin_id,
+            )
         )
 
     return soup

@@ -65,11 +65,11 @@ async def generate_benchmark(
         backend=request.backend,
     )
 
-    return {
-        "status": ResponseStatus.ACCEPTED,
-        "message": "Benchmark generation started",
-        "session_id": session_id,
-    }
+    return BenchmarkGenerateResponse(
+        status=ResponseStatus.ACCEPTED,
+        message="Benchmark generation started",
+        session_id=session_id,
+    )
 
 
 class ConfirmRequest(BaseModel):
@@ -107,10 +107,10 @@ async def confirm_benchmark(
         session_id=session_id,
     )
 
-    return {
-        "status": ResponseStatus.ACCEPTED,
-        "message": "Benchmark generation proceeding",
-    }
+    return BenchmarkConfirmResponse(
+        status=ResponseStatus.ACCEPTED,
+        message="Benchmark generation proceeding",
+    )
 
 
 # Note: We might need an endpoint to get the status/result of a specific session
@@ -213,11 +213,11 @@ async def update_objectives(
             new_content = yaml.dump(obj_data, sort_keys=False)
             await client.write_file("objectives.yaml", new_content)
 
-            return {
-                "status": ResponseStatus.SUCCESS,
-                "message": "Objectives updated",
-                "objectives": obj_data["constraints"],
-            }
+            return BenchmarkObjectivesResponse(
+                status=ResponseStatus.SUCCESS,
+                message="Objectives updated",
+                objectives=obj_data["constraints"],
+            )
 
         except Exception as e:
             raise HTTPException(

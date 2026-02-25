@@ -26,7 +26,14 @@ class COTSItem(BaseModel):
     metadata: dict[StrictStr, Any]
 
 
+class SearchConstraints(BaseModel):
+    max_weight_g: float | None = None
+    max_cost: float | None = None
+    category: str | None = None
+    min_size: float | None = None
+
+
 class SearchQuery(BaseModel):
     query: StrictStr
-    constraints: dict[StrictStr, Any] | None = None  # e.g., {"max_weight": 100}
+    constraints: SearchConstraints | None = None
     limit: StrictInt = 5

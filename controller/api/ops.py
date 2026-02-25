@@ -2,8 +2,10 @@ import os
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from pydantic import BaseModel
 
 from shared.ops.workflows import BackupWorkflow
+from shared.models.schemas import BackupParams
 
 logger = structlog.get_logger(__name__)
 
@@ -21,7 +23,13 @@ async def verify_backup_secret(x_backup_secret: str = Header(None)):
         raise HTTPException(status_code=403, detail="Invalid backup secret")
 
 
-@router.post("/backup", status_code=202)
+class BackupTriggerResponse(BaseModel):
+    workflow_id: str
+    status: str
+    detail: str
+
+
+@router.post("/backup", status_code=202, response_model=BackupTriggerResponse)
 async def trigger_backup(request: Request, _=Depends(verify_backup_secret)):
     """
     Trigger the automated backup workflow.
@@ -33,15 +41,15 @@ async def trigger_backup(request: Request, _=Depends(verify_backup_secret)):
         logger.error("Temporal client not found in app state")
         raise HTTPException(status_code=500, detail="Temporal client not initialized")
 
-    params = {
-        "db_url": os.getenv("DATABASE_URL"),
-        "s3_bucket": os.getenv("BACKUP_S3_BUCKET"),
-        "source_bucket": os.getenv("ASSET_S3_BUCKET"),
-        "backup_bucket": os.getenv("BACKUP_S3_BUCKET"),
-    }
+    params = BackupParams(
+        db_url=os.getenv("DATABASE_URL"),
+        s3_bucket=os.getenv("BACKUP_S3_BUCKET"),
+        source_bucket=os.getenv("ASSET_S3_BUCKET"),
+        backup_bucket=os.getenv("BACKUP_S3_BUCKET"),
+    )
 
     # Validate that we have at least some parameters to work with
-    if not any(params.values()):
+    if not any(v is not None for v in params.model_dump().values()):
         logger.error("Missing backup configuration", params=params)
         raise HTTPException(status_code=500, detail="Backup configuration missing")
 
@@ -56,8 +64,8 @@ async def trigger_backup(request: Request, _=Depends(verify_backup_secret)):
         task_queue="ops-tasks",
     )
 
-    return {
-        "workflow_id": handle.id,
-        "status": "Accepted",
-        "detail": "Backup workflow initiated",
-    }
+    return BackupTriggerResponse(
+        workflow_id=handle.id,
+        status="Accepted",
+        detail="Backup workflow initiated",
+    )
