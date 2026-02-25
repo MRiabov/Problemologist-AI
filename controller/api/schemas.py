@@ -12,6 +12,7 @@ from shared.enums import (
     TraceType,
 )
 from shared.models.schemas import SchematicItem
+from shared.models.steerability import CodeReference, GeometricSelection
 from shared.simulation.schemas import SimulatorBackendType
 
 
@@ -122,8 +123,9 @@ class SteeringQueueEntry(BaseModel):
     """A single entry in the steering prompt queue."""
 
     text: str
-    selections: list[dict] = []
+    selections: list[GeometricSelection] = []
     mentions: list[str] = []
+    code_references: list[CodeReference] = []
 
 
 class CotsSearchItem(BaseModel):
