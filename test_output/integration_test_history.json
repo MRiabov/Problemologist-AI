@@ -1,6 +1,166 @@
 {
   "runs": [
     {
+      "timestamp": "2026-02-25T14:20:41.596415",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 56.434,
+      "tests": [
+        {
+          "name": "test_int_120_circuit_validation_gate",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 55.54,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_121_short_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.137,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_122_overcurrent_supply_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.14,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_123_overcurrent_wire_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.13,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_124_open_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.137,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-25T14:13:39.238926",
+      "status": "failed",
+      "total": 5,
+      "passed": 4,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 105.483,
+      "tests": [
+        {
+          "name": "test_int_120_circuit_validation_gate",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 104.517,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_121_short_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.138,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_122_overcurrent_supply_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.138,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_123_overcurrent_wire_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.13,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_124_open_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.137,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_124_open_circuit_detection():\n        \"\"\"INT-124: Verify open circuit / floating node detection via API.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"124\")\n            # Motor with only one terminal connected\n            open_circuit = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),\n                components=[\n                    ElectronicComponent(\n                        component_id=\"m1\",\n                        type=ElectronicComponentType.MOTOR,\n                        stall_current_a=2.0,\n                    )\n                ],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"w1\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"m1\", terminal=\"+\"),\n                        gauge_awg=22,\n                        length_mm=100.0,\n                    )\n                    # Missing wire from m1:- to supply:0\n                ],\n            )\n            req_val = ElectronicsValidationRequest(section=open_circuit)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n>           assert val_resp.success is False\nE           AssertionError: assert True is False\nE            +  where True = BenchmarkToolResponse(success=True, message='Circuit is valid', confidence='high', artifacts=SimulationArtifacts(render_paths=[], mjcf_content=None, stress_summaries=[], fluid_metrics=[], circuit_validation_result={'valid': True, 'node_voltages': {'m1_-': 12.000000000000002, 'm1_+': 12.000000000000002, 'supply_v+': 12.0}, 'branch_currents': {'vsupply': 4.547473508864641e-13}, 'total_draw_a': 4.547473508864641e-13, 'errors': [], 'failures': [], 'warnings': []}, scene_path=None, failure=None, verification_result=None), events=[]).success\n\ntests/integration/architecture_p0/test_int_120_electronics.py:290: AssertionError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-25T14:10:54.749636",
+      "status": "failed",
+      "total": 3,
+      "passed": 0,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 2.299,
+      "tests": [
+        {
+          "name": "test_int_120_circuit_validation_gate",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.743,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_120_circuit_validation_gate():\n        \"\"\"INT-120: Verify that /validate_circuit endpoint works and simulate respects its failure.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"120\")\n            # 1. Define a faulty circuit (short circuit)\n            faulty_section = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),\n                components=[],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"short_wire\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=10,\n                        length_mm=10000.0,  # ~0.033 Ohm -> ~360A\n                    )\n                ],\n            )\n    \n            # 2. Call /benchmark/validate_circuit\n            req_val = ElectronicsValidationRequest(section=faulty_section)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:65: AttributeError"
+        },
+        {
+          "name": "test_int_121_short_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.298,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_121_short_circuit_detection():\n        \"\"\"INT-121: Verify short circuit detection via API.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"121\")\n            short_circuit = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),\n                components=[],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"short_wire_121\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=10,\n                        length_mm=10000.0,\n                    )\n                ],\n            )\n            req_val = ElectronicsValidationRequest(section=short_circuit)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:158: AttributeError"
+        },
+        {
+          "name": "test_int_122_overcurrent_supply_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.273,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_122_overcurrent_supply_detection():\n        \"\"\"INT-122: Verify overcurrent supply detection via API.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"122\")\n            # Motor with 5A stall on a 1A PSU. Resistance = 12/5 = 2.4 Ohm.\n            overcurrent = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),\n                components=[\n                    ElectronicComponent(\n                        component_id=\"m1\",\n                        type=ElectronicComponentType.MOTOR,\n                        stall_current_a=5.0,\n                    )\n                ],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"w1\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"m1\", terminal=\"+\"),\n                        gauge_awg=18,\n                        length_mm=500.0,\n                    ),\n                    WireConfig(\n                        wire_id=\"w2\",\n                        from_terminal=WireTerminal(component=\"m1\", terminal=\"-\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=18,\n                        length_mm=500.0,\n                    ),\n                ],\n            )\n            req_val = ElectronicsValidationRequest(section=overcurrent)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:204: AttributeError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-25T14:06:57.223556",
+      "status": "failed",
+      "total": 3,
+      "passed": 0,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 1.797,
+      "tests": [
+        {
+          "name": "test_int_120_circuit_validation_gate",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 1.044,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_120_circuit_validation_gate():\n        \"\"\"INT-120: Verify that /validate_circuit endpoint works and simulate respects its failure.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"120\")\n            # 1. Define a faulty circuit (short circuit)\n            faulty_section = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),\n                components=[],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"short_wire\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=10,\n                        length_mm=10000.0,  # ~0.033 Ohm -> ~360A\n                    )\n                ],\n            )\n    \n            # 2. Call /benchmark/validate_circuit\n            req_val = ElectronicsValidationRequest(section=faulty_section)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:65: AttributeError"
+        },
+        {
+          "name": "test_int_121_short_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.157,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_121_short_circuit_detection():\n        \"\"\"INT-121: Verify short circuit detection via API.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"121\")\n            short_circuit = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),\n                components=[],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"short_wire_121\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=10,\n                        length_mm=10000.0,\n                    )\n                ],\n            )\n            req_val = ElectronicsValidationRequest(section=short_circuit)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:158: AttributeError"
+        },
+        {
+          "name": "test_int_122_overcurrent_supply_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.151,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_122_overcurrent_supply_detection():\n        \"\"\"INT-122: Verify overcurrent supply detection via API.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = get_session_id(\"122\")\n            # Motor with 5A stall on a 1A PSU. Resistance = 12/5 = 2.4 Ohm.\n            overcurrent = ElectronicsSection(\n                power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=1.0),\n                components=[\n                    ElectronicComponent(\n                        component_id=\"m1\",\n                        type=ElectronicComponentType.MOTOR,\n                        stall_current_a=5.0,\n                    )\n                ],\n                wiring=[\n                    WireConfig(\n                        wire_id=\"w1\",\n                        from_terminal=WireTerminal(component=\"supply\", terminal=\"v+\"),\n                        to_terminal=WireTerminal(component=\"m1\", terminal=\"+\"),\n                        gauge_awg=18,\n                        length_mm=500.0,\n                    ),\n                    WireConfig(\n                        wire_id=\"w2\",\n                        from_terminal=WireTerminal(component=\"m1\", terminal=\"-\"),\n                        to_terminal=WireTerminal(component=\"supply\", terminal=\"0\"),\n                        gauge_awg=18,\n                        length_mm=500.0,\n                    ),\n                ],\n            )\n            req_val = ElectronicsValidationRequest(section=overcurrent)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate_circuit\",\n                json=req_val.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert resp.status_code == 200\n            val_resp = BenchmarkToolResponse.model_validate(resp.json())\n            assert val_resp.success is False\n>           assert val_resp.artifacts.failure.reason == \"VALIDATION_FAILED\"\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           AttributeError: 'dict' object has no attribute 'failure'\n\ntests/integration/architecture_p0/test_int_120_electronics.py:204: AttributeError"
+        }
+      ]
+    },
+    {
       "timestamp": "2026-02-25T08:12:01.841080",
       "status": "failed",
       "total": 1,
@@ -16,82 +176,6 @@
           "time": 126.106,
           "status": "failed",
           "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-25T08:07:01.218115",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 126.515,
-      "tests": [
-        {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 126.334,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-25T07:47:06.052296",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 54.79,
-      "tests": [
-        {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 54.569,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-25T07:44:14.942377",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 47.63,
-      "tests": [
-        {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 47.498,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-25T07:39:25.955760",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 134.439,
-      "tests": [
-        {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 134.311,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n>       expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_label(\"Send Message\")\n\ntests/integration/frontend/test_int_164.py:36: AssertionError"
         }
       ]
     }

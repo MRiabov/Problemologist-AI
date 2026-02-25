@@ -20,7 +20,7 @@ from shared.models.schemas import (
     ElectronicsSection,
     PowerSupplyConfig,
 )
-from shared.enums import FailureReason
+from shared.enums import FailureReason, ElectronicComponentType
 from shared.models.simulation import SimulationFailure
 from shared.circuit_builder import resolve_node_name
 
@@ -90,11 +90,11 @@ def validate_circuit(
 
         for comp in section.components:
             required = []
-            if comp.type == "motor":
+            if comp.type == ElectronicComponentType.MOTOR:
                 required = ["+", "-"]
-            elif comp.type in ["switch", "relay"]:
+            elif comp.type in [ElectronicComponentType.SWITCH, ElectronicComponentType.RELAY]:
                 required = ["in", "out"]
-            elif comp.type == "power_supply":
+            elif comp.type == ElectronicComponentType.POWER_SUPPLY:
                 required = ["+", "-"]
 
             for term in required:
@@ -190,7 +190,7 @@ def validate_circuit(
 
         if section:
             for comp in section.components:
-                if comp.type == "power_supply":
+                if comp.type == ElectronicComponentType.POWER_SUPPLY:
                     v_name = f"v{comp.component_id}".lower()
                     if v_name in sources_draw:
                         draw = sources_draw[v_name]
@@ -309,10 +309,10 @@ def calculate_static_power_budget(section: ElectronicsSection) -> dict:
     psu = section.power_supply
 
     for comp in section.components:
-        if comp.type == "motor":
+        if comp.type == ElectronicComponentType.MOTOR:
             # Use stall current as worst-case for budget
             total_rated_current += comp.stall_current_a or 0.0
-        elif comp.type == "relay" or comp.type == "switch":
+        elif comp.type == ElectronicComponentType.RELAY or comp.type == ElectronicComponentType.SWITCH:
             # Switches/relays consume negligible power for budget purposes
             # (unless we model the relay coil, which we don't yet in high-level budget)
             pass

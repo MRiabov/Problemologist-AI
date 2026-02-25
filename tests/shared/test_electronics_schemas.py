@@ -15,7 +15,7 @@ def test_electronics_section_validation():
         "components": [
             {
                 "component_id": "motor1",
-                "type": "motor",
+                "type": "MOTOR",
                 "cots_part_id": "SG90",
                 "assembly_part_ref": "bracket_a",
             }
@@ -50,7 +50,7 @@ def test_assembly_definition_with_electronics():
             {
                 "part_name": "bracket_a",
                 "part_id": "b_a",
-                "manufacturing_method": "cnc",
+                "manufacturing_method": "CNC",
                 "material_id": "aluminum_6061",
                 "quantity": 1,
                 "part_volume_mm3": 1000.0,
@@ -65,7 +65,7 @@ def test_assembly_definition_with_electronics():
             "components": [
                 {
                     "component_id": "m1",
-                    "type": "motor",
+                    "type": "MOTOR",
                     "assembly_part_ref": "bracket_a",
                 }
             ],
@@ -98,7 +98,7 @@ def test_electronics_reference_validation():
             "components": [
                 {
                     "component_id": "m1",
-                    "type": "motor",
+                    "type": "MOTOR",
                     "assembly_part_ref": "missing_part",
                 }
             ],

@@ -247,7 +247,7 @@ class BenchmarkToolResponse(BaseModel):
     success: bool
     message: str
     confidence: str = "high"
-    artifacts: SimulationArtifacts | dict[str, Any] | None = None
+    artifacts: SimulationArtifacts | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
 
 

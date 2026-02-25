@@ -282,9 +282,9 @@ async def api_verify(
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
-            artifacts={
-                "failure": {"reason": "VERIFICATION_ERROR", "detail": str(e)},
-            },
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(reason=FailureReason.VALIDATION_FAILED, detail=str(e))
+            ),
         )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
@@ -352,9 +352,9 @@ async def api_simulate(
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
-            artifacts={
-                "failure": {"reason": "PHYSICS_INSTABILITY", "detail": str(e)},
-            },
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(reason=FailureReason.PHYSICS_INSTABILITY, detail=str(e))
+            ),
         )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
@@ -406,14 +406,14 @@ async def api_validate(
                     success=is_valid,
                     message=message or "Validation successful",
                     events=events,
-                    artifacts={
-                        "failure": {
-                            "reason": "VALIDATION_FAILED",
-                            "detail": message,
-                        }
+                    artifacts=SimulationArtifacts(
+                        failure=SimulationFailure(
+                            reason=FailureReason.VALIDATION_FAILED,
+                            detail=message,
+                        )
                         if not is_valid
                         else None
-                    },
+                    ),
                 )
 
     except Exception as e:
@@ -421,9 +421,9 @@ async def api_validate(
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
-            artifacts={
-                "failure": {"reason": "VALIDATION_FAILED", "detail": str(e)},
-            },
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(reason=FailureReason.VALIDATION_FAILED, detail=str(e))
+            ),
         )
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
@@ -447,24 +447,24 @@ async def api_validate_circuit(
         return BenchmarkToolResponse(
             success=res.valid,
             message="; ".join(res.errors) if not res.valid else "Circuit is valid",
-            artifacts={
-                "circuit_validation_result": res.model_dump(),
-                "failure": {
-                    "reason": "VALIDATION_FAILED",
-                    "detail": "; ".join(res.errors),
-                }
+            artifacts=SimulationArtifacts(
+                circuit_validation_result=res.model_dump(),
+                failure=SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED,
+                    detail="; ".join(res.errors),
+                )
                 if not res.valid
                 else None,
-            },
+            ),
         )
     except Exception as e:
         logger.error("api_validate_circuit_failed", error=str(e))
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
-            artifacts={
-                "failure": {"reason": "VALIDATION_FAILED", "detail": str(e)},
-            },
+            artifacts=SimulationArtifacts(
+                failure=SimulationFailure(reason=FailureReason.VALIDATION_FAILED, detail=str(e))
+            ),
         )
 
 
@@ -587,7 +587,7 @@ async def api_build(
                 return BenchmarkToolResponse(
                     success=True,
                     message=f"Assets rebuilt. Scene saved to {scene_path.name}",
-                    artifacts={"scene_path": str(scene_path.relative_to(root))},
+                    artifacts=SimulationArtifacts(scene_path=str(scene_path.relative_to(root))),
                     events=events,
                 )
 
