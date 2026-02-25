@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from worker_light.app import app
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.router import FilesystemRouter
+from worker_light.app import app
 
 client = TestClient(app)
 

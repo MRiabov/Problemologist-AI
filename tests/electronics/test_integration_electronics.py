@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 from build123d import Box, Compound
 
 from shared.enums import (
-    ElectronicComponentType,
     FailureReason,
 )
 from shared.models.schemas import (

@@ -2,13 +2,13 @@ import structlog
 from build123d import Compound, Part
 
 from shared.models.schemas import BoundingBox
-from worker_heavy.workbenches.cnc import analyze_cnc
-from worker_heavy.workbenches.injection_molding import analyze_im
 from shared.workers.workbench_models import (
     ManufacturingConfig,
     ManufacturingMethod,
     WorkbenchResult,
 )
+from worker_heavy.workbenches.cnc import analyze_cnc
+from worker_heavy.workbenches.injection_molding import analyze_im
 from worker_heavy.workbenches.print_3d import analyze_3dp
 
 logger = structlog.get_logger()

@@ -44,7 +44,10 @@ async def test_int_045_skills_sync_lifecycle():
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             if status_resp.status_code == 200:
                 episode_data = EpisodeResponse.model_validate(status_resp.json())
-                if episode_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
+                if episode_data.status in [
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                ]:
                     break
             await asyncio.sleep(1)
 

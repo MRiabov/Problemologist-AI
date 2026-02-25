@@ -84,8 +84,8 @@ def test_im_cost_calculation():
     assert result1.unit_cost > 5000.0
 
     # Test with context for reuse
-    from worker_heavy.workbenches.injection_molding import _calculate_im_cost
     from shared.workers.workbench_models import WorkbenchContext
+    from worker_heavy.workbenches.injection_molding import _calculate_im_cost
 
     context = WorkbenchContext()
     cost1 = _calculate_im_cost(box, config, quantity=1, context=context)

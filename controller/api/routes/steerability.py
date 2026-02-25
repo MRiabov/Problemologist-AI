@@ -75,26 +75,24 @@ async def steer_agent(
                 session_id, prompt
             )
             return {"status": "queued", "queue_position": queue_position}
-        else:
-            # Agent is idle, wake up
-            logger.info("agent_idle_waking_up", episode_id=str(episode.id))
+        # Agent is idle, wake up
+        logger.info("agent_idle_waking_up", episode_id=str(episode.id))
 
-            # Start background task
-            new_task = asyncio.create_task(
-                continue_agent_task(
-                    episode.id,
-                    prompt.text,
-                    metadata=prompt.model_dump(),
-                )
+        # Start background task
+        new_task = asyncio.create_task(
+            continue_agent_task(
+                episode.id,
+                prompt.text,
+                metadata=prompt.model_dump(),
             )
-            task_tracker.register_task(episode.id, new_task)
+        )
+        task_tracker.register_task(episode.id, new_task)
 
-            return {"status": "started", "queue_position": 0}
-    else:
-        logger.warning("episode_not_found_for_steer", session_id=session_id)
-        # Fallback to just enqueueing if we can't find the episode object but session exists?
-        queue_position = await steerability_service.enqueue_prompt(session_id, prompt)
-        return {"status": "queued", "queue_position": queue_position}
+        return {"status": "started", "queue_position": 0}
+    logger.warning("episode_not_found_for_steer", session_id=session_id)
+    # Fallback to just enqueueing if we can't find the episode object but session exists?
+    queue_position = await steerability_service.enqueue_prompt(session_id, prompt)
+    return {"status": "queued", "queue_position": queue_position}
 
 
 @router.get("/queue", response_model=list[SteerablePrompt])

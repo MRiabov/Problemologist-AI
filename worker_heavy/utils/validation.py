@@ -26,16 +26,16 @@ from shared.models.simulation import (
     SimulationResult,
     StressSummary,
 )
+from shared.observability.events import emit_event
+from shared.observability.schemas import WireRoutingEvent
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import SimulatorBackendType
+from shared.wire_utils import calculate_path_length, check_wire_clearance
 from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config
 
 from .dfm import validate_and_price
 from .rendering import prerender_24_views
-from shared.observability.events import emit_event
-from shared.observability.schemas import WireRoutingEvent
-from shared.wire_utils import calculate_path_length, check_wire_clearance
 
 logger = structlog.get_logger(__name__)
 
@@ -435,8 +435,8 @@ def simulate(
     session_id: str | None = None,
 ) -> SimulationResult:
     """Provide a physics-backed stability and objective check."""
-    from worker_heavy.simulation.loop import SimulationLoop
     from worker_heavy.config import settings
+    from worker_heavy.simulation.loop import SimulationLoop
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode

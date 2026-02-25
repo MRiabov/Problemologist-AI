@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import patch
+
 from shared.cots.parts.motors import ServoMotor
 from shared.observability.schemas import ComponentUsageEvent
 

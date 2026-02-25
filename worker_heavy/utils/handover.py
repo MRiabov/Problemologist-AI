@@ -7,9 +7,9 @@ import yaml
 from build123d import Compound, export_step
 
 from shared.models.schemas import ObjectivesYaml
+from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.workbenches.config import load_config
-from shared.workers.workbench_models import ManufacturingMethod
 
 logger = structlog.get_logger(__name__)
 

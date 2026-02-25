@@ -51,12 +51,12 @@ def test_fem_breakage_detection(tmp_path):
         )
 
         from shared.models.schemas import (
-            ObjectivesYaml,
-            PhysicsConfig,
             BoundingBox,
-            ObjectivesSection,
             Constraints,
             MovedObject,
+            ObjectivesSection,
+            ObjectivesYaml,
+            PhysicsConfig,
         )
         from shared.models.simulation import StressSummary
         from shared.workers.workbench_models import ManufacturingMethod

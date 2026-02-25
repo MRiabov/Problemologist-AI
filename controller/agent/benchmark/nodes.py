@@ -9,14 +9,14 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
-from shared.models.schemas import ReviewResult
 from shared.enums import SessionStatus
-from shared.workers.schema import SimulationArtifacts
+from shared.models.schemas import ReviewResult
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
 )
 from shared.type_checking import type_check
+from shared.workers.schema import SimulationArtifacts
 
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_tools

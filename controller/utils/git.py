@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 import dspy
 from git import GitCommandError, Repo

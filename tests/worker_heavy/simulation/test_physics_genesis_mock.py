@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import numpy as np
 import pytest
 
+from shared.enums import FailureReason
 from shared.models.schemas import (
     BoundingBox,
     Constraints,
@@ -14,9 +15,10 @@ from shared.models.schemas import (
     ObjectivesYaml,
     PhysicsConfig,
 )
-from shared.enums import FailureReason
 from shared.models.simulation import (
     SimulationFailure,
+)
+from shared.models.simulation import (
     SimulationMetrics as SharedSimulationMetrics,
 )
 from shared.simulation.backends import (

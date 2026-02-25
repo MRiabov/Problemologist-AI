@@ -1,8 +1,7 @@
-import structlog
+import ctypes.util
 from typing import Any
 
-import ctypes.util
-
+import structlog
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
 from PySpice.Unit import *
@@ -15,14 +14,14 @@ if NgSpiceShared.LIBRARY_PATH.startswith("libngspice"):
     if lib_path:
         NgSpiceShared.LIBRARY_PATH = lib_path
 
+from shared.circuit_builder import resolve_node_name
+from shared.enums import FailureReason
 from shared.models.schemas import (
     CircuitValidationResult,
     ElectronicsSection,
     PowerSupplyConfig,
 )
-from shared.enums import FailureReason
 from shared.models.simulation import SimulationFailure
-from shared.circuit_builder import resolve_node_name
 
 # NGSpice 42 compatibility monkeypatch
 # NGSpice 42 sends "Using SPARSE 1.3" to stderr, which PySpice treats as an error.

@@ -20,8 +20,8 @@ from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
 from shared.enums import ResponseStatus
-from shared.simulation.schemas import SimulatorBackendType
 from shared.models.schemas import CustomObjectives
+from shared.simulation.schemas import SimulatorBackendType
 
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
 

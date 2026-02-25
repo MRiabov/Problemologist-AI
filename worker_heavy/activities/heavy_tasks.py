@@ -1,9 +1,6 @@
 import asyncio
-import io
-import tarfile
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import structlog
 from temporalio import activity
@@ -18,8 +15,8 @@ from shared.workers.schema import (
     HeavyValidationParams,
     HeavyValidationResponse,
 )
-from worker_heavy.utils.validation import simulate_subprocess, validate
 from worker_heavy.utils.preview import preview_design
+from worker_heavy.utils.validation import simulate_subprocess, validate
 
 logger = structlog.get_logger(__name__)
 

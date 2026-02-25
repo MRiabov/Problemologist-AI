@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Protocol
 
 from build123d import Compound, Part
 

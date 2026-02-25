@@ -1,11 +1,8 @@
-import asyncio
 import os
 import time
-import uuid
 
 import httpx
 import pytest
-from shared.enums import ReviewDecision, FailureReason as SimulationFailureMode
 
 from controller.api.schemas import (
     AgentRunRequest,
@@ -14,6 +11,7 @@ from controller.api.schemas import (
     EpisodeCreateResponse,
     SchematicItem,
 )
+from shared.enums import FailureReason as SimulationFailureMode
 from shared.models.steerability import (
     GeometricSelection,
     SelectionLevel,
@@ -121,7 +119,7 @@ def build():
         )
 
         # assembly_definition.yaml marking elec_part as electronics
-        assembly_content = f"""
+        assembly_content = """
 version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100
@@ -129,12 +127,12 @@ constraints:
   planner_target_max_unit_cost_usd: 100
   planner_target_max_weight_g: 1000
 electronics:
-  power_supply: {{voltage_dc: 12, max_current_a: 10}}
+  power_supply: {voltage_dc: 12, max_current_a: 10}
   components:
-    - {{component_id: "elec_part", type: "motor", assembly_part_ref: "elec_part"}}
+    - {component_id: "elec_part", type: "motor", assembly_part_ref: "elec_part"}
   wiring:
-    - {{wire_id: "w1", from: {{component: "supply", terminal: "v+"}}, to: {{component: "elec_part", terminal: "+"}}, gauge_awg: 22, length_mm: 50}}
-    - {{wire_id: "w2", from: {{component: "elec_part", terminal: "-"}}, to: {{component: "supply", terminal: "0"}}, gauge_awg: 22, length_mm: 50}}
+    - {wire_id: "w1", from: {component: "supply", terminal: "v+"}, to: {component: "elec_part", terminal: "+"}, gauge_awg: 22, length_mm: 50}
+    - {wire_id: "w2", from: {component: "elec_part", terminal: "-"}, to: {component: "supply", terminal: "0"}, gauge_awg: 22, length_mm: 50}
 totals:
   estimated_unit_cost_usd: 10
   estimated_weight_g: 100

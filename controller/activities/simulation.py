@@ -9,10 +9,9 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode
-from shared.enums import AssetType, EpisodeStatus
 from shared.observability.storage import S3Client, S3Config
-from shared.workers.schema import FailureSimulationConfig, UpdateTraceParams
 from shared.type_checking import type_check
+from shared.workers.schema import FailureSimulationConfig, UpdateTraceParams
 
 # Configuration for activities
 WORKER_LIGHT_URL = settings.worker_light_url
@@ -75,7 +74,6 @@ async def upload_to_s3_activity(
     simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
 ) -> str:
     """Upload video to S3 using S3Client."""
-    import os
     from pathlib import Path
 
     if simulate_failures.s3_upload:

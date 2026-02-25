@@ -1,12 +1,10 @@
 from shared.circuit_builder import build_circuit_from_section
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import (
+    ElectronicComponent,
     ElectronicsSection,
     PowerSupplyConfig,
-    ElectronicComponent,
-    WireConfig,
-    WireTerminal,
 )
-from shared.enums import ElectronicComponentType
 
 
 def test_connector_gap():

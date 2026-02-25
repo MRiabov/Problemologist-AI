@@ -30,8 +30,8 @@ from shared.enums import (
     AssetType,
     EpisodeStatus,
     ResponseStatus,
-    TraceType,
     ReviewDecision,
+    TraceType,
 )
 
 logger = structlog.get_logger(__name__)

@@ -8,7 +8,6 @@ pytestmark = [pytest.mark.integration, pytest.mark.xdist_group(name="physics_sim
 from build123d import Box
 
 from shared.models.simulation import SimulationMetrics, StressSummary
-from worker_heavy.utils import validation
 from worker_heavy.utils.validation import (
     get_stress_report,
     preview_stress,

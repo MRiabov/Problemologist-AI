@@ -1,5 +1,6 @@
 import pytest
 from build123d import Box
+
 from shared.models.schemas import PartMetadata
 from shared.workers.workbench_models import (
     ManufacturingConfig,

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from controller.api.schemas import CotsSearchItem, CotsMetadataResponse
+from controller.api.schemas import CotsMetadataResponse, CotsSearchItem
 from shared.cots.database.models import CatalogMetadataORM, COTSItemORM
 
 # Initialize router
@@ -87,7 +87,5 @@ def get_catalog_metadata(db: Session = Depends(get_db)):
     return CotsMetadataResponse(
         catalog_version=result.catalog_version,
         bd_warehouse_commit=result.bd_warehouse_commit,
-        generated_at=result.generated_at.isoformat()
-        if result.generated_at
-        else None,
+        generated_at=result.generated_at.isoformat() if result.generated_at else None,
     )

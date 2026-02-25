@@ -1,20 +1,21 @@
-import pytest
-from playwright.sync_api import Page, expect
-import uuid
-import httpx
 import os
 import re
+import uuid
 
+import httpx
+import pytest
+from playwright.sync_api import Page, expect
 from pydantic import TypeAdapter
+
+from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateResponse,
-    EpisodeResponse,
     EpisodeListItem,
+    EpisodeResponse,
 )
 from controller.api.tasks import AgentRunRequest
-from controller.api.routes.benchmark import BenchmarkGenerateRequest
-from shared.enums import EpisodeStatus, TraceType
+from shared.enums import TraceType
 
 # Constants
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
@@ -59,7 +60,9 @@ def test_int_157_session_history(page: Page):
         for i in range(max_retries):
             resp = client.get(f"{CONTROLLER_URL}/episodes/")
             if resp.status_code == 200:
-                episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
+                episodes = TypeAdapter(list[EpisodeListItem]).validate_python(
+                    resp.json()
+                )
                 ep_ids = [str(ep.id) for ep in episodes]
                 if benchmark_id in ep_ids and engineer_id in ep_ids:
                     episodes_found = True

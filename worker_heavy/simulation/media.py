@@ -1,5 +1,7 @@
-import structlog
 from pathlib import Path
+
+import structlog
+
 from worker_heavy.utils.rendering import VideoRenderer
 
 logger = structlog.get_logger(__name__)

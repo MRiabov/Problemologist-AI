@@ -1,8 +1,8 @@
-import pytest
-import subprocess
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add dev/automations to path so we can import the scripts
 PROJ_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))

@@ -6,19 +6,19 @@ import pytest
 import yaml
 
 from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
-    PhysicsConfig,
     BoundingBox,
-    MovedObject,
     Constraints,
-)
-from shared.workers.schema import (
-    BenchmarkToolResponse,
-    BenchmarkToolRequest,
-    WriteFileRequest,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
+    PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    WriteFileRequest,
+)
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")

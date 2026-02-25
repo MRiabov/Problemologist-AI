@@ -13,8 +13,8 @@ from .nodes.electronics_reviewer import electronics_reviewer_node
 from .nodes.execution_reviewer import execution_reviewer_node
 from .nodes.plan_reviewer import plan_reviewer_node
 from .nodes.planner import planner_node
-from .nodes.summarizer import summarizer_node
 from .nodes.skills import skills_node
+from .nodes.summarizer import summarizer_node
 from .state import AgentState, AgentStatus
 
 logger = structlog.get_logger(__name__)

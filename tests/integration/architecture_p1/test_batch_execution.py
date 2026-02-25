@@ -31,7 +31,11 @@ async def test_int_043_batch_execution_path():
                 session_id=session_id,
             )
             tasks.append(
-                client.post(f"{CONTROLLER_URL}/agent/run", json=request.model_dump(), timeout=10.0)
+                client.post(
+                    f"{CONTROLLER_URL}/agent/run",
+                    json=request.model_dump(),
+                    timeout=10.0,
+                )
             )
 
         # 1. Verify all accepted
@@ -66,9 +70,7 @@ async def test_int_043_batch_execution_path():
                         f"Episode {episode_id} failed unexpectedly. Details: {ep_data}"
                     )
 
-                if (
-                    status not in [EpisodeStatus.COMPLETED, EpisodeStatus.CANCELLED]
-                ):
+                if status not in [EpisodeStatus.COMPLETED, EpisodeStatus.CANCELLED]:
                     all_done = False
 
             if all_done:

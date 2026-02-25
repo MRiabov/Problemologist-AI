@@ -120,7 +120,9 @@ async def test_int_060_langfuse_feedback_contract():
             # Verify local persistence
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             updated_episode = EpisodeResponse.model_validate(status_resp.json())
-            updated_trace = next(t for t in (updated_episode.traces or []) if t.id == trace_id)
+            updated_trace = next(
+                t for t in (updated_episode.traces or []) if t.id == trace_id
+            )
             assert updated_trace.feedback_score == 1
             assert updated_trace.feedback_comment == "Great trace!"
 

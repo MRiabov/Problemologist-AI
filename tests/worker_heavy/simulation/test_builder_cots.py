@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-import pytest
+
 from shared.cots.parts.motors import ServoMotor
 from worker_heavy.simulation.builder import SceneCompiler
 

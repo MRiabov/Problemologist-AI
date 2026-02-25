@@ -31,7 +31,9 @@ async def test_manufacturing_methods_and_materials():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Setup Benchmark
-        request = BenchmarkGenerateRequest(prompt="Create a benchmark for a CNC machined part.")
+        request = BenchmarkGenerateRequest(
+            prompt="Create a benchmark for a CNC machined part."
+        )
         resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
@@ -109,7 +111,9 @@ async def test_manufacturing_methods_and_materials():
             session_id=bad_material_session_id,
             metadata_vars={"benchmark_id": benchmark_session_id},
         )
-        bad_run_resp = await client.post("/agent/run", json=bad_run_request.model_dump())
+        bad_run_resp = await client.post(
+            "/agent/run", json=bad_run_request.model_dump()
+        )
         assert bad_run_resp.status_code in [200, 202]
         bad_episode_id = AgentRunResponse.model_validate(bad_run_resp.json()).episode_id
 

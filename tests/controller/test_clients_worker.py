@@ -4,8 +4,8 @@ import pytest
 
 from controller.clients.worker import WorkerClient
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import EditOp, ExecuteResponse
 from shared.workers.filesystem.backend import FileInfo
+from shared.workers.schema import EditOp, ExecuteResponse
 
 
 @pytest.fixture

@@ -6,20 +6,20 @@ import pytest
 import yaml
 
 from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
-    BoundingBox,
-    MovedObject,
-    Constraints,
-    AssemblyDefinition,
     AssemblyConstraints,
+    AssemblyDefinition,
+    BoundingBox,
+    Constraints,
     CostTotals,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
 )
 from shared.workers.schema import (
-    BenchmarkToolResponse,
     BenchmarkToolRequest,
-    WriteFileRequest,
+    BenchmarkToolResponse,
     DeleteFileRequest,
+    WriteFileRequest,
 )
 
 # Constants

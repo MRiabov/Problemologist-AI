@@ -1,6 +1,5 @@
 """Tests for position-based motor controllers."""
 
-import mujoco
 import numpy as np
 import pytest
 

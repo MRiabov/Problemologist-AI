@@ -1,21 +1,19 @@
-import asyncio
 import os
 import shutil
 import tempfile
 import uuid
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import yaml
 from langchain_core.messages import HumanMessage
+
+import controller.agent.nodes.base
+import controller.middleware.remote_fs
+import controller.observability.middleware_helper
 
 # NUCLEAR OPTION: Mock observability at the module level before anything else imports it
 import controller.observability.tracing
-import controller.observability.middleware_helper
-import controller.middleware.remote_fs
-import controller.agent.nodes.base
 
 mock_async = AsyncMock()
 controller.observability.tracing.record_worker_events = mock_async
@@ -30,10 +28,10 @@ controller.middleware.remote_fs.sync_file_asset = mock_async
 # Fix NameError for logger in base.py
 controller.agent.nodes.base.logger = MagicMock()
 
-from controller.agent.benchmark.nodes import BenchmarkCoderNode, BenchmarkGeneratorState
 from controller.agent.benchmark.models import GenerationSession, SessionStatus
-from controller.agent.nodes.base import SharedNodeContext
+from controller.agent.benchmark.nodes import BenchmarkCoderNode, BenchmarkGeneratorState
 from controller.agent.mock_llm import MockDSPyLM
+from controller.agent.nodes.base import SharedNodeContext
 from controller.clients.worker import WorkerClient
 from shared.simulation.schemas import RandomizationStrategy
 
