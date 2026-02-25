@@ -1,97 +1,97 @@
 {
   "runs": [
     {
-      "timestamp": "2026-02-25T08:12:01.841080",
+      "timestamp": "2026-02-25T14:14:56.729659",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 126.378,
+      "duration": 310.06,
       "tests": [
         {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 126.106,
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 302.4,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_025_events_collection_e2e():\n        \"\"\"INT-025: Verify worker events are ingested and persisted as traces.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-025-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(task=\"Run a simulation\", session_id=session_id)\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for completion\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n>               pytest.fail(\"Agent did not complete simulation task in time\")\nE               Failed: Agent did not complete simulation task in time\n\ntests/integration/architecture_p0/test_missing_p0.py:216: Failed"
         }
       ]
     },
     {
-      "timestamp": "2026-02-25T08:07:01.218115",
+      "timestamp": "2026-02-25T14:08:16.224704",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 126.515,
+      "duration": 313.399,
       "tests": [
         {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 126.334,
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 304.055,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:32: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_025_events_collection_e2e():\n        \"\"\"INT-025: Verify worker events are ingested and persisted as traces.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-025-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(task=\"Run a simulation\", session_id=session_id)\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for completion\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n>               pytest.fail(\"Agent did not complete simulation task in time\")\nE               Failed: Agent did not complete simulation task in time\n\ntests/integration/architecture_p0/test_missing_p0.py:216: Failed"
         }
       ]
     },
     {
-      "timestamp": "2026-02-25T07:47:06.052296",
+      "timestamp": "2026-02-25T14:02:02.256053",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 54.79,
+      "duration": 314.081,
       "tests": [
         {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 54.569,
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 303.183,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_025_events_collection_e2e():\n        \"\"\"INT-025: Verify worker events are ingested and persisted as traces.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-025-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(task=\"Run a simulation\", session_id=session_id)\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for completion\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n>               pytest.fail(\"Agent did not complete simulation task in time\")\nE               Failed: Agent did not complete simulation task in time\n\ntests/integration/architecture_p0/test_missing_p0.py:216: Failed"
         }
       ]
     },
     {
-      "timestamp": "2026-02-25T07:44:14.942377",
+      "timestamp": "2026-02-25T13:55:12.971761",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 47.63,
+      "duration": 310.15,
       "tests": [
         {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 47.498,
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 302.599,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column, but we use test-id now\n        line_one = page.get_by_test_id(\"code-line-1\")\n        expect(line_one).to_be_visible()\n    \n        # Simulate line selection (clicking the line)\n        line_one.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_025_events_collection_e2e():\n        \"\"\"INT-025: Verify worker events are ingested and persisted as traces.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-025-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(task=\"Run a simulation\", session_id=session_id)\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for completion\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n>               pytest.fail(\"Agent did not complete simulation task in time\")\nE               Failed: Agent did not complete simulation task in time\n\ntests/integration/architecture_p0/test_missing_p0.py:216: Failed"
         }
       ]
     },
     {
-      "timestamp": "2026-02-25T07:39:25.955760",
+      "timestamp": "2026-02-25T13:48:03.145561",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 134.439,
+      "duration": 310.634,
       "tests": [
         {
-          "name": "test_code_viewer_line_selection_and_mentions[chromium]",
-          "classname": "tests.integration.frontend.test_int_164",
-          "time": 134.311,
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 302.952,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n>       expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_label(\"Send Message\")\n\ntests/integration/frontend/test_int_164.py:36: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_025_events_collection_e2e():\n        \"\"\"INT-025: Verify worker events are ingested and persisted as traces.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-025-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(task=\"Run a simulation\", session_id=session_id)\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for completion\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n>               pytest.fail(\"Agent did not complete simulation task in time\")\nE               Failed: Agent did not complete simulation task in time\n\ntests/integration/architecture_p0/test_missing_p0.py:216: Failed"
         }
       ]
     }

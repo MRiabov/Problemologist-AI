@@ -265,6 +265,11 @@ async def get_episode_schematic(
 
     try:
         content = await client.read_file("assembly_definition.yaml")
+    except Exception:
+        # If the file is missing, we just return an empty schematic
+        return []
+
+    try:
         import yaml
 
         from shared.models.schemas import AssemblyDefinition
@@ -277,7 +282,9 @@ async def get_episode_schematic(
         return generate_schematic_soup(assembly)
     except Exception as e:
         logger.error("failed_to_get_schematic", episode_id=episode_id, error=str(e))
-        return []
+        raise HTTPException(
+            status_code=500, detail=f"Failed to parse assembly definition: {e!s}"
+        )
 
 
 class TraceResponse(BaseModel):
