@@ -3,10 +3,10 @@ from build123d import Box
 
 from shared.models.schemas import PartMetadata
 from shared.workers.workbench_models import (
+    CNCMethodConfig,
     ManufacturingConfig,
     ManufacturingMethod,
     MaterialDefinition,
-    MethodConfig,
 )
 from worker_heavy.utils.dfm import validate_and_price
 
@@ -32,7 +32,7 @@ def mock_config():
                 # Missing FEM fields
             ),
         },
-        cnc=MethodConfig(
+        cnc=CNCMethodConfig(
             materials={
                 "aluminum_6061": MaterialDefinition(
                     name="Aluminum 6061",
@@ -115,7 +115,7 @@ def test_validate_and_price_empty_config_fallback():
     empty_config = ManufacturingConfig(
         defaults={"material": "abs"},
         materials={},
-        cnc=MethodConfig(materials={}),
+        cnc=CNCMethodConfig(materials={}),
     )
     part = Box(10, 10, 10)
 
