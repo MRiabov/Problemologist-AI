@@ -4,6 +4,13 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import (
+    AgentRunResponse,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -28,16 +35,16 @@ async def test_manufacturing_methods_and_materials():
             200,
             202,
         ], f"Failed to generate benchmark: {resp.text}"
-        benchmark_session_id = resp.json()["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        benchmark_session_id = str(benchmark_resp.session_id)
 
         # Wait for benchmark
         for _ in range(150):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if (
-                status_resp.status_code == 200
-                and status_resp.json()["status"] == "completed"
-            ):
-                break
+            if status_resp.status_code == 200:
+                bench_ep = EpisodeResponse.model_validate(status_resp.json())
+                if bench_ep.status == EpisodeStatus.COMPLETED:
+                    break
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation timed out.")
@@ -57,7 +64,7 @@ async def test_manufacturing_methods_and_materials():
             200,
             202,
         ], f"Failed to trigger agent: {run_resp.text}"
-        episode_id = run_resp.json()["episode_id"]
+        episode_id = AgentRunResponse.model_validate(run_resp.json()).episode_id
 
         # Wait for Engineer
         engineer_completed = False
@@ -65,7 +72,8 @@ async def test_manufacturing_methods_and_materials():
         for _ in range(150):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
-                final_status = ep_resp.json()["status"]
+                ep = EpisodeResponse.model_validate(ep_resp.json())
+                final_status = ep.status.value
                 if final_status in ["completed", "failed", "max_turns_reached"]:
                     engineer_completed = True
                     break
@@ -78,16 +86,16 @@ async def test_manufacturing_methods_and_materials():
         # Use /episodes/{id} to get assets list
         ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200
-        ep_data = ep_resp.json()
-        assets = ep_data.get("assets", [])
+        ep_data = EpisodeResponse.model_validate(ep_resp.json())
+        assets = ep_data.assets
 
         # Check for assembly_definition.yaml which implies workbench ran
         cost_yaml_artifact = next(
-            (a for a in assets if "assembly_definition.yaml" in a["s3_path"]),
+            (a for a in assets if "assembly_definition.yaml" in a.s3_path),
             None,
         )
         assert cost_yaml_artifact is not None, (
-            f"Workbench output (cost estimation) missing. Assets: {[a['s3_path'] for a in assets]}"
+            f"Workbench output (cost estimation) missing. Assets: {[a.s3_path for a in assets]}"
         )
 
         # 4. Verify Material Enforcement (INT-035) - "Nice to have" negative test
@@ -103,15 +111,15 @@ async def test_manufacturing_methods_and_materials():
             },
         )
         assert bad_run_resp.status_code in [200, 202]
-        bad_episode_id = bad_run_resp.json()["episode_id"]
+        bad_episode_id = AgentRunResponse.model_validate(bad_run_resp.json()).episode_id
 
         # Minimal assertion for INT-035: The system shouldn't crash, and if it fails, it handles it gracefully.
         bad_engineer_completed = False
         for _ in range(150):
             ep_resp = await client.get(f"/episodes/{bad_episode_id}")
             if ep_resp.status_code == 200:
-                status = ep_resp.json()["status"]
-                if status in ["completed", "failed"]:
+                ep = EpisodeResponse.model_validate(ep_resp.json())
+                if ep.status.value in ["completed", "failed"]:
                     bad_engineer_completed = True
                     break
             await asyncio.sleep(2)
