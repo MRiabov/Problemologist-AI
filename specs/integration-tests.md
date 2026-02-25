@@ -200,6 +200,7 @@ Priorities:
 
 These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
 To ensure stability and prevent Hot Module Replacement (HMR) reloads from interfering with tests, the frontend must be built and served as a static distribution on port **15173** (using `npx serve -s dist -p 15173`). All frontend service integration tests must standardize on this port.
+Additionally, we use test selectors for robust and easy frontend visibility testing like `data-testid="sidebar-resizer"`.
 
 | ID | Priority | Test | Required assertions |
 |---|---|---|---|
