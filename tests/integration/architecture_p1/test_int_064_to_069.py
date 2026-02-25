@@ -13,7 +13,6 @@ from controller.api.schemas import (
     CotsSearchItem,
     EpisodeCreateResponse,
     SchematicItem,
-    SteeringQueueEntry,
 )
 from shared.models.steerability import (
     GeometricSelection,
@@ -21,7 +20,11 @@ from shared.models.steerability import (
     SteerablePrompt,
 )
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import BenchmarkToolRequest, BenchmarkToolResponse, WriteFileRequest
+from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    WriteFileRequest,
+)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -91,7 +94,9 @@ constraints: {max_unit_cost: 100, max_weight_g: 1000}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="objectives.yaml", content=objectives_content).model_dump(),
+            json=WriteFileRequest(
+                path="objectives.yaml", content=objectives_content
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -109,7 +114,9 @@ def build():
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="script.py", content=script_content).model_dump(),
+            json=WriteFileRequest(
+                path="script.py", content=script_content
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -135,7 +142,9 @@ totals:
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="assembly_definition.yaml", content=assembly_content).model_dump(),
+            json=WriteFileRequest(
+                path="assembly_definition.yaml", content=assembly_content
+            ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
 
@@ -163,7 +172,9 @@ fluids:
         )
 
         # Run simulation
-        request = BenchmarkToolRequest(script_path="script.py", backend=SimulatorBackendType.GENESIS)
+        request = BenchmarkToolRequest(
+            script_path="script.py", backend=SimulatorBackendType.GENESIS
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=request.model_dump(),
@@ -224,7 +235,7 @@ async def test_int_067_068_steerability():
             f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/queue"
         )
         assert queue_resp.status_code == 200
-        queue = [SteeringQueueEntry.model_validate(e) for e in queue_resp.json()]
+        queue = [SteerablePrompt.model_validate(e) for e in queue_resp.json()]
         assert len(queue) > 0
         assert queue[0].text == steer_request.text
 
@@ -265,7 +276,9 @@ totals:
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="assembly_definition.yaml", content=assembly_content).model_dump(),
+            json=WriteFileRequest(
+                path="assembly_definition.yaml", content=assembly_content
+            ).model_dump(),
             headers={"X-Session-ID": "test-fe-contract"},
         )
 
@@ -284,7 +297,9 @@ totals:
         # First write a dummy image
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=WriteFileRequest(path="renders/test.png", content="dummy-binary-content").model_dump(),
+            json=WriteFileRequest(
+                path="renders/test.png", content="dummy-binary-content"
+            ).model_dump(),
             headers={"X-Session-ID": "test-fe-contract"},
         )
 
