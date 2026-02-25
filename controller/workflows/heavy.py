@@ -2,6 +2,14 @@ from datetime import timedelta
 
 from temporalio import workflow
 
+from shared.models.simulation import SimulationResult
+from shared.workers.schema import (
+    HeavyPreviewParams,
+    HeavyPreviewResponse,
+    HeavySimulationParams,
+    HeavyValidationParams,
+    HeavyValidationResponse,
+)
 from shared.type_checking import type_check
 
 
@@ -9,7 +17,7 @@ from shared.type_checking import type_check
 @workflow.defn
 class HeavySimulationWorkflow:
     @workflow.run
-    async def run(self, params: dict) -> dict:
+    async def run(self, params: HeavySimulationParams) -> SimulationResult:
         """Run physics simulation on a heavy worker."""
         return await workflow.execute_activity(
             "worker_run_simulation",
@@ -24,7 +32,7 @@ class HeavySimulationWorkflow:
 @workflow.defn
 class HeavyValidationWorkflow:
     @workflow.run
-    async def run(self, params: dict) -> dict:
+    async def run(self, params: HeavyValidationParams) -> HeavyValidationResponse:
         """Run geometric validation on a heavy worker."""
         return await workflow.execute_activity(
             "worker_validate_design",
@@ -38,7 +46,7 @@ class HeavyValidationWorkflow:
 @workflow.defn
 class HeavyPreviewWorkflow:
     @workflow.run
-    async def run(self, params: dict) -> dict:
+    async def run(self, params: HeavyPreviewParams) -> HeavyPreviewResponse:
         """Run design rendering on a heavy worker."""
         return await workflow.execute_activity(
             "worker_preview_design",

@@ -53,7 +53,7 @@ class Episode(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     task: Mapped[str] = mapped_column(String)
     status: Mapped[EpisodeStatus] = mapped_column(
-        SQLEnum(EpisodeStatus),
+        SQLEnum(EpisodeStatus, values_callable=lambda x: [e.value for e in x]),
         default=EpisodeStatus.RUNNING,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -92,7 +92,9 @@ class Trace(Base):
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     langfuse_trace_id: Mapped[str | None] = mapped_column(String)
 
-    trace_type: Mapped[TraceType] = mapped_column(SQLEnum(TraceType))
+    trace_type: Mapped[TraceType] = mapped_column(
+        SQLEnum(TraceType, values_callable=lambda x: [e.value for e in x])
+    )
     name: Mapped[str | None] = mapped_column(String)  # Tool name or stage
     content: Mapped[str | None] = mapped_column(
         String
@@ -113,7 +115,9 @@ class Asset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
-    asset_type: Mapped[AssetType] = mapped_column(SQLEnum(AssetType))
+    asset_type: Mapped[AssetType] = mapped_column(
+        SQLEnum(AssetType, values_callable=lambda x: [e.value for e in x])
+    )
     s3_path: Mapped[str] = mapped_column(String)
     content: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

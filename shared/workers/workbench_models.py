@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field
 from shared.enums import ManufacturingMethod
 
 
+class WorkbenchContext(BaseModel):
+    """Context for tracking part reuse and other state during assembly analysis."""
+
+    part_counts: dict[str, int] = Field(default_factory=dict)
+    additional_data: dict[str, Any] = Field(default_factory=dict)
+
+
 class BuildZone(BaseModel):
     """Defines the spatial bounds within which a design must fit."""
 
@@ -72,20 +79,66 @@ class WireDefinition(BaseModel):
     cost_per_m: float
 
 
-class MethodConfig(BaseModel):
+class CNCConstraints(BaseModel):
+    min_tool_radius_mm: float = 1.0
+    mrr_mm3_per_min: float = 1000.0
+
+
+class CNCParameters(BaseModel):
+    finishing_feed_rate_mm_min: float = 500.0
+    finishing_stepover_mm: float = 0.5
+
+
+class CNCCosts(BaseModel):
+    setup_fee: float = 80.0
+
+
+class CNCMethodConfig(BaseModel):
     materials: dict[str, MaterialDefinition]
-    constraints: dict[str, Any] = Field(default_factory=dict)
-    parameters: dict[str, Any] = Field(default_factory=dict)
-    costs: dict[str, Any] = Field(default_factory=dict)
+    constraints: CNCConstraints = Field(default_factory=CNCConstraints)
+    parameters: CNCParameters = Field(default_factory=CNCParameters)
+    costs: CNCCosts = Field(default_factory=CNCCosts)
+
+
+class IMConstraints(BaseModel):
+    min_draft_angle_deg: float = 2.0
+    min_wall_thickness_mm: float = 1.0
+    max_wall_thickness_mm: float = 4.0
+
+
+class IMCosts(BaseModel):
+    base_mold_cost: float = 5000.0
+    mold_cost_per_surface_area_cm2: float = 0.5
+    injection_rate_cm3_s: float = 10.0
+
+
+class IMMethodConfig(BaseModel):
+    materials: dict[str, MaterialDefinition]
+    constraints: IMConstraints = Field(default_factory=IMConstraints)
+    costs: IMCosts = Field(default_factory=IMCosts)
+
+
+class ThreeDPParameters(BaseModel):
+    deposition_rate_cm3_hr: float = 15.0
+
+
+class ThreeDPCosts(BaseModel):
+    setup_fee: float = 10.0
+
+
+class ThreeDPMethodConfig(BaseModel):
+    materials: dict[str, MaterialDefinition]
+    parameters: ThreeDPParameters = Field(default_factory=ThreeDPParameters)
+    costs: ThreeDPCosts = Field(default_factory=ThreeDPCosts)
 
 
 class ManufacturingConfig(BaseModel):
     defaults: dict[str, Any] = Field(default_factory=dict)
     materials: dict[str, MaterialDefinition] = Field(default_factory=dict)
     wires: dict[str, WireDefinition] = Field(default_factory=dict)
-    cnc: MethodConfig | None = None
-    injection_molding: MethodConfig | None = None
-    three_dp: MethodConfig | None = None
+    cnc: CNCMethodConfig | None = None
+    injection_molding: IMMethodConfig | None = None
+    three_dp: ThreeDPMethodConfig | None = None
 
     def __getitem__(self, key: str) -> Any:
         # Support dict-like access for backward compatibility with existing workbenches

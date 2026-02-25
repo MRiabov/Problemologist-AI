@@ -14,4 +14,9 @@ export enum AssetType {
     GLB = 'GLB',
     PYTHON = 'PYTHON',
     OTHER = 'OTHER',
+    CIRCUIT_DATA = 'CIRCUIT_DATA',
+    TIMELINE = 'TIMELINE',
+    MARKDOWN = 'MARKDOWN',
+    LOG = 'LOG',
+    ERROR = 'ERROR',
 }

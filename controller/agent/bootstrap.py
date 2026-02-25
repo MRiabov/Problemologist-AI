@@ -72,10 +72,9 @@ class AgentModule(dspy.Module):
             if func:
                 self.tool_fns[t.name] = func
 
-        self.program = dspy.CodeAct(
+        self.program = dspy.ReAct(
             self.signature,
             tools=list(self.tool_fns.values()),
-            interpreter=self.interpreter,
         )
         logger.info(
             "agent_module_initialized",
