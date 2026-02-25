@@ -40,7 +40,7 @@ async def test_run_generation_session_exception_handling():
     # Mock Episode object
     mock_episode = MagicMock()
     mock_episode.metadata_vars = {}
-    mock_episode.status = "running"
+    mock_episode.status = EpisodeStatus.RUNNING
 
     # Mock db.get for the exception handler
     mock_db.get = AsyncMock(return_value=mock_episode)

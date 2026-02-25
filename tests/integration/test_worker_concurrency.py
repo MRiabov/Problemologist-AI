@@ -4,6 +4,9 @@ import uuid
 import httpx
 import pytest
 
+from shared.enums import ResponseStatus
+from shared.workers.schema import ExecuteResponse, StatusResponse
+
 # Assuming worker is running at http://localhost:18001
 WORKER_LIGHT_URL = "http://localhost:18001"
 
@@ -24,6 +27,8 @@ async def run_session(session_id: str, filename: str, content: str):
             headers=headers,
         )
         assert resp.status_code == 200, f"Write failed: {resp.text}"
+        write_resp = StatusResponse.model_validate(resp.json())
+        assert write_resp.status == ResponseStatus.SUCCESS
 
         # 2. Execute code to read it from CWD
         code = f"""
@@ -40,11 +45,11 @@ assert content == "{content}", f"Expected {{content}}, got {{content}}"
             headers=headers,
         )
         assert resp.status_code == 200, f"Execute failed: {resp.text}"
-        data = resp.json()
-        assert data["exit_code"] == 0, (
-            f"Code failed with exit code {data['exit_code']}. Out: {data['stdout']} Err: {data['stderr']}"
+        data = ExecuteResponse.model_validate(resp.json())
+        assert data.exit_code == 0, (
+            f"Code failed with exit code {data.exit_code}. Out: {data.stdout} Err: {data.stderr}"
         )
-        return data["stdout"]
+        return data.stdout
 
 
 @pytest.mark.integration

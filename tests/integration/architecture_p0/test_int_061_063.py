@@ -3,6 +3,11 @@ import time
 import httpx
 import pytest
 
+from shared.workers.schema import (
+    WriteFileRequest,
+    DeleteFileRequest,
+)
+
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://localhost:18002")
@@ -17,29 +22,36 @@ async def test_int_061_asset_serving_security():
         session_b = f"test-61-b-{int(time.time())}"
 
         # 1. Setup session A with a valid python file and an asset
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": "part.py",
-                "content": "import build123d\ndef build(): return None",
-            },
-            headers={"X-Session-ID": session_a},
+        write_py_a = WriteFileRequest(
+            path="part.py",
+            content="import build123d\ndef build(): return None",
         )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "part.stl", "content": "dummy-stl-content"},
+            json=write_py_a.model_dump(mode="json"),
+            headers={"X-Session-ID": session_a},
+        )
+        write_stl_a = WriteFileRequest(path="part.stl", content="dummy-stl-content")
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=write_stl_a.model_dump(mode="json"),
             headers={"X-Session-ID": session_a},
         )
 
         # 2. Setup session B with a broken python file and an asset
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "broken.py", "content": "invalid syntax !!!"},
-            headers={"X-Session-ID": session_b},
+        write_py_b = WriteFileRequest(
+            path="broken.py",
+            content="invalid syntax !!!",
         )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "broken.stl", "content": "dummy-stl-content"},
+            json=write_py_b.model_dump(mode="json"),
+            headers={"X-Session-ID": session_b},
+        )
+        write_stl_b = WriteFileRequest(path="broken.stl", content="dummy-stl-content")
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=write_stl_b.model_dump(mode="json"),
             headers={"X-Session-ID": session_b},
         )
 
@@ -65,9 +77,10 @@ async def test_int_061_asset_serving_security():
         assert resp.status_code == 404
 
         # 6. Verify other MIME types
+        write_png_a = WriteFileRequest(path="test.png", content="png-data")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "test.png", "content": "png-data"},
+            json=write_png_a.model_dump(mode="json"),
             headers={"X-Session-ID": session_a},
         )
         resp = await client.get(
@@ -107,9 +120,10 @@ async def test_int_063_mounted_path_read_only():
         session_id = f"test-63-{int(time.time())}"
 
         # 1. Verify workspace root is writable
+        write_root = WriteFileRequest(path="writable.txt", content="i am writable")
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "writable.txt", "content": "i am writable"},
+            json=write_root.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
         assert resp.status_code == 200
@@ -117,17 +131,19 @@ async def test_int_063_mounted_path_read_only():
         # 2. Verify read-only mounts
         for ro_path in ["/utils", "/skills", "/reviews", "/config"]:
             # Try write
+            write_ro = WriteFileRequest(path=f"{ro_path}/test.txt", content="fail")
             resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",
-                json={"path": f"{ro_path}/test.txt", "content": "fail"},
+                json=write_ro.model_dump(mode="json"),
                 headers={"X-Session-ID": session_id},
             )
             assert resp.status_code == 403, f"Expected 403 for {ro_path} write"
 
-            # Try delete (if exists, or even if it doesn't, it should be blocked by prefix)
+            # Try delete
+            delete_ro = DeleteFileRequest(path=f"{ro_path}/nonexistent")
             resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/delete",
-                json={"path": f"{ro_path}/nonexistent"},
+                json=delete_ro.model_dump(mode="json"),
                 headers={"X-Session-ID": session_id},
             )
             assert resp.status_code == 403, f"Expected 403 for {ro_path} delete"

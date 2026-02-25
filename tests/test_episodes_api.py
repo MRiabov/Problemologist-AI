@@ -74,7 +74,7 @@ def test_get_episode_success(mock_db):
     data = response.json()
     assert data["id"] == str(episode_id)
     assert len(data["assets"]) == 1
-    assert data["assets"][0]["asset_type"] == "python"
+    assert data["assets"][0]["asset_type"] == AssetType.PYTHON
     assert data["assets"][0]["s3_path"] == "test.py"
 
 

@@ -4,6 +4,15 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import (
+    AgentRunResponse,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
+from controller.api.tasks import AgentRunRequest
+from controller.api.routes.benchmark import BenchmarkGenerateRequest
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -24,10 +33,11 @@ async def test_full_workflow_end_to_end():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=60.0) as client:
         # 1. Trigger Benchmark Generation
         prompt = "Create a simple box stacking benchmark."
-        resp = await client.post("/benchmark/generate", params={"prompt": prompt})
+        req = BenchmarkGenerateRequest(prompt=prompt)
+        resp = await client.post("/benchmark/generate", json=req.model_dump())
         assert resp.status_code == 200, f"Failed to trigger benchmark: {resp.text}"
-        data = resp.json()
-        session_id = data["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        session_id = benchmark_resp.session_id
 
         # 2. Poll for completion
         max_retries = 30
@@ -37,13 +47,16 @@ async def test_full_workflow_end_to_end():
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{session_id}")
             if status_resp.status_code == 200:
-                sess_data = status_resp.json()
-                last_benchmark_status = sess_data["status"]
+                sess_data = EpisodeResponse.model_validate(status_resp.json())
+                last_benchmark_status = sess_data.status
 
-                if last_benchmark_status == "completed":
+                if last_benchmark_status == EpisodeStatus.COMPLETED:
                     benchmark_completed = True
                     break
-                if last_benchmark_status == "rejected":
+                if (
+                    last_benchmark_status == "REJECTED"
+                    or last_benchmark_status == EpisodeStatus.FAILED
+                ):
                     pytest.fail("Benchmark generation was rejected.")
 
             await asyncio.sleep(2)
@@ -61,13 +74,14 @@ async def test_full_workflow_end_to_end():
         # Generate a unique session ID for the engineer run
         engineer_session_id = f"INT-033-full-{uuid.uuid4().hex[:8]}"
 
-        run_payload = {"task": engineer_task, "session_id": engineer_session_id}
+        req_run = AgentRunRequest(task=engineer_task, session_id=engineer_session_id)
 
-        run_resp = await client.post("/agent/run", json=run_payload)
+        run_resp = await client.post("/agent/run", json=req_run.model_dump())
         assert run_resp.status_code == 202, (
             f"Failed to trigger engineer: {run_resp.text}"
         )
-        episode_id = run_resp.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(run_resp.json())
+        episode_id = agent_run_resp.episode_id
 
         # 5. Poll for Engineer completion
         engineer_completed = False
@@ -75,13 +89,13 @@ async def test_full_workflow_end_to_end():
         for _ in range(max_retries):
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
-                ep_data = ep_resp.json()
-                last_engineer_status = ep_data["status"]
+                ep_data = EpisodeResponse.model_validate(ep_resp.json())
+                last_engineer_status = ep_data.status
 
-                if last_engineer_status == "completed":
+                if last_engineer_status == EpisodeStatus.COMPLETED:
                     engineer_completed = True
                     break
-                if last_engineer_status == "failed":
+                if last_engineer_status == EpisodeStatus.FAILED:
                     pytest.fail(f"Engineer agent failed. Episode data: {ep_data}")
 
             await asyncio.sleep(2)

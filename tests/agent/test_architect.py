@@ -37,7 +37,7 @@ Test Overview
 @patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_logic(
-    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
+    mock_ctx_cls, mock_react_cls, mock_record_events, mock_llm
 ):
     # Create a real SharedNodeContext but with mocked attributes to satisfy beartype
     mock_pm = MagicMock()
@@ -70,7 +70,7 @@ async def test_architect_node_logic(
     # Mock DSPy Program
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(summary="Finished planning.")
-    mock_codeact_cls.return_value = mock_program
+    mock_react_cls.return_value = mock_program
 
     state = AgentState(task="Build a robot", session_id="test-session")
 
@@ -88,7 +88,7 @@ async def test_architect_node_logic(
 @patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_fallback(
-    mock_ctx_cls, mock_codeact_cls, mock_record_events, mock_llm
+    mock_ctx_cls, mock_react_cls, mock_record_events, mock_llm
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -112,7 +112,7 @@ async def test_architect_node_fallback(
     # Mock DSPy Program
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(summary="Failed planning.")
-    mock_codeact_cls.return_value = mock_program
+    mock_react_cls.return_value = mock_program
 
     state = AgentState(task="Build a robot", session_id="test-session")
 

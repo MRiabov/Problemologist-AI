@@ -5,6 +5,9 @@ import time
 import httpx
 import pytest
 
+from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from shared.enums import EpisodeStatus
+
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
 
@@ -32,7 +35,8 @@ async def test_int_043_batch_execution_path():
         episode_ids = []
         for resp in responses:
             assert resp.status_code == 202
-            episode_ids.append(resp.json()["episode_id"])
+            agent_run_resp = AgentRunResponse.model_validate(resp.json())
+            episode_ids.append(agent_run_resp.episode_id)
 
         assert len(set(episode_ids)) == 2, "All episode IDs must be unique"
 
@@ -51,23 +55,15 @@ async def test_int_043_batch_execution_path():
                     all_done = False
                     break
 
-                status = status_resp.json()["status"]
-                if status == "failed":
-                    # Fetch more details if possible
-                    detail_resp = await client.get(
-                        f"{CONTROLLER_URL}/episodes/{episode_id}"
-                    )
-                    details = (
-                        detail_resp.json()
-                        if detail_resp.status_code == 200
-                        else "No details"
-                    )
+                ep_data = EpisodeResponse.model_validate(status_resp.json())
+                status = ep_data.status
+                if status == EpisodeStatus.FAILED:
                     pytest.fail(
-                        f"Episode {episode_id} failed unexpectedly. Details: {details}"
+                        f"Episode {episode_id} failed unexpectedly. Details: {ep_data}"
                     )
 
                 if (
-                    status not in ["completed", "stopped"]
+                    status not in [EpisodeStatus.COMPLETED, "STOPPED"]
                 ):  # stopped is also a terminal state if we cancelled it, but here we expect completion
                     all_done = False
 
@@ -88,4 +84,5 @@ async def test_int_043_batch_execution_path():
         # Double check status one last time
         for episode_id in episode_ids:
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-            assert status_resp.json()["status"] == "completed"
+            ep_data = EpisodeResponse.model_validate(status_resp.json())
+            assert ep_data.status == EpisodeStatus.COMPLETED

@@ -5,6 +5,23 @@ import httpx
 import pytest
 import yaml
 
+from shared.models.schemas import (
+    ObjectivesYaml,
+    ObjectivesSection,
+    BoundingBox,
+    MovedObject,
+    Constraints,
+    AssemblyDefinition,
+    AssemblyConstraints,
+    CostTotals,
+)
+from shared.workers.schema import (
+    BenchmarkToolResponse,
+    BenchmarkToolRequest,
+    WriteFileRequest,
+    DeleteFileRequest,
+)
+
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
@@ -50,42 +67,41 @@ def valid_todo():
 
 @pytest.fixture
 def valid_objectives():
-    return {
-        "objectives": {
-            "goal_zone": {"min": [10.0, 10.0, 10.0], "max": [20.0, 20.0, 20.0]},
-            "forbid_zones": [],
-            "build_zone": {"min": [-50.0, -50.0, 0.0], "max": [50.0, 50.0, 100.0]},
-        },
-        "simulation_bounds": {
-            "min": [-100.0, -100.0, 0.0],
-            "max": [100.0, 100.0, 100.0],
-        },
-        "moved_object": {
-            "label": "ball",
-            "shape": "sphere",
-            "start_position": [0.0, 0.0, 50.0],
-            "runtime_jitter": [0.0, 0.0, 0.0],
-        },
-        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1.0},
-    }
+    return ObjectivesYaml(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(10.0, 10.0, 10.0), max=(20.0, 20.0, 20.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 100.0)),
+        ),
+        simulation_bounds=BoundingBox(
+            min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
+        ),
+        moved_object=MovedObject(
+            label="ball",
+            shape="sphere",
+            start_position=(0.0, 0.0, 50.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+    )
 
 
 @pytest.fixture
 def valid_cost():
-    return {
-        "version": "1.0",
-        "constraints": {
-            "benchmark_max_unit_cost_usd": 50.0,
-            "benchmark_max_weight_g": 1000.0,
-            "planner_target_max_unit_cost_usd": 45.0,
-            "planner_target_max_weight_g": 900.0,
-        },
-        "totals": {
-            "estimated_unit_cost_usd": 30.0,
-            "estimated_weight_g": 500.0,
-            "estimate_confidence": "high",
-        },
-    }
+    return AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=50.0,
+            benchmark_max_weight_g=1000.0,
+            planner_target_max_unit_cost_usd=45.0,
+            planner_target_max_weight_g=900.0,
+        ),
+        totals=CostTotals(
+            estimated_unit_cost_usd=30.0,
+            estimated_weight_g=500.0,
+            estimate_confidence="high",
+        ),
+    )
 
 
 @pytest.fixture
@@ -110,14 +126,21 @@ def build():
 async def setup_workspace(client, headers, files):
     """Utility to setup a workspace. Overwrites if exists."""
     for path, content in files.items():
-        # Use overwrite=True to handle existing files (like objectives.yaml template)
+        if isinstance(content, (ObjectivesYaml, AssemblyDefinition)):
+            content_str = yaml.dump(content.model_dump(mode="json", by_alias=True))
+        elif not isinstance(content, str):
+            content_str = yaml.dump(content)
+        else:
+            content_str = content
+
+        write_req = WriteFileRequest(
+            path=path,
+            content=content_str,
+            overwrite=True,
+        )
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={
-                "path": path,
-                "content": content if isinstance(content, str) else yaml.dump(content),
-                "overwrite": True,
-            },
+            json=write_req.model_dump(mode="json"),
             headers=headers,
         )
         assert resp.status_code == 200, f"Failed to write {path}: {resp.text}"
@@ -148,56 +171,61 @@ async def test_int_005_mandatory_artifacts_gate(
         # 1. Missing plan.md
         files = base_files.copy()
         del files["plan.md"]
-        # Since fs/delete is used in setup_workspace, we can just not include it
         await setup_workspace(client, base_headers, files)
-        # Manually ensure plan.md is gone if it existed from previous step (though each session is new)
+        delete_req = DeleteFileRequest(path="plan.md")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
-            json={"path": "plan.md"},
+            json=delete_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert not resp.json()["success"]
-        assert "plan.md is missing" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "plan.md is missing" in data.message
 
         # 2. Missing todo.md
         files = base_files.copy()
         del files["todo.md"]
         await setup_workspace(client, base_headers, files)
+        delete_todo_req = DeleteFileRequest(path="todo.md")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
-            json={"path": "todo.md"},
+            json=delete_todo_req.model_dump(mode="json"),
             headers=base_headers,
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert not resp.json()["success"]
-        assert "todo.md is missing" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "todo.md is missing" in data.message
 
         # 3. Missing assembly_definition.yaml
         files = base_files.copy()
         del files["assembly_definition.yaml"]
         await setup_workspace(client, base_headers, files)
+        delete_cost_req = DeleteFileRequest(path="assembly_definition.yaml")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
-            json={"path": "assembly_definition.yaml"},
+            json=delete_cost_req.model_dump(mode="json"),
             headers=base_headers,
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert not resp.json()["success"]
-        assert "assembly_definition.yaml is missing" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "assembly_definition.yaml is missing" in data.message
 
 
 @pytest.mark.integration_p0
@@ -219,13 +247,15 @@ async def test_int_006_plan_structure_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "plan.md invalid" in resp.json()["message"]
-        assert "Missing required section" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "plan.md invalid" in data.message
+        assert "Missing required section" in data.message
 
         # 2. Parts List missing table/bullets
         invalid_plan = """## 1. Solution Overview
@@ -244,12 +274,11 @@ Just some text here, no list or table.
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert (
-            "Parts List must contain a bullet list or table" in resp.json()["message"]
-        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "Parts List must contain a bullet list or table" in data.message
 
 
 @pytest.mark.integration_p0
@@ -271,13 +300,15 @@ async def test_int_007_todo_integrity(
         await setup_workspace(
             client, base_headers, {**base_files, "todo.md": invalid_todo}
         )
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "todo.md invalid" in resp.json()["message"]
-        assert "invalid checkbox" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "todo.md invalid" in data.message
+        assert "invalid checkbox" in data.message
 
         # 2. Uncompleted item at submission
         uncompleted_todo = "- [ ] I forgot to finish this"
@@ -286,10 +317,11 @@ async def test_int_007_todo_integrity(
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "must be completed or skipped" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "must be completed or skipped" in data.message
 
 
 @pytest.mark.integration_p0
@@ -311,12 +343,14 @@ async def test_int_008_objectives_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "objectives.yaml": template_content}
         )
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "template placeholders" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "template placeholders" in data.message
 
         # 2. Schema violation (wrong type)
         invalid_obj = {"objectives": {"goal_zone": {"min": "not_a_list"}}}
@@ -325,10 +359,11 @@ async def test_int_008_objectives_validation(
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "objectives.yaml invalid" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "objectives.yaml invalid" in data.message
 
 
 @pytest.mark.integration_p0
@@ -352,12 +387,14 @@ async def test_int_009_cost_estimation_validation(
             base_headers,
             {**base_files, "assembly_definition.yaml": template_cost},
         )
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "template placeholders" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "template placeholders" in data.message
 
         # 2. Schema violation (missing required field)
         invalid_cost = {
@@ -371,10 +408,11 @@ async def test_int_009_cost_estimation_validation(
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "assembly_definition.yaml invalid" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "assembly_definition.yaml invalid" in data.message
 
 
 @pytest.mark.integration_p0
@@ -385,20 +423,20 @@ async def test_int_011_planner_caps_enforcement(
     """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Create invalid cost estimation (target > benchmark cap)
-        invalid_cost = {
-            "version": "1.0",
-            "constraints": {
-                "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_g": 1000.0,
-                "planner_target_max_unit_cost_usd": 60.0,  # OVER LIMIT
-                "planner_target_max_weight_g": 500.0,
-            },
-            "totals": {
-                "estimated_unit_cost_usd": 40.0,
-                "estimated_weight_g": 200.0,
-                "estimate_confidence": "medium",
-            },
-        }
+        invalid_cost = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=50.0,
+                benchmark_max_weight_g=1000.0,
+                planner_target_max_unit_cost_usd=60.0,  # OVER LIMIT
+                planner_target_max_weight_g=500.0,
+            ),
+            totals=CostTotals(
+                estimated_unit_cost_usd=40.0,
+                estimated_weight_g=200.0,
+                estimate_confidence="medium",
+            ),
+        )
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -408,21 +446,23 @@ async def test_int_011_planner_caps_enforcement(
         }
         await setup_workspace(client, base_headers, files)
         # Record validation
+        val_req = BenchmarkToolRequest(script_path="solution.py")
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert "assembly_definition.yaml invalid" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "assembly_definition.yaml invalid" in data.message
         assert (
             "Planner target cost (60.0) must be less than or equal to benchmark max cost (50.0)"
-            in resp.json()["message"]
+            in data.message
         )
 
 
@@ -451,34 +491,38 @@ async def test_int_015_engineer_handover_immutability(
         await setup_workspace(client, base_headers, files)
 
         # Baseline commit
+        from shared.workers.schema import GitCommitRequest
+
+        commit_req = GitCommitRequest(message="Initial benchmark")
         await client.post(
             f"{WORKER_LIGHT_URL}/git/commit",
-            json={"message": "Initial benchmark"},
+            json=commit_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
         # Cheat: modify objectives.yaml
-        modified_objectives = valid_objectives.copy()
-        modified_objectives["constraints"]["max_unit_cost"] = 1000.0
-        # setup_workspace handles delete+write
+        modified_objectives = valid_objectives.model_copy(deep=True)
+        modified_objectives.constraints.max_unit_cost = 1000.0
         await setup_workspace(
             client, base_headers, {"objectives.yaml": modified_objectives}
         )
         # Record validation
+        val_req = BenchmarkToolRequest(script_path="solution.py")
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert not resp.json()["success"]
-        assert "objectives.yaml violation" in resp.json()["message"]
-        assert "has been modified" in resp.json()["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "objectives.yaml violation" in data.message
+        assert "has been modified" in data.message
 
 
 @pytest.mark.integration_p0
@@ -511,23 +555,24 @@ def build():
         }
         await setup_workspace(client, base_headers, files)
         # Record validation
+        val_req = BenchmarkToolRequest(script_path="solution.py")
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        data = resp.json()
-        assert not data["success"]
-        assert "Submission rejected (DFM)" in data["message"]
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "Submission rejected (DFM)" in data.message
         assert (
-            "Build zone violation" in data.get("message", "")
-            or "out of bounds" in data.get("message", "").lower()
+            "Build zone violation" in data.message
+            or "out of bounds" in data.message.lower()
         )
 
 
@@ -537,23 +582,22 @@ async def test_int_010_planner_pricing_script_integration(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
     """INT-010: Verify validate_costing_and_price block when over caps."""
-    # Increased timeout to 300s to accommodate slow Genesis initialization on CPU
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Create cost estimation where totals > planner caps (which are valid vs benchmark)
-        invalid_cost = {
-            "version": "1.0",
-            "constraints": {
-                "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_g": 1000.0,
-                "planner_target_max_unit_cost_usd": 45.0,
-                "planner_target_max_weight_g": 900.0,
-            },
-            "totals": {
-                "estimated_unit_cost_usd": 55.0,  # OVER PLANNER CAP
-                "estimated_weight_g": 500.0,
-                "estimate_confidence": "high",
-            },
-        }
+        invalid_cost = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=50.0,
+                benchmark_max_weight_g=1000.0,
+                planner_target_max_unit_cost_usd=45.0,
+                planner_target_max_weight_g=900.0,
+            ),
+            totals=CostTotals(
+                estimated_unit_cost_usd=55.0,  # OVER PLANNER CAP
+                estimated_weight_g=500.0,
+                estimate_confidence="high",
+            ),
+        )
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -563,20 +607,22 @@ async def test_int_010_planner_pricing_script_integration(
         }
         await setup_workspace(client, base_headers, files)
         # Record validation
+        val_req = BenchmarkToolRequest(script_path="solution.py")
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        assert not resp.json()["success"]
-        assert "assembly_definition.yaml invalid" in resp.json()["message"]
-        assert "exceeds target" in resp.json()["message"].lower()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "assembly_definition.yaml invalid" in data.message
+        assert "exceeds target" in data.message.lower()
 
 
 @pytest.mark.integration_p0
@@ -602,33 +648,20 @@ async def test_int_018_validate_and_price_integration_gate(
         }
         await setup_workspace(client, base_headers, files)
 
-        # 2. Try to simulate without validation
-        # In our architecture, the worker might allow it if artifacts exist,
-        # but the spec says "simulate and submit_for_review require manufacturability + pricing validation first".
-        # If the worker performs validation on-the-fly, we expect it to fail if artifacts are missing.
-        # If we want to test the GATE, we should check if the server rejects it if no validation record exists.
-
-        # Actually, let's test that submission fails if validation results (artifacts) are missing.
-        # But INT-018 is about the *prior* call.
-
-        # If the backend enforces that /benchmark/validate MUST have been called (e.g. via a session flag)
-        # then we test that here.
-        # Assuming for now it's about artifact existence.
-
         # Let's delete the cached validation results specifically if any
+        delete_req = DeleteFileRequest(path="validation_results.json")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
-            json={"path": "validation_results.json"},
+            json=delete_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
+        submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json={"script_path": "solution.py"},
+            json=submit_req.model_dump(mode="json"),
             headers=base_headers,
         )
-        # If the gate is enforced, it should fail.
-        # Based on current handover logic, it might fail because it looks for validation records.
-        assert not resp.json()["success"]
-        # Depending on implementation, it might say "validation results missing" or similar
-        assert "validation" in resp.json()["message"].lower()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "validation" in data.message.lower()

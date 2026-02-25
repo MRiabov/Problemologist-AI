@@ -33,19 +33,35 @@ scenarios:
         theme: "path_planning_with_wall"
         reasoning: "Creating a simple path planning task to verify movement."
         params: { wall_height: 5, goal_pos: [10, 10, 0] }
+      generated_code: |
+        with open('plan.md', 'w') as f:
+            f.write('## 1. Learning Objective\nPath planning.\n## 2. Geometry\nA wall.\n## 3. Objectives\nGoal at corner.')
+        with open('todo.md', 'w') as f:
+            f.write('# TODO\n- [x] Initial plan')
+        with open('objectives.yaml', 'w') as f:
+            f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nphysics: {backend: genesis}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     coder:
       thought: "Implementing benchmark script and setting up mandatory files."
       generated_code: |
         with open('script.py', 'w') as f:
-            f.write('from build123d import *\ndef build(): return Box(10,10,10)')
+            f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.metadata = PartMetadata(label="box")\n    return b')
+
+        # Manually create a GLB for the frontend to avoid rendering hangs/failures
+        import os
+        from build123d import Box, export_stl
+        import trimesh
+        os.makedirs('assets', exist_ok=True)
+        export_stl(Box(10,10,10), 'assets/box.stl')
+        mesh = trimesh.load('assets/box.stl')
+        mesh.export('assets/box.glb', file_type='glb')
 
         objectives_content = """
         objectives:
-          goal_zone: {min: [8, 8, 0], max: [10, 10, 2]}
+          goal_zone: {min: [0, 0, 0], max: [1, 1, 1]}
           forbid_zones: []
           build_zone: {min: [-10, -10, 0], max: [10, 10, 10]}
         physics:
-          backend: genesis
+          backend: GENESIS
         simulation_bounds: {min: [-15, -15, 0], max: [15, 15, 20]}
         moved_object:
           label: ball

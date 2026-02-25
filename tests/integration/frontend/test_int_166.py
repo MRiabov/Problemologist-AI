@@ -1,11 +1,15 @@
+import os
 import pytest
 from playwright.sync_api import Page, expect
+
+# Constants
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
 def test_simulation_navigation_timeline(page: Page):
     # 1. Navigate to the local development server
-    page.goto("http://localhost:15173", timeout=60000)
+    page.goto(FRONTEND_URL, timeout=60000)
 
     # 2. Navigate to the Benchmark page
     benchmark_link = page.get_by_role("link", name="Benchmark")

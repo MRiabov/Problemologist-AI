@@ -4,6 +4,8 @@ import time
 import httpx
 import pytest
 
+from shared.workers.schema import BenchmarkToolResponse
+
 # Adjust URL to your worker
 WORKER_LIGHT_URL = "http://localhost:18001"
 WORKER_HEAVY_URL = "http://localhost:18002"
@@ -63,8 +65,8 @@ async def test_simulation_concurrency_serialization():
     intervals = []
     for i, (resp, start, end) in enumerate(results):
         assert resp.status_code == 200, f"Sim {i} failed: {resp.text}"
-        data = resp.json()
-        assert data["success"], f"Sim {i} returned success=False: {data.get('message')}"
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert data.success, f"Sim {i} returned success=False: {data.message}"
 
         duration = end - start
         durations.append(duration)

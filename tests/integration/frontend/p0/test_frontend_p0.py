@@ -5,6 +5,13 @@ import httpx
 import os
 import re
 
+from controller.api.schemas import (
+    AgentRunResponse,
+    BenchmarkGenerateResponse,
+    EpisodeResponse,
+)
+from shared.enums import EpisodeStatus, TraceType
+
 # Constants
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
@@ -27,7 +34,8 @@ def test_int_157_session_history(page: Page):
             f"{CONTROLLER_URL}/benchmark/generate", json={"prompt": benchmark_name}
         )
         assert resp_b.status_code == 200
-        benchmark_id = resp_b.json()["session_id"]
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp_b.json())
+        benchmark_id = str(benchmark_resp.session_id)
 
         # Create engineer session
         resp_e = client.post(
@@ -35,7 +43,8 @@ def test_int_157_session_history(page: Page):
             json={"task": engineer_name, "session_id": str(uuid.uuid4())},
         )
         assert resp_e.status_code == 202
-        engineer_id = resp_e.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(resp_e.json())
+        engineer_id = str(agent_run_resp.episode_id)
 
     # 2. Poll until both episodes are available via the API
     max_retries = 30
@@ -44,7 +53,8 @@ def test_int_157_session_history(page: Page):
         for i in range(max_retries):
             resp = client.get(f"{CONTROLLER_URL}/episodes/")
             if resp.status_code == 200:
-                ep_ids = [ep["id"] for ep in resp.json()]
+                episodes = [EpisodeResponse.model_validate(ep) for ep in resp.json()]
+                ep_ids = [str(ep.id) for ep in episodes]
                 if benchmark_id in ep_ids and engineer_id in ep_ids:
                     episodes_found = True
                     break
@@ -162,14 +172,16 @@ def test_int_159_plan_approval_comment(page: Page):
 
     # 5. Verify the comment is persisted as a trace via API
     with httpx.Client() as client:
-        episodes = client.get(f"{CONTROLLER_URL}/episodes/").json()
+        episodes_json = client.get(f"{CONTROLLER_URL}/episodes/").json()
+        episodes = [EpisodeResponse.model_validate(ep) for ep in episodes_json]
         # Find the episode we just created/confirmed
         found_ep = None
         for ep in episodes:
-            full_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep['id']}").json()
-            for trace in full_ep.get("traces", []):
-                if trace.get("trace_type") == "log" and test_comment in (
-                    trace.get("content") or ""
+            full_ep_json = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}").json()
+            full_ep = EpisodeResponse.model_validate(full_ep_json)
+            for trace in full_ep.traces:
+                if trace.trace_type == TraceType.LOG and test_comment in (
+                    trace.content or ""
                 ):
                     found_ep = full_ep
                     break

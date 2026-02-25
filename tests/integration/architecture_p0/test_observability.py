@@ -6,19 +6,8 @@ import httpx
 import pytest
 from temporalio.client import Client
 
-
-# Local constants for black-box testing
-class EpisodeStatus:
-    COMPLETED = "completed"
-    FAILED = "failed"
-    RUNNING = "running"
-
-
-class AssetType:
-    VIDEO = "video"
-    RENDER = "render"
-    MJCF = "mjcf"
-
+from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")
@@ -36,7 +25,8 @@ async def test_int_053_temporal_workflow_lifecycle():
             json={"task": task, "session_id": "INT-053-obs"},
         )
         assert resp.status_code == 202
-        episode_id = resp.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(resp.json())
+        episode_id = agent_run_resp.episode_id
 
         # 2. Connect to Temporal and start SimulationWorkflow
         temporal = await Client.connect(TEMPORAL_URL)
@@ -57,9 +47,9 @@ async def test_int_053_temporal_workflow_lifecycle():
         # 4. Verify episode status in DB via API
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         assert status_resp.status_code == 200
-        data = status_resp.json()
-        assert data["status"] == EpisodeStatus.COMPLETED
-        assert data["updated_at"] is not None
+        ep_data = EpisodeResponse.model_validate(status_resp.json())
+        assert ep_data.status == EpisodeStatus.COMPLETED
+        assert ep_data.updated_at is not None
 
 
 @pytest.mark.integration_p0
@@ -68,20 +58,13 @@ async def test_int_055_s3_artifact_upload_logging():
     """INT-055: Verify S3 artifact upload logging and linkage."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode
-        episode_id = str(uuid.uuid4())
         # Manual insert or use agent/run
-        await client.post(
-            f"{CONTROLLER_URL}/agent/run",
-            json={"task": "Test S3 Upload", "session_id": "INT-055-s3"},
-        )
-        # Wait, I need the actual ID. Let's list and pick latest?
-        # Or better just use the one from previous test if I want to be fast, but isolation is better.
-
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
             json={"task": "Test S3 Upload", "session_id": "INT-055-s3"},
         )
-        episode_id = resp.json()["episode_id"]
+        agent_run_resp = AgentRunResponse.model_validate(resp.json())
+        episode_id = agent_run_resp.episode_id
 
         # 2. Trigger workflow
         temporal = await Client.connect(TEMPORAL_URL)
@@ -94,13 +77,13 @@ async def test_int_055_s3_artifact_upload_logging():
 
         # 3. Verify Asset record via API
         episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = episode_resp.json()
+        ep_data = EpisodeResponse.model_validate(episode_resp.json())
 
-        assert len(data["assets"]) > 0
-        asset = data["assets"][0]
-        assert asset["asset_type"] == AssetType.VIDEO
-        assert asset["s3_path"].startswith("videos/")
-        assert asset["created_at"] is not None
+        assert len(ep_data.assets) > 0
+        asset = ep_data.assets[0]
+        assert asset.asset_type == AssetType.VIDEO
+        assert asset.s3_path.startswith("videos/")
+        assert asset.created_at is not None
 
 
 @pytest.mark.integration_p0
@@ -114,7 +97,8 @@ async def test_int_054_temporal_failure_path():
             json={"task": "Test Failure Injection", "session_id": "INT-054-fail"},
         )
         assert resp.status_code == 201
-        episode_id = resp.json()["episode_id"]
+        data = resp.json()
+        episode_id = data["episode_id"]
 
         # 2. Trigger workflow with MJCF failure injection
         temporal = await Client.connect(TEMPORAL_URL)
@@ -139,8 +123,8 @@ async def test_int_054_temporal_failure_path():
         # 4. Verify episode status is FAILED in DB
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         assert status_resp.status_code == 200
-        data = status_resp.json()
-        assert data["status"] == EpisodeStatus.FAILED
+        ep_data = EpisodeResponse.model_validate(status_resp.json())
+        assert ep_data.status == EpisodeStatus.FAILED
 
 
 @pytest.mark.integration_p0
@@ -158,7 +142,8 @@ async def test_int_056_s3_upload_failure_retry():
             f"{CONTROLLER_URL}/test/episodes",
             json={"task": "Test S3 Retry", "session_id": "INT-056-retry"},
         )
-        episode_id = resp.json()["episode_id"]
+        data = resp.json()
+        episode_id = data["episode_id"]
 
         temporal = await Client.connect(TEMPORAL_URL)
         handle = await temporal.start_workflow(
@@ -178,9 +163,9 @@ async def test_int_056_s3_upload_failure_retry():
         await asyncio.sleep(1)
 
         status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        data = status_resp.json()
+        ep_data = EpisodeResponse.model_validate(status_resp.json())
         assert (
-            data["status"] == EpisodeStatus.RUNNING
+            ep_data.status == EpisodeStatus.RUNNING
         )  # Should still be running (retrying)
 
         # Cleanup: Cancel it so we don't spam logs

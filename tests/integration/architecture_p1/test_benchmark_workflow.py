@@ -3,6 +3,9 @@ import asyncio
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import BenchmarkGenerateResponse, EpisodeResponse
+from shared.enums import EpisodeStatus
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -28,8 +31,8 @@ async def test_benchmark_planner_cad_reviewer_path():
             200,
             202,
         ], f"Failed to trigger benchmark: {resp.text}"
-        data = resp.json()
-        session_id = str(data["session_id"])
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        session_id = str(benchmark_resp.session_id)
         # Override with INT-031 prefix for mock routing if needed,
         # but the controller generated a UUID.
         # Actually, the mock LM handles UUIDs by routing to 'benchmark' scenario.
@@ -46,19 +49,19 @@ async def test_benchmark_planner_cad_reviewer_path():
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{session_id}")
             if status_resp.status_code == 200:
-                sess_data = status_resp.json()
-                last_status = sess_data["status"]
+                sess_data = EpisodeResponse.model_validate(status_resp.json())
+                last_status = sess_data.status
 
-                if last_status == "planned" and not confirmed:
+                if last_status == EpisodeStatus.PLANNED and not confirmed:
                     # WP08: Call confirm to continue from planning to execution
                     confirm_resp = await client.post(f"/benchmark/{session_id}/confirm")
                     assert confirm_resp.status_code in [200, 202]
                     confirmed = True
 
-                if last_status == "completed":
+                if last_status == EpisodeStatus.COMPLETED:
                     benchmark_completed = True
                     break
-                if last_status == "rejected" or last_status == "failed":
+                if last_status == EpisodeStatus.FAILED:
                     pytest.fail(
                         f"Benchmark generation failed with status: {last_status}"
                     )

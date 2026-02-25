@@ -1,8 +1,29 @@
 import os
 import time
-
 import httpx
 import pytest
+import yaml
+
+from shared.models.schemas import (
+    ObjectivesYaml,
+    ObjectivesSection,
+    PhysicsConfig,
+    BoundingBox,
+    MovedObject,
+    Constraints,
+    StaticRandomization,
+)
+from shared.workers.workbench_models import (
+    ManufacturingConfig,
+    CNCMethodConfig,
+    MaterialDefinition,
+)
+from shared.workers.schema import (
+    BenchmarkToolResponse,
+    BenchmarkToolRequest,
+    WriteFileRequest,
+)
+from shared.simulation.schemas import SimulatorBackendType
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -20,24 +41,32 @@ def base_headers(session_id):
     return {"X-Session-ID": session_id}
 
 
-async def setup_fem_workspace(client, headers, objectives_content, script_content=None):
+async def setup_fem_workspace(
+    client, headers, objectives: ObjectivesYaml, script_content=None
+):
     """Utility to setup a FEM workspace."""
     # Write objectives.yaml
+    write_obj_req = WriteFileRequest(
+        path="objectives.yaml",
+        content=yaml.dump(objectives.model_dump(mode="json")),
+        overwrite=True,
+    )
     await client.post(
         f"{WORKER_LIGHT_URL}/fs/write",
-        json={
-            "path": "objectives.yaml",
-            "content": objectives_content,
-            "overwrite": True,
-        },
+        json=write_obj_req.model_dump(mode="json"),
         headers=headers,
     )
 
     # Write script.py if provided
     if script_content:
+        write_script_req = WriteFileRequest(
+            path="script.py",
+            content=script_content,
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "script.py", "content": script_content, "overwrite": True},
+            json=write_script_req.model_dump(mode="json"),
             headers=headers,
         )
 
@@ -51,34 +80,47 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Setup objectives with FEM enabled and genesis backend
-        objectives_content = """
-physics:
-  backend: "genesis"
-  fem_enabled: true
-objectives:
-  goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
-simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
-moved_object: {label: "obj", shape: "sphere", start_position: [0, 0, 5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
-"""
+        objectives = ObjectivesYaml(
+            physics=PhysicsConfig(
+                backend=SimulatorBackendType.GENESIS, fem_enabled=True
+            ),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="obj",
+                shape="sphere",
+                start_position=(0, 0, 5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+        )
+
         # 1b. Setup custom material config that LACKS FEM fields
-        # (aluminum_6061 in default config now HAS them, so we must override)
-        custom_config = """
-cnc:
-  materials:
-    no_fem_material:
-      name: "No FEM Material"
-      density_g_cm3: 2.7
-      cost_per_kg: 6.0
-      machine_hourly_rate: 80.0
-      color: "#D1D5DB"
-      # missing youngs_modulus_pa, yield_stress_pa, etc.
-      compatibility: ["cnc"]
-"""
+        custom_config = ManufacturingConfig(
+            cnc=CNCMethodConfig(
+                materials={
+                    "no_fem_material": MaterialDefinition(
+                        name="No FEM Material",
+                        density_g_cm3=2.7,
+                        cost_per_kg=6.0,
+                        machine_hourly_rate=80.0,
+                        color="#D1D5DB",
+                        compatibility=["CNC"],
+                    )
+                }
+            )
+        )
+        req_write_cfg = WriteFileRequest(
+            path="manufacturing_config.yaml",
+            content=yaml.dump(custom_config.model_dump(mode="json")),
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            json=req_write_cfg.model_dump(mode="json"),
             headers=base_headers,
         )
 
@@ -96,34 +138,33 @@ def build():
     return p
 """
 
-        await setup_fem_workspace(
-            client, base_headers, objectives_content, script_content
-        )
+        await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # 2. Test INT-111: validate_and_price gate
-        # We expect this to fail because aluminum_6061 lacks FEM fields
+        val_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json={"script_path": "script.py"},
+            json=val_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
-        assert not data["success"]
-        assert "FEM fields" in data["message"] or "material" in data["message"].lower()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "FEM fields" in data.message or "material" in data.message.lower()
 
         # 3. Test INT-102: simulate entry gate
+        sim_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json=sim_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
-        assert not data["success"]
-        assert "FEM fields" in data["message"] or "material" in data["message"].lower()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "FEM fields" in data.message or "material" in data.message.lower()
 
 
 @pytest.mark.integration_p0
@@ -134,39 +175,53 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Setup custom material config with very low ultimate_stress_pa
-        custom_config = """
-cnc:
-  materials:
-    fragile_material:
-      name: "Fragile Material"
-      density_g_cm3: 2.7
-      cost_per_kg: 6.0
-      machine_hourly_rate: 80.0
-      color: "#D1D5DB"
-      youngs_modulus_pa: 70000000000.0
-      poissons_ratio: 0.33
-      yield_stress_pa: 100
-      ultimate_stress_pa: 200
-      compatibility: ["cnc"]
-"""
+        custom_config = ManufacturingConfig(
+            cnc=CNCMethodConfig(
+                materials={
+                    "fragile_material": MaterialDefinition(
+                        name="Fragile Material",
+                        density_g_cm3=2.7,
+                        cost_per_kg=6.0,
+                        machine_hourly_rate=80.0,
+                        color="#D1D5DB",
+                        youngs_modulus_pa=70000000000.0,
+                        poissons_ratio=0.33,
+                        yield_stress_pa=100,
+                        ultimate_stress_pa=200,
+                        compatibility=["CNC"],
+                    )
+                }
+            )
+        )
 
+        req_write_cfg = WriteFileRequest(
+            path="manufacturing_config.yaml",
+            content=yaml.dump(custom_config.model_dump(mode="json")),
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            json=req_write_cfg.model_dump(mode="json"),
             headers=base_headers,
         )
 
-        objectives_content = """
-physics:
-  backend: "genesis"
-  fem_enabled: true
-objectives:
-  goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
-simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
-moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
-"""
+        objectives = ObjectivesYaml(
+            physics=PhysicsConfig(
+                backend=SimulatorBackendType.GENESIS, fem_enabled=True
+            ),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0, 0, 0.5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+        )
         # Script with a part that will surely break (high force/stress expected)
         script_content = """
 from build123d import *
@@ -182,26 +237,25 @@ def build():
     )
     return p
 """
-        await setup_fem_workspace(
-            client, base_headers, objectives_content, script_content
-        )
+        await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # Simulate
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "smoke_test_mode": True},
+            json=sim_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,
         )
 
         assert resp.status_code == 200
-        data = resp.json()
-        assert not data["success"]
-        assert "PART_BREAKAGE" in data["message"].upper()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "PART_BREAKAGE" in data.message.upper()
 
         # Verify event emission
-        events = data.get("events", [])
-        assert any(e["event_type"] == "part_breakage" for e in events)
+        events = data.events
+        assert any(e.event_type == "part_breakage" for e in events)
 
 
 @pytest.mark.integration_p0
@@ -212,38 +266,52 @@ async def test_int_104_stress_reporting(session_id, base_headers):
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Setup material with FEM fields
-        custom_config = """
-cnc:
-  materials:
-    steel:
-      name: "Steel"
-      density_g_cm3: 7.8
-      cost_per_kg: 2.0
-      machine_hourly_rate: 100.0
-      color: "#94a3b8"
-      youngs_modulus_pa: 210e9
-      poissons_ratio: 0.3
-      yield_stress_pa: 250e6
-      ultimate_stress_pa: 400e6
-      compatibility: ["cnc"]
-"""
+        custom_config = ManufacturingConfig(
+            cnc=CNCMethodConfig(
+                materials={
+                    "steel": MaterialDefinition(
+                        name="Steel",
+                        density_g_cm3=7.8,
+                        cost_per_kg=2.0,
+                        machine_hourly_rate=100.0,
+                        color="#94a3b8",
+                        youngs_modulus_pa=210e9,
+                        poissons_ratio=0.3,
+                        yield_stress_pa=250e6,
+                        ultimate_stress_pa=400e6,
+                        compatibility=["CNC"],
+                    )
+                }
+            )
+        )
+        req_write_cfg = WriteFileRequest(
+            path="manufacturing_config.yaml",
+            content=yaml.dump(custom_config.model_dump(mode="json")),
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            json=req_write_cfg.model_dump(mode="json"),
             headers=base_headers,
         )
 
-        objectives_content = """
-physics:
-  backend: "genesis"
-  fem_enabled: true
-objectives:
-  goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
-simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
-moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
-"""
+        objectives = ObjectivesYaml(
+            physics=PhysicsConfig(
+                backend=SimulatorBackendType.GENESIS, fem_enabled=True
+            ),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0, 0, 0.5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+        )
         script_content = """
 from build123d import *
 from shared.models.schemas import PartMetadata
@@ -256,33 +324,30 @@ def build():
     )
     return p
 """
-        await setup_fem_workspace(
-            client, base_headers, objectives_content, script_content
-        )
+        await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # Simulate
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "smoke_test_mode": True},
+            json=sim_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
+        data = BenchmarkToolResponse.model_validate(resp.json())
 
         # SUCCESS is NOT guaranteed here but stress_summaries SHOULD be present if it ran
-        # If it failed for other reasons (e.g. Genesis backend not available in test env),
-        # we might need to skip or mock. But the spec says "Required integration execution contract: real containers".
+        artifacts = data.artifacts
+        assert artifacts.stress_summaries or (
+            hasattr(data, "stress_summaries") and data.stress_summaries
+        )
 
-        # For now, let's assume it runs.
-        artifacts = data.get("artifacts") or {}
-        assert "stress_summaries" in artifacts or "stress_summaries" in data
-        # Check specific field in result payload (SimulationResult schema)
-        summaries = data.get("stress_summaries", [])
-        if data["success"]:  # Only assert content if it didn't crash early
+        summaries = artifacts.stress_summaries
+        if data.success:  # Only assert content if it didn't crash early
             assert len(summaries) > 0
-            assert summaries[0]["part_label"] == "steel_part"
-            assert "max_von_mises_pa" in summaries[0]
+            assert summaries[0].part_label == "steel_part"
+            assert summaries[0].max_von_mises_pa > 0
 
 
 @pytest.mark.integration_p0
@@ -293,40 +358,57 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Use a material that is strong but we set a very LOW stress objective
-        objectives_content = """
-physics:
-  backend: "genesis"
-  fem_enabled: true
-objectives:
-  goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
-  stress_objectives:
-    - part_label: "weak_link"
-      max_von_mises_mpa: 0.0001 # Extremely low threshold
-simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
-moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
-"""
-        # Material setup with FEM fields so it passes initial gate
-        custom_config = """
-cnc:
-  materials:
-    strong_steel:
-      name: "Strong Steel"
-      density_g_cm3: 7.8
-      cost_per_kg: 2.0
-      machine_hourly_rate: 100.0
-      color: "#94a3b8"
-      youngs_modulus_pa: 210e9
-      poissons_ratio: 0.3
-      yield_stress_pa: 250e6
-      ultimate_stress_pa: 400e6
-      compatibility: ["cnc"]
-"""
+        from shared.models.schemas import MaxStressObjective
 
+        objectives = ObjectivesYaml(
+            physics=PhysicsConfig(
+                backend=SimulatorBackendType.GENESIS, fem_enabled=True
+            ),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+                stress_objectives=[
+                    MaxStressObjective(part_label="weak_link", max_von_mises_mpa=0.0001)
+                ],
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0, 0, 0.5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+        )
+
+        # Material setup with FEM fields so it passes initial gate
+        custom_config = ManufacturingConfig(
+            cnc=CNCMethodConfig(
+                materials={
+                    "strong_steel": MaterialDefinition(
+                        name="Strong Steel",
+                        density_g_cm3=7.8,
+                        cost_per_kg=2.0,
+                        machine_hourly_rate=100.0,
+                        color="#94a3b8",
+                        youngs_modulus_pa=210e9,
+                        poissons_ratio=0.3,
+                        yield_stress_pa=250e6,
+                        ultimate_stress_pa=400e6,
+                        compatibility=["CNC"],
+                    )
+                }
+            )
+        )
+
+        req_write_cfg = WriteFileRequest(
+            path="manufacturing_config.yaml",
+            content=yaml.dump(custom_config.model_dump(mode="json")),
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            json=req_write_cfg.model_dump(mode="json"),
             headers=base_headers,
         )
 
@@ -344,21 +426,20 @@ def build():
     return p
 """
 
-        await setup_fem_workspace(
-            client, base_headers, objectives_content, script_content
-        )
+        await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # Simulate
+        sim_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py"},
+            json=sim_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=300.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
-        assert not data["success"]
-        assert "STRESS_OBJECTIVE_EXCEEDED" in data["message"].upper()
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "STRESS_OBJECTIVE_EXCEEDED" in data.message.upper()
 
 
 @pytest.mark.integration_p0
@@ -366,20 +447,23 @@ def build():
 async def test_int_109_physics_instability_abort(session_id, base_headers):
     """
     INT-109: Verify kinetics energy abort.
-    Note: Creating true instability reliably is hard, but we can try
-    intersecting geometries with high mass/stiffness.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
-        objectives_content = """
-physics:
-  backend: "genesis"
-objectives:
-  goal_zone: {min: [10, 10, 10], max: [12, 12, 12]}
-  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
-simulation_bounds: {min: [-10, -10, -10], max: [10, 10, 10]}
-moved_object: {label: "target_box", shape: "sphere", start_position: [0, 0, 0.5], runtime_jitter: [0, 0, 0]}
-constraints: {max_unit_cost: 100, max_weight_g: 10}
-"""
+        objectives = ObjectivesYaml(
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0, 0, 0.5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+        )
         # Script with overlapping high-density parts to cause explosion
         script_content = """
 from build123d import *
@@ -399,41 +483,45 @@ def build():
     )
     return Compound(children=[p1, p2])
 """
-        custom_config = """
-cnc:
-  materials:
-    heavy:
-      name: "Heavy"
-      density_g_cm3: 1000.0
-      cost_per_kg: 1.0
-      machine_hourly_rate: 1.0
-      color: "#000000"
-      compatibility: ["cnc"]
-"""
+        custom_config = ManufacturingConfig(
+            cnc=CNCMethodConfig(
+                materials={
+                    "heavy": MaterialDefinition(
+                        name="Heavy",
+                        density_g_cm3=1000.0,
+                        cost_per_kg=1.0,
+                        machine_hourly_rate=1.0,
+                        color="#000000",
+                        compatibility=["CNC"],
+                    )
+                }
+            )
+        )
+        req_write_cfg = WriteFileRequest(
+            path="manufacturing_config.yaml",
+            content=yaml.dump(custom_config.model_dump(mode="json")),
+            overwrite=True,
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "manufacturing_config.yaml", "content": custom_config},
+            json=req_write_cfg.model_dump(mode="json"),
             headers=base_headers,
         )
 
-        await setup_fem_workspace(
-            client, base_headers, objectives_content, script_content
-        )
+        await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # Skip geometric validation to allow intersection
+        # skip_validate is not in BenchmarkToolRequest schema, might need to pass via script or other means
+        # but let's assume simulate endpoint supports it or just run it.
+        sim_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json={"script_path": "script.py", "skip_validate": True},
+            json={**sim_req.model_dump(mode="json"), "skip_validate": True},
             headers=base_headers,
             timeout=300.0,
         )
         assert resp.status_code == 200
-        data = resp.json()
+        data = BenchmarkToolResponse.model_validate(resp.json())
 
-        # It might either be PHYSICS_INSTABILITY or success if it didn't explode
-        # but for INT-109 we want to verify the abort logic.
-        # If it happens, we assert it.
-        if "PHYSICS_INSTABILITY" in data["message"].upper():
-            assert any(
-                e["event_type"] == "physics_instability" for e in data.get("events", [])
-            )
+        if "PHYSICS_INSTABILITY" in data.message.upper():
+            assert any(e.event_type == "physics_instability" for e in data.events)

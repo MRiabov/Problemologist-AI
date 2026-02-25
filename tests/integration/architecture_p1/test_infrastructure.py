@@ -4,6 +4,10 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from shared.enums import EpisodeStatus
+from tests.integration.contracts import BackupWorkflowResponse
+
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://localhost:18000"
 
@@ -25,15 +29,16 @@ async def test_render_artifact_generation_int_039():
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
         assert resp.status_code in [200, 202], f"Failed to trigger agent: {resp.text}"
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # 2. Poll for completion
         completed = False
         for _ in range(150):
             status_resp = await client.get(f"/episodes/{episode_id}")
             if status_resp.status_code == 200:
-                data = status_resp.json()
-                if data["status"] in ["completed", "failed"]:
+                ep_data = EpisodeResponse.model_validate(status_resp.json())
+                if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                     completed = True
                     break
             await asyncio.sleep(2)
@@ -41,20 +46,21 @@ async def test_render_artifact_generation_int_039():
         assert completed, "Episode failed to complete in time"
 
         # 3. Verify Artifacts (discoverable by reviewer/consumer paths)
-        ep_data = (await client.get(f"/episodes/{episode_id}")).json()
-        assets = ep_data.get("assets", [])
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"/episodes/{episode_id}")).json()
+        )
+        assets = ep_data.assets
 
         # Check for 24-view renders (images)
         # The policy might be a zip bundle or individual images
-        # Looking at controller/api/tasks.py, it syncs files from the worker session root.
+        # Assets are synced from the worker session root.
 
         render_assets = [
             a
             for a in assets
-            if "renders/" in a["s3_path"]
-            and (".png" in a["s3_path"] or ".jpg" in a["s3_path"])
+            if "renders/" in a.s3_path and (".png" in a.s3_path or ".jpg" in a.s3_path)
         ]
-        # INT-032 mentions 24-view renders, INT-039 says "produces discoverable artifacts"
+        # INT-039 requires discoverable render artifacts.
         assert len(render_assets) > 0, (
             f"No render artifacts found in episode. Assets: {assets}"
         )
@@ -78,26 +84,30 @@ async def test_asset_persistence_linkage_int_040():
                 "session_id": session_id,
             },
         )
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # Wait for completion
         for _ in range(150):
-            data = (await client.get(f"/episodes/{episode_id}")).json()
-            if data["status"] in ["completed", "failed"]:
+            ep_data = EpisodeResponse.model_validate(
+                (await client.get(f"/episodes/{episode_id}")).json()
+            )
+            if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
             await asyncio.sleep(2)
 
         # Verify Linkage
-        data = (await client.get(f"/episodes/{episode_id}")).json()
-        assets = data.get("assets", [])
-        asset_paths = [a["s3_path"] for a in assets]
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"/episodes/{episode_id}")).json()
+        )
+        asset_paths = [a.s3_path for a in ep_data.assets]
 
         # Requirements: scripts, renders, MJCF, video
-        # (Video might be optional depending on if simulate was called, but task asked for it)
+        # Video may be optional if simulate was not called.
         assert any("script.py" in p for p in asset_paths), "script.py not linked"
         assert any(".xml" in p or ".mjcf" in p for p in asset_paths), "MJCF not linked"
         assert any("renders/" in p for p in asset_paths), "Renders not linked"
-        # assert any(".mp4" in p for p in asset_paths), "Video not linked" # If video is generated
+        # assert any(".mp4" in p for p in asset_paths), "Video not linked"
 
 
 @pytest.mark.integration_p1
@@ -105,7 +115,7 @@ async def test_asset_persistence_linkage_int_040():
 async def test_mjcf_joint_mapping_int_037():
     """
     INT-037: MJCF Joint Mapping
-    Must verify that produced MJCF artifacts from a real run have the correct joint/actuator mappings.
+    Must verify produced MJCF artifacts have expected joint/actuator mappings.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # We use a prompt that should result in a jointed assembly
@@ -117,31 +127,34 @@ async def test_mjcf_joint_mapping_int_037():
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # Wait for completion
         for _ in range(150):
-            data = (await client.get(f"/episodes/{episode_id}")).json()
-            if data["status"] in ["completed", "failed"]:
+            ep_data = EpisodeResponse.model_validate(
+                (await client.get(f"/episodes/{episode_id}")).json()
+            )
+            if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
             await asyncio.sleep(2)
 
-        data = (await client.get(f"/episodes/{episode_id}")).json()
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"/episodes/{episode_id}")).json()
+        )
         # Find MJCF asset
         mjcf_asset = next(
             (
                 a
-                for a in data.get("assets", [])
-                if a["s3_path"].endswith(".xml") or a["s3_path"].endswith(".mjcf")
+                for a in ep_data.assets
+                if a.s3_path.endswith(".xml") or a.s3_path.endswith(".mjcf")
             ),
             None,
         )
 
         assert mjcf_asset is not None, "MJCF asset not found"
-        content = mjcf_asset.get("content", "")
-        # Since we fixed validation.py to use SimulationBuilder, it should now produce better MJCF
-        # if the agent correctly uses build123d labels/constraints (or if LLM just gets it right)
-        # For now, we just assert basic MJCF structure exists
+        content = mjcf_asset.content or ""
+        # Keep assertion at basic MJCF structure level.
         assert "<mujoco" in content
         assert "<worldbody" in content
 
@@ -162,21 +175,29 @@ async def test_controller_function_family_int_038():
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         for _ in range(150):
-            data = (await client.get(f"/episodes/{episode_id}")).json()
-            if data["status"] in ["completed", "failed"]:
+            ep_data = EpisodeResponse.model_validate(
+                (await client.get(f"/episodes/{episode_id}")).json()
+            )
+            if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
             await asyncio.sleep(2)
 
         # Verify it ran without crashing (Simulation stable / Goal achieved)
-        data = (await client.get(f"/episodes/{episode_id}")).json()
-        assert data["status"] == "completed"
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"/episodes/{episode_id}")).json()
+        )
+        assert ep_data.status == EpisodeStatus.COMPLETED
         # Check traces for simulation success
-        traces = data.get("traces", [])
+        traces = ep_data.traces
         assert any(
-            "Simulation stable" in t["content"] or "Goal achieved" in t["content"]
+            (
+                (t.content and "Simulation stable" in t.content)
+                or (t.content and "Goal achieved" in t.content)
+            )
             for t in traces
         )
 
@@ -199,8 +220,8 @@ async def test_temporal_recovery_int_041():
             pytest.skip("/ops/backup endpoint not found")
 
         assert resp.status_code == 202
-        workflow_id = resp.json()["workflow_id"]
-        assert workflow_id.startswith("backup-")
+        workflow = BackupWorkflowResponse.model_validate(resp.json())
+        assert workflow.workflow_id.startswith("backup-")
 
 
 @pytest.mark.integration_p1
@@ -216,17 +237,22 @@ async def test_async_callbacks_int_042():
             "/agent/run",
             json={"task": "Just say hello and finish.", "session_id": session_id},
         )
-        episode_id = resp.json()["episode_id"]
+        run_data = AgentRunResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
 
         # Immediate status should be RUNNING
-        data = (await client.get(f"/episodes/{episode_id}")).json()
-        assert data["status"] == "running"
+        ep_data = EpisodeResponse.model_validate(
+            (await client.get(f"/episodes/{episode_id}")).json()
+        )
+        assert ep_data.status == EpisodeStatus.RUNNING
 
         # Wait for completion (simulates async callback/polling)
         for _ in range(150):
-            data = (await client.get(f"/episodes/{episode_id}")).json()
-            if data["status"] == "completed":
+            ep_data = EpisodeResponse.model_validate(
+                (await client.get(f"/episodes/{episode_id}")).json()
+            )
+            if ep_data.status == EpisodeStatus.COMPLETED:
                 break
             await asyncio.sleep(1)
 
-        assert data["status"] == "completed"
+        assert ep_data.status == EpisodeStatus.COMPLETED

@@ -4,6 +4,13 @@ import time
 import httpx
 import pytest
 
+from shared.workers.schema import (
+    WriteFileRequest,
+    ExecuteResponse,
+    ListFilesRequest,
+    ExecuteRequest,
+)
+
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 
@@ -35,15 +42,16 @@ def build():
     p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return p
 """
+        write_req = WriteFileRequest(
+            path="box.py", content=script_content, overwrite=True
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "box.py", "content": script_content},
+            json=write_req.model_dump(mode="json"),
             headers=base_headers,
         )
 
-        # 2. Trigger tetrahedralization (via a hypothetical worker endpoint if exists,
-        # or as part of Genesis simulation setup)
-        # Assuming we can trigger meshing via /runtime/execute for now to test the internal tool
+        # 2. Trigger tetrahedralization
         code = """
 from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
@@ -54,36 +62,39 @@ export_stl(part, "test.stl")
 msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
 assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 """
+        exec_req = ExecuteRequest(code=code, timeout=60)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
-            json={"code": code},
+            json=exec_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=60.0,
         )
         assert resp.status_code == 200, f"Execution failed: {resp.text}"
-        data = resp.json()
-        assert data["exit_code"] == 0, (
-            f"Meshing script failed: {data['stdout']} {data['stderr']}"
+        data = ExecuteResponse.model_validate(resp.json())
+        assert data.exit_code == 0, (
+            f"Meshing script failed: {data.stdout} {data.stderr}"
         )
 
         # 3. Verify files exist in session
+        ls_req = ListFilesRequest(path=".")
         ls_resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ls_req.model_dump(mode="json"),
+            headers=base_headers,
         )
         files = [f["name"] for f in ls_resp.json()]
-        # TetGen produces .node and .ele (renamed to .node and .ele in current mesh_utils.py)
-        # but the spec says "-> .msh". Our mesh_utils.py has a renaming logic.
         assert "test.node" in files or "test.msh" in files, (
             f"Missing mesh files. Found: {files}"
         )
 
         # 4. Fail path: Non-manifold geometry
-        # (This might be hard to construct via build123d without it failing first,
-        # but we can try to write a malformed STL directly)
         bad_stl = "solid bad\nfacet normal 0 0 0\nouter loop\nvertex 0 0 0\nvertex 0 0 0\nvertex 0 0 0\nendloop\nendfacet\nendsolid"
+        write_bad_stl = WriteFileRequest(
+            path="bad.stl", content=bad_stl, overwrite=True
+        )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json={"path": "bad.stl", "content": bad_stl},
+            json=write_bad_stl.model_dump(mode="json"),
             headers=base_headers,
         )
 
@@ -92,12 +103,12 @@ from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
 tetrahedralize(Path("bad.stl"), Path("bad.msh"))
 """
+        exec_fail_req = ExecuteRequest(code=code_fail, timeout=60)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
-            json={"code": code_fail},
+            json=exec_fail_req.model_dump(mode="json"),
             headers=base_headers,
             timeout=60.0,
         )
-        assert resp.json()["exit_code"] != 0, (
-            "Expected meshing to fail for malformed STL"
-        )
+        data_fail = ExecuteResponse.model_validate(resp.json())
+        assert data_fail.exit_code != 0, "Expected meshing to fail for malformed STL"

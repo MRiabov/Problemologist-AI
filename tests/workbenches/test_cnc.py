@@ -95,7 +95,9 @@ def test_cnc_cost_calculation(config):
     assert cost10.unit_cost < cost1.unit_cost  # Bulk discount due to setup fee
 
     # Test reuse discount
-    context = {}
+    from shared.workers.workbench_models import WorkbenchContext
+
+    context = WorkbenchContext()
     cost_first = calculate_cnc_cost(p.part, config, quantity=1, context=context)
     cost_second = calculate_cnc_cost(p.part, config, quantity=1, context=context)
 
