@@ -97,6 +97,7 @@ class FailureReason(StrEnum):
     # Validation failures
     VALIDATION_FAILED = "VALIDATION_FAILED"
     MANUFACTURABILITY_FAILED = "MANUFACTURABILITY_FAILED"
+    VERIFICATION_ERROR = "VERIFICATION_ERROR"
 
 
 # Alias for backward compatibility
