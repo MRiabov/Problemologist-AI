@@ -91,14 +91,18 @@ def validate_circuit(
                 resolve_node_name(wire.to_terminal.component, wire.to_terminal.terminal)
             )
 
+        from shared.enums import ElectronicComponentType
+
         for comp in section.components:
             required = []
-            comp_type = _component_type(comp)
-            if comp_type == "MOTOR":
+            if comp.type == ElectronicComponentType.MOTOR:
                 required = ["+", "-"]
-            elif comp_type in {"SWITCH", "RELAY"}:
+            elif comp.type in [
+                ElectronicComponentType.SWITCH,
+                ElectronicComponentType.RELAY,
+            ]:
                 required = ["in", "out"]
-            elif comp_type == "POWER_SUPPLY":
+            elif comp.type == ElectronicComponentType.POWER_SUPPLY:
                 required = ["+", "-"]
 
             for term in required:
@@ -194,7 +198,7 @@ def validate_circuit(
 
         if section:
             for comp in section.components:
-                if _component_type(comp) == "POWER_SUPPLY":
+                if comp.type == ElectronicComponentType.POWER_SUPPLY:
                     v_name = f"v{comp.component_id}".lower()
                     if v_name in sources_draw:
                         draw = sources_draw[v_name]

@@ -13,7 +13,7 @@ from shared.workers.schema import (
 )
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
 @pytest.fixture

@@ -2514,7 +2514,8 @@
           "STRESS_OBJECTIVE_EXCEEDED",
           "ELECTRONICS_FLUID_DAMAGE",
           "VALIDATION_FAILED",
-          "MANUFACTURABILITY_FAILED"
+          "MANUFACTURABILITY_FAILED",
+          "VERIFICATION_ERROR"
         ],
         "title": "FailureReason",
         "description": "Unified failure modes for physics and electronics simulation."
