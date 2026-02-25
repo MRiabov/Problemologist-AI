@@ -7,9 +7,9 @@ import pytest
 
 from controller.api.schemas import (
     AgentRunResponse,
+    EpisodeCreateResponse,
     EpisodeListItem,
     EpisodeResponse,
-    TestEpisodeCreateResponse,
 )
 from controller.api.tasks import AgentRunRequest
 from shared.enums import EpisodeStatus
@@ -51,7 +51,7 @@ async def test_int_004_episode_artifact_persistence():
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
-        episode_create = TestEpisodeCreateResponse.model_validate(resp.json())
+        episode_create = EpisodeCreateResponse.model_validate(resp.json())
         episode_id = str(episode_create.episode_id)
 
         # Let's check episodes list
