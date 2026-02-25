@@ -5,7 +5,7 @@ import structlog
 from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
-from controller.agent.state import AgentState, AgentStatus
+from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from shared.type_checking import type_check
 

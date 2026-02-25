@@ -7,8 +7,8 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from controller.api.main import app as controller_app  # noqa: E402
-from worker_light.app import app as worker_light_app  # noqa: E402
 from worker_heavy.app import app as worker_heavy_app  # noqa: E402
+from worker_light.app import app as worker_light_app  # noqa: E402
 
 
 def generate_schema(app, filename):

@@ -19,7 +19,6 @@ from pydantic import (
 
 from shared.enums import (
     ElectronicComponentType,
-    FailureReason,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,

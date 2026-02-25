@@ -1,9 +1,7 @@
 import asyncio
 import base64
 import contextlib
-import io
 import multiprocessing
-import tarfile
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -18,15 +16,12 @@ from fastapi import (
 )
 
 from shared.enums import (
-    ElectronicComponentType,
     FailureReason,
-    ManufacturingMethod,
-    MotorControlMode,
 )
 from shared.models.simulation import (
     SimulationFailure,
-    SimulationResult,
 )
+from shared.workers.loader import load_component_from_script
 from shared.workers.persistence import (
     collect_and_cleanup_events,
     record_validation_result,
@@ -42,17 +37,14 @@ from shared.workers.schema import (
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
-from shared.workers.loader import load_component_from_script
-from worker_heavy.utils.topology import analyze_component
-from worker_heavy.utils.validation import validate_fem_manufacturability
+from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import (
-    simulate,
     submit_for_review,
     validate,
-    validate_circuit as utils_validate_circuit,
 )
 from worker_heavy.utils.preview import preview_design
-from worker_heavy.simulation.verification import verify_with_jitter
+from worker_heavy.utils.topology import analyze_component
+from worker_heavy.utils.validation import validate_fem_manufacturability
 
 logger = structlog.get_logger(__name__)
 heavy_router = APIRouter()
@@ -146,9 +138,10 @@ def _init_genesis_worker():
         if "PYOPENGL_PLATFORM" not in os.environ:
             os.environ["PYOPENGL_PLATFORM"] = "egl"
 
+        import time
+
         import genesis as gs
         import torch
-        import time
 
         # Basic init
         has_gpu = torch.cuda.is_available()

@@ -1,8 +1,9 @@
-import structlog
 from pathlib import Path
-from build123d import Part, Compound
 
-from shared.workers.workbench_models import WorkbenchResult, ManufacturingMethod
+import structlog
+from build123d import Compound, Part
+
+from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.workbenches.config import load_config
 

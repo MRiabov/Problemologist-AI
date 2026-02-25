@@ -57,7 +57,7 @@ async def test_benchmark_planner_cad_reviewer_path():
                     # WP08: Call confirm to continue from planning to execution
                     confirm_resp = await client.post(
                         f"/benchmark/{session_id}/confirm",
-                        json=ConfirmRequest(comment="Looks good").model_dump()
+                        json=ConfirmRequest(comment="Looks good").model_dump(),
                     )
                     assert confirm_resp.status_code in [200, 202]
                     confirmed = True

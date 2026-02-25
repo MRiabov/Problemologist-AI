@@ -1,11 +1,12 @@
-import os
-import httpx
 import logging
-from typing import Any, Optional
+import os
 from pathlib import Path
+from typing import Any, Optional
 
+import httpx
 from build123d import Compound
 from pydantic import BaseModel
+
 from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
 
 logger = logging.getLogger(__name__)
@@ -103,4 +104,4 @@ def refuse_plan(reason: str) -> bool:
 
 
 # Re-export fasteners
-from shared.utils.fasteners import fastener_hole, HoleType
+from shared.utils.fasteners import HoleType, fastener_hole

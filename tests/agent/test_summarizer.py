@@ -1,14 +1,15 @@
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import dspy
-from controller.agent.nodes.summarizer import summarizer_node
-from controller.agent.state import AgentState
+
+from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.nodes import (
     summarizer_node as benchmark_summarizer_node,
 )
 from controller.agent.benchmark.state import BenchmarkGeneratorState
-from controller.agent.benchmark.models import GenerationSession
-import uuid
+from controller.agent.nodes.summarizer import summarizer_node
+from controller.agent.state import AgentState
 
 
 @pytest.fixture

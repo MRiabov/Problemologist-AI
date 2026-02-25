@@ -62,8 +62,8 @@ class TestMotorOverload:
         """Test that motor clamped at forcerange for >2s fails simulation."""
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        from worker_heavy.utils.controllers.position_based import hold_position
         from shared.enums import FailureReason
+        from worker_heavy.utils.controllers.position_based import hold_position
 
         controllers = {"servo": hold_position(3.14)}  # Impossible with 0.1 N limit
 

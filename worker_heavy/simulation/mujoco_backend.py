@@ -4,8 +4,8 @@ from typing import Any
 import mujoco
 import numpy as np
 
-from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
 from shared.enums import FailureReason
+from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,

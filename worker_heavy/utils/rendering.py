@@ -155,8 +155,7 @@ def prerender_24_views(
                             # If rendering fails once due to EGL, it likely will fail for all views.
                             # We can break or continue. Let's continue to be safe, but it'll probably fail for all.
                             continue
-                        else:
-                            raise
+                        raise
 
             # Only close if it's not a cached backend
             if not session_id:

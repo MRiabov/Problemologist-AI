@@ -1,6 +1,7 @@
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 
 from controller.observability.langfuse import get_langfuse_client
 
@@ -56,6 +57,7 @@ def test_get_langfuse_client_returns_none_in_integration_test():
 async def test_calculate_and_report_automated_score():
     """Test that automated score is calculated from events and reported."""
     import uuid
+
     from controller.observability.langfuse import calculate_and_report_automated_score
     from shared.enums import TraceType
 

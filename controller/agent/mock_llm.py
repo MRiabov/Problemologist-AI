@@ -1,7 +1,7 @@
 import json
 import re
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import dspy
 import structlog
@@ -287,7 +287,7 @@ class MockDSPyLM(dspy.LM):
             "thought": thought,
             "reasoning": reasoning,
             "finished": finished,
-            "generated_code": node_data.get("generated_code", None),
+            "generated_code": node_data.get("generated_code"),
         }
 
         # ReAct compatibility - handle intermediate tool calling phase
@@ -411,7 +411,7 @@ class MockDSPyLM(dspy.LM):
                     val = json.dumps(val)
 
                 # TypedPredictor expects [[ ## field ## ]] followed by value on NEXT line
-                lines.append(f"[[ ## {field} ## ]]\n{str(val)}")
+                lines.append(f"[[ ## {field} ## ]]\n{val!s}")
 
             result = "\n\n".join(lines)
             logger.info("mock_dspy_returning_fields", text=result[:200] + "...")

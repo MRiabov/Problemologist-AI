@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import trimesh
+
 from shared.observability.events import emit_event
 from shared.observability.schemas import MeshingFailureEvent
 
@@ -248,7 +249,7 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
 
             # Parse .node file
             nodes = []
-            with open(node_file, "r") as f:
+            with open(node_file) as f:
                 lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
                 header = lines[0].split()
                 num_nodes = int(header[0])
@@ -259,7 +260,7 @@ def _tetrahedralize_tetgen(input_path: Path, output_msh_path: Path) -> Path:
 
             # Parse .ele file
             elements = []
-            with open(ele_file, "r") as f:
+            with open(ele_file) as f:
                 lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
                 header = lines[0].split()
                 num_eles = int(header[0])

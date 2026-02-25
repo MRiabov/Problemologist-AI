@@ -4,6 +4,7 @@ import uuid
 import httpx
 import pytest
 
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
@@ -12,7 +13,6 @@ from shared.workers.schema import (
     SimulationArtifacts,
     WriteFileRequest,
 )
-from shared.simulation.schemas import SimulatorBackendType
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")

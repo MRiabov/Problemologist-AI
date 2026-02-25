@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 from temporalio import workflow
 
 from shared.enums import AssetType, EpisodeStatus
-from shared.workers.schema import SimulationWorkflowParams, UpdateTraceParams
 from shared.type_checking import type_check
+from shared.workers.schema import SimulationWorkflowParams, UpdateTraceParams
 
 # Import activities for type hinting in workflow (optional but good for clarity)
 if TYPE_CHECKING:

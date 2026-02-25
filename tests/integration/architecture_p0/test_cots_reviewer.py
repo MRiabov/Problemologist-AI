@@ -3,7 +3,6 @@ import uuid
 
 import httpx
 import pytest
-
 from pydantic import TypeAdapter
 
 from controller.api.schemas import (

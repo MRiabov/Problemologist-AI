@@ -1,10 +1,11 @@
 import asyncio
 import base64
-from typing import Literal, Any
+from typing import Any, Literal
 
 import httpx
 
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
@@ -14,7 +15,6 @@ from shared.workers.schema import (
     GrepMatch,
     InspectTopologyResponse,
 )
-from shared.workers.filesystem.backend import FileInfo
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 

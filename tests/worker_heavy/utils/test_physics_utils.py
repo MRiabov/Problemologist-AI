@@ -1,12 +1,13 @@
 import os
+
 import yaml
-from pathlib import Path
-from shared.models.simulation import StressSummary, SimulationResult
+
+from shared.models.simulation import SimulationResult, StressSummary
 from worker_heavy.utils.validation import (
     define_fluid,
     get_stress_report,
-    set_soft_mesh,
     save_simulation_result,
+    set_soft_mesh,
 )
 
 

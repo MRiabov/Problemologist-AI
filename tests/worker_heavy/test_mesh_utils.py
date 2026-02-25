@@ -1,15 +1,15 @@
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 import trimesh
-import subprocess
 
+from shared.observability.schemas import MeshingFailureEvent
 from worker_heavy.utils.mesh_utils import (
     MeshProcessingError,
     repair_mesh,
     tetrahedralize,
 )
-from shared.observability.schemas import MeshingFailureEvent
 
 
 def test_repair_mesh_already_watertight():

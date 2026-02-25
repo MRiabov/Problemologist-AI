@@ -1,11 +1,9 @@
-import os
-
 from temporalio import activity
 
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
-from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 from shared.type_checking import type_check
+from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 
 WORKER_LIGHT_URL = settings.worker_light_url
 

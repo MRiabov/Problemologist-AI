@@ -1,21 +1,19 @@
-from typing import Any
-
 import structlog
 from build123d import Compound, Part, Solid
 
 from shared.type_checking import type_check
-from worker_heavy.workbenches.analysis_utils import (
-    check_undercuts,
-    compute_part_hash,
-    part_to_trimesh,
-)
-from worker_heavy.workbenches.base import Workbench
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
     WorkbenchContext,
     WorkbenchResult,
 )
+from worker_heavy.workbenches.analysis_utils import (
+    check_undercuts,
+    compute_part_hash,
+    part_to_trimesh,
+)
+from worker_heavy.workbenches.base import Workbench
 
 logger = structlog.get_logger()
 

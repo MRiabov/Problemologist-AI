@@ -1,14 +1,17 @@
 import asyncio
 import os
-import uuid
 
 import httpx
 import pytest
 from temporalio.client import Client
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse, TestEpisodeCreateResponse
+from controller.api.schemas import (
+    AgentRunResponse,
+    EpisodeResponse,
+    TestEpisodeCreateResponse,
+)
 from controller.api.tasks import AgentRunRequest
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus
+from shared.enums import AssetType, EpisodeStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "localhost:17233")

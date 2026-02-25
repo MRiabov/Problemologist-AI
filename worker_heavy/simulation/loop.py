@@ -4,10 +4,9 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
-from shared.enums import FluidEvalAt, FluidObjectiveType, FailureReason
+from shared.enums import FailureReason
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import (
-    FluidMetricResult,
     SimulationFailure,
     SimulationMetrics,
 )
@@ -22,10 +21,10 @@ from shared.wire_utils import check_wire_clearance, get_awg_properties
 from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
 from worker_heavy.simulation.evaluator import SuccessEvaluator
-from worker_heavy.simulation.objectives import ObjectiveEvaluator
-from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.factory import get_physics_backend
+from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
+from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.workbenches.config import load_config
 

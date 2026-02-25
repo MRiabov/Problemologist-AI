@@ -1,12 +1,12 @@
-import os
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
 
 import httpx
 import structlog
 from langgraph.graph import END, START, StateGraph
+from opentelemetry import trace
 
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -14,9 +14,8 @@ from controller.graph.steerability_node import check_steering, steerability_node
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
-from opentelemetry import trace
-from controller.persistence.models import Asset, Episode
-from shared.enums import AssetType, EpisodeStatus, ReviewDecision
+from controller.persistence.models import Episode
+from shared.enums import EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
@@ -420,6 +419,7 @@ async def _persist_session_assets(
             # Sync assets to the Asset table
             try:
                 from contextlib import suppress
+
                 from controller.config.settings import settings as global_settings
 
                 worker_light_url = global_settings.worker_light_url

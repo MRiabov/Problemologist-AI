@@ -1,9 +1,10 @@
-import os
-import structlog
 import asyncio
+import os
+from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 
 from shared.logging import configure_logging, log_marker_middleware
 from worker_heavy.api.routes import heavy_router
@@ -19,6 +20,7 @@ async def start_temporal_worker():
     try:
         from temporalio.client import Client
         from temporalio.worker import Worker
+
         from worker_heavy.activities.heavy_tasks import (
             preview_design_activity,
             run_simulation_activity,

@@ -1,15 +1,16 @@
+import asyncio
+import os
+from contextlib import asynccontextmanager
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 
 from shared.logging import configure_logging, log_marker_middleware
-import os
-import asyncio
-from worker_light.api.routes import light_router
 from worker_heavy.api.routes import heavy_router
-from worker_light.utils.git import sync_skills
+from worker_light.api.routes import light_router
 from worker_light.config import settings
+from worker_light.utils.git import sync_skills
 
 # Configure structured logging
 configure_logging("worker-light")

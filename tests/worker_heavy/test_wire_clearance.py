@@ -1,14 +1,15 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from build123d import Box, Compound, Vector
+
+from build123d import Box
+
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import (
+    ElectronicComponent,
     ElectronicsSection,
+    PowerSupplyConfig,
     WireConfig,
     WireTerminal,
-    PowerSupplyConfig,
-    ElectronicComponent,
 )
-from shared.enums import ElectronicComponentType
 from worker_heavy.simulation.loop import SimulationLoop
 
 

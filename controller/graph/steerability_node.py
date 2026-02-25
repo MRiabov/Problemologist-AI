@@ -3,7 +3,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage
 
-from controller.agent.state import AgentStatus, AgentState
+from controller.agent.state import AgentState, AgentStatus
 from controller.services.steerability.service import steerability_service
 
 logger = structlog.get_logger(__name__)

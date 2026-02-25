@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 import schemathesis
 
+from shared.workers.filesystem.router import FilesystemRouter
 from worker_light.api.routes import get_router
 from worker_light.app import app
-from shared.workers.filesystem.router import FilesystemRouter
 
 # Initialize schemathesis with the app's OpenAPI schema
 schema = schemathesis.openapi.from_asgi("/openapi.json", app)

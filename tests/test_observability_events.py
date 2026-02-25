@@ -3,9 +3,11 @@ from shared.observability.schemas import (
     LibraryUsageEvent,
     ObservabilityEventType,
     ReviewDecisionEvent,
-    FailureReason as SimulationFailureMode,
     SimulationInstabilityEvent,
     SubmissionValidationEvent,
+)
+from shared.observability.schemas import (
+    FailureReason as SimulationFailureMode,
 )
 
 

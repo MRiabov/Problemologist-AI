@@ -1,7 +1,7 @@
 import numpy as np
 import structlog
 
-from shared.enums import FluidEvalAt, FluidObjectiveType, FailureReason
+from shared.enums import FailureReason, FluidEvalAt, FluidObjectiveType
 from shared.models.simulation import FluidMetricResult, SimulationFailure
 from shared.observability.events import emit_event
 from shared.observability.schemas import (

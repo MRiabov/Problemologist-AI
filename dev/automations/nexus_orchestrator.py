@@ -1,8 +1,8 @@
 import json
-import subprocess
 import os
-import time
 import re
+import subprocess
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
@@ -32,7 +32,7 @@ def update_pulse():
 
     pulse = f"""# Nexus Orchestrator Pulse
 Last Update: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Uptime: {str(datetime.now() - datetime.fromisoformat(state.get("start_time", datetime.now().isoformat())))}
+Uptime: {datetime.now() - datetime.fromisoformat(state.get("start_time", datetime.now().isoformat()))!s}
 
 ## KPIs (Last 4 Hours)
 - **Merges:** {len(recent_merges)} (Target: 3-5)
@@ -76,7 +76,7 @@ def run_cmd(cmd, cwd=PROJ_ROOT, capture=True):
 
 def get_state():
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r") as f:
+        with open(STATE_FILE) as f:
             try:
                 return json.load(f)
             except:

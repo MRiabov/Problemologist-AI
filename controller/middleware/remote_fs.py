@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 from temporalio.client import Client
 
@@ -9,7 +8,6 @@ from controller.observability.middleware_helper import (
     broadcast_file_update,
     record_events,
     record_simulation_result,
-    sync_file_asset,
 )
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
@@ -17,6 +15,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
+from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -30,7 +29,6 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
-from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import (

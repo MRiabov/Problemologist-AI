@@ -1,13 +1,12 @@
-import ast
 import datetime
 import json
 import uuid
 from typing import Any
 
 import structlog
-from pydantic import BaseModel
-from opentelemetry import trace
 from langchain_core.callbacks import BaseCallbackHandler
+from opentelemetry import trace
+from pydantic import BaseModel
 
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker

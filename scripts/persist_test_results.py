@@ -1,10 +1,9 @@
-import sys
-import os
 import json
+import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from pydantic import BaseModel, Field
-from typing import List, Optional
+
+from pydantic import BaseModel
 
 
 # Define models
@@ -13,7 +12,7 @@ class TestCaseResult(BaseModel):
     classname: str
     time: float
     status: str
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class TestRun(BaseModel):
@@ -25,11 +24,11 @@ class TestRun(BaseModel):
     skipped: int
     errors: int
     duration: float
-    tests: List[TestCaseResult]
+    tests: list[TestCaseResult]
 
 
 class TestHistory(BaseModel):
-    runs: List[TestRun]
+    runs: list[TestRun]
 
 
 HISTORY_FILE = "test_output/integration_test_history.json"
@@ -136,7 +135,7 @@ def main():
     history = []
     if os.path.exists(HISTORY_FILE):
         try:
-            with open(HISTORY_FILE, "r") as f:
+            with open(HISTORY_FILE) as f:
                 data = json.load(f)
                 if isinstance(data, dict):
                     history = data.get("runs", [])
@@ -158,7 +157,7 @@ def main():
         archive = []
         if os.path.exists(ARCHIVE_FILE):
             try:
-                with open(ARCHIVE_FILE, "r") as f:
+                with open(ARCHIVE_FILE) as f:
                     archive = json.load(f)
                     if not isinstance(archive, list):
                         archive = []

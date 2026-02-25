@@ -1,12 +1,11 @@
-import pytest
 from shared.models.schemas import (
-    AssemblyDefinition,
     AssemblyConstraints,
+    AssemblyDefinition,
     CostTotals,
-    ElectronicsSection,
-    PowerSupplyConfig,
     ElectronicComponent,
     ElectronicComponentType,
+    ElectronicsSection,
+    PowerSupplyConfig,
     WireConfig,
     WireTerminal,
 )

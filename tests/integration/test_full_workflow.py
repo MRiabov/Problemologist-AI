@@ -4,13 +4,13 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateResponse,
     EpisodeResponse,
 )
 from controller.api.tasks import AgentRunRequest
-from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller

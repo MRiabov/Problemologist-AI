@@ -1,10 +1,9 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
+from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.app import app
-from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 client = TestClient(app)
 

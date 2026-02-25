@@ -1,15 +1,16 @@
+import xml.etree.ElementTree as ET
+
 import mujoco
 import numpy as np
 import pytest
-import xml.etree.ElementTree as ET
-from build123d import Box, Compound, Align
+from build123d import Box, Compound
 
-from shared.models.schemas import PartMetadata, CompoundMetadata, JointMetadata
+from shared.models.schemas import CompoundMetadata, JointMetadata, PartMetadata
 from worker_heavy.simulation.builder import (
+    CommonAssemblyTraverser,
     MeshProcessor,
     SceneCompiler,
     SimulationBuilder,
-    CommonAssemblyTraverser,
 )
 
 

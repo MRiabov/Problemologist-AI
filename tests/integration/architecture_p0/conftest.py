@@ -1,7 +1,7 @@
-import pytest
-import pytest_asyncio
 import os
+
 import httpx
+import pytest_asyncio
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")

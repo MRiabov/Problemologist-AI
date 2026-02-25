@@ -1,5 +1,3 @@
-from worker_heavy.workbenches.base import AnalyzeFunction, Workbench, WorkbenchAnalyzer
-from worker_heavy.workbenches.config import load_config
 from shared.workers.workbench_models import (
     CostBreakdown,
     DFMReport,
@@ -8,6 +6,8 @@ from shared.workers.workbench_models import (
     MaterialDefinition,
     WorkbenchResult,
 )
+from worker_heavy.workbenches.base import AnalyzeFunction, Workbench, WorkbenchAnalyzer
+from worker_heavy.workbenches.config import load_config
 
 __all__ = [
     "AnalyzeFunction",

@@ -1,9 +1,7 @@
-import json
-import subprocess
 import os
-import sys
-import time
 import re
+import subprocess
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 

@@ -5,27 +5,27 @@ import httpx
 import pytest
 import yaml
 
+from shared.enums import FluidEvalAt, FluidShapeType
 from shared.models.schemas import (
-    ObjectivesYaml,
-    ObjectivesSection,
-    PhysicsConfig,
     BoundingBox,
-    MovedObject,
     Constraints,
+    FlowRateObjective,
+    FluidContainmentObjective,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
-    FluidContainmentObjective,
-    FlowRateObjective,
+    MovedObject,
+    ObjectivesSection,
+    ObjectivesYaml,
+    PhysicsConfig,
 )
+from shared.observability.schemas import SimulationBackendSelectedEvent
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
-    BenchmarkToolResponse,
     BenchmarkToolRequest,
+    BenchmarkToolResponse,
     WriteFileRequest,
 )
-from shared.simulation.schemas import SimulatorBackendType
-from shared.enums import FluidShapeType, FluidEvalAt
-from shared.observability.schemas import SimulationBackendSelectedEvent
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -103,7 +103,10 @@ def build():
         events = data.events
 
         # Verify event emission
-        event_dict = next((e for e in events if e.get("event_type") == "simulation_backend_selected"), None)
+        event_dict = next(
+            (e for e in events if e.get("event_type") == "simulation_backend_selected"),
+            None,
+        )
         assert event_dict is not None, "Missing simulation_backend_selected event"
 
         event = SimulationBackendSelectedEvent.model_validate(event_dict)

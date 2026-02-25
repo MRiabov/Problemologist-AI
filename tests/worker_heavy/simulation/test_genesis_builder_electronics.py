@@ -1,15 +1,12 @@
 import json
-import unittest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import tempfile
-import sys
-import os
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from shared.models.schemas import WireTerminal
 from worker_heavy.simulation.builder import GenesisSimulationBuilder
 from worker_heavy.simulation.genesis_backend import GenesisBackend
-import worker_heavy.workbenches.config
-from shared.models.schemas import WireConfig, WireTerminal
 
 
 class TestGenesisBuilderElectronics(unittest.TestCase):
@@ -53,7 +50,7 @@ class TestGenesisBuilderElectronics(unittest.TestCase):
         scene_path = self.output_dir / "scene.json"
         self.assertTrue(scene_path.exists())
 
-        with open(scene_path, "r") as f:
+        with open(scene_path) as f:
             data = json.load(f)
 
         self.assertIn("cables", data, "'cables' key missing in scene.json")

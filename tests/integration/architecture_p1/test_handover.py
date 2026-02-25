@@ -60,7 +60,7 @@ async def test_benchmark_to_engineer_handoff():
                 if last_status == EpisodeStatus.PLANNED:
                     await client.post(
                         f"/benchmark/{session_id}/confirm",
-                        json=ConfirmRequest(comment="Handoff confirm").model_dump()
+                        json=ConfirmRequest(comment="Handoff confirm").model_dump(),
                     )
                 if last_status == EpisodeStatus.COMPLETED:
                     benchmark_completed = True

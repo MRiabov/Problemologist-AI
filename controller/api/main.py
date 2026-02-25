@@ -2,6 +2,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from temporalio.client import Client
 
 from controller.api import ops
@@ -13,7 +14,6 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger, log_marker_middleware
-from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 configure_logging("controller")
@@ -77,8 +77,12 @@ app.include_router(simulation.router)
 app.include_router(steerability.router, prefix="/api/v1")
 
 
+from controller.api.schemas import (
+    AgentRunRequest,
+    AgentRunResponse,
+    EpisodeCreateResponse,
+)
 from controller.api.tasks import execute_agent_task
-from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeCreateResponse
 
 
 @app.post("/test/episodes", status_code=201, response_model=EpisodeCreateResponse)

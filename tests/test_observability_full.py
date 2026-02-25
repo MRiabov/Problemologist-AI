@@ -23,7 +23,6 @@ from shared.observability.schemas import (
     ReviewDecisionEvent,
     RunCommandToolEvent,
     SceneValidationEvent,
-    FailureReason as SimulationFailureMode,
     SimulationInstabilityEvent,
     SimulationRequestEvent,
     SimulationResultEvent,
@@ -32,6 +31,9 @@ from shared.observability.schemas import (
     SubmissionValidationEvent,
     ToolInvocationEvent,
     WriteFileToolEvent,
+)
+from shared.observability.schemas import (
+    FailureReason as SimulationFailureMode,
 )
 
 

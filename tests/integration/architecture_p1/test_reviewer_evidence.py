@@ -1,8 +1,8 @@
 import asyncio
 import uuid
-import yaml
 
 import pytest
+import yaml
 from httpx import AsyncClient
 
 from controller.api.schemas import (
@@ -130,7 +130,9 @@ async def test_reviewer_evidence_completeness():
                         frontmatter = ReviewFrontmatter.model_validate(raw_frontmatter)
 
                         # Check for evidence in comments or other fields
-                        if frontmatter.decision and (frontmatter.comments or "images_viewed" in raw_frontmatter):
+                        if frontmatter.decision and (
+                            frontmatter.comments or "images_viewed" in raw_frontmatter
+                        ):
                             passed_evidence_check = True
                             break
                 except Exception:

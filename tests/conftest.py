@@ -1,6 +1,5 @@
 import httpx
 import pytest
-import os
 
 SERVICES = [
     "http://127.0.0.1:18000",  # Controller

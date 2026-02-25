@@ -1,9 +1,11 @@
 import dspy
 import structlog
-from controller.agent.state import AgentState
-from .base import BaseNode, SharedNodeContext
-from shared.type_checking import type_check
+
 from controller.agent.config import settings
+from controller.agent.state import AgentState
+from shared.type_checking import type_check
+
+from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
 

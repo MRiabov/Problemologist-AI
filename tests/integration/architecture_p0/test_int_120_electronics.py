@@ -1,25 +1,26 @@
+import uuid
+
 import httpx
 import pytest
 import yaml
-import uuid
 
+from shared.enums import ElectronicComponentType
 from shared.models.schemas import (
+    AssemblyConstraints,
     AssemblyDefinition,
-    ElectronicsSection,
+    CostTotals,
     ElectronicComponent,
+    ElectronicsSection,
+    PowerSupplyConfig,
     WireConfig,
     WireTerminal,
-    PowerSupplyConfig,
-    AssemblyConstraints,
-    CostTotals,
 )
 from shared.workers.schema import (
-    ElectronicsValidationRequest,
-    BenchmarkToolResponse,
     BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    ElectronicsValidationRequest,
     WriteFileRequest,
 )
-from shared.enums import ElectronicComponentType
 
 # Constants
 WORKER_HEAVY_URL = "http://localhost:18002"

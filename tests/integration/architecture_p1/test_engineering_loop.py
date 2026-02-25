@@ -62,7 +62,7 @@ async def test_engineering_full_loop():
                 if status == EpisodeStatus.PLANNED:
                     await client.post(
                         f"/benchmark/{benchmark_session_id}/confirm",
-                        json=ConfirmRequest(comment="Proceed").model_dump()
+                        json=ConfirmRequest(comment="Proceed").model_dump(),
                     )
                 elif status == EpisodeStatus.COMPLETED:
                     break

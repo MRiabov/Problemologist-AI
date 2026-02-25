@@ -817,16 +817,13 @@ class GenesisBackend(PhysicsBackend):
             nodes = state.pos[0].cpu().numpy()
             stress = state.von_mises[0].cpu().numpy()
             return StressField(nodes=nodes, stress=stress)
-        elif hasattr(state, "pos") and state.pos.ndim == 3:
+        if hasattr(state, "pos") and state.pos.ndim == 3:
             # It's a node-based entity (FEM). If von_mises is missing, it might have exploded.
             nodes = state.pos[0].cpu().numpy()
             # Return NaNs to indicate we know it's FEM but stress is unavailable (likely due to instability)
             stress = np.full(len(nodes), np.nan)
             return StressField(nodes=nodes, stress=stress)
-        else:
-            logger.debug(
-                "state_missing_von_mises", body_id=body_id, attributes=dir(state)
-            )
+        logger.debug("state_missing_von_mises", body_id=body_id, attributes=dir(state))
 
         return None
 
@@ -1207,7 +1204,6 @@ class GenesisBackend(PhysicsBackend):
     def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
         """Apply position jitter to a body in Genesis using qpos."""
         import torch
-        import genesis as gs
 
         if body_name in self.entities:
             entity = self.entities[body_name]
