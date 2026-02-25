@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AgentRunRequest } from '../models/AgentRunRequest';
+import type { AgentRunResponse } from '../models/AgentRunResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -54,12 +55,12 @@ export class DefaultService {
     /**
      * Run Agent
      * @param requestBody
-     * @returns any Successful Response
+     * @returns AgentRunResponse Successful Response
      * @throws ApiError
      */
     public static runAgentAgentRunPost(
         requestBody: AgentRunRequest,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<AgentRunResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/agent/run',

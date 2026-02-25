@@ -3527,5 +3527,357 @@
         "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_simulation_navigation_timeline(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_166.py:40: AssertionError"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-25T05:56:05.816506",
+    "status": "failed",
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 209.021,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 7.459,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 29.553,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 15.449,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 39.253,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      },
+      {
+        "name": "test_cad_topology_selection_and_browser[chromium]",
+        "classname": "tests.integration.frontend.test_int_165",
+        "time": 39.007,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_cad_topology_selection_and_browser(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        # Note: We expect the 3D viewer to load after this.\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_165.py:42: AssertionError"
+      },
+      {
+        "name": "test_simulation_navigation_timeline[chromium]",
+        "classname": "tests.integration.frontend.test_int_166",
+        "time": 45.479,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_simulation_navigation_timeline(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_166.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T06:03:17.359276",
+    "status": "failed",
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 243.513,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 7.428,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 29.079,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 15.815,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 50.734,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      },
+      {
+        "name": "test_cad_topology_selection_and_browser[chromium]",
+        "classname": "tests.integration.frontend.test_int_165",
+        "time": 51.227,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_cad_topology_selection_and_browser(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        # Note: We expect the 3D viewer to load after this.\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_165.py:42: AssertionError"
+      },
+      {
+        "name": "test_simulation_navigation_timeline[chromium]",
+        "classname": "tests.integration.frontend.test_int_166",
+        "time": 50.943,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_simulation_navigation_timeline(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_166.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T06:07:23.095009",
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 80.947,
+    "tests": [
+      {
+        "name": "test_int_002_controller_worker_execution_boundary",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 80.881,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T06:12:41.344473",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 47.631,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 47.46,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T06:28:21.717443",
+    "status": "failed",
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 219.642,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 5.806,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 30.896,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 19.066,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 48.344,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      },
+      {
+        "name": "test_cad_topology_selection_and_browser[chromium]",
+        "classname": "tests.integration.frontend.test_int_165",
+        "time": 45.915,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_cad_topology_selection_and_browser(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        # Note: We expect the 3D viewer to load after this.\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_165.py:42: AssertionError"
+      },
+      {
+        "name": "test_simulation_navigation_timeline[chromium]",
+        "classname": "tests.integration.frontend.test_int_166",
+        "time": 46.524,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_simulation_navigation_timeline(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple cube benchmark.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_166.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:06:23.616779",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 45.463,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 45.327,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:12:46.961553",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 122.282,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 122.105,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\ntests/integration/frontend/test_int_164.py:33: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:15:11.129361",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 45.19,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 45.0,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:21:43.909321",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 45.957,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 45.789,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           33 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:27:21.283490",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 45.773,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 45.623,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n>       expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\nE       AssertionError: Locator expected not to be visible\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(\"No Assets Loaded\")\nE           32 \u00d7 locator resolved to <h3 class=\"text-sm font-bold text-slate-200\">No Assets Loaded</h3>\nE              - unexpected value \"visible\"\n\ntests/integration/frontend/test_int_164.py:40: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:30:25.451213",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 47.249,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 46.954,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column\n        line_number = page.get_by_text(\"1\", exact=True).first\n        expect(line_number).to_be_visible()\n    \n        # Simulate line selection (clicking line number)\n        line_number.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.locator(\".bg-blue-500\\\\/10\")  # Context card styling\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for locator(\".bg-blue-500\\\\/10\")\n\ntests/integration/frontend/test_int_164.py:59: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:32:23.889492",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 1,
+    "duration": 0.367,
+    "tests": [
+      {
+        "name": "tests.integration.frontend.test_int_164",
+        "classname": "",
+        "time": 0.0,
+        "status": "error",
+        "message": ".venv/lib/python3.12/site-packages/_pytest/python.py:507: in importtestmodule\n    mod = import_path(\n.venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path\n    importlib.import_module(module_name)\n/usr/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n<frozen importlib._bootstrap>:1387: in _gcd_import\n    ???\n<frozen importlib._bootstrap>:1360: in _find_and_load\n    ???\n<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked\n    ???\n<frozen importlib._bootstrap>:935: in _load_unlocked\n    ???\n.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:188: in exec_module\n    source_stat, co = _rewrite_test(fn, self.config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test\n    tree = ast.parse(source, filename=strfn)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.12/ast.py:52: in parse\n    return compile(source, filename, mode, flags,\nE     File \"/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/frontend/test_int_164.py\", line 58\nE       context_card = page.get_by_test_id(\"context-card\")\nE   IndentationError: unexpected indent"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-25T07:35:06.467947",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 61.098,
+    "tests": [
+      {
+        "name": "test_code_viewer_line_selection_and_mentions[chromium]",
+        "classname": "tests.integration.frontend.test_int_164",
+        "time": 60.952,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_code_viewer_line_selection_and_mentions(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page\n        benchmark_link = page.get_by_role(\"link\", name=\"Benchmark\")\n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = \"Create a simple benchmark for moving a ball.\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the \"Confirm & Start\" button to appear and click it\n        confirm_button = page.get_by_role(\"button\", name=\"Confirm & Start\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # 7. Wait for assets to be generated (Send Message button returns)\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # Ensure Viewport overlays are gone before proceeding\n        expect(page.get_by_text(\"No Assets Loaded\")).not_to_be_visible(timeout=30000)\n        expect(page.get_by_text(\"No Model Loaded\")).not_to_be_visible(timeout=30000)\n    \n        # 8. Open a file in the code viewer\n        # Clicking script.py in the file tree\n        script_file = page.get_by_text(\"script.py\")\n        expect(script_file).to_be_visible(timeout=30000)\n        script_file.click()\n    \n        # 9. Select lines in the code viewer\n        # Line numbers are usually in a specific column\n        line_number = page.get_by_text(\"1\", exact=True).first\n        expect(line_number).to_be_visible()\n    \n        # Simulate line selection (clicking line number)\n        line_number.click()\n    \n        # 10. Verify Context Card appears in chat input area\n        context_card = page.get_by_test_id(\"context-card\")\n>       expect(context_card).to_be_visible()\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 5000ms\nE         - waiting for get_by_test_id(\"context-card\")\n\ntests/integration/frontend/test_int_164.py:58: AssertionError"
+      }
+    ]
   }
 ]

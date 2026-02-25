@@ -2,7 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { BenchmarkConfirmResponse } from '../models/BenchmarkConfirmResponse';
 import type { BenchmarkGenerateRequest } from '../models/BenchmarkGenerateRequest';
+import type { BenchmarkGenerateResponse } from '../models/BenchmarkGenerateResponse';
+import type { BenchmarkObjectivesResponse } from '../models/BenchmarkObjectivesResponse';
 import type { ConfirmRequest } from '../models/ConfirmRequest';
 import type { controller__api__schemas__EpisodeResponse } from '../models/controller__api__schemas__EpisodeResponse';
 import type { UpdateObjectivesRequest } from '../models/UpdateObjectivesRequest';
@@ -14,12 +17,12 @@ export class BenchmarkService {
      * Generate Benchmark
      * Trigger a new benchmark generation session.
      * @param requestBody
-     * @returns any Successful Response
+     * @returns BenchmarkGenerateResponse Successful Response
      * @throws ApiError
      */
     public static generateBenchmarkBenchmarkGeneratePost(
         requestBody: BenchmarkGenerateRequest,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<BenchmarkGenerateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/benchmark/generate',
@@ -35,13 +38,13 @@ export class BenchmarkService {
      * Confirm and continue benchmark generation after planning.
      * @param sessionId
      * @param requestBody
-     * @returns any Successful Response
+     * @returns BenchmarkConfirmResponse Successful Response
      * @throws ApiError
      */
     public static confirmBenchmarkBenchmarkSessionIdConfirmPost(
         sessionId: string,
         requestBody: ConfirmRequest,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<BenchmarkConfirmResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/benchmark/{session_id}/confirm',
@@ -80,13 +83,13 @@ export class BenchmarkService {
      * Update objectives.yaml for a specific session.
      * @param sessionId
      * @param requestBody
-     * @returns any Successful Response
+     * @returns BenchmarkObjectivesResponse Successful Response
      * @throws ApiError
      */
     public static updateObjectivesBenchmarkSessionIdObjectivesPost(
         sessionId: string,
         requestBody: UpdateObjectivesRequest,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<BenchmarkObjectivesResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/benchmark/{session_id}/objectives',

@@ -4,7 +4,14 @@ import uuid
 import httpx
 import pytest
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse, ReviewResponse
+from pydantic import TypeAdapter
+
+from controller.api.schemas import (
+    AgentRunResponse,
+    CotsSearchItem,
+    EpisodeResponse,
+    ReviewResponse,
+)
 from shared.workers.schema import FsFileEntry
 
 # Constants
@@ -42,16 +49,16 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
             pytest.skip("COTS search endpoint not implemented on controller")
 
         assert resp.status_code == 200
-        search_results = resp.json()
+        search_results = TypeAdapter(list[CotsSearchItem]).validate_python(resp.json())
         assert isinstance(search_results, list)
 
         if len(search_results) > 0:
             part = search_results[0]
-            # INT-013: Required fields — validate as dict since COTS part schema
-            # may vary; existence check is the contract here.
-            required_fields = ["part_id", "manufacturer", "price", "source"]
-            for field in required_fields:
-                assert field in part, f"Missing {field} in COTS result"
+            # INT-013: Required fields — validate via model
+            assert part.part_id is not None
+            assert part.manufacturer is not None
+            assert part.price is not None
+            assert part.source is not None
 
         # INT-012: Read-only check
         # Verify that after search, no new files are created in a dummy session

@@ -3,6 +3,7 @@ import time
 import httpx
 import pytest
 
+from controller.api.schemas import OpenAPISchema
 from shared.workers.schema import (
     WriteFileRequest,
     DeleteFileRequest,
@@ -98,16 +99,16 @@ async def test_int_062_worker_openapi_contract():
         # Check Worker Light OpenAPI
         resp = await client.get(f"{WORKER_LIGHT_URL}/openapi.json")
         assert resp.status_code == 200
-        light_schema = resp.json()
-        paths = light_schema.get("paths", {})
+        light_schema = OpenAPISchema.model_validate(resp.json())
+        paths = light_schema.paths
         assert "/fs/ls" in paths
         assert "/assets/{path}" in paths
 
         # Check Worker Heavy OpenAPI
         resp = await client.get(f"{WORKER_HEAVY_URL}/openapi.json")
         assert resp.status_code == 200
-        heavy_schema = resp.json()
-        paths = heavy_schema.get("paths", {})
+        heavy_schema = OpenAPISchema.model_validate(resp.json())
+        paths = heavy_schema.paths
         assert "/benchmark/simulate" in paths
         assert "/benchmark/validate" in paths
 
