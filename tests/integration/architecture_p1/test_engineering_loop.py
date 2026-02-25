@@ -5,14 +5,19 @@ import pytest
 from httpx import AsyncClient
 
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
+    ArtifactEntry,
+    BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
+from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p1
@@ -35,10 +40,11 @@ async def test_engineering_full_loop():
     ) as client:  # Longer timeout for full loop
         # 1. Setup: Generate a Benchmark (or use a mocked ID if testing against mock)
         # For integration, we generate one.
-        prompt = "Create a benchmark about stacking blocks."
-        resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
+        request = BenchmarkGenerateRequest(
+            prompt="Create a benchmark about stacking blocks.",
+            backend=SimulatorBackendType.GENESIS,
         )
+        resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -54,7 +60,10 @@ async def test_engineering_full_loop():
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 status = sess_data.status
                 if status == EpisodeStatus.PLANNED:
-                    await client.post(f"/benchmark/{benchmark_session_id}/confirm")
+                    await client.post(
+                        f"/benchmark/{benchmark_session_id}/confirm",
+                        json=ConfirmRequest(comment="Proceed").model_dump()
+                    )
                 elif status == EpisodeStatus.COMPLETED:
                     break
             await asyncio.sleep(2)
@@ -64,15 +73,13 @@ async def test_engineering_full_loop():
         # 2. Trigger Engineer Agent
         engineer_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
         task = f"Solve benchmark: {benchmark_session_id}"
-        run_payload = {
-            "task": task,
-            "session_id": engineer_session_id,
-            "benchmark_session_id": str(
-                benchmark_session_id
-            ),  # If API supports linking directly
-        }
+        run_request = AgentRunRequest(
+            task=task,
+            session_id=engineer_session_id,
+            metadata_vars={"benchmark_id": str(benchmark_session_id)},
+        )
 
-        run_resp = await client.post("/agent/run", json=run_payload)
+        run_resp = await client.post("/agent/run", json=run_request.model_dump())
         assert run_resp.status_code in [
             200,
             202,
@@ -106,8 +113,8 @@ async def test_engineering_full_loop():
         assert artifacts_resp.status_code == 200, (
             f"Failed to fetch artifacts for {engineer_session_id}: {artifacts_resp.text}"
         )
-        artifacts = artifacts_resp.json()
-        artifact_paths = [a["path"] for a in artifacts]
+        artifacts = [ArtifactEntry.model_validate(a) for a in artifacts_resp.json()]
+        artifact_paths = [a.path for a in artifacts]
 
         # Check for Planner artifacts
         assert any("plan.md" in p for p in artifact_paths), (
@@ -126,6 +133,3 @@ async def test_engineering_full_loop():
         assert len(review_files) > 0, (
             f"No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing). Artifacts: {artifact_paths}"
         )
-
-        # We could inspect content here if we had content access,
-        # to verify "typed decision" (e.g. accepted/rejected in frontmatter)

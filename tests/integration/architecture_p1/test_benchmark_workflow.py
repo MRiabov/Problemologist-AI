@@ -5,13 +5,16 @@ from httpx import AsyncClient
 
 from controller.api.schemas import (
     ArtifactEntry,
+    BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
+from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://localhost:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000"
 
 
 @pytest.mark.integration_p1
@@ -27,24 +30,18 @@ async def test_benchmark_planner_cad_reviewer_path():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
-        prompt = "Create a simple path planning benchmark with a wall and a goal."
-        resp = await client.post(
-            "/benchmark/generate", json={"prompt": prompt, "backend": "genesis"}
+        request = BenchmarkGenerateRequest(
+            prompt="Create a simple path planning benchmark with a wall and a goal.",
+            backend=SimulatorBackendType.GENESIS,
         )
+        resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
         ], f"Failed to trigger benchmark: {resp.text}"
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
         session_id = str(benchmark_resp.session_id)
-        # Override with INT-031 prefix for mock routing if needed,
-        # but the controller generated a UUID.
-        # Actually, the mock LM handles UUIDs by routing to 'benchmark' scenario.
-        # If I want to use 'INT-031' specifically, I should probably pass it if the API allowed,
-        # but /benchmark/generate generates its own UUID.
-        # Wait, the MockDSPyLM routes UUIDs to 'benchmark'.
-        # 'benchmark' in mock_responses.yaml is already defined.
-        # Let's check 'benchmark' scenario in mock_responses.yaml.
+
         max_retries = 150
         benchmark_completed = False
         last_status = None
@@ -58,7 +55,10 @@ async def test_benchmark_planner_cad_reviewer_path():
 
                 if last_status == EpisodeStatus.PLANNED and not confirmed:
                     # WP08: Call confirm to continue from planning to execution
-                    confirm_resp = await client.post(f"/benchmark/{session_id}/confirm")
+                    confirm_resp = await client.post(
+                        f"/benchmark/{session_id}/confirm",
+                        json=ConfirmRequest(comment="Looks good").model_dump()
+                    )
                     assert confirm_resp.status_code in [200, 202]
                     confirmed = True
 
