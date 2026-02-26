@@ -4063,5 +4063,323 @@
         "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_test_id(\"chat-confirm-button\")\n\ntests/integration/frontend/p0/test_int_173.py:32: AssertionError"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-26T09:00:02.546955",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.786,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 189.077,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:09:07.763859",
+    "status": "failed",
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 220.721,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.377,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.486,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 181.45,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:18:32.828653",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.448,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 187.645,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:25:39.055484",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.206,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.464,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:37:33.932961",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.935,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.828,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T16:47:48.448494",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 325.397,
+    "tests": [
+      {
+        "name": "test_int_102_111_fem_material_validation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 236.381,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_103_part_breakage_detection",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 10.368,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_104_stress_reporting",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 10.768,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_107_stress_objective_evaluation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 10.182,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_109_physics_instability_abort",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 57.427,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T16:48:46.004826",
+    "status": "passed",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 13.218,
+    "tests": [
+      {
+        "name": "test_int_012_013_cots_search_contract_and_readonly",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.509,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_016_reviewer_decision_schema_gate",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 5.174,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_017_plan_refusal_loop",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.534,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T16:50:54.863811",
+    "status": "passed",
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 93.207,
+    "tests": [
+      {
+        "name": "test_int_005_mandatory_artifacts_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.437,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_006_plan_structure_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.185,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_007_todo_integrity",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.183,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_008_objectives_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.181,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_009_cost_estimation_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.205,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_caps_enforcement",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 87.285,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_015_engineer_handover_immutability",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 2.035,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_019_hard_constraints_gates",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.214,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_010_planner_pricing_script_integration",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.945,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_018_validate_and_price_integration_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.169,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T16:53:11.339816",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 99.103,
+    "tests": [
+      {
+        "name": "test_int_004_episode_artifact_persistence",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.702,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_trace_realtime_broadcast",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.204,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_target_caps_validation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.138,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 80.776,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_025_events_collection_e2e",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.193,
+        "status": "passed",
+        "message": null
+      }
+    ]
   }
 ]

@@ -1,111 +1,181 @@
 {
   "runs": [
     {
-      "timestamp": "2026-02-26T09:37:33.932961",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
+      "timestamp": "2026-02-26T17:17:48.910804",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
       "skipped": 0,
       "errors": 0,
-      "duration": 194.935,
+      "duration": 223.841,
       "tests": [
         {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 188.828,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "name": "test_int_001_compose_boot_health_contract",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.485,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_002_controller_worker_execution_boundary",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 10.365,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_003_session_filesystem_isolation",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.135,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_004_simulation_serialization",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 106.061,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_020_simulation_failure_taxonomy",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 6.451,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_021_runtime_randomization_robustness",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.332,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_022_motor_overload_behavior",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 6.273,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_023_fastener_validity_rules",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 86.917,
+          "status": "passed",
+          "message": null
         }
       ]
     },
     {
-      "timestamp": "2026-02-26T09:25:39.055484",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 193.206,
-      "tests": [
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 188.464,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-26T09:18:32.828653",
-      "status": "failed",
-      "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 193.448,
-      "tests": [
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 187.645,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-26T09:09:07.763859",
-      "status": "failed",
-      "total": 3,
+      "timestamp": "2026-02-26T17:06:26.662158",
+      "status": "passed",
+      "total": 2,
       "passed": 2,
-      "failed": 1,
+      "failed": 0,
       "skipped": 0,
       "errors": 0,
-      "duration": 220.721,
+      "duration": 15.177,
       "tests": [
         {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 17.377,
+          "name": "test_int_011_planner_target_caps_validation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.543,
           "status": "passed",
           "message": null
         },
         {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 17.486,
+          "name": "test_int_022_motor_overload_behavior",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 7.434,
           "status": "passed",
           "message": null
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 181.45,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-26T09:00:02.546955",
+      "timestamp": "2026-02-26T17:01:08.866585",
       "status": "failed",
-      "total": 1,
-      "passed": 0,
+      "total": 2,
+      "passed": 1,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 194.786,
+      "duration": 15.889,
       "tests": [
         {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 189.077,
+          "name": "test_int_011_planner_target_caps_validation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.51,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_011_planner_target_caps_validation():\n        \"\"\"INT-011: Verify planner target caps must be <= benchmark caps.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"test-caps-{uuid.uuid4().hex[:8]}\"\n    \n            # 1. Setup invalid assembly_definition.yaml (target > benchmark)\n            invalid_asm = \"\"\"\n    version: \"1.0\"\n    constraints:\n      benchmark_max_unit_cost_usd: 100.0\n      benchmark_max_weight_g: 1000.0\n      planner_target_max_unit_cost_usd: 150.0  # INVALID: > 100.0\n      planner_target_max_weight_g: 500.0\n    totals:\n      estimated_unit_cost_usd: 10.0\n      estimated_weight_g: 100.0\n      estimate_confidence: high\n    \"\"\"\n            write_req = WriteFileRequest(path=\"assembly_definition.yaml\", content=invalid_asm)\n            await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/write\",\n                json=write_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # 2. Setup dummy script.py\n            script = \"from build123d import Box\\ndef build(): return Box(1, 1, 1)\"\n            write_script_req = WriteFileRequest(path=\"script.py\", content=script)\n            await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/write\",\n                json=write_script_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # 3. Call validate and expect failure\n            val_req = BenchmarkToolRequest(script_path=\"script.py\")\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/validate\",\n                json=val_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            assert resp.status_code == 200\n            data = BenchmarkToolResponse.model_validate(resp.json())\n>           assert not data.success\nE           AssertionError: assert not True\nE            +  where True = BenchmarkToolResponse(success=True, message='Validation successful', confidence='high', artifacts=SimulationArtifacts(render_paths=[], mjcf_content=None, stress_summaries=[], fluid_metrics=[], circuit_validation_result=None, scene_path=None, failure=None, verification_result=None, total_cost=None, total_weight_g=None), events=[]).success\n\ntests/integration/architecture_p0/test_missing_p0.py:137: AssertionError"
+        },
+        {
+          "name": "test_int_022_motor_overload_behavior",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 7.572,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T16:56:54.395273",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 18.537,
+      "tests": [
+        {
+          "name": "test_int_053_temporal_workflow_lifecycle",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 5.692,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_055_s3_artifact_upload_logging",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 0.862,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_054_temporal_failure_path",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 3.813,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_056_s3_upload_failure_retry",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 1.179,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T16:55:49.147549",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 111.5,
+      "tests": [
+        {
+          "name": "test_int_020_simulation_failure_taxonomy",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 104.551,
+          "status": "passed",
+          "message": null
         }
       ]
     }
