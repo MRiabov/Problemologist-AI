@@ -4063,5 +4063,1362 @@
         "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_test_id(\"chat-confirm-button\")\n\ntests/integration/frontend/p0/test_int_173.py:32: AssertionError"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-26T09:00:02.546955",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.786,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 189.077,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:09:07.763859",
+    "status": "failed",
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 220.721,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.377,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.486,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 181.45,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:18:32.828653",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.448,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 187.645,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:25:39.055484",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.206,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.464,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:37:33.932961",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.935,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.828,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:19:30.656891",
+    "status": "failed",
+    "total": 5,
+    "passed": 2,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 547.204,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 5.299,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 15.986,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 186.434,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      },
+      {
+        "name": "test_int_172_plan_approval_control_placement[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_172",
+        "time": 187.23,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_172_plan_approval_control_placement(page: Page):\n        \"\"\"\n        INT-172: Approve/disapprove controls are available in both expected UI locations\n        (chat-bottom and file-explorer/top-right) when planning is complete; controls are\n        hidden/disabled before planner output is ready.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple benchmark for approval test {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n    \n        # Verify controls are hidden/disabled before planner output is ready\n        chat_confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        # We will just look for Confirm & Start in chat\n        expect(chat_confirm_button).not_to_be_visible()\n    \n        file_explorer_confirm_button = page.locator(\n            \"[data-testid='file-explorer-confirm-button']\"\n        )\n        expect(file_explorer_confirm_button).not_to_be_visible()\n    \n        # Send message to start planning\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card or completion of planning\n        expect(\n            page.get_by_text(re.compile(\"Execution Plan Ready\", re.IGNORECASE))\n>       ).to_be_visible(timeout=180000)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(re.compile(r\"Execution Plan Ready\", re.IGNORECASE))\n\ntests/integration/frontend/p0/test_int_172.py:46: AssertionError"
+      },
+      {
+        "name": "test_int_173_exact_pointing_payload[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_173",
+        "time": 127.424,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_test_id(\"chat-confirm-button\")\n\ntests/integration/frontend/p0/test_int_173.py:32: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:29:16.301371",
+    "status": "failed",
+    "total": 57,
+    "passed": 54,
+    "failed": 2,
+    "skipped": 1,
+    "errors": 0,
+    "duration": 169.961,
+    "tests": [
+      {
+        "name": "test_int_001_compose_boot_health_contract",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.094,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_002_controller_worker_execution_boundary",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 10.246,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_003_session_filesystem_isolation",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.107,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_004_simulation_serialization",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 21.71,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_020_simulation_failure_taxonomy",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 3.442,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_021_runtime_randomization_robustness",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.205,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_022_motor_overload_behavior",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 23.098,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_023_fastener_validity_rules",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 13.512,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_012_013_cots_search_contract_and_readonly",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.109,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_016_reviewer_decision_schema_gate",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.207,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_017_plan_refusal_loop",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.508,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_026_mandatory_event_families",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 3.228,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_027_seed_variant_tracking",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.193,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_028_strict_api_schema_contract",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.342,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_029_api_key_enforcement",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.287,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_030_interrupt_propagation",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 1.144,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.105,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.104,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.11,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_064_path_traversal_protection",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.104,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_102_111_fem_material_validation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 6.062,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_103_part_breakage_detection",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 4.408,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_104_stress_reporting",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 3.909,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_107_stress_objective_evaluation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 4.04,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_109_physics_instability_abort",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 1.072,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_108_tetrahedralization_pipeline",
+        "classname": "tests.integration.architecture_p0.test_int_108_meshing",
+        "time": 8.343,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_110_gpu_oom_retry",
+        "classname": "tests.integration.architecture_p0.test_int_110_gpu_oom",
+        "time": 0.097,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_120_circuit_validation_gate",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.172,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_121_short_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.093,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_122_overcurrent_supply_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.089,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_123_overcurrent_wire_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.089,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_124_open_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.091,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_125_valid_circuit_totals",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 2.665,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_004_episode_artifact_persistence",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.126,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_trace_realtime_broadcast",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.135,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_target_caps_validation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.097,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.135,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_014_cots_propagation():\n        \"\"\"INT-014: Verify COTS data propagates into plan and assembly definition.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-014-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(\n                task=\"Design a mechanism with a servo motor\",\n                session_id=session_id,\n            )\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for agent to reach COMPLETED status\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n                pytest.fail(\"Agent did not complete planning in time\")\n    \n            # Verify plan.md contains COTS ID\n            read_plan_req = ReadFileRequest(path=\"plan.md\")\n            plan_resp = await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/read\",\n                json=read_plan_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert plan_resp.status_code == 200\n            plan_data = ReadFileResponse.model_validate(plan_resp.json())\n>           assert \"MOCK-MOTOR-ID\" in plan_data.content\nE           AssertionError: assert 'MOCK-MOTOR-ID' in '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n'\nE            +  where '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n' = ReadFileResponse(content='## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n').content\n\ntests/integration/architecture_p0/test_missing_p0.py:155: AssertionError"
+      },
+      {
+        "name": "test_int_025_events_collection_e2e",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.148,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_053_temporal_workflow_lifecycle",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 0.94,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_055_s3_artifact_upload_logging",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 0.588,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_054_temporal_failure_path",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 3.383,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_056_s3_upload_failure_retry",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 1.133,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_101_physics_backend_selection",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 6.482,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_105_fluid_containment_evaluation",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 1.648,
+        "status": "skipped",
+        "message": "Skipping Genesis MPM test on CPU due to performance constraints."
+      },
+      {
+        "name": "test_int_106_flow_rate_evaluation",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 1.05,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_112_mujoco_backward_compat",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 0.15,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_mandatory_artifacts_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.165,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_006_plan_structure_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.13,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_007_todo_integrity",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.131,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_008_objectives_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.135,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_009_cost_estimation_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.144,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_caps_enforcement",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.52,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_015_engineer_handover_immutability",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.647,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_019_hard_constraints_gates",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.143,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_010_planner_pricing_script_integration",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.202,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_018_validate_and_price_integration_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.134,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_multitenancy_repro",
+        "classname": "tests.integration.test_multitenancy_repro",
+        "time": 0.094,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_multitenancy_repro():\n        # Pre-warm: the first simulation on a fresh worker always takes long due to kernel compilation.\n        # We run a tiny dummy simulation to warm up the pool\n        # and we include both Box and Sphere to trigger all needed kernels.\n        print(\"Pre-warming Genesis cache...\")\n        warmup_script = \"\"\"\n    from build123d import Box, Sphere, Compound\n    from shared.models.schemas import PartMetadata\n    from shared.enums import ManufacturingMethod\n    def build():\n        b = Box(1, 1, 1)\n        b.metadata = PartMetadata(material_id=\"aluminum_6061\", manufacturing_method=ManufacturingMethod.THREE_DP)\n        s = Sphere(1)\n        s.metadata = PartMetadata(material_id=\"aluminum_6061\", manufacturing_method=ManufacturingMethod.THREE_DP)\n        return b + s\n    \"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            print(\"Warmup round...\")\n>           await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/simulate\",\n                headers={\"x-session-id\": \"warmup\"},\n                json={\n                    \"session_id\": \"warmup\",\n                    \"script_content\": warmup_script,\n                    \"smoke_test_mode\": True,\n                },\n                timeout=300.0,\n            )\n\ntests/integration/test_multitenancy_repro.py:86: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:30:03.898742",
+    "status": "passed",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 0.011,
+    "tests": []
+  },
+  {
+    "timestamp": "2026-02-26T10:31:17.895674",
+    "status": "passed",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 0.011,
+    "tests": []
+  },
+  {
+    "timestamp": "2026-02-26T10:38:20.109526",
+    "status": "failed",
+    "total": 57,
+    "passed": 54,
+    "failed": 2,
+    "skipped": 1,
+    "errors": 0,
+    "duration": 386.526,
+    "tests": [
+      {
+        "name": "test_int_001_compose_boot_health_contract",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.117,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_002_controller_worker_execution_boundary",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 10.298,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_003_session_filesystem_isolation",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.104,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_004_simulation_serialization",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 26.458,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_020_simulation_failure_taxonomy",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 4.045,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_021_runtime_randomization_robustness",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.228,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_022_motor_overload_behavior",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 26.207,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_023_fastener_validity_rules",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 14.206,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_012_013_cots_search_contract_and_readonly",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.122,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_016_reviewer_decision_schema_gate",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.228,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_017_plan_refusal_loop",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.507,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_026_mandatory_event_families",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 3.305,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_027_seed_variant_tracking",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.216,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_028_strict_api_schema_contract",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.296,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_029_api_key_enforcement",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 0.242,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_030_interrupt_propagation",
+        "classname": "tests.integration.architecture_p0.test_int_026_030",
+        "time": 1.242,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.135,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.099,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.13,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_064_path_traversal_protection",
+        "classname": "tests.integration.architecture_p0.test_int_061_064",
+        "time": 0.124,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_102_111_fem_material_validation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 195.422,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_103_part_breakage_detection",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 15.786,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_104_stress_reporting",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 3.951,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_107_stress_objective_evaluation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 3.649,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_109_physics_instability_abort",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 0.973,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_108_tetrahedralization_pipeline",
+        "classname": "tests.integration.architecture_p0.test_int_108_meshing",
+        "time": 8.951,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_110_gpu_oom_retry",
+        "classname": "tests.integration.architecture_p0.test_int_110_gpu_oom",
+        "time": 0.101,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_120_circuit_validation_gate",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.176,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_121_short_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.1,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_122_overcurrent_supply_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.097,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_123_overcurrent_wire_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.093,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_124_open_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.093,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_125_valid_circuit_totals",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 2.492,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_004_episode_artifact_persistence",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.119,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_trace_realtime_broadcast",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.12,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_target_caps_validation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.096,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.126,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_014_cots_propagation():\n        \"\"\"INT-014: Verify COTS data propagates into plan and assembly definition.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-014-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(\n                task=\"Design a mechanism with a servo motor\",\n                session_id=session_id,\n            )\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for agent to reach COMPLETED status\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n                pytest.fail(\"Agent did not complete planning in time\")\n    \n            # Verify plan.md contains COTS ID\n            read_plan_req = ReadFileRequest(path=\"plan.md\")\n            plan_resp = await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/read\",\n                json=read_plan_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert plan_resp.status_code == 200\n            plan_data = ReadFileResponse.model_validate(plan_resp.json())\n>           assert \"MOCK-MOTOR-ID\" in plan_data.content\nE           AssertionError: assert 'MOCK-MOTOR-ID' in '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n'\nE            +  where '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n' = ReadFileResponse(content='## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n').content\n\ntests/integration/architecture_p0/test_missing_p0.py:155: AssertionError"
+      },
+      {
+        "name": "test_int_025_events_collection_e2e",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.134,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_053_temporal_workflow_lifecycle",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 0.952,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_055_s3_artifact_upload_logging",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 0.522,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_054_temporal_failure_path",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 3.351,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_056_s3_upload_failure_retry",
+        "classname": "tests.integration.architecture_p0.test_observability",
+        "time": 1.125,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_101_physics_backend_selection",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 5.787,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_105_fluid_containment_evaluation",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 2.476,
+        "status": "skipped",
+        "message": "Skipping Genesis MPM test on CPU due to performance constraints."
+      },
+      {
+        "name": "test_int_106_flow_rate_evaluation",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 1.053,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_112_mujoco_backward_compat",
+        "classname": "tests.integration.architecture_p0.test_physics_fluids",
+        "time": 0.174,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_mandatory_artifacts_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.164,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_006_plan_structure_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.132,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_007_todo_integrity",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.129,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_008_objectives_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.132,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_009_cost_estimation_validation",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.14,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_caps_enforcement",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.222,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_015_engineer_handover_immutability",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.429,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_019_hard_constraints_gates",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.141,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_010_planner_pricing_script_integration",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 1.112,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_018_validate_and_price_integration_gate",
+        "classname": "tests.integration.architecture_p0.test_planner_gates",
+        "time": 0.116,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_multitenancy_repro",
+        "classname": "tests.integration.test_multitenancy_repro",
+        "time": 0.091,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_multitenancy_repro():\n        # Pre-warm: the first simulation on a fresh worker always takes long due to kernel compilation.\n        # We run a tiny dummy simulation to warm up the pool\n        # and we include both Box and Sphere to trigger all needed kernels.\n        print(\"Pre-warming Genesis cache...\")\n        warmup_script = \"\"\"\n    from build123d import Box, Sphere, Compound\n    from shared.models.schemas import PartMetadata\n    from shared.enums import ManufacturingMethod\n    def build():\n        b = Box(1, 1, 1)\n        b.metadata = PartMetadata(material_id=\"aluminum_6061\", manufacturing_method=ManufacturingMethod.THREE_DP)\n        s = Sphere(1)\n        s.metadata = PartMetadata(material_id=\"aluminum_6061\", manufacturing_method=ManufacturingMethod.THREE_DP)\n        return b + s\n    \"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            print(\"Warmup round...\")\n>           await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/simulate\",\n                headers={\"x-session-id\": \"warmup\"},\n                json={\n                    \"session_id\": \"warmup\",\n                    \"script_content\": warmup_script,\n                    \"smoke_test_mode\": True,\n                },\n                timeout=300.0,\n            )\n\ntests/integration/test_multitenancy_repro.py:86: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:40:18.393406",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 10.043,
+    "tests": [
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.493,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_014_cots_propagation():\n        \"\"\"INT-014: Verify COTS data propagates into plan and assembly definition.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-014-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(\n                task=\"Design a mechanism with a servo motor\",\n                session_id=session_id,\n            )\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for agent to reach COMPLETED status\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n                pytest.fail(\"Agent did not complete planning in time\")\n    \n            # Verify plan.md contains COTS ID\n            read_plan_req = ReadFileRequest(path=\"plan.md\")\n            plan_resp = await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/read\",\n                json=read_plan_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert plan_resp.status_code == 200\n            plan_data = ReadFileResponse.model_validate(plan_resp.json())\n>           assert \"MOCK-MOTOR-ID\" in plan_data.content\nE           AssertionError: assert 'MOCK-MOTOR-ID' in '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n'\nE            +  where '## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n' = ReadFileResponse(content='## 1. Solution Overview\\nDefault.\\n## 2. Parts List\\n- Default\\n## 3. Assembly Strategy\\n1. Default\\n## 4. Cost & Weight Budget\\n- Default\\n## 5. Risk Assessment\\n- Default\\n').content\n\ntests/integration/architecture_p0/test_missing_p0.py:155: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:42:20.867572",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 81.778,
+    "tests": [
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 75.756,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_014_cots_propagation():\n        \"\"\"INT-014: Verify COTS data propagates into plan and assembly definition.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"INT-014-{uuid.uuid4().hex[:8]}\"\n            run_req = AgentRunRequest(\n                task=\"Design a mechanism with a servo motor\",\n                session_id=session_id,\n            )\n            run_resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=run_req.model_dump(mode=\"json\"),\n            )\n            assert run_resp.status_code == 202\n            run_data = AgentRunResponse.model_validate(run_resp.json())\n            episode_id = run_data.episode_id\n    \n            # Wait for agent to reach COMPLETED status\n            max_attempts = 60\n            for _ in range(max_attempts):\n                await asyncio.sleep(5.0)\n                status_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                ep_data = EpisodeResponse.model_validate(status_resp.json())\n                if ep_data.status == EpisodeStatus.COMPLETED:\n                    break\n            else:\n                pytest.fail(\"Agent did not complete planning in time\")\n    \n            # Verify plan.md contains COTS ID\n            read_plan_req = ReadFileRequest(path=\"plan.md\")\n            plan_resp = await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/read\",\n                json=read_plan_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n            assert plan_resp.status_code == 200\n            plan_data = ReadFileResponse.model_validate(plan_resp.json())\n>           assert \"MOCK-MOTOR-ID\" in plan_data.content\nE           assert 'MOCK-MOTOR-ID' in \"# Engineering Plan\\n\\n<!-- \\nThis plan describes HOW you will solve the benchmark scenario defined in objectives.yaml.\\nThe plan must respect ALL constraints: build_zone boundaries, max_unit_cost, max_weight.\\nThink mechanically: slopes guide gravity, walls channel flow, motors provide energy.\\n-->\\n\\n## 1. Solution Overview\\n\\n<!--\\nDescribe your mechanical solution strategy in 2-3 sentences.\\nFocus on the CORE MECHANISM that guides the moved_object to the goal_zone.\\n\\nEXAMPLE (Ball-to-Funnel Problem):\\n> A sloped ramp guides the ball from the spawn position toward a central funnel.\\n> The funnel narrows to channel the ball precisely into the goal zone below.\\n> Side walls prevent escape paths and ensure robust capture across jitter variations.\\n-->\\n\\n- **Core Mechanism**: [e.g., Gravity-fed ramp with funnel collection]\\n- **Key Principle**: [e.g., Potential energy conversion, channeled flow, rotational sorting]\\n- **Robustness Strategy**: [e.g., Wide capture area, tapered guides, retry paths]\\n\\n## 2. Parts List\\n\\n<!--\\nList each part you will create. For EACH part, specify:\\n- Name (used in code as variable)\\n- Approximate dimensions (in mm)\\n- Material (must be compatible...-----------|\\n| Ball bounces off ramp | Medium | High | Add lip at ramp edges, roughen surface |\\n| Ball gets stuck in funnel | Low | High | Increase funnel taper angle to 45\u00b0 |\\n| Cost exceeds budget | Medium | Medium | Use thinner walls (2.5mm vs 3mm) |\\n| Ball escapes via jitter | High | High | Extend capture area beyond jitter range |\\n-->\\n\\n| Risk | Likelihood | Impact | Mitigation |\\n|------|------------|--------|------------|\\n| [risk description] | [Low/Med/High] | [Low/Med/High] | [mitigation strategy] |\\n\\n### Jitter Robustness Check\\n\\n<!--\\nThe moved_object has runtime_jitter and static_randomization.\\nYour solution MUST work across ALL possible spawn variations.\\n\\nCALCULATION:\\n- Spawn position: [X, Y, Z] from objectives.yaml\\n- Runtime jitter: \u00b1[X, Y, Z] mm\\n- Static randomization: [describe any radius/mass variations]\\n\\nYour capture mechanism must cover:\\n- X range: [spawn.X - jitter.X] to [spawn.X + jitter.X]\\n- Y range: [spawn.Y - jitter.Y] to [spawn.Y + jitter.Y]\\n- Z range: [spawn.Z - jitter.Z] to [spawn.Z + jitter.Z]\\n-->\\n\\n- Capture area covers spawn jitter: \u2610 Yes / \u2610 No\\n- Tested edge cases considered: [list which corners/extremes you've accounted for]\\n\"\nE            +  where \"# Engineering Plan\\n\\n<!-- \\nThis plan describes HOW you will solve the benchmark scenario defined in objectives.yaml.\\nThe plan must respect ALL constraints: build_zone boundaries, max_unit_cost, max_weight.\\nThink mechanically: slopes guide gravity, walls channel flow, motors provide energy.\\n-->\\n\\n## 1. Solution Overview\\n\\n<!--\\nDescribe your mechanical solution strategy in 2-3 sentences.\\nFocus on the CORE MECHANISM that guides the moved_object to the goal_zone.\\n\\nEXAMPLE (Ball-to-Funnel Problem):\\n> A sloped ramp guides the ball from the spawn position toward a central funnel.\\n> The funnel narrows to channel the ball precisely into the goal zone below.\\n> Side walls prevent escape paths and ensure robust capture across jitter variations.\\n-->\\n\\n- **Core Mechanism**: [e.g., Gravity-fed ramp with funnel collection]\\n- **Key Principle**: [e.g., Potential energy conversion, channeled flow, rotational sorting]\\n- **Robustness Strategy**: [e.g., Wide capture area, tapered guides, retry paths]\\n\\n## 2. Parts List\\n\\n<!--\\nList each part you will create. For EACH part, specify:\\n- Name (used in code as variable)\\n- Approximate dimensions (in mm)\\n- Material (must be compatible...-----------|\\n| Ball bounces off ramp | Medium | High | Add lip at ramp edges, roughen surface |\\n| Ball gets stuck in funnel | Low | High | Increase funnel taper angle to 45\u00b0 |\\n| Cost exceeds budget | Medium | Medium | Use thinner walls (2.5mm vs 3mm) |\\n| Ball escapes via jitter | High | High | Extend capture area beyond jitter range |\\n-->\\n\\n| Risk | Likelihood | Impact | Mitigation |\\n|------|------------|--------|------------|\\n| [risk description] | [Low/Med/High] | [Low/Med/High] | [mitigation strategy] |\\n\\n### Jitter Robustness Check\\n\\n<!--\\nThe moved_object has runtime_jitter and static_randomization.\\nYour solution MUST work across ALL possible spawn variations.\\n\\nCALCULATION:\\n- Spawn position: [X, Y, Z] from objectives.yaml\\n- Runtime jitter: \u00b1[X, Y, Z] mm\\n- Static randomization: [describe any radius/mass variations]\\n\\nYour capture mechanism must cover:\\n- X range: [spawn.X - jitter.X] to [spawn.X + jitter.X]\\n- Y range: [spawn.Y - jitter.Y] to [spawn.Y + jitter.Y]\\n- Z range: [spawn.Z - jitter.Z] to [spawn.Z + jitter.Z]\\n-->\\n\\n- Capture area covers spawn jitter: \u2610 Yes / \u2610 No\\n- Tested edge cases considered: [list which corners/extremes you've accounted for]\\n\" = ReadFileResponse(content=\"# Engineering Plan\\n\\n<!-- \\nThis plan describes HOW you will solve the benchmark scenario defined in objectives.yaml.\\nThe plan must respect ALL constraints: build_zone boundaries, max_unit_cost, max_weight.\\nThink mechanically: slopes guide gravity, walls channel flow, motors provide energy.\\n-->\\n\\n## 1. Solution Overview\\n\\n<!--\\nDescribe your mechanical solution strategy in 2-3 sentences.\\nFocus on the CORE MECHANISM that guides the moved_object to the goal_zone.\\n\\nEXAMPLE (Ball-to-Funnel Problem):\\n> A sloped ramp guides the ball from the spawn position toward a central funnel.\\n> The funnel narrows to channel the ball precisely into the goal zone below.\\n> Side walls prevent escape paths and ensure robust capture across jitter variations.\\n-->\\n\\n- **Core Mechanism**: [e.g., Gravity-fed ramp with funnel collection]\\n- **Key Principle**: [e.g., Potential energy conversion, channeled flow, rotational sorting]\\n- **Robustness Strategy**: [e.g., Wide capture area, tapered guides, retry paths]\\n\\n## 2. Parts List\\n\\n<!--\\nList each part you will create. For EACH part, specify:\\n- Name (used in code as variable)\\n- Approximate dimensions (in mm)\\n- Mat...----------|\\n| Ball bounces off ramp | Medium | High | Add lip at ramp edges, roughen surface |\\n| Ball gets stuck in funnel | Low | High | Increase funnel taper angle to 45\u00b0 |\\n| Cost exceeds budget | Medium | Medium | Use thinner walls (2.5mm vs 3mm) |\\n| Ball escapes via jitter | High | High | Extend capture area beyond jitter range |\\n-->\\n\\n| Risk | Likelihood | Impact | Mitigation |\\n|------|------------|--------|------------|\\n| [risk description] | [Low/Med/High] | [Low/Med/High] | [mitigation strategy] |\\n\\n### Jitter Robustness Check\\n\\n<!--\\nThe moved_object has runtime_jitter and static_randomization.\\nYour solution MUST work across ALL possible spawn variations.\\n\\nCALCULATION:\\n- Spawn position: [X, Y, Z] from objectives.yaml\\n- Runtime jitter: \u00b1[X, Y, Z] mm\\n- Static randomization: [describe any radius/mass variations]\\n\\nYour capture mechanism must cover:\\n- X range: [spawn.X - jitter.X] to [spawn.X + jitter.X]\\n- Y range: [spawn.Y - jitter.Y] to [spawn.Y + jitter.Y]\\n- Z range: [spawn.Z - jitter.Z] to [spawn.Z + jitter.Z]\\n-->\\n\\n- Capture area covers spawn jitter: \u2610 Yes / \u2610 No\\n- Tested edge cases considered: [list which corners/extremes you've accounted for]\\n\").content\n\ntests/integration/architecture_p0/test_missing_p0.py:155: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:46:23.557797",
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 79.57,
+    "tests": [
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 75.667,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T10:48:51.569883",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 91.551,
+    "tests": [
+      {
+        "name": "test_int_004_episode_artifact_persistence",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.463,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_trace_realtime_broadcast",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.141,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_target_caps_validation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.099,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 75.393,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_025_events_collection_e2e",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.144,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:03:10.999322",
+    "status": "failed",
+    "total": 4,
+    "passed": 1,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 34.333,
+    "tests": [
+      {
+        "name": "test_int_001_compose_boot_health_contract",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.104,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_002_controller_worker_execution_boundary",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 10.24,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_002_controller_worker_execution_boundary():\n        \"\"\"INT-002: Verify controller-worker handoff and execution status.\"\"\"\n        session_id = f\"INT-002-{int(time.time())}\"\n        task = \"Build a simple box of 10x10x10mm.\"\n    \n        async with httpx.AsyncClient(timeout=300.0) as client:\n            # Trigger agent run\n            req = AgentRunRequest(task=task, session_id=session_id)\n            resp = await client.post(\n                f\"{CONTROLLER_URL}/agent/run\",\n                json=req.model_dump(mode=\"json\"),\n                timeout=600.0,\n            )\n            assert resp.status_code == 202\n            agent_run_resp = AgentRunResponse.model_validate(resp.json())\n            episode_id = agent_run_resp.episode_id\n    \n            # Poll for status with increased timeout\n            max_attempts = 120\n            completed = False\n            for _ in range(max_attempts):\n                await asyncio.sleep(10.0)\n>               s_resp = await client.get(f\"{CONTROLLER_URL}/episodes/{episode_id}\")\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/integration/architecture_p0/test_architecture_p0.py:99: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1768: in get\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      },
+      {
+        "name": "test_int_003_session_filesystem_isolation",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.143,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\nworker_light_client = <httpx.AsyncClient object at 0x7f84d8a19ca0>\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_003_session_filesystem_isolation(worker_light_client):\n        \"\"\"INT-003: Verify sessions have isolated filesystems.\"\"\"\n        client = worker_light_client\n        session_a = f\"test-iso-a-{int(time.time())}\"\n        session_b = f\"test-iso-b-{int(time.time())}\"\n    \n        # Write to A\n        req_write = WriteFileRequest(path=\"test_iso.txt\", content=\"dummy_payload\")\n>       await client.post(\n            \"/fs/write\",\n            json=req_write.model_dump(mode=\"json\"),\n            headers={\"X-Session-ID\": session_a},\n        )\n\ntests/integration/architecture_p0/test_architecture_p0.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      },
+      {
+        "name": "test_int_004_simulation_serialization",
+        "classname": "tests.integration.architecture_p0.test_architecture_p0",
+        "time": 0.099,
+        "status": "failed",
+        "message": "@contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n>           yield\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:394: in handle_async_request\n    resp = await self._pool.handle_async_request(req)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:256: in handle_async_request\n    raise exc from None\n.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py:236: in handle_async_request\n    response = await connection.handle_async_request(\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:101: in handle_async_request\n    raise exc\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:78: in handle_async_request\n    stream = await self._connect(request)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_async/connection.py:124: in _connect\n    stream = await self._network_backend.connect_tcp(**kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpcore/_backends/auto.py:31: in connect_tcp\n    return await self._backend.connect_tcp(\n.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py:113: in connect_tcp\n    with map_exceptions(exc_map):\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nmap = {<class 'TimeoutError'>: <class 'httpcore.ConnectTimeout'>, <class 'OSError'>: <class 'httpcore.ConnectError'>, <class 'anyio.BrokenResourceError'>: <class 'httpcore.ConnectError'>}\n\n    @contextlib.contextmanager\n    def map_exceptions(map: ExceptionMapping) -> typing.Iterator[None]:\n        try:\n            yield\n        except Exception as exc:  # noqa: PIE786\n            for from_exc, to_exc in map.items():\n                if isinstance(exc, from_exc):\n>                   raise to_exc(exc) from exc\nE                   httpcore.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: ConnectError\n\nThe above exception was the direct cause of the following exception:\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_004_simulation_serialization():\n        \"\"\"INT-004: Verify simulation serialization schema and concurrency.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            # Create two sessions\n            session_id_1 = f\"test-ser-1-{int(time.time())}\"\n            session_id_2 = f\"test-ser-2-{int(time.time())}\"\n    \n            script = \"\"\"\n    from build123d import *\n    from shared.models.schemas import PartMetadata\n    def build():\n        b = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))\n        b.label = \"target_box\"\n        b.metadata = PartMetadata(material_id=\"aluminum_6061\", fixed=True)\n        return b\n    \"\"\"\n            # Write scripts\n            req_write = WriteFileRequest(path=\"box.py\", content=script)\n>           await asyncio.gather(\n                client.post(\n                    f\"{WORKER_LIGHT_URL}/fs/write\",\n                    json=req_write.model_dump(mode=\"json\"),\n                    headers={\"X-Session-ID\": session_id_1},\n                ),\n                client.post(\n                    f\"{WORKER_LIGHT_URL}/fs/write\",\n                    json=req_write.model_dump(mode=\"json\"),\n                    headers={\"X-Session-ID\": session_id_2},\n                ),\n            )\n\ntests/integration/architecture_p0/test_architecture_p0.py:157: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post\n    return await self.request(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request\n    return await self.send(request, auth=auth, follow_redirects=follow_redirects)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send\n    response = await self._send_handling_auth(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth\n    response = await self._send_handling_redirects(\n.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects\n    response = await self._send_single_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request\n    response = await transport.handle_async_request(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:393: in handle_async_request\n    with map_httpcore_exceptions():\n/usr/lib/python3.12/contextlib.py:158: in __exit__\n    self.gen.throw(value)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n    @contextlib.contextmanager\n    def map_httpcore_exceptions() -> typing.Iterator[None]:\n        global HTTPCORE_EXC_MAP\n        if len(HTTPCORE_EXC_MAP) == 0:\n            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()\n        try:\n            yield\n        except Exception as exc:\n            mapped_exc = None\n    \n            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():\n                if not isinstance(exc, from_exc):\n                    continue\n                # We want to map to the most specific exception we can find.\n                # Eg if `exc` is an `httpcore.ReadTimeout`, we want to map to\n                # `httpx.ReadTimeout`, not just `httpx.TimeoutException`.\n                if mapped_exc is None or issubclass(to_exc, mapped_exc):\n                    mapped_exc = to_exc\n    \n            if mapped_exc is None:  # pragma: no cover\n                raise\n    \n            message = str(exc)\n>           raise mapped_exc(message) from exc\nE           httpx.ConnectError: All connection attempts failed\n\n.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: ConnectError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:08:21.744771",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 195.353,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 189.709,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:17:29.072037",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 192.176,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 187.292,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:25:41.098885",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 191.783,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 187.285,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:27:45.794208",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 16.824,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 11.882,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n>       page.get_by_role(\"button\", name=\"Confirm & Start\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:175: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = <playwright._impl._connection.Connection object at 0x765161e94050>\ncb = <function Channel.send.<locals>.<lambda> at 0x765161b3d580>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: get_by_role(\"button\", name=\"Confirm & Start\") resolved to 2 elements:\nE               1) <button data-testid=\"chat-confirm-button\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 px-4 py-2 flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20\">\u2026</button> aka get_by_test_id(\"chat-confirm-button\")\nE               2) <button title=\"Confirm & Start Implementation\" data-testid=\"file-explorer-confirm-button\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground text-xs h-6 w-6 p-0 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-all\">\u2026</button> aka get_by_test_id(\"file-explorer-confirm-button\")\nE           \nE           Call log:\nE             - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: Error"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:29:11.954181",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 19.043,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 14.339,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n        page.get_by_test_id(\"chat-confirm-button\").click()\n    \n        # Wait for the agent to transition to RUNNING state in the UI\n        expect(page.get_by_text(re.compile(r\"thinking\", re.IGNORECASE))).to_be_visible(\n            timeout=30000\n        )\n    \n        # 5. Verify the comment is persisted as a trace via API\n        with httpx.Client() as client:\n            resp = client.get(f\"{CONTROLLER_URL}/episodes/\")\n            assert resp.status_code == 200\n            episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())\n    \n            # Find the episode we just created/confirmed\n            found_ep = None\n            for ep in episodes:\n                resp_ep = client.get(f\"{CONTROLLER_URL}/episodes/{ep.id}\")\n                assert resp_ep.status_code == 200\n                full_ep = EpisodeResponse.model_validate(resp_ep.json())\n                for trace in full_ep.traces:\n                    if trace.trace_type == TraceType.LOG and test_comment in (\n                        trace.content or \"\"\n                    ):\n                        found_ep = full_ep\n                        break\n                if found_ep:\n                    break\n    \n>           assert found_ep is not None, (\n                f\"Comment '{test_comment}' not found in any episode traces\"\n            )\nE           AssertionError: Comment 'Test Comment 0851902d-e51c-4ba9-bb20-dd2c75a55e46' not found in any episode traces\nE           assert None is not None\n\ntests/integration/frontend/p0/test_frontend_p0.py:203: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:32:18.543138",
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 17.909,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 13.604,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:33:40.994655",
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 18.498,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 14.187,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T11:57:29.781042",
+    "status": "failed",
+    "total": 7,
+    "passed": 4,
+    "failed": 3,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 199.506,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 12.21,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 13.363,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 7.99,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_172_plan_approval_control_placement[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_172",
+        "time": 7.431,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_173_exact_pointing_payload[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_173",
+        "time": 79.085,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n        expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\n    \n        # Wait for the model viewer to load and have assets\n        # E.g. waiting for no-assets-overlay to NOT be visible or waiting for a model to load\n        # Let's just wait a bit or wait for canvas\n        canvas = page.locator(\"canvas\").first\n        expect(canvas).to_be_visible(timeout=30000)\n    \n        # Enable part selection mode\n        part_selection = page.get_by_title(\"Part Selection\")\n        if part_selection.is_visible():\n>           part_selection.click()\n\ntests/integration/frontend/p0/test_int_173.py:47: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = <playwright._impl._connection.Connection object at 0x7afc690e3350>\ncb = <function Channel.send.<locals>.<lambda> at 0x7afc49c6fd80>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_title(\"Part Selection\")\nE               - locator resolved to <button title=\"Part Selection\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-7 w-7 rounded-full bg-primary text-primary-foreground\">\u2026</button>\nE             - attempting click action\nE               - waiting for element to be visible, enabled and stable\nE             - element was detached from the DOM, retrying\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
+      },
+      {
+        "name": "test_int_174_cad_show_hide_behavior[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_174",
+        "time": 47.351,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_174_cad_show_hide_behavior(page: Page):\n        \"\"\"\n        INT-174: Users can hide/show selected parts both in design and simulation views;\n        visibility toggles do not corrupt selection state or context-card creation\n        for visible entities.\n        \"\"\"\n        # 1. Navigate to the local development server\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # 2. Click \"CREATE NEW\" button\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        # 3. Enter the prompt\n        prompt_text = f\"Create a simple benchmark with two parts {uuid.uuid4()}\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 4. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 5. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n        expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\n    \n        # Wait for the model viewer to load\n        canvas = page.locator(\"canvas\").first\n        expect(canvas).to_be_visible(timeout=30000)\n    \n        # Open model browser if needed\n        model_browser = page.get_by_test_id(\"model-browser-panel\")\n        if not model_browser.is_visible():\n            toggle = page.get_by_test_id(\"model-browser-toggle\").first\n            if toggle.is_visible():\n                toggle.click()\n    \n        # Wait for nodes to appear in model browser\n        # We will hover over the first node and click the eye icon\n        first_node = page.locator(\".group\\\\/node\").first\n>       first_node.wait_for(state=\"visible\", timeout=30000)\n\ntests/integration/frontend/p0/test_int_174.py:59: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:18074: in wait_for\n    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:710: in wait_for\n    await self._frame.wait_for_selector(\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:369: in wait_for_selector\n    await self._channel.send(\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = <playwright._impl._connection.Connection object at 0x7afc690e3350>\ncb = <function Channel.send.<locals>.<lambda> at 0x7afc49c8c680>, is_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for locator(\".group\\\\/node\").first to be visible\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
+      },
+      {
+        "name": "test_int_177_feedback_modal_edit_recall[chromium]",
+        "classname": "tests.integration.frontend.p0.test_int_177",
+        "time": 8.657,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_int_177_feedback_modal_edit_recall(page: Page):\n        \"\"\"\n        INT-177: Feedback modal edit/recall + persistence contract\n        After output completion, user can open feedback modal, change thumbs direction\n        before submit, select topic(s), add text, and persisted feedback reflects final edited state.\n        \"\"\"\n        page.set_viewport_size({\"width\": 1280, \"height\": 720})\n        page.goto(FRONTEND_URL, timeout=60000)\n        page.evaluate(\"localStorage.clear()\")\n        page.reload()\n    \n        # 1. Start a session\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        unique_prompt = f\"Design a simple bracket INT-177 {uuid.uuid4()}\"\n        prompt_input = page.locator(\"#chat-input\")\n        prompt_input.wait_for(state=\"attached\", timeout=30000)\n        prompt_input.fill(unique_prompt)\n    \n        send_button = page.get_by_label(\"Send Message\")\n        send_button.click()\n    \n        # 2. Wait for generation to complete (indicators: check-circle/clock/layers/x-circle)\n        # Using the same selectors as INT-170 + x-circle\n        # We also wait for the status to change from RUNNING\n        page.wait_for_function(\n            \"() => !document.querySelector('.animate-pulse')?.parentElement?.innerText?.includes('RUNNING')\",\n            timeout=120000,\n        )\n    \n        page.wait_for_selector(\n            \".lucide-check-circle2, .lucide-clock, .lucide-layers, .lucide-x-circle\",\n            timeout=120000,\n        )\n    \n        # 3. Open feedback modal from sidebar episode feedback action\n        # Sidebar actions are shown on hover and target the selected episode's latest trace.\n        page.wait_for_selector('[data-testid=\"sidebar-episode-item\"]', timeout=60000)\n        episode_row = (\n            page.get_by_test_id(\"sidebar-episode-item\")\n            .filter(has_text=re.compile(\"INT-177\"))\n            .first\n        )\n        episode_row.hover()\n        thumbs_up_sidebar = episode_row.get_by_test_id(\"sidebar-thumbs-up\")\n        expect(thumbs_up_sidebar).to_be_visible(timeout=10000)\n        thumbs_up_sidebar.click()\n    \n        # 4. Verify modal opens and Thumbs Up is selected (score 1)\n        modal = page.get_by_test_id(\"feedback-modal\")\n        expect(modal).to_be_visible(timeout=10000)\n    \n        # Check if Thumbs Up is active in modal.\n        thumbs_up_modal = modal.get_by_test_id(\"modal-thumbs-up\")\n        expect(thumbs_up_modal).to_have_class(re.compile(r\"text-green-500\"))\n    \n        # 5. Click Thumbs Down in modal (change direction to score 0)\n        thumbs_down_modal = modal.get_by_test_id(\"modal-thumbs-down\")\n        thumbs_down_modal.click()\n    \n        # Verify Thumbs Down is now active\n        expect(thumbs_down_modal).to_have_class(re.compile(r\"text-red-500\"))\n    \n        # 6. Select a topic (e.g., \"Technical Error\")\n        topic_name = \"Technical Error\"\n        page.get_by_role(\"button\", name=topic_name).click()\n    \n        # 7. Fill text and submit\n        test_comment = f\"Actually it had a technical error {uuid.uuid4()}\"\n        page.get_by_placeholder(\"How can the agent improve?\").fill(test_comment)\n    \n        submit_button = page.get_by_role(\"button\", name=\"Send Feedback\")\n        expect(submit_button).to_be_enabled()\n        submit_button.click()\n    \n        # 8. Verify success state in UI\n        expect(page.get_by_text(\"Feedback Received\")).to_be_visible(timeout=30000)\n    \n        # 9. Verify via API that the final state (Thumbs Down + Comment) is persisted\n        with httpx.Client() as client:\n            # Get all episodes\n            resp = client.get(f\"{CONTROLLER_URL}/episodes/\")\n            assert resp.status_code == 200\n            episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())\n    \n            # The most recent episode should be ours\n            # Episode names usually match the prompt or truncated prompt\n            # But we can just check the last few episodes\n            found_feedback = False\n            for ep in episodes[:5]:  # Check first 5 episodes\n                resp_ep = client.get(f\"{CONTROLLER_URL}/episodes/{ep.id}\")\n                if resp_ep.status_code != 200:\n                    continue\n    \n                full_ep = EpisodeResponse.model_validate(resp_ep.json())\n                # Find the trace that has feedback\n                for trace in full_ep.traces:\n                    # Based on the implementation, feedback is likely attached to the assistant's message trace\n                    # In FeedbackSystem.tsx, submitTraceFeedback is called with traceId\n                    # Let's check if the feedback fields match\n                    if (\n                        trace.feedback_score == 0\n                        and trace.feedback_comment\n                        and f\"[{topic_name}] {test_comment}\" in trace.feedback_comment\n                    ):\n                        found_feedback = True\n                        break\n                if found_feedback:\n                    break\n    \n>           assert found_feedback, (\n                \"Persisted feedback did not match final edited state (Score: 0, Comment: [Topic] Text)\"\n            )\nE           AssertionError: Persisted feedback did not match final edited state (Score: 0, Comment: [Topic] Text)\nE           assert False\n\ntests/integration/frontend/p0/test_int_177.py:127: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T12:27:07.012250",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 1,
+    "duration": 0.535,
+    "tests": [
+      {
+        "name": "tests.integration.frontend.p0.test_int_174",
+        "classname": "",
+        "time": 0.0,
+        "status": "error",
+        "message": ".venv/lib/python3.12/site-packages/_pytest/python.py:507: in importtestmodule\n    mod = import_path(\n.venv/lib/python3.12/site-packages/_pytest/pathlib.py:587: in import_path\n    importlib.import_module(module_name)\n/usr/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n<frozen importlib._bootstrap>:1387: in _gcd_import\n    ???\n<frozen importlib._bootstrap>:1360: in _find_and_load\n    ???\n<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked\n    ???\n<frozen importlib._bootstrap>:935: in _load_unlocked\n    ???\n.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:188: in exec_module\n    source_stat, co = _rewrite_test(fn, self.config)\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:357: in _rewrite_test\n    tree = ast.parse(source, filename=strfn)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.12/ast.py:52: in parse\n    return compile(source, filename, mode, flags,\nE     File \"/home/maksym/Work/proj/Problemologist/Problemologist-AI/tests/integration/frontend/p0/test_int_174.py\", line 50\nE       model_browser = page.get_by_test_id(\"model-browser-panel\")\nE   IndentationError: unexpected indent"
+      }
+    ]
   }
 ]

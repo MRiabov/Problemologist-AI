@@ -1,29 +1,77 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="194.935" timestamp="2026-02-26T09:34:17.407270+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_frontend_p0" name="test_int_159_plan_approval_comment[chromium]" time="188.828"><failure message="AssertionError: Locator expected to be visible&#10;Actual value: None&#10;Error: element(s) not found &#10;Call log:&#10;  - Expect &quot;to_be_visible&quot; with timeout 180000ms&#10;  - waiting for get_by_text(&quot;Execution Plan Ready&quot;)">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="3" time="387.187" timestamp="2026-02-26T12:58:35.704081+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_int_173" name="test_int_173_exact_pointing_payload[chromium]" time="188.511"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    177 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
 
     @pytest.mark.integration_frontend
-    def test_int_159_plan_approval_comment(page: Page):
+    def test_int_173_exact_pointing_payload(page: Page):
         """
-        INT-159: After planner output, approve/disapprove controls appear;
-        action posts decision to API; optional user comment is persisted
-        and visible in run history.
+        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads
+        with stable entity IDs and source asset reference; payload reaches backend unchanged.
         """
         # 1. Start a benchmark generation
-        page.goto(f"{FRONTEND_URL}/benchmark")
+        page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
         page.wait_for_load_state("networkidle")
     
         # Click CREATE NEW
         page.get_by_test_id("create-new-button").click()
     
-        page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
+        prompt_text = f"Generate a simple cube for testing {uuid.uuid4()}"
+        page.locator("#chat-input").fill(prompt_text)
         page.get_by_label("Send Message").click()
     
-        # 2. Wait for the "Execution Plan Ready" card
-&gt;       expect(page.get_by_text("Execution Plan Ready")).to_be_visible(timeout=180000)
-E       AssertionError: Locator expected to be visible
-E       Actual value: None
-E       Error: element(s) not found 
+        # Wait for completion and confirm
+        confirm_button = page.get_by_test_id("chat-confirm-button")
+        expect(confirm_button).to_be_visible(timeout=120000)
+        confirm_button.click()
+    
+        # Wait for the overlay to disappear
+&gt;       expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
+E       AssertionError: Locator expected to be hidden
+E       Actual value: visible 
 E       Call log:
-E         - Expect "to_be_visible" with timeout 180000ms
-E         - waiting for get_by_text("Execution Plan Ready")
+E         - Expect "to_be_hidden" with timeout 180000ms
+E         - waiting for get_by_test_id("no-assets-overlay")
+E           177 × locator resolved to &lt;div data-testid="no-assets-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-auto"&gt;…&lt;/div&gt;
+E               - unexpected value "visible"
 
-tests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError</failure></testcase></testsuite></testsuites>
+tests/integration/frontend/p0/test_int_173.py:36: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_174" name="test_int_174_cad_show_hide_behavior[chromium]" time="189.718"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    178 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+
+    @pytest.mark.integration_frontend
+    def test_int_174_cad_show_hide_behavior(page: Page):
+        """
+        INT-174: Users can hide/show selected parts both in design and simulation views;
+        visibility toggles do not corrupt selection state or context-card creation
+        for visible entities.
+        """
+        # 1. Navigate to the local development server
+        page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
+        page.wait_for_load_state("networkidle")
+    
+        # 2. Click "CREATE NEW" button
+        page.get_by_test_id("create-new-button").click()
+    
+        # 3. Enter the prompt
+        prompt_text = f"Create a simple benchmark with two parts {uuid.uuid4()}"
+        prompt_input = page.locator("#chat-input")
+        expect(prompt_input).to_be_visible(timeout=30000)
+        prompt_input.fill(prompt_text)
+    
+        # 4. Submit the prompt
+        send_button = page.get_by_label("Send Message")
+        expect(send_button).to_be_enabled(timeout=30000)
+        send_button.click()
+    
+        # 5. Wait for the "Confirm &amp; Start" button and click it
+        confirm_button = page.get_by_test_id("chat-confirm-button")
+        expect(confirm_button).to_be_visible(timeout=120000)
+        confirm_button.click()
+    
+        # Wait for the overlay to disappear
+&gt;       expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
+E       AssertionError: Locator expected to be hidden
+E       Actual value: visible 
+E       Call log:
+E         - Expect "to_be_hidden" with timeout 180000ms
+E         - waiting for get_by_test_id("no-assets-overlay")
+E           178 × locator resolved to &lt;div data-testid="no-assets-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-auto"&gt;…&lt;/div&gt;
+E               - unexpected value "visible"
+
+tests/integration/frontend/p0/test_int_174.py:43: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_177" name="test_int_177_feedback_modal_edit_recall[chromium]" time="8.489" /></testsuite></testsuites>

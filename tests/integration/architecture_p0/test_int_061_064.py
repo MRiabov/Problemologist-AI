@@ -162,6 +162,7 @@ async def test_int_064_path_traversal_protection():
         # We use /fs/read because GET /assets/... might be normalized by the HTTP client.
         # Path in JSON body is not normalized by the client.
         from shared.workers.schema import ReadFileRequest
+
         read_req = ReadFileRequest(path="/utils/../pyproject.toml")
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
