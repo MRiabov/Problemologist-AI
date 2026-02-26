@@ -380,23 +380,23 @@ async def api_validate(
                     session_root=root,
                     script_content=request.script_content,
                 )
-                is_valid, message = await asyncio.to_thread(
-                    validate,
-                    component,
-                    output_dir=root,
-                    session_id=x_session_id,
-                    smoke_test_mode=request.smoke_test_mode,
-                    particle_budget=request.particle_budget,
-                )
-
                 fem_valid, fem_msg = await asyncio.to_thread(
                     validate_fem_manufacturability,
                     component,
                     root,
                 )
-                if is_valid and not fem_valid:
+                if not fem_valid:
                     is_valid = False
-                    message = (message + "; " + fem_msg) if message else fem_msg
+                    message = fem_msg
+                else:
+                    is_valid, message = await asyncio.to_thread(
+                        validate,
+                        component,
+                        output_dir=root,
+                        session_id=x_session_id,
+                        smoke_test_mode=request.smoke_test_mode,
+                        particle_budget=request.particle_budget,
+                    )
 
                 record_validation_result(root, is_valid, message)
 
