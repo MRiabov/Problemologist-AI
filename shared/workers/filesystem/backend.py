@@ -293,15 +293,24 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
         try:
             files = self.glob_info(glob or "**/*", path=base_virt)
             matches: list[GrepMatch] = []
+            regex = re.compile(re.escape(pattern))
             for f_info in files:
-                if f_info["is_dir"]:
+                if f_info.is_dir:
                     continue
                 try:
-                    content = self._read_raw(f_info["path"])
-                    matches.extend(
-                        self._grep_in_content(content, pattern, f_info["path"])
-                    )
-                except:
+                    local_p = self._resolve(f_info.path)
+                    # Use line-by-line reading to avoid loading large files into memory
+                    with local_p.open("r", encoding="utf-8", errors="ignore") as f:
+                        for line_num, line in enumerate(f, 1):
+                            if regex.search(line):
+                                matches.append(
+                                    GrepMatch(
+                                        path=f_info.path,
+                                        line=line_num,
+                                        text=line.rstrip(),
+                                    )
+                                )
+                except Exception:
                     continue
             return matches
         except Exception as e:
@@ -394,3 +403,50 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             shutil.rmtree(local_path)
         else:
             local_path.unlink()
+
+    def move(self, source: str, destination: str) -> WriteResult:
+        """Move or rename a file or directory."""
+        try:
+            src_path = self._resolve(source)
+            dst_path = self._resolve(destination)
+            if not src_path.exists():
+                return WriteResult(error=f"Source path not found: {source}")
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src_path), str(dst_path))
+            return WriteResult(path=destination)
+        except Exception as e:
+            return WriteResult(error=f"Error moving {source} to {destination}: {e!s}")
+
+    async def amove(self, source: str, destination: str) -> WriteResult:
+        return self.move(source, destination)
+
+    def copy(self, source: str, destination: str) -> WriteResult:
+        """Copy a file or directory."""
+        try:
+            src_path = self._resolve(source)
+            dst_path = self._resolve(destination)
+            if not src_path.exists():
+                return WriteResult(error=f"Source path not found: {source}")
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            if src_path.is_dir():
+                shutil.copytree(str(src_path), str(dst_path))
+            else:
+                shutil.copy2(str(src_path), str(dst_path))
+            return WriteResult(path=destination)
+        except Exception as e:
+            return WriteResult(error=f"Error copying {source} to {destination}: {e!s}")
+
+    async def acopy(self, source: str, destination: str) -> WriteResult:
+        return self.copy(source, destination)
+
+    def mkdir(self, path: str) -> WriteResult:
+        """Create a directory."""
+        try:
+            local_p = self._resolve(path)
+            local_p.mkdir(parents=True, exist_ok=True)
+            return WriteResult(path=path)
+        except Exception as e:
+            return WriteResult(error=f"Error creating directory {path}: {e!s}")
+
+    async def amkdir(self, path: str) -> WriteResult:
+        return self.mkdir(path)

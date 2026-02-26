@@ -185,6 +185,66 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def delete_file(self, path: str) -> bool:
+        """Delete a file or directory."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/delete",
+                json={"path": path},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def move_file(self, source: str, destination: str) -> bool:
+        """Move or rename a file or directory."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/move",
+                json={"source": source, "destination": destination},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def copy_file(self, source: str, destination: str) -> bool:
+        """Copy a file or directory."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/copy",
+                json={"source": source, "destination": destination},
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
+    async def mkdir(self, path: str) -> bool:
+        """Create a directory."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/mkdir",
+                json={"path": path},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()["status"] == "success"
+        finally:
+            await self._close_client(client)
+
     async def bundle_session(self) -> bytes:
         """Bundle the session workspace into a gzipped tarball from the light worker."""
         client = await self._get_client()

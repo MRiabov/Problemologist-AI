@@ -105,3 +105,23 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
     )
 
     return results
+
+
+def get_part_by_id(part_id: str, db_path: str) -> COTSItem | None:
+    """
+    Look up a single COTS part by its ID.
+    """
+    engine = create_engine(f"sqlite:///{db_path}")
+    with Session(engine) as session:
+        item = session.query(COTSItemORM).filter(COTSItemORM.part_id == part_id).first()
+        if item:
+            return COTSItem(
+                part_id=item.part_id,
+                name=item.name,
+                category=item.category,
+                unit_cost=item.unit_cost,
+                weight_g=item.weight_g,
+                import_recipe=item.import_recipe,
+                metadata=item.metadata_dict,
+            )
+    return None

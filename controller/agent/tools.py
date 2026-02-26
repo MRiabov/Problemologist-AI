@@ -30,6 +30,22 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
             path, [EditOp(old_string=old_string, new_string=new_string)]
         )
 
+    async def delete_file(path: str):
+        """Delete a file or directory in the workspace."""
+        return await fs.delete_file(path)
+
+    async def move_file(source: str, destination: str):
+        """Move or rename a file or directory in the workspace."""
+        return await fs.move_file(source, destination)
+
+    async def copy_file(source: str, destination: str):
+        """Copy a file or directory in the workspace."""
+        return await fs.copy_file(source, destination)
+
+    async def mkdir(path: str):
+        """Create a new directory in the workspace."""
+        return await fs.mkdir(path)
+
     async def grep(pattern: str, path: str | None = None, glob: str | None = None):
         """Search for a pattern in files."""
         return await fs.grep(pattern, path, glob)
@@ -55,6 +71,10 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         read_file,
         write_file,
         edit_file,
+        delete_file,
+        move_file,
+        copy_file,
+        mkdir,
         grep,
         execute_command,
         inspect_topology,

@@ -101,6 +101,26 @@ class DeleteFileRequest(BaseModel):
     path: StrictStr = Field(..., min_length=1)
 
 
+class MoveFileRequest(BaseModel):
+    """Request to move or rename a file."""
+
+    source: StrictStr = Field(..., min_length=1)
+    destination: StrictStr = Field(..., min_length=1)
+
+
+class CopyFileRequest(BaseModel):
+    """Request to copy a file or directory."""
+
+    source: StrictStr = Field(..., min_length=1)
+    destination: StrictStr = Field(..., min_length=1)
+
+
+class MkdirRequest(BaseModel):
+    """Request to create a directory."""
+
+    path: StrictStr = Field(..., min_length=1)
+
+
 class WriteFileRequest(BaseModel):
     """Request to write a file."""
 

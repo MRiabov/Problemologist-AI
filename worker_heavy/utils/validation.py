@@ -406,18 +406,30 @@ def calculate_assembly_totals(
 
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
-        for p in cots_parts:
-            total_cost += p.unit_cost_usd * p.quantity
-            # Weight is not always in CotsPartEstimate, but we can try to find it
-            # if we had a more detailed catalog access here.
-            # For now, we'll try to use metadata if we can find it in shared catalog.
-            import contextlib
+        from shared.cots.runtime import get_part_by_id
 
-            with contextlib.suppress(Exception):
-                # Heuristic: try to look up weight if not provided
-                # In current schema CotsPartEstimate doesn't have weight_g
-                # But the indexer extracts it.
-                pass
+        # Use environment variable for DB path if set, otherwise default
+        db_path = os.environ.get("COTS_DB_PATH", "parts.db")
+
+        for p in cots_parts:
+            # Prefer price from assembly definition
+            total_cost += p.unit_cost_usd * p.quantity
+
+            # Try to look up weight from catalog if not provided
+            # (Currently CotsPartEstimate doesn't have weight_g)
+            try:
+                part_meta = get_part_by_id(p.part_id, db_path)
+                if part_meta:
+                    total_weight += part_meta.weight_g * p.quantity
+                else:
+                    # Fallback or log warning?
+                    logger.warning("cots_part_not_found_in_catalog", part_id=p.part_id)
+            except Exception as e:
+                logger.error(
+                    "failed_to_lookup_cots_part_weight",
+                    part_id=p.part_id,
+                    error=str(e),
+                )
 
     return total_cost, total_weight
 
