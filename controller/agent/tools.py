@@ -50,6 +50,17 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def render_snapshot(
+        target_ids: list[str],
+        view_matrix: list[list[float]],
+        script_path: str = "script.py",
+    ) -> dict:
+        """
+        Render a snapshot of selected features (faces, parts) from a specific camera angle.
+        Returns the S3 key of the generated image.
+        """
+        return await fs.render_snapshot(target_ids, view_matrix, script_path)
+
     return [
         list_files,
         read_file,
@@ -58,6 +69,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
+        render_snapshot,
         search_cots_catalog,
     ]
 

@@ -1,17 +1,68 @@
 import os
 import tempfile
 import uuid
+import asyncio
 from pathlib import Path
 
 import numpy as np
 import structlog
 import vtk
 from build123d import export_stl
+from temporalio import activity
 
 from shared.observability.storage import S3Client, S3Config
 from shared.workers.loader import load_component_from_script as _load_component
+from shared.workers.schema import HeavyRenderSnapshotParams, HeavyRenderSnapshotResponse
 
 logger = structlog.get_logger(__name__)
+
+
+def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
+    """Extract gzipped tarball to target directory using system tar."""
+    import subprocess
+
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tf:
+        tf.write(bundle_bytes)
+        tf_path = tf.name
+    try:
+        subprocess.run(
+            ["tar", "-zxf", tf_path, "-C", str(target_dir), "--no-same-owner"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as spe:
+        logger.error("tar_subprocess_failed", stderr=spe.stderr)
+        raise RuntimeError(f"tar extraction failed: {spe.stderr}")
+    finally:
+        if Path(tf_path).exists():
+            Path(tf_path).unlink()
+
+
+@activity.defn(name="worker_render_snapshot")
+async def render_snapshot_activity(params: HeavyRenderSnapshotParams) -> HeavyRenderSnapshotResponse:
+    """Render a selection snapshot from a session bundle."""
+    bundle_bytes = params.bundle_bytes
+    script_path = params.script_path
+    target_ids = params.target_ids
+    view_matrix = params.view_matrix
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _extract_bundle(bundle_bytes, root)
+
+        try:
+            # Run the rendering logic in a thread to avoid blocking the loop
+            image_key = await asyncio.to_thread(
+                render_selection_snapshot,
+                ids=target_ids,
+                view_matrix=view_matrix,
+                script_path=root / script_path,
+            )
+            return HeavyRenderSnapshotResponse(success=True, image_key=image_key)
+        except Exception as e:
+            logger.error("render_snapshot_activity_failed", error=str(e))
+            return HeavyRenderSnapshotResponse(success=False, error=str(e))
 
 
 def render_selection_snapshot(
