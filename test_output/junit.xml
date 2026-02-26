@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="3" time="387.187" timestamp="2026-02-26T12:58:35.704081+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_int_173" name="test_int_173_exact_pointing_payload[chromium]" time="188.511"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    177 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="3" time="398.723" timestamp="2026-02-26T13:10:40.233708+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_int_173" name="test_int_173_exact_pointing_payload[chromium]" time="195.900"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    177 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
 
     @pytest.mark.integration_frontend
     def test_int_173_exact_pointing_payload(page: Page):
@@ -32,7 +32,7 @@ E         - waiting for get_by_test_id("no-assets-overlay")
 E           177 × locator resolved to &lt;div data-testid="no-assets-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-auto"&gt;…&lt;/div&gt;
 E               - unexpected value "visible"
 
-tests/integration/frontend/p0/test_int_173.py:36: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_174" name="test_int_174_cad_show_hide_behavior[chromium]" time="189.718"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    178 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+tests/integration/frontend/p0/test_int_173.py:36: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_174" name="test_int_174_cad_show_hide_behavior[chromium]" time="189.747"><failure message="AssertionError: Locator expected to be hidden&#10;Actual value: visible &#10;Call log:&#10;  - Expect &quot;to_be_hidden&quot; with timeout 180000ms&#10;  - waiting for get_by_test_id(&quot;no-assets-overlay&quot;)&#10;    174 × locator resolved to &lt;div data-testid=&quot;no-assets-overlay&quot; class=&quot;absolute inset-0 flex items-center justify-center pointer-events-auto&quot;&gt;…&lt;/div&gt;&#10;        - unexpected value &quot;visible&quot;">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
 
     @pytest.mark.integration_frontend
     def test_int_174_cad_show_hide_behavior(page: Page):
@@ -71,7 +71,7 @@ E       Actual value: visible
 E       Call log:
 E         - Expect "to_be_hidden" with timeout 180000ms
 E         - waiting for get_by_test_id("no-assets-overlay")
-E           178 × locator resolved to &lt;div data-testid="no-assets-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-auto"&gt;…&lt;/div&gt;
+E           174 × locator resolved to &lt;div data-testid="no-assets-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-auto"&gt;…&lt;/div&gt;
 E               - unexpected value "visible"
 
-tests/integration/frontend/p0/test_int_174.py:43: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_177" name="test_int_177_feedback_modal_edit_recall[chromium]" time="8.489" /></testsuite></testsuites>
+tests/integration/frontend/p0/test_int_174.py:43: AssertionError</failure></testcase><testcase classname="tests.integration.frontend.p0.test_int_177" name="test_int_177_feedback_modal_edit_recall[chromium]" time="12.613" /></testsuite></testsuites>
