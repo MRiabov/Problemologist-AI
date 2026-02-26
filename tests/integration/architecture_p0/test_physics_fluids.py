@@ -140,7 +140,7 @@ def build():
         assert event_dict is not None, "Missing simulation_backend_selected event"
 
         event = SimulationBackendSelectedEvent.model_validate(event_dict)
-        assert event.backend == "genesis"
+        assert event.backend.lower() == "genesis"
         assert event.fem_enabled is True
         assert event.compute_target == "cpu"
 

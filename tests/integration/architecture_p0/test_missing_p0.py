@@ -189,6 +189,8 @@ async def test_int_025_events_collection_e2e():
         for _ in range(max_attempts):
             await asyncio.sleep(5.0)
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            if status_resp.status_code != 200:
+                continue
             ep_data = EpisodeResponse.model_validate(status_resp.json())
             if ep_data.status == EpisodeStatus.COMPLETED:
                 break

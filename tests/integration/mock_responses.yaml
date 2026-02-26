@@ -24,6 +24,28 @@ scenarios:
         reason: "The design satisfies all requirements."
         required_fixes: []
 
+  INT-176:
+    planner:
+      thought: "Testing tool failure recovery."
+      generated_code: |
+        with open('plan.md', 'w') as f: f.write('## 1. Solution Overview\nFail test.')
+        with open('todo.md', 'w') as f: f.write('- [ ] Fail a tool\n- [ ] Continue')
+        with open('assembly_definition.yaml', 'w') as f: f.write('version: "1.0"\nconstraints: {benchmark_max_unit_cost_usd: 100, benchmark_max_weight_g: 1000, planner_target_max_unit_cost_usd: 50, planner_target_max_weight_g: 500}\ntotals: {estimated_unit_cost_usd: 10, estimated_weight_g: 100, estimate_confidence: high}')
+        with open('objectives.yaml', 'w') as f: f.write('constraints: {max_unit_cost: 50, max_weight_g: 1000.0}')
+    coder:
+      thought: "I will call a command that fails, then continue."
+      tool_calls:
+        - name: "execute_command"
+          input: { command: "ls /non_existent_path_to_fail" }
+          thought: "Attempting to list non-existent path."
+      generated_code: "with open('script.py', 'w') as f: f.write('# Recovered')"
+      journal: "Observed failure but continued work."
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "The design satisfies all requirements."
+        required_fixes: []
+
   # Benchmark workflow (detected by prompt or UUID session_id)
   benchmark:
     planner:
@@ -39,12 +61,12 @@ scenarios:
         with open('todo.md', 'w') as f:
             f.write('# TODO\n- [x] Initial plan')
         with open('objectives.yaml', 'w') as f:
-            f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nphysics: {backend: genesis}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
+            f.write('objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nphysics: {backend: GENESIS}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 100, max_weight_g: 1000}')
     coder:
       thought: "Implementing benchmark script and setting up mandatory files."
       generated_code: |
         with open('script.py', 'w') as f:
-            f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.metadata = PartMetadata(label="box")\n    return b')
+            f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = "box"\n    b.metadata = PartMetadata(material_id="abs", fixed=True)\n    return b')
 
         # Manually create a GLB for the frontend to avoid rendering hangs/failures
         import os
@@ -59,7 +81,7 @@ scenarios:
         objectives:
           goal_zone: {min: [0, 0, 0], max: [1, 1, 1]}
           forbid_zones: []
-          build_zone: {min: [-10, -10, 0], max: [10, 10, 10]}
+          build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
         physics:
           backend: GENESIS
         simulation_bounds: {min: [-15, -15, 0], max: [15, 15, 20]}
@@ -873,7 +895,7 @@ scenarios:
         objectives:
           goal_zone: {min: [8, 8, 0], max: [10, 10, 2]}
           forbid_zones: []
-          build_zone: {min: [-10, -10, 0], max: [10, 10, 10]}
+          build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
         simulation_bounds: {min: [-15, -15, 0], max: [15, 15, 20]}
         moved_object:
           label: ball
@@ -939,7 +961,7 @@ scenarios:
       
     coder:
       thought: "Default coder response."
-      generated_code: "with open('solution.py', 'w') as f: f.write('# Default')"
+      generated_code: "with open('script.py', 'w') as f: f.write('# Default script')"
     reviewer:
       review:
         decision: "APPROVED"

@@ -4,7 +4,6 @@ import pytest
 from httpx import AsyncClient
 
 from controller.api.schemas import (
-    ArtifactEntry,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
     ConfirmRequest,
@@ -72,13 +71,13 @@ async def test_benchmark_to_engineer_handoff():
         if not benchmark_completed:
             pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
-        # 3. Verify Handoff Package Artifacts
-        artifacts_resp = await client.get(f"/artifacts/{session_id}")
-        assert artifacts_resp.status_code == 200, (
-            f"Failed to fetch artifacts: {artifacts_resp.text}"
+        # 3. Verify Handoff Package Artifacts from episode assets
+        episode_resp = await client.get(f"/episodes/{session_id}")
+        assert episode_resp.status_code == 200, (
+            f"Failed to fetch episode assets: {episode_resp.text}"
         )
-        artifacts = [ArtifactEntry.model_validate(a) for a in artifacts_resp.json()]
-        artifact_paths = [a.path for a in artifacts]
+        episode_data = EpisodeResponse.model_validate(episode_resp.json())
+        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
 
         # Check existence of required files
         assert any("objectives.yaml" in p for p in artifact_paths), (
