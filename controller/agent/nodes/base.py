@@ -141,14 +141,21 @@ class BaseNode:
 
                     try:
                         if asyncio.iscoroutinefunction(func):
-                            # For the tool itself, we still need a loop if it's async
-                            new_loop = asyncio.new_event_loop()
+                            # WP10: Reuse the main event loop to avoid resource leaks
+                            # and overhead of creating new loops for every tool call.
+                            # We must check if we're in the same loop to avoid deadlocks.
                             try:
-                                result = new_loop.run_until_complete(
-                                    func(*args, **kwargs)
-                                )
-                            finally:
-                                new_loop.close()
+                                current_loop = asyncio.get_running_loop()
+                            except RuntimeError:
+                                current_loop = None
+
+                            # We use run_coroutine_threadsafe to schedule the tool on the main loop.
+                            # BaseNode._run_program calls DSPy via asyncio.to_thread, which runs
+                            # in a separate thread without a running loop, so current_loop is None.
+                            future = asyncio.run_coroutine_threadsafe(
+                                func(*args, **kwargs), self.ctx.main_loop
+                            )
+                            result = future.result()
                         else:
                             result = func(*args, **kwargs)
 

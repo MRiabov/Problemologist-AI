@@ -40,12 +40,18 @@ if not hasattr(NgSpiceShared, "_patched_problemologist"):
             return 0
 
         prefix, _, content = message.partition(" ")
-        if prefix == "stderr" and (
+        # WP13: Refined NGSpice output handling.
+        # Categorize non-error messages from stderr that PySpice misinterprets.
+        is_ignorable = prefix == "stderr" and (
             "SPARSE" in content
             or content.startswith("Note:")
             or "singular matrix" in content.lower()
-        ):
+            or "warning" in content.lower()
+        )
+
+        if is_ignorable:
             if hasattr(self, "_stdout"):
+                # Redirecting these to a virtual stdout for later inspection if needed.
                 self._stdout.append(content)
             return 0
         return _original_send_char(message_c, ngspice_id, user_data)

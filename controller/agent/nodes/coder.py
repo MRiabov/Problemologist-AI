@@ -13,6 +13,20 @@ from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
 
+ELECTRONICS_KEYWORDS = [
+    "circuit",
+    "wire",
+    "electronics",
+    "routing",
+    "psu",
+    "power",
+    "pyspice",
+    "simulation",
+    "schematic",
+    "pcb",
+    "kicad",
+]
+
 
 class CoderSignature(dspy.Signature):
     """
@@ -126,12 +140,11 @@ class CoderNode(BaseNode):
 
     def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list, ignoring electronics tasks."""
-        elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):
                 task = line.strip().replace("- [ ]", "").strip()
                 # If it's an electronics task, skip it (ElectronicsEngineer will handle it)
-                if any(kw in task.lower() for kw in elec_keywords):
+                if any(kw in task.lower() for kw in ELECTRONICS_KEYWORDS):
                     continue
                 return task
         return None
@@ -142,8 +155,14 @@ class CoderNode(BaseNode):
 async def coder_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url, session_id=session_id
-    )
+
+    if state.context:
+        ctx = state.context
+    else:
+        ctx = SharedNodeContext.create(
+            worker_light_url=settings.spec_001_api_url, session_id=session_id
+        )
+        state.context = ctx
+
     node = CoderNode(context=ctx)
     return await node(state)

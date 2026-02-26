@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Any
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -31,6 +31,7 @@ class AgentState(BaseModel):
     status: AgentStatus = AgentStatus.IDLE
     feedback: StrictStr = ""
     session_id: StrictStr = ""
+    context: Any = Field(default=None, exclude=True)
     episode_id: StrictStr = ""
     best_cost: float | None = None
     best_weight_g: float | None = None

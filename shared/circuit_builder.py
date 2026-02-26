@@ -72,12 +72,21 @@ def build_circuit_from_section(
             i_stall = comp.stall_current_a or 2.0
             resistance = v_rated / i_stall
 
+            # WP12: Enhanced motor model for better fidelity (including inductance)
             # Motor terminals are usually '+' and '-' or 'a' and 'b'
-            # We'll support both common patterns by mapping them to the circuit nodes
-            # Note: Wiring will connect to these nodes.
-            circuit.R(
-                f"m_{comp.component_id}",
+            # We add a small inductance in series with the resistance
+            # to better model the dynamic behavior during start-up/stall.
+            # Default to 1mH if not specified.
+            inductance = 1e-3
+            circuit.L(
+                f"m_ind_{comp.component_id}",
                 f"{comp.component_id}_+",
+                f"{comp.component_id}_int",
+                inductance @ u_H,
+            )
+            circuit.R(
+                f"m_res_{comp.component_id}",
+                f"{comp.component_id}_int",
                 f"{comp.component_id}_-",
                 resistance @ u_Ohm,
             )

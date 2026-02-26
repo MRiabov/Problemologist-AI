@@ -116,8 +116,13 @@ class PlannerNode(BaseNode):
 async def planner_node(state: AgentState) -> AgentState:
     # Use session_id from state, fallback to default if not set (e.g. tests)
     session_id = state.session_id or settings.default_session_id
-    ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url, session_id=session_id
-    )
+
+    if state.context:
+        ctx = state.context
+    else:
+        ctx = SharedNodeContext.create(
+            worker_light_url=settings.spec_001_api_url, session_id=session_id
+        )
+        state.context = ctx
     node = PlannerNode(context=ctx)
     return await node(state)
